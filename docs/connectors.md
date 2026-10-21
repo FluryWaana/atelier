@@ -53,6 +53,9 @@ Un champ peut avoir une valeur `default`. Un `select` fournit
 `options: [{ value: 'cloud', label: 'Cloud' }]`.
 Les chaînes sont limitées à 4 000 caractères. `validateSettings(values)` peut
 refuser une combinaison de valeurs en levant une erreur compréhensible.
+Il reçoit aussi les paramètres précédents et les champs modifiés :
+`validateSettings(values, previous, changes)`. Il peut normaliser `values`,
+notamment pour invalider des réglages propres à une ancienne instance.
 
 Les champs `password` sont enregistrés dans le coffre chiffré et ne sont jamais
 renvoyés à l’interface. Laisser vide conserve le secret ; **Oublier ce secret**
