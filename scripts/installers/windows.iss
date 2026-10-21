@@ -41,7 +41,8 @@ Name: "{group}\Importer les données portables"; Filename: "{app}\AtelierKanban.
 Name: "{group}\Désinstaller Atelier Kanban"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\AtelierKanban.exe"; Description: "Ouvrir Atelier Kanban (pour importer des données, utilisez d’abord le raccourci d’import)"; Flags: postinstall nowait skipifsilent unchecked
+; Explorer keeps the installer's RedirectionGuard from blocking user-created agent/worktree junctions.
+Filename: "{win}\explorer.exe"; Parameters: """{app}\AtelierKanban.exe"""; Description: "Ouvrir Atelier Kanban"; Flags: postinstall nowait skipifsilent unchecked
 
 [Code]
 function StopAtelier(): Boolean;
