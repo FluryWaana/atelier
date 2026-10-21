@@ -14,3 +14,10 @@ test('domain and application dependencies point inward and contain no HTTP or SQ
     }
   }
 });
+
+test('generic card workflows and local time do not implement provider protocols', () => {
+  for (const name of ['card-workflows', 'card-worktrees', 'time-tracking']) {
+    const source = readFileSync(new URL('../lib/application/' + name + '.mjs', import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /requestJira|requestTempo|\/rest\/api\/|tempoWorklogId|jiraStatusMap/, name);
+  }
+});

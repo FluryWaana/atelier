@@ -47,11 +47,11 @@ Le domaine ne dépend ni de Node.js ni de HTTP. Le cas d’usage reçoit les por
 ## Autres cas d’usage et points de composition
 
 - `application/runs.mjs` orchestre les agents, leurs événements, les limites du journal et les résultats. Les exécutables, worktrees, identifiants et transformations d’événements lui sont injectés.
-- `application/card-workflows.mjs` expose les commandes des cartes : préparation, brainstorming, Jira, PR, review, worktrees, services et file. `http/card-workflow-routes.mjs` traduit les méthodes HTTP en commandes ; l’application ne reçoit pas de requête HTTP.
+- `application/card-workflows.mjs` orchestre les commandes communes des cartes et appelle les fournisseurs sans leurs secrets ni leur protocole. `application/card-worktrees.mjs` gère les worktrees et services locaux. `lib/jira-card-workflows.mjs` conserve la création et les transitions propres à Jira ; les routes historiques restent disponibles.
 - `application/jira-sync.mjs` conserve le verrou de synchronisation, les règles de correspondance et les mises à jour transactionnelles. L’adaptateur `infrastructure/sync-repository.mjs` fournit la transaction SQLite.
 - `application/settings.mjs` valide les réglages et conserve les identifiants hors des réponses publiques. Une transaction enregistre ensemble réglages et coffre chiffré. Les jetons en mémoire changent uniquement après succès.
 - `application/automation.mjs` porte le parcours automatique, avec vérification, publication, review et délai injectés. `lib/automation.mjs` conserve l’ancienne interface de composition.
-- `application/time-tracking.mjs` porte le chronomètre et les protections contre les doubles envois Tempo. `domain/time.mjs` valide les saisies et `http/time-routes.mjs` traduit les routes. `lib/time-tracking.mjs` compose les adaptateurs historiques.
+- `application/time-tracking.mjs` gère les saisies et le chronomètre local avec une horloge injectée. `lib/tempo-export.mjs` porte les appels Jira/Tempo et les protections contre les doubles envois. `lib/time-tracking.mjs` compose ces services et le minuteur ; `http/time-routes.mjs` traduit les routes.
 
 Les modules historiques de Git, Jira, Azure, Tempo, stockage et processus restent les adaptateurs concrets. `server.mjs` et les petits modules de compatibilité les assemblent ; les cas d’usage n’importent pas leurs implémentations. Les réexports évitent une migration simultanée de tous les consommateurs. `test/architecture.test.mjs` interdit les imports vers l’extérieur dans le domaine et l’application, ainsi que l’accès direct à HTTP, SQLite et aux variables système.
 

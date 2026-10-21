@@ -119,6 +119,19 @@ test('a third-party ticket creation attaches the remote ticket to the existing l
   }, [module]);
 });
 
+test('explicit status synchronization uses the ticket provider without Jira settings', async () => {
+  const calls = [];
+  const module = { ...demo, capabilities: { tickets: { ...demo.capabilities.tickets,
+    syncStatus(context, { card, required }) { calls.push({ id: card.id, required }); return card; },
+  } } };
+  await fixture(async ({ app, request }) => {
+    app.store.putCard({ id: 'external', status: 'todo', ticket: { connector: 'demo', id: '42' } });
+    const result = await request('/api/cards/external/sync-status', 'POST', {});
+    assert.equal(result.id, 'external');
+    assert.deepEqual(calls, [{ id: 'external', required: true }]);
+  }, [module]);
+});
+
 test('repository providers receive their own context and existing PRs keep their provider', async () => {
   const calls = [];
   const forge = { id: 'forge', name: 'Forge', apiVersion: 1, capabilities: { repositories: {

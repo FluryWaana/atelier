@@ -3,6 +3,8 @@ import { createConnectorTime } from './lib/application/connector-time.mjs';
 import { createConnectors } from './lib/application/connectors.mjs';
 import { connectorRoute } from './lib/http/connector-routes.mjs';
 import { loadConnectors, loadBuiltinConnectors } from './lib/infrastructure/connector-loader.mjs';
+import { createJiraCardWorkflows } from './lib/jira-card-workflows.mjs';
+import { createCardWorktrees } from './lib/application/card-worktrees.mjs';
 import { createCardWorkflows } from './lib/application/card-workflows.mjs';
 import { cardWorkflowRoute } from './lib/http/card-workflow-routes.mjs';
 import { createSettings } from './lib/application/settings.mjs';
@@ -126,7 +128,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       builtins: { check: async (name, input = {}) => {
           const [result] = await checkConnections({ only: [name], repo: input.repo ? repository(input.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe });
           if (!result.ok) throw new Error(result.message); return result.message;
-        }, syncTicketStatus: id => ticketSync.syncCardStatus(id), ticketWorkflow: (...args) => cardWorkflows.execute(...args), linkPullRequest: card => linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset => ticketSync.sync(reset), repositories: repositoryHandlers,
+        }, syncTicketStatus: (id, required) => ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) => jiraWorkflows.execute(...args), linkPullRequest: card => linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset => ticketSync.sync(reset), repositories: repositoryHandlers,
         time: (operation, input) => operation === 'preview' ? store.time(input.id) : tracking.execute(operation === 'send' ? 'export' : operation, input.id, input.body) },
       time: { get: id => store.time(id), save: entry => { store.putTime(entry); changed(); } },
     }),
@@ -167,9 +169,10 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     issueId: (base, id) => 'jira-' + Buffer.from(base).toString('base64url') + '-' + id,
   });
   const ticketProvider = card => card.ticket?.connector || 'jira';
-  const syncCardStatus = id => {
+  const syncCardStatus = (id, required = false) => {
     const card = store.card(id), provider = ticketProvider(card);
-    return card.ticket && connectors.supports(provider, 'tickets', 'syncStatus') ? connectors.invoke('tickets', 'syncStatus', { card }, provider) : card;
+    if (required && (!card.ticket || !connectors.supports(provider, 'tickets', 'syncStatus'))) fail('Synchronisation de statut indisponible.');
+    return card.ticket && connectors.supports(provider, 'tickets', 'syncStatus') ? connectors.invoke('tickets', 'syncStatus', { card, required }, provider) : card;
   };
   const linkTicketPullRequest = card => connectors.supports(ticketProvider(card), 'tickets', 'linkPullRequest')
     ? connectors.invoke('tickets', 'linkPullRequest', { card }, ticketProvider(card)) : false;
@@ -240,15 +243,17 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     queuedIds: () => queue.state().ids, launchTask, syncCardStatus, invalidateReviews, newId: randomUUID, timestamp,
   });
 
-  const cardWorkflows = createCardWorkflows({ store, manualLaunch, startRun, busy, config, configFor, token: settingsService.token, jiraBase, requestJira, publishing, changed, queue, refreshPR, invalidateReviews, automation, checkDependencies, devServers, prepareWorktree, prepareApplicationWorktrees, samePath, syncCardStatus, correctionInstructions, reviewPR, previewPR, publishPR, linkPullRequestToJira: linkTicketPullRequest, removeApplicationWorktrees, removeWorktree, launchTask, newId: randomUUID, timestamp });
+  const jiraWorkflows = createJiraCardWorkflows({ store, busy, config, token: settingsService.token, jiraBase, requestJira, publishing, changed, timestamp });
+  const cardWorktrees = createCardWorktrees({ store, busy, configFor, publishing, changed, devServers, prepareWorktree, prepareApplicationWorktrees, samePath, removeApplicationWorktrees, removeWorktree });
+  const cardWorkflows = createCardWorkflows({ store, manualLaunch, startRun, busy, publishing, changed, queue, refreshPR, invalidateReviews, automation, checkDependencies, samePath, syncCardStatus, correctionInstructions, reviewPR, previewPR, publishPR, linkTicketPullRequest, launchTask, worktrees: cardWorktrees, newId: randomUUID, timestamp });
 
   async function route(req, path, body) {
-    const ticketOperation = path.match(/^\/api\/cards\/([^/]+)\/(create-ticket|transitions|transition)$/);
+    const ticketOperation = path.match(/^\/api\/cards\/([^/]+)\/(create-ticket|create-jira|transitions|transition)$/);
     if (ticketOperation && (ticketOperation[2] === 'transitions' ? req.method === 'GET' : req.method === 'POST')) {
       const card = store.card(ticketOperation[1]); if (!card) fail('Carte introuvable.', 404);
       if (busy(card.id) || card.archived) fail('Restaure la carte et attends la fin des opérations.', 409);
-      const operation = ticketOperation[2] === 'create-ticket' ? 'create' : ticketOperation[2];
-      return connectors.invoke('tickets', operation, { card, body }, card.ticket ? ticketProvider(card) : connectors.selected('tickets'));
+      const operation = ['create-ticket', 'create-jira'].includes(ticketOperation[2]) ? 'create' : ticketOperation[2];
+      return connectors.invoke('tickets', operation, { card, body }, ticketOperation[2] === 'create-jira' ? 'jira' : card.ticket ? ticketProvider(card) : connectors.selected('tickets'));
     }
     const connectorResult = connectorRoute(connectors, req.method, path, body);
     if (connectorResult !== undefined) return connectorResult;
