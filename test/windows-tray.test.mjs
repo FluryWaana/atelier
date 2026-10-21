@@ -5,7 +5,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { startWindowsTray } from '../lib/infrastructure/windows-tray.mjs';
+import { startTray } from '../lib/infrastructure/tray.mjs';
 
 test('Windows tray opens Atelier, requests graceful shutdown and exits when its server disconnects', { skip: process.platform !== 'win32', timeout: 30000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'atelier-tray-'));
@@ -38,10 +38,10 @@ test('Windows tray opens Atelier, requests graceful shutdown and exits when its 
   child.stdin.end();
   assert.equal(await closed, 0, 'EOF removes the icon even after an unexpected server exit.');
 
-  const stop = startWindowsTray(root, 54321);
+  const stop = startTray(root, 54321);
   await delay(300);
   await stop();
-  await startWindowsTray(join(root, 'missing'), 54321)();
+  await startTray(join(root, 'missing'), 54321)();
 
   const harness = join(root, 'scripts', 'TrayCheck.cs');
   writeFileSync(harness, `using System;

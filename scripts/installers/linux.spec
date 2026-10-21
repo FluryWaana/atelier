@@ -4,7 +4,7 @@ Release: 1
 Summary: Tableau de tâches local Atelier Kanban
 License: AGPL-3.0-or-later AND MIT
 URL: https://github.com/%{repository}
-Requires: libsecret, xdg-utils, lsof, zenity
+Requires: libsecret, xdg-utils, lsof, zenity, python3-gobject, gtk3, libayatana-appindicator-gtk3
 # Preserve the bundled, tested Node binary and generate its shared-library requirements.
 %global __os_install_post %{nil}
 

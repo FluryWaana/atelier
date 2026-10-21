@@ -45,7 +45,7 @@ if (process.platform === 'win32') {
   copyFileSync(join(app, 'public', 'atelier-kanban.png'), join(iconDirectory, 'atelier-kanban.png'));
   run('desktop-file-validate', [join(payload, 'usr/share/applications/atelier-kanban.desktop')]);
   const deb = join(stage, 'deb'); cpSync(payload, deb, { recursive: true }); mkdirSync(join(deb, 'DEBIAN'));
-  writeFileSync(join(deb, 'DEBIAN', 'control'), `Package: atelier-kanban\nVersion: ${version}\nArchitecture: ${process.arch === 'x64' ? 'amd64' : 'arm64'}\nMaintainer: Atelier Kanban <noreply@github.com>\nSection: devel\nPriority: optional\nDepends: libc6 (>= 2.28), libstdc++6 (>= 8), libgcc-s1, libsecret-tools, xdg-utils, lsof, zenity\nHomepage: https://github.com/${repository}\nDescription: Tableau de tâches local Atelier Kanban\n Node.js est inclus. Les données restent dans le dossier personnel.\n`);
+  writeFileSync(join(deb, 'DEBIAN', 'control'), `Package: atelier-kanban\nVersion: ${version}\nArchitecture: ${process.arch === 'x64' ? 'amd64' : 'arm64'}\nMaintainer: Atelier Kanban <noreply@github.com>\nSection: devel\nPriority: optional\nDepends: libc6 (>= 2.28), libstdc++6 (>= 8), libgcc-s1, libsecret-tools, xdg-utils, lsof, zenity, python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1\nHomepage: https://github.com/${repository}\nDescription: Tableau de tâches local Atelier Kanban\n Node.js est inclus. Les données restent dans le dossier personnel.\n`);
   for (const name of ['preinst', 'prerm']) { copyFileSync(join(templates, 'check-stopped.sh'), join(deb, 'DEBIAN', name)); chmodSync(join(deb, 'DEBIAN', name), 0o755); }
   run('dpkg-deb', ['--root-owner-group', '--build', deb, join(dist, names[0])]);
   const rpmRoot = join(stage, 'rpmbuild'); mkdirSync(rpmRoot);

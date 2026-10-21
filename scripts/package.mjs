@@ -29,6 +29,7 @@ if (process.platform === 'win32') {
   execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', join(root, 'scripts', 'Compress-Release.ps1'), '-Source', stage, '-Destination', archive], { windowsHide: true, stdio: 'inherit' });
 }
 else {
+  if (process.platform === 'darwin') execFileSync('xcrun', ['swiftc', '-swift-version', '5', '-O', '-framework', 'AppKit', '-o', join(stage, 'scripts', 'MacTray'), join(stage, 'scripts', 'MacTray.swift')], { stdio: 'inherit' });
   for (const name of ['runtime/node', 'Start.command', 'Stop.command']) chmodSync(join(stage, name), 0o755);
   execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });
 }

@@ -20,7 +20,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { sameSecret, sessionProof, writeSession } from './lib/infrastructure/local-session.mjs';
-import { startWindowsTray } from './lib/infrastructure/windows-tray.mjs';
+import { startTray } from './lib/infrastructure/tray.mjs';
 import { openTokenVault } from './lib/token-vault.mjs';
 import { createBackups } from './lib/backups.mjs';
 import { projectSettings, settingsForProject } from './lib/project-settings.mjs';
@@ -423,7 +423,7 @@ if (import.meta.main) {
   const app = createApp({ connectorModules, connectorErrors, shutdownForUpdate: shutdown, shutdown });
   app.server.listen(Number(process.env.PORT || 4317), '127.0.0.1', () => {
     writeSession(dataDirectory(root), app.authToken);
-    stopTray = startWindowsTray(root, app.server.address().port);
+    stopTray = startTray(root, app.server.address().port);
     console.log(`Atelier Kanban : http://127.0.0.1:${app.server.address().port} · ouvre le lanceur pour te connecter.`);
   });
   app.server.on('error', error => { console.error(error.message); process.exitCode = 1; });

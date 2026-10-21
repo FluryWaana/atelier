@@ -82,6 +82,9 @@ jobs:
           RELEASE_TARGET: ${{ matrix.name }}
       - run: npm ci
       - run: npm run build:css
+      - name: Install Linux tray test dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1 xvfb xauth dbus-x11
       - run: npm test
       - run: ./test/UpdateArchive.Tests.ps1
         if: runner.os == 'Windows'
