@@ -22,7 +22,7 @@ test('macOS menu bar helper compiles and exits when its server disconnects', { s
   mkdirSync(join(root, 'scripts')); mkdirSync(join(root, 'public'));
   copyFileSync(new URL('../public/atelier-kanban.png', import.meta.url), join(root, 'public', 'atelier-kanban.png'));
   const binary = join(root, 'scripts', 'MacTray');
-  execFileSync('xcrun', ['swiftc', '-swift-version', '5', '-framework', 'AppKit', '-o', binary, fileURLToPath(new URL('../scripts/MacTray.swift', import.meta.url))], { timeout: 45000 });
+  execFileSync('xcrun', ['swiftc', '-parse-as-library', '-swift-version', '5', '-framework', 'AppKit', '-o', binary, fileURLToPath(new URL('../scripts/MacTray.swift', import.meta.url))], { timeout: 45000 });
   child = spawn(binary, [], { stdio: ['pipe', 'ignore', 'pipe'] });
   let error = '';
   child.stderr.on('data', chunk => { error += chunk; });

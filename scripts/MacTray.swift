@@ -75,8 +75,12 @@ import AppKit
     }
 }
 
-let application = NSApplication.shared
-let delegate = AtelierTray()
-application.setActivationPolicy(.accessory)
-application.delegate = delegate
-application.run()
+@main struct TrayApplication {
+    @MainActor static func main() {
+        let application = NSApplication.shared
+        let delegate = AtelierTray()
+        application.setActivationPolicy(.accessory)
+        application.delegate = delegate
+        withExtendedLifetime(delegate) { application.run() }
+    }
+}
