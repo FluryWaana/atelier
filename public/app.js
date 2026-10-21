@@ -12,6 +12,7 @@ import { effortLevels } from './agent-options.mjs';
 import { usageText, usageTotals } from './agent-usage.mjs';
 import { blockers, nextAction, prLabel, cleanupCandidate, workReport } from './workflow.mjs';
 import { initUpdates } from './updates.mjs';
+import { localFetch, eventsUrl } from './local-session.mjs';
 initializeLanguage(document);
 const $ = s => document.querySelector(s);
 let state = { projects: [], cards: [], runs: [], settings: {} }, selected = null, selectedRun = null, cursor = 0, logRun = null, refreshing = false, wasRunning = false;
@@ -46,7 +47,7 @@ function taskAgentFields(form, options = {}) {
   form.elements.agent.onchange = () => taskAgentFields(form);
 }
 async function api(path, method = 'GET', body) {
-  const response = await fetch(path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  const response = await localFetch(path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const data = await response.json(); if (response.status === 404 && data.error === 'Route introuvable.') throw new Error(msg("Fonction indisponible : redémarrez Atelier avec son lanceur, puis rechargez la page.")); if (!response.ok) throw new Error(messageText(data.error) || msg("Erreur du serveur.")); return data;
 }
 let toastTimer;
@@ -379,7 +380,7 @@ async function syncLive() {
   } catch { $('#live-connection').textContent = msg("Actualisation interrompue · nouvelle tentative…"); setTimeout(syncLive, 1000); }
   finally { refreshing = false; }
 }
-const events = new EventSource('/api/events');
+const events = new EventSource(eventsUrl());
 events.onmessage = () => { $('#live-connection').textContent = msg("● En direct"); $('#live-connection').className = 'connected'; syncLive(); };
 events.onerror = () => { $('#live-connection').textContent = msg("Direct interrompu · reconnexion…"); $('#live-connection').className = ''; };
 setInterval(updateClocks, 1000);

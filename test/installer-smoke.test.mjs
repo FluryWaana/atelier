@@ -9,6 +9,7 @@ import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { installerNames } from '../lib/domain/releases.mjs';
 import { dataDirectory } from '../lib/infrastructure/installation.mjs';
+import { readSession } from '../lib/infrastructure/local-session.mjs';
 import { verifyChecksum } from '../lib/infrastructure/package-updater.mjs';
 
 const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
@@ -22,7 +23,7 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
   const env = { ...process.env, LOCALAPPDATA: join(root, 'user'), XDG_DATA_HOME: join(root, 'user') };
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve));
   env.PORT = String(socket.address().port); await new Promise(resolve => socket.close(resolve));
-  const request = path => fetch(`http://127.0.0.1:${env.PORT}${path}`, { headers: { Connection: 'close' } });
+  const request = path => fetch(`http://127.0.0.1:${env.PORT}${path}`, { headers: { Connection: 'close', Authorization: 'Bearer ' + readSession(dataDirectory(app, { env })) } });
   const app = process.platform === 'win32' ? join(root, 'app') : join(root, 'opt', 'atelier-kanban');
   const node = join(app, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node');
   const run = (command, args, options = {}) => execFileSync(command, args, { env, windowsHide: true, timeout: 90000, ...options });
@@ -54,7 +55,7 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
   launch();
   const health = await (await request('/api/health')).json(); pid = health.pid;
   assert.equal(health.version, version);
-  const response = await fetch(`http://127.0.0.1:${env.PORT}/api/cards`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Connection: 'close' }, body: JSON.stringify({ title: 'Carte conservée après réinstallation', status: 'todo' }) });
+  const response = await fetch(`http://127.0.0.1:${env.PORT}/api/cards`, { method: 'POST', headers: { Authorization: 'Bearer ' + readSession(dataDirectory(app, { env })), 'Content-Type': 'application/json', 'X-Local-Request': '1', Connection: 'close' }, body: JSON.stringify({ title: 'Carte conservée après réinstallation', status: 'todo' }) });
   assert.equal(response.ok, true, await response.text());
   const data = dataDirectory(app, { env });
   assert.equal(existsSync(join(data, 'kanban.sqlite')), true);

@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { packageName, releaseVersion, installerNames } from '../lib/domain/releases.mjs';
 import { verifyChecksum } from '../lib/infrastructure/package-updater.mjs';
+import { verifyReleaseSignature } from '../lib/infrastructure/release-signature.mjs';
 
 export function checkRelease(root, { tag, target, nodeVersion = process.versions.node } = {}) {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -17,16 +18,21 @@ export function checkRelease(root, { tag, target, nodeVersion = process.versions
   return pkg.version;
 }
 
-export function checkReleaseArtifacts(directory, version) {
-  const archives = [['win32', 'x64'], ['linux', 'x64'], ['linux', 'arm64'], ['darwin', 'x64'], ['darwin', 'arm64']]
+export function releaseArtifacts(version) {
+  return [['win32', 'x64'], ['linux', 'x64'], ['linux', 'arm64'], ['darwin', 'x64'], ['darwin', 'arm64']]
     .flatMap(([platform, arch]) => [packageName(version, platform, arch), ...installerNames(version, platform, arch)]);
-  const expected = archives.flatMap(name => [name, name + '.sha256']).sort();
-  assert.deepEqual(readdirSync(directory).sort(), expected, 'Les cinq archives portables, cinq installateurs et leurs empreintes sont requis, sans fichier supplémentaire.');
+}
+
+export function checkReleaseArtifacts(directory, version, repository = process.env.GITHUB_REPOSITORY, publicKey) {
+  const archives = releaseArtifacts(version);
+  const expected = archives.flatMap(name => [name, name + '.sha256', name + '.sha256.sig']).sort();
+  assert.deepEqual(readdirSync(directory).sort(), expected, 'Les cinq archives portables, cinq installateurs, empreintes et signatures sont requis, sans fichier supplémentaire.');
   for (const name of expected) assert.ok(lstatSync(join(directory, name)).isFile(), 'Fichier de release invalide : ' + name);
   for (const name of archives) {
     const bytes = readFileSync(join(directory, name));
     assert.ok(bytes.length > 0, 'Paquet vide : ' + name);
     verifyChecksum(bytes, readFileSync(join(directory, name + '.sha256'), 'utf8'), name);
+    verifyReleaseSignature(readFileSync(join(directory, name + '.sha256'), 'utf8'), readFileSync(join(directory, name + '.sha256.sig'), 'utf8'), name, repository, version, publicKey);
   }
 }
 
@@ -37,5 +43,5 @@ if (import.meta.main) {
     target: process.env.RELEASE_TARGET,
   });
   if (process.argv[2]) checkReleaseArtifacts(resolve(process.argv[2]), version);
-  console.log(`Release ${version} vérifiée${process.argv[2] ? ' : archives, installateurs et SHA256 valides' : ''}.`);
+  console.log(`Release ${version} vérifiée${process.argv[2] ? ' : archives, installateurs, SHA256 et signatures valides' : ''}.`);
 }

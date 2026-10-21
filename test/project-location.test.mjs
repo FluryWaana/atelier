@@ -9,7 +9,7 @@ import { createApp } from '../server.mjs';
 function request(app, body) {
   return new Promise(resolve => {
     const req = Readable.from([JSON.stringify(body)]);
-    Object.assign(req, { method: 'PATCH', url: '/api/projects/project', headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1' } });
+    Object.assign(req, { method: 'PATCH', url: '/api/projects/project', headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1', authorization: 'Bearer ' + app.authToken } });
     const res = { status: 200, setHeader() {}, writeHead(status) { this.status = status; }, end(value) { resolve({ status: this.status, body: JSON.parse(value) }); } };
     app.server.emit('request', req, res);
   });

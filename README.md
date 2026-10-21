@@ -67,7 +67,7 @@ Download the archive for your system from [GitHub Releases](https://github.com/F
 | macOS | Intel | `atelier-kanban-X.Y.Z-macos-x64.tar.gz` |
 | macOS | Apple Silicon | `atelier-kanban-X.Y.Z-macos-arm64.tar.gz` |
 
-`X.Y.Z` is the release version. Each archive has a companion `.sha256` checksum file.
+`X.Y.Z` is the release version. Each archive has companion `.sha256` and `.sha256.sig` files. In-app updates verify the Ed25519 signature with the installed public key before downloading the archive.
 
 **Windows:** double-click `Start.cmd` to start and `Stop.cmd` to stop.
 
@@ -79,7 +79,7 @@ sh Start.command
 sh Stop.command
 ```
 
-The launcher opens **http://127.0.0.1:4317** in your browser.
+The launcher opens **http://127.0.0.1:4317** in your browser with a private session. Use the launcher again after a restart or update; opening a plain bookmark does not authenticate the tab.
 
 **Upgrading from a version with French launcher filenames:** its updater cannot accept the renamed files. Stop the old application, back up its data, then install this version manually. For a portable copy, extract it into a new folder and transfer the data before the first launch. Update any personal shortcuts.
 
@@ -89,7 +89,7 @@ On Linux, saving tokens requires `secret-tool` and an unlocked Secret Service ke
 
 ### Run from source
 
-Use **Node.js 24 or newer**; the exact development and CI version is pinned in [`.node-version`](.node-version).
+Use the security-patched Node.js version pinned in [`.node-version`](.node-version).
 
 ```sh
 git clone https://github.com/FluryWaana/atelier.git
@@ -102,7 +102,7 @@ There are no runtime npm dependencies. The launcher starts the server in the bac
 ```sh
 node launcher.mjs --stop       # Stop the application
 node launcher.mjs --no-browser # Start without opening a browser tab
-npm start                      # Run the server in the foreground instead
+npm start                      # Foreground server; open the launcher to connect the browser
 ```
 
 The server listens on `127.0.0.1` only. Set the `PORT` environment variable before starting it to change the default port, `4317`. Launcher logs are written to `data/server.stdout.log` and `data/server.stderr.log`.
@@ -159,7 +159,7 @@ See the [repository connection guide](docs/repository-connectors.md) for authent
 ## Data and privacy
 
 - **Local storage:** cards, projects, settings, and history are stored in `kanban.sqlite` in the data directory described above, or `data/` beside a portable copy. Use the application's backup tools, or stop Atelier before copying the complete data directory.
-- **Credentials:** saved tokens use encrypted storage backed by Windows DPAPI or the Linux/macOS system keyring. Moving a backup to another machine may require entering credentials again.
+- **Credentials:** saved tokens use encrypted storage backed by Windows DPAPI or the Linux/macOS system keyring. Restoring a backup clears saved tokens and disables environment-token fallback; enter credentials again for the restored service addresses.
 - **External services:** coding agents and configured integrations communicate with their providers. A local board does not make those services offline.
 - **Logs:** agent output can contain source code and repository information. Keep databases, backups, credentials, and logs out of version control and public issue reports.
 - **Extensions:** local connectors run with Atelier's system permissions. Install only code you trust.

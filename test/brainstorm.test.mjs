@@ -11,7 +11,7 @@ const ticket = { title: 'Exporter', description: 'Exporter les tâches', criteri
 function request(app, path, body = {}, method = 'POST') {
   return new Promise(resolve => {
     const req = Readable.from(method === 'GET' ? [] : [JSON.stringify(body)]);
-    Object.assign(req, { method, url: path, headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1' } });
+    Object.assign(req, { method, url: path, headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1', authorization: 'Bearer ' + app.authToken } });
     const res = { status: 200, setHeader() {}, writeHead(status) { this.status = status; }, end(value) { resolve({ status: this.status, body: JSON.parse(value) }); } };
     app.server.emit('request', req, res);
   });

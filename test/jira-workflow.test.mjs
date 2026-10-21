@@ -27,7 +27,7 @@ test('Jira sync sorts by configured status IDs and names without starting agents
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const sync = async () => {
       const response = await fetch(`http://127.0.0.1:${app.server.address().port}/api/jira/sync`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: '{}',
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: '{}',
       });
       assert.equal(response.status, 200);
     };
@@ -72,7 +72,7 @@ for (const [column, target, name] of [['done', '10002', 'Done'], ['standby', '10
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const request = async (action, method, body) => {
       const response = await fetch(`http://127.0.0.1:${app.server.address().port}/api/cards/ticket${action}`, {
-        method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body),
+        method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body),
       });
       assert.equal(response.status, 200);
       return response.json();

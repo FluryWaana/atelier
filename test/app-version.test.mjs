@@ -12,7 +12,7 @@ test('health returns the package version', async t => {
   t.after(async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); });
   t.mock.method(app.server, 'address', () => ({ port: 4317 }));
   const req = Readable.from([]);
-  Object.assign(req, { method: 'GET', url: '/api/health', headers: { host: '127.0.0.1:4317' } });
+  Object.assign(req, { method: 'GET', url: '/api/health', headers: { host: '127.0.0.1:4317', authorization: 'Bearer ' + app.authToken } });
   const result = await new Promise(resolve => {
     app.server.emit('request', req, { setHeader() {}, writeHead(status) { assert.equal(status, 200); }, end(value) { resolve(JSON.parse(value)); } });
   });

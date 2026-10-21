@@ -1,4 +1,5 @@
 import { messageText, msg } from './i18n.mjs';
+import { localFetch } from './local-session.mjs';
 export function initUpdates({ api, confirm }) {
   const banner = document.querySelector('#update-banner'), message = document.querySelector('#update-message');
   const checkButton = document.querySelector('#check-updates'), installButton = document.querySelector('#install-update'), notes = document.querySelector('#update-notes');
@@ -44,7 +45,8 @@ export function initUpdates({ api, confirm }) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         let state;
         try {
-          const response = await fetch('/api/updates', { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+          const response = await localFetch('/api/updates', { cache: 'no-store', signal: AbortSignal.timeout(2000) });
+          if (response.status === 401) { message.textContent = msg('Session expirée ou absente. Rouvre Atelier avec son lanceur.'); return; }
           if (!response.ok) continue;
           state = await response.json();
         } catch { continue; }

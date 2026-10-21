@@ -16,7 +16,8 @@ import { createServer } from 'node:http';
 import { readFileSync, readdirSync, mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
+import { sameSecret, sessionProof, writeSession } from './lib/infrastructure/local-session.mjs';
 import { openTokenVault } from './lib/token-vault.mjs';
 import { createBackups } from './lib/backups.mjs';
 import { projectSettings, settingsForProject } from './lib/project-settings.mjs';
@@ -64,7 +65,8 @@ function repository(value) {
   return repo;
 }
 
-export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate } = {}) {
+export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {
+  const authToken = randomBytes(32).toString('hex');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const store = openStore(join(dataDir, 'kanban.sqlite'));
   const backups = createBackups(store, dataDir);
@@ -89,7 +91,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   try { savedTokens = tokenVault.load(); }
   catch { console.warn('Jetons enregistrés illisibles avec ce compte système. Renseigne-les à nouveau dans les paramètres.'); }
   const settingsService = createSettings({ store: createSettingsRepository(store), vault: tokenVault, repository, jiraBase, platform: process.platform,
-    initialTokens: { ...savedTokens, jira: process.env.JIRA_TOKEN || savedTokens.jira || '', azure: process.env.AZURE_DEVOPS_PAT || savedTokens.azure || '', tempo: process.env.TEMPO_TOKEN || savedTokens.tempo || '' },
+    initialTokens: { ...savedTokens, ...(!store.settings().credentialsReset ? { jira: process.env.JIRA_TOKEN || savedTokens.jira || '', azure: process.env.AZURE_DEVOPS_PAT || savedTokens.azure || '', tempo: process.env.TEMPO_TOKEN || savedTokens.tempo || '' } : {}) },
   });
   let closing = false;
   let requestsInFlight = 0;
@@ -279,6 +281,12 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       const result = backups.restore(body.name); queue.pause(true); settingsService.clearTokens(); return result;
     }
     if (path === '/api/health' && req.method === 'GET') return { app: 'atelier-kanban', version, workspace: root, pid: process.pid };
+    if (path === '/api/shutdown' && req.method === 'POST') {
+      if (!shutdown) fail('Arrêt indisponible.', 409);
+      if (active.size || automation.size() || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || requestsInFlight > 1 || queue.state().current || store.times().some(entry => entry.runningSince || entry.exportState === 'sending')) fail('Arrête les agents et chronomètres et attends la fin des opérations.', 409);
+      closing = true;
+      return { ok: true };
+    }
     if (path === '/api/time' || path.startsWith('/api/time/')) return tracking.route(req, path, body);
     if (path === '/api/diagnostics' && req.method === 'POST') {
       const local = await checkConnections({ only: ['Git', 'Codex', 'Claude Code'], repo: body.repo ? repository(body.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe });
@@ -323,6 +331,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   }
   const assets = { "/connector-availability.mjs": ["connector-availability.mjs", "text/javascript"], '/views/settings.mjs': ['views/settings.mjs', 'text/javascript'], '/views/project-settings.mjs': ['views/project-settings.mjs', 'text/javascript'], '/views/processes.mjs': ['views/processes.mjs', 'text/javascript'], '/view-helpers.mjs': ['view-helpers.mjs', 'text/javascript'], '/views/board.mjs': ['views/board.mjs', 'text/javascript'], '/views/projects.mjs': ['views/projects.mjs', 'text/javascript'], '/lib/domain/agent-options.mjs': ['../lib/domain/agent-options.mjs', 'text/javascript'], '/lib/domain/tasks.mjs': ['../lib/domain/tasks.mjs', 'text/javascript'], '/lib/domain/paths.mjs': ['../lib/domain/paths.mjs', 'text/javascript'], '/lib/domain/validation.mjs': ['../lib/domain/validation.mjs', 'text/javascript'], '/updates.mjs': ['updates.mjs', 'text/javascript'], '/workflow.mjs': ['workflow.mjs', 'text/javascript'], '/agent-usage.mjs': ['agent-usage.mjs', 'text/javascript'], '/agent-options.mjs': ['agent-options.mjs', 'text/javascript'], '/ui-helpers.mjs': ['ui-helpers.mjs', 'text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
   assets['/i18n.mjs'] = ['i18n.mjs', 'text/javascript'];
+  assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];
   for (const name of readdirSync(join(root, 'public', 'locales'))) {
     if (/^[a-zA-Z0-9-]+\.mjs$/.test(name)) assets['/locales/' + name] = ['locales/' + name, 'text/javascript'];
   }
@@ -337,7 +346,15 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       const port = server.address()?.port;
       if (![ `127.0.0.1:${port}`, `localhost:${port}` ].includes(host)) fail('Hôte interdit.', 403);
       if (req.headers.origin && req.headers.origin !== `http://${host}`) fail('Origine interdite.', 403);
-      const path = decodeURIComponent(new URL(req.url, `http://${host}`).pathname);
+      const url = new URL(req.url, `http://${host}`);
+      const path = decodeURIComponent(url.pathname);
+      if (path === '/api/health' && req.method === 'GET' && /^[a-f0-9]{64}$/.test(url.searchParams.get('challenge') || '')) {
+        send(200, { proof: sessionProof(authToken, url.searchParams.get('challenge'), port) }); return;
+      }
+      if (path.startsWith('/api/')) {
+        const credential = req.headers.authorization?.replace(/^Bearer /, '') || (path === '/api/events' ? url.searchParams.get('session') : '');
+        if (!sameSecret(credential, authToken)) fail('Session expirée ou absente. Rouvre Atelier avec son lanceur.', 401);
+      }
       const updatePath = path === '/api/updates' || path.startsWith('/api/updates/');
       if (path.startsWith('/api/') && path !== '/api/health' && !updatePath && (updates.busy() || updateLock(root))) fail('Mise à jour en cours. Attends le redémarrage.', 409);
       if (path === '/api/events' && req.method === 'GET') {
@@ -362,6 +379,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
         body = JSON.parse(raw || '{}'); if (!body || typeof body !== 'object' || Array.isArray(body)) fail('Objet JSON requis.');
       }
       const result = await route(req, path, body);
+      if (path === '/api/shutdown' && req.method === 'POST') res.once('finish', () => { shutdown().catch(error => console.error('Arrêt :', error)); });
       if (path === '/api/updates/install' && req.method === 'POST' && shutdownForUpdate) res.once('finish', () => { shutdownForUpdate().catch(error => console.error('Arrêt pour mise à jour :', error)); });
       send(200, result);
       if (req.method !== 'GET') changed();
@@ -383,7 +401,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     while (active.size && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
     if (!active.size) store.db.close();
   }
-  return { server, store, close };
+  return { server, store, close, authToken };
 }
 
 if (import.meta.main) {
@@ -391,8 +409,12 @@ if (import.meta.main) {
   if (lock && lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');
   const connectorErrors = [];
   const connectorModules = await loadConnectors(join(root, 'connectors'), error => connectorErrors.push(error));
-  const app = createApp({ connectorModules, connectorErrors, shutdownForUpdate: async () => { await app.close(); process.exit(0); } });
-  app.server.listen(Number(process.env.PORT || 4317), '127.0.0.1', () => console.log(`Atelier Kanban : http://127.0.0.1:${app.server.address().port}`));
+  const shutdown = async () => { await app.close(); process.exit(0); };
+  const app = createApp({ connectorModules, connectorErrors, shutdownForUpdate: shutdown, shutdown });
+  app.server.listen(Number(process.env.PORT || 4317), '127.0.0.1', () => {
+    writeSession(dataDirectory(root), app.authToken);
+    console.log(`Atelier Kanban : http://127.0.0.1:${app.server.address().port} · ouvre le lanceur pour te connecter.`);
+  });
   app.server.on('error', error => { console.error(error.message); process.exitCode = 1; });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, async () => { await app.close(); process.exit(); });
 }

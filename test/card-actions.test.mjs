@@ -12,7 +12,7 @@ test('archive and deletion stay local for Jira cards in every column', async () 
   try {
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = 'http://127.0.0.1:' + app.server.address().port;
-    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
+    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
     for (const status of ['todo', 'doing', 'review', 'done', 'standby']) {
       const card = { id: status, title: 'Carte Jira', status, agent: 'codex', ticket: { key: 'TEST-1', base: 'https://jira.example' } };
       app.store.putCard(card);

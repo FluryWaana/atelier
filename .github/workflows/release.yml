@@ -11,6 +11,42 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  security:
+    name: Security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - name: Audit production and development dependencies
+        run: npm audit --package-lock-only --ignore-scripts --audit-level=moderate
+      - uses: github/codeql-action/init@793b778da9c9275a0f276522b27cb5fc14bba279 # v4
+        with:
+          languages: javascript-typescript,actions
+          queries: security-extended
+      - uses: github/codeql-action/analyze@793b778da9c9275a0f276522b27cb5fc14bba279 # v4
+        id: codeql
+        with:
+          output: ${{ runner.temp }}/codeql-results
+          # Code scanning accepts branch and PR refs; tag releases use the same local gate.
+          upload: ${{ github.ref_type == 'tag' && 'never' || 'always' }}
+      - name: Block publication on CodeQL findings
+        env:
+          CODEQL_RESULTS: ${{ steps.codeql.outputs.sarif-output }}
+        run: node scripts/check-codeql.mjs "$CODEQL_RESULTS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() && steps.codeql.outcome != 'skipped' }}
+        with:
+          name: security-codeql
+          path: ${{ runner.temp }}/codeql-results/*.sarif
+          if-no-files-found: error
   package:
     strategy:
       fail-fast: false
@@ -29,8 +65,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .node-version
           cache: npm
@@ -68,7 +106,7 @@ jobs:
           # Package hooks inspect processes belonging to other users through /proc.
           docker run --rm --cap-add=SYS_PTRACE -v "$PWD:/workspace:ro" ubuntu:24.04 sh /workspace/test/linux-installation.sh deb
           docker run --rm --cap-add=SYS_PTRACE -v "$PWD:/workspace:ro" fedora:43 sh /workspace/test/linux-installation.sh rpm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.name }}-release
           path: |
@@ -81,21 +119,27 @@ jobs:
           if-no-files-found: error
   publish:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: package
+    needs: [security, package]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .node-version
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: '*-release'
           merge-multiple: true
           path: dist
+      - name: Sign release assets
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: node scripts/sign-release.mjs dist
       - name: Verify all release assets
         run: npm run check:release -- dist
       - name: Publish stable release

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createServer } from 'node:net';
+import { createServer as createHttpServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -13,6 +15,7 @@ import { extractTarPackage } from '../lib/infrastructure/tar-package.mjs';
 import { packageName } from '../lib/domain/releases.mjs';
 import { dataVersion } from '../lib/domain/release-package.mjs';
 import { dataDirectory } from '../lib/infrastructure/installation.mjs';
+import { readSession } from '../lib/infrastructure/local-session.mjs';
 import { verifyChecksum } from '../lib/infrastructure/windows-updater.mjs';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -60,6 +63,8 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   copyFileSync(join(rootApp, 'lib', 'domain', 'release-package.mjs'), join(stage, 'lib', 'domain', 'release-package.mjs'));
   mkdirSync(join(stage, 'lib', 'infrastructure'));
   copyFileSync(join(rootApp, 'lib', 'infrastructure', 'installation.mjs'), join(stage, 'lib', 'infrastructure', 'installation.mjs'));
+  copyFileSync(join(rootApp, 'lib', 'infrastructure', 'local-session.mjs'), join(stage, 'lib', 'infrastructure', 'local-session.mjs'));
+  copyFileSync(join(rootApp, 'lib', 'token-vault.mjs'), join(stage, 'lib', 'token-vault.mjs'));
   const version = pkg.version.split('.').map((value, i) => Number(value) + (i === 2 ? 1 : 0)).join('.');
   writeFileSync(join(stage, 'payload', 'package.json'), JSON.stringify({ ...pkg, version }));
   if (failStartup) writeFileSync(join(stage, 'payload', 'server.mjs'), 'throw new Error("simulated startup failure");');
@@ -76,12 +81,34 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   let output = ''; worker.stderr.on('data', chunk => { output += chunk; });
   const code = await new Promise((resolve, reject) => { worker.on('error', reject); worker.on('exit', resolve); });
   assert.equal(code, 0, output);
-  const health = await (await fetch(`http://127.0.0.1:${port}/api/health`)).json(); serverPid = health.pid;
+  const headers = { Authorization: 'Bearer ' + readSession(data) };
+  const health = await (await fetch(`http://127.0.0.1:${port}/api/health`, { headers })).json(); serverPid = health.pid;
   assert.equal(health.version, failStartup ? pkg.version : version);
-  const state = await (await fetch(`http://127.0.0.1:${port}/api/state`)).json();
+  const state = await (await fetch(`http://127.0.0.1:${port}/api/state`, { headers })).json();
   assert.equal(state.cards[0].title, 'Une carte à conserver');
   const receipt = JSON.parse(readFileSync(join(data, 'update-result.json'), 'utf8'));
   assert.equal(receipt.success, !failStartup);
   if (installed) assert.equal(existsSync(join(rootApp, 'data')), false);
   assert.equal(existsSync(join(rootApp, '.update-lock.json')), false);
+  const launcherOptions = { env: { ...env, PORT: String(port) }, windowsHide: true, timeout: 15000 };
+  const runtime = join(rootApp, 'runtime', binary), launcher = join(rootApp, 'launcher.mjs');
+  await promisify(execFile)(runtime, [launcher, '--no-browser'], launcherOptions);
+  await promisify(execFile)(runtime, [launcher, '--stop'], launcherOptions);
+  await assert.rejects(fetch(`http://127.0.0.1:${port}/api/health`));
+  serverPid = null;
+  if (!installed && !failStartup) {
+    const victim = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { windowsHide: true, stdio: 'ignore' });
+    t.after(() => victim.kill());
+    const requests = [];
+    const impostor = createHttpServer((req, res) => {
+      requests.push(req.headers.authorization);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ...health, pid: victim.pid }));
+    });
+    await new Promise(resolve => impostor.listen(port, '127.0.0.1', resolve));
+    t.after(() => new Promise(resolve => impostor.close(resolve)));
+    await assert.rejects(promisify(execFile)(runtime, [launcher, '--stop'], launcherOptions), /Identité du serveur/);
+    assert.equal(victim.exitCode, null);
+    assert.deepEqual(requests, [undefined]);
+  }
 });

@@ -36,9 +36,11 @@ test('portable import snapshots committed SQLite WAL, preserves source and refus
   try {
     store.putCard({ id: 'preserved', title: 'À conserver', status: 'todo' });
     writeFileSync(join(source, 'attachment.txt'), 'document');
+    for (const name of ['local-session', 'local-browser.html']) writeFileSync(join(source, name), 'expired session');
     importPortableData(source, destination);
     assert.equal(store.card('preserved').title, 'À conserver');
     assert.equal(readFileSync(join(destination, 'attachment.txt'), 'utf8'), 'document');
+    for (const name of ['local-session', 'local-browser.html']) assert.equal(existsSync(join(destination, name)), false);
     const db = new DatabaseSync(join(destination, 'kanban.sqlite'), { readOnly: true });
     try { assert.match(db.prepare('SELECT data FROM cards WHERE id = ?').get('preserved').data, /À conserver/); }
     finally { db.close(); }

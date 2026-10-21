@@ -3,6 +3,7 @@ export default {
   "Voir les tâches proposées ({0})": "View proposed tasks ({0})",
   "Propose un découpage en tâches.": "Suggest a task breakdown.",
   "Tâche ajoutée au tableau.": "Task added to the board.",
+  "Session expirée ou absente. Rouvre Atelier avec son lanceur.": "Session expired or missing. Reopen Atelier using its launcher.",
   "Vos discussions": "Your conversations",
   "+ Nouvelle discussion": "+ New conversation",
   "UNE IDÉE SUFFIT POUR COMMENCER": "START WITH AN IDEA",

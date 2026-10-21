@@ -13,7 +13,7 @@ async function fixture(run, connectorModules = [demo], options = {}) {
   await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
   const origin = 'http://127.0.0.1:' + app.server.address().port;
   async function request(path, method = 'GET', body) {
-    const response = await fetch(origin + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    const response = await fetch(origin + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const result = await response.json();
     assert.equal(response.status, 200, JSON.stringify(result));
     return result;
@@ -23,11 +23,11 @@ async function fixture(run, connectorModules = [demo], options = {}) {
 }
 
 test('application runs without builtins and rejects unavailable ticket operations', async () => {
-  await fixture(async ({ request, origin }) => {
+  await fixture(async ({ app, request, origin }) => {
     const catalog = await request('/api/connectors');
     assert.deepEqual(catalog.modules, []);
     assert.equal(catalog.providers.tickets, '');
-    const response = await fetch(origin + '/api/tickets/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: '{}' });
+    const response = await fetch(origin + '/api/tickets/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: '{}' });
     assert.equal(response.ok, false);
   }, [], { builtinModules: [] });
 });
@@ -175,12 +175,12 @@ test('project repository override wins, empty inherits, and published PRs remain
     await request(`/api/cards/${card.id}/pr-preview`);
     assert.equal(calls.pop(), 'general');
     for (const repositoryConnector of ['missing', 'jira', {}, 'invalid/id']) {
-      const response = await fetch(origin + '/api/projects/project', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify({ repositoryConnector }) });
+      const response = await fetch(origin + '/api/projects/project', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify({ repositoryConnector }) });
       assert.equal(response.ok, false);
       assert.equal(app.store.projects()[0].repositoryConnector, '');
     }
     app.store.putProject({ ...app.store.projects()[0], repositoryConnector: 'removed' });
-    const unavailable = await fetch(origin + `/api/cards/${card.id}/pr-preview`);
+    const unavailable = await fetch(origin + `/api/cards/${card.id}/pr-preview`, { headers: { Authorization: 'Bearer ' + app.authToken } });
     assert.equal(unavailable.ok, false);
     assert.equal(calls.length, 0);
   }, [forge('general'), forge('specific')]);

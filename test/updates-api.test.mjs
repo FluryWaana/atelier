@@ -8,7 +8,7 @@ import { createApp } from '../server.mjs';
 
 async function request(app, path, method = 'GET', body = {}, headers = {}) {
   const req = Readable.from(method === 'GET' ? [] : [JSON.stringify(body)]);
-  Object.assign(req, { method, url: path, headers: { host: '127.0.0.1:4317', ...(method !== 'GET' ? { 'content-type': 'application/json', 'x-local-request': '1' } : {}), ...headers } });
+  Object.assign(req, { method, url: path, headers: { host: '127.0.0.1:4317', authorization: 'Bearer ' + app.authToken, ...(method !== 'GET' ? { 'content-type': 'application/json', 'x-local-request': '1' } : {}), ...headers } });
   return new Promise(resolve => {
     let status;
     app.server.emit('request', req, { setHeader() {}, writeHead(value) { status = value; }, end(body) { resolve({ status, body: JSON.parse(body) }); } });

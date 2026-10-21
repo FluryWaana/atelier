@@ -17,7 +17,7 @@ test('stable versions compare numerically and never downgrade', () => {
 
 test('GitHub releases require both assets from the configured repository', async () => {
   const repository = 'owner/atelier', name = 'atelier-kanban-1.2.3-windows-x64.zip';
-  const release = { tag_name: 'v1.2.3', html_url: `https://github.com/${repository}/releases/tag/v1.2.3`, assets: [name, name + '.sha256'].map(name => ({ name, browser_download_url: `https://github.com/${repository}/releases/download/v1.2.3/${name}` })) };
+  const release = { tag_name: 'v1.2.3', html_url: `https://github.com/${repository}/releases/tag/v1.2.3`, assets: [name, name + '.sha256', name + '.sha256.sig'].map(name => ({ name, browser_download_url: `https://github.com/${repository}/releases/download/v1.2.3/${name}` })) };
   let status = 200;
   const service = createGithubReleases(repository, async (url, options) => {
     assert.equal(url, `https://api.github.com/repos/${repository}/releases/latest`);

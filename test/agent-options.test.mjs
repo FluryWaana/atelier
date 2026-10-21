@@ -64,9 +64,9 @@ test('API persists defaults and task overrides through launches, copies and agen
   try {
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${app.server.address().port}`;
-    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
+    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
     assert.equal((await fetch(url + '/agent-options.mjs')).status, 200);
-    const settings = (await (await fetch(url + '/api/state')).json()).settings;
+    const settings = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).settings;
     const defaults = { ...settings, codexModel: 'custom-codex', codexEffort: 'high', claudeModel: 'sonnet', claudeEffort: 'medium' };
     assert.equal((await request('/api/settings', 'PUT', defaults)).status, 200);
     assert.equal((await request('/api/settings', 'PUT', settings)).status, 200);
@@ -80,7 +80,7 @@ test('API persists defaults and task overrides through launches, copies and agen
     assert.equal(app.store.runs()[0].effort, 'high');
     assert.equal(app.store.runs()[0].usage.totalTokens, 1100);
     assert.equal(app.store.runs()[0].usage.costUsd, null);
-    assert.equal((await (await fetch(url + '/api/state')).json()).runs[0].usage.pricingModel, 'custom-codex');
+    assert.equal((await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).runs[0].usage.pricingModel, 'custom-codex');
     assert.equal((await request(path, 'PATCH', { model: 'task-model', effort: 'low', status: 'doing' })).status, 200);
     assert.equal(launches.at(-1).model, 'task-model');
     assert.equal(launches.at(-1).effort, 'low');

@@ -21,8 +21,8 @@ test('global agent is validated, saved and used for new cards', async t => {
   try {
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${app.server.address().port}`;
-    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
-    const settings = (await (await fetch(url + '/api/state')).json()).settings;
+    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
+    const settings = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).settings;
     assert.equal(settings.agent, 'codex');
     const original = await (await request('/api/cards', 'POST', { title: 'Avant' })).json();
     assert.equal((await request('/api/settings', 'PUT', { ...settings, agent: 'invalid' })).status, 400);
@@ -58,7 +58,7 @@ test('Jira sync updates untouched tickets without a repository and preserves man
     app.store.putRun({ id: 'run', cardId: id('started'), status: 'done' });
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${app.server.address().port}`;
-    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
+    const request = (path, method, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
     for (const agent of ['claude', 'codex']) assert.equal((await request('/api/cards/' + id('manual'), 'PATCH', { agent })).status, 200);
     assert.equal((await request('/api/cards/' + id('model'), 'PATCH', { model: 'custom-codex' })).status, 200);
     assert.equal((await request('/api/cards/' + id('effort'), 'PATCH', { effort: 'xhigh' })).status, 200);

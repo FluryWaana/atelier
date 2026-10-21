@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkRelease, checkReleaseArtifacts } from '../scripts/check-release.mjs';
+import { signRelease } from '../scripts/sign-release.mjs';
 
 function temporaryDirectory(t) {
   const directory = mkdtempSync(join(tmpdir(), 'atelier-pipeline-'));
@@ -50,6 +51,8 @@ test('release preflight rejects inconsistent versions, tags and runtimes', t => 
 
 test('publication requires all portable archives, installers and their valid checksums', t => {
   const root = temporaryDirectory(t);
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const check = version => checkReleaseArtifacts(root, version, 'owner/repo', publicKey);
   const archives = ['windows-x64.zip', 'linux-x64.tar.gz', 'linux-arm64.tar.gz', 'macos-x64.tar.gz', 'macos-arm64.tar.gz', 'windows-x64-setup.exe', 'linux-x64.deb', 'linux-x64.rpm', 'linux-arm64.deb', 'linux-arm64.rpm']
     .map(suffix => 'atelier-kanban-1.2.3-' + suffix);
   for (const name of archives) {
@@ -57,18 +60,20 @@ test('publication requires all portable archives, installers and their valid che
     writeFileSync(join(root, name), bytes);
     writeFileSync(join(root, name + '.sha256'), `${createHash('sha256').update(bytes).digest('hex')}  ${name}\n`);
   }
-  assert.doesNotThrow(() => checkReleaseArtifacts(root, '1.2.3'));
-  assert.throws(() => checkReleaseArtifacts(root, '1.2.4'), /installateurs/);
+  assert.throws(() => check('1.2.3'), /signatures/);
+  signRelease(root, '1.2.3', 'owner/repo', privateKey.export({ type: 'pkcs8', format: 'pem' }), publicKey.export({ type: 'spki', format: 'pem' }));
+  assert.doesNotThrow(() => check('1.2.3'));
+  assert.throws(() => check('1.2.4'), /installateurs/);
   const archive = join(root, archives[0]), checksum = archive + '.sha256';
   const originalChecksum = readFileSync(checksum);
   rmSync(checksum);
-  assert.throws(() => checkReleaseArtifacts(root, '1.2.3'), /installateurs/);
+  assert.throws(() => check('1.2.3'), /installateurs/);
   writeFileSync(checksum, originalChecksum);
   writeFileSync(join(root, 'unexpected.txt'), 'unexpected');
-  assert.throws(() => checkReleaseArtifacts(root, '1.2.3'), /supplémentaire/);
+  assert.throws(() => check('1.2.3'), /supplémentaire/);
   rmSync(join(root, 'unexpected.txt'));
   writeFileSync(archive, 'corrupted');
-  assert.throws(() => checkReleaseArtifacts(root, '1.2.3'), /Empreinte/);
+  assert.throws(() => check('1.2.3'), /Empreinte/);
   writeFileSync(archive, '');
-  assert.throws(() => checkReleaseArtifacts(root, '1.2.3'), /vide/);
+  assert.throws(() => check('1.2.3'), /vide/);
 });

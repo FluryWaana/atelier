@@ -12,7 +12,7 @@ test('creation uses the selected column without starting an agent', async () => 
   try {
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${app.server.address().port}/api/cards`;
-    const create = body => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
+    const create = body => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
     for (const status of [undefined, 'todo', 'doing', 'review']) {
       const response = await create({ title: 'Une tâche', status });
       assert.equal(response.status, 200);

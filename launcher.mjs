@@ -7,16 +7,16 @@ import { updateLock, processExists } from './scripts/update-worker.mjs';
 import { dataDirectory, installationMode } from './lib/infrastructure/installation.mjs';
 import { importPortableData } from './lib/infrastructure/portable-import.mjs';
 import { chooseFolder } from './lib/folders.mjs';
+import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const dataDir = dataDirectory(root);
 const port = Number(process.env.PORT || 4317);
 const url = `http://127.0.0.1:${port}`;
+let authToken;
 async function health() {
-  let response;
-  try { response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(1000) }); }
-  catch { return null; }
-  const value = await response.json();
+  const value = await authenticatedHealth(url, () => authToken = readSession(dataDir));
+  if (!value) return null;
   if (value.app !== 'atelier-kanban' || (process.platform === 'win32' ? resolve(value.workspace).toLowerCase() !== root.toLowerCase() : resolve(value.workspace) !== root)) {
     throw new Error('Ce port est utilisé par une autre application ou une autre copie Atelier.');
   }
@@ -40,17 +40,8 @@ try {
   }
   if (process.argv.includes('--stop')) {
     if (current) {
-      const response = await fetch(`${url}/api/state`, { signal: AbortSignal.timeout(3000) });
-      if (!response.ok) throw new Error('Impossible de vérifier les opérations en cours.');
-      const state = await response.json();
-      if (state.runs.some(r => r.status === 'running') || state.cards.some(c => c.publishing) || state.times.some(t => t.runningSince || t.exportState === 'sending')) {
-        throw new Error('Arrêtez les agents et chronomètres et attendez la fin des publications.');
-      }
-      for (const session of state.devServers || []) {
-        const stopped = await fetch(`${url}/api/cards/${encodeURIComponent(session.cardId)}/dev-servers`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: '{}' });
-        if (!stopped.ok) throw new Error('Impossible d’arrêter les serveurs Front / Back.');
-      }
-      process.kill(current.pid);
+      const response = await fetch(`${url}/api/shutdown`, { method: 'POST', headers: { Authorization: 'Bearer ' + authToken, 'Content-Type': 'application/json', 'X-Local-Request': '1', Connection: 'close' }, body: '{}', redirect: 'error', signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error((await response.json()).error || 'Arrêt refusé.');
       for (let i = 0; i < 30 && await health(); i++) await delay(200);
       if (await health()) throw new Error('Le serveur ne s’est pas arrêté.');
     }
@@ -70,8 +61,9 @@ try {
     }
     console.log(`Atelier Kanban : ${url}\nUtilisez ${process.platform === 'win32' ? 'Stop.cmd' : 'Stop.command'} pour fermer le serveur.`);
     if (!process.argv.includes('--no-browser')) {
-      const browser = spawn(process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { windowsHide: true, detached: true, stdio: 'ignore' });
-      browser.on('error', () => console.log(`Ouvrez ${url} dans votre navigateur.`));
+      const address = browserAddress(dataDir, url, authToken);
+      const browser = spawn(process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open', [address], { windowsHide: true, detached: true, stdio: 'ignore' });
+      browser.on('error', () => console.error('Impossible d’ouvrir le navigateur. Vérifie le navigateur par défaut puis relance Atelier.'));
       browser.unref();
     }
   }

@@ -4,6 +4,7 @@ import { dirname, join, resolve, basename } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { managedEntries } from '../lib/domain/release-package.mjs';
 import { dataDirectory } from '../lib/infrastructure/installation.mjs';
+import { authenticatedHealth, readSession } from '../lib/infrastructure/local-session.mjs';
 
 export function processExists(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -70,9 +71,8 @@ function startServer(root, port, token) {
 async function healthy(root, port, version, pid) {
   for (let i = 0; i < 60; i++) {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1000) });
-      const value = await response.json();
-      if (response.ok && value.app === 'atelier-kanban' && realpathSync(value.workspace) === realpathSync(root) && value.version === version && value.pid === pid) return;
+      const value = await authenticatedHealth(`http://127.0.0.1:${port}`, () => readSession(dataDirectory(root)));
+      if (value?.app === 'atelier-kanban' && realpathSync(value.workspace) === realpathSync(root) && value.version === version && value.pid === pid) return;
     } catch {}
     await delay(500);
   }

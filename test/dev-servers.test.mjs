@@ -145,7 +145,7 @@ test('API validates the worktree, saves commands and blocks removal until server
   try {
     await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${app.server.address().port}`;
-    const request = (path, method, body = {}) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, body: JSON.stringify(body) });
+    const request = (path, method, body = {}) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
     const project = await (await request('/api/projects', 'POST', { name: 'Test', repo: root })).json();
     const companionRepo = join(root, 'companion'); mkdirSync(companionRepo);
     const companion = await (await request('/api/projects', 'POST', { name: 'Companion', repo: companionRepo })).json();
@@ -164,7 +164,7 @@ test('API validates the worktree, saves commands and blocks removal until server
     assert.equal((await request(path + '/worktree', 'DELETE')).status, 409);
     assert.equal((await request('/api/projects/' + project.id, 'DELETE')).status, 409);
     assert.equal((await request('/api/projects/' + companion.id, 'DELETE')).status, 409);
-    const session = (await (await fetch(url + '/api/state')).json()).devServers[0];
+    const session = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).devServers[0];
     assert.equal(session.services[0].status, 'running');
     assert.equal(session.services.length, 2);
     assert.equal(session.services[0].repo, app.store.card(card.id).worktree.path);
@@ -172,25 +172,25 @@ test('API validates the worktree, saves commands and blocks removal until server
     const [frontService, backService] = session.services;
     for (const body of [{ serviceId: 42 }, { serviceId: '' }, { restart: true }, { serviceId: frontService.id, restart: 'yes' }, { serviceId: 'unknown', restart: true }]) assert.equal((await request(path + '/dev-servers', 'POST', body)).status, 400);
     assert.equal((await request(path + '/dev-servers', 'DELETE', { serviceId: frontService.id })).status, 200);
-    let current = (await (await fetch(url + '/api/state')).json()).devServers[0];
+    let current = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).devServers[0];
     assert.equal(current.services[0].status, 'stopped');
     assert.equal(current.services[1].pid, backService.pid);
     assert.equal(current.services[1].status, 'running');
     assert.equal((await request(path + '/dev-servers', 'POST', { serviceId: frontService.id })).status, 200);
-    current = (await (await fetch(url + '/api/state')).json()).devServers[0];
+    current = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).devServers[0];
     const restartedPid = current.services[0].pid;
     assert.notEqual(restartedPid, frontService.pid);
     assert.equal((await request(path + '/dev-servers', 'POST', { serviceId: frontService.id, restart: true })).status, 200);
-    current = (await (await fetch(url + '/api/state')).json()).devServers[0];
+    current = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).devServers[0];
     assert.notEqual(current.services[0].pid, restartedPid);
     assert.equal(current.services[1].pid, backService.pid);
-    const inspected = await fetch(url + '/api/dev-servers');
+    const inspected = await fetch(url + '/api/dev-servers', { headers: { Authorization: 'Bearer ' + app.authToken } });
     assert.equal(inspected.status, 200);
     assert.equal((await inspected.json())[0].services.length, 2);
     assert.equal((await request(path + '/dev-servers', 'DELETE')).status, 200);
     assert.equal((await request(path + '/dev-servers', 'POST', { standalone: 'yes' })).status, 400);
     assert.equal((await request(path + '/dev-servers', 'POST', { standalone: true })).status, 200);
-    const standalone = (await (await fetch(url + '/api/state')).json()).devServers.find(session => session.cardId === card.id);
+    const standalone = (await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json()).devServers.find(session => session.cardId === card.id);
     assert.deepEqual(standalone.projectIds, [project.id]);
     assert.equal(standalone.services.length, 1);
     assert.equal(standalone.services[0].repo, app.store.card(card.id).worktree.path);
