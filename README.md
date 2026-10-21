@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/atelier-kanban.png" alt="Atelier Kanban logo" width="160" height="160">
+</p>
+
 # Atelier Kanban
 
 [![Release](https://img.shields.io/github/v/release/FluryWaana/atelier?label=release)](https://github.com/FluryWaana/atelier/releases/latest)
