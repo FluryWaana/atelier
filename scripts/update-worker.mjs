@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, copyFileSync, openSync, closeSync, unlinkSync, lstatSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, copyFileSync, openSync, closeSync, unlinkSync, lstatSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve, basename } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { managedEntries } from '../lib/domain/release-package.mjs';
 import { dataDirectory } from '../lib/infrastructure/installation.mjs';
@@ -73,7 +72,7 @@ async function healthy(root, port, version, pid) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1000) });
       const value = await response.json();
-      if (response.ok && value.app === 'atelier-kanban' && (process.platform === 'win32' ? resolve(value.workspace).toLowerCase() === resolve(root).toLowerCase() : resolve(value.workspace) === resolve(root)) && value.version === version && value.pid === pid) return;
+      if (response.ok && value.app === 'atelier-kanban' && realpathSync(value.workspace) === realpathSync(root) && value.version === version && value.pid === pid) return;
     } catch {}
     await delay(500);
   }
@@ -119,6 +118,6 @@ export async function runUpdate(stage, recover = false) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (import.meta.main) {
   runUpdate(process.argv[2], process.argv.includes('--recover')).catch(error => { console.error(error); process.exitCode = 1; });
 }

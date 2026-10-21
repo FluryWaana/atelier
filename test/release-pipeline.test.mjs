@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkRelease, checkReleaseArtifacts } from '../scripts/check-release.mjs';
@@ -11,6 +13,18 @@ function temporaryDirectory(t) {
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   return directory;
 }
+
+test('release commands execute through a linked parent directory', t => {
+  const root = temporaryDirectory(t), linked = join(root, 'linked');
+  symlinkSync(fileURLToPath(new URL('../', import.meta.url)), linked, process.platform === 'win32' ? 'junction' : 'dir');
+  const options = { encoding: 'utf8', windowsHide: true, env: { ...process.env, GITHUB_REF_TYPE: 'branch', RELEASE_TARGET: '' } };
+  const check = spawnSync(process.execPath, [join(linked, 'scripts', 'check-release.mjs')], options);
+  assert.equal(check.status, 0, check.stderr);
+  assert.match(check.stdout, /Release .* vérifiée/);
+  const update = spawnSync(process.execPath, [join(linked, 'scripts', 'update-worker.mjs'), root], options);
+  assert.equal(update.status, 1, 'The worker must execute and reject an invalid stage, not silently exit.');
+  assert.match(update.stderr, /Dossier de mise à jour invalide/);
+});
 
 test('release preflight rejects inconsistent versions, tags and runtimes', t => {
   const root = temporaryDirectory(t);

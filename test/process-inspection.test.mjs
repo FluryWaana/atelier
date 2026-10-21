@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { descendantPids, listenerUrl, tcpListeners } from '../lib/process-inspection.mjs';
+import { descendantPids, inspectProcesses, listenerUrl, tcpListeners } from '../lib/process-inspection.mjs';
+
+test('Windows inspection joins CIM ancestry and netstat sockets and propagates failures', async () => {
+  const snapshot = await inspectProcesses('win32', async command => ({ stdout: command === 'powershell.exe'
+    ? '{"ProcessId":123,"ParentProcessId":42}'
+    : '  TCP  127.0.0.1:4317  0.0.0.0:0  LISTENING  123\n' }));
+  assert.deepEqual(descendantPids(42, snapshot.processes), [42, 123]);
+  assert.deepEqual(snapshot.listeners, [{ pid: 123, address: '127.0.0.1', port: 4317 }]);
+  await assert.rejects(inspectProcesses('win32', async () => { throw new Error('inspection timeout'); }), /inspection timeout/);
+});
 
 test('TCP inspection accepts listening IPv4/IPv6 sockets and rejects unrelated connections', () => {
   assert.deepEqual(tcpListeners(`

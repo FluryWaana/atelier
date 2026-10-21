@@ -65,8 +65,9 @@ jobs:
       - name: Test Linux package manager lifecycle
         if: runner.os == 'Linux'
         run: |
-          docker run --rm -v "$PWD:/workspace:ro" ubuntu:24.04 sh /workspace/test/linux-installation.sh deb
-          docker run --rm -v "$PWD:/workspace:ro" fedora:43 sh /workspace/test/linux-installation.sh rpm
+          # Package hooks inspect processes belonging to other users through /proc.
+          docker run --rm --cap-add=SYS_PTRACE -v "$PWD:/workspace:ro" ubuntu:24.04 sh /workspace/test/linux-installation.sh deb
+          docker run --rm --cap-add=SYS_PTRACE -v "$PWD:/workspace:ro" fedora:43 sh /workspace/test/linux-installation.sh rpm
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-release

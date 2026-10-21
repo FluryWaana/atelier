@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { packageName, releaseVersion, installerNames } from '../lib/domain/releases.mjs';
 import { verifyChecksum } from '../lib/infrastructure/package-updater.mjs';
 
@@ -30,7 +30,7 @@ export function checkReleaseArtifacts(directory, version) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (import.meta.main) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const version = checkRelease(root, {
     tag: process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : undefined,
