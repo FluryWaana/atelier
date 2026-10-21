@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,8 +73,8 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
     run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=desktopicon', '/DIR=' + app]);
     assert.equal(existsSync(desktopShortcut), true);
     const shortcut = JSON.parse(run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ATELIER_TEST_SHORTCUT); @{ target = $shortcut.TargetPath; directory = $shortcut.WorkingDirectory } | ConvertTo-Json -Compress'], { encoding: 'utf8', env: { ...env, ATELIER_TEST_SHORTCUT: desktopShortcut } }));
-    assert.equal(shortcut.target.toLowerCase(), join(app, 'AtelierKanban.exe').toLowerCase());
-    assert.equal(shortcut.directory.toLowerCase(), app.toLowerCase());
+    assert.equal(realpathSync(shortcut.target).toLowerCase(), realpathSync(join(app, 'AtelierKanban.exe')).toLowerCase());
+    assert.equal(realpathSync(shortcut.directory).toLowerCase(), realpathSync(app).toLowerCase());
     launch(); pid = (await (await request('/api/health')).json()).pid;
     const state = await (await request('/api/state')).json();
     assert.equal(state.cards[0].title, 'Carte conservée après réinstallation');
