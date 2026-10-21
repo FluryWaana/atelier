@@ -50,6 +50,33 @@ test('publication refuses files changed since the verified preview', async () =>
   await assert.rejects(publishPullRequest(f.card, options, '', f.run, f.request), /évolué/);
   assert.equal(f.commands.some(args => args[0] === 'push'), false);
 });
+
+test('Azure publication preserves the saved repository and PR before any Git write', async () => {
+  for (const scenario of ['repository', 'missing', 'different', 'valid']) {
+    const f = setup(scenario === 'missing' ? [] : [{ pullRequestId: scenario === 'different' ? 2 : 1, isDraft: true }]);
+    const repository = scenario === 'repository' ? 'other' : 'repo';
+    f.card.pullRequest = { number: 1, repository: `org/project/${repository}`, url: `https://dev.azure.com/org/project/_git/${repository}/pullrequest/1` };
+    const publication = publishPullRequest(f.card, await f.options(), '', f.run, f.request);
+    if (scenario === 'valid') assert.equal((await publication).number, 1);
+    else {
+      await assert.rejects(publication, /PR/);
+      assert.equal(f.commands.some(args => ['add', 'commit', 'push'].includes(args[0])), false);
+      assert.equal(f.calls.some(call => call.body), false);
+    }
+  }
+});
+
+test('Azure refuses a destination changed after the final preview', async () => {
+  const f = setup();
+  let checked = false;
+  const run = async (command, args, ...rest) => {
+    if (args[0] === 'status' && args[1] === '--porcelain') checked = true;
+    if (checked && args[0] === 'remote') return 'https://dev.azure.com/org/project/_git/other';
+    return f.run(command, args, ...rest);
+  };
+  await assert.rejects(publishPullRequest(f.card, await f.options(), '', run, f.request), /destination Git/);
+  assert.equal(f.commands.some(args => args[0] === 'push'), false);
+});
 test('Azure request uses PATCH when updating an existing PR', async t => {
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(options.method, 'PATCH'); assert.deepEqual(JSON.parse(options.body), { description: 'Tests réussis' });
