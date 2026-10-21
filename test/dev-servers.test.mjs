@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createDevServers } from '../lib/dev-servers.mjs';
@@ -37,7 +37,7 @@ test('front and back run in the worktree, log failures, prevent port conflicts a
 });
 
 test('linked projects run from the task worktree and companion source, in either direction', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'atelier-linked-dev-'));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'atelier-linked-dev-')));
   const servers = createDevServers(() => {});
   try {
     const [frontSource, frontWorktree, backSource, backWorktree] = ['front-source', 'front-worktree', 'back-source', 'back-worktree'].map(name => join(root, name));
@@ -131,7 +131,7 @@ test('Windows detects the actual listening port of a launched child process', { 
 });
 
 test('API validates the worktree, saves commands and blocks removal until servers stop', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'atelier-dev-api-'));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'atelier-dev-api-')));
   const git = (...args) => execFileSync('git', ['-C', root, ...args], { windowsHide: true, stdio: 'ignore' });
   git('init', '-b', 'master');
   git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-m', 'initial');
