@@ -1,0 +1,74 @@
+name: Release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+          - os: ubuntu-24.04
+            name: linux-x64
+          - os: ubuntu-24.04-arm
+            name: linux-arm64
+          - os: macos-15-intel
+            name: macos-x64
+          - os: macos-15
+            name: macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:css
+      - run: npm test
+      - run: ./test/UpdateArchive.Tests.ps1
+        if: runner.os == 'Windows'
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node -e "if (process.env.GITHUB_REF_NAME !== 'v' + JSON.parse(require('fs').readFileSync('package.json')).version) throw Error('Le tag doit correspondre à package.json.')"
+      - name: Fetch pinned Node license
+        run: node --input-type=module -e "import {mkdirSync,writeFileSync} from 'node:fs'; const r=await fetch('https://raw.githubusercontent.com/nodejs/node/v24.19.0/LICENSE'); if(!r.ok) throw Error('Licence Node indisponible'); mkdirSync('.updates',{recursive:true}); writeFileSync('.updates/Node-LICENSE', await r.text());"
+      - run: npm run package
+        env:
+          NODE_LICENSE: .updates/Node-LICENSE
+      - run: npm run test:release
+        env:
+          ATELIER_REQUIRE_RELEASE: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-release
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release'
+          merge-multiple: true
+          path: dist
+      - name: Publish stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"

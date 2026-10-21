@@ -1,0 +1,225 @@
+// Dialogues : même cadre et mêmes repères, contenu adapté à chaque action.
+dialog { width: min(720px, calc(100vw - 48px)); max-width: calc(100vw - 48px); max-height: calc(100dvh - 48px); padding: 0; border: 1px solid #494253; border-radius: 18px; background: $panel; box-shadow: 0 32px 110px #0009; scrollbar-gutter: stable; scroll-padding-block: 120px 96px; }
+dialog::backdrop { background: #080b12c4; backdrop-filter: blur(7px); }
+dialog > form, #projects-dialog, #diagnostics-dialog, #tempo-dialog, #backups-dialog, #command-dialog { padding: 28px 32px; }
+dialog .dialog-heading { position: sticky; top: 0; z-index: 3; align-items: flex-start; gap: 24px; margin: -28px -32px 24px; padding: 24px 32px 20px; border-bottom: 1px solid $line; background: $panel; }
+// Ces dialogues portent eux-mêmes le padding de leur en-tête.
+#projects-dialog > .dialog-heading, #diagnostics-dialog > .dialog-heading, #tempo-dialog > .dialog-heading, #backups-dialog > .dialog-heading, #command-dialog > .dialog-heading { top: -28px; }
+dialog .dialog-heading .eyebrow { font-size: 9px; letter-spacing: 1.5px; }
+dialog .dialog-heading h2 { font-size: 24px; line-height: 1.35; font-weight: 550; margin: 8px 0 0; letter-spacing: -.5px; }
+dialog .dialog-heading > button, #card-detail .dialog-heading > button { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; min-height: 44px; padding: 0; margin-top: 2px; border: 1px solid #353b47; border-radius: 9px; background: #22262f; color: #c5ccda; font: 24px/1 "Segoe UI", sans-serif; }
+dialog .dialog-heading > button:hover { background: #30303d; color: $text; border-color: #5a4e6a; }
+dialog > .hint, dialog > form > .hint { max-width: 80ch; margin: 0 0 22px; }
+dialog label { font-size: 14px; font-weight: 550; color: #d5dbe7; margin: 18px 0 0; line-height: 1.6; }
+dialog input, dialog select, dialog textarea { margin-top: 8px; }
+dialog input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), dialog select { min-height: 44px; }
+dialog input, dialog select, dialog textarea { font-size: 14px; }
+dialog input[type="checkbox"], dialog input[type="radio"] { width: 18px; height: 18px; min-width: 18px; min-height: 18px; flex-shrink: 0; }
+dialog textarea { line-height: 1.7; }
+dialog label .hint { display: block; margin-top: 7px; font-weight: 400; font-size: 13px; }
+dialog .form-row { gap: 16px; }
+.form-section { min-width: 0; padding: 22px; margin: 0 0 18px; border: 1px solid #343644; border-radius: 12px; background: #181c24; }
+.form-section > :last-child { margin-bottom: 0; }
+.section-heading { display: flex; align-items: start; gap: 11px; margin: 0 0 18px; }
+.section-heading h3 { font-size: 14px; line-height: 1.5; font-weight: 600; margin: 0; color: #e0dce9; }
+.section-heading .hint { font-weight: 400; font-size: 13px; margin: 5px 0 0; }
+.section-number { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border: 1px solid #4b3d60; border-radius: 7px; font: 10px/1 Consolas, monospace; color: #bdacd9; background: #2a2334; }
+.form-section .section-heading + label { margin-top: 0; }
+.form-section .form-row:first-child > label, .model-options .form-row > label { margin-top: 0; }
+.section-kicker + .form-row { margin-top: 10px; }
+dialog > .notice-line, dialog > form > .notice-line { max-width: none; }
+.notice-line { display: block; padding: 13px 16px; background: #242331; border: 1px solid #40374d; border-radius: 9px; color: #bab0cd; font-size: 13px; line-height: 1.75; }
+label.notice-line { display: flex; align-items: start; font-weight: 400; }
+.notice-line input[type="checkbox"] { flex-shrink: 0; margin-top: 3px; }
+.dialog-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 0; margin: 12px 0; border-top: 1px solid $line; border-bottom: 1px solid $line; }
+.dialog-toolbar .hint, .dialog-toolbar .path-text { flex: 1; min-width: 0; margin: 0; }
+dialog > form > .form-actions { position: sticky; bottom: 0; z-index: 2; margin: 24px -32px -28px; padding: 18px 32px; border-top: 1px solid #373544; background: $panel; box-shadow: 0 -12px 25px rgba($panel, .8); }
+dialog .form-actions { gap: 10px; }
+dialog .form-actions button { min-height: 44px; font-size: 14px; }
+.disclosure { padding: 0 18px; border-radius: 10px; border-color: #343644; background: #171b22; }
+.disclosure > summary { position: relative; display: block; padding: 16px 26px 16px 0; font-size: 13px; line-height: 1.6; font-weight: 550; color: #cbc3d9; list-style: none; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: ''; position: absolute; right: 3px; top: 21px; width: 6px; height: 6px; border-right: 1.5px solid #9d8db5; border-bottom: 1.5px solid #9d8db5; transform: rotate(45deg); }
+.disclosure[open] > summary::after { transform: rotate(225deg); top: 24px; }
+.disclosure[open] { padding-bottom: 18px; }
+.disclosure[open] > summary { margin-bottom: 8px; border-bottom: 1px solid #30333e; }
+.disclosure .disclosure { background: #141820; }
+// Connexions : les services sont indépendants des préférences de travail.
+#settings-dialog { width: 840px; }
+#default-agent-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+.agent-preset { padding: 16px; min-width: 0; background: #1e222c; border: 1px solid $line; border-radius: 10px; }
+.agent-preset h4 { margin: 0; font-size: 13px; font-weight: 550; color: #d0bfee; }
+.agent-preset .form-row { flex-direction: column; gap: 0; }
+.agent-preset .form-row label { flex: none; }
+.integration-section { margin-top: 26px; }
+.integration-section > .disclosure { margin-bottom: 12px; }
+#settings-form > .form-section > .hint { font-size: 13px; margin: 10px 0 0; }
+#settings-form [data-forget-token] { margin-top: 10px; min-height: 34px; padding: 6px 10px; font-size: 13px; }
+// Création et gestion des projets.
+#new-dialog { width: 740px; }
+.template-options { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 0 22px; margin: 0; align-items: center; }
+.template-options > span { font-size: 13px; color: #929bad; margin-right: 4px; }
+.template-options button { min-height: 33px; padding: 6px 11px; border-radius: 7px; font-size: 13px; background: transparent; }
+#new-form textarea[name="description"] { min-height: 130px; }
+#new-form > .model-options { padding-top: 18px; }
+#projects-dialog { width: 960px; }
+.projects-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+.project-catalog { min-width: 0; }
+#project-list { max-height: none; overflow: visible; }
+.project-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid $line; border-radius: 10px; background: #1e222b; }
+.project-row > button:first-child { border: 0; padding: 0; border-radius: 0; background: transparent; text-align: left; min-height: 0; }
+.project-row > button:first-child:hover { color: #d6c5f1; }
+.project-row strong { font-size: 14px; font-weight: 550; }
+.project-row small { margin-top: 8px; font: 10px/1.7 Consolas, monospace; color: #939eaf; }
+.project-row-actions { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid $line; }
+.project-row-actions button { font-size: 13px; padding: 6px 10px; min-height: 32px; background: transparent; }
+#project-form { border: 1px solid #343644; margin: 0; padding: 22px; }
+#project-form .directory-picker { align-items: stretch; }
+#project-form .directory-picker input { width: 0; }
+#project-form .directory-picker button { font-size: 13px; padding: 8px 10px; }
+#project-form .form-actions { margin-top: 20px; padding-top: 16px; }
+#project-form .form-actions button { width: 100%; }
+#project-settings-dialog, #launch-settings-dialog { width: 1080px; }
+.launch-settings-grid { margin-top: 18px; margin-bottom: 20px; }
+.application-launch-panel { min-width: 0; height: 100%; padding: 20px; border: 1px solid $line; border-radius: 12px; }
+.application-launch-panel legend { float: none; width: auto; padding: 0 8px; font-size: 17px; font-weight: 600; }
+.application-launch-panel .form-label { display: block; margin-top: 16px; }
+.application-launch-panel .input-group { display: flex; }
+#project-settings-form > .form-section > .row > div > .form-label { display: block; }
+#project-jira-map { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.runtime-settings > h3 { margin: 0 0 12px; font-size: 14px; }
+.runtime-settings > .hint { font-size: 13px; }
+// Détail de tâche : contexte à gauche, exécution à droite.
+#card-dialog { width: 1120px; max-width: calc(100vw - 48px); max-height: calc(100dvh - 48px); padding: 0; }
+#card-detail { padding: 28px 32px; }
+#card-detail > .dialog-heading { position: sticky; top: 0; margin: -28px -32px 0; padding: 24px 32px 20px; background: $panel; border-bottom: 1px solid $line; align-items: flex-start; gap: 24px; }
+#card-detail > .dialog-heading h2 { font-size: 25px; line-height: 1.35; max-width: 820px; }
+#card-detail .detail-nav { position: static; padding: 14px 0 20px; margin: 0; gap: 6px; background: transparent; border: 0; }
+.detail-nav button { min-height: 32px; padding: 6px 11px; font-size: 13px; border-radius: 7px; background: #23232e; border-color: #3c354a; }
+.task-editor { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 22px; }
+#card-detail .task-editor > form, #card-detail .task-editor > .run-box { min-width: 0; padding: 22px; margin: 0; border: 1px solid #3b3849; border-radius: 12px; background: #181c24; }
+#card-detail .task-editor > .run-box { background: linear-gradient(150deg, #252130, #1b1e27); border-color: #4a3d5a; }
+#card-detail h3 { font-size: 15px; margin: 0 0 18px; font-weight: 550; }
+#card-detail .task-editor label { margin: 16px 0 0; font-size: 13px; }
+#card-detail .task-editor .form-row { gap: 12px; }
+#card-detail .task-editor .form-row label { min-width: 0; }
+#card-detail .task-editor .hint { font-size: 13px; margin: 8px 0 0; }
+#card-detail textarea[name="description"] { min-height: 150px; font-size: 13px; line-height: 1.7; }
+#card-detail .task-editor .run-controls { display: flex; align-items: stretch; flex-direction: column; gap: 12px; margin-top: 18px; }
+#card-detail .task-editor .run-controls select { margin-top: 0; }
+#card-detail .task-editor .run-controls .primary { width: 100%; margin: 0; }
+#card-detail .task-editor .agent-options { background: transparent; border-color: #494052; }
+#card-detail .task-editor .disclosure { margin: 18px 0; }
+#card-form > button[type="submit"] { margin-top: 20px; width: 100%; font-size: 13px; }
+#card-detail .section-kicker { margin: 18px 0 8px; font-size: 9px; }
+#card-detail .detail-description { max-height: 420px; font-size: 13px; line-height: 1.85; padding: 0 0 16px; }
+#card-detail .draft-notice { margin: 0 0 20px; font-size: 13px; }
+#card-detail .disclosure { margin: 14px 0; }
+#card-detail .disclosure > summary { font-size: 13px; padding: 16px 26px 16px 0; }
+#card-detail .disclosure .worktree-box { margin: 0; padding: 0; border: 0; background: transparent; }
+#card-detail .worktree-box > button { margin: 10px 6px 0 0; font-size: 13px; }
+#card-detail .worktree-box > code, #dev-context { padding: 12px; border: 1px solid $line; border-radius: 7px; background: #12161c; font: 11px/1.7 Consolas, monospace; }
+#card-detail .agent-summary { margin: 20px 0; padding: 22px; border-radius: 12px; }
+#card-detail .agent-summary h3 { font-size: 16px; color: #d6c5f0; }
+#card-detail .agent-summary pre { font: 13px/1.85 "Segoe UI", sans-serif; max-height: 420px; }
+.log { font: 11px/1.75 Consolas, monospace; border-color: #333846; background: #10141b; border-radius: 8px; padding: 16px; }
+#run-details .detail-actions { margin: 18px 0; }
+#card-detail .card-utilities { margin-top: 24px; padding-top: 20px; gap: 8px; }
+.card-utilities button { font-size: 13px; min-height: 36px; padding: 8px 12px; }
+#card-detail .task-editor, #card-detail > section, #card-detail > details { scroll-margin-top: 180px; }
+// Publication, temps et opérations de maintenance.
+#pr-dialog { width: 1040px; }
+#pr-destination { font: 11px/1.7 Consolas, monospace; padding: 11px 14px; border: 1px solid $line; border-radius: 8px; background: #151920; overflow-wrap: anywhere; }
+.pr-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 20px; }
+.pr-layout .form-section { margin: 0; }
+.pr-layout .code-section h4 { font-size: 13px; font-weight: 550; color: #aca4bb; margin: 18px 0 10px; }
+.pr-layout .log { max-height: 190px; font-size: 11px; padding: 12px; }
+#pr-form > .hint { margin: 18px 0 0; font-size: 13px; }
+#pr-commit-label { margin-top: 18px; }
+#diagnostics-dialog { width: 760px; }
+.diagnostic { padding: 18px; margin: 12px 0; border: 1px solid $line; border-radius: 10px; background: #181d25; }
+.diagnostic h3, .diagnostic h4 { font-size: 14px; margin: 0 0 10px; }
+.diagnostic p { font-size: 13px; line-height: 1.75; margin-bottom: 0; overflow-wrap: anywhere; }
+#time-dialog { width: 700px; }
+#time-form > .form-section > label:first-of-type { margin-top: 0; }
+#time-form .form-row { display: grid; grid-template-columns: 1fr 1fr .85fr; gap: 12px; }
+#time-form .form-actions #start-timer { margin-right: auto; }
+#tempo-dialog { width: 640px; }
+.transfer-summary { padding: 24px; border: 1px solid #493e5c; border-radius: 12px; background: linear-gradient(145deg, #282235, #1a1e27); margin-bottom: 20px; }
+.transfer-summary h3 { margin: 0 0 14px; font-size: 17px; line-height: 1.55; font-weight: 550; }
+.transfer-summary .entry-description { padding: 14px 0; margin: 14px 0; border-top: 1px solid #41394d; border-bottom: 1px solid #41394d; }
+#tempo-dialog > .form-actions { margin-top: 24px; }
+#backups-dialog { width: 820px; }
+#backup-list { max-height: none; }
+#backup-list .workspace-row { padding: 18px; background: #1d222b; }
+#backup-list .workspace-row strong { font-size: 13px; font-weight: 550; }
+#backup-list .workspace-row .hint { margin-bottom: 0; }
+#backup-list button { font-size: 13px; }
+#command-dialog { width: 660px; }
+#command-query { font-size: 15px; padding: 14px 16px; border-color: #554665; background: #151922; }
+#command-results { max-height: 48dvh; margin: 18px -6px; }
+.command-result { gap: 14px; padding: 13px 12px; border-radius: 8px; }
+.command-kind { font-size: 9px; width: 44px; }
+.command-result strong { font-size: 13px; font-weight: 550; }
+.command-result small { font-size: 13px; }
+.search-help { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin: 18px 0 0; padding-top: 16px; border-top: 1px solid $line; color: #8e98aa; font-size: 11px; }
+.search-help span { margin-left: auto; }
+#confirm-dialog { padding: 0; width: 500px; border-color: #5b4550; background: linear-gradient(145deg, #29212a, $panel 60%); }
+#confirm-dialog .dialog-heading { position: static; padding-bottom: 0; border: 0; background: transparent; }
+#confirm-title { font-size: 22px; line-height: 1.4; letter-spacing: -.4px; margin: 0 0 12px; }
+#confirm-message { font-size: 13px; line-height: 1.85; color: #bfc1ce; }
+#confirm-dialog .form-actions { position: static; background: transparent; box-shadow: none; border-color: #483941; }
+@media (max-width: 1000px) {
+  .projects-layout, .pr-layout { grid-template-columns: minmax(0, 1fr); }
+  .project-catalog { width: 100%; }
+}
+@media (max-width: 800px) {
+  .task-editor { grid-template-columns: minmax(0, 1fr); }
+  #card-dialog { width: 720px; }
+  #card-detail > .dialog-heading h2 { font-size: 22px; }
+}
+@media (max-width: 600px) {
+  dialog, #card-dialog { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 14px; }
+  dialog > form, #projects-dialog, #diagnostics-dialog, #tempo-dialog, #backups-dialog, #command-dialog, #card-detail { padding: 22px 18px; }
+  dialog .dialog-heading, #card-detail > .dialog-heading { top: 0; margin: -22px -18px 20px; padding: 20px 18px 18px; gap: 16px; }
+  dialog .dialog-heading h2 { font-size: 21px; }
+  dialog .dialog-heading > button { width: 32px; height: 32px; min-height: 32px; }
+  dialog > form > .form-actions { bottom: 0; margin: 22px -18px -22px; padding: 16px 18px; flex-wrap: wrap; }
+  dialog .form-actions button { flex: 1 1 120px; }
+  #projects-dialog > .dialog-heading, #diagnostics-dialog > .dialog-heading, #tempo-dialog > .dialog-heading, #backups-dialog > .dialog-heading, #command-dialog > .dialog-heading { top: -22px; }
+  .form-section, #project-form { padding: 18px; border-radius: 10px; }
+  .section-heading { gap: 9px; margin-bottom: 16px; }
+  .section-heading h3 { font-size: 13px; }
+  dialog .form-row { flex-direction: column; gap: 0; }
+  #default-agent-fields, #project-jira-map { grid-template-columns: minmax(0, 1fr); }
+  .agent-preset { padding: 14px; }
+  .template-options { gap: 6px; padding-bottom: 18px; }
+  .template-options > span { flex-basis: 100%; }
+  .template-options button { flex: 1; padding: 6px 7px; font-size: 11px; }
+  dialog input, dialog select, dialog textarea { font-size: 16px; }
+  dialog .dialog-heading > button { width: 44px; height: 44px; min-height: 44px; }
+  .projects-layout { gap: 10px; }
+  #project-form .directory-picker { flex-wrap: nowrap; }
+  #project-form .directory-picker input { flex-basis: 0; }
+  .project-row { padding: 14px; }
+  #card-detail > .dialog-heading { margin-bottom: 0; }
+  #card-detail > .dialog-heading h2 { font-size: 21px; }
+  #card-detail .detail-nav { padding: 14px 0 18px; gap: 5px; }
+  .detail-nav button { padding: 5px 8px; font-size: 11px; min-height: 31px; }
+  #card-detail .task-editor > form, #card-detail .task-editor > .run-box { padding: 18px; }
+  #card-detail .task-editor .form-row { flex-direction: column; }
+  #card-detail .task-editor .run-controls > * { width: 100%; }
+  #card-detail .card-utilities button { flex: 1; }
+  .pr-layout { gap: 14px; }
+  #time-form .form-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #time-form .form-actions #start-timer { flex-basis: 100%; }
+  .transfer-summary { padding: 18px; }
+  .dialog-toolbar { align-items: stretch; gap: 12px; }
+  .dialog-toolbar > button { align-self: flex-start; }
+  #confirm-dialog .dialog-heading { margin-bottom: 20px; }
+  #confirm-title { font-size: 21px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  dialog[open] { animation: atelier-dialog-in .16s ease-out; }
+  @keyframes atelier-dialog-in { from { opacity: .7; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+}

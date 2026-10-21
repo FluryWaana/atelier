@@ -1,0 +1,16 @@
+node_modules/
+.artifacts/
+connectors/*/
+data/
+.updates/
+.update-lock.json*
+dist/
+runtime/node.exe
+runtime/node
+release.json
+.serena/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
