@@ -31,6 +31,10 @@ jobs:
         with:
           languages: javascript-typescript,actions
           queries: security-extended
+          config: |
+            packs:
+              javascript:
+                - codeql/javascript-queries@2.4.8:AlertSuppression.ql
       - uses: github/codeql-action/analyze@793b778da9c9275a0f276522b27cb5fc14bba279 # v4
         id: codeql
         with:

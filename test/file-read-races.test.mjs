@@ -9,7 +9,7 @@ import { detectLaunch } from '../lib/launch-detection.mjs';
 import { previewPullRequest } from '../lib/pull-requests.mjs';
 
 for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a file replaced between validation and opening`, async t => {
-  const root = fs.mkdtempSync(join(tmpdir(), 'atelier-read-race-'));
+  const root = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'atelier-read-race-')));
   const name = { session: 'local-session', manifest: 'package.json', preview: 'untracked.txt' }[kind];
   const path = join(root, name);
   const content = kind === 'manifest' ? JSON.stringify({ scripts: { start: 'node app.js' } }) : 'a'.repeat(64);
@@ -19,7 +19,7 @@ for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a f
   let replaced = false, fd;
   t.after(() => {
     t.mock.restoreAll(); syncBuiltinESMExports();
-    assert.ok(resolve(root).startsWith(resolve(tmpdir()) + sep));
+    assert.ok(resolve(root).startsWith(fs.realpathSync(tmpdir()) + sep));
     fs.rmSync(root, { recursive: true, force: true });
   });
   t.mock.method(fs, 'openSync', (file, ...args) => {
