@@ -23,6 +23,14 @@ test('the security gate refuses findings, failed analyses and missing or malform
   assert.throws(() => checkCodeql(directory), /js\/command-line-injection/);
   const blocked = spawnSync(process.execPath, ['scripts/check-codeql.mjs', directory], { encoding: 'utf8', windowsHide: true });
   assert.equal(blocked.status, 1);
+  write([{ results: [{ ruleId: 'js/http-to-file-access', suppressions: [{ kind: 'inSource' }] }] }]);
+  assert.doesNotThrow(() => checkCodeql(directory));
+  for (const suppression of [{ kind: 'external' }, { kind: 'inSource', status: 'rejected' }, { kind: 'inSource', status: 'underReview' }]) {
+    write([{ results: [{ ruleId: 'js/http-to-file-access', suppressions: [suppression] }] }]);
+    assert.throws(() => checkCodeql(directory), /js\/http-to-file-access/);
+  }
+  write([{ results: [{ ruleId: 'js/http-to-file-access', suppressions: [{ kind: 'inSource' }] }, { ruleId: 'js/xss-through-dom' }] }]);
+  assert.throws(() => checkCodeql(directory), /js\/xss-through-dom/);
   write([{ results: [], invocations: [{ executionSuccessful: false }] }]);
   assert.throws(() => checkCodeql(directory), /en échec/);
   write([]);

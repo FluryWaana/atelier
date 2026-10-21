@@ -22,6 +22,19 @@ async function fixture(t, options = {}) {
   return { app, request, dataDir, restart: async () => { await app.close(); return start(); } };
 }
 
+test('local health refuses remote or malformed addresses before reading credentials', async () => {
+  const unexpected = () => { assert.fail('Invalid addresses must not cause network or credential access'); };
+  for (const url of ['https://127.0.0.1:4317', 'http://example.com:4317', 'http://127.0.0.1:4317@evil.invalid', 'http://127.0.0.1:0', 'http://127.0.0.1:65536', 'http://127.0.0.1:4317/path']) {
+    await assert.rejects(authenticatedHealth(url, unexpected, unexpected), /Adresse du serveur local invalide/);
+  }
+  const token = 'a'.repeat(64);
+  const health = await authenticatedHealth('http://127.0.0.1:80', () => token, async url => {
+    const challenge = new URL(url).searchParams.get('challenge');
+    return Response.json(challenge ? { proof: sessionProof(token, challenge, 80) } : { app: 'atelier-kanban' });
+  });
+  assert.equal(health.app, 'atelier-kanban');
+});
+
 test('private API, event stream and shutdown reject anonymous or foreign requests', async t => {
   let stopped = 0;
   const { app, request } = await fixture(t, { shutdown: async () => { stopped++; } });

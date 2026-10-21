@@ -25,6 +25,6 @@ test('settings expose providers used by projects even when a different global pr
   assert.match(host.innerHTML, /Modules non chargés/);
   assert.match(host.innerHTML, /&lt;broken&gt;/);
   assert.match(host.innerHTML, /&lt;script&gt;/);
-  assert.doesNotMatch(host.innerHTML, /<script>/);
+  assert.doesNotMatch(host.innerHTML, /<script>/i);
   assert.equal(catalog.providers.repositories, 'azure');
 });

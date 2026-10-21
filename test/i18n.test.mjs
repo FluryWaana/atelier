@@ -122,7 +122,7 @@ test('translated module markup escapes labels and preserves user-entered values'
   const view = createSettingsView({ document, api: async () => ({ modules: [module], providers: {} }) });
   await view.open();
   assert.match(host.innerHTML, /&lt;script&gt;Example&lt;\/script&gt;/);
-  assert.doesNotMatch(host.innerHTML, /<script>/);
+  assert.doesNotMatch(host.innerHTML, /<script>/i);
   assert.match(host.innerHTML, /value="Nouvelle tâche"/);
   assert.match(host.innerHTML, /Title<input/);
 });

@@ -24,7 +24,7 @@ test('workflow UI escapes logs and errors and resumes or stops the matching card
   const card = { id: 'ticket', title: 'Titre', status: 'standby', automation: { state: 'error', step: 'tests', cycles: 0, message: '<script>erreur</script>', tests: { state: 'failed', command: 'npm test', output: '<img src=x>' } } };
   const failed = view(card);
   assert.match(failed.host.innerHTML, /Vérifications · Échec/);
-  assert.match(failed.host.innerHTML, /&lt;img/); assert.doesNotMatch(failed.host.innerHTML, /<script>/);
+  assert.match(failed.host.innerHTML, /&lt;img/); assert.doesNotMatch(failed.host.innerHTML, /<script>/i);
   await failed.resume.onclick(); assert.equal(failed.requests[0][0], '/api/cards/ticket/resume-automation');
   const running = view({ ...card, automation: { ...card.automation, state: 'running' } });
   await running.stop.onclick(); assert.equal(running.requests[0][0], '/api/cards/ticket/stop-automation');
@@ -51,7 +51,7 @@ test('criterion evidence is escaped and old reviews are explicitly identified', 
   const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { cards: [{ id: 'ticket' }], runs: [run] }, selectedRun: 'run', esc, runNames: { completed: 'Terminé' }, $: selector => selector === '#pr-review-result' ? host : selector === '#check-review' ? check : null });
   vm.runInContext(source.slice(source.indexOf('function renderReviewReport('), source.indexOf('function projectConfig(')), context);
   context.renderReviewReport('ticket');
-  assert.match(host.innerHTML, /Impossible à vérifier · &lt;Critère>/); assert.match(host.innerHTML, /&lt;script>/); assert.doesNotMatch(host.innerHTML, /<script>/);
+  assert.match(host.innerHTML, /Impossible à vérifier · &lt;Critère>/); assert.match(host.innerHTML, /&lt;script>/); assert.doesNotMatch(host.innerHTML, /<script>/i);
   assert.doesNotMatch(host.innerHTML, /type="checkbox"/);
   delete run.review.criteria; context.renderReviewReport('ticket');
   assert.match(host.innerHTML, /ancienne review ne contient pas de bilan/);

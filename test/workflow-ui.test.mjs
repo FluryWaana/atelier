@@ -9,15 +9,23 @@ import { connectorSupports, repositoryProvider } from '../public/connector-avail
 const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 
+test('work report escapes the date before inserting it in an HTML attribute', () => {
+  const context = vm.createContext({ markupText, esc, summaryDay: '\"><img src=x onerror=alert(1)>', scopedCards: () => [], workReport: () => '', state: { cards: [], runs: [], times: [] } });
+  vm.runInContext(source.slice(source.indexOf('function reportMarkup('), source.indexOf('function bindWorkflowActions(')), context);
+  const html = context.reportMarkup();
+  assert.match(html, /value="&quot;>&lt;img/);
+  assert.doesNotMatch(html, /<img/i);
+});
+
 test('PR details and cleanup candidates escape service data and show incomplete checks explicitly', () => {
   const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, esc, prLabel, cleanupCandidate, connectorSupports, repositoryProvider, worktreeChecks: [], state: { runs: [] }, devRunning: () => false });
   vm.runInContext(source.slice(source.indexOf('function prMarkup('), source.indexOf('function renderWorkflowDetail(')), context);
   vm.runInContext(source.slice(source.indexOf('function cleanupMarkup('), source.indexOf('function queueMarkup(')), context);
   const card = { id: 'a', title: '<script>danger</script>', status: 'done', worktree: {}, pullRequest: { number: 7, url: 'https://example.invalid/pr/7', checkedAt: new Date().toISOString(), refreshError: '<img src=x>', checksError: '<svg>', checks: [{ name: '<script>', state: 'pending' }] } };
   const markup = context.prMarkup(card);
-  assert.doesNotMatch(markup, /<img|<svg|<script>/); assert.match(markup, /&lt;img/); assert.match(markup, /règles de branche et pipelines restent à vérifier/);
+  assert.doesNotMatch(markup, /<img|<svg|<script>/i); assert.match(markup, /&lt;img/); assert.match(markup, /règles de branche et pipelines restent à vérifier/);
   const cleanup = context.cleanupMarkup([card, { id: 'b', title: 'En cours', worktree: {}, status: 'doing' }]);
-  assert.match(cleanup, /data-clean-candidate="a"/); assert.doesNotMatch(cleanup, /data-clean-candidate="b"/); assert.doesNotMatch(cleanup, /<script>/);
+  assert.match(cleanup, /data-clean-candidate="a"/); assert.doesNotMatch(cleanup, /data-clean-candidate="b"/); assert.doesNotMatch(cleanup, /<script>/i);
 });
 
 test('delivery cleanup confirms once and never requests forced removal', async () => {

@@ -33,6 +33,19 @@ test('review checks that the published source and target match the clean worktre
   dirty = true; await assert.rejects(prepareReview(card, '', git, request), /worktree propre/);
 });
 
+test('review rejects remote commit options before invoking Git with them', async () => {
+  const card = { branch: 'feature/test', worktree: { path: 'repo' }, pullRequest: { repository: 'org/project/repo', number: 1 } };
+  const git = async (command, args) => {
+    assert.deepEqual(args, ['remote', 'get-url', 'origin']);
+    return 'https://dev.azure.com/org/project/_git/repo';
+  };
+  for (const field of ['lastMergeSourceCommit', 'lastMergeTargetCommit']) {
+    const pr = { status: 'active', sourceRefName: 'refs/heads/feature/test', targetRefName: 'refs/heads/main', lastMergeSourceCommit: { commitId: 'a'.repeat(40) }, lastMergeTargetCommit: { commitId: 'b'.repeat(40) } };
+    pr[field].commitId = '--exec=unexpected';
+    await assert.rejects(prepareReview(card, '', git, async () => pr), /Commits de PR indisponibles/);
+  }
+});
+
 test('criteria coverage keeps the original text, orders assessments and requires evidence for every criterion', () => {
   const criteria = ['Connexion refusée sans mot de passe', 'Message visible après succès', 'Export accessible'];
   const report = { summary: 'Bilan', findings: [], criteria: [

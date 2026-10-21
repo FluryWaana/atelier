@@ -14,7 +14,10 @@ export function checkCodeql(directory) {
     for (const run of report.runs) {
       assert.ok(Array.isArray(run.results), 'Résultats CodeQL absents.');
       assert.ok(!run.invocations?.some(invocation => invocation.executionSuccessful === false), 'Analyse CodeQL en échec.');
-      for (const result of run.results) findings.push(`${file}: ${result.ruleId || 'alerte sans identifiant'}`);
+      for (const result of run.results) {
+        if (result.suppressions?.some(suppression => suppression.kind === 'inSource' && (!suppression.status || suppression.status === 'accepted'))) continue;
+        findings.push(`${file}: ${result.ruleId || 'alerte sans identifiant'}`);
+      }
     }
   }
   assert.equal(findings.length, 0, `Alertes CodeQL à traiter avant publication :\n${findings.join('\n')}`);

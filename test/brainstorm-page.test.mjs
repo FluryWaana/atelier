@@ -145,7 +145,7 @@ test('conversation shows escaped answers and clickable questions without requiri
   Object.assign(p.context.state.runs[0], { status: 'completed', brainstorm: { message: '<script>Texte utilisateur</script>', questions: ['Pour qui ?'] }, proposals: [] });
   p.context.renderBrainstormPage();
   assert.match(p.nodes['#brainstorm-chat-history'].innerHTML, /&lt;script&gt;/);
-  assert.doesNotMatch(p.nodes['#brainstorm-chat-history'].innerHTML, /<script>/);
+  assert.doesNotMatch(p.nodes['#brainstorm-chat-history'].innerHTML, /<script>/i);
   assert.equal(p.nodes['#brainstorm-generate'].disabled, false);
   question.onclick();
   assert.equal(p.nodes['#brainstorm-reply'].value, 'Pour qui ?\n');
