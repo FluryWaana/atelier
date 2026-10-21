@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Atelier Kanban
+Comment=Tableau de tâches local
+Exec=atelier-kanban
+Icon=atelier-kanban
+Terminal=false
+Categories=Development;ProjectManagement;
+Actions=Stop;Import;
+
+[Desktop Action Stop]
+Name=Arrêter Atelier Kanban
+Exec=atelier-kanban --stop
+
+[Desktop Action Import]
+Name=Importer les données portables
+Exec=atelier-kanban --import-data

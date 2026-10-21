@@ -11,6 +11,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { openStore } from '../lib/store.mjs';
 import { extractTarPackage } from '../lib/infrastructure/tar-package.mjs';
 import { packageName } from '../lib/domain/releases.mjs';
+import { dataVersion } from '../lib/domain/release-package.mjs';
+import { dataDirectory } from '../lib/infrastructure/installation.mjs';
 import { verifyChecksum } from '../lib/infrastructure/windows-updater.mjs';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -18,7 +20,7 @@ const archive = new URL('../dist/' + packageName(pkg.version, process.platform, 
 const skip = !existsSync(archive);
 if (process.env.ATELIER_REQUIRE_RELEASE === '1' && skip) throw new Error('Package absent : les tests de release doivent être exécutés après le build.');
 const binary = process.platform === 'win32' ? 'node.exe' : 'node';
-for (const failStartup of [false, true]) test(`Packaged release: ${failStartup ? 'failed startup rolls back application and database' : 'installs and restarts without losing user data'}`, { skip, timeout: 120000 }, async t => {
+for (const installed of [false, true]) for (const failStartup of [false, true]) test(`Packaged release (${installed ? 'user data' : 'portable'}): ${failStartup ? 'failed startup rolls back application and database' : 'installs and restarts without losing user data'}`, { skip: skip || installed && process.platform === 'darwin', timeout: 120000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'atelier-release-'));
   let serverPid;
   t.after(async () => {
@@ -28,14 +30,23 @@ for (const failStartup of [false, true]) test(`Packaged release: ${failStartup ?
   const checksum = readFileSync(new URL(archive.href + '.sha256'), 'utf8');
   verifyChecksum(readFileSync(archive), checksum, packageName(pkg.version, process.platform, process.arch));
   const extracted = join(root, 'app');
-  if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', fileURLToPath(new URL('../scripts/Expand-Update.ps1', import.meta.url)), '-Archive', fileURLToPath(archive), '-Destination', extracted], { windowsHide: true });
+  if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', fileURLToPath(new URL('../scripts/Expand-Update.ps1', import.meta.url)), '-Archive', fileURLToPath(archive), '-Destination', extracted], { windowsHide: true });
   else extractTarPackage(readFileSync(archive), extracted);
   assert.equal(existsSync(join(extracted, 'data')), false);
   for (const extension of ['cmd', 'command']) {
     assert.match(readFileSync(join(extracted, 'Start.' + extension), 'utf8'), /launcher\.mjs/);
     assert.match(readFileSync(join(extracted, 'Stop.' + extension), 'utf8'), /launcher\.mjs[\s\S]*--stop/);
   }
+  const manifest = JSON.parse(readFileSync(join(extracted, 'release.json'), 'utf8'));
+  assert.equal(manifest.version, pkg.version);
+  assert.equal(manifest.platform, process.platform);
+  assert.equal(manifest.arch, process.arch);
+  assert.equal(manifest.nodeVersion, process.versions.node);
+  assert.equal(manifest.dataVersion, dataVersion);
   const rootApp = extracted, stage = join(rootApp, '.updates', 'update-' + randomUUID());
+  const env = { ...process.env, LOCALAPPDATA: join(root, 'user'), XDG_DATA_HOME: join(root, 'user') };
+  if (installed) writeFileSync(join(rootApp, 'installation.json'), '{"mode":"user"}');
+  const data = dataDirectory(rootApp, { env });
   mkdirSync(join(stage, 'payload'), { recursive: true });
   const { managedEntries } = await import('../lib/domain/release-package.mjs');
   for (const name of managedEntries) cpSync(join(rootApp, name), join(stage, 'payload', name), { recursive: true });
@@ -43,19 +54,21 @@ for (const failStartup of [false, true]) test(`Packaged release: ${failStartup ?
   copyFileSync(join(rootApp, 'runtime', binary), join(stage, binary));
   copyFileSync(join(rootApp, 'scripts', 'update-worker.mjs'), join(stage, 'scripts', 'update-worker.mjs'));
   copyFileSync(join(rootApp, 'lib', 'domain', 'release-package.mjs'), join(stage, 'lib', 'domain', 'release-package.mjs'));
+  mkdirSync(join(stage, 'lib', 'infrastructure'));
+  copyFileSync(join(rootApp, 'lib', 'infrastructure', 'installation.mjs'), join(stage, 'lib', 'infrastructure', 'installation.mjs'));
   const version = pkg.version.split('.').map((value, i) => Number(value) + (i === 2 ? 1 : 0)).join('.');
   writeFileSync(join(stage, 'payload', 'package.json'), JSON.stringify({ ...pkg, version }));
   if (failStartup) writeFileSync(join(stage, 'payload', 'server.mjs'), 'throw new Error("simulated startup failure");');
-  mkdirSync(join(rootApp, 'data', 'backups'), { recursive: true });
-  const store = openStore(join(rootApp, 'data', 'kanban.sqlite'));
+  mkdirSync(join(data, 'backups'), { recursive: true });
+  const store = openStore(join(data, 'kanban.sqlite'));
   store.putCard({ id: 'retained', title: 'Une carte à conserver', status: 'todo' }); store.db.close();
   const backupName = `atelier-${Date.now()}-${randomUUID()}.sqlite`;
-  copyFileSync(join(rootApp, 'data', 'kanban.sqlite'), join(rootApp, 'data', 'backups', backupName));
+  copyFileSync(join(data, 'kanban.sqlite'), join(data, 'backups', backupName));
   const socket = createServer(); await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve));
   const port = socket.address().port; await new Promise(resolve => socket.close(resolve));
   writeFileSync(join(stage, 'config.json'), JSON.stringify({ version, previousVersion: pkg.version, port, backupName }));
   writeFileSync(join(rootApp, '.update-lock.json'), JSON.stringify({ id: stage.split(/[\\/]/).at(-1), ownerPid: 0, pid: null, token: randomUUID() }));
-  const worker = spawn(join(stage, binary), [join(stage, 'scripts', 'update-worker.mjs'), stage], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const worker = spawn(join(stage, binary), [join(stage, 'scripts', 'update-worker.mjs'), stage], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], env });
   let output = ''; worker.stderr.on('data', chunk => { output += chunk; });
   const code = await new Promise((resolve, reject) => { worker.on('error', reject); worker.on('exit', resolve); });
   assert.equal(code, 0, output);
@@ -63,7 +76,8 @@ for (const failStartup of [false, true]) test(`Packaged release: ${failStartup ?
   assert.equal(health.version, failStartup ? pkg.version : version);
   const state = await (await fetch(`http://127.0.0.1:${port}/api/state`)).json();
   assert.equal(state.cards[0].title, 'Une carte à conserver');
-  const receipt = JSON.parse(readFileSync(join(rootApp, 'data', 'update-result.json'), 'utf8'));
+  const receipt = JSON.parse(readFileSync(join(data, 'update-result.json'), 'utf8'));
   assert.equal(receipt.success, !failStartup);
+  if (installed) assert.equal(existsSync(join(rootApp, 'data')), false);
   assert.equal(existsSync(join(rootApp, '.update-lock.json')), false);
 });

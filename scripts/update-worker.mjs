@@ -4,6 +4,7 @@ import { dirname, join, resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { managedEntries } from '../lib/domain/release-package.mjs';
+import { dataDirectory } from '../lib/infrastructure/installation.mjs';
 
 export function processExists(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -49,7 +50,7 @@ export function restoreFiles(root, stage) {
   if (transaction.started) {
     const { backupName } = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));
     if (!/^atelier-\d{13}-[a-f0-9-]{36}\.sqlite$/.test(backupName)) throw new Error('Sauvegarde de secours invalide.');
-    const data = join(root, 'data'); assertPlain(data);
+    const data = dataDirectory(root); assertPlain(data);
     const backup = join(data, 'backups', backupName);
     if (!existsSync(backup)) throw new Error('Sauvegarde de secours introuvable.');
     for (const suffix of ['', '-wal', '-shm']) {
@@ -62,7 +63,7 @@ export function restoreFiles(root, stage) {
   }
 }
 function startServer(root, port, token) {
-  const out = openSync(join(root, 'data', 'server.stdout.log'), 'a'), err = openSync(join(root, 'data', 'server.stderr.log'), 'a');
+  const out = openSync(join(dataDirectory(root), 'server.stdout.log'), 'a'), err = openSync(join(dataDirectory(root), 'server.stderr.log'), 'a');
   const child = spawn(join(root, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'), [join(root, 'server.mjs')], { cwd: root, windowsHide: true, detached: true, stdio: ['ignore', out, err], env: { ...process.env, PORT: String(port), ATELIER_UPDATE_TOKEN: token } });
   closeSync(out); closeSync(err);
   child.on('error', () => {}); child.unref(); return child;
@@ -82,7 +83,7 @@ export async function runUpdate(stage, recover = false) {
   stage = resolve(stage);
   const root = dirname(dirname(stage));
   if (basename(dirname(stage)) !== '.updates' || !/^update-[a-f0-9-]{36}$/.test(basename(stage))) throw new Error('Dossier de mise à jour invalide.');
-  assertPlain(root); assertPlain(join(root, '.updates')); assertPlain(stage); assertPlain(join(root, 'data'));
+  assertPlain(root); assertPlain(join(root, '.updates')); assertPlain(stage); assertPlain(dataDirectory(root));
   const config = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));
   const lockPath = join(root, '.update-lock.json'), lock = updateLock(root);
   if (!lock || lock.id !== basename(stage)) throw new Error('Verrou de mise à jour absent.');
@@ -100,7 +101,7 @@ export async function runUpdate(stage, recover = false) {
     child = startServer(root, config.port, lock.token);
     writeJson(lockPath, { ...lock, pid: process.pid, serverPid: child.pid });
     await healthy(root, config.port, config.version, child.pid);
-    writeJson(join(root, 'data', 'update-result.json'), { version: config.version, success: true, message: `Mise à jour ${config.version} installée.`, date: new Date().toISOString() });
+    writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: true, message: `Mise à jour ${config.version} installée.`, date: new Date().toISOString() });
     unlinkSync(lockPath);
   } catch (error) {
     if (child && processExists(child.pid)) {
@@ -109,7 +110,7 @@ export async function runUpdate(stage, recover = false) {
       if (processExists(child.pid)) throw new Error('Le nouveau serveur refuse de s’arrêter. Restauration différée pour protéger les données.');
     }
     restoreFiles(root, stage);
-    writeJson(join(root, 'data', 'update-result.json'), { version: config.version, success: false, message: error.message, date: new Date().toISOString() });
+    writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: false, message: error.message, date: new Date().toISOString() });
     unlinkSync(lockPath);
     if (!processExists(lock.ownerPid)) {
       child = startServer(root, config.port, '');

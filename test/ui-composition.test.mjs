@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,7 +18,7 @@ test('creation and project selection target the repository disclosure among opti
       ['#template-criteria', {}], ['#project-filter', { value: '' }], ['#new-project', {}],
       ['#new-dialog', { setAttribute() {}, showModal() {} }],
     ]);
-    const context = vm.createContext({
+    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
       $: selector => { assert.ok(nodes.has(selector), selector); return nodes.get(selector); },
       state: { projects: [], settings: { repo } },
       document: { querySelectorAll: () => [] }, attachDraft() {}, taskAgentFields() {},
@@ -35,7 +36,7 @@ test('creation and project selection target the repository disclosure among opti
 
 test('sidebar displays the version returned by the server', async () => {
   const badge = { setAttribute(name, value) { this[name] = value; } };
-  const context = vm.createContext({
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
     api: async path => { assert.equal(path, '/api/health'); return { version: '2.3.4' }; },
     $: selector => { assert.equal(selector, '#app-version'); return badge; },
   });
@@ -54,7 +55,7 @@ test('draft notices stay outside the task editor and keep saving form values', (
     const password = { name: 'token', value: 'not-for-storage', type: 'password' };
     const form = { elements: [field, password] }; field.form = form;
     const host = { querySelector: selector => selector === '.detail-nav' ? navigation : selector === '.dialog-heading' ? heading : null };
-    const context = vm.createContext({
+    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
       document: { createElement: () => notice },
       localStorage: { getItem: () => null, setItem(name, value) { saved = { name, value: JSON.parse(value) }; } },
       $: () => ({ children: [] }),

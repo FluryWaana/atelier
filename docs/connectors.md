@@ -180,3 +180,8 @@ fournisseur général. Une ancienne PR sans `connector` utilise Azure DevOps.
 Les PR/MR existantes gardent la priorité de leur propre champ `connector`.
 Le champ `errors` du catalogue contient les identifiants et messages des modules
 non chargés ; l’interface les affiche comme du texte.
+
+## Traductions
+
+Les modules peuvent déclarer leur langue source et des catalogues par langue pour leurs descriptions, champs, options, onglets et actions. Voir le [guide de traduction](localization.md#traductions-des-modules) et le module de démonstration. Les identifiants et valeurs enregistrées restent indépendants de la langue.
+

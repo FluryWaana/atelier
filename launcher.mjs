@@ -4,8 +4,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { updateLock, processExists } from './scripts/update-worker.mjs';
+import { dataDirectory, installationMode } from './lib/infrastructure/installation.mjs';
+import { importPortableData } from './lib/infrastructure/portable-import.mjs';
+import { chooseFolder } from './lib/folders.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
+const dataDir = dataDirectory(root);
 const port = Number(process.env.PORT || 4317);
 const url = `http://127.0.0.1:${port}`;
 async function health() {
@@ -27,6 +31,13 @@ try {
     await new Promise((resolve, reject) => { recovery.on('error', reject); recovery.on('exit', code => code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });
   }
   let current = await health();
+  if (process.argv.includes('--import-data')) {
+    if (installationMode(root) === 'portable') throw new Error('Utilisez le lanceur de la version installée pour importer les données.');
+    if (current) throw new Error('Arrêtez Atelier avant d’importer les données.');
+    const source = process.argv[process.argv.indexOf('--import-data') + 1] || await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');
+    if (!source) process.exit(0);
+    importPortableData(source, dataDir);
+  }
   if (process.argv.includes('--stop')) {
     if (current) {
       const response = await fetch(`${url}/api/state`, { signal: AbortSignal.timeout(3000) });
@@ -46,16 +57,16 @@ try {
     console.log('Atelier est arrêté.');
   } else {
     if (!current) {
-      mkdirSync(join(root, 'data'), { recursive: true });
-      const out = openSync(join(root, 'data/server.stdout.log'), 'a');
-      const err = openSync(join(root, 'data/server.stderr.log'), 'a');
+      mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+      const out = openSync(join(dataDir, 'server.stdout.log'), 'a');
+      const err = openSync(join(dataDir, 'server.stderr.log'), 'a');
       const child = spawn(process.execPath, ['server.mjs'], { cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, err] });
       child.on('error', error => { console.error(error.message); process.exitCode = 1; });
       child.unref();
       closeSync(out);
       closeSync(err);
       for (let i = 0; i < 40 && !current; i++) { await delay(200); current = await health(); }
-      if (!current) throw new Error('Démarrage impossible. Consultez data/server.stderr.log.');
+      if (!current) throw new Error('Démarrage impossible. Consultez ' + join(dataDir, 'server.stderr.log'));
     }
     console.log(`Atelier Kanban : ${url}\nUtilisez ${process.platform === 'win32' ? 'Stop.cmd' : 'Stop.command'} pour fermer le serveur.`);
     if (!process.argv.includes('--no-browser')) {

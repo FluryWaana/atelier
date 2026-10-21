@@ -1,9 +1,10 @@
+import { msg, locale } from './i18n.mjs';
 import { blockers } from './workflow.mjs';
 
 export const taskTemplates = {
-  feature: { title: 'Fonctionnalité', mode: 'edit', description: 'Objectif\n\nComportement attendu\n\nCritères de réussite\n- \n\nContraintes\n' },
-  bug: { title: 'Correction', mode: 'edit', description: 'Problème observé\n\nÉtapes pour reproduire\n1. \n\nRésultat attendu\n\nVérification de la correction\n' },
-  analysis: { title: 'Analyse', mode: 'analyze', description: 'Question à examiner\n\nContexte\n\nLivrable attendu\nUne analyse avec les constats, les pistes et leurs limites. Ne pas modifier les fichiers.\n' },
+  feature: { title: msg("Fonctionnalité"), mode: 'edit', description: msg("Objectif\n\nComportement attendu\n\nCritères de réussite\n- \n\nContraintes\n") },
+  bug: { title: msg("Correction"), mode: 'edit', description: msg("Problème observé\n\nÉtapes pour reproduire\n1. \n\nRésultat attendu\n\nVérification de la correction\n") },
+  analysis: { title: msg("Analyse"), mode: 'analyze', description: msg("Question à examiner\n\nContexte\n\nLivrable attendu\nUne analyse avec les constats, les pistes et leurs limites. Ne pas modifier les fichiers.\n") },
 };
 
 export function matchesFocus(card, runs, focus, cards = []) {
@@ -26,11 +27,11 @@ export function paletteItems(state, query) {
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const words = normalize(query.trim()).split(/\s+/).filter(Boolean);
   const items = [
-    { kind: 'action', id: 'new', title: 'Créer une tâche', detail: 'Nouvelle tâche locale' },
-    { kind: 'action', id: 'projects', title: 'Gérer les projets', detail: 'Répertoires locaux' },
-    { kind: 'action', id: 'diagnostics', title: 'Tester les connexions', detail: 'Git, agents et services' },
+    { kind: 'action', id: 'new', title: msg("Créer une tâche"), detail: msg("Nouvelle tâche locale") },
+    { kind: 'action', id: 'projects', title: msg("Gérer les projets"), detail: msg("Répertoires locaux") },
+    { kind: 'action', id: 'diagnostics', title: msg("Tester les connexions"), detail: msg("Git, agents et services") },
     ...state.projects.map(p => ({ kind: 'project', id: p.id, title: p.name, detail: p.repo })),
-    ...state.cards.map(c => ({ kind: 'card', id: c.id, title: c.title, detail: `${c.ticket?.key || 'Tâche locale'}${c.archived ? ' · Archivée' : ''}` })),
+    ...state.cards.map(c => ({ kind: 'card', id: c.id, title: c.title, detail: `${c.ticket?.key || msg("Tâche locale")}${c.archived ? msg(" · Archivée") : ''}` })),
   ];
   return items.filter(item => words.every(word => normalize(item.title + ' ' + item.detail).includes(word))).slice(0, 30);
 }
@@ -46,7 +47,7 @@ export function timeCsv(entries, cards) {
     if (/^[\s]*[=+@-]/.test(text) || /^[\t\r\n]/.test(text)) text = "'" + text;
     return '"' + text.replaceAll('"', '""') + '"';
   };
-  const rows = [['Date', 'Heure', 'Ticket', 'Tâche', 'Secondes', 'Description', 'État Tempo', 'ID Tempo']];
+  const rows = [[msg("Date"), msg("Heure"), msg("Ticket"), msg("Tâche"), msg("Secondes"), msg("Description"), msg("État Tempo"), msg("ID Tempo")]];
   for (const entry of entries.filter(e => !e.runningSince)) {
     const card = cards.find(c => c.id === entry.cardId);
     rows.push([entry.date, entry.startTime, card?.ticket?.key, card?.title, entry.seconds, entry.description, entry.exportState, entry.tempoId]);

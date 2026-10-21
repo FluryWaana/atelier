@@ -22,7 +22,7 @@ mkdirSync(join(stage, 'runtime')); copyFileSync(process.execPath, join(stage, 'r
 writeFileSync(join(stage, 'release.json'), JSON.stringify({ repository, version, dataVersion, nodeVersion, platform: process.platform, arch: process.arch }, null, 2) + '\n');
 const name = packageName(version, process.platform, process.arch), archive = join(dist, name);
 if (existsSync(archive)) throw new Error('Ce package existe déjà dans dist. Utilise une nouvelle version ou déplace le précédent.');
-if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', join(root, 'scripts', 'Compress-Release.ps1'), '-Source', stage, '-Destination', archive], { windowsHide: true, stdio: 'inherit' });
+if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', join(root, 'scripts', 'Compress-Release.ps1'), '-Source', stage, '-Destination', archive], { windowsHide: true, stdio: 'inherit' });
 else {
   for (const name of ['runtime/node', 'Start.command', 'Stop.command']) chmodSync(join(stage, name), 0o755);
   execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });

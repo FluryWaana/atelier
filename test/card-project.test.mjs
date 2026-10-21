@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBoardView } from '../public/views/board.mjs';

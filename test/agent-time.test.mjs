@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -7,7 +8,7 @@ import { agentTime } from '../public/ui-helpers.mjs';
 
 test('agent timestamps in milliseconds become seconds and display with the correct units', () => {
   const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const context = vm.createContext({});
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,});
   vm.runInContext(source.slice(source.indexOf('function duration('), source.indexOf('function agentState(')), context);
   const startedAt = '2026-10-20T10:00:00.000Z';
   const runs = [{ cardId: 'a', status: 'completed', startedAt, endedAt: '2026-10-20T11:02:03.456Z' }];
@@ -40,7 +41,7 @@ test('Time view shows automatic totals per task without adding human entries', (
   const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
   const block = source.slice(source.indexOf("  if (currentView === 'time') {"), source.indexOf('  const openJournals ='));
   const cards = [{ id: 'a', title: '<Tâche>' }, { id: 'b', title: 'Autre' }];
-  const context = vm.createContext({
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
     currentView: 'time', cards, ids: new Set(['a', 'b']), times: [],
     runs: cards.map(card => ({ cardId: card.id, status: 'completed', startedAt: '2026-10-20T10:00:00Z', endedAt: '2026-10-20T10:01:00Z' })),
     state: { times: [] }, timeFilters: { from: '', to: '', status: 'all' }, summaryDay: '2026-10-20',
@@ -71,7 +72,7 @@ test('live refresh keeps filtered Time totals separate from the all-date task to
   const period = { dataset: { agentTime: 'a' }, hasAttribute: () => true };
   const card = { dataset: { agentTime: 'a' }, hasAttribute: () => false };
   const clock = { dataset: { clock: 'old' } };
-  const context = vm.createContext({
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
     state: { runs: [
       { cardId: 'a', status: 'completed', startedAt: new Date(2026, 9, 20, 23, 30).toISOString(), endedAt: new Date(2026, 9, 21, 1).toISOString() },
       { id: 'old', cardId: 'b', status: 'interrupted', startedAt: '2026-10-20T10:00:00Z', lastEventAt: '2026-10-20T10:00:12Z', endedAt: '2026-10-21T10:00:00Z' },

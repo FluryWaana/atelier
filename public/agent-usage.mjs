@@ -1,10 +1,11 @@
+import { msg, locale } from './i18n.mjs';
 export function usageText(run) {
   const u = run.usage;
-  const model = u?.models?.length ? u.models.join(', ') : run.actualModel || run.model || 'Modèle non communiqué par le CLI';
-  if (!u) return `${model} · Tokens et coût ${run.status === 'running' ? 'en attente du bilan CLI' : 'indisponibles (bilan CLI absent)'}.`;
-  const n = value => value.toLocaleString('fr-FR');
-  const cost = u.referenceModel ? 'Coût indisponible (ancienne estimation sur un autre modèle)' : u.costUsd == null ? 'Coût indisponible (modèle ou tarif inconnu)' : `Coût estimé : ${u.costUsd.toLocaleString('fr-FR', { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 6 })}`;
-  return `${model} · ${n(u.totalTokens)} tokens · Input : ${n(u.inputTokens)} (dont cache lu : ${n(u.cacheReadTokens)}, écrit : ${n(u.cacheWriteTokens)}) · Output : ${n(u.outputTokens)} · ${cost}${u.source === 'standard-api' ? ` · Tarif API standard du ${u.pricingDate}, contexte court, hors outils et majorations` : ' · Estimation CLI'}${u.scope === 'main-agent' ? ' · Tokens de l’agent principal uniquement' : ''}${run.status !== 'completed' ? ' · Bilan partiel possible' : ''}.`;
+  const model = u?.models?.length ? u.models.join(', ') : run.actualModel || run.model || msg("Modèle non communiqué par le CLI");
+  if (!u) return msg("{0} · Tokens et coût {1}.", model, run.status === 'running' ? msg("en attente du bilan CLI") : msg("indisponibles (bilan CLI absent)"));
+  const n = value => value.toLocaleString(locale);
+  const cost = u.referenceModel ? msg("Coût indisponible (ancienne estimation sur un autre modèle)") : u.costUsd == null ? msg("Coût indisponible (modèle ou tarif inconnu)") : msg("Coût estimé : {0}", u.costUsd.toLocaleString(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 6 }));
+  return msg("{0} · {1} tokens · Input : {2} (dont cache lu : {3}, écrit : {4}) · Output : {5} · {6}{7}{8}{9}.", model, n(u.totalTokens), n(u.inputTokens), n(u.cacheReadTokens), n(u.cacheWriteTokens), n(u.outputTokens), cost, u.source === 'standard-api' ? msg(" · Tarif API standard du {0}, contexte court, hors outils et majorations", u.pricingDate) : msg(" · Estimation CLI"), u.scope === 'main-agent' ? msg(" · Tokens de l’agent principal uniquement") : '', run.status !== 'completed' ? msg(" · Bilan partiel possible") : '');
 }
 
 export function usageTotals(runs) {

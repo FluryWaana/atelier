@@ -3,3 +3,6 @@
 *.js text eol=lf
 *.command text eol=lf
 *.cmd text eol=crlf
+scripts/installers/*.sh text eol=lf
+scripts/installers/atelier-kanban text eol=lf
+test/*.sh text eol=lf

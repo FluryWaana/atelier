@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +10,7 @@ for (const [name, marker] of [['card detail', "  $('#remove-worktree').onclick =
     for (const accepted of [false, true]) {
       const calls = [], button = { dataset: { cleanWorktree: 'a' } };
       let warning = '';
-      const context = vm.createContext({
+      const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
         card: { id: 'a' }, $: () => button, document: { querySelectorAll: () => [button] },
         confirmAction: async message => { warning = message; return accepted; },
         action: fn => fn(), cardPath: id => '/api/cards/' + id,

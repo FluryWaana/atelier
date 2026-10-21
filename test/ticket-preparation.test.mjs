@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, realpathSync, readFileSync } from 'node:fs';
@@ -82,7 +83,7 @@ test('proposal editor preserves edits during updates and transfers only on expli
   const card = { id: 'ticket', title: 'Titre', instructions: instructions.value, checklist: [] };
   const run = { id: 'run', cardId: card.id, kind: 'ticket-preparation', status: 'completed', preparation: { checklist: [{ text: 'Proposé', done: false }], questions: [] }, requirements: { title: card.title, description: '', instructions: card.instructions, criteria: [] } };
   const elements = { '#ticket-proposal': host, '#apply-ticket-proposal': apply, '#proposed-criteria': criteria, '#proposed-questions': questions, '#instructions': instructions, '#criteria-list': list, '#card-form': form };
-  const context = vm.createContext({ state: { cards: [card], runs: [run] }, $: selector => elements[selector], esc: s => s, action: f => f(), toast() {}, addCriterion: item => copied.push(item), Event: class {} });
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { cards: [card], runs: [run] }, $: selector => elements[selector], esc: s => s, action: f => f(), toast() {}, addCriterion: item => copied.push(item), Event: class {} });
   vm.runInContext(source.slice(source.indexOf('function renderTicketPreparation('), source.indexOf('function addCriterion(')), context);
   context.renderTicketPreparation(card.id); context.renderTicketPreparation(card.id);
   assert.equal(renders, 1); assert.equal(copied.length, 0);

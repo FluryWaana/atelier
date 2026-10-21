@@ -9,6 +9,17 @@ function sync(context) {
 }
 
 export default {
+  sourceLocale: 'fr-FR',
+  translations: {
+    'en-US': {
+      'Connecteur de démonstration': 'Demo connector',
+      'Un exemple local et sans compte externe pour créer votre propre connecteur.': 'A local example without an external account to build your own connector.',
+      'Titre du ticket de démonstration': 'Demo ticket title',
+      'Diagnostic démo': 'Demo diagnostics',
+      'Cet onglet est déclaré par le module.': 'This tab is declared by the module.',
+      'Compter les tickets importés': 'Count imported tickets',
+    },
+  },
   id: 'demo', name: 'Connecteur de démonstration', apiVersion: 1,
   description: 'Un exemple local et sans compte externe pour créer votre propre connecteur.',
   fields: [{ id: 'title', label: 'Titre du ticket de démonstration', type: 'text' }],

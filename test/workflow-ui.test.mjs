@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +10,7 @@ const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8'
 const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 
 test('PR details and cleanup candidates escape service data and show incomplete checks explicitly', () => {
-  const context = vm.createContext({ esc, prLabel, cleanupCandidate, connectorSupports, repositoryProvider, worktreeChecks: [], state: { runs: [] }, devRunning: () => false });
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, esc, prLabel, cleanupCandidate, connectorSupports, repositoryProvider, worktreeChecks: [], state: { runs: [] }, devRunning: () => false });
   vm.runInContext(source.slice(source.indexOf('function prMarkup('), source.indexOf('function renderWorkflowDetail(')), context);
   vm.runInContext(source.slice(source.indexOf('function cleanupMarkup('), source.indexOf('function queueMarkup(')), context);
   const card = { id: 'a', title: '<script>danger</script>', status: 'done', worktree: {}, pullRequest: { number: 7, url: 'https://example.invalid/pr/7', checkedAt: new Date().toISOString(), refreshError: '<img src=x>', checksError: '<svg>', checks: [{ name: '<script>', state: 'pending' }] } };
@@ -22,7 +23,7 @@ test('PR details and cleanup candidates escape service data and show incomplete 
 test('delivery cleanup confirms once and never requests forced removal', async () => {
   for (const accepted of [false, true]) {
     const calls = [], button = { dataset: { cleanCandidate: 'a' }, isConnected: true };
-    const context = vm.createContext({
+    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
       document: { querySelectorAll: selector => selector === '[data-clean-candidate]' ? [button] : [] },
       $: () => null, bindPrActions() {}, action: fn => fn(), confirmAction: async () => accepted,
       cardPath: id => '/api/cards/' + id, api: async (...args) => calls.push(args), async refresh() {}, toast() {}, worktreeChecks: [],

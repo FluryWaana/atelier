@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -12,7 +13,7 @@ function page() {
   for (const id of ['brainstorm-context', 'brainstorm-editor-kicker', 'brainstorm-editor-title', 'brainstorm-editor-intro', 'brainstorm-chat', 'brainstorm-start', 'brainstorm-reply', 'brainstorm-send', 'brainstorm-reply-form', 'brainstorm-chat-history', 'brainstorm-composer-agent']) nodes['#' + id] = { dataset: {}, style: {}, value: '', scrollHeight: 0, scrollTop: 0, clientHeight: 0, reportValidity: () => true };
   const calls = [], saved = new Map(), opened = [];
   let failure = false;
-  const context = vm.createContext({
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
     state: { cards: [], runs: [], projects: [], settings: {} }, brainstormSession: '', brainstormInitialized: false, brainstormingBusy: false,
     $: selector => nodes[selector], esc: text => text, taskAgentFields() {}, renderBrainstorm() {}, cardPath: id => '/api/cards/' + id,
     localStorage: { setItem: (key, value) => saved.set(key, value), getItem: key => saved.get(key) },
@@ -56,7 +57,7 @@ test('page preserves edits across updates and resumes the same session after a f
 
 test('brainstorm sessions stay out of the ordinary task views', () => {
   const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const context = vm.createContext({ state: { projects: [], cards: [{ id: 'idea', brainstormSession: true }, { id: 'task' }] }, $: () => ({ value: '' }) });
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { projects: [], cards: [{ id: 'idea', brainstormSession: true }, { id: 'task' }] }, $: () => ({ value: '' }) });
   vm.runInContext(source.slice(source.indexOf('function scopedCards('), source.indexOf('function duration(')), context);
   assert.equal(context.scopedCards().length, 1); assert.equal(context.scopedCards()[0].id, 'task');
 });

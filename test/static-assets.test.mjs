@@ -28,9 +28,10 @@ test('the browser entry point and every imported module are served with strict C
     assert.match(headers['Content-Security-Policy'], /script-src 'self';/);
     const source = path.startsWith('/lib/domain/') ? '..' + path : '../public' + path;
     assert.equal(response.body, readFileSync(new URL(source, import.meta.url), 'utf8'));
-    for (const match of response.body.matchAll(/(?:import|export)\s[^;]*?from\s*['"]([^'"]+)['"]/g)) {
+    for (const match of response.body.matchAll(/^(?:import|export)\s[^\r\n;]*?from\s*['"]([^'"]+)['"]/gm)) {
       paths.add(new URL(match[1], 'http://127.0.0.1:4317' + path).pathname);
     }
   }
   assert.ok(paths.has('/agent-usage.mjs'));
 });
+

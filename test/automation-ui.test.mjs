@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -8,7 +9,7 @@ const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8'
 const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 function view(card) {
   const host = { dataset: {} }, resume = {}, stop = {}, requests = [];
-  const context = vm.createContext({
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
     state: { cards: [card], projects: [], times: [] }, selected: card.id, esc,
     $: selector => selector === '#automation-status' ? host : selector === '#resume-automation' && card.automation?.state === 'error' ? resume : selector === '#stop-automation' && card.automation?.state === 'running' ? stop : null,
     cardPath: id => '/api/cards/' + id, action: fn => fn(), api: async (...args) => requests.push(args), refresh: async () => {}, renderDetail() {}, updateRun: async () => {},
@@ -47,7 +48,7 @@ test('functional coverage counts stay visible on the card and in the persistent 
 test('criterion evidence is escaped and old reviews are explicitly identified', () => {
   const host = { dataset: {}, insertAdjacentHTML(position, html) { this.innerHTML += html; } }, check = {};
   const run = { id: 'run', cardId: 'ticket', kind: 'pr-review', status: 'completed', startedAt: '2026-10-20T12:00:00Z', reviewContext: {}, review: { summary: 'Bilan', findings: [], criteria: [{ index: 0, text: '<Critère>', status: 'unverifiable', evidence: '<script>preuve</script>' }] } };
-  const context = vm.createContext({ state: { cards: [{ id: 'ticket' }], runs: [run] }, selectedRun: 'run', esc, runNames: { completed: 'Terminé' }, $: selector => selector === '#pr-review-result' ? host : selector === '#check-review' ? check : null });
+  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { cards: [{ id: 'ticket' }], runs: [run] }, selectedRun: 'run', esc, runNames: { completed: 'Terminé' }, $: selector => selector === '#pr-review-result' ? host : selector === '#check-review' ? check : null });
   vm.runInContext(source.slice(source.indexOf('function renderReviewReport('), source.indexOf('function projectConfig(')), context);
   context.renderReviewReport('ticket');
   assert.match(host.innerHTML, /Impossible à vérifier · &lt;Critère>/); assert.match(host.innerHTML, /&lt;script>/); assert.doesNotMatch(host.innerHTML, /<script>/);

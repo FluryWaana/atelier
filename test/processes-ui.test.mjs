@@ -1,3 +1,4 @@
+import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
 import { sameRepository } from '../lib/domain/paths.mjs';
 import { createProcessesView } from '../public/views/processes.mjs';
 import test from 'node:test';
@@ -273,4 +274,4 @@ test('stop-all attempts every running stack in the current view even if one stop
   assert.deepEqual(calls.sort(), ['/api/cards/a/dev-servers', '/api/cards/b/dev-servers']);
 });
 
-function contextFor(values) { const context = vm.createContext({ sameRepository, ...values }); context.getState = () => context.state; return context; }
+function contextFor(values) { const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, sameRepository, ...values }); context.getState = () => context.state; return context; }

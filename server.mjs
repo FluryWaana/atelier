@@ -13,7 +13,7 @@ import { createJiraSync } from './lib/application/jira-sync.mjs';
 import { createSyncRepository } from './lib/infrastructure/sync-repository.mjs';
 import { samePath } from './lib/paths.mjs';
 import { createServer } from 'node:http';
-import { readFileSync, mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -48,6 +48,7 @@ import { brainstormPrompt, parseBrainstorm } from './lib/brainstorm.mjs';
 import { createUpdates } from './lib/application/updates.mjs';
 import { createGithubReleases } from './lib/infrastructure/github-releases.mjs';
 import { createPackageUpdater } from './lib/infrastructure/package-updater.mjs';
+import { dataDirectory } from './lib/infrastructure/installation.mjs';
 import { updateRoute } from './lib/http/update-routes.mjs';
 import { updateLock } from './scripts/update-worker.mjs';
 
@@ -63,7 +64,7 @@ function repository(value) {
   return repo;
 }
 
-export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = join(root, 'data'), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate } = {}) {
+export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate } = {}) {
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const store = openStore(join(dataDir, 'kanban.sqlite'));
   const backups = createBackups(store, dataDir);
@@ -321,6 +322,10 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     fail('Route introuvable.', 404);
   }
   const assets = { "/connector-availability.mjs": ["connector-availability.mjs", "text/javascript"], '/views/settings.mjs': ['views/settings.mjs', 'text/javascript'], '/views/project-settings.mjs': ['views/project-settings.mjs', 'text/javascript'], '/views/processes.mjs': ['views/processes.mjs', 'text/javascript'], '/view-helpers.mjs': ['view-helpers.mjs', 'text/javascript'], '/views/board.mjs': ['views/board.mjs', 'text/javascript'], '/views/projects.mjs': ['views/projects.mjs', 'text/javascript'], '/lib/domain/agent-options.mjs': ['../lib/domain/agent-options.mjs', 'text/javascript'], '/lib/domain/tasks.mjs': ['../lib/domain/tasks.mjs', 'text/javascript'], '/lib/domain/paths.mjs': ['../lib/domain/paths.mjs', 'text/javascript'], '/lib/domain/validation.mjs': ['../lib/domain/validation.mjs', 'text/javascript'], '/updates.mjs': ['updates.mjs', 'text/javascript'], '/workflow.mjs': ['workflow.mjs', 'text/javascript'], '/agent-usage.mjs': ['agent-usage.mjs', 'text/javascript'], '/agent-options.mjs': ['agent-options.mjs', 'text/javascript'], '/ui-helpers.mjs': ['ui-helpers.mjs', 'text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+  assets['/i18n.mjs'] = ['i18n.mjs', 'text/javascript'];
+  for (const name of readdirSync(join(root, 'public', 'locales'))) {
+    if (/^[a-zA-Z0-9-]+\.mjs$/.test(name)) assets['/locales/' + name] = ['locales/' + name, 'text/javascript'];
+  }
   const server = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
