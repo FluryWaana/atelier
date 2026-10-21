@@ -39,6 +39,9 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
     desktopShortcut = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Join-Path ([Environment]::GetFolderPath('Desktop')) 'Atelier Kanban.lnk'"], { encoding: 'utf8' }).trim();
     assert.equal(existsSync(desktopShortcut), false, 'Un raccourci existe déjà : utiliser un compte de test.');
     run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=', '/DIR=' + app]); installed = true;
+    const registration = JSON.parse(run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{B1FD8B3A-76DE-4DF8-96B2-502E5F10C99F}_is1' | Select-Object DisplayName, DisplayVersion | ConvertTo-Json -Compress"], { encoding: 'utf8' }));
+    assert.equal(registration.DisplayName, 'Atelier Kanban');
+    assert.equal(registration.DisplayVersion, version);
     assert.equal(existsSync(desktopShortcut), false, 'Le raccourci Bureau est facultatif.');
   } else if (name.endsWith('.deb')) {
     run('dpkg-deb', ['-x', archive, root]);

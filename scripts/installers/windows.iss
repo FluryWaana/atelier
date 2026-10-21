@@ -21,6 +21,7 @@ DisableProgramGroupPage=yes
 CloseApplications=no
 RestartApplications=no
 UninstallDisplayIcon={app}\AtelierKanban.exe
+UninstallDisplayName=Atelier Kanban
 SetupIconFile={#SourceDir}\public\atelier-kanban.ico
 OutputDir={#OutputDir}
 OutputBaseFilename=atelier-kanban-{#ReleaseVersion}-windows-x64-setup
