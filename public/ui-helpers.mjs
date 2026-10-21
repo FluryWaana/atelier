@@ -1,3 +1,4 @@
+import { sameRepository } from '../lib/domain/paths.mjs';
 import { msg, locale } from './i18n.mjs';
 import { blockers } from './workflow.mjs';
 
@@ -88,4 +89,9 @@ export function dailyTime(entries, day, now = Date.now()) {
     groups.set(entry.cardId, group);
   }
   return [...groups.values()].sort((a,b) => b.seconds - a.seconds);
+}
+
+export function scopedCards(state, projectId, includeArchived = false) {
+  const project = state.projects.find(p => p.id === projectId);
+  return state.cards.filter(c => !c.brainstormSession && (includeArchived || !c.archived) && (!project || sameRepository(c.repo, project.repo, state.settings.platform)));
 }

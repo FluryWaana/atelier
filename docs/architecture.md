@@ -42,7 +42,7 @@ Le domaine ne dépend ni de Node.js ni de HTTP. Le cas d’usage reçoit les por
 
 `lib/http/task-routes.mjs` et `project-routes.mjs` dispatchent les requêtes. `server.mjs` compose les dépendances, applique les protections HTTP et traduit les erreurs métier en réponses HTTP. Les règles de blocage pendant une exécution, les chronomètres et l’historique restent conservés.
 
-`public/views/board.mjs`, `projects.mjs`, `processes.mjs` et `project-settings.mjs` reçoivent explicitement l’état et les actions de l’interface. Ils possèdent le rendu et les événements du tableau, de la liste des projets, des processus et des réglages de projet. `public/app.js` conserve la coordination, les filtres globaux et les écrans de fiche, brainstorming et temps. Ce code reste dans la couche de présentation ; les décisions métier sont contrôlées côté application. Les tests couvrent les cas d’usage avec un stockage en mémoire, les routes avec SQLite temporaire et les événements des vues avec des doubles DOM.
+Les modules de `public/views/` reçoivent explicitement l’état et les actions de l’interface. `card.mjs` possède la sélection et le journal de la fiche ; `brainstorm.mjs` possède la discussion et ses brouillons ; `time.mjs` possède les filtres, les formulaires et les chronomètres affichés. `task-editor.mjs` partage les champs d’agent et les brouillons entre création et édition. Le tableau, les projets et les processus conservent leurs vues dédiées. `public/app.js` compose ces vues et conserve la navigation et les filtres globaux. Les décisions métier restent contrôlées côté application. Les tests couvrent les cas d’usage avec un stockage en mémoire, les routes avec SQLite temporaire et les événements des vues importées directement avec des doubles DOM ; ils n’exécutent plus de fragments découpés dans le source.
 
 ## Autres cas d’usage et points de composition
 
@@ -67,6 +67,6 @@ La compatibilité native doit être validée par la matrice GitHub avant diffusi
 
 ## Migration du reste du projet
 
-Les prochaines évolutions de présentation peuvent extraire la fiche, le brainstorming et le suivi du temps de `public/app.js` lorsqu’elles touchent ces écrans. Garder l’état et les actions explicites, les routes existantes, la protection locale, les validations et les tests. Les comportements système réels et les intégrations externes doivent être vérifiés sur chaque plateforme avant diffusion.
+Les prochaines évolutions de présentation doivent conserver l’état et les actions explicites, les routes existantes, la protection locale, les validations et les tests. Les comportements système réels et les intégrations externes doivent être vérifiés sur chaque plateforme avant diffusion.
 
 Chaque extraction doit laisser une application utilisable. Une migration de données ne se mélange pas à un déplacement de code. La version du format de données (`dataVersion`) est actuellement 1 ; l’installation automatique refuse un paquet d’un autre format. Une future évolution du format nécessite d’abord des migrations testées et une politique de restauration explicite.

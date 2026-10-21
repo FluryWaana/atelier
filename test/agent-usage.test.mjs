@@ -112,7 +112,7 @@ test('display and aggregate stats distinguish historical/missing usage from meas
   const legacy = { usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 15, costUsd: 1, referenceModel: true } };
   assert.deepEqual(usageTotals([legacy]), { costUsd: 0, measured: 0, missing: 1 });
   assert.match(usageText(legacy), /ancienne estimation sur un autre modèle/);
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8') + readFileSync(new URL('../public/views/card.mjs', import.meta.url), 'utf8');
   assert.ok(source.includes("$('#run-usage').textContent = usageText(run)"));
   assert.ok(source.includes('${esc(usageText(run))}'));
   assert.ok(source.includes('const usage = usageTotals(runs)'));

@@ -1,31 +1,29 @@
-import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
+import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+import { createTaskEditor } from '../public/views/task-editor.mjs';
+import { loadVersion } from '../public/ui-actions.mjs';
+import { bindView } from './helpers/view-context.mjs';
 
-const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 test('creation and project selection target the repository disclosure among optional sections', () => {
   for (const repo of ['', 'C:/project']) {
     const directory = { open: false };
     const form = {
       elements: { repo: { value: '', closest(selector) { assert.equal(selector, 'details'); return directory; } }, agent: {}, title: { focus() {} } },
-      dataset: {}, reset() {},
+      dataset: {}, reset() {}, querySelector: () => ({}),
     };
     const nodes = new Map([
       ['#new-form', form], ['#create-button', {}], ['#new-form h2', {}],
       ['#new-form button.primary', {}], ['#new-form .notice-line', {}],
       ['#template-criteria', {}], ['#project-filter', { value: '' }], ['#new-project', {}],
-      ['#new-dialog', { setAttribute() {}, showModal() {} }],
+      ['#new-dialog', { setAttribute() {}, showModal() {}, querySelector: selector => selector === '.draft-notice' ? null : { after() {} } }],
     ]);
-    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+    const context = {
       $: selector => { assert.ok(nodes.has(selector), selector); return nodes.get(selector); },
       state: { projects: [], settings: { repo } },
-      document: { querySelectorAll: () => [] }, attachDraft() {}, taskAgentFields() {},
-    });
-    for (const prefix of ["$('#create-button').onclick =", "$('#new-project').onchange ="]) {
-      vm.runInContext(source.split('\n').find(line => line.startsWith(prefix)), context);
-    }
+      document: { querySelectorAll: () => [], createElement: () => ({}) }, attachDraft() {}, taskAgentFields() {},
+    };
+    bindView(createTaskEditor, context).bind();
     nodes.get('#create-button').onclick();
     assert.equal(directory.open, !repo);
     nodes.get('#new-project').onchange({ target: { value: 'C:/selected-project' } });
@@ -36,12 +34,11 @@ test('creation and project selection target the repository disclosure among opti
 
 test('sidebar displays the version returned by the server', async () => {
   const badge = { setAttribute(name, value) { this[name] = value; } };
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+  const context = {
     api: async path => { assert.equal(path, '/api/health'); return { version: '2.3.4' }; },
     $: selector => { assert.equal(selector, '#app-version'); return badge; },
-  });
-  vm.runInContext(source.slice(source.indexOf('async function loadVersion('), source.indexOf('action(loadVersion);')), context);
-  await context.loadVersion();
+  };
+  await loadVersion({ querySelector: context.$ }, context.api);
   assert.equal(badge.textContent, 'v2.3.4');
   assert.equal(badge['aria-label'], 'Version 2.3.4');
 });
@@ -55,12 +52,12 @@ test('draft notices stay outside the task editor and keep saving form values', (
     const password = { name: 'token', value: 'not-for-storage', type: 'password' };
     const form = { elements: [field, password] }; field.form = form;
     const host = { querySelector: selector => selector === '.detail-nav' ? navigation : selector === '.dialog-heading' ? heading : null };
-    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+    const context = {
       document: { createElement: () => notice },
       localStorage: { getItem: () => null, setItem(name, value) { saved = { name, value: JSON.parse(value) }; } },
       $: () => ({ children: [] }),
-    });
-    vm.runInContext(source.slice(source.indexOf('function attachDraft('), source.indexOf('async function renderBackups(')), context);
+    };
+    bindView(createTaskEditor, context);
     context.attachDraft(form, key, host);
     assert.equal(placedAfter[0], key === 'card' ? 'navigation' : 'heading');
     assert.equal(placedAfter[1], notice);

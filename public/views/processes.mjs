@@ -71,3 +71,21 @@ function processesMarkup(project) {
 
   return { devRunning, processCards, launchProjects, projectManagedPorts, projectLaunchBlocked, processesMarkup };
 }
+
+export function bindProcessActions({ document, api, action, refresh, refreshProcesses, processCards, devRunning }, project) {
+  const $ = selector => document.querySelector(selector);
+  if ($('#stop-visible-processes')) $('#stop-visible-processes').onclick = () => action(async () => {
+    const results = await Promise.allSettled(processCards(project).filter(card => devRunning(card.id)).map(card => api(cardPath(card.id) + '/dev-servers', 'DELETE', {})));
+    await refresh();
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure) throw failure.reason;
+  });
+  document.querySelectorAll('[data-process-action]').forEach(button => button.onclick = () => action(async () => {
+    button.disabled = true;
+    try {
+      const operation = button.dataset.processAction, serviceId = button.dataset.serviceId;
+      await api(cardPath(button.dataset.processCard) + '/dev-servers', operation === 'stop' ? 'DELETE' : 'POST', { ...(serviceId ? { serviceId } : operation === 'start' ? { standalone: true } : {}), ...(operation === 'restart' ? { restart: true } : {}) });
+      await refresh(); await refreshProcesses();
+    } finally { if (button.isConnected) button.disabled = false; }
+  }));
+}

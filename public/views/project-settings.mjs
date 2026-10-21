@@ -2,7 +2,7 @@ import { msg, markupText, locale } from '../i18n.mjs';
 import { names, esc } from '../view-helpers.mjs';
 import { sameRepository } from '../../lib/domain/paths.mjs';
 
-export function createProjectSettings({ document, getState, api, action, refresh, toast, devRunning }) {
+export function createProjectSettings({ document, getState, api, action, refresh, toast, devRunning, FormData = globalThis.FormData }) {
   const $ = selector => document.querySelector(selector);
   let editingProject = null;
 $('#browse-project-settings').onclick = () => action(async () => {
@@ -54,10 +54,6 @@ async function detectLaunchSettings(form, projectId, role = '') {
       select.onchange = () => { const candidate = detected.candidates[Number(select.value)]; if (select.value !== '' && candidate?.role === role && candidate.runnable !== false) apply(role, candidate); };
     });
   } finally { button.disabled = false; }
-}
-function detectedProfileCommand(candidate, profileName) {
-  if (profileName && !candidate.profiles.some(profile => profile.name === profileName && profile.supported)) throw new Error(msg("Profil .NET non pris en charge."));
-  return candidate.baseCommand + (profileName ? ` --launch-profile "${profileName}"` : ' --no-launch-profile') + (candidate.automaticPort ? ' -- --urls http://127.0.0.1:{port}' : '');
 }
 let editingLaunchProject = null;
 function openLaunchSettings(id) {
@@ -136,5 +132,10 @@ $('#project-settings-form').onsubmit = event => { event.preventDefault(); action
 
 
 
-  return { openProjectSettings, openLaunchSettings };
+  return { openProjectSettings, openLaunchSettings, detectLaunchSettings, bindLaunchSettings };
+}
+
+export function detectedProfileCommand(candidate, profileName) {
+  if (profileName && !candidate.profiles.some(profile => profile.name === profileName && profile.supported)) throw new Error(msg("Profil .NET non pris en charge."));
+  return candidate.baseCommand + (profileName ? ` --launch-profile "${profileName}"` : ' --no-launch-profile') + (candidate.automaticPort ? ' -- --urls http://127.0.0.1:{port}' : '');
 }

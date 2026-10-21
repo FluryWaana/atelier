@@ -1,8 +1,10 @@
-import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
+import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+import { createBrainstormView, createBrainstormProposals, brainstormQuestions } from '../public/views/brainstorm.mjs';
+import { scopedCards } from '../public/ui-helpers.mjs';
+import { notifyCompletions } from '../public/ui-actions.mjs';
+import { bindView } from './helpers/view-context.mjs';
 import { sameRepository } from '../lib/domain/paths.mjs';
 
 function page() {
@@ -18,7 +20,7 @@ function page() {
   nodes['#brainstorm-toolbar'] = {};
   const calls = [], saved = new Map(), opened = [];
   let failure = false;
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+  const context = {
     state: { cards: [], runs: [], projects: [], settings: {} }, brainstormSession: '', brainstormInitialized: false, brainstormingBusy: false,
     $: selector => nodes[selector], esc: text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'), taskAgentFields() {}, renderBrainstorm() {}, cardPath: id => '/api/cards/' + id,
     localStorage: { setItem: (key, value) => saved.set(key, value), getItem: key => saved.get(key), removeItem: key => saved.delete(key) },
@@ -30,9 +32,9 @@ function page() {
       context.state.cards = [session]; return session;
     },
     refresh: async () => context.renderBrainstormPage(), openCard: async id => opened.push(id), toast() {}, action: fn => fn(),
-  });
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  vm.runInContext(source.slice(source.indexOf('function rememberBrainstorm('), source.indexOf('function setupBrainstorm(')), context);
+  };
+
+  bindView(createBrainstormView, context);
   context.renderBrainstormPage();
   return { context, fields, calls, saved, opened, nodes, failLaunch: value => { failure = value; } };
 }
@@ -79,7 +81,7 @@ test('page preserves edits across updates and resumes the same session after a f
   const p = page(); p.fields.title.value = 'Idée à explorer'; p.fields.instructions.value = 'Contrainte';
   p.failLaunch(true);
   await assert.rejects(p.context.submitBrainstorm(false), /indisponible/);
-  assert.equal(p.context.brainstormSession, 'session');
+  assert.equal(p.context.session, 'session');
   assert.equal(p.fields.title.value, 'Idée à explorer');
   p.failLaunch(false);
   await p.context.submitBrainstorm(false);
@@ -92,9 +94,9 @@ test('page preserves edits across updates and resumes the same session after a f
 });
 
 test('brainstorm sessions stay out of the ordinary task views', () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { projects: [], cards: [{ id: 'idea', brainstormSession: true }, { id: 'task' }] }, $: () => ({ value: '' }) });
-  vm.runInContext(source.slice(source.indexOf('function scopedCards('), source.indexOf('function duration(')), context);
+
+  const context = {  state: { projects: [], cards: [{ id: 'idea', brainstormSession: true }, { id: 'task' }] }, $: () => ({ value: '' }) };
+  context.scopedCards = () => scopedCards(context.state, '');
   assert.equal(context.scopedCards().length, 1); assert.equal(context.scopedCards()[0].id, 'task');
 });
 
@@ -152,7 +154,7 @@ test('conversation shows escaped answers and clickable questions without requiri
   assert.equal(p.nodes['#brainstorm-generate'].disabled, false);
   assert.equal(p.nodes['#brainstorm-generate'].textContent, 'Envoyer et préparer les tâches');
   assert.equal(p.nodes['#brainstorm-send'].disabled, false);
-  assert.deepEqual(Array.from(p.context.brainstormQuestions({ brainstorm: { questions: ['Pour qui ?'] }, proposals: [{ questions: ['Pour qui ?', 'Quel format ?'] }] })), ['Pour qui ?', 'Quel format ?']);
+  assert.deepEqual(Array.from(brainstormQuestions({ brainstorm: { questions: ['Pour qui ?'] }, proposals: [{ questions: ['Pour qui ?', 'Quel format ?'] }] })), ['Pour qui ?', 'Quel format ?']);
 });
 
 test('drafts survive switching sessions and starting a session clears the initial draft', async () => {
@@ -180,12 +182,12 @@ test('running agents allow drafting but not sending and explicit breakdown does 
 });
 
 test('task panel preserves and labels the previous breakdown during a later conversation', () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+
   const host = { dataset: {}, querySelectorAll: () => [] };
-  const context = vm.createContext({ msg, markupText, messageText, sameRepository, esc: text => text,
+  const context = {  sameRepository, esc: text => text,
     state: { cards: [], runs: [{ id: 'new', cardId: 'session', kind: 'brainstorm', status: 'completed', proposals: [], brainstorm: { message: 'Discutons.' } }, { id: 'old', cardId: 'session', kind: 'brainstorm', status: 'completed', proposals: [{ title: 'Export CSV', description: 'Description', checklist: [], questions: [] }] }] },
-  });
-  vm.runInContext(source.slice(source.indexOf('function renderBrainstorm('), source.indexOf('function renderTicketPreparation(')), context);
+  };
+  bindView(createBrainstormProposals, context);
   context.renderBrainstorm('session', host);
   assert.match(host.innerHTML, /Export CSV/); assert.match(host.innerHTML, /Dernier découpage proposé/);
   assert.match(host.innerHTML, /data-brainstorm-proposal="0" open/);
@@ -236,17 +238,16 @@ test('a created session survives launch and refresh failures without duplicating
 });
 
 test('the visible conversation does not show a distracting Agents notification', async () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+
   for (const cardId of ['session', 'other']) {
     const messages = [], run = { id: 'run', cardId, kind: 'brainstorm', status: 'running' };
-    const context = vm.createContext({ msg, messageText, localizeModule,
+    const context = {
       state: { cards: [], runs: [run], settings: { platform: 'win32' } }, currentView: 'brainstorm', brainstormSession: 'session',
       api: async () => ({ cards: [], runs: [{ ...run, status: 'completed' }], settings: { platform: 'win32' } }),
       $: () => ({}), resetJiraButton: {}, connectorSupports: () => false, connectorName: () => '',
       renderTemplates() {}, renderProjects() {}, board() {}, updateDevServers() {}, updateAutomation() {},
       document: { querySelector: () => null }, toast: message => messages.push(message),
-    });
-    vm.runInContext(source.slice(source.indexOf('async function refresh('), source.indexOf('function connectorName(')), context);
-    await context.refresh(); assert.equal(messages.length, cardId === 'session' ? 0 : 1);
+    };
+    notifyCompletions(await context.api(), new Map([['run', 'running']]), new Map(), context); assert.equal(messages.length, cardId === 'session' ? 0 : 1);
   }
 });

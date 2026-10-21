@@ -1,26 +1,32 @@
-import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
+import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+import { createCardView } from '../public/views/card.mjs';
+import { createTimeView } from '../public/views/time.mjs';
+import { createWorkspaceWorkflows } from '../public/views/workspace-workflows.mjs';
+import { bindView } from './helpers/view-context.mjs';
 import { prLabel, cleanupCandidate } from '../public/workflow.mjs';
 import { connectorSupports, repositoryProvider } from '../public/connector-availability.mjs';
 
-const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
 const esc = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 
 test('work report escapes the date before inserting it in an HTML attribute', () => {
-  const context = vm.createContext({ markupText, esc, summaryDay: '\"><img src=x onerror=alert(1)>', scopedCards: () => [], workReport: () => '', state: { cards: [], runs: [], times: [] } });
-  vm.runInContext(source.slice(source.indexOf('function reportMarkup('), source.indexOf('function bindWorkflowActions(')), context);
+  const context = { esc, summaryDay: '\"><img src=x onerror=alert(1)>', scopedCards: () => [], workReport: () => '', state: { cards: [], runs: [], times: [] } };
+  const date = {};
+  context.$ = selector => selector === '#report-day' ? date : null;
+  context.board = () => {};
+  bindView(createTimeView, context).bindReport();
+  date.onchange({ target: { value: context.summaryDay } });
   const html = context.reportMarkup();
-  assert.match(html, /value="&quot;>&lt;img/);
+  assert.match(html, /value="&quot;&gt;&lt;img/);
   assert.doesNotMatch(html, /<img/i);
 });
 
 test('PR details and cleanup candidates escape service data and show incomplete checks explicitly', () => {
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, esc, prLabel, cleanupCandidate, connectorSupports, repositoryProvider, worktreeChecks: [], state: { runs: [] }, devRunning: () => false });
-  vm.runInContext(source.slice(source.indexOf('function prMarkup('), source.indexOf('function renderWorkflowDetail(')), context);
-  vm.runInContext(source.slice(source.indexOf('function cleanupMarkup('), source.indexOf('function queueMarkup(')), context);
+  const context = {  esc, prLabel, cleanupCandidate, connectorSupports, repositoryProvider, worktreeChecks: [], state: { runs: [] }, devRunning: () => false };
+  bindView(createCardView, context);
+  context.getWorktreeChecks = () => context.worktreeChecks;
+  bindView(createWorkspaceWorkflows, context);
   const card = { id: 'a', title: '<script>danger</script>', status: 'done', worktree: {}, pullRequest: { number: 7, url: 'https://example.invalid/pr/7', checkedAt: new Date().toISOString(), refreshError: '<img src=x>', checksError: '<svg>', checks: [{ name: '<script>', state: 'pending' }] } };
   const markup = context.prMarkup(card);
   assert.doesNotMatch(markup, /<img|<svg|<script>/i); assert.match(markup, /&lt;img/); assert.match(markup, /règles de branche et pipelines restent à vérifier/);
@@ -31,12 +37,13 @@ test('PR details and cleanup candidates escape service data and show incomplete 
 test('delivery cleanup confirms once and never requests forced removal', async () => {
   for (const accepted of [false, true]) {
     const calls = [], button = { dataset: { cleanCandidate: 'a' }, isConnected: true };
-    const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+    const context = {
       document: { querySelectorAll: selector => selector === '[data-clean-candidate]' ? [button] : [] },
       $: () => null, bindPrActions() {}, action: fn => fn(), confirmAction: async () => accepted,
       cardPath: id => '/api/cards/' + id, api: async (...args) => calls.push(args), async refresh() {}, toast() {}, worktreeChecks: [],
-    });
-    vm.runInContext(source.slice(source.indexOf('function bindWorkflowActions(')), context);
+    };
+    context.clearWorktreeChecks = () => { context.worktreeChecks = []; };
+    bindView(createWorkspaceWorkflows, context);
     context.bindWorkflowActions(); await button.onclick();
     assert.equal(JSON.stringify(calls), JSON.stringify(accepted ? [['/api/cards/a/worktree', 'DELETE', {}]] : []));
   }

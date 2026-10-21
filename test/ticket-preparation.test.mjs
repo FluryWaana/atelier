@@ -1,11 +1,12 @@
-import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
+import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, realpathSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import vm from 'node:vm';
+import { createTicketPreparation } from '../public/views/card.mjs';
+import { bindView } from './helpers/view-context.mjs';
 import { createApp } from '../server.mjs';
 import { openStore } from '../lib/store.mjs';
 import { parsePreparation, preparationPrompt } from '../lib/ticket-preparation.mjs';
@@ -72,7 +73,6 @@ test('preparation uses read-only execution, keeps status and requirements, handl
 });
 
 test('proposal editor preserves edits during updates and transfers only on explicit action', async () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
   const host = { dataset: {}, querySelectorAll: () => [criteria, questions, apply] };
   let renders = 0, copied = [], events = 0;
   Object.defineProperty(host, 'innerHTML', { set(value) { renders++; } });
@@ -83,8 +83,8 @@ test('proposal editor preserves edits during updates and transfers only on expli
   const card = { id: 'ticket', title: 'Titre', instructions: instructions.value, checklist: [] };
   const run = { id: 'run', cardId: card.id, kind: 'ticket-preparation', status: 'completed', preparation: { checklist: [{ text: 'Proposé', done: false }], questions: [] }, requirements: { title: card.title, description: '', instructions: card.instructions, criteria: [] } };
   const elements = { '#ticket-proposal': host, '#apply-ticket-proposal': apply, '#proposed-criteria': criteria, '#proposed-questions': questions, '#instructions': instructions, '#criteria-list': list, '#card-form': form };
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule, state: { cards: [card], runs: [run] }, $: selector => elements[selector], esc: s => s, action: f => f(), toast() {}, addCriterion: item => copied.push(item), Event: class {} });
-  vm.runInContext(source.slice(source.indexOf('function renderTicketPreparation('), source.indexOf('function addCriterion(')), context);
+  const context = {  state: { cards: [card], runs: [run] }, $: selector => elements[selector], esc: s => s, action: f => f(), toast() {}, addCriterion: item => copied.push(item), Event: class {} };
+  bindView(createTicketPreparation, context);
   context.renderTicketPreparation(card.id); context.renderTicketPreparation(card.id);
   assert.equal(renders, 1); assert.equal(copied.length, 0);
   await apply.onclick();

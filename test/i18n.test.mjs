@@ -128,7 +128,7 @@ test('translated module markup escapes labels and preserves user-entered values'
 });
 
 test('browser translation calls refer to registered catalog entries', () => {
-  for (const file of ['app.js', 'ui-helpers.mjs', 'view-helpers.mjs', 'workflow.mjs', 'agent-usage.mjs', 'updates.mjs', 'views/board.mjs', 'views/projects.mjs', 'views/project-settings.mjs', 'views/processes.mjs', 'views/settings.mjs']) {
+  for (const file of ['app.js', 'ui-actions.mjs', 'views/card.mjs', 'views/time.mjs', 'views/brainstorm.mjs', 'views/task-editor.mjs', 'views/overview.mjs', 'views/workspace-workflows.mjs', 'ui-helpers.mjs', 'view-helpers.mjs', 'workflow.mjs', 'agent-usage.mjs', 'updates.mjs', 'views/board.mjs', 'views/projects.mjs', 'views/project-settings.mjs', 'views/processes.mjs', 'views/settings.mjs']) {
     const source = readFileSync(new URL('../public/' + file, import.meta.url), 'utf8');
     for (const match of source.matchAll(/(?:msg|markupText)\(("(?:[^"\\]|\\.)*")/g)) assert.ok(Object.hasOwn(languages['en-US'].messages, JSON.parse(match[1])), file + ': ' + match[1]);
   }

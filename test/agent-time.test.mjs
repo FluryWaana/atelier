@@ -1,22 +1,21 @@
-import { msg, markupText, locale, messageText, localizeModule } from './helpers/french-locale.mjs';
+import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
+import { duration } from '../public/view-helpers.mjs';
+import { createTimeView } from '../public/views/time.mjs';
+import { bindView } from './helpers/view-context.mjs';
 import { spawnSync } from 'node:child_process';
 import { agentTime } from '../public/ui-helpers.mjs';
 
 test('agent timestamps in milliseconds become seconds and display with the correct units', () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,});
-  vm.runInContext(source.slice(source.indexOf('function duration('), source.indexOf('function agentState(')), context);
+  const context = { };
   const startedAt = '2026-10-20T10:00:00.000Z';
   const runs = [{ cardId: 'a', status: 'completed', startedAt, endedAt: '2026-10-20T11:02:03.456Z' }];
   const seconds = agentTime(runs)[0].seconds;
   assert.equal(seconds, 3723);
-  assert.equal(context.duration(seconds), '1 h 02 min 03 s');
+  assert.equal(duration(seconds), '1 h 02 min 03 s');
   for (const [seconds, expected] of [[0, '0 h 00 min 00 s'], [59, '0 h 00 min 59 s'], [60, '0 h 01 min 00 s'], [3600, '1 h 00 min 00 s'], [90061, '25 h 01 min 01 s']]) {
-    assert.equal(context.duration(seconds), expected);
+    assert.equal(duration(seconds), expected);
   }
 });
 
@@ -38,22 +37,21 @@ test('agent time accumulates executions per task, including reviews and stopped 
 });
 
 test('Time view shows automatic totals per task without adding human entries', () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-  const block = source.slice(source.indexOf("  if (currentView === 'time') {"), source.indexOf('  const openJournals ='));
   const cards = [{ id: 'a', title: '<Tâche>' }, { id: 'b', title: 'Autre' }];
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+  const context = {
     currentView: 'time', cards, ids: new Set(['a', 'b']), times: [],
     runs: cards.map(card => ({ cardId: card.id, status: 'completed', startedAt: '2026-10-20T10:00:00Z', endedAt: '2026-10-20T10:01:00Z' })),
     state: { times: [] }, timeFilters: { from: '', to: '', status: 'all' }, summaryDay: '2026-10-20',
     agentTime, dailyTime: () => [], duration: seconds => `${seconds}s`, reportMarkup: () => '',
     esc: value => String(value).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
-  });
-  const html = vm.runInContext(`let html = ''; ${block}; html`, context);
-  assert.match(html, /id="agent-total">120s/);
-  assert.match(html, /data-agent-time="a">60s/);
-  assert.match(html, /data-agent-time="b">60s/);
+  };
+  bindView(createTimeView, context);
+  const html = context.timeMarkup(cards, context.runs, []);
+  assert.match(html, /id="agent-total">0 h 02 min 00 s/);
+  assert.match(html, /data-agent-time="a">0 h 01 min 00 s/);
+  assert.match(html, /data-agent-time="b">0 h 01 min 00 s/);
   assert.match(html, /&lt;Tâche&gt;/);
-  assert.match(html, /id="human-total">0s/);
+  assert.match(html, /id="human-total">0 h 00 min 00 s/);
   assert.equal(context.state.times.length, 0);
 });
 
@@ -67,27 +65,27 @@ test('stopped executions without an end date do not keep accumulating time', () 
 });
 
 test('live refresh keeps filtered Time totals separate from the all-date task total', () => {
-  const source = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
   const total = {};
   const period = { dataset: { agentTime: 'a' }, hasAttribute: () => true };
   const card = { dataset: { agentTime: 'a' }, hasAttribute: () => false };
   const clock = { dataset: { clock: 'old' } };
-  const context = vm.createContext({ msg, markupText, locale, messageText, localizeModule,
+  const context = {
     state: { runs: [
       { cardId: 'a', status: 'completed', startedAt: new Date(2026, 9, 20, 23, 30).toISOString(), endedAt: new Date(2026, 9, 21, 1).toISOString() },
       { id: 'old', cardId: 'b', status: 'interrupted', startedAt: '2026-10-20T10:00:00Z', lastEventAt: '2026-10-20T10:00:12Z', endedAt: '2026-10-21T10:00:00Z' },
     ], times: [] },
-    agentTime, timeFilters: { from: '2026-10-20', to: '2026-10-20' }, selectedRun: null,
+    agentTime, timeFilters: { from: '2026-10-20', to: '2026-10-20' }, getSelectedRun: () => null,
     scopedCards: () => [{ id: 'a' }], duration: seconds => `${seconds}s`,
     $: selector => selector === '#agent-total' ? total : null,
     document: { querySelectorAll: selector => selector === '[data-agent-time]' ? [period, card] : selector === '[data-clock]' ? [clock] : [] },
-  });
-  vm.runInContext(source.slice(source.indexOf('function updateClocks('), source.indexOf('async function refresh(')), context);
+  };
+  bindView(createTimeView, context);
+  Object.assign(context.filters, context.timeFilters);
   context.updateClocks();
-  assert.equal(total.textContent, '1800s');
-  assert.equal(period.textContent, '1800s');
-  assert.equal(card.textContent, '5400s');
-  assert.equal(clock.textContent, 'Durée : 12s');
+  assert.equal(total.textContent, '0 h 30 min 00 s');
+  assert.equal(period.textContent, '0 h 30 min 00 s');
+  assert.equal(card.textContent, '1 h 30 min 00 s');
+  assert.equal(clock.textContent, 'Durée : 0 h 00 min 12 s');
 });
 
 test('date filters split overnight runs into local days and include the entire end date', () => {
