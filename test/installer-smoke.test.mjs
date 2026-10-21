@@ -27,7 +27,7 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
   const app = process.platform === 'win32' ? join(root, 'app') : join(root, 'opt', 'atelier-kanban');
   const node = join(app, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node');
   const run = (command, args, options = {}) => execFileSync(command, args, { env, windowsHide: true, timeout: 90000, ...options });
-  let installed = false, pid;
+  let installed = false, pid, desktopShortcut;
   t.after(async () => {
     if (pid) { try { process.kill(pid); } catch {} await delay(1000); }
     if (installed && process.platform === 'win32' && existsSync(join(app, 'unins000.exe'))) run(join(app, 'unins000.exe'), ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']);
@@ -36,7 +36,10 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
   if (process.platform === 'win32') {
     const existing = spawnSync('reg.exe', ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{B1FD8B3A-76DE-4DF8-96B2-502E5F10C99F}_is1'], { windowsHide: true });
     assert.equal(existing.status, 1, 'Une installation existe déjà pour cet utilisateur : utiliser un compte de test.');
-    run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/DIR=' + app]); installed = true;
+    desktopShortcut = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Join-Path ([Environment]::GetFolderPath('Desktop')) 'Atelier Kanban.lnk'"], { encoding: 'utf8' }).trim();
+    assert.equal(existsSync(desktopShortcut), false, 'Un raccourci existe déjà : utiliser un compte de test.');
+    run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=', '/DIR=' + app]); installed = true;
+    assert.equal(existsSync(desktopShortcut), false, 'Le raccourci Bureau est facultatif.');
   } else if (name.endsWith('.deb')) {
     run('dpkg-deb', ['-x', archive, root]);
     run('dpkg-deb', ['-e', archive, join(root, 'control')]);
@@ -64,16 +67,22 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
   assert.equal(updates.canInstall, process.platform === 'win32');
   run(node, [join(app, 'launcher.mjs'), '--stop']); pid = null;
   if (process.platform === 'win32') {
-    run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/DIR=' + app]);
+    run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=desktopicon', '/DIR=' + app]);
+    assert.equal(existsSync(desktopShortcut), true);
+    const shortcut = JSON.parse(run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ATELIER_TEST_SHORTCUT); @{ target = $shortcut.TargetPath; directory = $shortcut.WorkingDirectory } | ConvertTo-Json -Compress'], { encoding: 'utf8', env: { ...env, ATELIER_TEST_SHORTCUT: desktopShortcut } }));
+    assert.equal(shortcut.target.toLowerCase(), join(app, 'AtelierKanban.exe').toLowerCase());
+    assert.equal(shortcut.directory.toLowerCase(), app.toLowerCase());
     launch(); pid = (await (await request('/api/health')).json()).pid;
     const state = await (await request('/api/state')).json();
     assert.equal(state.cards[0].title, 'Carte conservée après réinstallation');
     run(node, [join(app, 'launcher.mjs'), '--stop']); pid = null;
     run(join(app, 'unins000.exe'), ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']); installed = false;
     assert.equal(existsSync(node), false);
+    assert.equal(existsSync(desktopShortcut), false);
     assert.equal(existsSync(join(data, 'kanban.sqlite')), true);
   } else {
     assert.match(readFileSync(join(root, 'usr/share/applications/atelier-kanban.desktop'), 'utf8'), /Exec=atelier-kanban/);
     assert.match(readFileSync(join(root, 'usr/bin/atelier-kanban'), 'utf8'), /\/opt\/atelier-kanban/);
+    assert.deepEqual(readFileSync(join(root, 'usr/share/icons/hicolor/512x512/apps/atelier-kanban.png')), readFileSync(join(app, 'public/atelier-kanban.png')));
   }
 });

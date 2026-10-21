@@ -35,6 +35,16 @@ test('local health refuses remote or malformed addresses before reading credenti
   assert.equal(health.app, 'atelier-kanban');
 });
 
+test('the public app logo is served intact without exposing private assets', async t => {
+  const { app } = await fixture(t);
+  const url = `http://127.0.0.1:${app.server.address().port}`;
+  const response = await fetch(url + '/atelier-kanban.png');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /^image\/png\b/);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), readFileSync(new URL('../public/atelier-kanban.png', import.meta.url)));
+  assert.equal((await fetch(url + '/data/local-session')).status, 404);
+});
+
 test('private API, event stream and shutdown reject anonymous or foreign requests', async t => {
   let stopped = 0;
   const { app, request } = await fixture(t, { shutdown: async () => { stopped++; } });

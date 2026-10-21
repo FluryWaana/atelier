@@ -21,6 +21,7 @@ DisableProgramGroupPage=yes
 CloseApplications=no
 RestartApplications=no
 UninstallDisplayIcon={app}\AtelierKanban.exe
+SetupIconFile={#SourceDir}\public\atelier-kanban.ico
 OutputDir={#OutputDir}
 OutputBaseFilename=atelier-kanban-{#ReleaseVersion}-windows-x64-setup
 Compression=lzma2
@@ -31,10 +32,14 @@ WizardStyle=modern
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
+Name: "{autodesktop}\Atelier Kanban"; Filename: "{app}\AtelierKanban.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 Name: "{group}\Atelier Kanban"; Filename: "{app}\AtelierKanban.exe"
 Name: "{group}\Arrêter Atelier Kanban"; Filename: "{app}\AtelierKanban.exe"; Parameters: "--stop"
 Name: "{group}\Importer les données portables"; Filename: "{app}\AtelierKanban.exe"; Parameters: "--import-data"

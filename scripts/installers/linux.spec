@@ -26,4 +26,4 @@ cp -a "%{payload}/." "%{buildroot}/"
 /opt/atelier-kanban
 /usr/bin/atelier-kanban
 /usr/share/applications/atelier-kanban.desktop
-/usr/share/icons/hicolor/scalable/apps/atelier-kanban.svg
+/usr/share/icons/hicolor/512x512/apps/atelier-kanban.png

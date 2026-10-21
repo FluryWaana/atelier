@@ -22,7 +22,7 @@ if (process.platform === 'win32') {
   run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', join(root, 'scripts', 'Expand-Update.ps1'), '-Archive', archive, '-Destination', app]);
   writeFileSync(join(app, 'installation.json'), '{"mode":"user"}\n');
   const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');
-  run(compiler, ['/nologo', '/target:winexe', '/reference:System.Windows.Forms.dll', '/out:' + join(app, 'AtelierKanban.exe'), join(templates, 'AtelierKanban.cs')]);
+  run(compiler, ['/nologo', '/target:winexe', '/reference:System.Windows.Forms.dll', '/win32icon:' + join(app, 'public', 'atelier-kanban.ico'), '/out:' + join(app, 'AtelierKanban.exe'), join(templates, 'AtelierKanban.cs')]);
   const iscc = process.env.ISCC || join(process.env['ProgramFiles(x86)'], 'Inno Setup 6', 'ISCC.exe');
   run(iscc, ['/DSourceDir=' + app, '/DOutputDir=' + dist, '/DReleaseVersion=' + version, join(templates, 'windows.iss')]);
 } else {
@@ -36,11 +36,13 @@ if (process.platform === 'win32') {
   for (const [source, target, mode] of [
     ['atelier-kanban', 'usr/bin/atelier-kanban', 0o755],
     ['atelier-kanban.desktop', 'usr/share/applications/atelier-kanban.desktop', 0o644],
-    ['atelier-kanban.svg', 'usr/share/icons/hicolor/scalable/apps/atelier-kanban.svg', 0o644],
   ]) {
     mkdirSync(dirname(join(payload, target)), { recursive: true });
     copyFileSync(join(templates, source), join(payload, target)); chmodSync(join(payload, target), mode);
   }
+  const iconDirectory = join(payload, 'usr/share/icons/hicolor/512x512/apps');
+  mkdirSync(iconDirectory, { recursive: true });
+  copyFileSync(join(app, 'public', 'atelier-kanban.png'), join(iconDirectory, 'atelier-kanban.png'));
   run('desktop-file-validate', [join(payload, 'usr/share/applications/atelier-kanban.desktop')]);
   const deb = join(stage, 'deb'); cpSync(payload, deb, { recursive: true }); mkdirSync(join(deb, 'DEBIAN'));
   writeFileSync(join(deb, 'DEBIAN', 'control'), `Package: atelier-kanban\nVersion: ${version}\nArchitecture: ${process.arch === 'x64' ? 'amd64' : 'arm64'}\nMaintainer: Atelier Kanban <noreply@github.com>\nSection: devel\nPriority: optional\nDepends: libc6 (>= 2.28), libstdc++6 (>= 8), libgcc-s1, libsecret-tools, xdg-utils, lsof, zenity\nHomepage: https://github.com/${repository}\nDescription: Tableau de tâches local Atelier Kanban\n Node.js est inclus. Les données restent dans le dossier personnel.\n`);
