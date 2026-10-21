@@ -7,6 +7,7 @@ import { updateLock, processExists } from './scripts/update-worker.mjs';
 import { dataDirectory, installationMode } from './lib/infrastructure/installation.mjs';
 import { importPortableData } from './lib/infrastructure/portable-import.mjs';
 import { chooseFolder } from './lib/folders.mjs';
+import { openBrowser } from './lib/browser.mjs';
 import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -62,9 +63,7 @@ try {
     console.log(`Atelier Kanban : ${url}\nUtilisez ${process.platform === 'win32' ? 'Stop.cmd' : 'Stop.command'} pour fermer le serveur.`);
     if (!process.argv.includes('--no-browser')) {
       const address = browserAddress(dataDir, url, authToken);
-      const browser = spawn(process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open', [address], { windowsHide: true, detached: true, stdio: 'ignore' });
-      browser.on('error', () => console.error('Impossible d’ouvrir le navigateur. Vérifie le navigateur par défaut puis relance Atelier.'));
-      browser.unref();
+      await openBrowser(address);
     }
   }
 } catch (error) { console.error(error.message); process.exitCode = 1; }
