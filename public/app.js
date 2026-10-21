@@ -119,7 +119,7 @@ async function refresh() {
   if (firstLoad && currentView === 'settings') settings(); renderTemplates(); renderProjects(); board(); updateDevServers(); updateAutomation();
   const ended = state.cards.filter(card => previousFlows.get(card.id) === 'running' && card.automation?.state !== 'running');
   if (ended.length) { toast(ended.map(card => `${card.title} : ${messageText(card.automation.message)}`).join(' · '), ended.some(card => card.automation.state !== 'ready')); return; }
-  const finished = state.runs.filter(run => previousRuns.get(run.id) === 'running' && ['completed', 'failed'].includes(run.status));
+  const finished = state.runs.filter(run => previousRuns.get(run.id) === 'running' && ['completed', 'failed'].includes(run.status) && !(currentView === 'brainstorm' && run.kind === 'brainstorm' && run.cardId === brainstormSession));
   if (finished.length && !document.querySelector('dialog[open]')) toast(msg("{0} exécution(s) terminée(s). Résultats dans l’onglet Agents.", finished.length), finished.some(run => run.status === 'failed'));
 }
 function connectorName(capability, id = state.connectors?.providers?.[capability]) {
@@ -685,10 +685,15 @@ document.addEventListener('keydown', event => {
 });
 
 function rememberBrainstorm() {
-  try { localStorage.setItem('atelier-brainstorm-page', JSON.stringify({ id: brainstormSession, reply: $('#brainstorm-reply').value, fields: Object.fromEntries([...$('#brainstorm-form').elements].filter(field => field.name).map(field => [field.name, field.value])) })); } catch {}
+  try {
+    const draft = JSON.stringify({ id: brainstormSession, reply: $('#brainstorm-reply').value, fields: Object.fromEntries([...$('#brainstorm-form').elements].filter(field => field.name).map(field => [field.name, field.value])) });
+    localStorage.setItem('atelier-brainstorm-page', draft);
+    localStorage.setItem('atelier-brainstorm-draft:' + brainstormSession, draft);
+  } catch {}
 }
 
 function loadBrainstormSession(id) {
+  rememberBrainstorm();
   const form = $('#brainstorm-form'), session = [...(state.brainstorms || []), ...state.cards].find(c => c.id === id);
   brainstormSession = session?.id || '';
   $('#brainstorm-reply').value = '';
@@ -697,16 +702,31 @@ function loadBrainstormSession(id) {
   taskAgentFields(form, session || {});
   if (session?.repo && ![...form.elements.repo.options].some(option => option.value === session.repo)) form.elements.repo.add(new Option(session.repo, session.repo));
   if (session) for (const name of ['title', 'description', 'instructions', 'repo']) form.elements[name].value = session[name] || '';
-  const host = $('#brainstorm-page-proposals'); host.replaceChildren(); delete host.dataset.signature;
+  try {
+    const saved = JSON.parse(localStorage.getItem('atelier-brainstorm-draft:' + brainstormSession) || 'null');
+    if (saved) {
+      form.elements.agent.value = saved.fields?.agent || form.elements.agent.value;
+      taskAgentFields(form, saved.fields || {});
+      for (const [name, value] of Object.entries(saved.fields || {})) {
+        if (!form.elements[name] || typeof value !== 'string') continue;
+        if (name === 'repo' && value && ![...form.elements.repo.options].some(option => option.value === value)) form.elements.repo.add(new Option(value, value));
+        form.elements[name].value = value;
+      }
+      $('#brainstorm-reply').value = typeof saved.reply === 'string' ? saved.reply : '';
+    }
+  } catch {}
+  const host = $('#brainstorm-page-proposals'); host.replaceChildren(); delete host.dataset.signature; delete host.dataset.runId;
+  const history = $('#brainstorm-chat-history'); delete history.dataset.signature; history.scrollTop = history.scrollHeight;
   rememberBrainstorm(); renderBrainstormPage();
 }
 
 function renderBrainstormPage() {
   const form = $('#brainstorm-form'), picker = $('#brainstorm-session');
   const sessions = [...(state.brainstorms || []), ...state.cards].filter(c => !c.archived && (c.brainstormSession || state.runs.some(r => r.cardId === c.id && r.kind === 'brainstorm')));
+  $('#brainstorm-toolbar').hidden = !sessions.length;
   const signature = JSON.stringify(sessions.map(c => [c.id, c.title]));
   if (picker.dataset.signature !== signature) {
-    picker.innerHTML = `<option value="">${markupText("Nouveau brainstorming")}</option>` + sessions.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+    picker.innerHTML = `<option value="">${markupText("Nouvelle discussion")}</option>` + sessions.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
     picker.dataset.signature = signature;
   }
   const projects = JSON.stringify(state.projects.map(p => [p.repo, p.name]));
@@ -730,8 +750,11 @@ function renderBrainstormPage() {
       form.elements[name].value = value;
     }
     form.oninput = rememberBrainstorm;
-    form.onchange = rememberBrainstorm;
+    form.onchange = () => { rememberBrainstorm(); renderBrainstormChat(state.runs.some(run => run.cardId === brainstormSession && run.status === 'running')); };
     picker.onchange = () => loadBrainstormSession(picker.value);
+    $('#brainstorm-new').onclick = () => loadBrainstormSession('');
+    $('#brainstorm-generate').onclick = () => action(() => submitBrainstorm(false, true, msg("Propose un découpage en tâches."), true));
+    $('#brainstorm-retry').onclick = () => action(() => submitBrainstorm(false, true, state.runs.find(r => r.cardId === brainstormSession && r.kind === 'brainstorm')?.instructions || msg("Reprends l’exploration à partir de notre discussion.")));
     form.onsubmit = event => { event.preventDefault(); action(() => submitBrainstorm(false)); };
     $('#brainstorm-create-local').onclick = () => action(() => submitBrainstorm(true));
     $('#brainstorm-reply').oninput = () => { rememberBrainstorm(); resizeBrainstormComposer(); };
@@ -741,24 +764,35 @@ function renderBrainstormPage() {
     $('#brainstorm-reply-form').onsubmit = event => { event.preventDefault(); action(() => submitBrainstorm(false, true)); };
   }
   picker.value = brainstormSession;
+  $('#brainstorm-new').hidden = !brainstormSession;
+  picker.disabled = $('#brainstorm-new').disabled = brainstormingBusy;
   const run = state.runs.find(r => r.cardId === brainstormSession && r.kind === 'brainstorm');
   const active = run?.status === 'running';
   for (const field of form.elements) field.disabled = active || brainstormingBusy;
+  form.elements.description.required = !form.elements.title.value.trim();
   renderBrainstormChat(active);
   resizeBrainstormComposer();
   const status = $('#brainstorm-page-status');
-  status.textContent = active ? `${messageText(run.activity) || msg("Brainstorming en cours…")}${run.liveText ? '\n' + run.liveText : ''}` : run ? run.proposals ? msg("Choisissez les propositions à transformer en tâches locales. Chaque tâche reste modifiable et peut ensuite être envoyée dans Jira.") : messageText(run.attention) || msg("Brainstorming interrompu ou échoué. Vous pouvez relancer l’exploration.") : msg("Décrivez une idée pour démarrer, ou créez directement une tâche locale.");
+  status.textContent = active ? messageText(run.activity) || msg("Brainstorming en cours…") : run ? run.brainstorm || run.proposals ? msg("Poursuivez la discussion ou demandez un découpage quand votre idée est prête.") : messageText(run.attention) || msg("Brainstorming interrompu ou échoué. Vous pouvez relancer l’exploration.") : msg("Commencez par une idée. L’agent vous aide à la préciser avant de créer des tâches.");
+  status.hidden = !run || !active && !run.attention && run.status === 'completed';
+  $('#brainstorm-retry').hidden = !run || active || run.status === 'completed' && !run.attention;
+  $('#brainstorm-retry').disabled = brainstormingBusy;
   $('#brainstorm-page-stop').hidden = !active;
   $('#brainstorm-page-stop').onclick = () => action(async () => { await api(`/api/runs/${run.id}/cancel`, 'POST', {}); await refresh(); });
-  if (run) renderBrainstorm(brainstormSession, $('#brainstorm-page-proposals'));
+  renderBrainstorm(brainstormSession, $('#brainstorm-page-proposals'));
+  $('#brainstorm-results').hidden = !state.runs.some(run => run.cardId === brainstormSession && run.kind === 'brainstorm' && run.proposals?.length);
 }
 
-async function submitBrainstorm(local, replying = false) {
+async function submitBrainstorm(local, replying = false, message = '', includeDraft = false) {
   const form = $('#brainstorm-form');
+  form.elements.description.required = !form.elements.title.value.trim();
   if (brainstormingBusy || state.runs.some(run => run.cardId === brainstormSession && run.status === 'running') || !form.reportValidity()) return;
-  const reply = replying ? $('#brainstorm-reply').value.trim() : '';
-  if (replying && (!brainstormSession || !reply || !$('#brainstorm-reply-form').reportValidity())) return;
+  const draft = $('#brainstorm-reply').value.trim();
+  const reply = replying ? includeDraft ? [draft, message].filter(Boolean).join('\n\n') : message || draft : '';
+  if (replying && (!brainstormSession || !reply || (!message || includeDraft && draft) && !$('#brainstorm-reply-form').reportValidity())) return;
   const body = Object.fromEntries(new FormData(form));
+  if (!body.title.trim() && !body.description.trim()) return;
+  if (!body.title.trim()) { body.title = body.description.trim().split('\n')[0].slice(0, 90); form.elements.title.value = body.title; }
   rememberBrainstorm();
   brainstormingBusy = true;
   try {
@@ -769,37 +803,56 @@ async function submitBrainstorm(local, replying = false) {
       return;
     }
     const session = await api(brainstormSession ? cardPath(brainstormSession) : '/api/brainstorms', brainstormSession ? 'PATCH' : 'POST', body);
+    if (!brainstormSession) { try { localStorage.removeItem('atelier-brainstorm-draft:'); } catch {} }
     brainstormSession = session.id;
-    await api(cardPath(session.id) + '/brainstorm', 'POST', { reply });
-    if (replying) $('#brainstorm-reply').value = '';
+    rememberBrainstorm();
+    const run = await api(cardPath(session.id) + '/brainstorm', 'POST', { reply });
+    state.runs = [run, ...state.runs.filter(previous => previous.id !== run.id)];
+    if (replying && (!message || includeDraft) && run.status !== 'failed') $('#brainstorm-reply').value = '';
   } finally {
     brainstormingBusy = false;
-    await refresh(); rememberBrainstorm(); renderBrainstormPage();
+    rememberBrainstorm();
+    try { await refresh(); }
+    finally { renderBrainstormPage(); if (!local) $('#brainstorm-reply').focus(); }
   }
+}
+
+function brainstormQuestions(run) {
+  return [...new Set([...(run?.brainstorm?.questions || []), ...(run?.proposals?.flatMap(proposal => proposal.questions) || [])])];
 }
 
 function renderBrainstormChat(active) {
   const discussing = Boolean(brainstormSession), context = $('#brainstorm-context');
   if (context.dataset.session !== brainstormSession) { context.open = !discussing; context.dataset.session = brainstormSession; }
-  $('#brainstorm-editor-kicker').textContent = discussing ? msg("VOTRE DISCUSSION") : msg("DE L’IDÉE À LA TÂCHE");
-  $('#brainstorm-editor-title').textContent = discussing ? msg("Affinons votre idée") : msg("Qu’avez-vous en tête ?");
+  $('#brainstorm-editor-kicker').hidden = discussing;
+  $('#brainstorm-editor-title').textContent = discussing ? $('#brainstorm-form').elements.title.value || msg("Votre discussion") : msg("Qu’aimeriez-vous améliorer ?");
   $('#brainstorm-editor-intro').hidden = discussing;
   $('#brainstorm-chat').hidden = !discussing;
-  $('#brainstorm-start').textContent = discussing ? msg("Actualiser les propositions") : msg("Explorer avec l’agent");
-  $('#brainstorm-reply').disabled = $('#brainstorm-send').disabled = active || brainstormingBusy;
+  $('#brainstorm-start').textContent = discussing ? msg("Reprendre avec cette idée") : msg("Discuter de cette idée");
+  $('#brainstorm-reply').disabled = brainstormingBusy;
+  $('#brainstorm-reply-form').dataset.active = String(active);
   $('#brainstorm-composer-agent').textContent = $('#brainstorm-form').elements.agent.value === 'claude' ? '✳ Claude' : '⌘ Codex';
   if (!discussing) return;
   const turns = state.runs.filter(run => run.cardId === brainstormSession && run.kind === 'brainstorm').slice().reverse();
   const host = $('#brainstorm-chat-history');
-  const signature = JSON.stringify(turns.map(run => [run.id, run.status, run.instructions, run.requirements, run.proposals, run.attention, run.activity]));
+  const signature = JSON.stringify(turns.map(run => [run.id, run.status, run.instructions, run.requirements, run.brainstorm, run.proposals, run.attention, run.activity, run.status !== 'running' && run.summary]));
   if (host.dataset.signature === signature) return;
   const follow = host.scrollHeight - host.scrollTop - host.clientHeight < 80;
   host.dataset.signature = signature;
   host.innerHTML = turns.map((run, index) => {
-    const user = index === 0 ? [run.requirements?.title, run.requirements?.description, run.requirements?.instructions, run.instructions].filter(Boolean).join('\n\n') : run.instructions || msg("Actualise les propositions à partir du besoin et des décisions précédentes.");
-    const answer = run.proposals ? `<p>${markupText("{0} proposition(s) à retrouver à droite.", run.proposals.length)}</p>${run.proposals.map(proposal => proposal.questions.length ? `<p><strong>${esc(proposal.title)}</strong></p><ul>${proposal.questions.map(question => `<li>${esc(question)}</li>`).join('')}</ul>` : '').join('')}${run.proposals.every(proposal => !proposal.questions.length) ? `<p>${markupText("Les points sont clarifiés. Vous pouvez créer les tâches ou demander d’autres ajustements.")}</p>` : `<p>${markupText("Vous pouvez répondre ci-dessous pour affiner les propositions.")}</p>`}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
-    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong><p>${esc(user)}</p></article><article class="brainstorm-message assistant"><strong>${run.agent === 'claude' ? 'Claude' : 'Codex'}</strong>${answer}</article>`;
+    const user = index === 0 || !run.instructions ? [run.requirements?.description || run.requirements?.title, run.requirements?.instructions, run.instructions].filter(Boolean).join('\n\n') : run.instructions;
+    const questions = brainstormQuestions(run);
+    const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? `<p>${esc(run.brainstorm.message)}</p>` : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${questions.length ? `<ul class="brainstorm-questions">${questions.map((question, q) => `<li>${index === turns.length - 1 ? `<button type="button" data-brainstorm-question="${q}">${esc(question)}<span aria-hidden="true"> ↗</span></button>` : esc(question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
+    const raw = !run.brainstorm && !run.proposals && run.status !== 'running' && run.summary ? `<details class="brainstorm-raw"><summary>${markupText("Voir la réponse brute de l’agent")}</summary><pre>${esc(run.summary)}</pre></details>` : '';
+    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong><p>${esc(user)}</p></article><article class="brainstorm-message assistant"><strong>${run.agent === 'claude' ? 'Claude' : 'Codex'}</strong>${answer}${raw}</article>`;
   }).join('') || `<p class="hint">${markupText("Envoyez un message pour poursuivre votre idée.")}</p>`;
+  const questions = brainstormQuestions(turns.at(-1));
+  host.querySelectorAll('[data-brainstorm-show-tasks]').forEach(button => button.onclick = () => { $('#brainstorm-results').scrollIntoView({ block: 'start' }); $('#brainstorm-results').focus({ preventScroll: true }); });
+  host.querySelectorAll('[data-brainstorm-question]').forEach(button => button.onclick = () => {
+    const input = $('#brainstorm-reply');
+    input.value += (input.value ? '\n\n' : '') + questions[Number(button.dataset.brainstormQuestion)] + '\n';
+    rememberBrainstorm(); resizeBrainstormComposer(); input.focus();
+  });
   if (follow) host.scrollTop = host.scrollHeight;
 }
 
@@ -808,7 +861,13 @@ function resizeBrainstormComposer() {
   input.style.height = 'auto';
   input.style.height = Math.min(180, Math.max(30, input.scrollHeight)) + 'px';
   input.style.overflowY = input.scrollHeight > 180 ? 'auto' : 'hidden';
-  $('#brainstorm-send').disabled = input.disabled || !input.value.trim();
+  const active = $('#brainstorm-reply-form').dataset.active === 'true';
+  $('#brainstorm-send').disabled = input.disabled || active || !input.value.trim();
+  $('#brainstorm-generate').disabled = !brainstormSession || input.disabled || active;
+  const proposed = state.runs.some(run => run.cardId === brainstormSession && run.kind === 'brainstorm' && run.proposals?.length);
+  $('#brainstorm-generate').textContent = input.value.trim() ? msg("Envoyer et préparer les tâches") : proposed ? msg("Actualiser les tâches") : msg("Préparer les tâches");
+  $('#brainstorm-composer-hint').textContent = active ? msg("L’agent travaille. Vous pouvez préparer votre prochain message ici.") : msg("Entrée pour envoyer · Maj+Entrée pour revenir à la ligne.");
+  $('#brainstorm-generate-hint').textContent = input.value.trim() ? msg("Votre message sera pris en compte.") : proposed ? msg("Les tâches déjà ajoutées restent inchangées.") : msg("Quand votre idée est assez claire.");
 }
 
 function setupBrainstorm(card, active, saveCard) {
@@ -832,7 +891,7 @@ function setupBrainstorm(card, active, saveCard) {
     $('#brainstorm-ticket').disabled = true;
     try {
       await saveCard(true);
-      const run = await api(cardPath(card.id) + '/brainstorm', 'POST', {});
+      const run = await api(cardPath(card.id) + '/brainstorm', 'POST', { reply: msg("Propose maintenant le découpage en tâches à partir de notre discussion et des décisions prises.") });
       await refresh(); renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun();
     } finally { if ($('#brainstorm-ticket')) $('#brainstorm-ticket').disabled = state.runs.some(r => r.cardId === card.id && r.status === 'running') || card.archived; }
   });
@@ -855,16 +914,25 @@ function setupBrainstorm(card, active, saveCard) {
 function renderBrainstorm(cardId, host = $('#brainstorm-proposals')) {
   if (!host) return;
   const latest = state.runs.find(r => r.cardId === cardId && r.kind === 'brainstorm');
-  const run = latest?.proposals ? latest : state.runs.find(r => r.cardId === cardId && r.kind === 'brainstorm' && r.proposals) || latest;
-  if (!run) return;
-  const signature = JSON.stringify([latest.id, latest.status, run.id, run.status, run.attention, run.proposals, state.cards.filter(c => c.brainstormSource?.runId === run.id).map(c => c.id)]);
+  const run = latest?.proposals?.length ? latest : state.runs.find(r => r.cardId === cardId && r.kind === 'brainstorm' && r.proposals?.length) || latest;
+  if (!run) {
+    if (host.id !== 'brainstorm-page-proposals') return;
+    host.innerHTML = `<div class="brainstorm-empty"><strong>${markupText("D’abord les idées, ensuite les tâches.")}</strong><p>${markupText("Répondez aux questions de l’agent. Quand le périmètre vous convient, demandez le découpage en tâches.")}</p></div>`;
+    return;
+  }
+  const card = [...(state.brainstorms || []), ...state.cards].find(card => card.id === cardId);
+  const changedProject = run.brainstormRepo !== undefined && run.brainstormRepo !== (card?.repo || '') && !sameRepository(run.brainstormRepo, card?.repo, state.settings.platform);
+  const signature = JSON.stringify([latest.id, latest.status, run.id, run.status, run.attention, run.proposals, changedProject, state.cards.filter(c => c.brainstormSource?.runId === run.id).map(c => c.id)]);
   if (host.dataset.signature === signature) return;
+  const expanded = host.dataset.runId === run.id ? new Set([...host.querySelectorAll('[data-brainstorm-proposal][open]')].map(item => Number(item.dataset.brainstormProposal))) : new Set([0]);
   host.dataset.signature = signature;
-  if (run.status === 'running') { host.textContent = msg("Brainstorming en cours… Suivez l’agent dans le journal."); return; }
+  if (run.status === 'running') { host.textContent = msg("Brainstorming en cours…"); return; }
   if (!run.proposals) { host.textContent = messageText(run.attention) || msg("Brainstorming interrompu ou échoué. Consultez le journal."); return; }
-  host.innerHTML = run.proposals.map((proposal, index) => {
+  if (!run.proposals.length) { host.innerHTML = `<div class="brainstorm-empty"><strong>${markupText("D’abord les idées, ensuite les tâches.")}</strong><p>${markupText("Répondez aux questions de l’agent. Quand le périmètre vous convient, demandez le découpage en tâches.")}</p></div>`; return; }
+  host.dataset.runId = run.id;
+  host.innerHTML = (changedProject ? `<p class="inline-error">${markupText("Le projet a changé. Demandez un nouveau découpage avant de créer des tâches.")}</p>` : run.id !== latest.id ? `<p class="hint">${markupText("Dernier découpage proposé. Demandez une mise à jour pour intégrer les échanges suivants.")}</p>` : '') + run.proposals.map((proposal, index) => {
     const draft = state.cards.find(c => c.brainstormSource?.runId === run.id && c.brainstormSource.index === index);
-    return `<details class="disclosure"><summary>${esc(proposal.title)}</summary><p class="path-text">${esc(proposal.description)}</p><ul>${proposal.checklist.map(item => `<li>${esc(item.text)}</li>`).join('')}</ul>${proposal.questions.length ? `<p>${markupText("Questions à trancher :")}</p><ul>${proposal.questions.map(q => `<li>${esc(q)}</li>`).join('')}</ul>` : ''}<button type="button" data-brainstorm-index="${index}" ${latest.status === 'running' && !draft ? 'disabled' : ''}>${draft ? msg("Ouvrir la tâche créée") : msg("Créer une tâche locale")}</button></details>`;
+    return `<details class="disclosure" data-brainstorm-proposal="${index}" ${expanded.has(index) ? 'open' : ''}><summary>${esc(proposal.title)}${draft ? `<span class="brainstorm-created">${markupText("Tâche créée")}</span>` : ''}</summary><p class="brainstorm-description">${esc(proposal.description)}</p><ul>${proposal.checklist.map(item => `<li>${esc(item.text)}</li>`).join('')}</ul>${proposal.questions.length ? `<p>${markupText("Questions à trancher :")}</p><ul>${proposal.questions.map(q => `<li>${esc(q)}</li>`).join('')}</ul>` : ''}<button type="button" data-brainstorm-index="${index}" ${(latest.status === 'running' || changedProject) && !draft ? 'disabled' : ''}>${draft ? msg("Ouvrir la tâche") : msg("Ajouter au tableau")}</button></details>`;
   }).join('');
   host.querySelectorAll('[data-brainstorm-index]').forEach(button => button.onclick = () => action(async () => {
     button.disabled = true;
@@ -873,7 +941,7 @@ function renderBrainstorm(cardId, host = $('#brainstorm-proposals')) {
       if (existing) { await openCard(existing.id); return; }
       const draft = await api(cardPath(cardId) + '/brainstorm-draft', 'POST', { runId: run.id, index: Number(button.dataset.brainstormIndex) });
       await refresh();
-      if (host.id === 'brainstorm-page-proposals') toast(msg("Tâche locale créée. Vous pouvez l’ouvrir pour la modifier ou l’envoyer dans Jira."));
+      if (host.id === 'brainstorm-page-proposals') toast(msg("Tâche ajoutée au tableau."));
       else await openCard(draft.id);
     } finally { button.disabled = false; }
   }));

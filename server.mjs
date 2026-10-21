@@ -155,7 +155,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       card.automation = { ...card.automation, state: 'interrupted', step: 'tests', message: reason }; store.putCard(card);
     }
   }
-  const runs = createRuns({ store, active, publishing, automationBusy: id => automation.busy(id), checkDependencies, configFor, repository, prepareWorktree,
+  const runs = createRuns({ store, active, publishing, automationBusy: id => automation.busy(id), checkDependencies, configFor, repository, samePath, prepareWorktree,
     brainstormDirectory() { const path = join(dataDir, 'brainstorm'); mkdirSync(path, { recursive: true }); return path; },
     newId: randomUUID, timestamp, launch, changed, invalidateReviews, brainstormPrompt, preparationPrompt, reviewPrompt, checklistText, parseBrainstorm, parsePreparation, parseReview, recordAgentUsage, eventProgress, eventText,
   });
