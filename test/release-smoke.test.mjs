@@ -66,6 +66,7 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   mkdirSync(join(stage, 'lib', 'infrastructure'));
   copyFileSync(join(rootApp, 'lib', 'infrastructure', 'installation.mjs'), join(stage, 'lib', 'infrastructure', 'installation.mjs'));
   copyFileSync(join(rootApp, 'lib', 'infrastructure', 'local-session.mjs'), join(stage, 'lib', 'infrastructure', 'local-session.mjs'));
+  copyFileSync(join(rootApp, 'lib', 'infrastructure', 'local-http.mjs'), join(stage, 'lib', 'infrastructure', 'local-http.mjs'));
   copyFileSync(join(rootApp, 'lib', 'token-vault.mjs'), join(stage, 'lib', 'token-vault.mjs'));
   const version = pkg.version.split('.').map((value, i) => Number(value) + (i === 2 ? 1 : 0)).join('.');
   writeFileSync(join(stage, 'payload', 'package.json'), JSON.stringify({ ...pkg, version }));

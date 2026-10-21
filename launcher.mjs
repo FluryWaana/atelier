@@ -9,6 +9,7 @@ import { importPortableData } from './lib/infrastructure/portable-import.mjs';
 import { chooseFolder } from './lib/folders.mjs';
 import { openBrowser } from './lib/browser.mjs';
 import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';
+import { localRequest } from './lib/infrastructure/local-http.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const dataDir = dataDirectory(root);
@@ -41,7 +42,7 @@ try {
   }
   if (process.argv.includes('--stop')) {
     if (current) {
-      const response = await fetch(`${url}/api/shutdown`, { method: 'POST', headers: { Authorization: 'Bearer ' + authToken, 'Content-Type': 'application/json', 'X-Local-Request': '1', Connection: 'close' }, body: '{}', redirect: 'error', signal: AbortSignal.timeout(5000) });
+      const response = await localRequest(`${url}/api/shutdown`, { method: 'POST', headers: { Authorization: 'Bearer ' + authToken, 'Content-Type': 'application/json', 'X-Local-Request': '1', Connection: 'close' }, body: '{}', signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error((await response.json()).error || 'Arrêt refusé.');
       for (let i = 0; i < 30 && await health(); i++) await delay(200);
       if (await health()) throw new Error('Le serveur ne s’est pas arrêté.');
