@@ -73,8 +73,9 @@ for (const name of names) test(`Native installer: ${name}`, { skip: !enabled, ti
     run(archive, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=desktopicon', '/DIR=' + app]);
     assert.equal(existsSync(desktopShortcut), true);
     const shortcut = JSON.parse(run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ATELIER_TEST_SHORTCUT); @{ target = $shortcut.TargetPath; directory = $shortcut.WorkingDirectory } | ConvertTo-Json -Compress'], { encoding: 'utf8', env: { ...env, ATELIER_TEST_SHORTCUT: desktopShortcut } }));
-    assert.equal(realpathSync(shortcut.target).toLowerCase(), realpathSync(join(app, 'AtelierKanban.exe')).toLowerCase());
-    assert.equal(realpathSync(shortcut.directory).toLowerCase(), realpathSync(app).toLowerCase());
+    // Windows runners can expose temporary directories through their short 8.3 names.
+    assert.equal(realpathSync.native(shortcut.target).toLowerCase(), realpathSync.native(join(app, 'AtelierKanban.exe')).toLowerCase());
+    assert.equal(realpathSync.native(shortcut.directory).toLowerCase(), realpathSync.native(app).toLowerCase());
     launch(); pid = (await (await request('/api/health')).json()).pid;
     const state = await (await request('/api/state')).json();
     assert.equal(state.cards[0].title, 'Carte conservée après réinstallation');
