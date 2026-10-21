@@ -5,6 +5,38 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server.mjs';
 
+test('creating then syncing a Jira ticket preserves its local card and history across instances', async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'kanban-jira-identity-'));
+  const jiraUrl = 'https://example.atlassian.net';
+  const issue = { id: '42', key: 'TEST-42', fields: { summary: 'Titre distant', description: '', status: { name: 'To Do' } } };
+  const app = createApp({ dataDir, protectTokens: value => value, requestJira: async (_, __, path) => path.includes('/search') ? { issues: [issue], isLast: true } : issue });
+  try {
+    await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
+    const request = async (path, body, method = 'POST', status = 200) => {
+      const response = await fetch(`http://127.0.0.1:${app.server.address().port}${path}`, { method, headers: { 'Content-Type': 'application/json', 'X-Local-Request': '1', Authorization: 'Bearer ' + app.authToken }, body: JSON.stringify(body) });
+      const result = await response.json(); assert.equal(response.status, status, JSON.stringify(result)); return result;
+    };
+    await request('/api/settings', { jiraUrl, token: 'fake' }, 'PUT');
+    const card = await request('/api/cards', { title: 'Local', checklist: [{ text: 'Conserver', done: false }] });
+    await request(`/api/cards/${card.id}/create-ticket`, { project: 'TEST', issueType: 'Task' });
+    app.store.putRun({ id: 'history', cardId: card.id, status: 'completed' });
+    app.store.putTime({ id: 'time', cardId: card.id, seconds: 60, exportState: 'draft' });
+    for (const path of ['/api/tickets/sync', '/api/tickets/reset']) await request(path, {});
+    assert.equal(app.store.cards().length, 1);
+    assert.equal(app.store.card(card.id).title, issue.fields.summary);
+    assert.deepEqual(app.store.card(card.id).checklist, card.checklist);
+    assert.equal(app.store.run('history').cardId, card.id);
+    assert.equal(app.store.time('time').cardId, card.id);
+    const other = await request('/api/cards', { title: 'Autre' });
+    await request(`/api/cards/${other.id}/create-ticket`, { existingKey: issue.key }, 'POST', 409);
+    assert.equal(app.store.card(other.id).ticket, undefined);
+    await request('/api/settings', { jiraUrl: 'https://other.atlassian.net', token: 'fake' }, 'PUT');
+    await request('/api/tickets/sync', {});
+    assert.equal(app.store.cards().filter(card => card.ticket).length, 2);
+    assert.equal(app.store.card(card.id).ticket.base, jiraUrl);
+  } finally { await app.close(); rmSync(dataDir, { recursive: true, force: true }); }
+});
+
 test('Jira sync sorts by configured status IDs and names without starting agents', async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'kanban-jira-sort-'));
   const jiraUrl = 'https://example.atlassian.net';
