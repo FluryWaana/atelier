@@ -27,8 +27,10 @@ for (const primary of ['front', 'back']) test(`a principal ${primary} creates an
   const worktrees = new Map(Object.values(sources).map(source => [source, [{ path: source, branch: 'main' }]]));
   worktrees.get(sources[primary]).push({ path: mainPath, branch });
   const commands = [], spawns = [];
+  let releaseFetch, fetched;
+  const fetching = new Promise(resolve => { fetched = resolve; });
   let dirty = false;
-  const git = t.mock.method(childProcess, 'execFileSync', (command, args) => {
+  const gitOutput = (command, args) => {
     assert.equal(command, 'git');
     const repo = args[1], options = args.slice(2); commands.push({ repo, options });
     if (options.includes('--show-toplevel')) return repo;
@@ -47,6 +49,16 @@ for (const primary of ['front', 'back']) test(`a principal ${primary} creates an
       worktrees.set(repo, worktrees.get(repo).filter(item => item.path !== path)); return '';
     }
     throw new Error('Commande Git inattendue : ' + options.join(' '));
+  };
+  const git = t.mock.method(childProcess, 'execFile', (command, args, options, callback) => {
+    if (args.includes('fetch') && !releaseFetch) {
+      releaseFetch = () => callback(null, gitOutput(command, args), '');
+      fetched(); return;
+    }
+    queueMicrotask(() => {
+      try { callback(null, gitOutput(command, args), ''); }
+      catch (error) { callback(error, '', error.message); }
+    });
   });
   const spawn = t.mock.method(childProcess, 'spawn', (...args) => {
     spawns.push(args);
@@ -61,7 +73,14 @@ for (const primary of ['front', 'back']) test(`a principal ${primary} creates an
   try {
     app.store.putProject({ id: 'p', name: 'Projet', repo: sources[primary], [peer + 'Repo']: sources[peer], frontCommand: 'npm run dev', backCommand: 'dotnet run' });
     app.store.putCard({ id: 'card', title: 'Même tâche', repo: sources[primary], branch, status: 'todo', worktree: { source: sources[primary], path: mainPath, branch } });
-    const start = await request(app, '/api/cards/card/dev-servers', 'POST', { standalone: true });
+    const starting = request(app, '/api/cards/card/dev-servers', 'POST', { standalone: true });
+    await fetching;
+    assert.equal((await request(app, '/api/state')).status, 200, 'HTTP remains responsive while Git is pending');
+    assert.equal((await request(app, '/api/cards/card', 'PATCH', { title: 'Concurrent edit' })).status, 409);
+    assert.equal((await request(app, '/api/cards/card/worktree', 'DELETE')).status, 409);
+    assert.equal((await request(app, '/api/cards/card/dev-servers', 'POST')).status, 409);
+    releaseFetch();
+    const start = await starting;
     assert.equal(start.status, 200, JSON.stringify(start.body));
     const card = app.store.card('card'), companion = card.serviceWorktrees[peer];
     assert.equal(companion.branch, branch);

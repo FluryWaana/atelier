@@ -193,11 +193,12 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       let run;
       const stop = () => { const entry = run && active.get(run.id); if (entry) { entry.cancelled = true; entry.stop(); } };
       signal.addEventListener('abort', stop, { once: true });
-      try {
+      (async () => { try {
         signal.throwIfAborted();
-        run = startRun(store.card(card.id), options, context, null, result => { signal.removeEventListener('abort', stop); resolve(result); });
+        run = await startRun(store.card(card.id), { ...options, signal }, context, null, result => { signal.removeEventListener('abort', stop); resolve(result); });
         onStarted(run);
-      } catch (error) { signal.removeEventListener('abort', stop); reject(error); }
+        if (signal.aborted) stop();
+      } catch (error) { signal.removeEventListener('abort', stop); reject(error); } })();
     }),
   });
   function launchTask(card, options, queued = false) {
@@ -390,6 +391,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   async function close() {
     closing = true;
     queue.close();
+    await runs.close();
     await automation.close();
     await devServers.close();
     for (const entry of active.values()) { entry.cancelled = true; entry.stop(); }

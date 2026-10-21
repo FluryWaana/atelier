@@ -95,21 +95,21 @@ test('Azure PR tracking validates identity and keeps the latest status in each c
   await assert.rejects(refreshPullRequest(card, '', async () => ({ ...pr, sourceRefName: 'refs/heads/other' })), /correspond/);
 });
 
-test('queue serializes tasks, pauses on failure and never resumes by itself after restart', () => {
+test('queue serializes tasks, pauses on failure and never resumes by itself after restart', async () => {
   const store = openStore(':memory:');
   const started = []; let running = false, success = true;
   const options = { store, launch(id) { started.push(id); running = true; return { id }; }, busy: () => running, result: () => success, changed() {} };
   let queue = createTaskQueue(options);
   try {
-    queue.add('a'); queue.add('a'); queue.add('b'); queue.tick(); assert.deepEqual(started, []);
-    queue.pause(false); queue.tick(); queue.tick(); assert.deepEqual(started, ['a']);
+    queue.add('a'); queue.add('a'); queue.add('b'); await queue.tick(); assert.deepEqual(started, []);
+    queue.pause(false); await queue.tick(); await queue.tick(); assert.deepEqual(started, ['a']);
     assert.throws(() => queue.remove('a'), /attends la fin/);
-    queue.pause(true); running = false; queue.tick(); assert.deepEqual(queue.state().ids, ['b']);
-    queue.pause(false); queue.tick(); assert.deepEqual(started, ['a', 'b']);
-    success = false; running = false; queue.tick(); assert.equal(queue.state().paused, true); assert.deepEqual(queue.state().ids, ['b']);
+    queue.pause(true); running = false; await queue.tick(); assert.deepEqual(queue.state().ids, ['b']);
+    queue.pause(false); await queue.tick(); assert.deepEqual(started, ['a', 'b']);
+    success = false; running = false; await queue.tick(); assert.equal(queue.state().paused, true); assert.deepEqual(queue.state().ids, ['b']);
     queue.pause(false); queue.close(); queue = createTaskQueue(options);
-    assert.equal(queue.state().paused, true); queue.tick(); assert.deepEqual(started, ['a', 'b']);
-    queue.remove('b'); queue.add('c'); queue.pause(false); queue.tick(); assert.deepEqual(started, ['a', 'b', 'c']);
+    assert.equal(queue.state().paused, true); await queue.tick(); assert.deepEqual(started, ['a', 'b']);
+    queue.remove('b'); queue.add('c'); queue.pause(false); await queue.tick(); assert.deepEqual(started, ['a', 'b', 'c']);
   } finally { queue.close(); store.db.close(); }
 });
 

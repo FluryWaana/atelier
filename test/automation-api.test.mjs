@@ -21,12 +21,18 @@ async function fixture(t, enabled = true, assessment = 'covered') {
   const root = mkdtempSync(join(tmpdir(), 'automation-api-'));
   const repo = join(root, 'repo'), worktree = join(root, 'worktree'); mkdirSync(repo); mkdirSync(worktree);
   const source = realpathSync(repo), destination = realpathSync(worktree);
-  const git = t.mock.method(childProcess, 'execFileSync', (command, args) => {
+  const gitOutput = (command, args) => {
     assert.equal(command, 'git');
     if (args.includes('--show-toplevel')) return source;
     if (args.includes('list')) return `worktree ${destination}\0branch refs/heads/feature/test\0\0`;
     if (args.includes('check-ref-format')) return '';
     throw new Error('Commande Git inattendue : ' + args.join(' '));
+  };
+  const git = t.mock.method(childProcess, 'execFile', (command, args, options, callback) => {
+    queueMicrotask(() => {
+      try { callback(null, gitOutput(command, args), ''); }
+      catch (error) { callback(error, '', error.message); }
+    });
   });
   syncBuiltinESMExports();
   const launches = [], publications = [];
@@ -101,7 +107,7 @@ test('the queue completes automatic workflows sequentially and blocks competing 
 test('cancelling an automatic agent stops the entire workflow', async t => {
   const { app, publications, wait } = await fixture(t);
   const response = await request(app, '/api/cards/ticket/run', 'POST', {});
-  const runId = response.body.automation.runId;
+  assert.equal(response.status, 200);  for (let i = 0; i < 100 && !app.store.card('ticket').automation.runId; i++) await new Promise(resolve => setImmediate(resolve));  const runId = app.store.card('ticket').automation.runId;  assert.ok(runId);
   assert.equal((await request(app, `/api/runs/${runId}/cancel`, 'POST')).status, 200);
   const card = await wait();
   assert.equal(card.automation.state, 'cancelled'); assert.equal(publications.length, 0);
