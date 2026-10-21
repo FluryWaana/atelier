@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync, spawn } from 'node:child_process';
@@ -29,7 +29,9 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   });
   const checksum = readFileSync(new URL(archive.href + '.sha256'), 'utf8');
   verifyChecksum(readFileSync(archive), checksum, packageName(pkg.version, process.platform, process.arch));
-  const extracted = join(root, 'app');
+  mkdirSync(join(root, 'physical'));
+  symlinkSync(join(root, 'physical'), join(root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  const extracted = join(root, 'linked', 'app');
   if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', fileURLToPath(new URL('../scripts/Expand-Update.ps1', import.meta.url)), '-Archive', fileURLToPath(archive), '-Destination', extracted], { windowsHide: true });
   else extractTarPackage(readFileSync(archive), extracted);
   assert.equal(existsSync(join(extracted, 'data')), false);

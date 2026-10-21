@@ -15,7 +15,7 @@ import { samePath } from './lib/paths.mjs';
 import { createServer } from 'node:http';
 import { readFileSync, readdirSync, mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { openTokenVault } from './lib/token-vault.mjs';
 import { createBackups } from './lib/backups.mjs';
@@ -386,7 +386,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   return { server, store, close };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (import.meta.main) {
   const lock = updateLock(root);
   if (lock && lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');
   const connectorErrors = [];
