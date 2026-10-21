@@ -10,7 +10,7 @@ try {
     foreach ($entry in $zip.Entries) {
         $name = $entry.FullName.Replace('\', '/')
         $parts = $name.TrimEnd('/').Split('/')
-        if ($parts.Count -eq 0 -or $parts[0] -notin @('server.mjs','launcher.mjs','package.json','release.json','Demarrer.cmd','Arreter.cmd', 'Demarrer.command', 'Arreter.command','README.md','lib','public','runtime','scripts','docs','examples')) { throw 'Contenu du package interdit.' }
+        if ($parts.Count -eq 0 -or $parts[0] -notin @('server.mjs','launcher.mjs','package.json','release.json','Start.cmd','Stop.cmd', 'Start.command', 'Stop.command','README.md','lib','public','runtime','scripts','docs','examples')) { throw 'Contenu du package interdit.' }
         foreach ($part in $parts) {
             if (!$part -or $part -in @('.','..') -or $part -match '[<>:"|?*\x00-\x1f]' -or $part -match '[. ]$' -or $part -match '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)') { throw 'Chemin du package invalide.' }
         }

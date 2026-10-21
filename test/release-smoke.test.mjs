@@ -31,6 +31,10 @@ for (const failStartup of [false, true]) test(`Packaged release: ${failStartup ?
   if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', fileURLToPath(new URL('../scripts/Expand-Update.ps1', import.meta.url)), '-Archive', fileURLToPath(archive), '-Destination', extracted], { windowsHide: true });
   else extractTarPackage(readFileSync(archive), extracted);
   assert.equal(existsSync(join(extracted, 'data')), false);
+  for (const extension of ['cmd', 'command']) {
+    assert.match(readFileSync(join(extracted, 'Start.' + extension), 'utf8'), /launcher\.mjs/);
+    assert.match(readFileSync(join(extracted, 'Stop.' + extension), 'utf8'), /launcher\.mjs[\s\S]*--stop/);
+  }
   const rootApp = extracted, stage = join(rootApp, '.updates', 'update-' + randomUUID());
   mkdirSync(join(stage, 'payload'), { recursive: true });
   const { managedEntries } = await import('../lib/domain/release-package.mjs');

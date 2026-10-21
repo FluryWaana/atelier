@@ -24,7 +24,7 @@ const name = packageName(version, process.platform, process.arch), archive = joi
 if (existsSync(archive)) throw new Error('Ce package existe déjà dans dist. Utilise une nouvelle version ou déplace le précédent.');
 if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-File', join(root, 'scripts', 'Compress-Release.ps1'), '-Source', stage, '-Destination', archive], { windowsHide: true, stdio: 'inherit' });
 else {
-  for (const name of ['runtime/node', 'Demarrer.command', 'Arreter.command']) chmodSync(join(stage, name), 0o755);
+  for (const name of ['runtime/node', 'Start.command', 'Stop.command']) chmodSync(join(stage, name), 0o755);
   execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });
 }
 const hash = createHash('sha256').update(readFileSync(archive)).digest('hex');

@@ -45,7 +45,7 @@ function taskAgentFields(form, options = {}) {
 }
 async function api(path, method = 'GET', body) {
   const response = await fetch(path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-Local-Request': '1' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  const data = await response.json(); if (response.status === 404 && data.error === 'Route introuvable.') throw new Error('Fonction indisponible : redémarrez Atelier avec Demarrer.ps1, puis rechargez la page.'); if (!response.ok) throw new Error(data.error || 'Erreur du serveur.'); return data;
+  const data = await response.json(); if (response.status === 404 && data.error === 'Route introuvable.') throw new Error('Fonction indisponible : redémarrez Atelier avec son lanceur, puis rechargez la page.'); if (!response.ok) throw new Error(data.error || 'Erreur du serveur.'); return data;
 }
 let toastTimer;
 function toast(message, error = false) { clearTimeout(toastTimer); const host = [...document.querySelectorAll('dialog[open]')].at(-1) || document.body; host.append($('#toast'));  $('#toast').textContent = message; $('#toast').className = error ? 'error' : ''; $('#toast').hidden = false; toastTimer = setTimeout(() => $('#toast').hidden = true, error ? 15000 : 6000); }

@@ -4,7 +4,7 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('atelier-zip-' + [guid]::Ne
 [IO.Directory]::CreateDirectory($fixtureRoot) > $null
 try {
     $cases = @(
-        @{ Names = @('server.mjs','lib/domain/test.mjs','examples/connector/module.mjs'); Valid = $true },
+        @{ Names = @('server.mjs','lib/domain/test.mjs','examples/connector/module.mjs','Start.cmd','Stop.cmd','Start.command','Stop.command'); Valid = $true },
         @{ Names = @('../outside'); Valid = $false },
         @{ Names = @('lib/../../outside'); Valid = $false },
         @{ Names = @('data/kanban.sqlite'); Valid = $false },

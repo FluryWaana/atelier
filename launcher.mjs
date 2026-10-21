@@ -57,7 +57,7 @@ try {
       for (let i = 0; i < 40 && !current; i++) { await delay(200); current = await health(); }
       if (!current) throw new Error('Démarrage impossible. Consultez data/server.stderr.log.');
     }
-    console.log(`Atelier Kanban : ${url}\nUtilisez ${process.platform === 'win32' ? 'Arreter.cmd' : 'Arreter.command'} pour fermer le serveur.`);
+    console.log(`Atelier Kanban : ${url}\nUtilisez ${process.platform === 'win32' ? 'Stop.cmd' : 'Stop.command'} pour fermer le serveur.`);
     if (!process.argv.includes('--no-browser')) {
       const browser = spawn(process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { windowsHide: true, detached: true, stdio: 'ignore' });
       browser.on('error', () => console.log(`Ouvrez ${url} dans votre navigateur.`));

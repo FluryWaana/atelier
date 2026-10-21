@@ -69,17 +69,19 @@ Download the archive for your system from [GitHub Releases](https://github.com/F
 
 `X.Y.Z` is the release version. Each archive has a companion `.sha256` checksum file.
 
-**Windows:** double-click `Demarrer.cmd` to start and `Arreter.cmd` to stop.
+**Windows:** double-click `Start.cmd` to start and `Stop.cmd` to stop.
 
 **Linux / macOS:** run these commands from the extracted folder:
 
 ```sh
-sh Demarrer.command
+sh Start.command
 # When you are finished:
-sh Arreter.command
+sh Stop.command
 ```
 
-The launcher opens **http://127.0.0.1:4317** in your browser. The launcher filenames are French: *Démarrer* means start and *Arrêter* means stop.
+The launcher opens **http://127.0.0.1:4317** in your browser.
+
+**Upgrading from a version with French launcher filenames:** its updater cannot accept the renamed files. Stop the old application, back up its data, then install this version manually. For a portable copy, extract it into a new folder and transfer the data before the first launch. Update any personal shortcuts.
 
 To use coding agents, install **Git** and your chosen **Codex or Claude Code CLI**, authenticate them, and make sure they are available in `PATH`. They are installed separately from Atelier. Local task management does not require an agent account.
 

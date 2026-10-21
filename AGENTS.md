@@ -6,8 +6,8 @@ This directory is the Windows x64 portable distribution of Atelier Kanban, a loc
 
 ## Build, Test, and Development Commands
 
-- `.\Demarrer.cmd`: start the portable application and open `http://127.0.0.1:4317`.
-- `.\Arreter.cmd`: stop the application through its launcher.
+- `.\Start.cmd`: start the portable application and open `http://127.0.0.1:4317`.
+- `.\Stop.cmd`: stop the application through its launcher.
 - `npm start`: run the server in the foreground with an installed Node.js 24 or newer.
 - `npm test`: run `node --test test/*.test.mjs`.
 - `.\runtime\node.exe --test test/*.test.mjs`: run tests using the bundled runtime.
@@ -26,7 +26,11 @@ Use `node:test` and `node:assert/strict`; name tests `test/<feature>.test.mjs`. 
 
 ## Commit & Pull Request Guidelines
 
-This distribution has no Git metadata, so commit conventions cannot be inferred. Use concise, imperative commit subjects. Describe the problem, changed behavior, and verification in each PR; link relevant issues and include screenshots for UI changes.
+Conventional Commits are mandatory for every commit. Use `<type>[optional scope][!]: <description>`, with a concise, imperative description in English. Use `feat` for new features, `fix` for bug fixes, and `docs`, `refactor`, `test`, `build`, `ci`, `perf`, `style`, or `chore` as appropriate. Mark breaking changes with `!` before the colon or a `BREAKING CHANGE:` footer, and explain the impact.
+
+Examples: `docs: require conventional commits`, `fix(updater): preserve user data during rollback`, `feat!: rename portable launchers to Start and Stop`.
+
+Describe the problem, changed behavior, and verification in each PR; link relevant issues and include screenshots for UI changes.
 
 ## Security & Configuration
 

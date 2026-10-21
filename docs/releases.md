@@ -26,9 +26,13 @@ npm run test:release
 
 Le paquet contient uniquement une liste explicite de fichiers applicatifs. Il ne contient aucune base personnelle. Un paquet local existant de même version n’est pas écrasé. Linux/macOS utilisent `tar --format=ustar` lors de la construction ; l’installation valide et extrait ce format restreint avec Node, sans lancer un extracteur externe. La licence Node est incluse dans `runtime/`. Ne pas distribuer un paquet de test construit avec un dépôt fictif.
 
+## Changement des noms de lanceurs
+
+Les lanceurs portables sont désormais `Start.cmd` / `Stop.cmd` sous Windows et `Start.command` / `Stop.command` sous Linux/macOS. Les anciennes versions qui utilisent les noms français refusent ces nouvelles entrées dans leur validation d’archive : cette transition nécessite une installation manuelle. Arrêter l’ancienne application, sauvegarder ses données, puis extraire la nouvelle archive dans un dossier distinct et y transférer les données avant le premier lancement. Mettre à jour les raccourcis personnels.
+
 ## Parcours utilisateur
 
-La première installation nécessite d’extraire le paquet de son système et d’utiliser `Demarrer.cmd` sous Windows ou `Demarrer.command` sous Linux/macOS. La commande `sh Demarrer.command` peut aussi être utilisée depuis le dossier extrait. Une ancienne version dépourvue du mécanisme de mise à jour doit recevoir cette première installation manuellement, application arrêtée et données sauvegardées.
+La première installation nécessite d’extraire le paquet de son système et d’utiliser `Start.cmd` sous Windows ou `Start.command` sous Linux/macOS. La commande `sh Start.command` peut aussi être utilisée depuis le dossier extrait. Une ancienne version dépourvue du mécanisme de mise à jour doit recevoir cette première installation manuellement, application arrêtée et données sauvegardées.
 
 L’interface recherche une version stable au chargement puis toutes les six heures tant que l’onglet est visible. Le bouton **Mises à jour** déclenche une recherche manuelle. Les recherches sont limitées à une par minute côté serveur. Une panne réseau n’empêche pas l’usage local.
 
