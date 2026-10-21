@@ -242,4 +242,10 @@ Bug reports, focused pull requests, translations, and connector contributions ar
 
 ## License
 
-This repository does not yet include a project license. Third-party components retain their respective licenses; portable packages include the Node.js runtime license.
+Atelier Kanban is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version (`AGPL-3.0-or-later`).
+
+Atelier Kanban is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full terms (included as `docs/LICENSE` in release packages).
+
+Commercial use is permitted. If you distribute a modified version, you must make its corresponding source available to recipients under this license. If users interact with your modified version over a network, you must prominently offer them access to its corresponding source. Contributions back to this repository through pull requests are welcome, but are not required by the license.
+
+Third-party components retain their respective licenses; release packages include the Node.js runtime license in `runtime/LICENSE`.

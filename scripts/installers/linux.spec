@@ -2,7 +2,7 @@ Name: atelier-kanban
 Version: %{release_version}
 Release: 1
 Summary: Tableau de tâches local Atelier Kanban
-License: LicenseRef-Proprietary AND MIT
+License: AGPL-3.0-or-later AND MIT
 URL: https://github.com/%{repository}
 Requires: libsecret, xdg-utils, lsof, zenity
 # Preserve the bundled, tested Node binary and generate its shared-library requirements.

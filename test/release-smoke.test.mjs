@@ -35,6 +35,8 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   if (process.platform === 'win32') execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-File', fileURLToPath(new URL('../scripts/Expand-Update.ps1', import.meta.url)), '-Archive', fileURLToPath(archive), '-Destination', extracted], { windowsHide: true });
   else extractTarPackage(readFileSync(archive), extracted);
   assert.equal(existsSync(join(extracted, 'data')), false);
+  assert.equal(readFileSync(join(extracted, 'docs', 'LICENSE'), 'utf8'), readFileSync(new URL('../LICENSE', import.meta.url), 'utf8'));
+  assert.equal(JSON.parse(readFileSync(join(extracted, 'package.json'), 'utf8')).license, 'AGPL-3.0-or-later');
   for (const extension of ['cmd', 'command']) {
     assert.match(readFileSync(join(extracted, 'Start.' + extension), 'utf8'), /launcher\.mjs/);
     assert.match(readFileSync(join(extracted, 'Stop.' + extension), 'utf8'), /launcher\.mjs[\s\S]*--stop/);

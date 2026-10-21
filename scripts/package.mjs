@@ -18,6 +18,7 @@ if (!existsSync(runtimeLicense)) throw new Error('Le fichier LICENSE de Node.js 
 const dist = join(root, 'dist'); mkdirSync(dist, { recursive: true });
 const stage = join(dist, 'build-' + randomUUID()); mkdirSync(stage);
 for (const name of managedEntries.filter(name => !['runtime', 'release.json'].includes(name))) cpSync(join(root, name), join(stage, name), { recursive: true, dereference: false });
+copyFileSync(join(root, 'LICENSE'), join(stage, 'docs', 'LICENSE'));
 mkdirSync(join(stage, 'runtime')); copyFileSync(process.execPath, join(stage, 'runtime', binary)); copyFileSync(runtimeLicense, join(stage, 'runtime', 'LICENSE'));
 writeFileSync(join(stage, 'release.json'), JSON.stringify({ repository, version, dataVersion, nodeVersion, platform: process.platform, arch: process.arch }, null, 2) + '\n');
 const name = packageName(version, process.platform, process.arch), archive = join(dist, name);
