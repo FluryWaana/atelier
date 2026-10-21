@@ -4,11 +4,15 @@ if (globalThis.location) {
   const supplied = fragment.get('session');
   if (supplied && /^[a-f0-9]{64}$/.test(supplied)) {
     token = supplied;
-    try { sessionStorage.setItem('atelier-session', token); } catch {}
     fragment.delete('session');
     history.replaceState(null, '', location.pathname + location.search + (fragment.size ? '#' + fragment : ''));
   }
+  if (!token) { try { token = localStorage.getItem('atelier-session') || ''; } catch {} }
   if (!token) { try { token = sessionStorage.getItem('atelier-session') || ''; } catch {} }
+  if (token) {
+    try { localStorage.setItem('atelier-session', token); } catch {}
+    try { sessionStorage.setItem('atelier-session', token); } catch {}
+  }
 }
 
 export function localFetch(path, options = {}) {
