@@ -8,9 +8,9 @@ import { projectSettings } from '../lib/project-settings.mjs';
 import { execFileSync } from 'node:child_process';
 import { createApp } from '../server.mjs';
 
-async function waitFor(check) {
-  const deadline = Date.now() + 10000;
-  while (!check()) { assert.ok(Date.now() < deadline, 'process output timeout'); await new Promise(resolve => setTimeout(resolve, 30)); }
+async function waitFor(check, timeout = 10000) {
+  const deadline = Date.now() + timeout;
+  while (!await check()) { assert.ok(Date.now() < deadline, 'process readiness timeout'); await new Promise(resolve => setTimeout(resolve, 30)); }
 }
 test('front and back run in the worktree, log failures, prevent port conflicts and stop', async () => {
   const path = mkdtempSync(join(tmpdir(), 'atelier-dev-'));
@@ -121,7 +121,12 @@ test('Windows detects the actual listening port of a launched child process', { 
     servers.start({ id: 'a', worktree: { path } }, { id: 'p', frontCommand: `"${process.execPath}" listen.cjs` });
     await waitFor(() => servers.state()[0].log.includes('"port":'));
     const expected = JSON.parse(servers.state()[0].log.match(/\{[^\n]+\}/)[0]);
-    const service = (await servers.refresh())[0].services[0];
+    let service;
+    // A cold Windows CIM provider can time out once; the UI also refreshes until inspection recovers.
+    await waitFor(async () => {
+      service = (await servers.refresh())[0].services[0];
+      return service.endpoints.some(endpoint => endpoint.pid === expected.pid && endpoint.port === expected.port);
+    }, 60000);
     assert.equal(service.inspectionError, '');
     assert.ok(service.processIds.includes(expected.pid));
     assert.ok(service.endpoints.some(endpoint => endpoint.pid === expected.pid && endpoint.port === expected.port && endpoint.address === '127.0.0.1'));
