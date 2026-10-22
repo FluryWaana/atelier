@@ -48,6 +48,18 @@ test('malformed CLI events cannot crash progress or logging', () => {
   }
 });
 
+test('Claude result logs preserve the summary and identify denied tools and inputs', () => {
+  const event = { type: 'result', result: 'Fichier créé.', permission_denials: [
+    { tool_name: 'Bash', tool_input: { command: 'git status --short' } },
+    { tool_name: 'Write', tool_input: { file_path: '/protected/file' } },
+  ] };
+  assert.equal(eventText(JSON.stringify(event)), 'Fichier créé.\nPermission refusée : Bash · {"command":"git status --short"}\nPermission refusée : Write · {"file_path":"/protected/file"}');
+  assert.match(eventText(JSON.stringify({ ...event, result: undefined })), /^Permission refusée : Bash/);
+  assert.equal(eventText(JSON.stringify({ ...event, permission_denials: [] })), 'Fichier créé.');
+  assert.equal(eventText(JSON.stringify({ type: 'result', errors: ['Échec'] })), 'Échec');
+  assert.match(eventText(JSON.stringify({ type: 'result', permission_denials: [null] })), /outil inconnu/);
+});
+
 test('credential readers bound local files and Codex exposes only the selected identity', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'kanban-credential-bounds-'));
   try {

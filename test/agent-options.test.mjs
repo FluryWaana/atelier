@@ -21,6 +21,12 @@ test('CLI options preserve permissions and use each agent format', () => {
   assert.equal(claude[claude.indexOf('--model') + 1], 'opus');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'high');
   assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'acceptEdits');
+  for (const mode of ['analyze', 'edit']) {
+    const args = commandArgs('claude', mode);
+    assert.equal(args[args.indexOf('--permission-mode') + 1], mode === 'edit' ? 'acceptEdits' : 'plan');
+    assert.equal(args[args.indexOf('--permission-prompts') + 1], 'none');
+    assert.deepEqual(args.slice(args.indexOf('--allowedTools') + 1), ['Bash(git status:*)', 'Bash(git branch --show-current)']);
+  }
   for (const agent of ['codex', 'claude']) {
     assert.ok(!commandArgs(agent, 'edit').includes('--model'));
     for (const model of ['--unsafe', 'a\nb', 'a"b', 42, null]) assert.throws(() => agentOptions(agent, { model }));

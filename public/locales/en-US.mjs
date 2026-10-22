@@ -1302,6 +1302,7 @@ export default {
   "Démarrage de l’agent": "Starting agent",
   "Proposition invalide ou incomplète. Consulte le journal et relance la préparation.": "Invalid or incomplete proposal. Check the log and restart preparation.",
   "Permission refusée : adapte les instructions puis relance.": "Permission denied: adjust instructions and restart.",
+  "Permission refusée : consulte les outils refusés dans le journal et les permissions du CLI avant de relancer.": "Permission denied: check the denied tools in the log and the CLI permissions before restarting.",
   "Erreur signalée par l’agent. Consulte le journal.": "The agent reported an error. Check the log.",
   "Service inconnu.": "Unknown service.",
   "Agent invalide.": "Invalid agent.",
