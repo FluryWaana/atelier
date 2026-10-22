@@ -284,6 +284,7 @@ kbd { font: 10px/1.2 Consolas, monospace; border: 1px solid currentColor; border
 .timer-banner button { padding: 7px 10px; font-size: 11px; }
 #update-banner { position: fixed; inset: auto 20px max(20px, env(safe-area-inset-bottom)) auto; z-index: 90; width: min(560px, calc(100% - 40px)); max-height: calc(100dvh - 40px); overflow: auto; margin: 0; padding: 18px 20px; background: var(--surface); border-color: var(--accent); box-shadow: 0 12px 40px #0008; font-size: 14px; }
 #update-message { margin: 0; overflow-wrap: anywhere; }
+#update-progress { width: 100%; height: 12px; accent-color: var(--accent); }
 #update-banner > div { width: 100%; justify-content: flex-end; }
 #update-banner button, #update-notes { min-height: 44px; display: inline-flex; align-items: center; font-size: 13px; }
 #timer-value { font-variant-numeric: tabular-nums; color: #a6d7be; }

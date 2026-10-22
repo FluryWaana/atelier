@@ -61,6 +61,17 @@ test('unsafe redirect targets are rejected before they receive a request', async
   }
 });
 
+test('download progress reports received bytes with or without a content length', async () => {
+  for (const total of [6, null]) {
+    const progress = [];
+    const request = async () => new Response(new ReadableStream({ start(controller) {
+      controller.enqueue(Buffer.from('ab')); controller.enqueue(Buffer.from('cdef')); controller.close();
+    } }), { headers: total ? { 'content-length': String(total) } : {} });
+    assert.equal((await download('https://github.com/app', 10, request, value => progress.push(value))).toString(), 'abcdef');
+    assert.deepEqual(progress, [0, 2, 6].map(received => ({ stage: 'download', received, total })));
+  }
+});
+
 test('downloads reject redirect loops, HTTP errors and oversized bodies', async () => {
   let calls = 0;
   await assert.rejects(download('https://github.com/app', 10, async () => {
@@ -101,6 +112,28 @@ test('failed preparation never backs up or starts the installer and releases the
   const { service, calls } = fixture({ installer: { prepare: async () => { throw new Error('corrupt'); } } });
   await service.check(); await assert.rejects(service.install('1.1.0'), /corrupt/);
   assert.equal(service.busy(), false); assert.equal(calls.includes('backup'), false);
+  assert.equal(service.state().progress, null);
+});
+
+test('update state exposes preparation progress before the install request completes', async () => {
+  const stages = [];
+  const { service } = fixture({
+    changed: () => { if (service.state().progress) stages.push(service.state().progress.stage); },
+    installer: {
+      prepare: async (release, progress) => {
+        progress({ stage: 'download', received: 50, total: 100 });
+        assert.equal(service.state().progress.received, 50);
+        progress({ stage: 'verify' });
+        assert.equal(service.state().progress.stage, 'verify');
+        progress({ stage: 'extract' });
+        assert.equal(service.state().progress.stage, 'extract');
+        assert.equal(service.busy(), true);
+      },
+      start: async () => assert.equal(service.state().progress.stage, 'restart'),
+    },
+  });
+  await service.check(); await service.install('1.1.0');
+  assert.deepEqual(stages, ['download', 'backup', 'restart']);
 });
 test('busy operations and stale selections prevent installation', async () => {
   const { service, calls } = fixture({ assertIdle: () => { throw new Error('busy'); } });

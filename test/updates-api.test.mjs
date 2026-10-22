@@ -19,7 +19,7 @@ test('update API rejects foreign requests, blocks busy installations and locks o
   let unblock, began;
   const preparing = new Promise(resolve => { began = resolve; });
   const app = createApp({ dataDir, updateOptions: { repository: 'owner/repo', releases: { latest: async () => ({ version: '9.0.0' }) },
-    installer: { prepare: () => { began(); return new Promise(resolve => { unblock = resolve; }); }, start: async () => {} } } });
+    installer: { prepare: (release, progress) => { progress({ stage: 'download', received: 42, total: 100 }); began(); return new Promise(resolve => { unblock = resolve; }); }, start: async () => {} } } });
   t.after(async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); });
   t.mock.method(app.server, 'address', () => ({ port: 4317 }));
   assert.equal((await request(app, '/api/updates/check', 'POST', {}, { origin: 'https://foreign.example' })).status, 403);
@@ -28,6 +28,7 @@ test('update API rejects foreign requests, blocks busy installations and locks o
   assert.equal((await request(app, '/api/updates/install', 'POST', { version: '9.0.0' })).status, 409);
   app.store.deleteTime('timer');
   const install = request(app, '/api/updates/install', 'POST', { version: '9.0.0' }); await preparing;
+  assert.deepEqual((await request(app, '/api/updates')).body.progress, { stage: 'download', received: 42, total: 100 });
   assert.equal((await request(app, '/api/queue', 'POST', { paused: false })).status, 409);
   assert.equal((await request(app, '/api/updates/install', 'POST', { version: '9.0.0' })).status, 409);
   assert.equal((await request(app, '/api/health')).status, 200);

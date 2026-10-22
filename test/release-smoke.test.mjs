@@ -15,7 +15,7 @@ import { extractTarPackage } from '../lib/infrastructure/tar-package.mjs';
 import { packageName } from '../lib/domain/releases.mjs';
 import { dataVersion } from '../lib/domain/release-package.mjs';
 import { dataDirectory } from '../lib/infrastructure/installation.mjs';
-import { readSession } from '../lib/infrastructure/local-session.mjs';
+import { readSession, writeSession } from '../lib/infrastructure/local-session.mjs';
 import { verifyChecksum } from '../lib/infrastructure/windows-updater.mjs';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -71,7 +71,13 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   const version = pkg.version.split('.').map((value, i) => Number(value) + (i === 2 ? 1 : 0)).join('.');
   writeFileSync(join(stage, 'payload', 'package.json'), JSON.stringify({ ...pkg, version }));
   if (failStartup) writeFileSync(join(stage, 'payload', 'server.mjs'), 'throw new Error("simulated startup failure");');
+  if (installed && !failStartup && process.platform === 'win32') {
+    const adapter = join(stage, 'payload', 'lib', 'infrastructure', 'installation.mjs');
+    writeFileSync(adapter, readFileSync(adapter, 'utf8').replace('export function updateInstalledVersion(', 'function originalUpdateInstalledVersion(') + '\nexport function updateInstalledVersion() { throw new Error("simulated registry denial"); }\n');
+  }
   mkdirSync(join(data, 'backups'), { recursive: true });
+  const browserSession = 'a'.repeat(64);
+  writeSession(data, browserSession);
   const store = openStore(join(data, 'kanban.sqlite'));
   store.putCard({ id: 'retained', title: 'Une carte à conserver', status: 'todo' }); store.db.close();
   const backupName = `atelier-${Date.now()}-${randomUUID()}.sqlite`;
@@ -86,6 +92,8 @@ for (const installed of [false, true]) for (const failStartup of [false, true]) 
   assert.equal(code, 0, output);
   const headers = { Authorization: 'Bearer ' + readSession(data) };
   const health = await (await fetch(`http://127.0.0.1:${port}/api/health`, { headers })).json(); serverPid = health.pid;
+  assert.equal(readSession(data), browserSession, 'The open browser must stay authenticated after update or rollback.');
+  if (installed && !failStartup && process.platform === 'win32') assert.match(readFileSync(join(data, 'server.stderr.log'), 'utf8'), /Version Windows non actualisée.*simulated registry denial/);
   assert.equal(health.version, failStartup ? pkg.version : version);
   const state = await (await fetch(`http://127.0.0.1:${port}/api/state`, { headers })).json();
   assert.equal(state.cards[0].title, 'Une carte à conserver');

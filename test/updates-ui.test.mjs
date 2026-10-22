@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { initUpdates } from '../public/updates.mjs';
 
 function fixture(t, api, confirm = async () => true) {
-  const nodes = Object.fromEntries(['update-banner', 'update-message', 'check-updates', 'install-update', 'update-notes', 'dismiss-update'].map(id => ['#' + id, { focus() {} }]));
+  const nodes = Object.fromEntries(['update-banner', 'update-message', 'update-progress', 'check-updates', 'install-update', 'update-notes', 'dismiss-update'].map(id => ['#' + id, { focus() {}, removeAttribute(name) { delete this[name]; } }]));
   const previous = globalThis.document;
   globalThis.document = { hidden: false, querySelector: selector => nodes[selector] };
   t.after(() => { if (previous === undefined) delete globalThis.document; else globalThis.document = previous; });
@@ -155,4 +155,38 @@ test('cancelling the confirmation never sends an installation request', async t 
   await nodes['#check-updates'].onclick();
   await nodes['#install-update'].onclick();
   assert.equal(installs, 0);
+});
+
+test('progress updates while the install request is pending and remains indeterminate during restart', async t => {
+  const result = installation(t, { success: true });
+  let finishInstall, polls = 0;
+  const nodes = fixture(t, async path => {
+    if (path.endsWith('/install')) return new Promise(resolve => { finishInstall = resolve; });
+    return { configured: true, canInstall: true, available: { version: '1.1.0' } };
+  });
+  t.mock.method(globalThis, 'fetch', async () => {
+    polls++;
+    assert.equal(nodes['#update-progress'].hidden, false);
+    if (polls === 1) {
+      assert.equal(typeof finishInstall, 'function');
+      return Response.json({ phase: 'installing', progress: { stage: 'download', received: 42, total: 100 } });
+    }
+    if (polls === 2) {
+      assert.equal(nodes['#update-progress'].value, 42);
+      assert.match(nodes['#update-message'].textContent, /42 %/);
+      return Response.json({ phase: 'installing', progress: { stage: 'download', received: 50, total: null } });
+    }
+    assert.equal(nodes['#update-progress'].value, undefined);
+    if (polls === 3) {
+      finishInstall();
+      return Response.json({ applying: true, progress: { stage: 'restart' } });
+    }
+    assert.match(nodes['#update-message'].textContent, /redémarrage/);
+    return Response.json({ result: { version: '1.1.0', success: true, date: new Date().toISOString() } });
+  });
+  await nodes['#check-updates'].onclick(); await nodes['#install-update'].onclick();
+  assert.equal(polls, 4);
+  assert.equal(result.reloads(), 1);
+  assert.equal(nodes['#update-progress'].value, 100);
+  assert.equal(nodes['#update-progress'].hidden, true);
 });

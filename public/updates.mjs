@@ -4,9 +4,24 @@ export function initUpdates({ api, confirm }) {
   const banner = document.querySelector('#update-banner'), message = document.querySelector('#update-message');
   const checkButton = document.querySelector('#check-updates'), installButton = document.querySelector('#install-update'), notes = document.querySelector('#update-notes');
   const dismissButton = document.querySelector('#dismiss-update');
+  const progress = document.querySelector('#update-progress');
   let available = null, installing = false, notice = '', dismissed = '';
   function controls(busy) {
     installing = busy; installButton.disabled = busy; checkButton.disabled = busy; dismissButton.disabled = busy;
+    progress.hidden = !busy;
+  }
+  function showProgress(state) {
+    progress.removeAttribute('value');
+    if (state?.stage === 'download') {
+      message.textContent = msg("Téléchargement et vérification de la mise à jour…");
+      if (state.total > 0) {
+        progress.value = Math.min(100, Math.floor(state.received / state.total * 100));
+        message.textContent = msg("Téléchargement de la mise à jour : {0} %", progress.value);
+      }
+    } else {
+      const messages = { verify: msg("Vérification de la mise à jour…"), extract: msg("Extraction de la mise à jour…"), backup: msg("Sauvegarde des données…") };
+      message.textContent = messages[state?.stage] || msg("Installation et redémarrage en cours…");
+    }
   }
   function render(state, manual) {
     available = state.available;
@@ -34,26 +49,27 @@ export function initUpdates({ api, confirm }) {
   checkButton.onclick = () => check(true);
   async function followInstallation(version, started = 0, begin) {
     controls(true); banner.hidden = false;
+    showProgress({ stage: begin ? 'download' : 'restart' });
+    let failure;
+    // Poll while the installation request is still downloading the package.
+    if (begin) Promise.resolve().then(begin).catch(error => {
+      if (!(error instanceof TypeError) && !(error instanceof SyntaxError)) failure = error;
+    });
     try {
-      if (begin) {
-        message.textContent = msg("Téléchargement et vérification de la mise à jour…");
-        try { await begin(); }
-        catch (error) { if (!(error instanceof TypeError) && !(error instanceof SyntaxError)) throw error; }
-      }
-      message.textContent = msg("Installation et redémarrage en cours…");
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 600; i++) {
         await new Promise(resolve => setTimeout(resolve, 1000));
+        if (failure) throw failure;
         let state;
         try {
           const response = await localFetch('/api/updates', { cache: 'no-store', signal: AbortSignal.timeout(2000) });
           if (response.status === 401) { message.textContent = msg('Session expirée ou absente. Rouvre Atelier avec son lanceur.'); return; }
           if (!response.ok) continue;
           state = await response.json();
-        } catch { continue; }
-        if (state.applying || state.phase === 'installing') continue;
+        } catch { showProgress({ stage: 'restart' }); continue; }
+        if (state.applying || state.phase === 'installing') { showProgress(state.progress); continue; }
         if (state.error) throw new Error(state.error);
         if (state.result && (!version || state.result.version === version) && Date.parse(state.result.date) >= started) {
-          if (state.result.success) { location.reload(); return; }
+          if (state.result.success) { progress.value = 100; location.reload(); return; }
           throw new Error(msg("La mise à jour a échoué. ") + messageText(state.result.message));
         }
       }

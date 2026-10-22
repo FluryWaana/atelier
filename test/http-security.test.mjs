@@ -11,7 +11,7 @@ import { authenticatedHealth, readSession, writeSession, sameSecret, sessionProo
 async function fixture(t, options = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'atelier-security-'));
   let app;
-  const start = async () => { app = createApp({ dataDir, ...options }); await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve)); return app; };
+  const start = async (overrides = {}) => { app = createApp({ dataDir, ...options, ...overrides }); await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve)); return app; };
   await start();
   t.after(async () => { await app.close(); assert.ok(resolve(dataDir).startsWith(resolve(tmpdir()) + sep)); rmSync(dataDir, { recursive: true, force: true }); });
   const request = (path, method = 'GET', body, headers = {}) => new Promise((resolve, reject) => {
@@ -19,7 +19,7 @@ async function fixture(t, options = {}) {
       let text = ''; res.setEncoding('utf8'); res.on('data', chunk => text += chunk); res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(text) }));
     }); req.on('error', reject); req.end(body === undefined ? undefined : JSON.stringify(body));
   });
-  return { app, request, dataDir, restart: async () => { await app.close(); return start(); } };
+  return { app, request, dataDir, restart: async overrides => { await app.close(); return start(overrides); } };
 }
 
 test('local health refuses remote or malformed addresses before reading credentials', async () => {
@@ -97,6 +97,19 @@ test('server identity is proved before disclosing credentials and sessions rotat
   const restarted = await context.restart();
   assert.notEqual(restarted.authToken, previous);
   assert.equal((await context.request('/api/state', 'GET', undefined, { Authorization: 'Bearer ' + previous })).status, 401);
+});
+
+test('update restarts preserve the browser session without allowing anonymous access', async t => {
+  const context = await fixture(t);
+  const token = context.app.authToken;
+  writeSession(context.dataDir, token);
+  for (let i = 0; i < 2; i++) {
+    const app = await context.restart({ resumeSession: true });
+    assert.equal(app.authToken, token);
+    assert.equal((await context.request('/api/state', 'GET', undefined, { Authorization: 'Bearer ' + token })).status, 200);
+    assert.equal((await context.request('/api/state', 'GET', undefined, { Authorization: '' })).status, 401);
+  }
+  assert.notEqual((await context.restart()).authToken, token);
 });
 
 test('restoration clears persisted credentials and environment fallback after restart', async t => {

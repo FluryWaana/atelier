@@ -19,7 +19,7 @@ import { readFileSync, readdirSync, mkdirSync, realpathSync, statSync, existsSyn
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, randomBytes } from 'node:crypto';
-import { sameSecret, sessionProof, writeSession } from './lib/infrastructure/local-session.mjs';
+import { sameSecret, sessionProof, readSession, writeSession } from './lib/infrastructure/local-session.mjs';
 import { startTray } from './lib/infrastructure/tray.mjs';
 import { openTokenVault } from './lib/token-vault.mjs';
 import { createBackups } from './lib/backups.mjs';
@@ -57,7 +57,7 @@ import { brainstormPrompt, parseBrainstorm } from './lib/brainstorm.mjs';
 import { createUpdates } from './lib/application/updates.mjs';
 import { createGithubReleases } from './lib/infrastructure/github-releases.mjs';
 import { createPackageUpdater } from './lib/infrastructure/package-updater.mjs';
-import { dataDirectory } from './lib/infrastructure/installation.mjs';
+import { dataDirectory, updateInstalledVersion } from './lib/infrastructure/installation.mjs';
 import { updateRoute } from './lib/http/update-routes.mjs';
 import { updateLock } from './scripts/update-worker.mjs';
 
@@ -73,8 +73,8 @@ function repository(value) {
   return repo;
 }
 
-export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, readAgentAccount = agentAccount, installAgentUpdate = updateAgent, getAgentUpdateInfo = agentUpdateInfo, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {
-  const authToken = randomBytes(32).toString('hex');
+export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), resumeSession = false, launch = startAgent, requestJira = jiraRequest, probe = agentStatus, readAgentAccount = agentAccount, installAgentUpdate = updateAgent, getAgentUpdateInfo = agentUpdateInfo, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {
+  const authToken = (resumeSession && readSession(dataDir)) || randomBytes(32).toString('hex');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const store = openStore(join(dataDir, 'kanban.sqlite'));
   const backups = createBackups(store, dataDir);
@@ -476,9 +476,11 @@ if (import.meta.main) {
   const connectorModules = await loadConnectors(join(root, 'connectors'), error => connectorErrors.push(error));
   let stopTray = async () => {};
   const shutdown = async () => { await app.close(); await stopTray(); process.exit(0); };
-  const app = createApp({ connectorModules, connectorErrors, shutdownForUpdate: shutdown, shutdown });
+  const app = createApp({ connectorModules, connectorErrors, resumeSession: Boolean(lock), shutdownForUpdate: shutdown, shutdown });
   app.server.listen(Number(process.env.PORT || 4317), '127.0.0.1', () => {
     writeSession(dataDirectory(root), app.authToken);
+    try { updateInstalledVersion(root, version); }
+    catch (error) { console.warn('Version Windows non actualisée :', error.message); }
     stopTray = startTray(root, app.server.address().port);
     console.log(`Atelier Kanban : http://127.0.0.1:${app.server.address().port} · ouvre le lanceur pour te connecter.`);
   });

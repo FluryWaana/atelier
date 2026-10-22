@@ -110,11 +110,12 @@ export async function runUpdate(stage, recover = false) {
     }
     restoreFiles(root, stage);
     writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: false, message: error.message, date: new Date().toISOString() });
-    unlinkSync(lockPath);
     if (!processExists(lock.ownerPid)) {
-      child = startServer(root, config.port, '');
+      child = startServer(root, config.port, lock.token);
+      writeJson(lockPath, { ...lock, pid: process.pid, serverPid: child.pid });
       await healthy(root, config.port, config.previousVersion, child.pid);
     }
+    unlinkSync(lockPath);
   }
 }
 
