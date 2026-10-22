@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { PassThrough, Writable } from 'node:stream';
 import { agentAccount, quotaWindows } from '../lib/agent-account.mjs';
 import { agentSidebarMarkup } from '../public/agent-options.mjs';
-import { providerCardMarkup, providerDetailMarkup } from '../public/views/agent-providers.mjs';
+import { createAgentProvidersView, providerCardMarkup, providerDetailMarkup } from '../public/views/agent-providers.mjs';
 import { setLocale } from '../public/i18n.mjs';
 
 function mockServer(respond) {
@@ -72,11 +72,34 @@ test('provider views expose accessible account navigation, honest unknown states
   const detail = providerDetailMarkup(profile, { ...status, quotas: [{ name: 'Codex', remainingPercent: 65, windowMinutes: 300, resetsAt: '2099-01-01T00:00:00Z' }] });
   assert.match(providerDetailMarkup(profile, status, true), /data-edit-provider="codex" disabled/);
   assert.match(detail, /value="65"/); assert.match(detail, /5 heures/); assert.match(detail, /noopener noreferrer/);
-  for (const html of [sidebar, card, detail]) { assert.doesNotMatch(html, /<script>|<img/); }
+  for (const html of [sidebar, card, detail]) { assert.doesNotMatch(html, /<script\b|<img\b/i); }
   const unknown = providerDetailMarkup({ ...profile, type: 'claude' }, status);
-  assert.match(unknown, /Quota non communiqué/); assert.match(unknown, /claude.ai\/settings\/usage/); assert.doesNotMatch(unknown, /<progress/);
+  assert.match(unknown, /Quota non communiqué/); assert.ok(unknown.includes('href="https://claude.ai/settings/usage"')); assert.doesNotMatch(unknown, /<progress/);
   const apiAccount = providerDetailMarkup({ ...profile, type: 'claude' }, { authMethod: 'api_key' });
-  assert.match(apiAccount, /Facturation à l’usage/); assert.match(apiAccount, /platform.claude.com\/usage/);
+  assert.match(apiAccount, /Facturation à l’usage/); assert.ok(apiAccount.includes('href="https://platform.claude.com/usage"'));
   const expired = providerDetailMarkup(profile, { quotas: [{ remainingPercent: 65, windowMinutes: 300, resetsAt: '2000-01-01T00:00:00Z' }] });
   assert.match(expired, /À actualiser/); assert.doesNotMatch(expired, /<progress/);
+});
+
+test('provider editor renders supported types and ignores injected type markup', async () => {
+  const options = {}, add = {}, cancel = {};
+  const form = {
+    elements: { type: { value: 'codex' }, name: { focus() {} } },
+    querySelector: selector => ({ '[data-provider-options]': options, '[data-cancel-provider]': cancel })[selector] || null,
+  };
+  const editor = { querySelector: () => form };
+  const host = {
+    querySelector: selector => ({ '[data-add-provider]': add, '[data-provider-editor]': editor })[selector] || null,
+    querySelectorAll: () => [],
+  };
+  const view = createAgentProvidersView({ document: { querySelector: () => host }, api: async () => [] });
+  await view.open();
+  add.onclick();
+  for (const [type, placeholder] of [['codex', 'codex'], ['claude', 'claude'], ['command', '/chemin/agent'], ['"><img src=x onerror=alert(1)>', 'codex']]) {
+    form.elements.type.value = type;
+    form.elements.type.onchange();
+    assert.ok(options.innerHTML.includes(`placeholder="${placeholder}"`));
+    assert.doesNotMatch(options.innerHTML, /<img\b/i);
+    assert.equal(options.innerHTML.includes('name="analyzeArgs"'), type === 'command');
+  }
 });
