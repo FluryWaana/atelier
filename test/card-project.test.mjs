@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBoardView } from '../public/views/board.mjs';
 
-function render(card, projects = [], runs = [], save = async () => {}) {
+function render(card, projects = [], runs = [], save = async () => {}, reload = async () => {}) {
   const elements = new Map();
   let renders = 0;
   const popover = { style: {}, offsetHeight: 52, previousElementSibling: { getBoundingClientRect: () => ({ bottom: 790, right: 900 }) } };
@@ -16,13 +16,51 @@ function render(card, projects = [], runs = [], save = async () => {}) {
     querySelectorAll: key => key === '[data-card-project]' ? [select] : key === '.card-actions' ? [menu] : key === '.card-action-menu' ? [popover] : key === '[data-archive-card]' ? [archive] : key === '[data-card-stop-agent]' ? [stop] : key === '[data-delete-card]' ? [remove] : key === '.column' ? [column] : [],
   };
   const state = { cards: [card], projects, runs, settings: { platform: 'win32' } };
-  const rerender = () => { renders++; view.render({ cards: [card], state, query: '', focusFilter: 'all' }); };
+  const rerender = () => { renders++; view.render({ cards: state.cards, state, query: '', focusFilter: 'all' }); };
   const view = createBoardView({ document, window: { innerWidth: 1000, innerHeight: 800 }, api: save,
-    confirmAction: async () => true, action: fn => fn(), async refresh() {}, toast() {}, openCard() {}, rerender,
+    confirmAction: async () => true, action: fn => fn(), async refresh() { await reload(state); rerender(); }, toast() {}, openCard() {}, rerender,
   });
   rerender();
-  return { get html() { return elements.get('#board').innerHTML; }, get renders() { return renders; }, select, menu, archive, popover, stop, remove, column, rerender };
+  return { get html() { return elements.get('#board').innerHTML; }, get renders() { return renders; }, state, select, menu, archive, popover, stop, remove, column, rerender };
 }
+
+function columnHtml(view, status) {
+  return view.html.split(`<div class="column ${status}"`)[1].split('<div class="column ')[0];
+}
+
+test('dropping a card renders its destination before launching and keeps it there during refreshes', async () => {
+  let finishMove, finishRefresh;
+  const card = { id: 'a', title: 'Tâche', status: 'todo', agent: 'codex' };
+  const view = render(card, [], [], (...args) => {
+    assert.match(columnHtml(view, 'doing'), /data-id="a"/);
+    assert.match(columnHtml(view, 'doing'), /role="status"[^]*Démarrage de l’agent…/);
+    assert.doesNotMatch(columnHtml(view, 'todo'), /data-id="a"/);
+    assert.deepEqual(args, ['/api/cards/a', 'PATCH', { status: 'doing' }]);
+    return new Promise(resolve => { finishMove = resolve; });
+  }, () => new Promise(resolve => { finishRefresh = resolve; }));
+  const moving = view.column.ondrop({ preventDefault() {}, dataTransfer: { getData: () => card.id } });
+  assert.equal(card.status, 'todo');
+  assert.match(columnHtml(view, 'doing'), /class="count">1/);
+  assert.match(columnHtml(view, 'todo'), /class="count">0/);
+  assert.match(view.html, /project-pill[^>]* disabled/);
+  assert.match(view.html, /data-archive-card="a" disabled/);
+  assert.match(view.html, /data-delete-card="a"[^>]* disabled/);
+  view.state.cards = [{ ...card, title: 'Titre actualisé' }]; view.rerender();
+  assert.match(columnHtml(view, 'doing'), /Titre actualisé/);
+  view.state.runs = [{ id: 'run', cardId: 'a', status: 'running', activity: 'Lecture du projet' }]; view.rerender();
+  assert.match(columnHtml(view, 'doing'), /Lecture du projet/);
+  assert.doesNotMatch(view.html, /Démarrage de l’agent…/);
+  finishMove({ status: 'doing' });
+  await Promise.resolve();
+  view.rerender();
+  assert.match(columnHtml(view, 'doing'), /data-id="a"/);
+  view.state.cards = [{ ...card, status: 'review' }];
+  view.state.runs = [{ ...view.state.runs[0], status: 'completed' }];
+  finishRefresh(); await moving;
+  assert.match(columnHtml(view, 'review'), /data-id="a"/);
+  assert.doesNotMatch(view.html, /project-pill[^>]* disabled/);
+  assert.doesNotMatch(view.html, /Démarrage de l’agent…/);
+});
 
 test('dropping a card cannot repeat a pending move, even after rendering, and can retry a failure', async () => {
   let rejectMove;
@@ -35,12 +73,29 @@ test('dropping a card cannot repeat a pending move, even after rendering, and ca
   assert.equal(calls.length, 1);
   rejectMove(new Error('Git : Filename too long'));
   await assert.rejects(moving, /Filename too long/);
+  assert.match(columnHtml(view, 'todo'), /data-id="a"/);
+  assert.doesNotMatch(columnHtml(view, 'doing'), /data-id="a"/);
+  assert.doesNotMatch(view.html, /Démarrage de l’agent…/);
+  assert.doesNotMatch(view.html, /project-pill[^>]* disabled/);
   const retry = view.column.ondrop(event);
   assert.equal(calls.length, 2);
   rejectMove(new Error('Autre échec'));
   await assert.rejects(retry, /Autre échec/);
   for (const [updated, runs] of [[{ ...card, publishing: true }, []], [card, [{ cardId: 'a', status: 'running' }]], [{ ...card, status: 'doing' }, []]]) {
     await render(updated, [], runs, () => assert.fail('must not move a busy or unchanged card')).column.ondrop(event);
+  }
+});
+
+test('failed moves reconcile server state and preserve the original error if refresh also fails', async () => {
+  for (const refreshFails of [false, true]) {
+    const card = { id: 'a', title: 'Tâche', status: 'todo', agent: 'codex' };
+    const view = render(card, [], [], async () => { throw new Error('Connexion interrompue'); }, async state => {
+      if (refreshFails) throw new Error('Actualisation indisponible');
+      state.cards = [{ ...card, status: 'doing' }];
+    });
+    await assert.rejects(view.column.ondrop({ preventDefault() {}, dataTransfer: { getData: () => card.id } }), /Connexion interrompue/);
+    assert.match(columnHtml(view, refreshFails ? 'todo' : 'doing'), /data-id="a"/);
+    assert.doesNotMatch(view.html, /project-pill[^>]* disabled/);
   }
 });
 
