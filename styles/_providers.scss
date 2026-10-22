@@ -1,0 +1,73 @@
+.provider-section-heading, .provider-detail-heading, .provider-card-top, .provider-card-footer, .provider-installation, .provider-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.provider-section-heading { margin-bottom: 22px; }
+.provider-section-heading h2, .provider-section-heading h3, .provider-detail-heading h2 { margin: 0 0 5px; }
+.provider-section-heading p, .provider-detail-heading p { margin: 0; }
+.provider-section-heading > button, .provider-list-footer > button { flex-shrink: 0; }
+.provider-grid, .provider-account-grid, .provider-quota-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.provider-card { display: flex; flex-direction: column; align-items: stretch; text-align: left; gap: 18px; padding: 22px; background: $surface; border: 1px solid $line; border-radius: 14px; min-width: 0; white-space: normal; transition: border-color .15s, background .15s; }
+.provider-card:hover { background: $card-surface; border-color: #76648e; }
+.provider-card .agent-icon, .provider-detail-heading .agent-icon { width: 44px; height: 44px; flex-basis: 44px; font-size: 24px; border-radius: 12px; }
+.provider-card-name { flex: 1; min-width: 0; }
+.provider-card-name strong { display: block; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.provider-card-name small { color: $muted; font-size: 11px; }
+.provider-status { display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 11px; color: $muted; }
+.provider-status.is-connected { color: $green; }
+.provider-card-account { color: $muted; font-size: 12px; overflow-wrap: anywhere; }
+.provider-card-footer { border-top: 1px solid $line; padding-top: 15px; margin-top: auto; color: $muted; font-size: 11px; }
+.provider-update { color: $warning; }
+.provider-list-footer { align-items: flex-start; margin-top: 24px; }
+.provider-back { background: transparent; border: 0; color: $muted; padding: 4px 0; margin-bottom: 24px; font-size: 12px; }
+.provider-detail-heading { justify-content: flex-start; margin-bottom: 24px; }
+.provider-detail-heading > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.provider-detail-heading .provider-status { align-self: center; }
+.provider-metric { border: 1px solid $line; background: $surface; border-radius: 12px; padding: 20px; min-width: 0; }
+.provider-metric h3 { color: $muted; font-size: 11px; font-weight: 500; margin: 0 0 10px; }
+.provider-metric p { font-size: 17px; font-weight: 550; margin: 0 0 5px; overflow-wrap: anywhere; }
+.provider-metric small { color: $muted; font-size: 11px; overflow-wrap: anywhere; }
+.provider-quota-panel { margin-top: 20px; padding: 24px; border: 1px solid $line; background: $surface; border-radius: 14px; }
+.provider-quota-panel h3, .provider-installation h3 { font-size: 14px; }
+.provider-quota-panel .hint, .provider-installation p { font-size: 12px; }
+.provider-quota { min-width: 0; border: 1px solid $line; background: $canvas; border-radius: 10px; padding: 18px; }
+.provider-quota-label { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.provider-quota-label span { color: $muted; overflow-wrap: anywhere; }
+.provider-quota-value { display: flex; align-items: baseline; gap: 3px; font-size: 38px; font-weight: 550; letter-spacing: -1px; margin: 12px 0 16px; }
+.provider-quota-value > span { font-size: 20px; color: $muted; }
+.provider-quota-value small { font-size: 11px; letter-spacing: 0; color: $muted; margin-left: 6px; font-weight: 400; }
+.provider-quota progress { appearance: none; display: block; width: 100%; height: 6px; border: 0; border-radius: 9px; background: $line; accent-color: $green; overflow: hidden; }
+.provider-quota progress::-webkit-progress-bar { background: $line; }
+.provider-quota progress::-webkit-progress-value { background: $green; border-radius: 9px; }
+.provider-quota progress::-moz-progress-bar { background: $green; }
+.provider-quota progress.quota-low::-webkit-progress-value { background: $warning; }
+.provider-quota progress.quota-low::-moz-progress-bar { background: $warning; }
+.provider-quota .hint { margin: 12px 0 0; font-size: 11px; }
+.provider-empty { background: $canvas; border: 1px dashed $line; border-radius: 10px; padding: 24px; color: $muted; font-size: 13px; }
+.provider-empty strong { color: $text; font-weight: 500; }
+.provider-empty p { margin: 8px 0 0; max-width: 560px; }
+.provider-checked { margin: 16px 0 0; }
+.provider-links { display: flex; flex-wrap: wrap; gap: 22px; border-top: 1px solid $line; padding-top: 16px; margin-top: 20px; font-size: 12px; }
+.provider-links a { color: $accent; text-decoration: none; }
+.provider-links a:hover { text-decoration: underline; }
+.provider-installation { padding: 22px 0; border-bottom: 1px solid $line; }
+.provider-installation h3 { margin: 0 0 6px; }
+.provider-installation p { margin: 0; color: $muted; }
+.provider-installation p strong { margin-left: 10px; color: $text; font-weight: 500; }
+.provider-installation > div:last-child { text-align: right; font-size: 12px; }
+.provider-installation small { display: block; color: $muted; margin-top: 5px; }
+.provider-detail-actions { display: flex; gap: 10px; margin: 20px 0; }
+#agent-provider-form { margin-top: 24px; }
+@media (max-width: 1080px) { .provider-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .provider-account-grid, .provider-quota-grid { grid-template-columns: minmax(0, 1fr); }
+  .provider-section-heading, .provider-list-footer, .provider-installation { flex-wrap: wrap; }
+  .provider-detail-heading { flex-wrap: wrap; }
+  .provider-detail-heading .provider-status { width: 100%; }
+  .provider-installation > div:last-child { text-align: left; }
+  .provider-quota-panel { padding: 16px; }
+}
+
+.provider-update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 18px; }
+.provider-update-actions p { margin: 0; }
+.provider-update-actions a { color: $accent; font-size: 12px; }
+
+.provider-update-progress { display: grid; gap: 8px; width: 100%; color: $muted; font-size: 12px; }
+.provider-update-progress progress { width: 100%; height: 8px; accent-color: $accent; }

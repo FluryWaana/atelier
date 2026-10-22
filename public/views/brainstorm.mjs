@@ -1,3 +1,4 @@
+import { agentName, agentProviders } from '../agent-options.mjs';
 import { messageText, msg, markupText, locale } from '../i18n.mjs';
 import { esc, cardPath } from '../view-helpers.mjs';
 import { sameRepository } from '../../lib/domain/paths.mjs';
@@ -63,7 +64,7 @@ function renderBrainstormPage() {
     let saved; try { saved = JSON.parse(localStorage.getItem('atelier-brainstorm-page') || 'null'); } catch {}
     brainstormSession = sessions.some(c => c.id === saved?.id) ? saved.id : '';
     $('#brainstorm-reply').value = brainstormSession && typeof saved?.reply === 'string' ? saved.reply : '';
-    form.elements.agent.value = ['codex', 'claude'].includes(saved?.fields?.agent) ? saved.fields.agent : getState().settings.agent || 'codex';
+    form.elements.agent.value = agentProviders(getState().settings).some(provider => provider.id === saved?.fields?.agent) ? saved.fields.agent : getState().settings.agent || 'codex';
     taskAgentFields(form, saved?.fields || {});
     for (const [name, value] of Object.entries(saved?.fields || {})) {
       if (!form.elements[name] || typeof value !== 'string') continue;
@@ -148,7 +149,7 @@ function renderBrainstormChat(active) {
   $('#brainstorm-start').textContent = discussing ? msg("Reprendre avec cette idée") : msg("Discuter de cette idée");
   $('#brainstorm-reply').disabled = brainstormingBusy;
   $('#brainstorm-reply-form').dataset.active = String(active);
-  $('#brainstorm-composer-agent').textContent = $('#brainstorm-form').elements.agent.value === 'claude' ? '✳ Claude' : '⌘ Codex';
+  $('#brainstorm-composer-agent').textContent = agentName(getState().settings, $('#brainstorm-form').elements.agent.value);
   if (!discussing) return;
   const turns = getState().runs.filter(run => run.cardId === brainstormSession && run.kind === 'brainstorm').slice().reverse();
   const host = $('#brainstorm-chat-history');
@@ -161,7 +162,7 @@ function renderBrainstormChat(active) {
     const questions = brainstormQuestions(run);
     const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? `<p>${esc(run.brainstorm.message)}</p>` : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${questions.length ? `<ul class="brainstorm-questions">${questions.map((question, q) => `<li>${index === turns.length - 1 ? `<button type="button" data-brainstorm-question="${q}">${esc(question)}<span aria-hidden="true"> ↗</span></button>` : esc(question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
     const raw = !run.brainstorm && !run.proposals && run.status !== 'running' && run.summary ? `<details class="brainstorm-raw"><summary>${markupText("Voir la réponse brute de l’agent")}</summary><pre>${esc(run.summary)}</pre></details>` : '';
-    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong><p>${esc(user)}</p></article><article class="brainstorm-message assistant"><strong>${run.agent === 'claude' ? 'Claude' : 'Codex'}</strong>${answer}${raw}</article>`;
+    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong><p>${esc(user)}</p></article><article class="brainstorm-message assistant"><strong>${esc(agentName(getState().settings, run.agent, run))}</strong>${answer}${raw}</article>`;
   }).join('') || `<p class="hint">${markupText("Envoyez un message pour poursuivre votre idée.")}</p>`;
   const questions = brainstormQuestions(turns.at(-1));
   host.querySelectorAll('[data-brainstorm-show-tasks]').forEach(button => button.onclick = () => { $('#brainstorm-results').scrollIntoView({ block: 'start' }); $('#brainstorm-results').focus({ preventScroll: true }); });

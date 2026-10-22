@@ -30,11 +30,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .shortcut { margin-left: auto; font-size: 10px; color: #ac9bc4; }
 .nav-item { margin-top: 7px; border: 1px solid transparent; background: transparent; width: 100%; font-weight: 450; color: #aab1c0; }
 .sidebar-bottom { margin-top: auto; }
-.agent-row { display: flex; gap: 10px; align-items: center; margin: 18px 10px; font-size: 12px; }
-.agent-icon { display: grid; place-items: center; border: 1px solid #343b44; border-radius: 9px; width: 33px; height: 33px; background: #20272a; color: #a5d1be; font-size: 16px; }
-.agent-row:nth-child(2) .agent-icon { background: #2b2421; color: #dfa88e; border-color: #44352d; }
-.agent-row small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
-.agent-row .online-dot { margin-left: auto; }
+.agent-row { display: flex; gap: 10px; align-items: center; width: 100%; padding: 11px 9px; margin: 3px 0; font-size: 12px; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 10px; }
+.agent-row:hover { background: $surface; border-color: $line; }
+.agent-icon { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid #34473f; border-radius: 10px; background: #202d28; color: #a5d1be; font-size: 19px; font-weight: 600; }
+.agent-icon-claude { background: #30251f; color: #e6ac8f; border-color: #514034; }
+.agent-icon-command { background: #282334; color: $accent; border-color: #40364f; font-size: 14px; }
+.agent-row-copy { flex: 1; min-width: 0; }
+.agent-row-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.agent-row small { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); margin-top: 3px; }
+.agent-chevron { margin-left: auto; flex-shrink: 0; color: $muted; font-size: 17px; }
 .online-dot, .live-dot { display: inline-block; width: 6px; height: 6px; background: $green; border-radius: 50%; box-shadow: 0 0 0 3px #8ccbb00b; }
 .offline { background: #c6ad78; }
 .local-note { border-top: 1px solid var(--line); padding: 22px 10px 0; margin-top: 30px; font-size: 11px; color: #c1c7d1; }

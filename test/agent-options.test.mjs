@@ -42,7 +42,7 @@ test('startAgent forwards model and effort to the spawned process', () => {
   const child = new EventEmitter();
   Object.assign(child, { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
   let args;
-  startAgent({ agent: 'codex', mode: 'edit', model: 'custom', effort: 'low', repo: '.', prompt: 'Test' }, () => {}, () => {}, (binary, argv) => { args = argv; return child; });
+  startAgent({ agent: 'codex', provider: { type: 'codex', command: process.execPath }, mode: 'edit', model: 'custom', effort: 'low', repo: '.', prompt: 'Test' }, () => {}, () => {}, (binary, argv) => { args = argv; return child; });
   child.emit('close', 0);
   assert.equal(args[args.indexOf('--model') + 1], 'custom');
   assert.ok(args.includes('model_reasoning_effort="low"'));

@@ -26,6 +26,11 @@ import { createBackups } from './lib/backups.mjs';
 import { projectSettings, settingsForProject } from './lib/project-settings.mjs';
 import { openStore } from './lib/store.mjs';
 import { agentStatus, startAgent, eventText, eventProgress } from './lib/agents.mjs';
+import { agentAccount } from './lib/agent-account.mjs';
+import { agentUpdateInfo, updateAgent } from './lib/agent-updates.mjs';
+import { agentProvider, agentProviders } from './lib/domain/agent-options.mjs';
+import { createAgentProviders } from './lib/application/agent-providers.mjs';
+import { agentProviderRoute } from './lib/http/agent-provider-routes.mjs';
 import { recordAgentUsage } from './lib/agent-usage.mjs';
 import { jiraBase, jiraRequest, fetchIssues, plainText, transitionToStatus, linkPullRequestToJira } from './lib/jira.mjs';
 import { defaultBranch, prepareWorktree, prepareApplicationWorktrees, removeApplicationWorktrees, removeWorktree } from './lib/worktrees.mjs';
@@ -68,7 +73,7 @@ function repository(value) {
   return repo;
 }
 
-export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {
+export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), launch = startAgent, requestJira = jiraRequest, probe = agentStatus, readAgentAccount = agentAccount, installAgentUpdate = updateAgent, getAgentUpdateInfo = agentUpdateInfo, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {
   const authToken = randomBytes(32).toString('hex');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const store = openStore(join(dataDir, 'kanban.sqlite'));
@@ -100,6 +105,26 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   let requestsInFlight = 0;
   let choosingFolder = false;
   let integrationCache;
+  let providerGeneration = 0, checkingProviders = false, providerReads = 0;
+  const customChecks = new Map(), accountChecks = new Map();
+  const invalidateProviders = () => { integrationCache = null; customChecks.clear(); accountChecks.clear(); providerGeneration++; };
+  const providers = createAgentProviders({ settings: settingsService, store,
+    busy: () => active.size > 0 || publishing.size > 0 || automation.size() > 0 || providerReads > 0 || checkingProviders || updates.busy() || Boolean(queue.state().current),
+    invalidate: invalidateProviders, changed, updateInfo: getAgentUpdateInfo, install: installAgentUpdate,
+    probe: provider => probe(provider.id, provider, providers.key(provider.id)),
+  });
+  const probeProvider = async (id, manual = false) => {
+    if (providers.updating()) fail('Mise à jour d’un CLI en cours. Patientez avant de lancer un agent ou une vérification.', 409);
+    const provider = agentProvider(config(), id), generation = providerGeneration;
+    const custom = provider.type === 'command' || Boolean(provider.command);
+    if (custom && !manual) return customChecks.get(id) || { installed: null, connected: false, version: '', manualCheckRequired: true };
+    providerReads++;
+    try {
+      const result = { ...await probe(id, provider, providers.key(id)), checkedAt: timestamp() };
+      if (custom && generation === providerGeneration) customChecks.set(id, result);
+      return result;
+    } finally { providerReads--; }
+  };
   for (const run of store.runs().filter(r => r.status === 'running')) {
     run.status = 'interrupted'; run.endedAt = run.lastEventAt || run.startedAt; store.putRun(run);
     const card = store.card(run.cardId);
@@ -127,7 +152,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       tasks, projects, config, changed,
       tickets: createConnectorTickets({ connector, store: createSyncRepository(store), tasks, busy, changed, timestamp, invalidateReviews }),
       builtins: { check: async (name, input = {}) => {
-          const [result] = await checkConnections({ only: [name], repo: input.repo ? repository(input.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe });
+          const [result] = await checkConnections({ only: [name], repo: input.repo ? repository(input.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe: probeProvider });
           if (!result.ok) throw new Error(result.message); return result.message;
         }, syncTicketStatus: (id, required) => ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) => jiraWorkflows.execute(...args), linkPullRequest: card => linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset => ticketSync.sync(reset), repositories: repositoryHandlers,
         time: (operation, input) => operation === 'preview' ? store.time(input.id) : tracking.execute(operation === 'send' ? 'export' : operation, input.id, input.body) },
@@ -149,6 +174,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     if (blocked.length) fail('Tâche bloquée par : ' + blocked.map(c => c.title).join(', '), 409);
   }
   function manualLaunch() {
+    if (providers.updating()) fail('Mise à jour d’un CLI en cours. Patientez avant de lancer un agent ou une vérification.', 409);
     if (queue.state().current || !queue.state().paused && queue.state().ids.length) fail('Mets la file en pause et attends la fin de la tâche active avant un lancement manuel.', 409);
   }
   const busy = id => automation.busy(id) || publishing.has(id) || [...active.values()].some(run => run.cardId === id);
@@ -160,9 +186,10 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       card.automation = { ...card.automation, state: 'interrupted', step: 'tests', message: reason }; store.putCard(card);
     }
   }
-  const runs = createRuns({ store, active, publishing, automationBusy: id => automation.busy(id), checkDependencies, configFor, repository, samePath, prepareWorktree,
+  const runs = createRuns({ assertCanStart() { if (providers.updating()) fail('Mise à jour d’un CLI en cours. Patientez avant de lancer un agent ou une vérification.', 'conflict'); }, store, active, publishing, automationBusy: id => automation.busy(id), checkDependencies, configFor, repository, samePath, prepareWorktree,
     brainstormDirectory() { const path = join(dataDir, 'brainstorm'); mkdirSync(path, { recursive: true }); return path; },
-    newId: randomUUID, timestamp, launch, changed, invalidateReviews, brainstormPrompt, preparationPrompt, reviewPrompt, checklistText, parseBrainstorm, parsePreparation, parseReview, recordAgentUsage, eventProgress, eventText,
+    newId: randomUUID, timestamp, launch: (options, line, end) => launch({ ...options, provider: agentProvider(config(), options.agent), apiKey: providers.key(options.agent) }, line, end), changed, invalidateReviews, brainstormPrompt, preparationPrompt, reviewPrompt, checklistText, parseBrainstorm, parsePreparation, parseReview,
+    recordAgentUsage: (run, line) => recordAgentUsage(run, line, agentProvider(config(), run.agent).configDir || undefined), eventProgress, eventText,
   });
   const startRun = runs.start;
 
@@ -210,13 +237,14 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     checkDependencies(card);
     if (busy(card.id)) fail('Une opération est en cours sur cette carte.', 409);
     if (card.archived) fail('Restaure cette tâche avant de lancer un agent.', 409);
-    if (!['codex', 'claude'].includes(options.agent) || !['edit', 'analyze'].includes(options.mode)) fail('Agent ou mode invalide.');
+    agentProvider(config(), options.agent);
+    if (!['edit', 'analyze'].includes(options.mode)) fail('Agent ou mode invalide.');
     options.instructions = text(options.instructions || '');
     return configFor(card).automationEnabled && options.mode === 'edit' ? automation.start(card, options, queued && ['error', 'interrupted', 'cancelled'].includes(card.automation?.state)) : startRun(card, options);
   }
 
   const queue = createTaskQueue({ store, changed,
-    busy: () => Boolean(automation.size() || active.size || publishing.size || ticketSync.busy() || updates.busy() || updateLock(root)),
+    busy: () => Boolean(providers.updating() || automation.size() || active.size || publishing.size || ticketSync.busy() || updates.busy() || updateLock(root)),
     launch: id => {
       const card = store.card(id);
       if (!card || card.archived || card.status === 'done') fail('Tâche absente, archivée ou déjà terminée : retire-la de la file.', 409);
@@ -230,12 +258,12 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     releases: releaseConfig.repository ? createGithubReleases(releaseConfig.repository) : null,
     installer: shutdownForUpdate && releaseConfig.repository ? createPackageUpdater({ root, dataDir, version, repository: releaseConfig.repository, port: () => server.address().port }) : null,
     assertIdle() {
-      if (requestsInFlight || choosingFolder || queue.state().current || !queue.state().paused && queue.state().ids.length || automation.size() || active.size || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || devServers.state().some(session => devServers.running(session.cardId)) || store.times().some(e => e.runningSince || ['sending', 'uncertain'].includes(e.exportState))) fail('Mets la file en pause, arrête les agents, les serveurs Front / Back et les chronomètres, puis termine ou vérifie les opérations en cours.', 409);
+      if (providers.updating() || requestsInFlight || choosingFolder || queue.state().current || !queue.state().paused && queue.state().ids.length || automation.size() || active.size || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || devServers.state().some(session => devServers.running(session.cardId)) || store.times().some(e => e.runningSince || ['sending', 'uncertain'].includes(e.exportState))) fail('Mets la file en pause, arrête les agents, les serveurs Front / Back et les chronomètres, puis termine ou vérifie les opérations en cours.', 409);
     },
     backup: () => backups.create(), changed, ...updateOptions,
   });
 
-  const projects = createProjects({ store: createProjectRepository(store), repository, projectSettings, detectLaunch, busy, devServers,
+  const projects = createProjects({ store: createProjectRepository(store), repository, projectSettings: body => projectSettings(body, config()), detectLaunch, busy, devServers,
     repositoryConnectorAvailable: id => connectors.supports(id, 'repositories', 'preview'),
     samePath,
     backup: backups.create, invalidateReviews, newId: randomUUID, timestamp,
@@ -281,22 +309,23 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     }
     if (path === '/api/backups' && req.method === 'GET') return { directory: backups.directory, backups: backups.list() };
     if (['/api/backups', '/api/backups/restore'].includes(path) && req.method === 'POST') {
+      if (providers.updating() || providerReads || checkingProviders) fail('Attendez la fin des exécutions et mises à jour avant de modifier les fournisseurs.', 409);
       if (devServers.state().some(session => devServers.running(session.cardId))) fail('Arrête les serveurs Front / Back avant cette opération.', 409);
       if (queue.state().current || !queue.state().paused && queue.state().ids.length || automation.size() || active.size || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || store.times().some(e => e.runningSince || ['sending', 'uncertain'].includes(e.exportState))) fail('Mets la file en pause, arrête les agents et chronomètres, puis termine ou vérifie les envois Tempo avant cette opération.', 409);
       if (path === '/api/backups') return backups.create();
       if (body.confirmed !== true) fail('Confirme la restauration de cette sauvegarde.');
-      const result = backups.restore(body.name); queue.pause(true); settingsService.clearTokens(); return result;
+      const result = backups.restore(body.name); queue.pause(true); settingsService.clearTokens(); invalidateProviders(); return result;
     }
     if (path === '/api/health' && req.method === 'GET') return { app: 'atelier-kanban', version, workspace: root, pid: process.pid };
     if (path === '/api/shutdown' && req.method === 'POST') {
       if (!shutdown) fail('Arrêt indisponible.', 409);
-      if (active.size || automation.size() || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || requestsInFlight > 1 || queue.state().current || store.times().some(entry => entry.runningSince || entry.exportState === 'sending')) fail('Arrête les agents et chronomètres et attends la fin des opérations.', 409);
+      if (providers.updating() || active.size || automation.size() || publishing.size || ticketSync.busy() || connectors.busy() || tracking.busy() || requestsInFlight > 1 || queue.state().current || store.times().some(entry => entry.runningSince || entry.exportState === 'sending')) fail('Arrête les agents et chronomètres et attends la fin des opérations.', 409);
       closing = true;
       return { ok: true };
     }
     if (path === '/api/time' || path.startsWith('/api/time/')) return tracking.route(req, path, body);
     if (path === '/api/diagnostics' && req.method === 'POST') {
-      const local = await checkConnections({ only: ['Git', 'Codex', 'Claude Code'], repo: body.repo ? repository(body.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe });
+      const local = await checkConnections({ only: ['Git', ...agentProviders(config()).map(provider => provider.name)], repo: body.repo ? repository(body.repo) : config().repo, settings: config(), token: settingsService.token('jira'), azureToken: settingsService.token('azure'), tempoToken: settingsService.token('tempo'), requestJira, requestTempo, probe: probeProvider });
       return [...local, ...await connectors.checkConnections(body)];
     }
     if (path === '/api/worktrees' && req.method === 'GET') return inspectWorktrees(store.cards());
@@ -311,10 +340,36 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       } finally { choosingFolder = false; }
     }
     if (path === '/api/state' && req.method === 'GET') return { queue: queue.state(), devServers: devServers.state(), times: store.times(), projects: store.projects(), brainstorms: store.cards().filter(card => card.brainstormSession), cards: store.cards().filter(card => !card.brainstormSession).map(card => ({ ...card, publishing: publishing.has(card.id) || automation.busy(card.id), suggestedBranch: defaultBranch(card) })), runs: store.runs(), settings: publicConfig(), connectors: connectors.describe() };
-    if (path === '/api/agents' && req.method === 'GET') {
-      if (!integrationCache || Date.now() - integrationCache.time > 30000) integrationCache = { time: Date.now(), value: await Promise.all(['codex', 'claude'].map(async agent => [agent, await probe(agent)])) };
-      return Object.fromEntries(integrationCache.value);
+    if (path === '/api/agents' && req.method === 'GET' || path === '/api/agents/check' && req.method === 'POST') {
+      const manual = req.method === 'POST';
+      if (manual && checkingProviders) fail('Une vérification des fournisseurs est déjà en cours.', 409);
+      if (manual) { checkingProviders = true; integrationCache = null; }
+      try {
+        if (!integrationCache || Date.now() - integrationCache.time > 30000) integrationCache = { time: Date.now(), value: Promise.all(agentProviders(config()).map(async provider => [provider.id, { ...await probeProvider(provider.id, manual), name: provider.name, type: provider.type, accountLabel: provider.accountLabel || '' }])) };
+        return Object.fromEntries(await integrationCache.value);
+      } finally { if (manual) checkingProviders = false; }
     }
+    const accountMatch = path.match(/^\/api\/agents\/([a-z][a-z0-9-]{0,63})\/account$/);
+    if (accountMatch && req.method === 'POST') {
+      if (providers.updating()) fail('Mise à jour d’un CLI en cours. Patientez avant de lancer un agent ou une vérification.', 409);
+      const id = accountMatch[1], provider = agentProvider(config(), id);
+      let cached = accountChecks.get(id);
+      if (!cached || Date.now() - cached.time > 60000) {
+        cached = { time: Date.now(), value: (async () => {
+          providerReads++;
+          try {
+            const status = await probeProvider(id, true);
+            const account = /^(api|apikey|api_key|api_key_helper|third_party)$/i.test(status.authMethod || '') ? { quotas: [], quotaState: 'api' }
+              : status.installed ? await readAgentAccount(provider) : { quotas: [], quotaState: 'unavailable' };
+            return { ...status, ...account, subscription: account.subscription || status.subscription || '', checkedAt: timestamp() };
+          } finally { providerReads--; }
+        })() };
+        accountChecks.set(id, cached);
+      }
+      return cached.value;
+    }
+    const providerResult = agentProviderRoute(providers, req.method, path, body);
+    if (providerResult !== undefined) return providerResult;
     const settingsResult = settingsRoute(settingsService, req.method, path, body);
     if (settingsResult !== undefined) return settingsResult;
     const cardResult = cardWorkflowRoute(cardWorkflows, req.method, path, body);
@@ -337,6 +392,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     fail('Route introuvable.', 404);
   }
   const assets = { '/views/overview.mjs': ['views/overview.mjs', 'text/javascript'], '/views/workspace-workflows.mjs': ['views/workspace-workflows.mjs', 'text/javascript'], '/views/card.mjs': ['views/card.mjs', 'text/javascript'], '/views/brainstorm.mjs': ['views/brainstorm.mjs', 'text/javascript'], '/views/time.mjs': ['views/time.mjs', 'text/javascript'], '/views/task-editor.mjs': ['views/task-editor.mjs', 'text/javascript'], '/ui-actions.mjs': ['ui-actions.mjs', 'text/javascript'], "/connector-availability.mjs": ["connector-availability.mjs", "text/javascript"], '/views/settings.mjs': ['views/settings.mjs', 'text/javascript'], '/views/project-settings.mjs': ['views/project-settings.mjs', 'text/javascript'], '/views/processes.mjs': ['views/processes.mjs', 'text/javascript'], '/view-helpers.mjs': ['view-helpers.mjs', 'text/javascript'], '/views/board.mjs': ['views/board.mjs', 'text/javascript'], '/views/projects.mjs': ['views/projects.mjs', 'text/javascript'], '/lib/domain/agent-options.mjs': ['../lib/domain/agent-options.mjs', 'text/javascript'], '/lib/domain/tasks.mjs': ['../lib/domain/tasks.mjs', 'text/javascript'], '/lib/domain/paths.mjs': ['../lib/domain/paths.mjs', 'text/javascript'], '/lib/domain/validation.mjs': ['../lib/domain/validation.mjs', 'text/javascript'], '/updates.mjs': ['updates.mjs', 'text/javascript'], '/workflow.mjs': ['workflow.mjs', 'text/javascript'], '/agent-usage.mjs': ['agent-usage.mjs', 'text/javascript'], '/agent-options.mjs': ['agent-options.mjs', 'text/javascript'], '/ui-helpers.mjs': ['ui-helpers.mjs', 'text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+  assets['/views/agent-providers.mjs'] = ['views/agent-providers.mjs', 'text/javascript'];
   assets['/i18n.mjs'] = ['i18n.mjs', 'text/javascript'];
   assets['/atelier-kanban.png'] = ['atelier-kanban.png', 'image/png'];
   assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];

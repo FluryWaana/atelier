@@ -1,3 +1,4 @@
+import { agentName, fillAgentSelect, agentSidebarMarkup } from './agent-options.mjs';
 import { scopedCards as cardsInScope } from './ui-helpers.mjs';
 import { overviewMarkup } from './views/overview.mjs';
 import { removeWorktree, createWorkspaceWorkflows } from './views/workspace-workflows.mjs';
@@ -31,7 +32,7 @@ const processView = createProcessesView({ getState: () => state, getSelection: (
 const { devRunning, processCards, launchProjects, projectManagedPorts, projectLaunchBlocked, processesMarkup } = processView;
 const projectSettingsView = createProjectSettings({ document, getState: () => state, api, action, refresh, toast, devRunning });
 const { openProjectSettings, openLaunchSettings } = projectSettingsView;
-const settingsView = createSettingsView({ document, api, action, toast, refresh });
+const settingsView = createSettingsView({ document, api, action, toast, refresh, confirmAction });
 const projectsView = createProjectsView({ document, location, api, action, confirmAction, refresh, toast, openProjectSettings,
   onSelect(id, clearSearch = false) {
     $('#project-filter').value = id; currentView = 'board'; focusFilter = 'all';
@@ -41,7 +42,7 @@ const projectsView = createProjectsView({ document, location, api, action, confi
 });
 
 const taskEditor = createTaskEditor({ document, getState: () => state, localStorage, addCriterion: (...args) => cardView.addCriterion(...args) });
-const { agentFields, taskAgentFields, attachDraft, clearDraft } = taskEditor;
+const { taskAgentFields, attachDraft, clearDraft } = taskEditor;
 const { renderBrainstorm } = createBrainstormProposals({ document, getState: () => state, api, action, refresh, openCard, toast });
 const brainstormView = createBrainstormView({ document, getState: () => state, localStorage, taskAgentFields, api, action, refresh, openCard, toast, renderBrainstorm });
 const timeView = createTimeView({ document, getState: () => state, api, action, confirmAction, refresh, toast, board, scopedCards, connectorName, setView: view => { currentView = view; }, getSelectedRun: () => cardView.selectedRun });
@@ -88,6 +89,7 @@ async function refresh() {
   const previousFlows = new Map(state.cards.map(card => [card.id, card.automation?.state]));
   const firstLoad = !state.settings.platform;
   state = await api('/api/state');
+  document.querySelectorAll('select[name=agent]').forEach(select => fillAgentSelect(select, state.settings));
   if (state.connectors) state.connectors.modules = state.connectors.modules.map(localizeModule);
   $('#sync-button').hidden = !connectorSupports(state.connectors, 'tickets', 'sync');
   resetJiraButton.hidden = !connectorSupports(state.connectors, 'tickets', 'reset');
@@ -102,18 +104,18 @@ function ticketSupports(card, operation) {
   const id = card.ticket?.connector || (card.ticket ? 'jira' : state.connectors?.providers?.tickets);
   return Boolean(state.connectors?.modules.find(module => module.id === id)?.operations?.tickets?.includes(operation));
 }
-function settings(section = 'general') {
+function settings(section = 'general', providerId = '') {
   currentView = 'settings';
   const form = $('#settings-form');
   for (const key of ['repo', 'agent', 'baseBranch']) form.elements[key].value = state.settings[key] || (key === 'agent' ? 'codex' : '');
-  $('#default-agent-fields').innerHTML = ['codex', 'claude'].map(agent => `<section class="agent-preset"><h4>${agent === 'codex' ? 'Codex' : 'Claude Code'}</h4>${agentFields(agent, { model: state.settings[agent + 'Model'], effort: state.settings[agent + 'Effort'] }, agent)}</section>`).join('');
   board();
-  action(() => settingsView.open(typeof section === 'string' ? section : 'general'));
+  action(() => settingsView.open(typeof section === 'string' ? section : 'general', providerId));
 }
 $('#settings-button').onclick = () => settings(); $('#welcome-settings').onclick = () => settings();
 const newAgentFields = document.createElement('details'); newAgentFields.className = 'disclosure model-options';
 newAgentFields.innerHTML = `<summary>${markupText("Modèle & réflexion (facultatif)")}</summary><div data-agent-fields></div>`;
 $('#new-form .notice-line').before(newAgentFields);
+document.querySelectorAll('select[name=agent]').forEach(select => fillAgentSelect(select, state.settings));
 taskAgentFields($('#new-form'));
 $('#new-dialog').addEventListener('toggle', () => { if ($('#new-dialog').open) taskAgentFields($('#new-form')); });
 $('#settings-form').onsubmit = event => { event.preventDefault(); action(async () => {
@@ -144,7 +146,8 @@ $('#sync-button').onclick = () => action(async () => {
 });
 async function loadAgents() {
   const agents = await api('/api/agents');
-  $('#agents').innerHTML = Object.entries(agents).map(([key, value]) => `<div class="agent-row"><span class="agent-icon">${key === 'codex' ? '⌘' : '✳'}</span><div>${key === 'codex' ? 'Codex' : 'Claude Code'}<small>${value.connected ? msg("Connecté") : value.installed ? msg("Connexion nécessaire") : msg("Non installé")}</small></div><span class="online-dot ${value.connected ? '' : 'offline'}" title="${esc(value.version)}"></span></div>`).join('');
+  $('#agents').innerHTML = agentSidebarMarkup(agents);
+  $('#agents').querySelectorAll('[data-agent-account]').forEach(button => button.onclick = () => settings('agents', button.dataset.agentAccount));
 }
 action(() => loadVersion(document, api));
 initUpdates({ api, confirm: confirmAction });
@@ -216,7 +219,7 @@ function renderWorkspace() {
     html += `<section class="worktree-box"><h3>${markupText("Coût API approximatif et temps agent")}</h3><p><strong>${esc(usage.costUsd.toLocaleString(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }))}</strong> ${markupText("sur {0} exécution(s) avec coût · Temps cumulé :", usage.measured)} <strong>${duration(agentTime(runs).reduce((sum, group) => sum + group.seconds, 0))}</strong> ${markupText("sur {0} exécution(s).", runs.length)}</p><p class="hint">${markupText("{0} exécution(s) sans coût disponible. Périmètre affiché, toutes dates. Estimation API indicative ; la facturation de votre abonnement peut différer.", usage.missing)}</p></section>`;
     html += runs.map(run => {
       const card = cards.find(c => c.id === run.cardId);
-      return `<article class="workspace-row agent-run" data-status="${esc(run.status)}"><div><span class="agent-pill ${esc(run.agent)}">${run.agent === 'claude' ? 'Claude Code' : 'Codex'}</span><h3>${esc(card.title)}</h3><p><span class="state-badge" data-agent-state="${run.id}">${esc(agentState(run))}</span> <span data-clock="${run.id}"></span></p><p class="hint">${esc(run.attention || run.activity || '')}</p><p class="hint">${esc(usageText(run))}</p><code>${esc(run.branch || run.repo)}</code></div><div class="row-actions">${cardButton(card)}${run.status === 'running' ? `<button data-stop-agent="${run.id}" class="danger">${markupText("Arrêter")}</button>` : ''}</div></article>`;
+      return `<article class="workspace-row agent-run" data-status="${esc(run.status)}"><div><span class="agent-pill ${esc(run.agent)}">${esc(agentName(state.settings, run.agent, run))}</span><h3>${esc(card.title)}</h3><p><span class="state-badge" data-agent-state="${run.id}">${esc(agentState(run))}</span> <span data-clock="${run.id}"></span></p><p class="hint">${esc(run.attention || run.activity || '')}</p><p class="hint">${esc(usageText(run))}</p><code>${esc(run.branch || run.repo)}</code></div><div class="row-actions">${cardButton(card)}${run.status === 'running' ? `<button data-stop-agent="${run.id}" class="danger">${markupText("Arrêter")}</button>` : ''}</div></article>`;
     }).join('') || `<p class="empty">${markupText("Aucun agent lancé pour ce projet.")}</p>`;
   }
   if (currentView === 'worktrees') {
