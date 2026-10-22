@@ -9,10 +9,11 @@ function render(card, projects = [], runs = [], save = async () => {}) {
   const popover = { style: {}, offsetHeight: 52, previousElementSibling: { getBoundingClientRect: () => ({ bottom: 790, right: 900 }) } };
   const stop = { dataset: { cardStopAgent: 'running-id' }, disabled: false }, remove = { dataset: { deleteCard: card.id }, disabled: false };
   const menu = {}, archive = { dataset: { archiveCard: card.id }, disabled: false };
+  const column = { dataset: { status: 'doing' }, classList: { remove() {} } };
   const select = { dataset: { cardProject: card.id }, value: 'D:\\Projet' };
   const document = {
     querySelector(key) { if (!elements.has(key)) elements.set(key, { value: '' }); return elements.get(key); },
-    querySelectorAll: key => key === '[data-card-project]' ? [select] : key === '.card-actions' ? [menu] : key === '.card-action-menu' ? [popover] : key === '[data-archive-card]' ? [archive] : key === '[data-card-stop-agent]' ? [stop] : key === '[data-delete-card]' ? [remove] : [],
+    querySelectorAll: key => key === '[data-card-project]' ? [select] : key === '.card-actions' ? [menu] : key === '.card-action-menu' ? [popover] : key === '[data-archive-card]' ? [archive] : key === '[data-card-stop-agent]' ? [stop] : key === '[data-delete-card]' ? [remove] : key === '.column' ? [column] : [],
   };
   const state = { cards: [card], projects, runs, settings: { platform: 'win32' } };
   const rerender = () => { renders++; view.render({ cards: [card], state, query: '', focusFilter: 'all' }); };
@@ -20,8 +21,28 @@ function render(card, projects = [], runs = [], save = async () => {}) {
     confirmAction: async () => true, action: fn => fn(), async refresh() {}, toast() {}, openCard() {}, rerender,
   });
   rerender();
-  return { get html() { return elements.get('#board').innerHTML; }, get renders() { return renders; }, select, menu, archive, popover, stop, remove };
+  return { get html() { return elements.get('#board').innerHTML; }, get renders() { return renders; }, select, menu, archive, popover, stop, remove, column, rerender };
 }
+
+test('dropping a card cannot repeat a pending move, even after rendering, and can retry a failure', async () => {
+  let rejectMove;
+  const calls = [], card = { id: 'a', title: 'Tâche', status: 'todo', agent: 'codex' };
+  const view = render(card, [], [], (...args) => { calls.push(args); return new Promise((resolve, reject) => { rejectMove = reject; }); });
+  const event = { preventDefault() {}, dataTransfer: { getData: () => card.id } };
+  const moving = view.column.ondrop(event);
+  card.title = 'Titre actualisé'; view.rerender();
+  await view.column.ondrop(event);
+  assert.equal(calls.length, 1);
+  rejectMove(new Error('Git : Filename too long'));
+  await assert.rejects(moving, /Filename too long/);
+  const retry = view.column.ondrop(event);
+  assert.equal(calls.length, 2);
+  rejectMove(new Error('Autre échec'));
+  await assert.rejects(retry, /Autre échec/);
+  for (const [updated, runs] of [[{ ...card, publishing: true }, []], [card, [{ cardId: 'a', status: 'running' }]], [{ ...card, status: 'doing' }, []]]) {
+    await render(updated, [], runs, () => assert.fail('must not move a busy or unchanged card')).column.ondrop(event);
+  }
+});
 
 test('cards show a project selector, including missing and unlisted projects', () => {
   const card = { id: 'a', title: 'Une tâche', status: 'todo', agent: 'codex', repo: '' };

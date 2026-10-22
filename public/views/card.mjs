@@ -17,6 +17,7 @@ export function createCardView({ document, getState, api, action, confirmAction,
   });
   function updateAutomation() { automation.updateAutomation(selected); }
   let selected = null, selectedRun = null, cursor = 0, logRun = null, wasRunning = false, prPreview = null, prCardId = null;
+  const savingCards = new Set();
 async function openCard(id) {
   selected = id; selectedRun = null; renderDetail(); if (!$('#card-dialog').open) $('#card-dialog').showModal(); await updateRun();
 }
@@ -61,14 +62,17 @@ function renderDetail() {
   renderTicketPreparation(card.id);
   setupBrainstorm(card, active, saveCard);
   $('#prepare-ticket').onclick = () => action(async () => {
+    if (savingCards.has(card.id)) return;
     if (!$('#card-form').reportValidity()) return;
+    savingCards.add(card.id);
     $('#prepare-ticket').disabled = true;
     try {
       await saveCard(true);
       const run = await api(cardPath(card.id) + '/prepare-ticket', 'POST', {});
-      await refresh(); renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun();
+      await refresh();
+      if (selected === card.id && $('#card-dialog').open) { renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun(); }
       toast(msg("Préparation lancée. La proposition apparaîtra dans la fiche."));
-    } finally { if ($('#prepare-ticket')) $('#prepare-ticket').disabled = getState().cards.find(c => c.id === card.id)?.archived || getState().runs.some(r => r.cardId === card.id && r.status === 'running'); }
+    } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
   });
   $('#add-criterion').onclick = () => { if ($('#criteria-list').children.length >= 20) return toast(msg("Maximum 20 critères."), true); addCriterion({ text: '', done: false }, false); $('#criteria-list').lastElementChild.querySelector('input[type=text]').focus(); };
   if (card.archived) { [...$('#card-form').elements].forEach(field => field.disabled = true); if ($('#load-transitions')) $('#load-transitions').disabled = true; }
@@ -80,15 +84,15 @@ function renderDetail() {
   if (active) { $('#card-form').elements.model.disabled = true; $('#card-form').elements.effort.disabled = true; $('#card-form').elements.agent.disabled = true; }
   $('#close-card').onclick = () => $('#card-dialog').close();
   async function saveCard(launchSeparately = false) { const body = Object.fromEntries(new FormData($('#card-form'))); body.blockedBy = [...$('#blocked-by').selectedOptions].map(option => option.value); body.checklist = [...$('#criteria-list').children].map(row => ({ text: row.querySelector('input[type=text]').value, done: row.querySelector('input[type=checkbox]').checked })); if (launchSeparately) body.status = getState().cards.find(c => c.id === card.id).status; const saved = await api(cardPath(card.id), 'PATCH', body); clearDraft(card.id); return saved; }
-  let savingCard = false;
   const cardForm = $('#card-form'), statusSelect = cardForm.elements.status;
   async function persistCard(statusChanged = false) {
-    if (savingCard) return;
+    if (savingCards.has(card.id)) return;
     if (!cardForm.reportValidity()) { statusSelect.value = getState().cards.find(c => c.id === card.id)?.status || card.status; return; }
-    savingCard = true;
+    savingCards.add(card.id);
     try {
       const pending = saveCard();
       statusSelect.disabled = true; cardForm.querySelector('button[type=submit]').disabled = true;
+      for (const selector of ['#launch', '#prepare-ticket', '#prepare-worktree']) $(selector).disabled = true;
       const saved = await pending; await refresh();
       if (selected === card.id && $('#card-dialog').open) { renderDetail(); await updateRun(); }
       toast(saved.ticketSync?.state === 'error' ? msg("Avancement local enregistré. Jira à vérifier : {0}", saved.ticketSync.message) : statusChanged ? msg("Avancement enregistré : {0}.{1}", names[saved.status], saved.ticketSync?.state === 'synced' && saved.ticketSync.localStatus === saved.status ? msg(" Jira : ") + saved.ticket.status + '.' : '') : msg("Carte enregistrée."), saved.ticketSync?.state === 'error');
@@ -96,18 +100,35 @@ function renderDetail() {
       statusSelect.value = getState().cards.find(c => c.id === card.id)?.status || card.status;
       throw error;
     } finally {
-      savingCard = false;
-      if (cardForm.isConnected) { statusSelect.disabled = Boolean(active); cardForm.querySelector('button[type=submit]').disabled = Boolean(active); }
+      savingCards.delete(card.id);
+      if (selected === card.id) await updateRun();
     }
   }
   statusSelect.disabled = Boolean(active);
   statusSelect.onchange = () => action(() => persistCard(true));
   cardForm.onsubmit = e => { e.preventDefault(); action(() => persistCard()); };
   $('#launch').onclick = () => action(async () => {
+    if (savingCards.has(card.id)) return;
+    const options = { agent: $('#card-form').elements.agent.value, mode: $('#mode').value, instructions: $('#instructions').value };
+    savingCards.add(card.id);
     $('#launch').disabled = true;
-    try { await saveCard(true); const run = await api(cardPath(card.id) + '/run', 'POST', { agent: $('#card-form').elements.agent.value, mode: $('#mode').value, instructions: $('#instructions').value }); await refresh(); renderDetail(); selectedRun = run.automation?.runId || run.id; await updateRun(); } finally { if ($('#launch')) $('#launch').disabled = getState().cards.find(c => c.id === card.id)?.publishing || getState().runs.some(r => r.cardId === card.id && r.status === 'running'); }
+    try {
+      await saveCard(true);
+      const run = await api(cardPath(card.id) + '/run', 'POST', options);
+      await refresh();
+      if (selected === card.id && $('#card-dialog').open) { renderDetail(); selectedRun = run.automation ? run.automation.runId || null : run.id; await updateRun(); }
+    } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
   });
-  $('#prepare-worktree').onclick = () => action(async () => { await saveCard(true); await api(cardPath(card.id) + '/worktree', 'POST', {}); await refresh(); renderDetail(); await updateRun(); toast(msg("Worktree prêt.")); });
+  $('#prepare-worktree').onclick = () => action(async () => {
+    if (savingCards.has(card.id)) return;
+    savingCards.add(card.id);
+    $('#prepare-worktree').disabled = true;
+    try {
+      await saveCard(true); await api(cardPath(card.id) + '/worktree', 'POST', {}); await refresh();
+      if (selected === card.id && $('#card-dialog').open) { renderDetail(); await updateRun(); }
+      toast(msg("Worktree prêt."));
+    } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
+  });
   const devBox = document.createElement('details');
   devBox.className = 'disclosure'; devBox.open = devRunning(card.id);
   devBox.innerHTML = `<summary>${markupText("Lancer le projet")}</summary><p class="hint">${markupText("Commandes définies dans Mes projets → Réglages. Le projet de la carte tourne dans son worktree ; son éventuel projet lié tourne depuis son dépôt local, avec sa branche et ses fichiers actuels. Démarrage et arrêt communs. Les commandes avec {port} permettent à Atelier de fournir des ports distincts.")}</p><p id="dev-context" class="hint path-text"></p><button id="start-dev">${markupText("Démarrer Front / Back")}</button> <button id="stop-dev">${markupText("Arrêter Front / Back")}</button><p id="dev-status" class="hint" role="status"></p><pre id="dev-log" class="log" aria-label="${markupText("Journal Front / Back")}"></pre>`;
@@ -150,37 +171,22 @@ function renderDetail() {
 }
 async function updateRun() {
   if (!$('#card-dialog').open) return;
+  const currentCard = getState().cards.find(c => c.id === selected);
+  if (!currentCard) { $('#card-dialog').close(); return; }
   updateAutomation();
-  const select = $('#run-select');
-  for (const run of getState().runs.filter(r => r.cardId === selected).reverse()) {
-    if (![...select.options].some(o => o.value === run.id)) select.prepend(new Option('', run.id));
-  }
-  if (select.options.length > 1) select.querySelector('option[value=""]')?.remove();
-  selectedRun ||= $('#run-select').value;
-  if (!selectedRun) return;
-  const run = getState().runs.find(r => r.id === selectedRun); if (!run) return;
-  const active = getState().cards.find(c => c.id === selected)?.archived || getState().cards.find(c => c.id === selected)?.publishing || getState().runs.some(r => r.cardId === selected && r.status === 'running');
-  if (wasRunning && !active) $('#card-form').elements.status.value = getState().cards.find(c => c.id === selected)?.status || 'todo';
+  const busyCard = savingCards.has(selected) || currentCard.publishing || getState().runs.some(r => r.cardId === selected && r.status === 'running');
+  const active = Boolean(currentCard.archived || busyCard);
+  if (wasRunning && !active) $('#card-form').elements.status.value = currentCard.status;
   wasRunning = active;
-  for (const option of $('#run-select').options) {
-    const current = getState().runs.find(r => r.id === option.value);
-    if (current) option.textContent = `${agentName(getState().settings, current.agent, current)} · ${new Date(current.startedAt).toLocaleString(locale)} · ${runNames[current.status]}${current.kind === 'pr-review' ? msg(" · Review PR") : current.kind === 'ticket-preparation' ? msg(" · Préparation du ticket") : current.kind === 'brainstorm' ? msg(" · Brainstorming") : ''}`;
-  }
   $('#card-form').elements.status.disabled = Boolean(active);
   for (const field of ['agent', 'model', 'effort']) $('#card-form').elements[field].disabled = Boolean(active);
   $('#launch').disabled = active; $('#card-form button[type=submit]').disabled = active; $('#add-criterion').disabled = active; $('#delete-card').disabled = active;
   $('#prepare-ticket').disabled = active;
+  $('#archive-card').disabled = Boolean(busyCard);
   renderTicketPreparation(selected);
   renderBrainstorm(selected);
   if ($('#brainstorm-ticket')) $('#brainstorm-ticket').disabled = active;
   if ($('#publish-jira')) $('#publish-jira').disabled = active;
-  $('#agent-summary').hidden = !run.summary || Boolean(run.review);
-  $('#summary-text').textContent = run.summary || '';
-  $('#summary-context').textContent = `${agentName(getState().settings, run.agent, run)} · ${run.actualModel || run.model || msg("Modèle CLI")} · ${effortLevels[run.agentType || run.agent]?.[run.effort] || msg("Réflexion CLI")} · ${runNames[run.status]} · ${new Date(run.startedAt).toLocaleString(locale)}`;
-  $('#run-status').textContent = `${runNames[run.status]} · ${run.mode === 'edit' ? msg("Modification") : msg("Analyse")}`;
-  $('#run-usage').textContent = usageText(run);
-  $('#stop-run').hidden = run.status !== 'running';
-  const currentCard = getState().cards.find(c => c.id === selected);
   $('#worktree-path').textContent = currentCard?.worktree?.path || msg("Sera créé au lancement.");
   $('#prepare-worktree').disabled = active || Boolean(currentCard?.worktree);
   $('#remove-worktree').disabled = active || !currentCard?.worktree || devRunning(selected);
@@ -188,6 +194,24 @@ async function updateRun() {
   if ($('#review-pr')) $('#review-pr').disabled = active || !currentCard?.worktree;
   renderReviewReport(selected);
   for (const field of ['repo', 'branch', 'baseBranch']) $('#card-form').elements[field].readOnly = active || Boolean(currentCard?.worktree);
+  const select = $('#run-select');
+  for (const run of getState().runs.filter(r => r.cardId === selected).reverse()) {
+    if (![...select.options].some(o => o.value === run.id)) select.prepend(new Option('', run.id));
+  }
+  if (select.options.length > 1) select.querySelector('option[value=""]')?.remove();
+  selectedRun ||= select.value;
+  const run = getState().runs.find(r => r.id === selectedRun && r.cardId === selected);
+  if (!run) return;
+  for (const option of select.options) {
+    const current = getState().runs.find(r => r.id === option.value);
+    if (current) option.textContent = `${agentName(getState().settings, current.agent, current)} · ${new Date(current.startedAt).toLocaleString(locale)} · ${runNames[current.status]}${current.kind === 'pr-review' ? msg(" · Review PR") : current.kind === 'ticket-preparation' ? msg(" · Préparation du ticket") : current.kind === 'brainstorm' ? msg(" · Brainstorming") : ''}`;
+  }
+  $('#agent-summary').hidden = !run.summary || Boolean(run.review);
+  $('#summary-text').textContent = run.summary || '';
+  $('#summary-context').textContent = `${agentName(getState().settings, run.agent, run)} · ${run.actualModel || run.model || msg("Modèle CLI")} · ${effortLevels[run.agentType || run.agent]?.[run.effort] || msg("Réflexion CLI")} · ${runNames[run.status]} · ${new Date(run.startedAt).toLocaleString(locale)}`;
+  $('#run-status').textContent = `${runNames[run.status]} · ${run.mode === 'edit' ? msg("Modification") : msg("Analyse")}`;
+  $('#run-usage').textContent = usageText(run);
+  $('#stop-run').hidden = run.status !== 'running';
   $('#live-progress').hidden = false;
   $('#current-activity').textContent = `${agentState(run)} · ${messageText(run.attention || run.activity || '')}`;
   $('#run-clock').dataset.clock = run.id;

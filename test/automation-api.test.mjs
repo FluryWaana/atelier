@@ -23,6 +23,7 @@ async function fixture(t, enabled = true, assessment = 'covered') {
   const source = realpathSync(repo), destination = realpathSync(worktree);
   const gitOutput = (command, args) => {
     assert.equal(command, 'git');
+    if (args[2] === 'config') { assert.deepEqual(args.slice(2), ['config', '--local', 'core.longpaths', 'true']); return ''; }
     if (args.includes('--show-toplevel')) return source;
     if (args.includes('list')) return `worktree ${destination}\0branch refs/heads/feature/test\0\0`;
     if (args.includes('check-ref-format')) return '';

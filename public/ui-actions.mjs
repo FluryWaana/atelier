@@ -1,15 +1,18 @@
 import { msg, messageText } from './i18n.mjs';
 
+const confirmations = new WeakSet();
 export function confirmAction(document, message, title, label) {
   const $ = selector => document.querySelector(selector);
   const dialog = $('#confirm-dialog');
+  if (dialog.open || confirmations.has(dialog)) return Promise.resolve(false);
   $('#confirm-title').textContent = title;
   $('#confirm-message').textContent = message;
   $('#confirm-action').textContent = label;
   dialog.returnValue = '';
+  dialog.showModal();
+  confirmations.add(dialog);
   return new Promise(resolve => {
-    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
-    dialog.showModal();
+    dialog.addEventListener('close', () => { confirmations.delete(dialog); resolve(dialog.returnValue === 'confirm'); }, { once: true });
   });
 }
 export async function loadVersion(document, api) {

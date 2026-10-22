@@ -33,6 +33,7 @@ for (const primary of ['front', 'back']) test(`a principal ${primary} creates an
   const gitOutput = (command, args) => {
     assert.equal(command, 'git');
     const repo = args[1], options = args.slice(2); commands.push({ repo, options });
+    if (options[0] === 'config') { assert.deepEqual(options, ['config', '--local', 'core.longpaths', 'true']); return ''; }
     if (options.includes('--show-toplevel')) return repo;
     if (options.includes('--git-common-dir')) return join(repo, '.git');
     if (options.includes('check-ref-format') || options[0] === 'fetch' || options[0] === 'for-each-ref' || options[0] === 'ls-files') return '';

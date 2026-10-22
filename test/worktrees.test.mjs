@@ -7,6 +7,31 @@ import { join } from 'node:path';
 import { prepareWorktree, removeWorktree } from '../lib/worktrees.mjs';
 
 const git = (repo, ...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+test('Windows worktrees support long tracked paths even when the repository disables them', { skip: process.platform !== 'win32' }, async t => {
+  const root = mkdtempSync(join(tmpdir(), 'atelier-longpaths-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const remote = join(root, 'remote'), source = join(root, 'source');
+  mkdirSync(remote);
+  git(remote, 'init', '-b', 'main');
+  git(remote, 'config', 'user.email', 'test@example.invalid'); git(remote, 'config', 'user.name', 'Test');
+  git(remote, 'commit', '--allow-empty', '-m', 'initial');
+  git(root, 'clone', remote, source);
+  git(source, 'config', 'core.longpaths', 'false');
+  const folder = join('legacy', 'scripts-'.repeat(10), 'releases-'.repeat(10));
+  const file = join(folder, 'migration-with-a-long-name.sql');
+  mkdirSync(join(remote, folder), { recursive: true });
+  writeFileSync(join(remote, file), 'SELECT 1;');
+  git(remote, '-c', 'core.longpaths=true', 'add', '.'); git(remote, 'commit', '-m', 'long path');
+  const card = { id: 'long', repo: source, title: 'Long paths' };
+  card.worktree = await prepareWorktree(card, {});
+  assert.ok(join(card.worktree.path, file).length > 260);
+  assert.equal(readFileSync(join(card.worktree.path, file), 'utf8'), 'SELECT 1;');
+  assert.equal(git(card.worktree.path, 'status', '--porcelain'), '');
+  assert.equal(await prepareWorktree(card, {}), card.worktree);
+  await removeWorktree(card);
+  assert.equal(existsSync(card.worktree.path), false);
+});
+
 test('worktrees fetch the remote base, share ignored dependencies and remove only links', async t => {
   const root = mkdtempSync(join(tmpdir(), 'atelier-worktrees-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));

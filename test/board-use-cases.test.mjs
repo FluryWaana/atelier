@@ -42,7 +42,7 @@ test('task edits preserve Jira authority and route a move into doing through exe
   const card = tasks.create({ title: 'Titre Jira' }); store.putCard({ ...card, ticket: { key: 'PROJ-1' } });
   const result = await tasks.update(card.id, { title: 'À ignorer', status: 'doing', instructions: 'Instruction', mode: 'analyze' });
   assert.equal(result.title, 'Titre Jira'); assert.equal(result.status, 'doing');
-  assert.deepEqual(events, [['launch', 'todo', { agent: 'claude', mode: 'analyze', instructions: 'Instruction' }], ['sync', card.id]]);
+  assert.deepEqual(events, [['launch', 'todo', { agent: 'claude', mode: 'analyze', instructions: 'Instruction' }], ['review', card.id], ['sync', card.id]]);
 });
 
 test('dependency validation rejects missing tasks, duplicates and cycles, including archived prerequisites', () => {
@@ -51,6 +51,18 @@ test('dependency validation rejects missing tasks, duplicates and cycles, includ
   assert.deepEqual(dependencies('b', ['a'], cards), ['a']);
   assert.equal(blockers({ blockedBy: ['b'] }, cards)[0].id, 'b');
   assert.equal(blockers({ blockedBy: ['missing'] }, cards)[0].status, 'missing');
+});
+
+test('moving into doing invalidates reviews when requirements change, including analysis runs', async () => {
+  const { tasks, events } = fixture();
+  const card = tasks.create({ title: 'Besoin initial' });
+  await tasks.update(card.id, { status: 'doing', mode: 'analyze', checklist: [{ text: 'Nouveau critère', done: false }] });
+  assert.deepEqual(events.map(event => event[0]), ['launch', 'review', 'sync']);
+  events.length = 0;
+  await tasks.update(card.id, { status: 'review' });
+  events.length = 0;
+  await tasks.update(card.id, { status: 'doing' });
+  assert.deepEqual(events.map(event => event[0]), ['launch', 'sync']);
 });
 
 test('task deletion retains cards with worktrees, dependencies, queued work or time history', () => {

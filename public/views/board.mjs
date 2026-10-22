@@ -8,6 +8,7 @@ export function createBoardView({ document, window, api, action, confirmAction, 
   const $ = selector => document.querySelector(selector);
   
   let boardSignature = '';
+  const movingCards = new Set();
   function render({ cards, state, query, focusFilter }) {
     const sameRepo = (a, b) => sameRepository(a, b, state.settings?.platform);
     const signature = JSON.stringify([cards, state.projects, state.runs.map(r => [r.id, r.status, r.activity]), query, focusFilter]);
@@ -63,7 +64,19 @@ export function createBoardView({ document, window, api, action, confirmAction, 
     document.querySelectorAll('[data-create-status]').forEach(button => button.onclick = () => { $('#create-button').click(); $('#new-form').dataset.status = button.dataset.createStatus; });
     document.querySelectorAll('.column').forEach(el => {
       el.ondragover = e => { e.preventDefault(); el.classList.add('drag-over'); }; el.ondragleave = () => el.classList.remove('drag-over');
-      el.ondrop = e => { e.preventDefault(); el.classList.remove('drag-over'); action(async () => { const result = await api(cardPath(e.dataTransfer.getData('text/plain')), 'PATCH', { status: el.dataset.status }); await refresh(); if (result.ticketSync?.state === 'error') toast(msg("Avancement local enregistré. Jira à vérifier : ") + result.ticketSync.message, true); }); };
+      el.ondrop = e => {
+        e.preventDefault(); el.classList.remove('drag-over');
+        const id = e.dataTransfer.getData('text/plain'), card = cards.find(card => card.id === id);
+        if (!card || movingCards.has(id) || card.status === el.dataset.status || card.publishing || state.runs.some(run => run.cardId === id && run.status === 'running')) return;
+        movingCards.add(id);
+        return action(async () => {
+          try {
+            const result = await api(cardPath(id), 'PATCH', { status: el.dataset.status });
+            await refresh();
+            if (result.ticketSync?.state === 'error') toast(msg("Avancement local enregistré. Jira à vérifier : ") + result.ticketSync.message, true);
+          } finally { movingCards.delete(id); }
+        });
+      };
     });
   }
   return { render, invalidate() { boardSignature = ''; } };
