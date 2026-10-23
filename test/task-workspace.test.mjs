@@ -10,7 +10,7 @@ test('unified diff renders old and new line numbers, signs and escaped source', 
   assert.match(html, /line-number">6<\/span><code>\+last/);
   assert.match(html, /added">\+2/);
   assert.match(html, /removed">−1/);
-  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(html, /<script\b/i);
 });
 
 test('file previews preserve whitespace, number lines and disclose display limits', () => {

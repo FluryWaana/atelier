@@ -5,9 +5,33 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sym
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { prepareWorktree, removeWorktree } from '../lib/worktrees.mjs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { syncWorktreeAgentContext } from '../lib/infrastructure/worktree-agent-context.mjs';
 
 const git = (repo, ...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const put = (root, name, content) => { const path = join(root, name); mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, content); };
+
+test('a failed context write removes its private temporary file', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'atelier-context-write-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const source = join(root, 'source'), worktree = join(root, 'worktree'), gitDir = join(root, 'metadata');
+  mkdirSync(worktree); mkdirSync(gitDir);
+  put(source, '.mcp.json', '{"private":true}');
+  const originalWrite = fs.writeFileSync;
+  const mock = t.mock.method(fs, 'writeFileSync', (file, ...args) => {
+    if (typeof file === 'number') { originalWrite(file, 'partial private data'); throw new Error('write failed'); }
+    return originalWrite(file, ...args);
+  });
+  syncBuiltinESMExports();
+  try {
+    await assert.rejects(syncWorktreeAgentContext(source, worktree, async (repo, args) => {
+      if (args[0] === 'ls-files') return repo === source ? '.mcp.json\0' : '';
+      return args.includes('--absolute-git-dir') ? gitDir : join(gitDir, 'info', 'exclude');
+    }), /write failed/);
+    assert.deepEqual(fs.readdirSync(worktree), []);
+  } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+});
 
 test('task worktrees inherit local agent context, refresh untouched copies and preserve branch files', async t => {
   const root = mkdtempSync(join(tmpdir(), 'atelier-agent-context-')), source = join(root, 'source');

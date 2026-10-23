@@ -1243,6 +1243,8 @@ export default {
   "Le worktree associé a disparu ou sa branche a changé. Vérifie-le dans Git avant de relancer.": "The associated worktree disappeared or its branch changed. Check it in Git before restarting.",
   "Le dépôt source ne correspond plus au worktree.": "The source repository no longer matches the worktree.",
   "Configuration de filtre Git incompatible avec l’aperçu sécurisé.": "Git filter configuration is incompatible with the secure preview.",
+  "Le fichier a changé pendant sa lecture.": "The file changed while it was being read.",
+  "Fichier trop volumineux.": "File too large.",
   "La branche {0} est déjà utilisée par un autre worktree.": "Branch {0} is already used by another worktree.",
   "Référence de départ invalide.": "Invalid starting reference.",
   "Le dossier cible existe déjà : {0}": "The target folder already exists: {0}",

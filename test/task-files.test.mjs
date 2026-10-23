@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, access } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { inspectTaskFiles } from '../lib/infrastructure/task-files.mjs';
 import { createApp } from '../server.mjs';
 
@@ -68,6 +70,25 @@ test('source files remain readable without a worktree, but task diff needs its b
   assert.equal((await inspectTaskFiles(card, 'files')).worktree, false);
   assert.equal((await inspectTaskFiles(card, 'file', { path: 'changed.txt' })).content, 'before\n');
   await assert.rejects(inspectTaskFiles(card, 'changes'), /Prépare le worktree/);
+});
+
+test('file preview rejects a file replaced between validation and opening', async t => {
+  const { repo, card } = await fixture(t);
+  const target = join(repo, 'changed.txt'), originalOpen = fs.promises.open;
+  let replaced = false;
+  const mock = t.mock.method(fs.promises, 'open', async (path, ...args) => {
+    if (path === target && !replaced) {
+      replaced = true;
+      await fs.promises.rename(target, join(repo, 'before.txt'));
+      await writeFile(target, 'unexpected contents');
+    }
+    return originalOpen(path, ...args);
+  });
+  syncBuiltinESMExports();
+  try {
+    await assert.rejects(inspectTaskFiles(card, 'file', { path: 'changed.txt' }), /changé/);
+    assert.equal(replaced, true);
+  } finally { mock.mock.restore(); syncBuiltinESMExports(); }
 });
 
 test('staged deletion and an untracked replacement have distinct diff previews', async t => {

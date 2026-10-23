@@ -64,5 +64,5 @@ test('missing and invalid Claude profiles fail without exposing their contents',
   writeFileSync(join(profile, '.claude.json'), 'private-invalid-json');
   assert.throws(read, error => /illisible/.test(error.message) && !error.message.includes('private-invalid-json'));
   writeFileSync(join(profile, '.claude.json'), ' '.repeat(4 * 1024 * 1024 + 1));
-  assert.throws(read, /volumineuse/);
+  assert.throws(read, /volumineux/);
 });
