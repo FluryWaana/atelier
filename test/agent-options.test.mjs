@@ -20,12 +20,12 @@ test('CLI options preserve permissions and use each agent format', () => {
   const claude = commandArgs('claude', 'edit', { model: 'opus', effort: 'high' });
   assert.equal(claude[claude.indexOf('--model') + 1], 'opus');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'high');
-  assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'acceptEdits');
+  assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'auto');
   for (const mode of ['analyze', 'edit']) {
     const args = commandArgs('claude', mode);
-    assert.equal(args[args.indexOf('--permission-mode') + 1], mode === 'edit' ? 'acceptEdits' : 'plan');
+    assert.equal(args[args.indexOf('--permission-mode') + 1], mode === 'edit' ? 'auto' : 'plan');
     assert.equal(args[args.indexOf('--permission-prompts') + 1], 'none');
-    assert.deepEqual(args.slice(args.indexOf('--allowedTools') + 1), ['Bash(git status:*)', 'Bash(git branch --show-current)']);
+    for (const flag of ['--allowedTools', '--dangerously-skip-permissions', '--bare', '--safe-mode', '--strict-mcp-config', '--disable-slash-commands']) assert.ok(!args.includes(flag), flag);
   }
   for (const agent of ['codex', 'claude']) {
     assert.ok(!commandArgs(agent, 'edit').includes('--model'));
@@ -83,6 +83,7 @@ test('API persists defaults and task overrides through launches, copies and agen
     const path = '/api/cards/' + card.id;
     assert.equal((await request(path + '/run', 'POST', {})).status, 200);
     assert.equal(launches.at(-1).model, 'custom-codex');
+    assert.equal(launches.at(-1).sourceRepo, app.store.card(card.id).worktree.source);
     assert.equal(app.store.runs()[0].effort, 'high');
     assert.equal(app.store.runs()[0].usage.totalTokens, 1100);
     assert.equal(app.store.runs()[0].usage.costUsd, null);

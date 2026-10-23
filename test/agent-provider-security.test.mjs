@@ -23,6 +23,41 @@ test('agents inherit only allowed system variables and their own credentials', (
   assert.deepEqual(agentEnvironment({ type: 'claude', auth: 'cli' }, '', environment), { ...clean, ANTHROPIC_API_KEY: 'claude-secret' });
 });
 
+test('Claude task sessions inherit MCP and plugin environment without parent session or runtime injection', () => {
+  const environment = { PATH: '/bin', HOME: '/home/test', CLAUDE_CONFIG_DIR: '/personal/claude',
+    MCP_SERVICE_TOKEN: 'mcp-secret', RTK_CONFIG_DIR: '/personal/rtk', HTTPS_PROXY: 'https://proxy.invalid',
+    ANTHROPIC_API_KEY: 'claude-secret', CLAUDECODE: '1', NODE_OPTIONS: '--require=inject.js',
+    NODE_TLS_REJECT_UNAUTHORIZED: '0', PYTHONPATH: '/inject', LD_PRELOAD: '/inject.so' };
+  const env = agentEnvironment({ type: 'claude' }, '', environment, true);
+  assert.deepEqual(env, { PATH: '/bin', HOME: '/home/test', CLAUDE_CONFIG_DIR: '/personal/claude',
+    MCP_SERVICE_TOKEN: 'mcp-secret', RTK_CONFIG_DIR: '/personal/rtk', HTTPS_PROXY: 'https://proxy.invalid', ANTHROPIC_API_KEY: 'claude-secret' });
+  const other = agentEnvironment({ type: 'claude', configDir: '/other/profile' }, '', environment, true);
+  assert.equal(other.CLAUDE_CONFIG_DIR, '/other/profile');
+  assert.equal(other.ANTHROPIC_API_KEY, undefined);
+  assert.equal(environment.CLAUDECODE, '1');
+});
+
+test('Claude launches in the task directory and redacts inherited MCP credentials', () => {
+  const previous = process.env.ATELIER_TEST_MCP_TOKEN;
+  process.env.ATELIER_TEST_MCP_TOKEN = 'private-mcp-credential';
+  try {
+    const child = new EventEmitter(); Object.assign(child, { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
+    let launched; const lines = [];
+    startAgent({ agent: 'claude', provider: { type: 'claude', command: process.execPath }, mode: 'edit', repo: '/task/worktree', prompt: 'Test' },
+      (_, line) => lines.push(line), () => {}, (_, args, options) => { launched = { args, options }; return child; });
+    child.stdout.write(JSON.stringify({ type: 'result', permission_denials: [{ tool_name: 'MCP', tool_input: { token: 'private-mcp-credential' } }] }) + '\n');
+    child.emit('close', 0);
+    assert.equal(launched.options.cwd, '/task/worktree');
+    assert.equal(launched.options.env.ATELIER_TEST_MCP_TOKEN, 'private-mcp-credential');
+    assert.ok(!JSON.stringify(launched.args).includes('private-mcp-credential'));
+    assert.match(eventText(lines[0]), /\[secret\]/);
+    assert.ok(!lines[0].includes('private-mcp-credential'));
+  } finally {
+    if (previous === undefined) delete process.env.ATELIER_TEST_MCP_TOKEN;
+    else process.env.ATELIER_TEST_MCP_TOKEN = previous;
+  }
+});
+
 test('executable lookup ignores the current directory, relative PATH entries and Windows wrappers', () => {
   assert.throws(() => resolveExecutable(basename(process.execPath), { PATH: '.;relative' }), /introuvable/);
   assert.equal(resolveExecutable(basename(process.execPath), { PATH: dirname(process.execPath) }), process.execPath);

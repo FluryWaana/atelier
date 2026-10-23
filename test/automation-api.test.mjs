@@ -25,6 +25,8 @@ async function fixture(t, enabled = true, assessment = 'covered') {
     assert.equal(command, 'git');
     if (args[2] === 'config') { assert.deepEqual(args.slice(2), ['config', '--local', 'core.longpaths', 'true']); return ''; }
     if (args.includes('--show-toplevel')) return source;
+    if (args.includes('--absolute-git-dir')) { const path = join(args[1], '.git'); mkdirSync(path, { recursive: true }); return path; }
+    if (args.includes('ls-files')) return '';
     if (args.includes('list')) return `worktree ${destination}\0branch refs/heads/feature/test\0\0`;
     if (args.includes('check-ref-format')) return '';
     throw new Error('Commande Git inattendue : ' + args.join(' '));

@@ -35,6 +35,7 @@ for (const primary of ['front', 'back']) test(`a principal ${primary} creates an
     const repo = args[1], options = args.slice(2); commands.push({ repo, options });
     if (options[0] === 'config') { assert.deepEqual(options, ['config', '--local', 'core.longpaths', 'true']); return ''; }
     if (options.includes('--show-toplevel')) return repo;
+    if (options.includes('--absolute-git-dir')) { const path = join(repo, '.git'); mkdirSync(path, { recursive: true }); return path; }
     if (options.includes('--git-common-dir')) return join(repo, '.git');
     if (options.includes('check-ref-format') || options[0] === 'fetch' || options[0] === 'for-each-ref' || options[0] === 'ls-files') return '';
     if (options.includes('FETCH_HEAD^{commit}')) return 'a'.repeat(40);
