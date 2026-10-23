@@ -1,14 +1,16 @@
 import { esc, cardPath } from '../view-helpers.mjs';
 import { msg, markupText, messageText } from '../i18n.mjs';
+import { highlightedLines } from '../syntax-highlight.mjs';
 
 const lineLimit = 10000;
-export function codeMarkup({ content, patch, unavailable }) {
+export function codeMarkup({ content, patch, unavailable, path }) {
   if (unavailable) return `<p class="hint">${esc(messageText(unavailable))}</p>`;
   let oldLine = 0, newLine = 0, inHunk = false, added = 0, removed = 0;
   const lines = (patch ?? content ?? '').split('\n');
   if (lines.at(-1) === '') lines.pop();
+  const highlighted = patch === undefined ? highlightedLines(lines.slice(0, lineLimit).join('\n'), path) : [];
   const rows = lines.slice(0, lineLimit).map((line, index) => {
-    if (patch === undefined) return `<div class="code-line"><span class="line-number">${index + 1}</span><code>${esc(line) || ' '}</code></div>`;
+    if (patch === undefined) return `<div class="code-line"><span class="line-number">${index + 1}</span><code>${highlighted[index] || ' '}</code></div>`;
     const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
     if (hunk) { oldLine = Number(hunk[1]); newLine = Number(hunk[2]); inHunk = true; return `<div class="diff-hunk">${esc(line)}</div>`; }
     if (!inHunk) return `<div class="diff-meta">${esc(line)}</div>`;

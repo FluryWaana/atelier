@@ -33,5 +33,7 @@ test('the browser entry point and every imported module are served with strict C
     }
   }
   assert.ok(paths.has('/agent-usage.mjs'));
+  assert.ok(paths.has('/syntax-highlight.mjs'));
+  assert.ok(paths.has('/vendor/highlightjs/highlight.min.js'));
 });
 

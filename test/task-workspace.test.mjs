@@ -2,6 +2,7 @@ import './helpers/french-locale.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { codeMarkup, createTaskWorkspace, fileListMarkup } from '../public/views/task-workspace.mjs';
+import { highlightedLines } from '../public/syntax-highlight.mjs';
 
 test('unified diff renders old and new line numbers, signs and escaped source', () => {
   const html = codeMarkup({ patch: '--- a/file\n+++ b/file\n@@ -4,2 +4,3 @@\n unchanged\n-old\n+<script>new</script>\n+last\n' });
@@ -19,6 +20,62 @@ test('file previews preserve whitespace, number lines and disclose display limit
   assert.match(html, /line-number">2<\/span><code>\tvalue/);
   assert.match(codeMarkup({ content: '\n'.repeat(10001) }), /10 000/);
   assert.match(codeMarkup({ unavailable: 'Fichier binaire : aperçu textuel indisponible.' }), /Fichier binaire/);
+});
+
+test('file previews color the language selected by extension and escape source markup', () => {
+  for (const [path, content] of [
+    ['src/app.mjs', 'const value = 42;'], ['view.tsx', 'const value: number = 42;'],
+    ['Main.CS', 'public class Example {}'], ['script.py', 'def example(): pass'],
+    ['query.sql', 'SELECT value FROM example;'], ['package.json', '{"value": true}'],
+    ['index.html', '<script>alert("unsafe")</script>'], ['style.css', '.example { color: red; }'],
+  ]) {
+    const html = codeMarkup({ path, content });
+    assert.match(html, /class="hljs-/, path);
+    assert.doesNotMatch(html, /<script\b/i, path);
+    assert.match(html, /line-number">1<\/span>/, path);
+  }
+});
+
+test('multiline and nested syntax tokens stay balanced within each numbered row', () => {
+  for (const content of ['/* first\n\tsecond\n last */\nconst x = 1;', 'const x = `first\n${\n  42\n}\nlast`;']) {
+    const lines = highlightedLines(content, 'app.js');
+    assert.equal(lines.length, content.split('\n').length);
+    for (const [index, line] of lines.entries()) {
+      assert.equal((line.match(/<span\b/g) || []).length, (line.match(/<\/span>/g) || []).length);
+      assert.equal(line.replace(/<[^>]+>/g, ''), content.split('\n')[index]);
+    }
+  }
+  assert.match(highlightedLines('/* first\n second */', 'app.js')[1], /^<span class="hljs-comment"> second/);
+});
+
+test('unknown formats and large previews remain escaped plain text', () => {
+  const content = '<img src=x onerror="alert(1)">';
+  for (const path of ['notes.txt', 'file.unknown', 'file.__proto__', 'README', undefined]) {
+    const html = codeMarkup({ path, content });
+    assert.doesNotMatch(html, /hljs-|<img\b/);
+    assert.match(html, /&lt;img/);
+  }
+  const large = 'const x = "<script>";'.repeat(7000);
+  assert.doesNotMatch(highlightedLines(large, 'app.js')[0], /hljs-|<script>/);
+  const truncated = codeMarkup({ path: 'app.js', content: 'const x = 1;\n'.repeat(10001) });
+  assert.match(truncated, /10 000/);
+  assert.equal((truncated.match(/class="code-line"/g) || []).length, 10000);
+});
+
+test('extensionless names stay plain text except for recognized special filenames', () => {
+  assert.deepEqual(highlightedLines('const value = 1;', 'src/js'), ['const value = 1;']);
+  assert.match(highlightedLines('all:\n\techo done', 'src/Makefile')[0], /hljs-/);
+});
+
+test('highlighting never turns hostile source into HTML and preserves the original text', () => {
+  const content = '</span><img src=x onerror="alert(1)">\n<script>alert(1)</script>\n&amplt; &#39; " \'\n<!-- unsafe -->';
+  const entities = { '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#x27;': "'", '&#39;': "'", '&amp;': '&' };
+  for (const path of ['app.js', 'view.tsx', 'index.html', 'style.css', 'Main.cs', 'script.py', 'data.json', 'README.md', 'file.unknown']) {
+    const lines = highlightedLines(content, path);
+    const plain = lines.map(line => line.replace(/<span class="[\w -]+">|<\/span>/g, '')).join('\n');
+    assert.doesNotMatch(plain, /[<>]/, path);
+    assert.equal(plain.replace(/&(?:lt|gt|quot|#x27|#39|amp);/g, entity => entities[entity]), content, path);
+  }
 });
 
 test('diff rows show only a status icon and basename, with full paths available accessibly', () => {
