@@ -1,5 +1,6 @@
 pub mod backups;
 pub mod checked_file;
+pub mod data_lock;
 pub mod database;
 pub mod installation;
 pub mod local_http;

@@ -158,7 +158,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI, Edge/Chrome/Firefox et trousseaux prouvés ; Safari et trays POSIX restants |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI, quatre navigateurs et trousseaux prouvés ; trays POSIX restants |
 | M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
 | M03 | M02 | Domaine et API métier équivalents | À faire |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
@@ -439,6 +439,13 @@ Prochaine action concrète :
 - **Livré :** client loopback borné sans proxy/redirection, santé HMAC avant Bearer, session chargée après réponse, bootstrap navigateur privé POSIX. Parcours UI réutilisant santé et arrêt communs.
 - **Preuves :** 33 tests Rust réussis, Clippy propre, Edge réel réussi ; suite Node avec paquets : 425 tests, 422 réussis, zéro échec, trois exclusions, 82,70 s. Le test de socket fermé a révélé puis vérifié le traitement explicite de Hyper `IncompleteMessage`.
 - **Suite :** verrou N1/Rust avec exclusion réciproque et libération après crash ; chemins concurrents, intégration serveur/lanceur et preuves GUI encore ouvertes.
+
+### 24 octobre 2026 / base `4afa807` / M02, verrou commun et correction POSIX
+
+- **Livré :** transaction SQLite exclusive sur un fichier de coordination dédié, acquise avant la base applicative et libérée après sa fermeture ; adaptateur Node N1 préparé, intégration de livraison en M09. Imports excluant ces fichiers. Correction des permissions du staging POSIX détectée par la CI.
+- **Preuves :** 34 tests Rust réussis, Clippy propre ; comparaison croisée avec acquisition refusée, alias, ports et arrêts brutaux Node/Rust réussie. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,39 s.
+- **CI :** Safari réussi, `f9b1598` entièrement vert. L'import de `f9f53cf` échoue sur les quatre POSIX car `tempfile` créait un dossier trop permissif ; mode 0700 fixé dès création, assertion conservée. La nouvelle CI exécute les comparaisons historiques sur les cinq runners ; résultats attendus pour ce correctif et le verrou.
+- **Suite :** recueillir ces preuves ; compléter les trays POSIX et les protections de chemins. M01/M02 restent en cours, N0 doit toujours être arrêté avant migration.
 
 ## 12. Définition finale de terminé
 

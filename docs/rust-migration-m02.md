@@ -48,3 +48,13 @@ La [CI du coffre `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/4
 Le bootstrap navigateur POSIX écrit un HTML privé atomique et ne place que son URL fichier dans les arguments ; Windows conserve l'URL à fragment. Les adresses et jetons sont validés. Le test UI utilise désormais ce même client pour santé et arrêt. 33 tests Rust réussis, Clippy propre et parcours Edge réel réussi ; suite Node 425 tests, 422 réussis, zéro échec, trois exclusions, 82,70 s.
 
 Compléter chemins et verrou commun N1/Rust ; intégrer les adaptateurs aux cas d'usage et à l'intégration OS dans leurs lots. Le serveur de production, SSE, reprise navigateur et arrêt occupé ne sont pas remplacés par le prototype. La compatibilité des données ne suffit pas à autoriser une migration de données utilisateur.
+
+### Verrou commun — incrément après `4afa807`
+
+Le prototype détient désormais une transaction exclusive sur `.atelier-data-lock.sqlite`, distincte de la base applicative, avant d'ouvrir celle-ci. Le fichier reste en place ; aucun PID périmé ni expiration à interpréter. Node dispose du même adaptateur synchrone pour N1 ; son branchement au serveur de transition reste en M09. La production N0 ne respecte toujours pas ce verrou et doit être arrêtée avant migration.
+
+Ce choix réutilise les [transactions SQLite](https://www.sqlite.org/lang_transaction.html) et leurs [verrous système](https://www.sqlite.org/lockingv3.html), disponibles dans les deux runtimes. Le chemin du dossier est canonique. Aucun descripteur ordinaire ne doit ouvrir puis fermer le fichier de verrou déjà détenu : sous POSIX cela peut libérer les verrous du processus. Les tests vérifient précisément qu'une acquisition refusée dans le même processus ne libère pas le premier verrou. Les fichiers de coordination sont exclus des imports des deux versions.
+
+34 tests Rust locaux réussis ; comparaison Node/Rust avec exclusions réciproques, aliases, ports indépendants et libération après arrêt brutal Node puis du vrai serveur Rust. Clippy propre. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,39 s. La comparaison historique passe maintenant dans les cinq jobs natifs, sans attendre les outils de navigateur.
+
+La CI de `f9f53cf` a détecté une permission trop large du dossier temporaire d'import sur les quatre runners POSIX : `tempfile` crée les dossiers avec 0777 filtré par umask. Le builder fixe désormais 0700 dès la création, avant toute copie ; le test de confidentialité est conservé. Cette correction et le verrou attendent leur validation native POSIX. Les courses hostiles sur les ancêtres et l'intégration N1 complète restent ouvertes.

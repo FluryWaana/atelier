@@ -25,6 +25,9 @@ fn copy_tree(source: &Path, destination: &Path, root: bool) -> Result<()> {
     for entry in fs::read_dir(source)? {
         let entry = entry?;
         let name = entry.file_name();
+        if root && name.to_str().is_some_and(super::data_lock::is_lock_file) {
+            continue;
+        }
         if root && matches!(name.to_str(), Some("local-session" | "local-browser.html")) {
             continue;
         }
@@ -117,9 +120,14 @@ pub fn import(source: &Path, destination: &Path) -> Result<()> {
     if destination == source || destination.starts_with(&source) {
         return Err("Le dossier de destination doit être distinct de la source.".into());
     }
-    let stage = tempfile::Builder::new()
-        .prefix(".atelier-import-")
-        .tempdir_in(&parent)?;
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".atelier-import-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o700));
+    }
+    let stage = builder.tempdir_in(&parent)?;
     copy_tree(&source, stage.path(), true)?;
     let identity = Identity::inspect(&database)?;
     let connection = Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
@@ -175,6 +183,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let source = root.path().join("source é");
         create_directory(&source).unwrap();
+        let _lock = crate::infrastructure::data_lock::DataLock::acquire(&source).unwrap();
         let connection = store::open(&source.join("kanban.sqlite")).unwrap();
         let store = Store::new(&connection);
         let card = json!({"id":"preserved", "title":"À conserver 🔑", "extra":null});
@@ -201,6 +210,11 @@ mod tests {
         );
         assert!(!destination.join("local-session").exists());
         assert!(!destination.join("local-browser.html").exists());
+        assert!(
+            !destination
+                .join(crate::infrastructure::data_lock::LOCK_NAME)
+                .exists()
+        );
         assert_eq!(
             fs::read_dir(destination.join("backups")).unwrap().count(),
             1

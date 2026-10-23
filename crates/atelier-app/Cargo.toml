@@ -34,4 +34,3 @@ windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", 
 
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.191"
-

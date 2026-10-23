@@ -39,6 +39,8 @@ Incrément après `33d594a` : C03 dispose du catalogue et de l'import, comparé 
 
 C05, incrément après `f9f53cf` : `tests/local-http.rs` couvre réponse 409, POST/headers/corps, redirection, limite, délai, socket fermé, HMAC avant Bearer, chargement tardif de session et bootstrap navigateur privé. Le parcours Edge emploie le même adaptateur santé/arrêt et passe. SSE, serveur métier complet, session navigateur/reprise et arrêts occupés restent ouverts.
 
+C02/C06, incrément après `4afa807` : verrou SQLite dédié commun au prototype et à l'adaptateur N1, exclusion croisée et libération après crash des deux runtimes prouvées localement ; intégration au paquet N1 en M09. La comparaison tourne désormais sur les cinq cibles. C03 : CI POSIX de l'import en échec sur le mode du staging, corrigé à 0700 avant copie, revalidation distante attendue. Safari macOS est réussi sur `f9b1598` ; trays POSIX encore ouverts.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

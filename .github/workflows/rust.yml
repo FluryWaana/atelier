@@ -26,6 +26,13 @@ jobs:
       - run: cargo test --workspace --exclude atelier-ui --locked
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - name: Compare historical Node data, vault and shared lock
+        run: cargo xtask test-storage-parity
+        env:
+          ATELIER_NODE: node
       - name: Install isolated Linux keyring prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11
@@ -56,13 +63,6 @@ jobs:
       - run: cargo install --locked trunk --version 0.22.0
       - run: cargo install --locked wasm-bindgen-cli --version 0.2.129
       - run: cargo fetch --locked
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .node-version
-      - name: Compare historical Node storage and restoration
-        run: cargo xtask test-storage-parity
-        env:
-          ATELIER_NODE: node
       - name: Record browser and driver versions
         if: runner.os == 'Linux'
         run: |

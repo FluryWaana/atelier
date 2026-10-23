@@ -1,12 +1,13 @@
+use super::data_lock::DataLock;
 use crate::Result;
 use std::{
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     path::{Path, PathBuf},
 };
 
 pub struct PrototypeDirectory {
     pub path: PathBuf,
-    _lock: File,
+    _lock: DataLock,
 }
 
 impl PrototypeDirectory {
@@ -23,15 +24,7 @@ impl PrototypeDirectory {
                 .create_new(true)
                 .open(&marker)?;
         }
-        let lock = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .open(path.join(".instance-lock"))?;
-        // shortcut: N0 does not honor this lock; qualify the shared N1/Rust protocol in M02.
-        lock.try_lock()
-            .map_err(|_| "Ce dossier est déjà ouvert par une instance Rust.")?;
+        let lock = DataLock::acquire(&path)?;
         Ok(Self { path, _lock: lock })
     }
 }

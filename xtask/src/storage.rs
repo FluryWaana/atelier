@@ -1,6 +1,7 @@
 use crate::{Result, command, root, run};
 use atelier_app::infrastructure::{
     backups,
+    data_lock::DataLock,
     database::Database,
     portable_import,
     store::{Documents, Store},
@@ -30,7 +31,15 @@ fn node(mode: &str, database: &Path, reference: &Path) -> Result<()> {
 }
 
 fn fixture(script: &str, mode: &str, database: &Path, reference: &Path) -> Result<()> {
-    let executable = std::env::var_os("ATELIER_NODE")
+    run(command(node_executable())
+        .arg(format!("test/fixtures/{script}"))
+        .arg(mode)
+        .arg(database)
+        .arg(reference))
+}
+
+fn node_executable() -> std::path::PathBuf {
+    std::env::var_os("ATELIER_NODE")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
             root().join(if cfg!(windows) {
@@ -38,16 +47,123 @@ fn fixture(script: &str, mode: &str, database: &Path, reference: &Path) -> Resul
             } else {
                 "runtime/node"
             })
-        });
-    run(command(executable)
-        .arg(format!("test/fixtures/{script}"))
-        .arg(mode)
-        .arg(database)
-        .arg(reference))
+        })
+}
+
+fn try_node_lock(directory: &Path, expected: i32) -> Result<()> {
+    let output = command(node_executable())
+        .args(["test/fixtures/rust-lock-reference.mjs", "try"])
+        .arg(directory)
+        .output()?;
+    if output.status.code() != Some(expected) {
+        return Err("Exclusion Node/Rust incorrecte.".into());
+    }
+    Ok(())
+}
+
+async fn test_data_lock(directory: &Path) -> Result<()> {
+    use std::{process::Stdio, time::Duration};
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    let root = directory.join("locks");
+    let first = DataLock::acquire(&root)?;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    try_node_lock(&root.join("."), 2)?;
+    if DataLock::acquire(&root).is_ok() {
+        return Err("Une seconde connexion Rust a obtenu le verrou.".into());
+    }
+    // A rejected same-process acquisition must not release POSIX locks held by the first connection.
+    try_node_lock(&root, 2)?;
+    drop(first);
+    try_node_lock(&root, 0)?;
+    let mut command = tokio::process::Command::from(command(node_executable()));
+    command
+        .args(["test/fixtures/rust-lock-reference.mjs", "hold"])
+        .arg(&root)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .kill_on_drop(true);
+    let mut node = command.spawn()?;
+    let mut output = BufReader::new(node.stdout.take().ok_or("Sortie de fixture absente.")?);
+    let mut ready = String::new();
+    tokio::time::timeout(Duration::from_secs(5), output.read_line(&mut ready)).await??;
+    if ready.trim() != "ready" {
+        return Err("Le verrou Node de test n'a pas démarré.".into());
+    }
+    if DataLock::acquire(&root.join(".")).is_ok() {
+        return Err("Rust a ignoré le verrou Node.".into());
+    }
+    try_node_lock(&root, 2)?;
+    node.kill().await?;
+    let after_crash = DataLock::acquire(&root)?;
+    try_node_lock(&root, 2)?;
+    drop(after_crash);
+    drop(listener);
+    try_node_lock(&root, 0)?;
+    println!(
+        "Verrou commun réussi : exclusion Node/Rust sur dossier canonique indépendamment des ports, maintien après refus local et reprise après arrêt brutal Node."
+    );
+    run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
+    let data = directory.join("locked-server");
+    let assets = directory.join("lock-assets");
+    std::fs::create_dir(&assets)?;
+    std::fs::write(
+        assets.join("index.html"),
+        "<!doctype html><title>Fixture</title>",
+    )?;
+    let port = std::net::TcpListener::bind("127.0.0.1:0")?
+        .local_addr()?
+        .port();
+    let executable = crate::root()
+        .join("target/debug")
+        .join(format!("atelier{}", std::env::consts::EXE_SUFFIX));
+    let mut command = tokio::process::Command::from(crate::command(executable));
+    command
+        .arg("serve-prototype")
+        .arg("--data-dir")
+        .arg(&data)
+        .arg("--assets")
+        .arg(&assets)
+        .arg("--port")
+        .arg(port.to_string())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .kill_on_drop(true);
+    let mut rust = command.spawn()?;
+    let client = atelier_app::infrastructure::local_http::LocalHttp::new()?;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        if rust.try_wait()?.is_some() {
+            return Err("Le serveur Rust de verrou est arrêté.".into());
+        }
+        if let Some(health) = client
+            .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
+                atelier_app::infrastructure::session::read_optional(&data)
+            })
+            .await?
+        {
+            if health["pid"].as_u64() != rust.id().map(u64::from) {
+                return Err("Identité du processus de test incorrecte.".into());
+            }
+            break;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return Err("Délai du serveur Rust de verrou dépassé.".into());
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    try_node_lock(&data, 2)?;
+    rust.kill().await?;
+    try_node_lock(&data, 0)?;
+    println!(
+        "Arrêt brutal Rust vérifié : le vrai serveur bloque N1, puis le verrou se libère sans nettoyage manuel."
+    );
+    Ok(())
 }
 
 pub async fn test() -> Result<()> {
     let directory = tempfile::tempdir()?;
+    test_data_lock(directory.path()).await?;
     let path = directory.path().join("reference.sqlite");
     let reference = directory.path().join("expected.json");
     let saved = directory.path().join("snapshot.sqlite");
