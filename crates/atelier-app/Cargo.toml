@@ -15,6 +15,8 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tempfile.workspace = true
+reqwest.workspace = true
+hyper = "=1.12.0"
 axum = "=0.8.9"
 rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }
 getrandom = "=0.4.3"
@@ -33,5 +35,3 @@ windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", 
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.191"
 
-[dev-dependencies]
-reqwest.workspace = true

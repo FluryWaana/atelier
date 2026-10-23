@@ -434,6 +434,12 @@ Prochaine action concrète :
 - **CI acquise :** cinq runners natifs de `33d594a` réussis, dont trousseaux Linux/macOS x64/ARM64 ; Chrome/Firefox Linux réussis sur `f9b1598`. Safari encore en cours. Voir les liens dans les relevés.
 - **Suite :** terminer verrou commun N1/Rust et protocole local du lanceur ; qualification des chemins concurrents et registre Windows encore ouverte. Les trays POSIX et la validation complète M01/M02 restent nécessaires.
 
+### 24 octobre 2026 / base `f9f53cf` / M02, contrôle local authentifié
+
+- **Livré :** client loopback borné sans proxy/redirection, santé HMAC avant Bearer, session chargée après réponse, bootstrap navigateur privé POSIX. Parcours UI réutilisant santé et arrêt communs.
+- **Preuves :** 33 tests Rust réussis, Clippy propre, Edge réel réussi ; suite Node avec paquets : 425 tests, 422 réussis, zéro échec, trois exclusions, 82,70 s. Le test de socket fermé a révélé puis vérifié le traitement explicite de Hyper `IncompleteMessage`.
+- **Suite :** verrou N1/Rust avec exclusion réciproque et libération après crash ; chemins concurrents, intégration serveur/lanceur et preuves GUI encore ouvertes.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

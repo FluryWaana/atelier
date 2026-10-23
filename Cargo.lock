@@ -65,6 +65,7 @@ dependencies = [
  "base64 0.22.1",
  "getrandom 0.4.3",
  "hmac",
+ "hyper",
  "libc",
  "reqwest",
  "ring",

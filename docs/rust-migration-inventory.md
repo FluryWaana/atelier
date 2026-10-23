@@ -28,6 +28,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/checked_file.rs](../crates/atelier-app/src/infrastructure/checked_file.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/database.rs](../crates/atelier-app/src/infrastructure/database.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/installation.rs](../crates/atelier-app/src/infrastructure/installation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/local_http.rs](../crates/atelier-app/src/infrastructure/local_http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/mod.rs](../crates/atelier-app/src/infrastructure/mod.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/portable_import.rs](../crates/atelier-app/src/infrastructure/portable_import.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/prototype.rs](../crates/atelier-app/src/infrastructure/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -36,6 +37,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs](../crates/atelier-app/src/infrastructure/token_vault.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/local-http.rs](../crates/atelier-app/tests/local-http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/prototype.rs](../crates/atelier-app/tests/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/Cargo.toml](../crates/atelier-core/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/application.rs](../crates/atelier-core/src/application.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -635,15 +637,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:15](../crates/atelier-app/Cargo.toml#L15) | <code>serde_json.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:16](../crates/atelier-app/Cargo.toml#L16) | <code>tokio.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:17](../crates/atelier-app/Cargo.toml#L17) | <code>tempfile.workspace = true</code> |
-| [crates/atelier-app/Cargo.toml:19](../crates/atelier-app/Cargo.toml#L19) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
-| [crates/atelier-app/Cargo.toml:26](../crates/atelier-app/Cargo.toml#L26) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
-| [crates/atelier-app/Cargo.toml:27](../crates/atelier-app/Cargo.toml#L27) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
-| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
-| [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem"] }</code> |
-| [crates/atelier-app/Cargo.toml:33](../crates/atelier-app/Cargo.toml#L33) | <code>[target.'cfg(unix)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>[dev-dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:37](../crates/atelier-app/Cargo.toml#L37) | <code>reqwest.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:18](../crates/atelier-app/Cargo.toml#L18) | <code>reqwest.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:21](../crates/atelier-app/Cargo.toml#L21) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
+| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
+| [crates/atelier-app/Cargo.toml:29](../crates/atelier-app/Cargo.toml#L29) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
+| [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
+| [crates/atelier-app/Cargo.toml:32](../crates/atelier-app/Cargo.toml#L32) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:33](../crates/atelier-app/Cargo.toml#L33) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem"] }</code> |
+| [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>[target.'cfg(unix)'.dependencies]</code> |
 | [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{application::create_card, contracts::Board};</code> |
 | [crates/atelier-app/src/http.rs:6](../crates/atelier-app/src/http.rs#L6) | <code>use axum::{</code> |
@@ -730,15 +731,29 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/installation.rs:64](../crates/atelier-app/src/infrastructure/installation.rs#L64) | <code>use super::*;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:65](../crates/atelier-app/src/infrastructure/installation.rs#L65) | <code>use std::fs;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:67](../crates/atelier-app/src/infrastructure/installation.rs#L67) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:7](../crates/atelier-app/src/infrastructure/local_http.rs#L7) | <code>use serde_json::Value;</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:8](../crates/atelier-app/src/infrastructure/local_http.rs#L8) | <code>use std::time::Duration;</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:10](../crates/atelier-app/src/infrastructure/local_http.rs#L10) | <code>pub struct LocalHttp {</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:14](../crates/atelier-app/src/infrastructure/local_http.rs#L14) | <code>pub struct LocalResponse {</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:15](../crates/atelier-app/src/infrastructure/local_http.rs#L15) | <code>pub status: StatusCode,</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:20](../crates/atelier-app/src/infrastructure/local_http.rs#L20) | <code>pub fn json(&amp;self) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:25](../crates/atelier-app/src/infrastructure/local_http.rs#L25) | <code>pub fn server_port(address: &amp;str) -&gt; Result&lt;u16&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:65](../crates/atelier-app/src/infrastructure/local_http.rs#L65) | <code>pub fn new() -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:75](../crates/atelier-app/src/infrastructure/local_http.rs#L75) | <code>pub async fn request(</code> |
+| [crates/atelier-app/src/infrastructure/local_http.rs:118](../crates/atelier-app/src/infrastructure/local_http.rs#L118) | <code>pub async fn authenticated_health(</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:1](../crates/atelier-app/src/infrastructure/mod.rs#L1) | <code>pub mod backups;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:2](../crates/atelier-app/src/infrastructure/mod.rs#L2) | <code>pub mod checked_file;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:3](../crates/atelier-app/src/infrastructure/mod.rs#L3) | <code>pub mod database;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:4](../crates/atelier-app/src/infrastructure/mod.rs#L4) | <code>pub mod installation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:5](../crates/atelier-app/src/infrastructure/mod.rs#L5) | <code>pub mod portable_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod prototype;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod session;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod store;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:5](../crates/atelier-app/src/infrastructure/mod.rs#L5) | <code>pub mod local_http;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod portable_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:10](../crates/atelier-app/src/infrastructure/mod.rs#L10) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:1](../crates/atelier-app/src/infrastructure/portable_import.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:5](../crates/atelier-app/src/infrastructure/portable_import.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use rusqlite::{Connection, OpenFlags};</code> |
@@ -774,8 +789,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/session.rs:35](../crates/atelier-app/src/infrastructure/session.rs#L35) | <code>use std::ptr::{null, null_mut};</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:36](../crates/atelier-app/src/infrastructure/session.rs#L36) | <code>use windows_sys::Win32::{</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:106](../crates/atelier-app/src/infrastructure/session.rs#L106) | <code>pub fn write(directory: &amp;Path, token: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:116](../crates/atelier-app/src/infrastructure/session.rs#L116) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:133](../crates/atelier-app/src/infrastructure/session.rs#L133) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:120](../crates/atelier-app/src/infrastructure/session.rs#L120) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:137](../crates/atelier-app/src/infrastructure/session.rs#L137) | <code>pub fn read_optional(directory: &amp;Path) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:145](../crates/atelier-app/src/infrastructure/session.rs#L145) | <code>pub fn browser_address(directory: &amp;Path, address: &amp;str, token: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:175](../crates/atelier-app/src/infrastructure/session.rs#L175) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:1](../crates/atelier-app/src/infrastructure/store.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:2](../crates/atelier-app/src/infrastructure/store.rs#L2) | <code>use rusqlite::{Connection, OptionalExtension, params};</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:3](../crates/atelier-app/src/infrastructure/store.rs#L3) | <code>use serde::{Deserialize, Serialize};</code> |
@@ -831,6 +848,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/lib.rs:5](../crates/atelier-app/src/lib.rs#L5) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Error&gt;;</code> |
 | [crates/atelier-app/src/main.rs:1](../crates/atelier-app/src/main.rs#L1) | <code>use atelier_app::{Result, http};</code> |
 | [crates/atelier-app/src/main.rs:2](../crates/atelier-app/src/main.rs#L2) | <code>use std::path::PathBuf;</code> |
+| [crates/atelier-app/tests/local-http.rs:1](../crates/atelier-app/tests/local-http.rs#L1) | <code>use atelier_app::infrastructure::{local_http::LocalHttp, session};</code> |
+| [crates/atelier-app/tests/local-http.rs:2](../crates/atelier-app/tests/local-http.rs#L2) | <code>use axum::{</code> |
+| [crates/atelier-app/tests/local-http.rs:9](../crates/atelier-app/tests/local-http.rs#L9) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/tests/local-http.rs:10](../crates/atelier-app/tests/local-http.rs#L10) | <code>use std::{</code> |
+| [crates/atelier-app/tests/local-http.rs:18](../crates/atelier-app/tests/local-http.rs#L18) | <code>use tokio::io::AsyncReadExt;</code> |
+| [crates/atelier-app/tests/local-http.rs:20](../crates/atelier-app/tests/local-http.rs#L20) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/local-http.rs:140](../crates/atelier-app/tests/local-http.rs#L140) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/local-http.rs:191](../crates/atelier-app/tests/local-http.rs#L191) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/local-http.rs:210](../crates/atelier-app/tests/local-http.rs#L210) | <code>#[test]</code> |
+| [crates/atelier-app/tests/local-http.rs:226](../crates/atelier-app/tests/local-http.rs#L226) | <code>use std::os::unix::fs::PermissionsExt;</code> |
 | [crates/atelier-app/tests/prototype.rs:1](../crates/atelier-app/tests/prototype.rs#L1) | <code>use atelier_app::{</code> |
 | [crates/atelier-app/tests/prototype.rs:5](../crates/atelier-app/tests/prototype.rs#L5) | <code>use atelier_core::contracts::Card;</code> |
 | [crates/atelier-app/tests/prototype.rs:6](../crates/atelier-app/tests/prototype.rs#L6) | <code>use serde_json::{Value, json};</code> |
@@ -922,9 +949,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use std::path::Path;</code> |
 | [xtask/src/storage.rs:49](../xtask/src/storage.rs#L49) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
-| [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::session;</code> |
+| [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::{local_http::LocalHttp, session};</code> |
 | [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
-| [xtask/src/ui.rs:4](../xtask/src/ui.rs#L4) | <code>use serde_json::{Value, json};</code> |
+| [xtask/src/ui.rs:4](../xtask/src/ui.rs#L4) | <code>use serde_json::json;</code> |
 | [xtask/src/ui.rs:5](../xtask/src/ui.rs#L5) | <code>use std::{</code> |
 | [xtask/src/ui.rs:110](../xtask/src/ui.rs#L110) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
@@ -2467,7 +2494,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/backups.rs:379](../crates/atelier-app/src/infrastructure/backups.rs#L379) | <code>store.log("review", "stdout", "after restore").unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:380](../crates/atelier-app/src/infrastructure/backups.rs#L380) | <code>assert_eq!(store.logs("review", 0).unwrap()[1].seq, 3);</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:390](../crates/atelier-app/src/infrastructure/backups.rs#L390) | <code>.query_row::&lt;i64, _, _&gt;("SELECT COUNT(*) FROM token_vault", [], \|row\| row.get(0))</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:10](../crates/atelier-app/src/infrastructure/mod.rs#L10) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:28](../crates/atelier-app/src/infrastructure/portable_import.rs#L28) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:36](../crates/atelier-app/src/infrastructure/portable_import.rs#L36) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:103](../crates/atelier-app/src/infrastructure/portable_import.rs#L103) | <code>let database = source.join("kanban.sqlite");</code> |
@@ -2483,9 +2510,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:232](../crates/atelier-app/src/infrastructure/portable_import.rs#L232) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:233](../crates/atelier-app/src/infrastructure/portable_import.rs#L233) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:245](../crates/atelier-app/src/infrastructure/portable_import.rs#L245) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:111](../crates/atelier-app/src/infrastructure/session.rs#L111) | <code>let temporary = directory.join(format!("local-session.{}", uuid::Uuid::new_v4()));</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:124](../crates/atelier-app/src/infrastructure/session.rs#L124) | <code>fs::rename(&amp;temporary, directory.join("local-session"))?;</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:134](../crates/atelier-app/src/infrastructure/session.rs#L134) | <code>let path = directory.join("local-session");</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:111](../crates/atelier-app/src/infrastructure/session.rs#L111) | <code>write_private(&amp;directory.join("local-session"), &amp;stored)</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:138](../crates/atelier-app/src/infrastructure/session.rs#L138) | <code>match fs::symlink_metadata(directory.join("local-session")) {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:162](../crates/atelier-app/src/infrastructure/session.rs#L162) | <code>let path = directory.join("local-browser.html");</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:176](../crates/atelier-app/src/infrastructure/session.rs#L176) | <code>let path = directory.join("local-session");</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:8](../crates/atelier-app/src/infrastructure/store.rs#L8) | <code>CREATE TABLE IF NOT EXISTS time_entries (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:9](../crates/atelier-app/src/infrastructure/store.rs#L9) | <code>CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:10](../crates/atelier-app/src/infrastructure/store.rs#L10) | <code>CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
@@ -2604,4 +2632,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:168](../xtask/src/storage.rs#L168) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 317 fichiers ; 93 fichiers de tests Node.
+Total : 319 fichiers ; 93 fichiers de tests Node.

@@ -1,7 +1,7 @@
 use crate::{Result, command, root, run};
-use atelier_app::infrastructure::session;
+use atelier_app::infrastructure::{local_http::LocalHttp, session};
 use fantoccini::{Client, ClientBuilder, Locator};
-use serde_json::{Value, json};
+use serde_json::json;
 use std::{
     path::Path,
     process::{Child, Stdio},
@@ -39,28 +39,20 @@ async fn start_server(data: &Path, port: u16) -> Result<(Process, String)> {
             .stderr(Stdio::inherit())
             .spawn()?,
     );
-    let http = reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()?;
-    let challenge = session::new_token()?;
+    let http = LocalHttp::new()?;
     let deadline = Instant::now() + Duration::from_secs(15);
     while Instant::now() < deadline {
         if process.0.try_wait()?.is_some() {
             return Err("Le serveur de test s’est arrêté au démarrage.".into());
         }
-        if let Ok(response) = http
-            .get(format!(
-                "http://127.0.0.1:{port}/api/health?challenge={challenge}"
-            ))
-            .send()
-            .await
-            && let (Ok(body), Ok(token)) = (response.json::<Value>().await, session::read(data))
-            && session::same_secret(
-                body["proof"].as_str().unwrap_or(""),
-                &session::proof(&token, &challenge, port)?,
-            )
+        if http
+            .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
+                session::read_optional(data)
+            })
+            .await?
+            .is_some()
         {
-            return Ok((process, token));
+            return Ok((process, session::read(data)?));
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
@@ -68,14 +60,22 @@ async fn start_server(data: &Path, port: u16) -> Result<(Process, String)> {
 }
 
 async fn stop_server(process: &mut Process, port: u16, token: &str) -> Result<()> {
-    reqwest::Client::new()
-        .post(format!("http://127.0.0.1:{port}/api/prototype/stop"))
-        .bearer_auth(token)
-        .header("X-Local-Request", "1")
-        .json(&json!({}))
-        .send()
-        .await?
-        .error_for_status()?;
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {token}").parse()?);
+    headers.insert("x-local-request", "1".parse()?);
+    headers.insert("content-type", "application/json".parse()?);
+    let response = LocalHttp::new()?
+        .request(
+            &format!("http://127.0.0.1:{port}/api/prototype/stop"),
+            reqwest::Method::POST,
+            headers,
+            Some("{}"),
+            Duration::from_secs(5),
+        )
+        .await?;
+    if !response.status.is_success() {
+        return Err("Arrêt du serveur de test refusé.".into());
+    }
     let deadline = Instant::now() + Duration::from_secs(10);
     while Instant::now() < deadline {
         if let Some(status) = process.0.try_wait()? {

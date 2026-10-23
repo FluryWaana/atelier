@@ -41,4 +41,10 @@ Le catalogue filtre les noms historiques et fichiers réguliers, conserve dates 
 
 La [CI du coffre `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672) a réussi sur les cinq runners natifs, incluant le probe trousseau Linux x64/ARM64 et macOS x64/ARM64 : création, relecture, suppression, refus après suppression. Ces essais utilisent un service aléatoire synthétique, jamais la clé de production. Le verrouillage interactif et le changement de compte ne sont pas couverts par ce probe.
 
-Compléter sessions/protocole HTTP du lanceur, chemins et verrou commun N1/Rust ; intégrer les adaptateurs aux cas d'usage et à l'intégration OS dans leurs lots. La compatibilité des données ne suffit pas à autoriser une migration de données utilisateur.
+### Canal local — incrément après `f9f53cf`
+
+`LocalHttp` utilise exclusivement HTTP vers 127.0.0.1, sans proxy ni redirection, sans connexion persistante, avec délai et réponse bornée à 65 536 octets. La santé challenge/HMAC charge le fichier de session après la réponse et n'envoie Bearer qu'après validation de la preuve. Refus de connexion/socket fermé ne demandent pas de secret ; timeout, faux serveur et redirection restent des erreurs. Réutilisation de reqwest et du type d'erreur Hyper déjà verrouillés, sans comparer des chaînes de diagnostic.
+
+Le bootstrap navigateur POSIX écrit un HTML privé atomique et ne place que son URL fichier dans les arguments ; Windows conserve l'URL à fragment. Les adresses et jetons sont validés. Le test UI utilise désormais ce même client pour santé et arrêt. 33 tests Rust réussis, Clippy propre et parcours Edge réel réussi ; suite Node 425 tests, 422 réussis, zéro échec, trois exclusions, 82,70 s.
+
+Compléter chemins et verrou commun N1/Rust ; intégrer les adaptateurs aux cas d'usage et à l'intégration OS dans leurs lots. Le serveur de production, SSE, reprise navigateur et arrêt occupé ne sont pas remplacés par le prototype. La compatibilité des données ne suffit pas à autoriser une migration de données utilisateur.

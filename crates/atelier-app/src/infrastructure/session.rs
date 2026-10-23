@@ -108,7 +108,11 @@ pub fn write(directory: &Path, token: &str) -> Result<()> {
     let stored = protect(token, false)?;
     #[cfg(not(windows))]
     let stored = token.to_owned();
-    let temporary = directory.join(format!("local-session.{}", uuid::Uuid::new_v4()));
+    write_private(&directory.join("local-session"), &stored)
+}
+
+fn write_private(path: &Path, stored: &str) -> Result<()> {
+    let temporary = path.with_extension(uuid::Uuid::new_v4().to_string());
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -121,13 +125,51 @@ pub fn write(directory: &Path, token: &str) -> Result<()> {
         file.write_all(stored.as_bytes())?;
         file.sync_all()?;
         drop(file);
-        fs::rename(&temporary, directory.join("local-session"))?;
+        fs::rename(&temporary, path)?;
         Ok(())
     })();
     if result.is_err() {
         let _ = fs::remove_file(&temporary);
     }
     result
+}
+
+pub fn read_optional(directory: &Path) -> Result<Option<String>> {
+    match fs::symlink_metadata(directory.join("local-session")) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.into()),
+        Ok(_) => read(directory).map(Some),
+    }
+}
+
+pub fn browser_address(directory: &Path, address: &str, token: &str) -> Result<String> {
+    let port = super::local_http::server_port(address)?;
+    if token.len() != 64
+        || !token
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err("Session locale invalide.".into());
+    }
+    let address = format!("http://127.0.0.1:{port}/#session={token}");
+    #[cfg(windows)]
+    {
+        let _ = directory;
+        Ok(address)
+    }
+    #[cfg(unix)]
+    {
+        let path = directory.join("local-browser.html");
+        write_private(
+            &path,
+            &format!(
+                "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0;url={address}\">"
+            ),
+        )?;
+        reqwest::Url::from_file_path(&path)
+            .map(|url| url.to_string())
+            .map_err(|_| "Chemin du navigateur invalide.".into())
+    }
 }
 
 pub fn read(directory: &Path) -> Result<String> {
