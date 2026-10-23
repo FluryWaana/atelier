@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os';
 import { Readable } from 'node:stream';
 import { createApp } from '../server.mjs';
 
-function request(app, body) {
+function request(app, body, headers = {}) {
   return new Promise(resolve => {
     const req = Readable.from([JSON.stringify(body)]);
-    Object.assign(req, { method: 'PATCH', url: '/api/projects/project', headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1', authorization: 'Bearer ' + app.authToken } });
+    Object.assign(req, { method: 'PATCH', url: '/api/projects/project', headers: { host: '127.0.0.1:4317', 'content-type': 'application/json', 'x-local-request': '1', authorization: 'Bearer ' + app.authToken, ...headers } });
     const res = { status: 200, setHeader() {}, writeHead(status) { this.status = status; }, end(value) { resolve({ status: this.status, body: JSON.parse(value) }); } };
     app.server.emit('request', req, res);
   });
@@ -67,4 +67,29 @@ test('a failed card update rolls back the project location and every card', asyn
   assert.equal(app.store.projects()[0].repo, old);
   assert.equal(app.store.card('card').repo, old);
   assert.equal(app.store.card('archive').repo, old);
+});
+
+test('project rules can be saved, preserved by partial updates and removed', async t => {
+  const { app } = fixture(t);
+  const projectRules = 'Préserve les accents.\nExécute les tests.';
+  const saved = await request(app, { projectRules });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.projectRules, projectRules);
+  assert.equal(app.store.projects()[0].projectRules, projectRules);
+  assert.equal((await request(app, { baseBranch: 'main' })).body.projectRules, projectRules);
+  assert.equal((await request(app, { projectRules: [] })).status, 400);
+  assert.equal(app.store.projects()[0].projectRules, projectRules);
+  assert.equal((await request(app, { projectRules: '   ' })).body.projectRules, '');
+  assert.equal(app.store.projects()[0].projectRules, '');
+});
+
+test('project rules reject unauthorized, foreign-origin and oversized updates without changing stored data', async t => {
+  const { app } = fixture(t);
+  await request(app, { projectRules: 'Règles conservées' });
+  for (const [headers, status] of [[{ authorization: '' }, 401], [{ origin: 'https://example.com' }, 403], [{ 'x-local-request': '' }, 403]]) {
+    assert.equal((await request(app, { projectRules: 'Remplacement' }, headers)).status, status);
+    assert.equal(app.store.projects()[0].projectRules, 'Règles conservées');
+  }
+  assert.equal((await request(app, { projectRules: 'x'.repeat(12001) })).status, 400);
+  assert.equal(app.store.projects()[0].projectRules, 'Règles conservées');
 });

@@ -80,6 +80,12 @@ dialog .form-actions button { min-height: 44px; font-size: 14px; }
 #project-form .form-actions { margin-top: 20px; padding-top: 16px; }
 #project-form .form-actions button { width: 100%; }
 #project-settings-dialog, #launch-settings-dialog { width: 1080px; }
+#project-rules-info { anchor-name: --project-rules-info; width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; font: 600 16px Georgia, serif; }
+#project-rules-help { width: min(420px, calc(100vw - 32px)); max-height: 70dvh; overflow: auto; padding: 18px; border: 1px solid $line; border-radius: 10px; background: $panel; color: $text; font-size: 13px; line-height: 1.65; box-shadow: 0 8px 24px #0006; }
+#project-rules-help > :last-child { margin-bottom: 0; }
+@supports (position-area: bottom) {
+  #project-rules-help { position-anchor: --project-rules-info; position-area: bottom span-right; position-try-fallbacks: flip-block, flip-inline; inset: auto; margin: 8px; }
+}
 .launch-settings-grid { margin-top: 18px; margin-bottom: 20px; }
 .application-launch-panel { min-width: 0; height: 100%; padding: 20px; border: 1px solid $line; border-radius: 12px; }
 .application-launch-panel legend { float: none; width: auto; padding: 0 8px; font-size: 17px; font-weight: 600; }

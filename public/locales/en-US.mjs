@@ -1,5 +1,10 @@
 // French source messages are stable translation keys. See docs/localization.md.
 export default {
+  "Règles du projet": "Project rules",
+  "À quoi servent les règles du projet ?": "What are project rules for?",
+  "Évitez de répéter vos consignes à chaque conversation. Définissez ici les habitudes à respecter dans ce projet : langue des réponses, conventions de code, tests attendus ou contraintes métier.": "Avoid repeating your instructions in every conversation. Set the expectations for this project here: response language, coding conventions, required tests or business constraints.",
+  "Ces règles sont ajoutées au début des échanges avec l’agent pour ce projet : brainstorming, préparation, développement et review. Les modifications s’appliquent aux prochains échanges, sans changer ceux en cours.": "These rules are added at the start of agent exchanges for this project: brainstorming, preparation, development and review. Changes apply to subsequent exchanges and do not affect those already running.",
+  "12 000 caractères maximum. Laissez vide pour ne pas ajouter de règles. Ce texte est transmis à l’agent sélectionné : n’y mettez pas de secrets.": "12,000 characters maximum. Leave blank to add no rules. This text is sent to the selected agent: do not include secrets.",
   "Agents en attente de réponse": "Agents awaiting a reply",
   "En attente de votre réponse": "Awaiting your reply",
   "Réponse libre": "Free-text answer",

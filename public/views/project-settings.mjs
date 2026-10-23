@@ -107,6 +107,7 @@ function openProjectSettings(id) {
   form.querySelectorAll('[data-role-detection-results]').forEach(results => { results.innerHTML = ''; });
   bindLaunchSettings(form, id);
   form.elements.agent.value = project.agent || ''; form.elements.baseBranch.value = project.baseBranch || ''; form.elements.jiraMode.value = project.jiraMode || 'inherit';
+  form.elements.projectRules.value = project.projectRules || '';
   const providers = state.connectors?.modules.filter(module => module.capabilities.includes('repositories')) || [];
   const general = providers.find(module => module.id === state.connectors?.providers?.repositories)?.name || msg("aucun module actif");
   form.elements.repositoryConnector.innerHTML = `<option value="">${markupText("Hériter du fournisseur général ({0})", esc(general))}</option>` + providers.map(module => `<option value="${esc(module.id)}">${esc(module.name)}</option>`).join('') + (project.repositoryConnector && !providers.some(module => module.id === project.repositoryConnector) ? `<option value="${esc(project.repositoryConnector)}" disabled>${markupText("Module indisponible : {0}", esc(project.repositoryConnector))}</option>` : '');

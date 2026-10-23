@@ -190,7 +190,7 @@ test('service repository pickers and detection keep Front and Back independent',
 });
 
 test('project settings include and wire the shared detection button to the project being edited', async () => {
-  const fields = ['repo', 'frontRepo', 'backRepo', 'agent', 'baseBranch', 'repositoryConnector', 'jiraMode', 'frontDirectory', 'backDirectory', 'backCommand', 'frontPort', 'backPort', 'prTarget', 'testCommand', 'automationEnabled', 'autoFix', 'linkedProjectId', 'todo', 'doing', 'review', 'done', 'standby'];
+  const fields = ['repo', 'frontRepo', 'backRepo', 'agent', 'baseBranch', 'projectRules', 'repositoryConnector', 'jiraMode', 'frontDirectory', 'backDirectory', 'backCommand', 'frontPort', 'backPort', 'prTarget', 'testCommand', 'automationEnabled', 'autoFix', 'linkedProjectId', 'todo', 'doing', 'review', 'done', 'standby'];
   const button = {}, results = { innerHTML: 'previous detection', querySelectorAll: () => [] }, sections = [], calls = [];
   const form = { dataset: {}, querySelectorAll: () => [], elements: Object.fromEntries(fields.map(name => [name, {}])), querySelector: selector => {
     if (selector === '[data-detect-launch]') return button;
@@ -199,7 +199,7 @@ test('project settings include and wire the shared detection button to the proje
   } };
   const nodes = { '#project-repository-connector': {}, '#project-settings-form': form, '#project-settings-title': {}, '#project-jira-map': {}, '#browse-project-settings': {}, '#project-location-help': {}, '#project-settings-dialog': { open: true, showModal() {} } };
   const context = contextFor({
-    $: selector => nodes[selector], document: { createElement: () => ({}) }, state: { cards: [], projects: [{ id: 'p', name: 'Premier', repo: 'first' }, { id: 'q', name: 'Second', repo: 'second' }] },
+    $: selector => nodes[selector], document: { createElement: () => ({}) }, state: { cards: [], projects: [{ id: 'p', name: 'Premier', repo: 'first', projectRules: 'Préserver les accents.\n</textarea><script>alert(1)</script>' }, { id: 'q', name: 'Second', repo: 'second' }] },
     esc, action: fn => fn(), api: async (...args) => { calls.push(args); return { candidates: [], warnings: [] }; },
   });
 
@@ -208,12 +208,14 @@ test('project settings include and wire the shared detection button to the proje
   form.closest = () => nodes['#project-settings-dialog'];
   projectSettings(context);
   context.openProjectSettings('p');
+  assert.equal(form.elements.projectRules.value, context.state.projects[0].projectRules);
   assert.match(sections[0].innerHTML, /data-detect-launch>Détecter la configuration du projet/);
   assert.match(sections[0].innerHTML, /data-launch-detection-results/);
   await button.onclick();
   assert.equal(calls[0][0], '/api/projects/p/detect-launch');
   results.innerHTML = 'results for p';
   context.openProjectSettings('q');
+  assert.equal(form.elements.projectRules.value, '');
   assert.equal(results.innerHTML, '');
   assert.equal(form.dataset.launchProjectId, 'q');
   await button.onclick();

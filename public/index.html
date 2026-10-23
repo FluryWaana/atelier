@@ -97,6 +97,15 @@
         <div class="col-12"><label class="form-label">Emplacement du dépôt Git<span class="input-group"><input class="form-control" name="repo" required maxlength="2000" placeholder="Chemin absolu du dépôt Git" aria-describedby="project-location-help"><button class="btn" type="button" id="browse-project-settings">Parcourir…</button></span></label><p id="project-location-help" class="form-text"></p></div>
         <div class="col-12 col-md-6"><label class="form-label">Agent préféré<select class="form-select" name="agent"><option value="">Hériter du réglage global</option></select></label></div>
         <div class="col-12 col-md-6"><label class="form-label">Branche de départ<input class="form-control" name="baseBranch" maxlength="180" placeholder="Hériter du réglage global"></label></div>
+        <div class="col-12">
+          <div class="d-flex align-items-center gap-2"><label class="form-label m-0" for="project-rules">Règles du projet</label><button type="button" id="project-rules-info" popovertarget="project-rules-help" aria-label="À quoi servent les règles du projet ?"><span aria-hidden="true">i</span></button></div>
+          <div id="project-rules-help" popover>
+            <p>Évitez de répéter vos consignes à chaque conversation. Définissez ici les habitudes à respecter dans ce projet : langue des réponses, conventions de code, tests attendus ou contraintes métier.</p>
+            <p>Ces règles sont ajoutées au début des échanges avec l’agent pour ce projet : brainstorming, préparation, développement et review. Les modifications s’appliquent aux prochains échanges, sans changer ceux en cours.</p>
+            <p>12 000 caractères maximum. Laissez vide pour ne pas ajouter de règles. Ce texte est transmis à l’agent sélectionné : n’y mettez pas de secrets.</p>
+          </div>
+          <textarea class="form-control" id="project-rules" name="projectRules" rows="6" maxlength="12000" aria-describedby="project-rules-help"></textarea>
+        </div>
         <div class="col-12" id="project-repository-connector"><label class="form-label">Fournisseur Git<select class="form-select" name="repositoryConnector" aria-describedby="project-repository-help"><option value="">Hériter du fournisseur général</option></select></label><p id="project-repository-help" class="form-text">S’applique aux nouvelles PR/MR de ce projet. Les PR/MR existantes conservent leur fournisseur. Les connexions se configurent dans les paramètres généraux.</p></div>
         <div class="col-12"><label class="form-label">Statuts Jira<select class="form-select" name="jiraMode"><option value="inherit">Hériter des réglages globaux</option><option value="off">Ne pas modifier Jira automatiquement</option><option value="custom">Utiliser les correspondances de ce projet</option></select></label><div id="project-jira-map"></div></div>
       </div>
