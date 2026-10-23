@@ -13,7 +13,7 @@ export function matchesFocus(card, runs, focus, cards = []) {
   if (focus === 'review') return card.status === 'review';
   if (focus !== 'attention') return true;
   const run = runs.find(r => r.cardId === card.id);
-  return card.status !== 'done' && (blockers(card, cards).length > 0 || card.ticketSync?.state === 'error' || ['error', 'interrupted', 'cancelled', 'blocked'].includes(card.automation?.state) || Boolean(run && (run.attention || ['failed', 'interrupted', 'cancelled'].includes(run.status))));
+  return card.status !== 'done' && (blockers(card, cards).length > 0 || card.ticketSync?.state === 'error' || ['error', 'interrupted', 'cancelled', 'blocked'].includes(card.automation?.state) || Boolean(run && (run.interactions?.length || run.attention || ['failed', 'interrupted', 'cancelled'].includes(run.status))));
 }
 
 export function shortcutAction(event, editing, dialogOpen) {

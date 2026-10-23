@@ -149,9 +149,9 @@ test('split credentials and oversized output never reach logs or summaries in pl
   const child = new EventEmitter(); Object.assign(child, { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
   const lines = [], secret = 'private-credential';
   startAgent({ agent: 'api', provider: { type: 'codex', auth: 'api', command: process.execPath }, apiKey: secret, mode: 'analyze', repo: '.', prompt: '' }, (stream, line) => lines.push({ stream, line }), () => {}, () => child);
-  child.stdout.write('x'.repeat(65536) + 'private-');
+  child.stderr.write('x'.repeat(65536) + 'private-');
   assert.equal(lines.length, 0);
-  child.stdout.write('credential\n');
+  child.stderr.write('credential\n');
   assert.ok(lines[0].line.endsWith('[secret]'));
   child.stderr.write('x'.repeat(1024 * 1024) + 'private-');
   child.stderr.write('credential\nNext line\n');

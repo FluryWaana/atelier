@@ -65,6 +65,7 @@ test('custom CLI receives separate arguments and stdin; Codex API key is scoped 
   const apiChild = new EventEmitter(); Object.assign(apiChild, { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
   startAgent({ agent: 'api', provider: { type: 'codex', auth: 'api', command: process.execPath }, apiKey: 'private-key', mode: 'edit', repo: '.', prompt: 'test' }, (_, line) => lines.push(line), () => {}, (_, args, options) => { launched = { args, options }; return apiChild; });
   assert.equal(launched.options.env.CODEX_API_KEY, 'private-key'); assert.ok(!launched.args.includes('private-key'));
+  assert.ok(launched.args.includes('cli_auth_credentials_store="ephemeral"'));
   apiChild.stderr.write('error private-key\n'); apiChild.emit('close', 1);
   assert.equal(lines.at(-1), 'error [secret]');
   assert.equal(agentEnvironment({ type: 'claude' }).CODEX_API_KEY, undefined);

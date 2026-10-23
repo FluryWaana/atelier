@@ -9,6 +9,7 @@ export function duration(seconds) {
   return msg("{0} h {1} min {2} s", Math.floor(seconds / 3600), String(Math.floor(seconds % 3600 / 60)).padStart(2, '0'), String(seconds % 60).padStart(2, '0'));
 }
 export function agentState(run) {
+  if (run.status === 'running' && run.interactions?.length) return msg("En attente de votre réponse");
   if (run.attention) return run.status === 'running' ? msg("Attention requise") : msg("Bloqué · consulter le journal");
   if (run.status !== 'running') return runNames[run.status];
   return Date.now() - new Date(run.lastEventAt || run.startedAt) > 60000 ? msg("Sans signal · état à vérifier") : msg("Travaille");

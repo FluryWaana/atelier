@@ -12,6 +12,7 @@ import { createSettings } from './lib/application/settings.mjs';
 import { settingsRoute } from './lib/http/settings-routes.mjs';
 import { createSettingsRepository } from './lib/infrastructure/settings-repository.mjs';
 import { createRuns } from './lib/application/runs.mjs';
+import { runRoute } from './lib/http/run-routes.mjs';
 import { createJiraSync } from './lib/application/jira-sync.mjs';
 import { createSyncRepository } from './lib/infrastructure/sync-repository.mjs';
 import { samePath } from './lib/paths.mjs';
@@ -127,7 +128,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     } finally { providerReads--; }
   };
   for (const run of store.runs().filter(r => r.status === 'running')) {
-    run.status = 'interrupted'; run.endedAt = run.lastEventAt || run.startedAt; store.putRun(run);
+    run.status = 'interrupted'; delete run.interactions; run.endedAt = run.lastEventAt || run.startedAt; store.putRun(run);
     const card = store.card(run.cardId);
     if (card?.status === 'doing' && !['ticket-preparation', 'brainstorm'].includes(run.kind)) { card.status = 'todo'; store.putCard(card); }
     store.log(run.id, 'system', 'Serveur arrêté pendant cette exécution. Vérifie le dépôt avant de relancer.');
@@ -375,6 +376,8 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     if (settingsResult !== undefined) return settingsResult;
     const cardResult = cardWorkflowRoute(cardWorkflows, req.method, path, body, Object.fromEntries(new URL(req.url, 'http://localhost').searchParams));
     if (cardResult !== undefined) return cardResult;
+    const runResult = runRoute(runs, req.method, path, body);
+    if (runResult !== undefined) return runResult;
     const logsMatch = path.match(/^\/api\/runs\/([^/]+)\/logs$/);
     if (logsMatch && req.method === 'GET') {
       const after = Number(new URL(req.url, 'http://localhost').searchParams.get('after') || 0);
@@ -386,7 +389,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
       const entry = active.get(cancelMatch[1]); if (!entry) fail('Exécution déjà terminée.', 409);
       if (automation.busy(entry.cardId)) { automation.stop(entry.cardId); return { ok: true }; }
       entry.cancelled = true;
-      const run = store.run(cancelMatch[1]); run.activity = 'Arrêt demandé…'; store.putRun(run);
+      const run = store.run(cancelMatch[1]); delete run.interactions; run.activity = 'Arrêt demandé…'; store.putRun(run);
       entry.stop(); return { ok: true };
     }
     if (['/api/jira/sync', '/api/jira/reset'].includes(path) && req.method === 'POST') return connectors.invoke('tickets', path.endsWith('/reset') ? 'reset' : 'sync', body, 'jira');
@@ -394,6 +397,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   }
   const assets = { '/views/overview.mjs': ['views/overview.mjs', 'text/javascript'], '/views/workspace-workflows.mjs': ['views/workspace-workflows.mjs', 'text/javascript'], '/views/card.mjs': ['views/card.mjs', 'text/javascript'], '/views/brainstorm.mjs': ['views/brainstorm.mjs', 'text/javascript'], '/views/time.mjs': ['views/time.mjs', 'text/javascript'], '/views/task-editor.mjs': ['views/task-editor.mjs', 'text/javascript'], '/ui-actions.mjs': ['ui-actions.mjs', 'text/javascript'], "/connector-availability.mjs": ["connector-availability.mjs", "text/javascript"], '/views/settings.mjs': ['views/settings.mjs', 'text/javascript'], '/views/project-settings.mjs': ['views/project-settings.mjs', 'text/javascript'], '/views/processes.mjs': ['views/processes.mjs', 'text/javascript'], '/view-helpers.mjs': ['view-helpers.mjs', 'text/javascript'], '/views/board.mjs': ['views/board.mjs', 'text/javascript'], '/views/projects.mjs': ['views/projects.mjs', 'text/javascript'], '/lib/domain/agent-options.mjs': ['../lib/domain/agent-options.mjs', 'text/javascript'], '/lib/domain/tasks.mjs': ['../lib/domain/tasks.mjs', 'text/javascript'], '/lib/domain/paths.mjs': ['../lib/domain/paths.mjs', 'text/javascript'], '/lib/domain/validation.mjs': ['../lib/domain/validation.mjs', 'text/javascript'], '/updates.mjs': ['updates.mjs', 'text/javascript'], '/workflow.mjs': ['workflow.mjs', 'text/javascript'], '/agent-usage.mjs': ['agent-usage.mjs', 'text/javascript'], '/agent-options.mjs': ['agent-options.mjs', 'text/javascript'], '/ui-helpers.mjs': ['ui-helpers.mjs', 'text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
   assets['/views/agent-providers.mjs'] = ['views/agent-providers.mjs', 'text/javascript'];
+  assets['/views/agent-interactions.mjs'] = ['views/agent-interactions.mjs', 'text/javascript'];
   assets['/views/task-workspace.mjs'] = ['views/task-workspace.mjs', 'text/javascript'];
   assets['/syntax-highlight.mjs'] = ['syntax-highlight.mjs', 'text/javascript'];
   assets['/vendor/highlightjs/highlight.min.js'] = ['vendor/highlightjs/highlight.min.js', 'text/javascript'];

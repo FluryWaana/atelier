@@ -13,18 +13,17 @@ import { PassThrough } from 'node:stream';
 
 test('CLI options preserve permissions and use each agent format', () => {
   const codex = commandArgs('codex', 'analyze', { model: 'custom/model', effort: 'xhigh' });
-  assert.equal(codex[codex.indexOf('--model') + 1], 'custom/model');
-  assert.equal(codex[codex.indexOf('-c') + 1], 'model_reasoning_effort="xhigh"');
-  assert.equal(codex[codex.indexOf('-s') + 1], 'read-only');
-  assert.equal(codex.at(-1), '-');
+  assert.deepEqual(codex, ['app-server']);
   const claude = commandArgs('claude', 'edit', { model: 'opus', effort: 'high' });
   assert.equal(claude[claude.indexOf('--model') + 1], 'opus');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'high');
-  assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'auto');
+  assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'default');
   for (const mode of ['analyze', 'edit']) {
     const args = commandArgs('claude', mode);
-    assert.equal(args[args.indexOf('--permission-mode') + 1], mode === 'edit' ? 'auto' : 'plan');
-    assert.equal(args[args.indexOf('--permission-prompts') + 1], 'none');
+    assert.equal(args[args.indexOf('--permission-mode') + 1], mode === 'edit' ? 'default' : 'plan');
+    assert.equal(args[args.indexOf('--permission-prompt-tool') + 1], 'stdio');
+    assert.equal(args[args.indexOf('--input-format') + 1], 'stream-json');
+    assert.ok(!args.includes('--permission-prompts'));
     for (const flag of ['--allowedTools', '--dangerously-skip-permissions', '--bare', '--safe-mode', '--strict-mcp-config', '--disable-slash-commands']) assert.ok(!args.includes(flag), flag);
   }
   for (const agent of ['codex', 'claude']) {
@@ -44,14 +43,23 @@ test('task and launch options override only the selected agent defaults', () => 
   assert.deepEqual(resolveAgentOptions(settings, card, { agent: 'codex', model: 'one-run', effort: '' }), { model: 'one-run', effort: 'medium' });
 });
 
-test('startAgent forwards model and effort to the spawned process', () => {
+test('startAgent forwards model, effort and sandbox through the Codex handshake', () => {
   const child = new EventEmitter();
   Object.assign(child, { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
   let args;
   startAgent({ agent: 'codex', provider: { type: 'codex', command: process.execPath }, mode: 'edit', model: 'custom', effort: 'low', repo: '.', prompt: 'Test' }, () => {}, () => {}, (binary, argv) => { args = argv; return child; });
+  child.stdin.read();
+  child.stdout.write(JSON.stringify({ id: 'initialize', result: {} }) + '\n');
+  const thread = child.stdin.read().toString().trim().split('\n').map(JSON.parse).at(-1);
+  assert.equal(thread.params.model, 'custom');
+  assert.equal(thread.params.sandbox, 'workspace-write');
+  assert.equal(thread.params.approvalPolicy, 'on-request');
+  child.stdout.write(JSON.stringify({ id: 'thread', result: { thread: { id: 'thread' } } }) + '\n');
+  const turn = JSON.parse(child.stdin.read().toString());
+  assert.equal(turn.params.effort, 'low');
+  assert.equal(turn.params.input[0].text, 'Test');
   child.emit('close', 0);
-  assert.equal(args[args.indexOf('--model') + 1], 'custom');
-  assert.ok(args.includes('model_reasoning_effort="low"'));
+  assert.deepEqual(args, ['app-server']);
 });
 
 test('API persists defaults and task overrides through launches, copies and agent changes', async t => {
