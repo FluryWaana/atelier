@@ -29,6 +29,8 @@ Les contrats des tableaux ne deviennent pas validés par ces seules preuves. Dé
 
 ## Contrats serveur et système
 
+M02 préparatoire (base `371a1a9`) : C02 dispose du schéma complet, transactions, pagination/UTF-16 et de `cargo xtask test-storage-parity` (810 documents, 10 002 logs, snapshot WAL, Node → Rust → Node → Rust). Les tests `store::tests` et `dropping_database_drains_an_accepted_write_after_caller_cancellation` passent. C03 ne couvre encore que la création du snapshot ; restauration/imports et garanties système restent ouverts. Voir [preuves M02](rust-migration-m02.md). Aucun de ces contrats n'est déclaré complètement qualifié.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

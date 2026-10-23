@@ -251,6 +251,33 @@ fn prototype_refuses_existing_data_and_locks_aliases_until_closed() {
     assert!(PrototypeDirectory::open(empty.path()).is_ok());
 }
 
+#[tokio::test]
+async fn dropping_database_drains_an_accepted_write_after_caller_cancellation() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("cancelled.sqlite");
+    let database = Database::open(&path).unwrap();
+    let (started, ready) = tokio::sync::oneshot::channel();
+    let (release, waiting) = std::sync::mpsc::channel();
+    let mut operation = Box::pin(database.call(move |store| {
+        started.send(()).unwrap();
+        waiting.recv().unwrap();
+        store.save_settings(&json!({"accepted":true}))
+    }));
+    tokio::select! {
+        _ = ready => {},
+        _ = &mut operation => panic!("Write finished before release"),
+    }
+    drop(operation);
+    release.send(()).unwrap();
+    drop(database);
+    let reopened = Database::open(&path).unwrap();
+    assert_eq!(
+        reopened.call(|store| store.settings()).await.unwrap(),
+        json!({"accepted":true})
+    );
+    reopened.close().await.unwrap();
+}
+
 #[test]
 fn session_tokens_and_constant_time_comparison_reject_malformed_values() {
     // Generated with the existing Node sessionProof, not with this Rust implementation.

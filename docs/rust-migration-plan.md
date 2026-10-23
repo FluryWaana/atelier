@@ -159,7 +159,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — tranche Windows/WASM prouvée ; CI et prototypes natifs restants |
-| M02 | M01 | Données, secrets et session compatibles | À faire |
+| M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
 | M03 | M02 | Domaine et API métier équivalents | À faire |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
@@ -406,6 +406,13 @@ Prochaine action concrète :
 - **État :** dépôt propre à la reprise, aucun changement distant supplémentaire après fetch. GitHub accessible avec l'authentification existante ; Ubuntu 26.04 x64 présent dans WSL, sans toolchain de développement détectée.
 - **Changement :** branche `codex/rust-migration-2026-10-24` et déclenchement du seul workflow Rust sur `codex/rust-migration-*`. Aucun tag ni publication de release. Quatre tests Node de pipeline/security réussis ; inventaire régénéré.
 - **Suite :** recueillir les résultats des cinq runners et du navigateur Linux ; avancer sur le schéma SQLite, transactions et sauvegardes synthétiques de M02.
+
+### 24 octobre 2026 / base `371a1a9` / M02, stockage préparatoire
+
+- **Livré :** schéma complet de `store.mjs`, documents JSON sans perte, paramètres, logs paginés et bornés en UTF-16, transactions et sauvegarde SQLite incluant le WAL sans écraser un fichier existant. Fermeture du thread avant libération de la base. Aucun accès aux données réelles autorisé.
+- **Preuves :** 16 tests Rust réussis et Clippy natif propre ; comparaison `cargo xtask test-storage-parity` Node → Rust → Node → Rust sur 810 documents et 10 002 logs, sauvegarde relue par Node. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions inchangées, 82,11 s ; parcours Edge réussi. Voir [relevé M02](rust-migration-m02.md).
+- **CI :** push autorisé explicitement par l'utilisateur après le refus initial de la revue automatique ; [exécution M01 sur `371a1a9`](https://github.com/FluryWaana/atelier/actions/runs/40031351769). Les résultats de cette exécution ne qualifient pas les modifications M02 encore locales.
+- **Limites et suite :** restauration utilisateur, coffre complet, protections des fichiers, session, imports et verrou N1 encore à porter ; M01 et M02 restent en cours.
 
 ## 12. Définition finale de terminé
 

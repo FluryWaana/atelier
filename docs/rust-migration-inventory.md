@@ -28,6 +28,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs](../crates/atelier-app/src/infrastructure/mod.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/prototype.rs](../crates/atelier-app/src/infrastructure/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/session.rs](../crates/atelier-app/src/infrastructure/session.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/store.rs](../crates/atelier-app/src/infrastructure/store.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/prototype.rs](../crates/atelier-app/tests/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -128,7 +129,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/project-settings.mjs](../lib/project-settings.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/automation.test.mjs](../test/automation.test.mjs), [test/default-agent.test.mjs](../test/default-agent.test.mjs), [test/dev-servers.test.mjs](../test/dev-servers.test.mjs), [test/launch-ports.test.mjs](../test/launch-ports.test.mjs), [test/launch-settings.test.mjs](../test/launch-settings.test.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs) |
 | [lib/pull-requests.mjs](../lib/pull-requests.mjs) | Source / configuration | [lib/diagnostics.mjs](../lib/diagnostics.mjs), [lib/forge-repositories.mjs](../lib/forge-repositories.mjs), [lib/infrastructure/task-files.mjs](../lib/infrastructure/task-files.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [server.mjs](../server.mjs), [test/azure-cli.test.mjs](../test/azure-cli.test.mjs), [test/file-read-races.test.mjs](../test/file-read-races.test.mjs), [test/pull-requests.test.mjs](../test/pull-requests.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [lib/reviews.mjs](../lib/reviews.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/automation.test.mjs](../test/automation.test.mjs), [test/reviews.test.mjs](../test/reviews.test.mjs) |
-| [lib/store.mjs](../lib/store.mjs) | Source / configuration | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [server.mjs](../server.mjs), [test/agent-time-restart.test.mjs](../test/agent-time-restart.test.mjs), [test/automation-backups.test.mjs](../test/automation-backups.test.mjs), [test/card-publication-races.test.mjs](../test/card-publication-races.test.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/jira-sync-races.test.mjs](../test/jira-sync-races.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/time-tracking.test.mjs](../test/time-tracking.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
+| [lib/store.mjs](../lib/store.mjs) | Source / configuration | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [server.mjs](../server.mjs), [test/agent-time-restart.test.mjs](../test/agent-time-restart.test.mjs), [test/automation-backups.test.mjs](../test/automation-backups.test.mjs), [test/card-publication-races.test.mjs](../test/card-publication-races.test.mjs), [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/jira-sync-races.test.mjs](../test/jira-sync-races.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/time-tracking.test.mjs](../test/time-tracking.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [lib/task-queue.mjs](../lib/task-queue.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [lib/tempo-export.mjs](../lib/tempo-export.mjs) | Source / configuration | [lib/time-tracking.mjs](../lib/time-tracking.mjs) |
 | [lib/tempo.mjs](../lib/tempo.mjs) | Source / configuration | [lib/time-tracking.mjs](../lib/time-tracking.mjs), [server.mjs](../server.mjs) |
@@ -249,7 +250,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/dev-servers.test.mjs](../test/dev-servers.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/file-read-races.test.mjs](../test/file-read-races.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/migration-agent.mjs](../test/fixtures/migration-agent.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [test/fixtures/migration-data.mjs](../test/fixtures/migration-data.mjs) | Test / support | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
+| [test/fixtures/migration-data.mjs](../test/fixtures/migration-data.mjs) | Test / support | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
+| [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/helpers/french-locale.mjs](../test/helpers/french-locale.mjs) | Test / support | [test/agent-interactions-ui.test.mjs](../test/agent-interactions-ui.test.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs), [test/agent-options.test.mjs](../test/agent-options.test.mjs), [test/agent-time.test.mjs](../test/agent-time.test.mjs), [test/agent-usage.test.mjs](../test/agent-usage.test.mjs), [test/automation-ui.test.mjs](../test/automation-ui.test.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/card-live-state.test.mjs](../test/card-live-state.test.mjs), [test/card-project.test.mjs](../test/card-project.test.mjs), [test/confirm-dialog.test.mjs](../test/confirm-dialog.test.mjs), [test/connector-availability.test.mjs](../test/connector-availability.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs), [test/projects-view.test.mjs](../test/projects-view.test.mjs), [test/settings-connectors-ui.test.mjs](../test/settings-connectors-ui.test.mjs), [test/task-workspace.test.mjs](../test/task-workspace.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/time-save-view.test.mjs](../test/time-save-view.test.mjs), [test/ui-composition.test.mjs](../test/ui-composition.test.mjs), [test/updates-ui.test.mjs](../test/updates-ui.test.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs), [test/worktree-removal-ui.test.mjs](../test/worktree-removal-ui.test.mjs) |
 | [test/helpers/view-context.mjs](../test/helpers/view-context.mjs) | Test / support | [test/agent-time.test.mjs](../test/agent-time.test.mjs), [test/automation-ui.test.mjs](../test/automation-ui.test.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/ui-composition.test.mjs](../test/ui-composition.test.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs) |
@@ -310,6 +312,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/bin/native-fixture.rs](../xtask/src/bin/native-fixture.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/main.rs](../xtask/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/storage.rs](../xtask/src/storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/tray.rs](../xtask/tests/support/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/windows.rs](../xtask/tests/support/windows.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -619,14 +622,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:14](../crates/atelier-app/Cargo.toml#L14) | <code>serde.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:15](../crates/atelier-app/Cargo.toml#L15) | <code>serde_json.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:16](../crates/atelier-app/Cargo.toml#L16) | <code>tokio.workspace = true</code> |
-| [crates/atelier-app/Cargo.toml:18](../crates/atelier-app/Cargo.toml#L18) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
-| [crates/atelier-app/Cargo.toml:23](../crates/atelier-app/Cargo.toml#L23) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
-| [crates/atelier-app/Cargo.toml:24](../crates/atelier-app/Cargo.toml#L24) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
-| [crates/atelier-app/Cargo.toml:25](../crates/atelier-app/Cargo.toml#L25) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
-| [crates/atelier-app/Cargo.toml:27](../crates/atelier-app/Cargo.toml#L27) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory"] }</code> |
-| [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>[dev-dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>tempfile.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:17](../crates/atelier-app/Cargo.toml#L17) | <code>tempfile.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:19](../crates/atelier-app/Cargo.toml#L19) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
+| [crates/atelier-app/Cargo.toml:24](../crates/atelier-app/Cargo.toml#L24) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
+| [crates/atelier-app/Cargo.toml:25](../crates/atelier-app/Cargo.toml#L25) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
+| [crates/atelier-app/Cargo.toml:26](../crates/atelier-app/Cargo.toml#L26) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
+| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:29](../crates/atelier-app/Cargo.toml#L29) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory"] }</code> |
+| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>[dev-dependencies]</code> |
 | [crates/atelier-app/Cargo.toml:32](../crates/atelier-app/Cargo.toml#L32) | <code>reqwest.workspace = true</code> |
 | [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{application::create_card, contracts::Board};</code> |
@@ -638,20 +641,22 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http.rs:19](../crates/atelier-app/src/http.rs#L19) | <code>use tower_http::services::ServeFile;</code> |
 | [crates/atelier-app/src/http.rs:21](../crates/atelier-app/src/http.rs#L21) | <code>pub const CSP: &amp;str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";</code> |
 | [crates/atelier-app/src/http.rs:185](../crates/atelier-app/src/http.rs#L185) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:1](../crates/atelier-app/src/infrastructure/database.rs#L1) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:2](../crates/atelier-app/src/infrastructure/database.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:3](../crates/atelier-app/src/infrastructure/database.rs#L3) | <code>use rusqlite::{Connection, params};</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:4](../crates/atelier-app/src/infrastructure/database.rs#L4) | <code>use std::path::Path;</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:5](../crates/atelier-app/src/infrastructure/database.rs#L5) | <code>use tokio::sync::{mpsc, oneshot};</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:13](../crates/atelier-app/src/infrastructure/database.rs#L13) | <code>pub struct Database {</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:19](../crates/atelier-app/src/infrastructure/database.rs#L19) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:45](../crates/atelier-app/src/infrastructure/database.rs#L45) | <code>pub async fn call&lt;T: Send + 'static&gt;(</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:59](../crates/atelier-app/src/infrastructure/database.rs#L59) | <code>pub async fn cards(&amp;self) -&gt; Result&lt;Vec&lt;Card&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:68](../crates/atelier-app/src/infrastructure/database.rs#L68) | <code>pub async fn put_card(&amp;self, card: Card) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:75](../crates/atelier-app/src/infrastructure/database.rs#L75) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:1](../crates/atelier-app/src/infrastructure/database.rs#L1) | <code>use super::store::{self, Documents, Store};</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:2](../crates/atelier-app/src/infrastructure/database.rs#L2) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:3](../crates/atelier-app/src/infrastructure/database.rs#L3) | <code>use atelier_core::contracts::Card;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:4](../crates/atelier-app/src/infrastructure/database.rs#L4) | <code>use rusqlite::Connection;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:5](../crates/atelier-app/src/infrastructure/database.rs#L5) | <code>use std::path::Path;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:6](../crates/atelier-app/src/infrastructure/database.rs#L6) | <code>use tokio::sync::{mpsc, oneshot};</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:14](../crates/atelier-app/src/infrastructure/database.rs#L14) | <code>pub struct Database {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:20](../crates/atelier-app/src/infrastructure/database.rs#L20) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:64](../crates/atelier-app/src/infrastructure/database.rs#L64) | <code>pub async fn call&lt;T: Send + 'static&gt;(</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:80](../crates/atelier-app/src/infrastructure/database.rs#L80) | <code>pub async fn cards(&amp;self) -&gt; Result&lt;Vec&lt;Card&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:91](../crates/atelier-app/src/infrastructure/database.rs#L91) | <code>pub async fn put_card(&amp;self, card: Card) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:99](../crates/atelier-app/src/infrastructure/database.rs#L99) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:1](../crates/atelier-app/src/infrastructure/mod.rs#L1) | <code>pub mod database;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:2](../crates/atelier-app/src/infrastructure/mod.rs#L2) | <code>pub mod prototype;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:3](../crates/atelier-app/src/infrastructure/mod.rs#L3) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:4](../crates/atelier-app/src/infrastructure/mod.rs#L4) | <code>pub mod store;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:2](../crates/atelier-app/src/infrastructure/prototype.rs#L2) | <code>use std::{</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:7](../crates/atelier-app/src/infrastructure/prototype.rs#L7) | <code>pub struct PrototypeDirectory {</code> |
@@ -672,6 +677,32 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/session.rs:105](../crates/atelier-app/src/infrastructure/session.rs#L105) | <code>pub fn write(directory: &amp;Path, token: &amp;str) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:115](../crates/atelier-app/src/infrastructure/session.rs#L115) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:132](../crates/atelier-app/src/infrastructure/session.rs#L132) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:1](../crates/atelier-app/src/infrastructure/store.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:2](../crates/atelier-app/src/infrastructure/store.rs#L2) | <code>use rusqlite::{Connection, OptionalExtension, params};</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:3](../crates/atelier-app/src/infrastructure/store.rs#L3) | <code>use serde::{Deserialize, Serialize};</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:4](../crates/atelier-app/src/infrastructure/store.rs#L4) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:5](../crates/atelier-app/src/infrastructure/store.rs#L5) | <code>use std::{path::Path, time::Duration};</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:17](../crates/atelier-app/src/infrastructure/store.rs#L17) | <code>pub enum Documents {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:36](../crates/atelier-app/src/infrastructure/store.rs#L36) | <code>pub struct Log {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:37](../crates/atelier-app/src/infrastructure/store.rs#L37) | <code>pub seq: i64,</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:38](../crates/atelier-app/src/infrastructure/store.rs#L38) | <code>pub stream: String,</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:39](../crates/atelier-app/src/infrastructure/store.rs#L39) | <code>pub text: String,</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:42](../crates/atelier-app/src/infrastructure/store.rs#L42) | <code>pub struct Store&lt;'a&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:57](../crates/atelier-app/src/infrastructure/store.rs#L57) | <code>pub fn documents(&amp;self, table: Documents) -&gt; Result&lt;Vec&lt;Value&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:66](../crates/atelier-app/src/infrastructure/store.rs#L66) | <code>pub fn document(&amp;self, table: Documents, id: &amp;str) -&gt; Result&lt;Option&lt;Value&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:79](../crates/atelier-app/src/infrastructure/store.rs#L79) | <code>pub fn put(&amp;self, table: Documents, document: &amp;Value) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:88](../crates/atelier-app/src/infrastructure/store.rs#L88) | <code>pub fn delete(&amp;self, table: Documents, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:94](../crates/atelier-app/src/infrastructure/store.rs#L94) | <code>pub fn settings(&amp;self) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:105](../crates/atelier-app/src/infrastructure/store.rs#L105) | <code>pub fn save_settings(&amp;self, settings: &amp;Value) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:113](../crates/atelier-app/src/infrastructure/store.rs#L113) | <code>pub fn log(&amp;self, id: &amp;str, stream: &amp;str, text: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:123](../crates/atelier-app/src/infrastructure/store.rs#L123) | <code>pub fn logs(&amp;self, id: &amp;str, after: i64) -&gt; Result&lt;Vec&lt;Log&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:138](../crates/atelier-app/src/infrastructure/store.rs#L138) | <code>pub fn transaction&lt;T&gt;(&amp;self, change: impl FnOnce(&amp;Self) -&gt; Result&lt;T&gt;) -&gt; Result&lt;T&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:145](../crates/atelier-app/src/infrastructure/store.rs#L145) | <code>pub fn backup(&amp;self, destination: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:163](../crates/atelier-app/src/infrastructure/store.rs#L163) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:164](../crates/atelier-app/src/infrastructure/store.rs#L164) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:166](../crates/atelier-app/src/infrastructure/store.rs#L166) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:223](../crates/atelier-app/src/infrastructure/store.rs#L223) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:257](../crates/atelier-app/src/infrastructure/store.rs#L257) | <code>#[test]</code> |
 | [crates/atelier-app/src/lib.rs:1](../crates/atelier-app/src/lib.rs#L1) | <code>pub mod http;</code> |
 | [crates/atelier-app/src/lib.rs:2](../crates/atelier-app/src/lib.rs#L2) | <code>pub mod infrastructure;</code> |
 | [crates/atelier-app/src/lib.rs:4](../crates/atelier-app/src/lib.rs#L4) | <code>pub type Error = Box&lt;dyn std::error::Error + Send + Sync&gt;;</code> |
@@ -685,10 +716,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/prototype.rs:59](../crates/atelier-app/tests/prototype.rs#L59) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/prototype.rs:219](../crates/atelier-app/tests/prototype.rs#L219) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/prototype.rs:238](../crates/atelier-app/tests/prototype.rs#L238) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:254](../crates/atelier-app/tests/prototype.rs#L254) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:278](../crates/atelier-app/tests/prototype.rs#L278) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:280](../crates/atelier-app/tests/prototype.rs#L280) | <code>use std::os::windows::process::CommandExt;</code> |
-| [crates/atelier-app/tests/prototype.rs:281](../crates/atelier-app/tests/prototype.rs#L281) | <code>use std::{</code> |
+| [crates/atelier-app/tests/prototype.rs:254](../crates/atelier-app/tests/prototype.rs#L254) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:281](../crates/atelier-app/tests/prototype.rs#L281) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:305](../crates/atelier-app/tests/prototype.rs#L305) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:307](../crates/atelier-app/tests/prototype.rs#L307) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/tests/prototype.rs:308](../crates/atelier-app/tests/prototype.rs#L308) | <code>use std::{</code> |
 | [crates/atelier-core/Cargo.toml:3](../crates/atelier-core/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:4](../crates/atelier-core/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:5](../crates/atelier-core/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -751,12 +783,18 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/bin/native-fixture.rs:61](../xtask/src/bin/native-fixture.rs#L61) | <code>use std::fs;</code> |
 | [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
 | [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
-| [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod ui;</code> |
-| [xtask/src/main.rs:21](../xtask/src/main.rs#L21) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:94](../xtask/src/main.rs#L94) | <code>mod tests {</code> |
-| [xtask/src/main.rs:95](../xtask/src/main.rs#L95) | <code>use super::*;</code> |
-| [xtask/src/main.rs:96](../xtask/src/main.rs#L96) | <code>#[test]</code> |
-| [xtask/src/main.rs:133](../xtask/src/main.rs#L133) | <code>#[test]</code> |
+| [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod storage;</code> |
+| [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod ui;</code> |
+| [xtask/src/main.rs:22](../xtask/src/main.rs#L22) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/main.rs:96](../xtask/src/main.rs#L96) | <code>mod tests {</code> |
+| [xtask/src/main.rs:97](../xtask/src/main.rs#L97) | <code>use super::*;</code> |
+| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>#[test]</code> |
+| [xtask/src/main.rs:135](../xtask/src/main.rs#L135) | <code>#[test]</code> |
+| [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
+| [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
+| [xtask/src/storage.rs:6](../xtask/src/storage.rs#L6) | <code>use serde_json::{Value, json};</code> |
+| [xtask/src/storage.rs:7](../xtask/src/storage.rs#L7) | <code>use std::path::Path;</code> |
+| [xtask/src/storage.rs:42](../xtask/src/storage.rs#L42) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
 | [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::session;</code> |
 | [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
@@ -1207,7 +1245,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:12](../crates/atelier-app/src/main.rs#L12) | <code>let value = args.next().ok_or("Valeur d’argument absente.")?;</code> |
-| [crates/atelier-app/tests/prototype.rs:297](../crates/atelier-app/tests/prototype.rs#L297) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
+| [crates/atelier-app/tests/prototype.rs:324](../crates/atelier-app/tests/prototype.rs#L324) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
 | [launcher.mjs:16](../launcher.mjs#L16) | <code>const port = Number(process.env.PORT \|\| 4317);</code> |
 | [launcher.mjs:36](../launcher.mjs#L36) | <code>if (process.argv.includes('--import-data')) {</code> |
 | [launcher.mjs:39](../launcher.mjs#L39) | <code>const source = process.argv[process.argv.indexOf('--import-data') + 1] \|\| await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');</code> |
@@ -1346,11 +1384,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
 | [xtask/src/bin/native-fixture.rs:21](../xtask/src/bin/native-fixture.rs#L21) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/bin/native-fixture.rs:22](../xtask/src/bin/native-fixture.rs#L22) | <code>match args</code> |
-| [xtask/src/main.rs:65](../xtask/src/main.rs#L65) | <code>run(command("trunk").args([</code> |
-| [xtask/src/main.rs:84](../xtask/src/main.rs#L84) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
-| [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:87](../xtask/src/main.rs#L87) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>.args([</code> |
+| [xtask/src/main.rs:66](../xtask/src/main.rs#L66) | <code>run(command("trunk").args([</code> |
+| [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/main.rs:86](../xtask/src/main.rs#L86) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
+| [xtask/src/main.rs:89](../xtask/src/main.rs#L89) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:101](../xtask/src/main.rs#L101) | <code>.args([</code> |
 | [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/ui.rs:127](../xtask/src/ui.rs#L127) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:163](../xtask/src/ui.rs#L163) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
@@ -2275,10 +2313,26 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:92](../.github/workflows/release.yml#L92) | <code>run: node --input-type=module -e "import {mkdirSync,writeFileSync} from 'node:fs'; const r=await fetch('https://raw.githubusercontent.com/nodejs/node/v'+process.versions.node+'/LICENSE'); if(!r.ok) throw Error('Licence Node indisponible'); mkdirSync('.updates',{recursive:true}); writeFileSync('.updates/Node-LICENSE', await r.text());"</code> |
 | [.github/workflows/release.yml:95](../.github/workflows/release.yml#L95) | <code>NODE_LICENSE: .updates/Node-LICENSE</code> |
 | [crates/atelier-app/src/http.rs:215](../crates/atelier-app/src/http.rs#L215) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite"))?;</code> |
-| [crates/atelier-app/src/infrastructure/database.rs:25](../crates/atelier-app/src/infrastructure/database.rs#L25) | <code>connection.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);")?;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:110](../crates/atelier-app/src/infrastructure/session.rs#L110) | <code>let temporary = directory.join(format!("local-session.{}", uuid::Uuid::new_v4()));</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:123](../crates/atelier-app/src/infrastructure/session.rs#L123) | <code>fs::rename(&amp;temporary, directory.join("local-session"))?;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:134](../crates/atelier-app/src/infrastructure/session.rs#L134) | <code>let stored = fs::read_to_string(directory.join("local-session"))?;</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:8](../crates/atelier-app/src/infrastructure/store.rs#L8) | <code>CREATE TABLE IF NOT EXISTS time_entries (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:9](../crates/atelier-app/src/infrastructure/store.rs#L9) | <code>CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:10](../crates/atelier-app/src/infrastructure/store.rs#L10) | <code>CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:11](../crates/atelier-app/src/infrastructure/store.rs#L11) | <code>CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:12](../crates/atelier-app/src/infrastructure/store.rs#L12) | <code>CREATE TABLE IF NOT EXISTS logs (seq INTEGER PRIMARY KEY AUTOINCREMENT, runId TEXT NOT NULL, stream TEXT NOT NULL, text TEXT NOT NULL);</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:14](../crates/atelier-app/src/infrastructure/store.rs#L14) | <code>CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), data TEXT NOT NULL);";</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:38](../crates/atelier-app/src/infrastructure/store.rs#L38) | <code>pub stream: String,</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:113](../crates/atelier-app/src/infrastructure/store.rs#L113) | <code>pub fn log(&amp;self, id: &amp;str, stream: &amp;str, text: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:117](../crates/atelier-app/src/infrastructure/store.rs#L117) | <code>"INSERT INTO logs(runId,stream,text) VALUES (?,?,?)",</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:118](../crates/atelier-app/src/infrastructure/store.rs#L118) | <code>params![id, stream, text],</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:125](../crates/atelier-app/src/infrastructure/store.rs#L125) | <code>"SELECT seq,stream,text FROM logs WHERE runId=? AND seq&gt;? ORDER BY seq LIMIT 500",</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:131](../crates/atelier-app/src/infrastructure/store.rs#L131) | <code>stream: row.get(1)?,</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:200](../crates/atelier-app/src/infrastructure/store.rs#L200) | <code>store.log("run", "stdout", &amp;i.to_string())?;</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:202](../crates/atelier-app/src/infrastructure/store.rs#L202) | <code>store.log("other", "stderr", "excluded")?;</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:206](../crates/atelier-app/src/infrastructure/store.rs#L206) | <code>let page = store.logs("run", 0).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:209](../crates/atelier-app/src/infrastructure/store.rs#L209) | <code>store.logs("run", page.last().unwrap().seq).unwrap().len(),</code> |
+| [crates/atelier-app/src/infrastructure/store.rs:264](../crates/atelier-app/src/infrastructure/store.rs#L264) | <code>let text = &amp;store.logs("run", 0).unwrap()[0].text;</code> |
 | [crates/atelier-app/tests/prototype.rs:68](../crates/atelier-app/tests/prototype.rs#L68) | <code>std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();</code> |
 | [crates/atelier-app/tests/prototype.rs:122](../crates/atelier-app/tests/prototype.rs#L122) | <code>"/local-session",</code> |
 | [crates/atelier-app/tests/prototype.rs:123](../crates/atelier-app/tests/prototype.rs#L123) | <code>"/data/local-session",</code> |
@@ -2366,5 +2420,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:385](../server.mjs#L385) | <code>return store.logs(logsMatch[1], after);</code> |
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
+| [xtask/src/storage.rs:13](../xtask/src/storage.rs#L13) | <code>let page = store.logs("run-0", cursor)?;</code> |
+| [xtask/src/storage.rs:74](../xtask/src/storage.rs#L74) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
 
-Total : 304 fichiers ; 93 fichiers de tests Node.
+Total : 307 fichiers ; 93 fichiers de tests Node.
