@@ -92,8 +92,7 @@ async fn stop_server(process: &mut Process, port: u16, token: &str) -> Result<()
 async fn wait_title(client: &Client, title: &str) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(15);
     while Instant::now() < deadline {
-        if let Ok(element) = client.find(Locator::Css(".card-title")).await
-            && element.text().await? == title
+        if client.execute("return Array.from(document.querySelectorAll('.card-title')).some(node => node.textContent === arguments[0]);", vec![json!(title)]).await? == json!(true)
         {
             return Ok(());
         }
@@ -218,6 +217,21 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-created.png"),
         client.screenshot().await?,
     )?;
+    let response = http
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .header("content-type", "application/json")
+        .body(r#"{"title":"\ud83d"}"#)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err("Création UTF-16 refusée.".into());
+    }
+    let atypical: atelier_core::document::Document = response.json().await?;
+    let atypical_id = atypical
+        .get::<String>("id")?
+        .ok_or("Identifiant UTF-16 absent.")?;
     stop_server(&mut server, port, &token).await?;
     let (mut restarted, next_token) = start_server(data.path(), port).await?;
     if session::same_secret(&token, &next_token) {
@@ -233,11 +247,17 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     {
         return Err("Ancienne session encore acceptée.".into());
     }
+    // A fragment-only navigation can retain the old DOM; require a new document after restart.
+    client.goto("about:blank").await?;
     client
         .goto(&format!("{address}/#session={next_token}"))
         .await
         .map_err(|_| "Navigation après redémarrage refusée.")?;
     wait_title(client, title).await?;
+    let units = client.execute("const card = Array.from(document.querySelectorAll('article.card')).find(node => node.dataset.id === arguments[0]); const title = card?.querySelector('.card-title').textContent; return title ? Array.from({length:title.length}, (_, i) => title.charCodeAt(i)) : [];", vec![json!(atypical_id)]).await?;
+    if units != json!([0xd83d]) {
+        return Err(format!("Le DOM a altéré le titre UTF-16 après redémarrage : {units}").into());
+    }
     if !client
         .find(Locator::Css("#error"))
         .await?

@@ -1,6 +1,6 @@
 # M01 — première tranche Rust exécutable
 
-Base : `ec6dbe4` (M00 commis), tranche verticale commise dans `c161512`, puis prototypes Windows. Incréments du 23 octobre 2026. **M01 en cours, pas de bascule de production.** Le workspace et le parcours vertical fonctionnent localement sur Windows x64 MSVC. La validation native complète reste ouverte.
+Base : `ec6dbe4` (M00 commis), tranche verticale commise dans `c161512`, puis preuves natives et navigateurs. **M01 implémenté à vérifier : faisabilité native acquise, vraie réouverture navigateur corrigée à requalifier en CI.** Aucune bascule de production.
 
 ## Périmètre livré
 
@@ -78,7 +78,13 @@ La suite Rust compte maintenant **12 tests réussis**, zéro ignoré, plus ce co
 
 Preuves suivantes : [CI `f9b1598`](https://github.com/FluryWaana/atelier/actions/runs/40034051039) entièrement réussie, cinq runners natifs, Chrome/Firefox Linux et Safari macOS. [CI `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672), cinq runners natifs réussis avec création/relecture/suppression d'un secret synthétique dans les trousseaux Linux et macOS, sur les deux architectures.
 
-Les cinq jobs natifs de [fec382f](https://github.com/FluryWaana/atelier/actions/runs/40038851567) réussissent, y compris les probes tray Linux/macOS sur les deux architectures. Avec les preuves antérieures Windows, coffres et quatre navigateurs, **M01 est validé pour la faisabilité**. Les refus natifs de coffres verrouillés/autres comptes restent nécessaires pour M02, et les comportements complets des trays pour M08. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
+Les cinq jobs natifs de [fec382f](https://github.com/FluryWaana/atelier/actions/runs/40038851567) réussissent, y compris les probes tray Linux/macOS sur les deux architectures. La faisabilité native est acquise. La clôture M01 annoncée à cet incrément est corrigée ci-dessous après découverte d'un faux positif du test de réouverture navigateur. Les refus natifs de coffres verrouillés/autres comptes restent nécessaires pour M02, et les comportements complets des trays pour M08. Aucune release publiée.
+
+### Réouverture réelle et titre UTF-16 — base `93f8276`
+
+Le changement du seul fragment `#session` pouvait laisser l'ancien document chargé après arrêt/redémarrage du serveur. Les tests antérieurs prouvaient la rotation côté API et la persistance SQLite, mais pas systématiquement le rechargement du DOM. Le scénario ajoute désormais une carte via API après le premier rendu, quitte la page vers `about:blank`, puis ouvre la nouvelle session et exige les deux cartes. Il compare aussi les unités UTF-16 d'un titre contenant un substitut isolé. Aucun ancien DOM ne peut satisfaire ces assertions.
+
+Edge réussit ce scénario corrigé ; capture finale relue. Chrome/Firefox/Safari doivent le rejouer en CI avant nouvelle clôture M01. L'affectation à `textContent` emploie [JsString::from_char_code](https://docs.rs/js-sys/0.3.106/js_sys/struct.JsString.html#method.from_char_code) et un NodeRef Leptos, sans conversion Rust `String` ni HTML interprété.
 
 ### Prototypes tray POSIX
 

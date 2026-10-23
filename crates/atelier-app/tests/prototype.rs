@@ -217,13 +217,61 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
 }
 
 #[tokio::test]
+async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
+    use atelier_core::{
+        contracts::Board,
+        document::{Document, JsonString},
+    };
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(
+        assets.path().join("index.html"),
+        "<!doctype html><title>Fixture</title>",
+    )
+    .unwrap();
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    let response = reqwest::Client::new()
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .header("content-type", "application/json")
+        .body(r#"{"title":"\ufeff\ud83d\u00a0"}"#)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let mut card: Card = response.json().await.unwrap();
+    assert_eq!(card.title, JsonString(vec![0xd83d]));
+    stop(&address, &token, server).await;
+    card.fields =
+        serde_json::from_str::<Document>(r#"{"\ud800":{"unknown":"\udc00"},"nullable":null}"#)
+            .unwrap();
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    database.put_card(card).await.unwrap();
+    database.close().await.unwrap();
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    let response = reqwest::Client::new()
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let raw = response.text().await.unwrap();
+    assert!(raw.contains(r#""\ud800":{"unknown":"\udc00"}"#));
+    let board: Board = serde_json::from_str(&raw).unwrap();
+    assert_eq!(board.cards[0].title, JsonString(vec![0xd83d]));
+    stop(&address, &token, server).await;
+}
+
+#[tokio::test]
 async fn database_preserves_unknown_fields_null_and_row_order() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("test.sqlite");
     let database = Database::open(&path).unwrap();
     let first: Card =
-        serde_json::from_value(json!({"id":"1", "title":"é", "extra":{"nullable":null}})).unwrap();
-    let second: Card = serde_json::from_value(json!({"id":"2", "title":"two"})).unwrap();
+        serde_json::from_str(r#"{"id":"1", "title":"é", "extra":{"nullable":null}}"#).unwrap();
+    let second: Card = serde_json::from_str(r#"{"id":"2", "title":"two"}"#).unwrap();
     database.put_card(first.clone()).await.unwrap();
     database.put_card(second.clone()).await.unwrap();
     let mut updated = first;
@@ -231,7 +279,10 @@ async fn database_preserves_unknown_fields_null_and_row_order() {
     database.put_card(updated.clone()).await.unwrap();
     database.close().await.unwrap();
     let reopened = Database::open(&path).unwrap();
-    assert_eq!(reopened.cards().await.unwrap(), vec![second, updated]);
+    assert_eq!(
+        serde_json::to_value(reopened.cards().await.unwrap()).unwrap(),
+        serde_json::to_value(vec![second, updated]).unwrap()
+    );
     reopened.close().await.unwrap();
 }
 

@@ -11,5 +11,6 @@ serde_json.workspace = true
 leptos = { version = "=0.8.22", features = ["csr"] }
 gloo-net = "=0.7.0"
 wasm-bindgen = "=0.2.129"
+js-sys = "=0.3.106"
 wasm-bindgen-futures = "=0.4.79"
 web-sys = { version = "=0.3.106", features = ["Window", "Location", "Storage", "History", "UrlSearchParams"] }

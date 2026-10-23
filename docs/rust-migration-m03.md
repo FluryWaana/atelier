@@ -1,6 +1,6 @@
 # M03 — Règles et API métier
 
-État : en cours, règles pures préparatoires ; API et cas d'usage complets à porter. M01 est désormais validé pour la faisabilité ; M02 reste en cours.
+État : en cours, règles pures préparatoires ; API et cas d'usage complets à porter. Les preuves natives M01 sont acquises, la réouverture navigateur corrigée doit être requalifiée ; M02 reste en cours.
 
 ## Règles de tâches et profils — base `fec382f`
 

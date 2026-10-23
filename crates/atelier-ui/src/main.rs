@@ -3,6 +3,19 @@ use gloo_net::http::Request;
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+#[component]
+fn CardTitle(title: atelier_core::document::JsonString) -> impl IntoView {
+    let heading = NodeRef::<leptos::html::H2>::new();
+    heading.on_load(move |node| {
+        // Keep UTF-16 intact at the DOM boundary; Rust String would replace isolated surrogates.
+        let text = js_sys::JsString::from_char_code(&title.0);
+        if !js_sys::Reflect::set(node.as_ref(), &"textContent".into(), &text).unwrap_or(false) {
+            node.set_text_content(Some("Titre illisible."));
+        }
+    });
+    view! { <h2 class="card-title" node_ref=heading></h2> }
+}
+
 fn session() -> Result<String, String> {
     let window = web_sys::window().ok_or("Navigateur indisponible.")?;
     let location = window.location();
@@ -120,7 +133,7 @@ fn App() -> impl IntoView {
             </form>
             <p role="alert" id="error">{move || error.get()}</p>
             <section aria-label="Tâches" id="prototype-board">
-                <For each=move || cards.get() key=|card| card.id.clone() children=|card| view! { <article class="card" data-id=card.id><h2 class="card-title">{card.title}</h2></article> } />
+                <For each=move || cards.get() key=|card| card.id.clone() children=|card| view! { <article class="card" data-id=card.id><CardTitle title=card.title /></article> } />
             </section>
         </main>
     }

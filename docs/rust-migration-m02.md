@@ -1,6 +1,6 @@
 # M02 — données et protections locales
 
-Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est désormais validé pour la faisabilité. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
+Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; les preuves natives M01 sont acquises, la réouverture navigateur corrigée doit encore être requalifiée. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
 
 ## Stockage porté
 
@@ -10,7 +10,7 @@ Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est d�
 
 40 tests Rust réussis, formatage et Clippy natif/WASM propres. Les tests couvrent toutes les 65 536 unités UTF-16, les échappements, clés/valeurs imbriquées, champs null, SQLite et restauration. `cargo xtask test-storage-parity` exécute maintenant la vraie duplication Node qui coupe l'emoji, réécrit les quatre tables et les réglages en Rust, crée aussi des substituts depuis Rust, puis fait comparer documents, restauration et secours par Node. La comparaison historique complète antérieure passe aussi. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,32 s.
 
-Limite restante : les contrats `Card` du prototype HTTP/UI et plusieurs règles métier utilisent encore `String`/`Value`. Leur adaptation est la prochaine étape ; ce stockage sans perte ne suffit pas à déclarer la chaîne entière compatible. Les preuves natives de chemins/coffres restent ouvertes.
+Incrément suivant, base `93f8276` : les contrats `Card`, le lecteur HTTP et la validation du titre utilisent maintenant `Document`/`JsonString`. SQLite → API → WASM → DOM conserve le titre et les clés inconnues ; 41 tests Rust passent et Edge vérifie les unités après vraie réouverture. Plusieurs règles métier préparatoires restent fondées sur `String`/`Value` et doivent être adaptées lors de leur intégration aux cas d'usage. Les preuves natives de chemins/coffres restent ouvertes.
 
 **Écart de compatibilité identifié après `05dbfc8` :** un titre constitué de 291 `a` puis un emoji peut produire un substitut UTF-16 isolé lorsque Node duplique la carte et limite `Copie — …` à 300 unités. `JSON.stringify` conserve ce substitut sous la forme `\ud83d`, alors que `serde_json::Value` refuse sa lecture. Le probe local reproduit les deux comportements sur une chaîne synthétique ; aucune donnée utilisateur ouverte. Les aller-retour précédents ne couvrent pas ce cas. M02 reste non qualifié tant que les chaînes et clés JSON correspondantes ne sont pas conservées et comparées à Node. La [documentation du désérialiseur](https://docs.rs/serde_json/latest/serde_json/de/struct.Deserializer.html) distingue les chaînes UTF-8 des chaînes d'octets WTF-8 ; [RawValue](https://docs.rs/serde_json/latest/serde_json/value/struct.RawValue.html) permet la conservation de JSON brut. Évaluer ces mécanismes existants avant d'introduire un parseur ou une conversion avec perte.
 

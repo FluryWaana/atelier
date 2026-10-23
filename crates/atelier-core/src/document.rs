@@ -104,6 +104,9 @@ impl<'de> Deserialize<'de> for JsonString {
 pub struct Document(Vec<(JsonString, Box<RawValue>)>);
 
 impl Document {
+    pub fn keys(&self) -> impl Iterator<Item = &JsonString> {
+        self.0.iter().map(|(key, _)| key)
+    }
     pub fn raw(&self, key: &str) -> Option<&RawValue> {
         let key = JsonString::from(key);
         self.0

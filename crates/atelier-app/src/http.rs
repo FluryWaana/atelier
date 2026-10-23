@@ -2,7 +2,7 @@ use crate::{
     Result,
     infrastructure::{database::Database, prototype::PrototypeDirectory, session},
 };
-use atelier_core::{application::create_card, contracts::Board};
+use atelier_core::{application::create_card, contracts::Board, document::Document};
 use axum::{
     Json, Router,
     body::{Body, to_bytes},
@@ -13,7 +13,7 @@ use axum::{
     routing::{get, get_service, post},
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::json;
 use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
 use tower_http::services::ServeFile;
@@ -132,7 +132,7 @@ async fn board(State(state): State<Shared>) -> Response {
     }
 }
 
-async fn object(body: Body) -> std::result::Result<Value, (StatusCode, &'static str)> {
+async fn object(body: Body) -> std::result::Result<Document, (StatusCode, &'static str)> {
     // Node counts UTF-16 code units; the byte ceiling bounds allocation before the exact check.
     let bytes = to_bytes(body, 400_000)
         .await
@@ -142,12 +142,13 @@ async fn object(body: Body) -> std::result::Result<Value, (StatusCode, &'static 
     if raw.encode_utf16().count() > 100_000 {
         return Err((StatusCode::PAYLOAD_TOO_LARGE, "Requête trop volumineuse."));
     }
-    let value: Value = serde_json::from_str(if raw.is_empty() { "{}" } else { raw })
-        .map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))?;
-    if !value.is_object() {
+    let value: &serde_json::value::RawValue =
+        serde_json::from_str(if raw.is_empty() { "{}" } else { raw })
+            .map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))?;
+    if !value.get().starts_with('{') {
         return Err((StatusCode::BAD_REQUEST, "Objet JSON requis."));
     }
-    Ok(value)
+    serde_json::from_str(value.get()).map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))
 }
 
 async fn create(State(state): State<Shared>, request: Request) -> Response {

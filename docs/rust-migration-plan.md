@@ -2,7 +2,7 @@
 
 Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applicative `0.1.9`.
 
-Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 validé pour la faisabilité ; M02 en cours pour les données et protections ; M03 en cours pour les règles pures, API encore à porter**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
+Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 faisabilité native acquise, réouverture navigateur corrigée à requalifier en CI ; M02 en cours pour les données et protections ; M03 en cours pour les règles pures, API encore à porter**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
 ## 1. Résultat attendu et périmètre
 
@@ -158,7 +158,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — cinq cibles, quatre navigateurs, coffres et trays natifs ; limites produit documentées |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | Implémenté à vérifier — preuves natives acquises ; vraie réouverture corrigée, Edge réussi, autres navigateurs à requalifier |
 | M02 | M01 | Données, secrets et session compatibles | En cours — aller-retour synthétique ; chaînes UTF-16 isolées, courses de chemins et refus natifs des coffres encore ouverts |
 | M03 | M02 | Domaine et API métier équivalents | En cours — règles pures préparatoires ; API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
@@ -482,6 +482,14 @@ Prochaine action concrète :
 - **Vérification :** 40 tests Rust réussis ; Clippy natif/WASM propre ; comparaison historique stockage/coffre/import/verrou/UTF-16 réussie. Suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,32 s.
 - **CI :** `fec382f` entièrement réussi. `05dbfc8` échoue uniquement au comparateur historique Windows : Git transforme le JSON de fixture en CRLF, alors que le contrôle comparait les octets du fichier. Correction : comparaison des valeurs JSON complètes, sans suppression de champs ni normalisation du contenu. Reproduction CRLF locale réussie ; revalidation CI attendue.
 - **Suite :** adapter les contrats HTTP/UI et règles encore fondés sur `String`/`Value` ; poursuivre les protections natives M02 et les cas d'usage M03. Aucun accès aux données utilisateur.
+
+### 24 octobre 2026 / base `93f8276` / M02, UTF-16 dans HTTP et WASM ; correction de preuve M01
+
+- **Comportement livré :** contrats de carte, lecture SQLite et API de création/lecture conservent les unités UTF-16 et champs inconnus sans passer par `Value`. Le titre est affecté au `textContent` du DOM avec les bindings JS standards ; aucun HTML injecté, aucun JavaScript applicatif manuel. `js-sys` 0.3.106, déjà verrouillé, devient dépendance directe UI.
+- **Vérification :** 41 tests Rust réussis ; Clippy natif/WASM propre. Nouveau test HTTP de titre isolé et clés JSON atypiques après redémarrage. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,68 s ; contrôle d'inventaire final réussi. Parcours Edge réel et capture relue : unités du titre dans le DOM vérifiées numériquement après réouverture.
+- **Correction de preuve :** le précédent scénario changeait seulement le fragment de session et pouvait conserver l'ancien DOM après redémarrage. L'ajout d'une seconde carte par API a révélé ce faux positif. Le scénario quitte maintenant la page vers `about:blank`, puis ouvre la nouvelle session ; les deux cartes doivent apparaître. M01 repasse à « implémenté à vérifier » en attendant Chrome/Firefox/Safari avec ce scénario corrigé. Les preuves serveur/natives antérieures restent valables.
+- **CI précédente :** le contrôle Windows de `93f8276` passe, correction CRLF et comparaison UTF-16 comprises ; les jobs natifs Linux et macOS ARM64 passent également. Le résultat macOS Intel était encore attendu à ce relevé.
+- **Suite :** recueillir les parcours corrigés sur les autres navigateurs ; poursuivre les cas d'usage métier avec la représentation sans perte et les preuves natives M02 restantes.
 
 ## 12. Définition finale de terminé
 

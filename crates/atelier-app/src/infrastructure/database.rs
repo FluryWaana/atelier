@@ -78,19 +78,12 @@ impl Database {
     }
 
     pub async fn cards(&self) -> Result<Vec<Card>> {
-        self.call(|store| {
-            store
-                .documents::<serde_json::Value>(Documents::Cards)?
-                .into_iter()
-                .map(|card| Ok(serde_json::from_value(card)?))
-                .collect()
-        })
-        .await
+        self.call(|store| store.documents(Documents::Cards)).await
     }
 
     pub async fn put_card(&self, card: Card) -> Result<Card> {
         self.call(move |store| {
-            store.put(Documents::Cards, &serde_json::to_value(&card)?)?;
+            store.put(Documents::Cards, &card)?;
             Ok(card)
         })
         .await
