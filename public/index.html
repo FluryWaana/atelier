@@ -36,42 +36,53 @@
     </section><div class="form-actions"><button class="primary" type="submit">Enregistrer les paramètres généraux</button></div></form></section><div id="connector-settings"></div></div></section>
 <section id="workspace-panel" class="workspace-panel" hidden></section>
     <section id="brainstorm-page" hidden aria-label="Atelier de brainstorming">
-      <div class="brainstorm-toolbar" id="brainstorm-toolbar"><label>Vos discussions<select id="brainstorm-session"><option value="">Nouvelle discussion</option></select></label><button type="button" id="brainstorm-new">+ Nouvelle discussion</button></div>
-      <div class="brainstorm-layout">
+      <ol class="brainstorm-steps" aria-label="Les étapes du brainstorming">
+        <li id="brainstorm-step-idea" aria-current="step"><span aria-hidden="true">1</span>Poser l’idée</li>
+        <li id="brainstorm-step-chat"><span aria-hidden="true">2</span>Explorer ensemble</li>
+        <li id="brainstorm-step-tasks"><span aria-hidden="true">3</span>Choisir les tâches</li>
+      </ol>
+      <div class="brainstorm-toolbar" id="brainstorm-toolbar"><label>Vos discussions<select id="brainstorm-session"><option value="">Nouvelle discussion</option></select></label><button type="button" id="brainstorm-toggle-tasks" aria-controls="brainstorm-results" hidden>Voir les tâches</button><button type="button" id="brainstorm-new">+ Nouvelle discussion</button></div>
+      <div class="brainstorm-layout" id="brainstorm-layout" data-panel="chat">
         <section class="brainstorm-editor">
           <div class="eyebrow" id="brainstorm-editor-kicker">UNE IDÉE SUFFIT POUR COMMENCER</div>
           <h2 id="brainstorm-editor-title">Qu’aimeriez-vous améliorer ?</h2>
-          <p class="hint" id="brainstorm-editor-intro">Décrivez ce que vous avez en tête. L’agent vous aidera à préciser la suite.</p>
-          <details id="brainstorm-context" open><summary>Modifier l’idée ou les préférences</summary>
+          <p class="hint" id="brainstorm-editor-intro">Décrivez votre idée, échangez avec l’agent, puis transformez les pistes retenues en tâches.</p>
+          <p class="hint" id="brainstorm-session-summary" hidden></p>
+          <details id="brainstorm-context" open><summary>Voir l’idée et les réglages de départ</summary>
+            <div id="brainstorm-session-context" hidden></div>
             <form id="brainstorm-form">
-              <label class="brainstorm-idea-label">Votre idée<textarea name="description" rows="4" maxlength="20000" placeholder="J’aimerais simplifier l’inscription de mes clients, mais je ne sais pas par où commencer…"></textarea></label>
-              <details class="brainstorm-settings"><summary>Choisir un projet ou un agent</summary>
-                <label>Nom de la discussion (facultatif)<input name="title" maxlength="300" placeholder="Déduit de votre idée si vous le laissez vide"></label>
+              <label class="brainstorm-idea-label">Votre idée<textarea name="description" rows="3" maxlength="20000" placeholder="J’aimerais simplifier l’inscription de mes clients, mais je ne sais pas par où commencer…"></textarea></label>
+              <div class="form-row">
                 <label>Projet à explorer (facultatif)<select name="repo"><option value="">Sans dépôt · brainstorming général</option></select></label>
                 <label>Agent<select name="agent"></select></label>
+              </div>
+              <details class="brainstorm-settings"><summary>Personnaliser le modèle et le contexte<span class="hint">Facultatif</span></summary>
                 <div data-agent-fields></div>
+                <label>Nom de la discussion (facultatif)<input name="title" maxlength="300" placeholder="Déduit de votre idée si vous le laissez vide"></label>
                 <label>Contraintes à respecter (facultatif)<textarea name="instructions" rows="2" maxlength="20000" placeholder="Budget, délais, points à préserver…"></textarea></label>
-                <button type="button" id="brainstorm-create-local" class="text-button">Créer une tâche sans discuter</button>
               </details>
-              <div class="brainstorm-start-actions"><span class="hint">Lecture seule · Utilise les quotas de votre agent.</span><button class="primary" id="brainstorm-start">Discuter de cette idée</button></div>
+              <p class="hint brainstorm-setup-note">Le projet et les réglages sont fixés au démarrage.</p>
+              <div class="brainstorm-start-actions"><span class="hint">Aucun fichier modifié.<br>Utilise les quotas de votre agent.</span><button class="primary" id="brainstorm-start">Démarrer la discussion</button></div>
+              <div class="brainstorm-direct"><button type="button" id="brainstorm-create-local" class="text-button">Créer une tâche sans discuter</button></div>
             </form>
           </details>
           <div class="brainstorm-run-status"><p id="brainstorm-page-status" class="hint" role="status"></p><button type="button" id="brainstorm-page-stop" hidden>Arrêter</button><button type="button" id="brainstorm-retry" hidden>Réessayer</button></div>
           <section id="brainstorm-chat" hidden aria-label="Discussion avec l’agent">
-            <div id="brainstorm-chat-history" class="brainstorm-chat-history" role="log" aria-label="Historique de la discussion" aria-live="polite"></div>
+            <div id="brainstorm-chat-history" class="brainstorm-chat-history" role="log" tabindex="0" aria-label="Historique de la discussion" aria-live="polite"></div>
             <form id="brainstorm-reply-form" aria-label="Envoyer un message">
               <div class="brainstorm-composer">
-                <textarea id="brainstorm-reply" required maxlength="20000" rows="2" aria-label="Message à l’agent" aria-describedby="brainstorm-composer-hint" placeholder="Répondez, posez une question ou proposez une autre piste…"></textarea>
+                <textarea id="brainstorm-reply" required maxlength="20000" rows="1" aria-label="Message à l’agent" aria-describedby="brainstorm-composer-hint" placeholder="Votre réponse ou votre question…"></textarea>
                 <div class="brainstorm-composer-actions"><span id="brainstorm-composer-agent">Votre agent</span><button type="submit" id="brainstorm-send" class="primary">Envoyer</button></div>
               </div>
               <p class="hint brainstorm-composer-hint" id="brainstorm-composer-hint">Entrée pour envoyer · Maj+Entrée pour revenir à la ligne.</p>
             </form>
-            <div class="brainstorm-next-step"><button type="button" id="brainstorm-generate" aria-describedby="brainstorm-generate-hint" disabled>Préparer les tâches</button><span id="brainstorm-generate-hint" class="hint">Quand votre idée est assez claire.</span></div>
+            <div class="brainstorm-next-step"><div><strong>Prêt à passer à l’action ?</strong><p id="brainstorm-generate-hint" class="hint">Quand votre idée est assez claire.</p></div><button type="button" id="brainstorm-generate" aria-describedby="brainstorm-generate-hint" disabled>Préparer les tâches</button></div>
           </section>
         </section>
+        <div id="brainstorm-splitter" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="brainstorm-chat brainstorm-results" aria-label="Largeur de la discussion" aria-valuemin="30" aria-valuemax="75" aria-valuenow="70" title="Glissez pour redimensionner. Utilisez aussi les flèches gauche et droite." hidden><span aria-hidden="true">⋮</span></div>
         <section id="brainstorm-results" class="brainstorm-results" hidden tabindex="-1" aria-label="Tâches proposées">
-          <div class="eyebrow">À VOUS DE CHOISIR</div><h2>Tâches proposées</h2><p class="hint">Ajoutez uniquement celles que vous retenez.</p>
-          <div id="brainstorm-page-proposals" aria-live="polite"></div>
+          <h2>Tâches proposées</h2><p class="hint">Relisez, puis ajoutez les tâches utiles au tableau.</p>
+          <div id="brainstorm-page-proposals" tabindex="0" aria-label="Liste des tâches proposées" aria-live="polite"></div>
         </section>
       </div>
     </section>

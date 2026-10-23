@@ -7,8 +7,8 @@ import { notifyCompletions } from '../public/ui-actions.mjs';
 import { bindView } from './helpers/view-context.mjs';
 import { sameRepository } from '../lib/domain/paths.mjs';
 
-function page() {
-  const fields = ['title', 'description', 'instructions', 'repo', 'agent', 'model', 'effort'].map(name => ({ name, value: '', disabled: false, dataset: {} }));
+function page({ state, storage = new Map() } = {}) {
+  const fields = ['title', 'description', 'instructions', 'repo', 'agent', 'model', 'effort'].map(name => ({ name, value: '', disabled: false, dataset: {}, focus() { this.focused = true; } }));
   fields.forEach(field => { fields[field.name] = field; }); fields.agent.value = 'codex';
   fields.repo.options = [{ value: '' }]; fields.repo.add = option => fields.repo.options.push(option);
   const form = { elements: fields, reportValidity: () => true, reset() { fields.forEach(field => field.value = ''); } };
@@ -16,13 +16,22 @@ function page() {
   for (const id of ['brainstorm-new', 'brainstorm-generate', 'brainstorm-retry', 'brainstorm-context', 'brainstorm-editor-kicker', 'brainstorm-editor-title', 'brainstorm-editor-intro', 'brainstorm-chat', 'brainstorm-start', 'brainstorm-reply', 'brainstorm-send', 'brainstorm-reply-form', 'brainstorm-chat-history', 'brainstorm-composer-agent']) nodes['#' + id] = { dataset: {}, style: {}, value: '', scrollHeight: 0, scrollTop: 0, clientHeight: 0, reportValidity: () => true, querySelectorAll: () => [], focus() {} };
   nodes['#brainstorm-page-proposals'].replaceChildren = () => {};
   nodes['#brainstorm-composer-hint'] = {}; nodes['#brainstorm-generate-hint'] = {};
-  nodes['#brainstorm-results'] = {};
+  nodes['#brainstorm-results'] = { focus() { this.focused = true; }, scrollIntoView() { assert.fail('Task navigation must not scroll the page'); } };
+  nodes['#brainstorm-layout'] = { dataset: { panel: 'chat' }, style: { setProperty(name, value) { this[name] = value; } }, getBoundingClientRect: () => ({ left: 100, width: 1000 }) };
+  nodes['#brainstorm-splitter'] = {
+    dataset: {}, offsetWidth: 24, getBoundingClientRect: () => ({ left: 780 }), focus() {},
+    setAttribute(name, value) { this[name] = value; }, setPointerCapture(id) { this.pointer = id; },
+    hasPointerCapture(id) { return this.pointer === id; }, releasePointerCapture() { this.pointer = null; },
+  };
+  nodes['#brainstorm-toggle-tasks'] = {};
   nodes['#brainstorm-toolbar'] = {};
-  const calls = [], saved = new Map(), opened = [];
+  nodes['#brainstorm-session-summary'] = {}; nodes['#brainstorm-session-context'] = {};
+  for (const step of ['idea', 'chat', 'tasks']) nodes['#brainstorm-step-' + step] = { setAttribute(name, value) { this[name] = value; } };
+  const calls = [], saved = storage, opened = [];
   let failure = false;
   const context = {
     state: { cards: [], runs: [], projects: [], settings: {} }, brainstormSession: '', brainstormInitialized: false, brainstormingBusy: false,
-    $: selector => nodes[selector], esc: text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'), taskAgentFields() {}, renderBrainstorm() {}, cardPath: id => '/api/cards/' + id,
+    $: selector => nodes[selector], esc: text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'), taskAgentFields(form, options = {}) { for (const name of ['model', 'effort']) form.elements[name].value = options[name] || ''; }, renderBrainstorm() {}, cardPath: id => '/api/cards/' + id,
     localStorage: { setItem: (key, value) => saved.set(key, value), getItem: key => saved.get(key), removeItem: key => saved.delete(key) },
     FormData: class { constructor(f) { return f.elements.filter(field => field.name && !field.disabled).map(field => [field.name, field.value]); } },
     api: async (path, method, body) => {
@@ -34,6 +43,7 @@ function page() {
     refresh: async () => context.renderBrainstormPage(), openCard: async id => opened.push(id), toast() {}, action: fn => fn(),
   };
 
+  if (state) context.state = state;
   bindView(createBrainstormView, context);
   context.renderBrainstormPage();
   return { context, fields, calls, saved, opened, nodes, failLaunch: value => { failure = value; } };
@@ -48,11 +58,14 @@ test('page creates a local task directly without starting an agent or requiring 
 
 test('a single idea starts a discussion with an automatic title and no empty tasks panel', async () => {
   const p = page();
+  assert.equal(p.nodes['#brainstorm-step-idea']['aria-current'], 'step');
   assert.equal(p.nodes['#brainstorm-results'].hidden, true);
   assert.equal(p.nodes['#brainstorm-toolbar'].hidden, true);
   await p.context.submitBrainstorm(false); assert.equal(p.calls.length, 0);
   p.fields.description.value = 'Simplifier l’inscription des clients.\nSupprimer les étapes inutiles.';
   await p.context.submitBrainstorm(false);
+  assert.equal(p.nodes['#brainstorm-step-chat']['aria-current'], 'step');
+  assert.equal(p.nodes['#brainstorm-step-idea']['aria-current'], 'false');
   assert.equal(p.calls[0].body.title, 'Simplifier l’inscription des clients.');
   assert.match(p.calls[0].body.description, /étapes inutiles/);
   assert.equal(p.nodes['#brainstorm-editor-title'].textContent, 'Simplifier l’inscription des clients.');
@@ -60,6 +73,8 @@ test('a single idea starts a discussion with an automatic title and no empty tas
   Object.assign(p.context.state.runs[0], { status: 'completed', proposals: [{ title: 'Inscription', questions: [] }] });
   p.context.renderBrainstormPage();
   assert.equal(p.nodes['#brainstorm-results'].hidden, false);
+  assert.equal(p.nodes['#brainstorm-step-tasks']['aria-current'], 'step');
+  assert.equal(p.nodes['#brainstorm-step-chat']['aria-current'], 'false');
   assert.equal(p.nodes['#brainstorm-page-status'].hidden, true);
 });
 
@@ -77,6 +92,62 @@ test('preparing tasks includes an unsent reply and keeps it on failure', async (
   assert.equal(p.nodes['#brainstorm-reply'].value, '');
 });
 
+test('tasks open without scrolling the page and returning to chat preserves the reply', async () => {
+  const p = page(); p.fields.description.value = 'Une idée'; await p.context.submitBrainstorm(false);
+  const showTasks = {};
+  p.nodes['#brainstorm-chat-history'].querySelectorAll = selector => selector === '[data-brainstorm-show-tasks]' ? [showTasks] : [];
+  Object.assign(p.context.state.runs[0], { status: 'completed', proposals: [{ title: 'Une tâche', questions: [] }] });
+  p.context.renderBrainstormPage();
+  assert.equal(p.nodes['#brainstorm-toggle-tasks'].hidden, false);
+  assert.equal(p.nodes['#brainstorm-layout'].dataset.panel, 'chat');
+  p.nodes['#brainstorm-reply'].value = 'Précision en cours';
+  showTasks.onclick();
+  assert.equal(p.nodes['#brainstorm-layout'].dataset.panel, 'tasks');
+  assert.equal(p.nodes['#brainstorm-results'].focused, true);
+  assert.equal(p.nodes['#brainstorm-toggle-tasks'].textContent, 'Revenir à la discussion');
+  p.nodes['#brainstorm-toggle-tasks'].onclick();
+  assert.equal(p.nodes['#brainstorm-layout'].dataset.panel, 'chat');
+  assert.equal(p.nodes['#brainstorm-reply'].value, 'Précision en cours');
+  p.nodes['#brainstorm-toggle-tasks'].onclick();
+  p.context.loadBrainstormSession('');
+  assert.equal(p.nodes['#brainstorm-layout'].dataset.panel, 'chat');
+  assert.equal(p.nodes['#brainstorm-toggle-tasks'].hidden, true);
+});
+
+test('splitter resizes both panels with pointer and keyboard without changing the discussion', async () => {
+  const p = page(), splitter = p.nodes['#brainstorm-splitter'], style = p.nodes['#brainstorm-layout'].style;
+  assert.equal(splitter.hidden, true);
+  p.fields.description.value = 'Une idée'; await p.context.submitBrainstorm(false);
+  Object.assign(p.context.state.runs[0], { status: 'completed', proposals: [{ title: 'Une tâche', questions: [] }] });
+  p.context.renderBrainstormPage();
+  assert.equal(splitter.hidden, false);
+  p.nodes['#brainstorm-reply'].value = 'Brouillon à garder';
+  p.nodes['#brainstorm-reply'].scrollHeight = 240;
+  const history = p.nodes['#brainstorm-chat-history'].innerHTML, calls = p.calls.length;
+  const pointer = { button: 0, isPrimary: true, pointerId: 1, clientX: 788, preventDefault() {} };
+  splitter.onpointerdown({ ...pointer, button: 2 }); assert.equal(splitter.pointer, undefined);
+  splitter.onpointerdown(pointer); assert.equal(splitter.pointer, 1);
+  splitter.onpointermove({ pointerId: 2, clientX: 596 }); assert.equal(style['--brainstorm-chat-size'], undefined);
+  splitter.onpointermove({ pointerId: 1, clientX: 596 });
+  assert.equal(style['--brainstorm-chat-size'], '50fr'); assert.equal(style['--brainstorm-task-size'], '50fr');
+  assert.equal(p.nodes['#brainstorm-reply'].style.height, '180px');
+  assert.equal(splitter['aria-valuenow'], '50'); assert.match(splitter['aria-valuetext'], /Discussion : 50 %/);
+  splitter.onpointermove({ pointerId: 1, clientX: -100 }); assert.equal(splitter['aria-valuenow'], '30');
+  splitter.onpointermove({ pointerId: 1, clientX: 2000 }); assert.equal(splitter['aria-valuenow'], '75');
+  splitter.onpointercancel(pointer); assert.equal(splitter.pointer, null); assert.equal(splitter.dataset.dragging, undefined);
+  splitter.onpointermove({ pointerId: 1, clientX: 596 }); assert.equal(splitter['aria-valuenow'], '75');
+  for (const [key, expected] of [['ArrowLeft', '70'], ['Home', '30'], ['ArrowRight', '35'], ['End', '75']]) {
+    let prevented = false;
+    splitter.onkeydown({ key, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true); assert.equal(splitter['aria-valuenow'], expected);
+  }
+  splitter.onkeydown({ key: 'Tab', preventDefault() { assert.fail('Tab must retain keyboard navigation'); } });
+  p.context.renderBrainstormPage();
+  assert.equal(style['--brainstorm-chat-size'], '75fr');
+  assert.equal(p.nodes['#brainstorm-reply'].value, 'Brouillon à garder');
+  assert.equal(p.nodes['#brainstorm-chat-history'].innerHTML, history); assert.equal(p.calls.length, calls);
+});
+
 test('page preserves edits across updates and resumes the same session after a failed launch', async () => {
   const p = page(); p.fields.title.value = 'Idée à explorer'; p.fields.instructions.value = 'Contrainte';
   p.failLaunch(true);
@@ -86,7 +157,8 @@ test('page preserves edits across updates and resumes the same session after a f
   p.failLaunch(false);
   await p.context.submitBrainstorm(false);
   assert.equal(p.calls.filter(c => c.path === '/api/brainstorms').length, 1);
-  assert.equal(p.calls[2].method, 'PATCH'); assert.equal(p.calls[2].path, '/api/cards/session');
+  assert.equal(p.calls[2].method, 'POST'); assert.equal(p.calls[2].path, '/api/cards/session/brainstorm');
+  assert.equal(p.calls.some(call => call.method === 'PATCH'), false);
   assert.equal(p.nodes['#brainstorm-page-stop'].hidden, false);
   assert.equal(p.fields.title.disabled, true);
   assert.equal(JSON.parse(p.saved.get('atelier-brainstorm-page')).fields.title, 'Idée à explorer');
@@ -163,12 +235,28 @@ test('drafts survive switching sessions and starting a session clears the initia
   p.nodes['#brainstorm-reply'].value = 'Une réponse à conserver'; p.nodes['#brainstorm-reply'].oninput();
   p.context.loadBrainstormSession('');
   assert.equal(p.fields.title.value, ''); assert.equal(p.nodes['#brainstorm-reply'].value, '');
+  assert.equal(p.fields.description.focused, true);
   p.fields.title.value = 'Autre idée';
   p.context.loadBrainstormSession('session');
   assert.equal(p.nodes['#brainstorm-reply'].value, 'Une réponse à conserver');
   assert.equal(p.fields.title.value, 'Exporter');
   p.context.loadBrainstormSession('');
   assert.equal(p.fields.title.value, 'Autre idée');
+});
+
+test('conversation separates paragraphs without interpreting user or agent HTML', async () => {
+  const p = page(); p.fields.description.value = 'Une idée'; await p.context.submitBrainstorm(false);
+  Object.assign(p.context.state.runs[0], {
+    status: 'completed', requirements: { description: 'Premier point.\n\nSecond point <img src=x>.' },
+    brainstorm: { message: 'Une réponse longue.\r\n\r\nUn autre paragraphe.\nUne précision.\n\n<script>alert(1)</script>', questions: [] },
+    proposals: [],
+  });
+  p.context.renderBrainstormPage();
+  const html = p.nodes['#brainstorm-chat-history'].innerHTML;
+  assert.match(html, /<p>Premier point\.<\/p><p>Second point &lt;img src=x&gt;\.<\/p>/);
+  assert.match(html, /<p>Une réponse longue\.<\/p><p>Un autre paragraphe\.\nUne précision\.<\/p>/);
+  assert.match(html, /<p>&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/p>/);
+  assert.doesNotMatch(html, /<(img|script)[ >]/);
 });
 
 test('running agents allow drafting but not sending and explicit breakdown does not consume a draft', async () => {
@@ -234,7 +322,46 @@ test('a created session survives launch and refresh failures without duplicating
   p.context.refresh = async () => { throw new Error('Réseau indisponible'); };
   await assert.rejects(p.context.submitBrainstorm(false));
   assert.equal(JSON.parse(p.saved.get('atelier-brainstorm-page')).id, 'session');
-  assert.equal(p.fields.title.disabled, false);
+  assert.equal(p.fields.title.disabled, true);
+  assert.equal(p.nodes['#brainstorm-form'].hidden, true);
+  assert.equal(p.nodes['#brainstorm-retry'].hidden, false);
+});
+
+test('session settings stay read-only after completion, cancellation and failure; replies never update them', async () => {
+  const p = page(); p.fields.title.value = 'Une idée'; p.fields.model.value = 'my-model';
+  p.fields.instructions.value = '<script>Contrainte</script>';
+  await p.context.submitBrainstorm(false);
+  for (const status of ['running', 'completed', 'cancelled', 'failed']) {
+    p.context.state.runs[0].status = status; p.context.renderBrainstormPage();
+    assert.ok(p.fields.every(field => field.disabled));
+    assert.equal(p.nodes['#brainstorm-form'].hidden, true);
+    assert.equal(p.nodes['#brainstorm-session-context'].hidden, false);
+    assert.match(p.nodes['#brainstorm-session-context'].innerHTML, /my-model/);
+    assert.match(p.nodes['#brainstorm-session-context'].innerHTML, /&lt;script&gt;/);
+  }
+  p.nodes['#brainstorm-reply'].value = 'Précision';
+  p.nodes['#brainstorm-form'].reportValidity = () => assert.fail('Replies do not validate the initial form');
+  await p.context.submitBrainstorm(false, true);
+  assert.deepEqual(p.calls.at(-1), { path: '/api/cards/session/brainstorm', method: 'POST', body: { reply: 'Précision' } });
+  assert.equal(p.calls.some(call => call.method === 'PATCH'), false);
+  const count = p.calls.length; await p.context.submitBrainstorm(true); assert.equal(p.calls.length, count);
+  p.context.loadBrainstormSession('');
+  assert.ok(p.fields.every(field => !field.disabled));
+  assert.equal(p.nodes['#brainstorm-form'].hidden, false);
+  assert.equal(p.nodes['#brainstorm-chat'].hidden, true);
+});
+
+test('reopening and reloading a session ignore stale setting drafts but preserve unsent replies', () => {
+  const session = { id: 'saved', brainstormSession: true, title: 'Idée enregistrée', description: 'Contexte initial', repo: '', agent: 'codex', model: 'original', effort: 'high' };
+  const draft = JSON.stringify({ id: session.id, fields: { title: 'Ancien brouillon', repo: 'C:/wrong', model: 'wrong', agent: 'claude' }, reply: 'À envoyer' });
+  const p = page({ state: { brainstorms: [session], cards: [], runs: [], projects: [], settings: {} }, storage: new Map([['atelier-brainstorm-page', draft], ['atelier-brainstorm-draft:saved', draft]]) });
+  for (const reopen of [false, true]) {
+    if (reopen) { p.context.loadBrainstormSession(''); p.saved.set('atelier-brainstorm-draft:saved', draft); p.context.loadBrainstormSession('saved'); }
+    assert.equal(p.fields.title.value, session.title); assert.equal(p.fields.repo.value, '');
+    assert.equal(p.fields.model.value, 'original'); assert.equal(p.fields.agent.value, 'codex');
+    assert.equal(p.nodes['#brainstorm-reply'].value, 'À envoyer');
+    assert.ok(p.fields.every(field => field.disabled));
+  }
 });
 
 test('the visible conversation does not show a distracting Agents notification', async () => {

@@ -26,7 +26,7 @@ function loadBrainstormSession(id) {
   if (session) for (const name of ['title', 'description', 'instructions', 'repo']) form.elements[name].value = session[name] || '';
   try {
     const saved = JSON.parse(localStorage.getItem('atelier-brainstorm-draft:' + brainstormSession) || 'null');
-    if (saved) {
+    if (saved && !session) {
       form.elements.agent.value = saved.fields?.agent || form.elements.agent.value;
       taskAgentFields(form, saved.fields || {});
       for (const [name, value] of Object.entries(saved.fields || {})) {
@@ -34,12 +34,15 @@ function loadBrainstormSession(id) {
         if (name === 'repo' && value && ![...form.elements.repo.options].some(option => option.value === value)) form.elements.repo.add(new Option(value, value));
         form.elements[name].value = value;
       }
-      $('#brainstorm-reply').value = typeof saved.reply === 'string' ? saved.reply : '';
     }
+    $('#brainstorm-reply').value = typeof saved?.reply === 'string' ? saved.reply : '';
   } catch {}
   const host = $('#brainstorm-page-proposals'); host.replaceChildren(); delete host.dataset.signature; delete host.dataset.runId;
   const history = $('#brainstorm-chat-history'); delete history.dataset.signature; history.scrollTop = history.scrollHeight;
+  showBrainstormTasks(false);
   rememberBrainstorm(); renderBrainstormPage();
+  if (session) $('#brainstorm-reply').focus();
+  else form.elements.description.focus();
 }
 
 function renderBrainstormPage() {
@@ -61,12 +64,15 @@ function renderBrainstormPage() {
   }
   if (!brainstormInitialized) {
     brainstormInitialized = true;
+    bindBrainstormSplitter();
     let saved; try { saved = JSON.parse(localStorage.getItem('atelier-brainstorm-page') || 'null'); } catch {}
     brainstormSession = sessions.some(c => c.id === saved?.id) ? saved.id : '';
+    const session = sessions.find(c => c.id === brainstormSession);
+    const fields = session || (!saved?.id ? saved?.fields : {}) || {};
     $('#brainstorm-reply').value = brainstormSession && typeof saved?.reply === 'string' ? saved.reply : '';
-    form.elements.agent.value = agentProviders(getState().settings).some(provider => provider.id === saved?.fields?.agent) ? saved.fields.agent : getState().settings.agent || 'codex';
-    taskAgentFields(form, saved?.fields || {});
-    for (const [name, value] of Object.entries(saved?.fields || {})) {
+    form.elements.agent.value = agentProviders(getState().settings).some(provider => provider.id === fields.agent) ? fields.agent : getState().settings.agent || 'codex';
+    taskAgentFields(form, fields);
+    for (const [name, value] of Object.entries(fields)) {
       if (!form.elements[name] || typeof value !== 'string') continue;
       if (name === 'repo' && value && ![...form.elements.repo.options].some(o => o.value === value)) form.elements.repo.add(new Option(value, value));
       form.elements[name].value = value;
@@ -75,6 +81,11 @@ function renderBrainstormPage() {
     form.onchange = () => { rememberBrainstorm(); renderBrainstormChat(getState().runs.some(run => run.cardId === brainstormSession && run.status === 'running')); };
     picker.onchange = () => loadBrainstormSession(picker.value);
     $('#brainstorm-new').onclick = () => loadBrainstormSession('');
+    $('#brainstorm-toggle-tasks').onclick = () => {
+      const show = $('#brainstorm-layout').dataset.panel !== 'tasks';
+      showBrainstormTasks(show);
+      (show ? $('#brainstorm-results') : $('#brainstorm-reply')).focus({ preventScroll: true });
+    };
     $('#brainstorm-generate').onclick = () => action(() => submitBrainstorm(false, true, msg("Propose un découpage en tâches."), true));
     $('#brainstorm-retry').onclick = () => action(() => submitBrainstorm(false, true, getState().runs.find(r => r.cardId === brainstormSession && r.kind === 'brainstorm')?.instructions || msg("Reprends l’exploration à partir de notre discussion.")));
     form.onsubmit = event => { event.preventDefault(); action(() => submitBrainstorm(false)); };
@@ -90,31 +101,81 @@ function renderBrainstormPage() {
   picker.disabled = $('#brainstorm-new').disabled = brainstormingBusy;
   const run = getState().runs.find(r => r.cardId === brainstormSession && r.kind === 'brainstorm');
   const active = run?.status === 'running';
-  for (const field of form.elements) field.disabled = active || brainstormingBusy;
+  const proposed = getState().runs.some(run => run.cardId === brainstormSession && run.kind === 'brainstorm' && run.proposals?.length);
+  const step = !brainstormSession ? 'idea' : proposed ? 'tasks' : 'chat';
+  for (const name of ['idea', 'chat', 'tasks']) $('#brainstorm-step-' + name).setAttribute('aria-current', name === step ? 'step' : 'false');
+  $('#brainstorm-start').textContent = brainstormingBusy ? msg("Démarrage…") : msg("Démarrer la discussion");
+  for (const field of form.elements) field.disabled = Boolean(brainstormSession) || brainstormingBusy;
   form.elements.description.required = !form.elements.title.value.trim();
   renderBrainstormChat(active);
   resizeBrainstormComposer();
   const status = $('#brainstorm-page-status');
-  status.textContent = active ? messageText(run.activity) || msg("Brainstorming en cours…") : run ? run.brainstorm || run.proposals ? msg("Poursuivez la discussion ou demandez un découpage quand votre idée est prête.") : messageText(run.attention) || msg("Brainstorming interrompu ou échoué. Vous pouvez relancer l’exploration.") : msg("Commencez par une idée. L’agent vous aide à la préciser avant de créer des tâches.");
-  status.hidden = !run || !active && !run.attention && run.status === 'completed';
-  $('#brainstorm-retry').hidden = !run || active || run.status === 'completed' && !run.attention;
+  status.textContent = active ? messageText(run.activity) || msg("Brainstorming en cours…") : run ? run.brainstorm || run.proposals ? msg("Poursuivez la discussion ou demandez un découpage quand votre idée est prête.") : messageText(run.attention) || msg("Brainstorming interrompu ou échoué. Vous pouvez relancer l’exploration.") : msg("La discussion est enregistrée. Réessayez pour lancer l’agent.");
+  status.hidden = !brainstormSession || Boolean(run && !active && !run.attention && run.status === 'completed');
+  $('#brainstorm-retry').hidden = !brainstormSession || active || Boolean(run && run.status === 'completed' && !run.attention);
   $('#brainstorm-retry').disabled = brainstormingBusy;
   $('#brainstorm-page-stop').hidden = !active;
   $('#brainstorm-page-stop').onclick = () => action(async () => { await api(`/api/runs/${run.id}/cancel`, 'POST', {}); await refresh(); });
   renderBrainstorm(brainstormSession, $('#brainstorm-page-proposals'));
-  $('#brainstorm-results').hidden = !getState().runs.some(run => run.cardId === brainstormSession && run.kind === 'brainstorm' && run.proposals?.length);
+  $('#brainstorm-results').hidden = !proposed;
+  $('#brainstorm-splitter').hidden = !proposed;
+  $('#brainstorm-toggle-tasks').hidden = !proposed;
+  if (!proposed) showBrainstormTasks(false);
+}
+
+function bindBrainstormSplitter() {
+  const splitter = $('#brainstorm-splitter'), layout = $('#brainstorm-layout');
+  let share = 70, drag = null;
+  const resize = value => {
+    share = Math.max(30, Math.min(75, value));
+    layout.style.setProperty('--brainstorm-chat-size', share + 'fr');
+    layout.style.setProperty('--brainstorm-task-size', (100 - share) + 'fr');
+    splitter.setAttribute('aria-valuenow', String(Math.round(share)));
+    splitter.setAttribute('aria-valuetext', msg("Discussion : {0} % · Tâches : {1} %", Math.round(share), 100 - Math.round(share)));
+    resizeBrainstormComposer();
+  };
+  splitter.onpointerdown = event => {
+    if (event.button !== 0 || !event.isPrimary) return;
+    event.preventDefault(); splitter.focus();
+    drag = { id: event.pointerId, offset: event.clientX - splitter.getBoundingClientRect().left };
+    splitter.dataset.dragging = 'true'; splitter.setPointerCapture(event.pointerId);
+  };
+  splitter.onpointermove = event => {
+    if (event.pointerId !== drag?.id) return;
+    const bounds = layout.getBoundingClientRect(), width = bounds.width - splitter.offsetWidth;
+    if (width > 0) resize((event.clientX - bounds.left - drag.offset) / width * 100);
+  };
+  splitter.onpointerup = splitter.onpointercancel = event => {
+    if (splitter.hasPointerCapture(event.pointerId)) splitter.releasePointerCapture(event.pointerId);
+    drag = null; delete splitter.dataset.dragging;
+  };
+  splitter.onlostpointercapture = () => { drag = null; delete splitter.dataset.dragging; };
+  splitter.onkeydown = event => {
+    const value = { ArrowLeft: share - 5, ArrowRight: share + 5, Home: 30, End: 75 }[event.key];
+    if (value === undefined) return;
+    event.preventDefault(); resize(value);
+  };
+}
+
+function showBrainstormTasks(show) {
+  $('#brainstorm-layout').dataset.panel = show ? 'tasks' : 'chat';
+  $('#brainstorm-toggle-tasks').textContent = show ? msg("Revenir à la discussion") : msg("Voir les tâches");
 }
 
 async function submitBrainstorm(local, replying = false, message = '', includeDraft = false) {
   const form = $('#brainstorm-form');
   form.elements.description.required = !form.elements.title.value.trim();
-  if (brainstormingBusy || getState().runs.some(run => run.cardId === brainstormSession && run.status === 'running') || !form.reportValidity()) return;
+  if (brainstormingBusy || getState().runs.some(run => run.cardId === brainstormSession && run.status === 'running') || local && brainstormSession) return;
+  if (!brainstormSession && !form.reportValidity()) return;
   const draft = $('#brainstorm-reply').value.trim();
   const reply = replying ? includeDraft ? [draft, message].filter(Boolean).join('\n\n') : message || draft : '';
   if (replying && (!brainstormSession || !reply || (!message || includeDraft && draft) && !$('#brainstorm-reply-form').reportValidity())) return;
-  const body = Object.fromEntries(new FormData(form));
-  if (!body.title.trim() && !body.description.trim()) return;
-  if (!body.title.trim()) { body.title = body.description.trim().split('\n')[0].slice(0, 90); form.elements.title.value = body.title; }
+  let body;
+  if (!brainstormSession) {
+    body = Object.fromEntries(new FormData(form));
+    if (!body.title.trim() && !body.description.trim()) return;
+    if (!body.title.trim()) { body.title = body.description.trim().split('\n')[0].slice(0, 90); form.elements.title.value = body.title; }
+  }
   rememberBrainstorm();
   brainstormingBusy = true;
   try {
@@ -124,29 +185,44 @@ async function submitBrainstorm(local, replying = false, message = '', includeDr
       await refresh(); await openCard(card.id); toast(msg("Tâche locale créée. Jira est facultatif."));
       return;
     }
-    const session = await api(brainstormSession ? cardPath(brainstormSession) : '/api/brainstorms', brainstormSession ? 'PATCH' : 'POST', body);
-    if (!brainstormSession) { try { localStorage.removeItem('atelier-brainstorm-draft:'); } catch {} }
-    brainstormSession = session.id;
+    if (!brainstormSession) {
+      const session = await api('/api/brainstorms', 'POST', body);
+      brainstormSession = session.id;
+      try { localStorage.removeItem('atelier-brainstorm-draft:'); } catch {}
+    }
     rememberBrainstorm();
-    const run = await api(cardPath(session.id) + '/brainstorm', 'POST', { reply });
+    const run = await api(cardPath(brainstormSession) + '/brainstorm', 'POST', { reply });
     getState().runs = [run, ...getState().runs.filter(previous => previous.id !== run.id)];
     if (replying && (!message || includeDraft) && run.status !== 'failed') $('#brainstorm-reply').value = '';
   } finally {
     brainstormingBusy = false;
     rememberBrainstorm();
     try { await refresh(); }
-    finally { renderBrainstormPage(); if (!local) $('#brainstorm-reply').focus(); }
+    finally { renderBrainstormPage(); if (!local) (brainstormSession ? $('#brainstorm-reply') : form.elements.description).focus(); }
   }
 }
 
 function renderBrainstormChat(active) {
   const discussing = Boolean(brainstormSession), context = $('#brainstorm-context');
+  const form = $('#brainstorm-form');
+  form.hidden = discussing;
+  $('#brainstorm-session-context').hidden = !discussing;
+  $('#brainstorm-session-summary').hidden = !discussing;
+  if (discussing) {
+    const fields = form.elements;
+    const project = getState().projects.find(project => project.repo === fields.repo.value)?.name || fields.repo.value || msg("Sans dépôt · brainstorming général");
+    $('#brainstorm-session-summary').textContent = project + ' · ' + agentName(getState().settings, fields.agent.value);
+    $('#brainstorm-session-context').innerHTML = `<p class="hint">${markupText("Ces réglages sont fixés pour cette discussion. Pour changer de projet ou de modèle, démarrez une nouvelle discussion.")}</p><dl class="brainstorm-context-values">${[
+      [msg("Projet"), project], [msg("Agent"), agentName(getState().settings, fields.agent.value)],
+      [msg("Modèle"), fields.model.value || fields.model.placeholder || msg("Configuration CLI")], [msg("Niveau de réflexion"), fields.effort.selectedOptions?.[0]?.textContent || fields.effort.value || msg("Par défaut")],
+      [msg("Votre idée"), fields.description.value], [msg("Contraintes à respecter (facultatif)"), fields.instructions.value],
+    ].filter(([, value]) => value).map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+  }
   if (context.dataset.session !== brainstormSession) { context.open = !discussing; context.dataset.session = brainstormSession; }
   $('#brainstorm-editor-kicker').hidden = discussing;
   $('#brainstorm-editor-title').textContent = discussing ? $('#brainstorm-form').elements.title.value || msg("Votre discussion") : msg("Qu’aimeriez-vous améliorer ?");
   $('#brainstorm-editor-intro').hidden = discussing;
   $('#brainstorm-chat').hidden = !discussing;
-  $('#brainstorm-start').textContent = discussing ? msg("Reprendre avec cette idée") : msg("Discuter de cette idée");
   $('#brainstorm-reply').disabled = brainstormingBusy;
   $('#brainstorm-reply-form').dataset.active = String(active);
   $('#brainstorm-composer-agent').textContent = agentName(getState().settings, $('#brainstorm-form').elements.agent.value);
@@ -160,12 +236,12 @@ function renderBrainstormChat(active) {
   host.innerHTML = turns.map((run, index) => {
     const user = index === 0 || !run.instructions ? [run.requirements?.description || run.requirements?.title, run.requirements?.instructions, run.instructions].filter(Boolean).join('\n\n') : run.instructions;
     const questions = brainstormQuestions(run);
-    const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? `<p>${esc(run.brainstorm.message)}</p>` : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${questions.length ? `<ul class="brainstorm-questions">${questions.map((question, q) => `<li>${index === turns.length - 1 ? `<button type="button" data-brainstorm-question="${q}">${esc(question)}<span aria-hidden="true"> ↗</span></button>` : esc(question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
+    const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? brainstormParagraphs(run.brainstorm.message) : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${questions.length ? `<ul class="brainstorm-questions">${questions.map((question, q) => `<li>${index === turns.length - 1 ? `<button type="button" data-brainstorm-question="${q}">${esc(question)}<span>${markupText("Répondre")}</span></button>` : esc(question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
     const raw = !run.brainstorm && !run.proposals && run.status !== 'running' && run.summary ? `<details class="brainstorm-raw"><summary>${markupText("Voir la réponse brute de l’agent")}</summary><pre>${esc(run.summary)}</pre></details>` : '';
-    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong><p>${esc(user)}</p></article><article class="brainstorm-message assistant"><strong>${esc(agentName(getState().settings, run.agent, run))}</strong>${answer}${raw}</article>`;
+    return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong>${brainstormParagraphs(user)}</article><article class="brainstorm-message assistant"><strong>${esc(agentName(getState().settings, run.agent, run))}</strong>${answer}${raw}</article>`;
   }).join('') || `<p class="hint">${markupText("Envoyez un message pour poursuivre votre idée.")}</p>`;
   const questions = brainstormQuestions(turns.at(-1));
-  host.querySelectorAll('[data-brainstorm-show-tasks]').forEach(button => button.onclick = () => { $('#brainstorm-results').scrollIntoView({ block: 'start' }); $('#brainstorm-results').focus({ preventScroll: true }); });
+  host.querySelectorAll('[data-brainstorm-show-tasks]').forEach(button => button.onclick = () => { showBrainstormTasks(true); $('#brainstorm-results').focus({ preventScroll: true }); });
   host.querySelectorAll('[data-brainstorm-question]').forEach(button => button.onclick = () => {
     const input = $('#brainstorm-reply');
     input.value += (input.value ? '\n\n' : '') + questions[Number(button.dataset.brainstormQuestion)] + '\n';
@@ -237,4 +313,8 @@ function renderBrainstorm(cardId, host = $('#brainstorm-proposals')) {
 
 export function brainstormQuestions(run) {
   return [...new Set([...(run?.brainstorm?.questions || []), ...(run?.proposals?.flatMap(proposal => proposal.questions) || [])])];
+}
+
+function brainstormParagraphs(text) {
+  return text.split(/\r?\n\s*\r?\n/).filter(part => part.trim()).map(part => `<p>${esc(part)}</p>`).join('');
 }
