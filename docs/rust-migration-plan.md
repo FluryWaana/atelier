@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI, quatre navigateurs et trousseaux prouvés ; trays POSIX restants |
 | M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
-| M03 | M02 | Domaine et API métier équivalents | À faire |
+| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures préparatoires ; API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -460,6 +460,13 @@ Prochaine action concrète :
 - **Vérification locale :** Clippy des probes Linux/macOS en compilation croisée sans avertissement ; formatage, Clippy natif et 35 tests Rust réussis. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 81,97 s. Inventaire régénéré.
 - **Limites :** les probes POSIX doivent encore réussir sur leurs vrais bureaux CI ; la vérification des types depuis Windows ne les qualifie pas. Aucun menu ni lanceur complet ajouté, aucune donnée personnelle ni publication.
 - **Suite :** relever les résultats natifs, poursuivre les règles métier M03 indépendantes et les preuves de fichiers/coffres M02. M01/M02 restent en cours.
+
+### 24 octobre 2026 / base `fec382f` / M03, règles pures préparatoires
+
+- **Comportement livré :** critères, dépendances et profils d'agents dans core, sans adaptateur ni dépendance supplémentaire ; 175 vecteurs capturés des vraies fonctions Node et comparaison historique en CI. Voir [relevé M03](rust-migration-m03.md).
+- **Vérification :** Clippy natif/WASM sans avertissement ; 37 tests Rust réussis, dont parité des résultats/messages et chaîne de dépendances de 10 000 cartes. Suite Node complète et inventaire vérifiés avant commit ; résultat détaillé dans le relevé M03.
+- **Preuves complémentaires :** CI de [44dd895](https://github.com/FluryWaana/atelier/actions/runs/40036942056) et [22545c2](https://github.com/FluryWaana/atelier/actions/runs/40037800280) entièrement réussies, cinq runners natifs et Chrome/Firefox/Safari. Les premiers probes tray `fec382f` passent sur Linux ARM64 et macOS ARM64 ; résultats des autres cibles encore attendus.
+- **Limites et suite :** règles seules, pas de remplacement de l'API ni d'exécution d'agent ; terminer les preuves natives ouvertes et porter les cas d'usage métier. Aucun lot globalement déclaré validé.
 
 ## 12. Définition finale de terminé
 

@@ -45,6 +45,8 @@ C25, incrément après `44dd895` : synchronisation de version par API registre n
 
 C25, incrément après `22545c2` : probes tray Linux/macOS ajoutés, contrôlés par Clippy en compilation croisée ; CI configure un vrai panneau XFCE isolé et la boucle AppKit native. Enregistrement/pixels/retrait Linux et visibilité/retrait macOS doivent encore passer sur les runners. Menus et actions restent en M08.
 
+C07/C11, incrément après `fec382f` : règles pures de critères, dépendances et profils d'agents portées dans core ; 175 contrats historiques de résultats/messages comparés sans Node dans les tests Rust ordinaires. Le comparateur historique vérifie aussi la provenance Node en CI. Chaîne de 10 000 dépendances testée. Cas d'usage, HTTP, effets et concurrence restent ouverts ; voir le relevé M03.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

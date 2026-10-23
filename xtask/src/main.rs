@@ -26,6 +26,18 @@ fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
     command
 }
 
+fn node_executable() -> PathBuf {
+    std::env::var_os("ATELIER_NODE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            root().join(if cfg!(windows) {
+                "runtime/node.exe"
+            } else {
+                "runtime/node"
+            })
+        })
+}
+
 fn run(command: &mut Command) -> Result<()> {
     if !command.status()?.success() {
         return Err("La commande de vérification a échoué.".into());
@@ -87,10 +99,14 @@ async fn main() -> Result<()> {
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["build-ui"] => build_ui(),
         ["test-storage-parity"] => storage::test().await,
+        ["test-domain-parity"] => {
+            run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
+            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))
+        }
         ["test-keyring"] => keyring::test().await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test().await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-keyring | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
+        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-keyring | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
     }
 }
 

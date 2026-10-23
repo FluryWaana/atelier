@@ -1,0 +1,3404 @@
+[
+  {
+    "operation": "text",
+    "args": [
+      "",
+      300
+    ],
+    "expected": {
+      "value": ""
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      "  é 🔧 ",
+      300
+    ],
+    "expected": {
+      "value": "é 🔧"
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      "﻿x ",
+      300
+    ],
+    "expected": {
+      "value": "x"
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      "x",
+      300
+    ],
+    "expected": {
+      "value": "x"
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      null,
+      300
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long."
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      12,
+      300
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long."
+    }
+  },
+  {
+    "operation": "text",
+    "args": [
+      "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+      300
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      null
+    ],
+    "expected": {
+      "error": "Maximum 20 critères de réussite."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      {}
+    ],
+    "expected": {
+      "error": "Maximum 20 critères de réussite."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      []
+    ],
+    "expected": {
+      "value": []
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "  Critère 🔧 ",
+          "done": false,
+          "extra": "discard"
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        {
+          "text": "Critère 🔧",
+          "done": false
+        }
+      ]
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "OK",
+          "done": true
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        {
+          "text": "OK",
+          "done": true
+        }
+      ]
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "",
+          "done": false
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "  ",
+          "done": true
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "x",
+          "done": "true"
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": null,
+          "done": false
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        null
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        },
+        {
+          "text": "x",
+          "done": false
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Maximum 20 critères de réussite."
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+          "done": true
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        {
+          "text": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+          "done": true
+        }
+      ]
+    }
+  },
+  {
+    "operation": "checklist",
+    "args": [
+      [
+        {
+          "text": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+          "done": true
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Chaque critère doit contenir un texte et un état valide."
+    }
+  },
+  {
+    "operation": "checklistText",
+    "args": [
+      []
+    ],
+    "expected": {
+      "value": ""
+    }
+  },
+  {
+    "operation": "checklistText",
+    "args": [
+      [
+        {
+          "text": "à faire",
+          "done": false
+        },
+        {
+          "text": "fini",
+          "done": true
+        }
+      ]
+    ],
+    "expected": {
+      "value": "\n\nCritères de réussite (validation humaine) :\n- [ ] à faire\n- [x] fini"
+    }
+  },
+  {
+    "operation": "reviewRequirements",
+    "args": [
+      {}
+    ],
+    "expected": {
+      "value": {
+        "title": "",
+        "description": "",
+        "instructions": "",
+        "criteria": []
+      }
+    }
+  },
+  {
+    "operation": "reviewRequirements",
+    "args": [
+      {
+        "title": "titre",
+        "description": null,
+        "instructions": "",
+        "checklist": [
+          {
+            "text": "C1",
+            "done": true
+          },
+          {
+            "text": "C2",
+            "done": false
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "value": {
+        "title": "titre",
+        "description": "",
+        "instructions": "",
+        "criteria": [
+          "C1",
+          "C2"
+        ]
+      }
+    }
+  },
+  {
+    "operation": "blockers",
+    "args": [
+      {
+        "blockedBy": []
+      },
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": []
+    }
+  },
+  {
+    "operation": "blockers",
+    "args": [
+      {
+        "blockedBy": [
+          "b",
+          "missing",
+          "c"
+        ]
+      },
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "missing",
+          "title": "Tâche introuvable",
+          "status": "missing"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "blockers",
+    "args": [
+      {
+        "blockedBy": [
+          "c"
+        ]
+      },
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": []
+    }
+  },
+  {
+    "operation": "blockers",
+    "args": [
+      {
+        "blockedBy": [
+          "b",
+          "b"
+        ]
+      },
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": []
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "a"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "b"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Cette dépendance créerait un cycle."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "d"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Cette dépendance créerait un cycle."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "missing"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "c",
+        "c"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        3
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      null,
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      "c",
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "a",
+      [
+        "c"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        "c"
+      ]
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "b",
+      [
+        "a"
+      ],
+      [
+        {
+          "id": "a",
+          "status": "todo"
+        },
+        {
+          "id": "b",
+          "status": "todo",
+          "archived": true,
+          "blockedBy": [
+            "a"
+          ]
+        },
+        {
+          "id": "c",
+          "status": "done"
+        },
+        {
+          "id": "d",
+          "status": "review",
+          "blockedBy": [
+            "b"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        "a"
+      ]
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "new",
+      [
+        "x"
+      ],
+      [
+        {
+          "id": "x",
+          "blockedBy": [
+            "y"
+          ]
+        },
+        {
+          "id": "y",
+          "blockedBy": [
+            "x"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        "x"
+      ]
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "new",
+      [
+        "x"
+      ],
+      [
+        {
+          "id": "x",
+          "blockedBy": [
+            "deleted"
+          ]
+        }
+      ]
+    ],
+    "expected": {
+      "value": [
+        "x"
+      ]
+    }
+  },
+  {
+    "operation": "dependencies",
+    "args": [
+      "new",
+      [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      [
+        {
+          "id": "0"
+        },
+        {
+          "id": "1"
+        },
+        {
+          "id": "2"
+        },
+        {
+          "id": "3"
+        },
+        {
+          "id": "4"
+        },
+        {
+          "id": "5"
+        },
+        {
+          "id": "6"
+        },
+        {
+          "id": "7"
+        },
+        {
+          "id": "8"
+        },
+        {
+          "id": "9"
+        },
+        {
+          "id": "10"
+        },
+        {
+          "id": "11"
+        },
+        {
+          "id": "12"
+        },
+        {
+          "id": "13"
+        },
+        {
+          "id": "14"
+        },
+        {
+          "id": "15"
+        },
+        {
+          "id": "16"
+        },
+        {
+          "id": "17"
+        },
+        {
+          "id": "18"
+        },
+        {
+          "id": "19"
+        },
+        {
+          "id": "20"
+        }
+      ]
+    ],
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même)."
+    }
+  },
+  {
+    "operation": "agentProviders",
+    "args": [
+      {}
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "codex",
+          "name": "Codex",
+          "type": "codex",
+          "auth": "cli",
+          "model": "",
+          "effort": ""
+        },
+        {
+          "id": "claude",
+          "name": "Claude Code",
+          "type": "claude",
+          "auth": "cli",
+          "model": "",
+          "effort": ""
+        }
+      ]
+    }
+  },
+  {
+    "operation": "agentProviders",
+    "args": [
+      {
+        "agentProviders": null
+      }
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "codex",
+          "name": "Codex",
+          "type": "codex",
+          "auth": "cli",
+          "model": "",
+          "effort": ""
+        },
+        {
+          "id": "claude",
+          "name": "Claude Code",
+          "type": "claude",
+          "auth": "cli",
+          "model": "",
+          "effort": ""
+        }
+      ]
+    }
+  },
+  {
+    "operation": "agentProviders",
+    "args": [
+      {
+        "agentProviders": []
+      }
+    ],
+    "expected": {
+      "value": []
+    }
+  },
+  {
+    "operation": "agentProviders",
+    "args": [
+      {
+        "agentProviders": [
+          {
+            "id": "work",
+            "type": "claude",
+            "unknown": true
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "work",
+          "type": "claude",
+          "unknown": true
+        }
+      ]
+    }
+  },
+  {
+    "operation": "agentProviders",
+    "args": [
+      {
+        "codexModel": "default",
+        "claudeEffort": "max"
+      }
+    ],
+    "expected": {
+      "value": [
+        {
+          "id": "codex",
+          "name": "Codex",
+          "type": "codex",
+          "auth": "cli",
+          "model": "default",
+          "effort": ""
+        },
+        {
+          "id": "claude",
+          "name": "Claude Code",
+          "type": "claude",
+          "auth": "cli",
+          "model": "",
+          "effort": "max"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "agentProvider",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      "codex"
+    ],
+    "expected": {
+      "value": {
+        "id": "codex",
+        "name": "Codex",
+        "type": "codex",
+        "auth": "cli",
+        "model": "codex-default",
+        "effort": "medium"
+      }
+    }
+  },
+  {
+    "operation": "agentProvider",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      "claude"
+    ],
+    "expected": {
+      "value": {
+        "id": "claude",
+        "name": "Claude Code",
+        "type": "claude",
+        "auth": "cli",
+        "model": "sonnet",
+        "effort": "low"
+      }
+    }
+  },
+  {
+    "operation": "agentProvider",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      "missing"
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {}
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": " custom/model:v1 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "custom/model:v1",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": "--unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": "a\nb"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": "a\"b"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": 42
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": null
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": "é"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "model": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": "minimal"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": "minimal"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": "deep_mode-1"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": " low "
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": null
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "codex",
+      {
+        "effort": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {}
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": " custom/model:v1 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "custom/model:v1",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": "--unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": "a\nb"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": "a\"b"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": 42
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": null
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": "é"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "model": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": "minimal"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": "deep_mode-1"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": " low "
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": null
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "claude",
+      {
+        "effort": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {}
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": " custom/model:v1 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "custom/model:v1",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": "--unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": "a\nb"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": "a\"b"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": 42
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": null
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": "é"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "model": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": ""
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": "minimal"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": "minimal"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": "deep_mode-1"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "",
+        "effort": "deep_mode-1"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": " low "
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": null
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "command",
+      {
+        "effort": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {}
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": " custom/model:v1 "
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": "--unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": "a\nb"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": "a\"b"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": 42
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": null
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": "é"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "model": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": ""
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": "minimal"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": "deep_mode-1"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": " low "
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": null
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "unknown",
+      {
+        "effort": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "work",
+      {
+        "model": "opus",
+        "effort": "max"
+      },
+      {
+        "agentProviders": [
+          {
+            "id": "work",
+            "type": "claude"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "agentOptions",
+    "args": [
+      "work",
+      {},
+      {
+        "agentProviders": []
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "codex"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "task-model",
+        "effort": "high"
+      }
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "claude"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "sonnet",
+        "effort": "low"
+      }
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "codex",
+        "model": "one-run",
+        "effort": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "one-run",
+        "effort": "medium"
+      }
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "codex",
+        "model": null,
+        "effort": null
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "task-model",
+        "effort": "high"
+      }
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "codex",
+        "model": false
+      }
+    ],
+    "expected": {
+      "error": "Modèle invalide."
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {
+        "agent": "codex",
+        "model": "task-model",
+        "effort": "high"
+      },
+      {
+        "agent": "missing"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "resolveAgentOptions",
+    "args": [
+      {
+        "codexModel": "codex-default",
+        "codexEffort": "medium",
+        "claudeModel": "sonnet",
+        "claudeEffort": "low"
+      },
+      {},
+      {
+        "agent": "codex"
+      }
+    ],
+    "expected": {
+      "value": {
+        "model": "codex-default",
+        "effort": "medium"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "../escape",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "constructor",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "prototype",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "__proto__",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "A",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Réglage du fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "a\nb",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Réglage du fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "unknown",
+        "model": "opus",
+        "effort": "max"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "auth": "api"
+      }
+    ],
+    "expected": {
+      "error": "Authentification invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "auth": null
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "auth": 1
+      }
+    ],
+    "expected": {
+      "error": "Authentification invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "../relative"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier de configuration doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "./relative"
+      }
+    ],
+    "expected": {
+      "error": "Le chemin de l’exécutable doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "-command"
+      }
+    ],
+    "expected": {
+      "error": "Exécutable requis."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": null
+      }
+    ],
+    "expected": {
+      "error": "Réglage du fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "minimal"
+      }
+    ],
+    "expected": {
+      "error": "Niveau de réflexion invalide pour cet agent."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "\\\\server\\share"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "\\\\server\\share"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "//server/share"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "//server/share"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "/\\server"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "/\\server"
+      }
+    ],
+    "expected": {
+      "error": "Les chemins réseau et périphériques ne sont pas autorisés."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "\\?\\C:\\x"
+      }
+    ],
+    "expected": {
+      "error": "Le chemin de l’exécutable doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "\\?\\C:\\x"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier de configuration doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "C:relative"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "C:relative",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "C:relative"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier de configuration doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "C:/é space"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "C:/é space",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "C:/é space"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "",
+        "configDir": "C:/é space",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "/home/é space"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "/home/é space",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "/home/é space"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "auth": "cli",
+        "command": "",
+        "configDir": "/home/é space",
+        "accountLabel": "",
+        "model": "opus",
+        "effort": "max"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "command": "\\rooted"
+      }
+    ],
+    "expected": {
+      "error": "Le chemin de l’exécutable doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "work",
+        "name": "Travail",
+        "type": "claude",
+        "model": "opus",
+        "effort": "max",
+        "configDir": "\\rooted"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier de configuration doit être absolu."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "auth": "cli",
+        "command": "runner",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "",
+        "effort": "deep",
+        "analyzeArgs": [],
+        "editArgs": [],
+        "versionArgs": [
+          "--version"
+        ],
+        "statusArgs": [],
+        "npmPackage": ""
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "versionArgs": [
+          null
+        ],
+        "statusArgs": "invalid"
+      }
+    ],
+    "expected": {
+      "error": "Argument invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "analyzeArgs": "--unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Les arguments doivent être une liste JSON."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "editArgs": [
+          null
+        ]
+      }
+    ],
+    "expected": {
+      "error": "Argument invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "statusArgs": [
+          "\u0000"
+        ]
+      }
+    ],
+    "expected": {
+      "error": "Argument invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "versionArgs": null
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "auth": "cli",
+        "command": "runner",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "",
+        "effort": "deep",
+        "analyzeArgs": [],
+        "editArgs": [],
+        "versionArgs": [
+          "--version"
+        ],
+        "statusArgs": [],
+        "npmPackage": ""
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "versionArgs": []
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "auth": "cli",
+        "command": "runner",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "",
+        "effort": "deep",
+        "analyzeArgs": [],
+        "editArgs": [],
+        "versionArgs": [],
+        "statusArgs": [],
+        "npmPackage": ""
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "",
+        "effort": "deep"
+      }
+    ],
+    "expected": {
+      "error": "Exécutable requis."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "analyzeArgs": [
+          "literal $() ; é",
+          "\n",
+          ""
+        ]
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "auth": "cli",
+        "command": "runner",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "",
+        "effort": "deep",
+        "analyzeArgs": [
+          "literal $() ; é",
+          "\n",
+          ""
+        ],
+        "editArgs": [],
+        "versionArgs": [
+          "--version"
+        ],
+        "statusArgs": [],
+        "npmPackage": ""
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "statusArgs": [
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x",
+          "x"
+        ]
+      }
+    ],
+    "expected": {
+      "error": "Les arguments doivent être une liste JSON."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "npmPackage": "../private"
+      }
+    ],
+    "expected": {
+      "error": "Paquet npm invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "npmPackage": "@scope/package.name"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "auth": "cli",
+        "command": "runner",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "",
+        "effort": "deep",
+        "analyzeArgs": [],
+        "editArgs": [],
+        "versionArgs": [
+          "--version"
+        ],
+        "statusArgs": [],
+        "npmPackage": "@scope/package.name"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "npmPackage": "Upper"
+      }
+    ],
+    "expected": {
+      "error": "Paquet npm invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "custom",
+        "name": "Custom",
+        "type": "command",
+        "command": "runner",
+        "effort": "deep",
+        "npmPackage": "@scope/nested/path"
+      }
+    ],
+    "expected": {
+      "error": "Paquet npm invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      {
+        "id": "api",
+        "name": "API",
+        "type": "codex",
+        "auth": "api",
+        "model": "custom/model",
+        "effort": "high"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "api",
+        "name": "API",
+        "type": "codex",
+        "auth": "api",
+        "command": "",
+        "configDir": "",
+        "accountLabel": "",
+        "model": "custom/model",
+        "effort": "high"
+      }
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      null
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      []
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  },
+  {
+    "operation": "providerSettings",
+    "args": [
+      "text"
+    ],
+    "expected": {
+      "error": "Fournisseur invalide."
+    }
+  }
+]

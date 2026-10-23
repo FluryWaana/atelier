@@ -33,6 +33,10 @@ jobs:
         run: cargo xtask test-storage-parity
         env:
           ATELIER_NODE: node
+      - name: Compare historical Node domain contracts
+        run: cargo xtask test-domain-parity
+        env:
+          ATELIER_NODE: node
       - name: Install isolated Linux keyring prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb

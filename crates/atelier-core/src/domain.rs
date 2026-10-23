@@ -1,3 +1,18 @@
+pub mod agent_options;
+pub mod checklist;
+pub mod tasks;
+
+pub(crate) fn truthy(value: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    match value {
+        Value::Null => false,
+        Value::Bool(value) => *value,
+        Value::Number(value) => value.as_f64() != Some(0.0),
+        Value::String(value) => !value.is_empty(),
+        Value::Array(_) | Value::Object(_) => true,
+    }
+}
+
 pub fn text(value: &str, limit: usize) -> Result<String, &'static str> {
     if value.encode_utf16().count() > limit {
         return Err("Texte invalide ou trop long.");

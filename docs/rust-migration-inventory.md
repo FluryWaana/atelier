@@ -45,7 +45,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application.rs](../crates/atelier-core/src/application.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/contracts.rs](../crates/atelier-core/src/contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/domain.rs](../crates/atelier-core/src/domain.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/domain/agent_options.rs](../crates/atelier-core/src/domain/agent_options.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/domain/checklist.rs](../crates/atelier-core/src/domain/checklist.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/domain/tasks.rs](../crates/atelier-core/src/domain/tasks.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/lib.rs](../crates/atelier-core/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/tests/domain-contracts.rs](../crates/atelier-core/tests/domain-contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -85,17 +89,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/connectors/tempo.mjs](../lib/connectors/tempo.mjs) | Source / configuration | [test/connectors.test.mjs](../test/connectors.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
 | [lib/dev-servers.mjs](../lib/dev-servers.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/dev-servers.test.mjs](../test/dev-servers.test.mjs), [test/launch-ports.test.mjs](../test/launch-ports.test.mjs), [test/launch-settings.test.mjs](../test/launch-settings.test.mjs) |
 | [lib/diagnostics.mjs](../lib/diagnostics.mjs) | Source / configuration | [server.mjs](../server.mjs) |
-| [lib/domain/agent-options.mjs](../lib/domain/agent-options.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/diagnostics.mjs](../lib/diagnostics.mjs), [lib/project-settings.mjs](../lib/project-settings.mjs), [public/agent-options.mjs](../public/agent-options.mjs), [server.mjs](../server.mjs), [test/agent-provider-security.test.mjs](../test/agent-provider-security.test.mjs), [test/agent-providers.test.mjs](../test/agent-providers.test.mjs) |
-| [lib/domain/checklist.mjs](../lib/domain/checklist.mjs) | Source / configuration | [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/checklist.mjs](../lib/checklist.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
+| [lib/domain/agent-options.mjs](../lib/domain/agent-options.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/diagnostics.mjs](../lib/diagnostics.mjs), [lib/project-settings.mjs](../lib/project-settings.mjs), [public/agent-options.mjs](../public/agent-options.mjs), [server.mjs](../server.mjs), [test/agent-provider-security.test.mjs](../test/agent-provider-security.test.mjs), [test/agent-providers.test.mjs](../test/agent-providers.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
+| [lib/domain/checklist.mjs](../lib/domain/checklist.mjs) | Source / configuration | [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/checklist.mjs](../lib/checklist.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/connectors.mjs](../lib/domain/connectors.mjs) | Source / configuration | [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/infrastructure/connector-loader.mjs](../lib/infrastructure/connector-loader.mjs), [test/connectors.test.mjs](../test/connectors.test.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
 | [lib/domain/paths.mjs](../lib/domain/paths.mjs) | Source / configuration | [lib/infrastructure/task-files.mjs](../lib/infrastructure/task-files.mjs), [lib/paths.mjs](../lib/paths.mjs), [public/app.js](../public/app.js), [public/connector-availability.mjs](../public/connector-availability.mjs), [public/ui-helpers.mjs](../public/ui-helpers.mjs), [public/views/board.mjs](../public/views/board.mjs), [public/views/brainstorm.mjs](../public/views/brainstorm.mjs), [public/views/card.mjs](../public/views/card.mjs), [public/views/processes.mjs](../public/views/processes.mjs), [public/views/project-settings.mjs](../public/views/project-settings.mjs), [public/views/projects.mjs](../public/views/projects.mjs), [public/views/task-editor.mjs](../public/views/task-editor.mjs), [public/views/time.mjs](../public/views/time.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs) |
 | [lib/domain/release-package.mjs](../lib/domain/release-package.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [lib/infrastructure/tar-package.mjs](../lib/infrastructure/tar-package.mjs), [scripts/package.mjs](../scripts/package.mjs), [scripts/update-worker.mjs](../scripts/update-worker.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/update-worker.test.mjs](../test/update-worker.test.mjs) |
 | [lib/domain/releases.mjs](../lib/domain/releases.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/updates.mjs](../lib/application/updates.mjs), [lib/infrastructure/github-releases.mjs](../lib/infrastructure/github-releases.mjs), [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs), [scripts/check-release.mjs](../scripts/check-release.mjs), [scripts/package-installers.mjs](../scripts/package-installers.mjs), [scripts/package.mjs](../scripts/package.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
 | [lib/domain/reviews.mjs](../lib/domain/reviews.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs) |
-| [lib/domain/tasks.mjs](../lib/domain/tasks.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [public/workflow.mjs](../public/workflow.mjs), [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs) |
+| [lib/domain/tasks.mjs](../lib/domain/tasks.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [public/workflow.mjs](../public/workflow.mjs), [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/tickets.mjs](../lib/domain/tickets.mjs) | Source / configuration | [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
 | [lib/domain/time.mjs](../lib/domain/time.mjs) | Source / configuration | [lib/application/time-tracking.mjs](../lib/application/time-tracking.mjs), [lib/tempo-export.mjs](../lib/tempo-export.mjs), [lib/time-tracking.mjs](../lib/time-tracking.mjs) |
-| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
+| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/folders.mjs](../lib/folders.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs) |
 | [lib/forge-repositories.mjs](../lib/forge-repositories.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [lib/connectors/gitlab.mjs](../lib/connectors/gitlab.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
 | [lib/forges/github.mjs](../lib/forges/github.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
@@ -263,6 +267,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/migration-agent.mjs](../test/fixtures/migration-agent.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/migration-data.mjs](../test/fixtures/migration-data.mjs) | Test / support | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs), [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs), [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
 | [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-domain-reference.json](../test/fixtures/rust-domain-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-lock-reference.mjs](../test/fixtures/rust-lock-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs) | Test / support | [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs), [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs) |
@@ -927,13 +933,43 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/contracts.rs:9](../crates/atelier-core/src/contracts.rs#L9) | <code>pub fields: Map&lt;String, Value&gt;,</code> |
 | [crates/atelier-core/src/contracts.rs:13](../crates/atelier-core/src/contracts.rs#L13) | <code>pub struct Board {</code> |
 | [crates/atelier-core/src/contracts.rs:14](../crates/atelier-core/src/contracts.rs#L14) | <code>pub cards: Vec&lt;Card&gt;,</code> |
-| [crates/atelier-core/src/domain.rs:1](../crates/atelier-core/src/domain.rs#L1) | <code>pub fn text(value: &amp;str, limit: usize) -&gt; Result&lt;String, &amp;'static str&gt; {</code> |
-| [crates/atelier-core/src/domain.rs:10](../crates/atelier-core/src/domain.rs#L10) | <code>mod tests {</code> |
-| [crates/atelier-core/src/domain.rs:11](../crates/atelier-core/src/domain.rs#L11) | <code>use super::*;</code> |
-| [crates/atelier-core/src/domain.rs:13](../crates/atelier-core/src/domain.rs#L13) | <code>#[test]</code> |
+| [crates/atelier-core/src/domain.rs:1](../crates/atelier-core/src/domain.rs#L1) | <code>pub mod agent_options;</code> |
+| [crates/atelier-core/src/domain.rs:2](../crates/atelier-core/src/domain.rs#L2) | <code>pub mod checklist;</code> |
+| [crates/atelier-core/src/domain.rs:3](../crates/atelier-core/src/domain.rs#L3) | <code>pub mod tasks;</code> |
+| [crates/atelier-core/src/domain.rs:6](../crates/atelier-core/src/domain.rs#L6) | <code>use serde_json::Value;</code> |
+| [crates/atelier-core/src/domain.rs:16](../crates/atelier-core/src/domain.rs#L16) | <code>pub fn text(value: &amp;str, limit: usize) -&gt; Result&lt;String, &amp;'static str&gt; {</code> |
+| [crates/atelier-core/src/domain.rs:25](../crates/atelier-core/src/domain.rs#L25) | <code>mod tests {</code> |
+| [crates/atelier-core/src/domain.rs:26](../crates/atelier-core/src/domain.rs#L26) | <code>use super::*;</code> |
+| [crates/atelier-core/src/domain.rs:28](../crates/atelier-core/src/domain.rs#L28) | <code>#[test]</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:1](../crates/atelier-core/src/domain/agent_options.rs#L1) | <code>use super::{text, truthy};</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:2](../crates/atelier-core/src/domain/agent_options.rs#L2) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:6](../crates/atelier-core/src/domain/agent_options.rs#L6) | <code>pub fn agent_providers(settings: &amp;Value) -&gt; Result&lt;Vec&lt;Value&gt;&gt; {</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:22](../crates/atelier-core/src/domain/agent_options.rs#L22) | <code>pub fn agent_provider(settings: &amp;Value, id: &amp;str) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:29](../crates/atelier-core/src/domain/agent_options.rs#L29) | <code>pub fn agent_options(agent: &amp;str, body: &amp;Value, settings: Option&lt;&amp;Value&gt;) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:76](../crates/atelier-core/src/domain/agent_options.rs#L76) | <code>pub fn resolve_agent_options(settings: &amp;Value, card: &amp;Value, body: &amp;Value) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-core/src/domain/agent_options.rs:160](../crates/atelier-core/src/domain/agent_options.rs#L160) | <code>pub fn provider_settings(body: &amp;Value) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-core/src/domain/checklist.rs:1](../crates/atelier-core/src/domain/checklist.rs#L1) | <code>use super::text;</code> |
+| [crates/atelier-core/src/domain/checklist.rs:2](../crates/atelier-core/src/domain/checklist.rs#L2) | <code>use serde::{Deserialize, Serialize};</code> |
+| [crates/atelier-core/src/domain/checklist.rs:3](../crates/atelier-core/src/domain/checklist.rs#L3) | <code>use serde_json::Value;</code> |
+| [crates/atelier-core/src/domain/checklist.rs:6](../crates/atelier-core/src/domain/checklist.rs#L6) | <code>pub struct Criterion {</code> |
+| [crates/atelier-core/src/domain/checklist.rs:7](../crates/atelier-core/src/domain/checklist.rs#L7) | <code>pub text: String,</code> |
+| [crates/atelier-core/src/domain/checklist.rs:8](../crates/atelier-core/src/domain/checklist.rs#L8) | <code>pub done: bool,</code> |
+| [crates/atelier-core/src/domain/checklist.rs:11](../crates/atelier-core/src/domain/checklist.rs#L11) | <code>pub fn checklist(value: &amp;Value) -&gt; Result&lt;Vec&lt;Criterion&gt;, &amp;'static str&gt; {</code> |
+| [crates/atelier-core/src/domain/checklist.rs:32](../crates/atelier-core/src/domain/checklist.rs#L32) | <code>pub fn checklist_text(items: &amp;[Criterion]) -&gt; String {</code> |
+| [crates/atelier-core/src/domain/tasks.rs:1](../crates/atelier-core/src/domain/tasks.rs#L1) | <code>use super::truthy;</code> |
+| [crates/atelier-core/src/domain/tasks.rs:2](../crates/atelier-core/src/domain/tasks.rs#L2) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-core/src/domain/tasks.rs:3](../crates/atelier-core/src/domain/tasks.rs#L3) | <code>use std::collections::{HashMap, HashSet};</code> |
+| [crates/atelier-core/src/domain/tasks.rs:5](../crates/atelier-core/src/domain/tasks.rs#L5) | <code>pub const STATUSES: &amp;[&amp;str] = &amp;["todo", "doing", "review", "done", "standby"];</code> |
+| [crates/atelier-core/src/domain/tasks.rs:7](../crates/atelier-core/src/domain/tasks.rs#L7) | <code>pub fn review_requirements(card: &amp;Value) -&gt; Value {</code> |
+| [crates/atelier-core/src/domain/tasks.rs:22](../crates/atelier-core/src/domain/tasks.rs#L22) | <code>pub fn blockers(card: &amp;Value, cards: &amp;[Value]) -&gt; Vec&lt;Value&gt; {</code> |
+| [crates/atelier-core/src/domain/tasks.rs:40](../crates/atelier-core/src/domain/tasks.rs#L40) | <code>pub fn dependencies(id: &amp;str, value: &amp;Value, cards: &amp;[Value]) -&gt; Result&lt;Vec&lt;String&gt;, &amp;'static str&gt; {</code> |
 | [crates/atelier-core/src/lib.rs:1](../crates/atelier-core/src/lib.rs#L1) | <code>pub mod application;</code> |
 | [crates/atelier-core/src/lib.rs:2](../crates/atelier-core/src/lib.rs#L2) | <code>pub mod contracts;</code> |
 | [crates/atelier-core/src/lib.rs:3](../crates/atelier-core/src/lib.rs#L3) | <code>pub mod domain;</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:1](../crates/atelier-core/tests/domain-contracts.rs#L1) | <code>use atelier_core::domain::{agent_options::*, checklist::*, tasks::*, text};</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:2](../crates/atelier-core/tests/domain-contracts.rs#L2) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:4](../crates/atelier-core/tests/domain-contracts.rs#L4) | <code>#[test]</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:50](../crates/atelier-core/tests/domain-contracts.rs#L50) | <code>#[test]</code> |
 | [crates/atelier-ui/Cargo.toml:3](../crates/atelier-ui/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:4](../crates/atelier-ui/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:5](../crates/atelier-ui/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -981,17 +1017,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod storage;</code> |
 | [xtask/src/main.rs:9](../xtask/src/main.rs#L9) | <code>mod ui;</code> |
 | [xtask/src/main.rs:23](../xtask/src/main.rs#L23) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>mod tests {</code> |
-| [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>use super::*;</code> |
-| [xtask/src/main.rs:100](../xtask/src/main.rs#L100) | <code>#[test]</code> |
-| [xtask/src/main.rs:137](../xtask/src/main.rs#L137) | <code>#[test]</code> |
-| [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
+| [xtask/src/main.rs:114](../xtask/src/main.rs#L114) | <code>mod tests {</code> |
+| [xtask/src/main.rs:115](../xtask/src/main.rs#L115) | <code>use super::*;</code> |
+| [xtask/src/main.rs:116](../xtask/src/main.rs#L116) | <code>#[test]</code> |
+| [xtask/src/main.rs:153](../xtask/src/main.rs#L153) | <code>#[test]</code> |
+| [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, node_executable, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use serde_json::{Value, json};</code> |
 | [xtask/src/storage.rs:11](../xtask/src/storage.rs#L11) | <code>use std::path::Path;</code> |
-| [xtask/src/storage.rs:65](../xtask/src/storage.rs#L65) | <code>use std::{process::Stdio, time::Duration};</code> |
-| [xtask/src/storage.rs:66](../xtask/src/storage.rs#L66) | <code>use tokio::io::{AsyncBufReadExt, BufReader};</code> |
-| [xtask/src/storage.rs:164](../xtask/src/storage.rs#L164) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/src/storage.rs:53](../xtask/src/storage.rs#L53) | <code>use std::{process::Stdio, time::Duration};</code> |
+| [xtask/src/storage.rs:54](../xtask/src/storage.rs#L54) | <code>use tokio::io::{AsyncBufReadExt, BufReader};</code> |
+| [xtask/src/storage.rs:152](../xtask/src/storage.rs#L152) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
 | [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::{local_http::LocalHttp, session};</code> |
 | [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
@@ -1447,9 +1483,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:91](../.github/workflows/rust.yml#L91) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:106](../.github/workflows/rust.yml#L106) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:107](../.github/workflows/rust.yml#L107) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:95](../.github/workflows/rust.yml#L95) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:110](../.github/workflows/rust.yml#L110) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:111](../.github/workflows/rust.yml#L111) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1467,6 +1503,21 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:12](../crates/atelier-app/src/main.rs#L12) | <code>let value = args.next().ok_or("Valeur d’argument absente.")?;</code> |
 | [crates/atelier-app/tests/prototype.rs:324](../crates/atelier-app/tests/prototype.rs#L324) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:12](../crates/atelier-core/tests/domain-contracts.rs#L12) | <code>let args = &amp;case["args"];</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:14](../crates/atelier-core/tests/domain-contracts.rs#L14) | <code>"text" =&gt; args[0]</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:17](../crates/atelier-core/tests/domain-contracts.rs#L17) | <code>.and_then(\|value\| text(value, args[1].as_u64().unwrap() as usize))</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:19](../crates/atelier-core/tests/domain-contracts.rs#L19) | <code>"checklist" =&gt; checklist(&amp;args[0]).map(\|value\| json!(value)),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:21](../crates/atelier-core/tests/domain-contracts.rs#L21) | <code>&amp;serde_json::from_value::&lt;Vec&lt;Criterion&gt;&gt;(args[0].clone()).unwrap()</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:23](../crates/atelier-core/tests/domain-contracts.rs#L23) | <code>"reviewRequirements" =&gt; Ok(review_requirements(&amp;args[0])),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:24](../crates/atelier-core/tests/domain-contracts.rs#L24) | <code>"blockers" =&gt; Ok(json!(blockers(&amp;args[0], args[1].as_array().unwrap()))),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:26](../crates/atelier-core/tests/domain-contracts.rs#L26) | <code>args[0].as_str().unwrap(),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:27](../crates/atelier-core/tests/domain-contracts.rs#L27) | <code>&amp;args[1],</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:28](../crates/atelier-core/tests/domain-contracts.rs#L28) | <code>args[2].as_array().unwrap(),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:31](../crates/atelier-core/tests/domain-contracts.rs#L31) | <code>"agentProviders" =&gt; agent_providers(&amp;args[0]).map(\|value\| json!(value)),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:32](../crates/atelier-core/tests/domain-contracts.rs#L32) | <code>"agentProvider" =&gt; agent_provider(&amp;args[0], args[1].as_str().unwrap()),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:33](../crates/atelier-core/tests/domain-contracts.rs#L33) | <code>"agentOptions" =&gt; agent_options(args[0].as_str().unwrap(), &amp;args[1], args.get(2)),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:34](../crates/atelier-core/tests/domain-contracts.rs#L34) | <code>"resolveAgentOptions" =&gt; resolve_agent_options(&amp;args[0], &amp;args[1], &amp;args[2]),</code> |
+| [crates/atelier-core/tests/domain-contracts.rs:35](../crates/atelier-core/tests/domain-contracts.rs#L35) | <code>"providerSettings" =&gt; provider_settings(&amp;args[0]),</code> |
 | [launcher.mjs:16](../launcher.mjs#L16) | <code>const port = Number(process.env.PORT \|\| 4317);</code> |
 | [launcher.mjs:36](../launcher.mjs#L36) | <code>if (process.argv.includes('--import-data')) {</code> |
 | [launcher.mjs:39](../launcher.mjs#L39) | <code>const source = process.argv[process.argv.indexOf('--import-data') + 1] \|\| await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');</code> |
@@ -1609,14 +1660,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/keyring.rs:19](../xtask/src/keyring.rs#L19) | <code>let args: Vec&lt;String&gt; = args</code> |
 | [xtask/src/keyring.rs:29](../xtask/src/keyring.rs#L29) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
 | [xtask/src/keyring.rs:32](../xtask/src/keyring.rs#L32) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
-| [xtask/src/main.rs:67](../xtask/src/main.rs#L67) | <code>run(command("trunk").args([</code> |
-| [xtask/src/main.rs:86](../xtask/src/main.rs#L86) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
-| [xtask/src/main.rs:87](../xtask/src/main.rs#L87) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:91](../xtask/src/main.rs#L91) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:103](../xtask/src/main.rs#L103) | <code>.args([</code> |
-| [xtask/src/storage.rs:55](../xtask/src/storage.rs#L55) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
-| [xtask/src/storage.rs:80](../xtask/src/storage.rs#L80) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
-| [xtask/src/storage.rs:106](../xtask/src/storage.rs#L106) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
+| [xtask/src/main.rs:79](../xtask/src/main.rs#L79) | <code>run(command("trunk").args([</code> |
+| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
+| [xtask/src/main.rs:103](../xtask/src/main.rs#L103) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:104](../xtask/src/main.rs#L104) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))</code> |
+| [xtask/src/main.rs:107](../xtask/src/main.rs#L107) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:119](../xtask/src/main.rs#L119) | <code>.args([</code> |
+| [xtask/src/storage.rs:43](../xtask/src/storage.rs#L43) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
+| [xtask/src/storage.rs:68](../xtask/src/storage.rs#L68) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
+| [xtask/src/storage.rs:94](../xtask/src/storage.rs#L94) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/ui.rs:127](../xtask/src/ui.rs#L127) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:163](../xtask/src/ui.rs#L163) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
@@ -2686,11 +2739,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>token_vault::{KeyringPlatform, execute_keyring, keyring_protect},</code> |
 | [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>token_vault::{self, KeyringPlatform},</code> |
 | [xtask/src/storage.rs:17](../xtask/src/storage.rs#L17) | <code>let page = store.logs("run-0", cursor)?;</code> |
-| [xtask/src/storage.rs:197](../xtask/src/storage.rs#L197) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
-| [xtask/src/storage.rs:271](../xtask/src/storage.rs#L271) | <code>let decoded = token_vault::keyring_protect(platform, envelope, true, &amp;mut key).await?;</code> |
-| [xtask/src/storage.rs:276](../xtask/src/storage.rs#L276) | <code>json!(token_vault::keyring_protect(platform, &amp;decoded, false, &amp;mut key).await?);</code> |
-| [xtask/src/storage.rs:281](../xtask/src/storage.rs#L281) | <code>if token_vault::load(&amp;database).await? != expected["tokens"] {</code> |
-| [xtask/src/storage.rs:284](../xtask/src/storage.rs#L284) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
+| [xtask/src/storage.rs:185](../xtask/src/storage.rs#L185) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
+| [xtask/src/storage.rs:259](../xtask/src/storage.rs#L259) | <code>let decoded = token_vault::keyring_protect(platform, envelope, true, &amp;mut key).await?;</code> |
+| [xtask/src/storage.rs:264](../xtask/src/storage.rs#L264) | <code>json!(token_vault::keyring_protect(platform, &amp;decoded, false, &amp;mut key).await?);</code> |
+| [xtask/src/storage.rs:269](../xtask/src/storage.rs#L269) | <code>if token_vault::load(&amp;database).await? != expected["tokens"] {</code> |
+| [xtask/src/storage.rs:272](../xtask/src/storage.rs#L272) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 325 fichiers ; 94 fichiers de tests Node.
+Total : 331 fichiers ; 94 fichiers de tests Node.

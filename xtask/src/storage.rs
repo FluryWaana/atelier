@@ -1,4 +1,4 @@
-use crate::{Result, command, root, run};
+use crate::{Result, command, node_executable, run};
 use atelier_app::infrastructure::{
     backups,
     data_lock::DataLock,
@@ -36,18 +36,6 @@ fn fixture(script: &str, mode: &str, database: &Path, reference: &Path) -> Resul
         .arg(mode)
         .arg(database)
         .arg(reference))
-}
-
-fn node_executable() -> std::path::PathBuf {
-    std::env::var_os("ATELIER_NODE")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            root().join(if cfg!(windows) {
-                "runtime/node.exe"
-            } else {
-                "runtime/node"
-            })
-        })
 }
 
 fn try_node_lock(directory: &Path, expected: i32) -> Result<()> {
