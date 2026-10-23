@@ -2,11 +2,15 @@ use crate::{
     Result,
     infrastructure::{database::Database, prototype::PrototypeDirectory, session},
 };
-use atelier_core::{application::create_card, contracts::Board, document::Document};
+use atelier_core::{
+    application::{create_card, duplicate_card},
+    contracts::{Board, Card},
+    document::Document,
+};
 use axum::{
     Json, Router,
     body::{Body, to_bytes},
-    extract::{Query, Request, State},
+    extract::{Path, Query, Request, State},
     http::{Method, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
@@ -151,14 +155,20 @@ async fn object(body: Body) -> std::result::Result<Document, (StatusCode, &'stat
     serde_json::from_str(value.get()).map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))
 }
 
+fn timestamp() -> Result<String> {
+    Ok(
+        time::OffsetDateTime::now_utc().format(time::macros::format_description!(
+            "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
+        ))?,
+    )
+}
+
 async fn create(State(state): State<Shared>, request: Request) -> Response {
     let body = match object(request.into_body()).await {
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
     };
-    let timestamp = match time::OffsetDateTime::now_utc().format(time::macros::format_description!(
-        "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
-    )) {
+    let timestamp = match timestamp() {
         Ok(value) => value,
         Err(_) => return failure(StatusCode::INTERNAL_SERVER_ERROR, "Horloge indisponible."),
     };
@@ -171,6 +181,40 @@ async fn create(State(state): State<Shared>, request: Request) -> Response {
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Écriture du stockage impossible.",
+        ),
+    }
+}
+
+async fn duplicate(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    if let Err((status, message)) = object(request.into_body()).await {
+        return failure(status, message);
+    }
+    let timestamp = match timestamp() {
+        Ok(value) => value,
+        Err(_) => return failure(StatusCode::INTERNAL_SERVER_ERROR, "Horloge indisponible."),
+    };
+    let copied = state
+        .database
+        .call(move |store| {
+            use crate::infrastructure::store::Documents;
+            let Some(card) = store.document::<Card>(Documents::Cards, &id)? else {
+                return Ok(None);
+            };
+            let copy = duplicate_card(&card, uuid::Uuid::new_v4().to_string(), timestamp)?;
+            store.put(Documents::Cards, &copy)?;
+            Ok(Some(copy))
+        })
+        .await;
+    match copied {
+        Ok(Some(card)) => Json(card).into_response(),
+        Ok(None) => failure(StatusCode::NOT_FOUND, "Carte introuvable."),
+        Err(_) => failure(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Duplication de la carte impossible.",
         ),
     }
 }
@@ -225,6 +269,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/health", get(health))
         .route("/api/state", get(board))
         .route("/api/cards", post(create))
+        .route("/api/cards/{id}/duplicate", post(duplicate))
         .route("/api/prototype/stop", post(stop))
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());

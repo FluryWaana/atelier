@@ -1,6 +1,6 @@
 # M02 — données et protections locales
 
-Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; les preuves natives M01 sont acquises, la réouverture navigateur corrigée doit encore être requalifiée. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
+Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est validé après requalification de la vraie réouverture navigateur. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
 
 ## Stockage porté
 

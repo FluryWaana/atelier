@@ -261,7 +261,51 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
     assert!(raw.contains(r#""\ud800":{"unknown":"\udc00"}"#));
     let board: Board = serde_json::from_str(&raw).unwrap();
     assert_eq!(board.cards[0].title, JsonString(vec![0xd83d]));
+    let client = reqwest::Client::new();
+    let duplicate = || {
+        client
+            .post(format!(
+                "{address}/api/cards/{}/duplicate",
+                board.cards[0].id
+            ))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+    };
+    let (first, second) = tokio::join!(duplicate().send(), duplicate().send());
+    let first = first.unwrap();
+    let second = second.unwrap();
+    assert_eq!(first.status(), 200);
+    assert_eq!(second.status(), 200);
+    let first: Card = first.json().await.unwrap();
+    let second: Card = second.json().await.unwrap();
+    assert_ne!(first.id, second.id);
+    let mut copied_title = JsonString::from("Copie — ");
+    copied_title.0.push(0xd83d);
+    assert_eq!(first.title, copied_title);
+    assert_eq!(second.title, copied_title);
+    assert!(first.fields.string_equals("status", "todo").unwrap());
+    assert!(first.fields.raw("nullable").is_none());
+    let missing = client
+        .post(format!("{address}/api/cards/missing/duplicate"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), 404);
+    assert_eq!(
+        missing.json::<Value>().await.unwrap(),
+        json!({"error":"Carte introuvable."})
+    );
     stop(&address, &token, server).await;
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    let saved = database.cards().await.unwrap();
+    assert_eq!(saved.len(), 3);
+    assert_eq!(saved[2].title, JsonString(vec![0xd83d]));
+    assert!(saved[2].fields.raw("nullable").is_some());
+    database.close().await.unwrap();
 }
 
 #[tokio::test]

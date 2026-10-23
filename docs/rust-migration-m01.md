@@ -1,6 +1,6 @@
 # M01 — première tranche Rust exécutable
 
-Base : `ec6dbe4` (M00 commis), tranche verticale commise dans `c161512`, puis preuves natives et navigateurs. **M01 implémenté à vérifier : faisabilité native acquise, vraie réouverture navigateur corrigée à requalifier en CI.** Aucune bascule de production.
+Base : `ec6dbe4` (M00 commis), tranche verticale commise dans `c161512`, puis preuves natives et navigateurs. **M01 validé pour la faisabilité, réouverture réelle requalifiée dans les quatre navigateurs.** Aucune bascule de production.
 
 ## Périmètre livré
 
@@ -8,7 +8,7 @@ Quatre crates : `atelier-core` porte validation du titre et contrat JSON extensi
 
 La seule commande produit Rust disponible est `atelier serve-prototype --data-dir DOSSIER --assets .artifacts/rust-ui [--port 4318]`. Elle exige un dossier vide au premier démarrage, puis son marqueur `.atelier-rust-prototype`. Elle refuse un dossier Node existant. Deux instances Rust ne peuvent pas ouvrir le même dossier, y compris via `.` ; M02 a remplacé le verrou initial par la coordination SQLite commune avec l'adaptateur N1. Son intégration dans la livraison Node de transition reste en M09.
 
-L'API du prototype propose `GET /api/health`, `GET /api/state`, `POST /api/cards` (titre seul) et `POST /api/prototype/stop`. Le tableau renvoyé ne contient que les cartes. Les autres contrats métier restent à porter. Les champs de création non pris en charge sont refusés explicitement. Les documents JSON persistés conservent les champs additionnels et null. Aucune compatibilité complète de la base Node n'est revendiquée.
+L'API initiale propose `GET /api/health`, `GET /api/state`, `POST /api/cards` (titre seul) et `POST /api/prototype/stop`. M03 ajoute `POST /api/cards/{id}/duplicate`. Le tableau renvoyé ne contient que les cartes. Les autres contrats métier restent à porter. Les champs de création non pris en charge sont refusés explicitement. Les documents JSON persistés conservent les champs additionnels et null. Aucune compatibilité complète de la base Node n'est revendiquée.
 
 HTTP écoute sur loopback, contrôle Host/Origin, authentification Bearer, preuve HMAC, mutations JSON et taille. La preuve HMAC possède un vecteur provenant de `sessionProof` Node. La session change à chaque lancement. Les assets sont limités aux fichiers générés reconnus. La CSP ajoute uniquement `'wasm-unsafe-eval'` à `script-src 'self'` ; pas de `'unsafe-eval'` ni `'unsafe-inline'`. `xtask` externalise le chargeur produit par Trunk et refuse un format inattendu. Le code JavaScript de liaison reste généré.
 
@@ -84,7 +84,7 @@ Les cinq jobs natifs de [fec382f](https://github.com/FluryWaana/atelier/actions/
 
 Le changement du seul fragment `#session` pouvait laisser l'ancien document chargé après arrêt/redémarrage du serveur. Les tests antérieurs prouvaient la rotation côté API et la persistance SQLite, mais pas systématiquement le rechargement du DOM. Le scénario ajoute désormais une carte via API après le premier rendu, quitte la page vers `about:blank`, puis ouvre la nouvelle session et exige les deux cartes. Il compare aussi les unités UTF-16 d'un titre contenant un substitut isolé. Aucun ancien DOM ne peut satisfaire ces assertions.
 
-Edge réussit ce scénario corrigé ; capture finale relue. Chrome/Firefox/Safari doivent le rejouer en CI avant nouvelle clôture M01. L'affectation à `textContent` emploie [JsString::from_char_code](https://docs.rs/js-sys/0.3.106/js_sys/struct.JsString.html#method.from_char_code) et un NodeRef Leptos, sans conversion Rust `String` ni HTML interprété.
+Edge réussit ce scénario corrigé ; capture finale relue. Les deux jobs navigateur de [aa9bf62](https://github.com/FluryWaana/atelier/actions/runs/40041776924) réussissent également : Chrome, Firefox et Safari requalifiés avec vraie réouverture et vérification numérique UTF-16. M01 peut de nouveau être clos avec les preuves natives déjà acquises. L'affectation à `textContent` emploie [JsString::from_char_code](https://docs.rs/js-sys/0.3.106/js_sys/struct.JsString.html#method.from_char_code) et un NodeRef Leptos, sans conversion Rust `String` ni HTML interprété.
 
 ### Prototypes tray POSIX
 

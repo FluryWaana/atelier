@@ -165,6 +165,15 @@ async fn test_utf16(directory: &Path) -> Result<()> {
     database
         .call(|store| {
             store.transaction(|store| {
+                let original = store
+                    .document::<atelier_core::contracts::Card>(Documents::Cards, "card")?
+                    .ok_or("Carte Unicode absente.")?;
+                let copied = atelier_core::application::duplicate_card(
+                    &original,
+                    "copy".into(),
+                    "2026-10-24T00:00:00.000Z".into(),
+                )?;
+                store.put(Documents::Cards, &copied)?;
                 for table in [
                     Documents::Projects,
                     Documents::Cards,

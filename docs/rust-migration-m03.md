@@ -1,6 +1,14 @@
 # M03 — Règles et API métier
 
-État : en cours, règles pures préparatoires ; API et cas d'usage complets à porter. Les preuves natives M01 sont acquises, la réouverture navigateur corrigée doit être requalifiée ; M02 reste en cours.
+## Duplication de cartes — base `aa9bf62`
+
+`application::duplicate_card` reprend uniquement les champs éditables prévus par Node, remet les critères à non validés et le statut à `todo`, sans ticket, PR, dépendances, worktrees, archivage, automatisation ni champ arbitraire. Le titre `Copie — …` est limité à 300 unités UTF-16, y compris lorsqu'une paire est coupée. Les textes et critères atypiques restent sans perte.
+
+`POST /api/cards/{id}/duplicate` applique les protections locales existantes et renvoie 404 pour une carte absente. Lecture et insertion occupent une seule opération du worker SQLite ; aucune I/O distante ni lancement d'agent. Deux requêtes concurrentes créent deux identifiants distincts et laissent l'original inchangé.
+
+42 tests Rust réussis, Clippy natif/WASM propre, comparaison historique complète réussie. Le corpus UTF-16 remplace la copie Node par la copie réellement calculée en Rust avant comparaison intégrale. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 83,69 s. Les autres opérations de tâches et leur exposition UI restent à porter.
+
+État : en cours, règles pures et duplication HTTP portées ; autres API et cas d'usage à porter. M01 est requalifié après correction du test de réouverture ; M02 reste en cours.
 
 ## Règles de tâches et profils — base `fec382f`
 

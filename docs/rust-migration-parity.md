@@ -53,6 +53,8 @@ C02/C03/C07, incrément après `038e794` : représentation UTF-16 et documents b
 
 C02/C05/UI, incrément après `93f8276` : contrats et titre HTTP/WASM sans perte, avec preuve numérique des unités dans le DOM Edge après redémarrage. Le test précédent pouvait conserver l'ancien DOM par navigation de fragment ; M01 rouvre sa qualification de réouverture Chrome/Firefox/Safari. Le nouveau scénario passe par `about:blank` et exige une seconde carte créée après le premier rendu ; les preuves de chargement WASM et primitives natives antérieures restent valables.
 
+C07, incrément après `aa9bf62` : duplication pure et HTTP portée, copie Node/Rust effectivement comparée dans le corpus UTF-16. Tests de contenu autorisé, critères décochés, absence de liens/états copiés, appels HTTP concurrents et 404. Les autres opérations de tâches restent ouvertes. Les parcours corrigés Chrome/Firefox/Safari passent dans les jobs navigateur `aa9bf62` ; M01 requalifié.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |
