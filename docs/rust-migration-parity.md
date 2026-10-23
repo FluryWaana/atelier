@@ -49,6 +49,8 @@ C07/C10, incrément après `fec382f` : règles pures de critères, dépendances 
 
 C08, incrément après `05dbfc8` : validation des réglages de projet et héritage par dépôt portés, 246 vecteurs de domaine au total. Déplacement transactionnel, découverte des services et routes restent ouverts. M01 est validé pour la faisabilité : les cinq jobs natifs `fec382f` passent, trays POSIX compris. C02/C07 : cas des substituts UTF-16 isolés découvert lors de la préparation de la duplication, à corriger avant toute qualification des données.
 
+C02/C03/C07, incrément après `038e794` : représentation UTF-16 et documents bruts conservés par SQLite/restauration, test exhaustif des unités et comparaison historique de la vraie duplication Node avec emoji coupé. Les contrats HTTP/UI encore fondés sur `String`/`Value` restent à adapter. Le contrôle historique de domaine compare désormais le JSON complet indépendamment des fins de ligne Git ; échec CRLF Windows reproduit et corrigé localement.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

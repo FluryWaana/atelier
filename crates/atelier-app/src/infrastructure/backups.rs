@@ -3,9 +3,10 @@ use super::{
     store::{Documents, Store},
 };
 use crate::Result;
+use atelier_core::document::{Document, JsonString};
 use rusqlite::{Connection, OpenFlags, params};
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::{
     collections::HashMap,
     fs,
@@ -136,7 +137,7 @@ impl BackupDirectory {
 struct SavedDocument {
     id: String,
     data: String,
-    value: Value,
+    value: Document,
 }
 
 fn documents(source: &Connection, table: Documents) -> Result<Vec<SavedDocument>> {
@@ -155,14 +156,31 @@ fn documents(source: &Connection, table: Documents) -> Result<Vec<SavedDocument>
     .collect()
 }
 
-fn truthy(value: Option<&Value>) -> bool {
-    match value {
-        None | Some(Value::Null) => false,
-        Some(Value::Bool(value)) => *value,
-        Some(Value::Number(value)) => value.as_f64() != Some(0.0),
-        Some(Value::String(value)) => !value.is_empty(),
-        Some(Value::Array(_) | Value::Object(_)) => true,
+fn automation_fields(raw: &serde_json::value::RawValue) -> Result<Document> {
+    let mut document = Document::default();
+    match raw.get().as_bytes().first() {
+        Some(b'{') => return Ok(serde_json::from_str(raw.get())?),
+        Some(b'[') => {
+            for (index, value) in
+                serde_json::from_str::<Vec<Box<serde_json::value::RawValue>>>(raw.get())?
+                    .iter()
+                    .enumerate()
+            {
+                document.set(&index.to_string(), value)?;
+            }
+        }
+        Some(b'"') => {
+            for (index, unit) in serde_json::from_str::<JsonString>(raw.get())?
+                .0
+                .into_iter()
+                .enumerate()
+            {
+                document.set(&index.to_string(), &JsonString(vec![unit]))?;
+            }
+        }
+        _ => {}
     }
+    Ok(document)
 }
 
 pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
@@ -182,40 +200,43 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
         .iter()
         .map(|row| (row.id.as_str(), &row.value))
         .collect();
-    for current in store.documents(Documents::Times)? {
-        if current.get("exportState") == Some(&json!("draft")) {
+    for current in store.documents::<Document>(Documents::Times)? {
+        if current.string_equals("exportState", "draft")? {
             continue;
         }
-        let saved = current
-            .get("id")
-            .and_then(Value::as_str)
-            .and_then(|id| times.get(id));
-        if saved.is_none_or(|saved| {
-            saved.get("exportState") != current.get("exportState")
-                || saved.get("tempoId") != current.get("tempoId")
-                || saved.get("exportState") != Some(&json!("exported"))
-        }) {
+        let id = current.get::<String>("id")?;
+        let saved = id.as_deref().and_then(|id| times.get(id));
+        let same = if let Some(saved) = saved {
+            saved.get::<Value>("exportState")? == current.get::<Value>("exportState")?
+                && saved.get::<Value>("tempoId")? == current.get::<Value>("tempoId")?
+                && saved.string_equals("exportState", "exported")?
+        } else {
+            false
+        };
+        if !same {
             return Err("Restauration refusée : des envois Tempo plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.".into());
         }
     }
-    if runs
-        .iter()
-        .any(|run| run.value.get("status") == Some(&json!("running")))
-        || cards.iter().any(|card| {
-            card.value
-                .get("automation")
-                .and_then(|automation| automation.get("state"))
-                == Some(&json!("running"))
-        })
-        || times.values().any(|time| {
-            truthy(time.get("runningSince"))
-                || matches!(
-                    time.get("exportState").and_then(Value::as_str),
-                    Some("sending" | "uncertain")
-                )
-        })
-    {
-        return Err("Cette sauvegarde contient des opérations inachevées.".into());
+    let unfinished = "Cette sauvegarde contient des opérations inachevées.";
+    for run in &runs {
+        if run.value.string_equals("status", "running")? {
+            return Err(unfinished.into());
+        }
+    }
+    for card in &cards {
+        if let Some(raw) = card.value.raw("automation")
+            && automation_fields(raw)?.string_equals("state", "running")?
+        {
+            return Err(unfinished.into());
+        }
+    }
+    for time in times.values() {
+        if time.truthy("runningSince")?
+            || time.string_equals("exportState", "sending")?
+            || time.string_equals("exportState", "uncertain")?
+        {
+            return Err(unfinished.into());
+        }
     }
     let mut statement = source.prepare("SELECT seq,runId,stream,text FROM logs ORDER BY seq")?;
     let logs = statement
@@ -247,23 +268,23 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
         for (id, data) in settings { store.connection.execute("INSERT INTO settings(id,data) VALUES (?,?)", params![id, data])?; }
         let vault: bool = store.connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='token_vault')", [], |row| row.get(0))?;
         if vault { store.connection.execute("DELETE FROM token_vault", [])?; }
-        let mut settings = store.settings()?;
-        settings.as_object_mut().ok_or("Paramètres sauvegardés invalides.")?.insert("credentialsReset".into(), json!(true));
+        let mut settings = store.settings::<Document>()?;
+        settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
-        for mut run in store.documents(Documents::Runs)? {
-            if run.get("kind") == Some(&json!("pr-review")) {
-                run["reviewStaleReason"] = json!("Données restaurées : relancez la review pour vérifier les commits actuels.");
+        for mut run in store.documents::<Document>(Documents::Runs)? {
+            if run.string_equals("kind", "pr-review")? {
+                run.set("reviewStaleReason", &"Données restaurées : relancez la review pour vérifier les commits actuels.")?;
                 store.put(Documents::Runs, &run)?;
             }
         }
-        for mut card in store.documents(Documents::Cards)? {
-            if truthy(card.get("automation")) {
-                let mut automation = card["automation"].as_object().cloned().unwrap_or_default();
-                automation.insert("state".into(), json!("interrupted"));
-                automation.insert("step".into(), json!("tests"));
-                automation.insert("message".into(), json!("Données restaurées : reprends les vérifications et la review sur le worktree actuel."));
-                card["automation"] = Value::Object(automation);
-                if !truthy(card.get("archived")) && card.get("status") != Some(&json!("done")) { card["status"] = json!("standby"); }
+        for mut card in store.documents::<Document>(Documents::Cards)? {
+            if card.truthy("automation")? {
+                let mut automation = automation_fields(card.raw("automation").ok_or("Automatisation absente.")?)?;
+                automation.set("state", &"interrupted")?;
+                automation.set("step", &"tests")?;
+                automation.set("message", &"Données restaurées : reprends les vérifications et la review sur le worktree actuel.")?;
+                card.set("automation", &automation)?;
+                if !card.truthy("archived")? && !card.string_equals("status", "done")? { card.set("status", &"standby")?; }
                 store.put(Documents::Cards, &card)?;
             }
         }
@@ -275,6 +296,7 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use crate::infrastructure::store::open;
+    use serde_json::json;
 
     #[test]
     fn catalogue_only_restores_named_local_files_and_preserves_a_named_rescue() {
@@ -309,7 +331,7 @@ mod tests {
         assert!(backups.directory.join(restored.rescue).is_file());
         assert!(
             store
-                .document(Documents::Cards, "recent")
+                .document::<serde_json::Value>(Documents::Cards, "recent")
                 .unwrap()
                 .is_none()
         );
@@ -351,7 +373,9 @@ mod tests {
         connection.execute_batch("CREATE TABLE token_vault(id INTEGER PRIMARY KEY,encrypted TEXT); INSERT INTO token_vault VALUES(1,'synthetic-only');").unwrap();
         let rescue = root.path().join("rescue.sqlite");
         restore(&store, &saved, &rescue).unwrap();
-        let cards = store.documents(Documents::Cards).unwrap();
+        let cards = store
+            .documents::<serde_json::Value>(Documents::Cards)
+            .unwrap();
         assert_eq!(cards[0]["id"], "two");
         assert_eq!(cards[0]["status"], "done");
         assert_eq!(cards[1]["status"], "standby");
@@ -359,14 +383,14 @@ mod tests {
         assert_eq!(cards[1]["automation"]["extra"], Value::Null);
         assert!(
             store
-                .document(Documents::Runs, "review")
+                .document::<serde_json::Value>(Documents::Runs, "review")
                 .unwrap()
                 .unwrap()
                 .get("reviewStaleReason")
                 .is_some()
         );
         assert_eq!(
-            store.settings().unwrap(),
+            store.settings::<serde_json::Value>().unwrap(),
             json!({"extra":null,"credentialsReset":true})
         );
         assert_eq!(
@@ -381,7 +405,7 @@ mod tests {
         let rescued = open(&rescue).unwrap();
         assert!(
             Store::new(&rescued)
-                .document(Documents::Cards, "new")
+                .document::<serde_json::Value>(Documents::Cards, "new")
                 .unwrap()
                 .is_some()
         );
@@ -404,7 +428,9 @@ mod tests {
         store
             .put(Documents::Cards, &json!({"id":"current"}))
             .unwrap();
-        let before = store.documents(Documents::Cards).unwrap();
+        let before = store
+            .documents::<serde_json::Value>(Documents::Cards)
+            .unwrap();
         let rescue = root.path().join("rescue.sqlite");
         for state in ["exported", "sending", "uncertain"] {
             store
@@ -415,7 +441,12 @@ mod tests {
                 .unwrap();
             assert!(restore(&store, &saved, &rescue).is_err());
             assert!(!rescue.exists());
-            assert_eq!(store.documents(Documents::Cards).unwrap(), before);
+            assert_eq!(
+                store
+                    .documents::<serde_json::Value>(Documents::Cards)
+                    .unwrap(),
+                before
+            );
         }
         store.delete(Documents::Times, "new").unwrap();
         for (i, (table, value)) in [
@@ -453,6 +484,11 @@ mod tests {
         connection.execute_batch("CREATE TRIGGER refuse_restore BEFORE INSERT ON cards BEGIN SELECT RAISE(ABORT,'injected failure'); END;").unwrap();
         assert!(restore(&store, &saved, &rescue).is_err());
         assert!(rescue.exists());
-        assert_eq!(store.documents(Documents::Cards).unwrap(), before);
+        assert_eq!(
+            store
+                .documents::<serde_json::Value>(Documents::Cards)
+                .unwrap(),
+            before
+        );
     }
 }

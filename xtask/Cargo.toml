@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 atelier-app.workspace = true
+atelier-core.workspace = true
 tokio.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

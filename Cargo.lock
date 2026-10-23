@@ -3851,6 +3851,7 @@ name = "xtask"
 version = "0.1.9"
 dependencies = [
  "atelier-app",
+ "atelier-core",
  "block2",
  "fantoccini",
  "objc2",

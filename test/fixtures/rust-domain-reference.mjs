@@ -74,6 +74,6 @@ for (const platform of ['win32', 'linux', 'darwin']) {
 const destination = fileURLToPath(new URL('./rust-domain-reference.json', import.meta.url));
 const content = JSON.stringify(cases, null, 2) + '\n';
 assert.ok(process.argv.slice(2).every(arg => arg === '--check'));
-if (process.argv.includes('--check')) assert.equal(readFileSync(destination, 'utf8'), content, 'Les contrats de référence Node ont changé.');
+if (process.argv.includes('--check')) assert.deepEqual(JSON.parse(readFileSync(destination, 'utf8')), cases, 'Les contrats de référence Node ont changé.');
 else writeFileSync(destination, content);
 console.log(`${cases.length} contrats de domaine Node ${process.argv.includes('--check') ? 'vérifiés' : 'capturés'}.`);

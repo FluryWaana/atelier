@@ -194,13 +194,15 @@ mod tests {
         let destination = root.path().join("user/data");
         import(&source, &destination).unwrap();
         assert_eq!(
-            store.document(Documents::Cards, "preserved").unwrap(),
+            store
+                .document::<serde_json::Value>(Documents::Cards, "preserved")
+                .unwrap(),
             Some(card.clone())
         );
         let copied = store::open(&destination.join("kanban.sqlite")).unwrap();
         assert_eq!(
             Store::new(&copied)
-                .document(Documents::Cards, "preserved")
+                .document::<serde_json::Value>(Documents::Cards, "preserved")
                 .unwrap(),
             Some(card)
         );

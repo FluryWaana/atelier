@@ -80,7 +80,7 @@ impl Database {
     pub async fn cards(&self) -> Result<Vec<Card>> {
         self.call(|store| {
             store
-                .documents(Documents::Cards)?
+                .documents::<serde_json::Value>(Documents::Cards)?
                 .into_iter()
                 .map(|card| Ok(serde_json::from_value(card)?))
                 .collect()

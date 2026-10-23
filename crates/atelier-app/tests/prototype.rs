@@ -272,7 +272,10 @@ async fn dropping_database_drains_an_accepted_write_after_caller_cancellation() 
     drop(database);
     let reopened = Database::open(&path).unwrap();
     assert_eq!(
-        reopened.call(|store| store.settings()).await.unwrap(),
+        reopened
+            .call(|store| store.settings::<serde_json::Value>())
+            .await
+            .unwrap(),
         json!({"accepted":true})
     );
     reopened.close().await.unwrap();

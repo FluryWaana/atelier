@@ -476,6 +476,13 @@ Prochaine action concrète :
 - **Écart découvert :** la duplication Node peut couper une paire UTF-16 avec `.slice(0,300)` et persister un substitut isolé. Un probe synthétique confirme que `serde_json::Value` le refuse. Les corpus précédents couvraient Unicode valide seulement. Il faut conserver ces unités, sans remplacement silencieux ; voir le relevé M02.
 - **Suite :** traiter cette compatibilité de chaînes puis reprendre les cas d'usage et routes M03. Les données utilisateur restent hors périmètre des essais.
 
+### 24 octobre 2026 / base `038e794` / M02, documents JSON sans perte
+
+- **Comportement livré :** `Document`/`JsonString`, basés sur les fonctions raw/WTF-8 existantes de Serde JSON, conservation des clés et valeurs UTF-16 atypiques dans SQLite et restauration ; aucune dépendance externe supplémentaire. La comparaison historique couvre le vrai titre tronqué par Node, les réécritures Rust, la restauration et le secours.
+- **Vérification :** 40 tests Rust réussis ; Clippy natif/WASM propre ; comparaison historique stockage/coffre/import/verrou/UTF-16 réussie. Suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,32 s.
+- **CI :** `fec382f` entièrement réussi. `05dbfc8` échoue uniquement au comparateur historique Windows : Git transforme le JSON de fixture en CRLF, alors que le contrôle comparait les octets du fichier. Correction : comparaison des valeurs JSON complètes, sans suppression de champs ni normalisation du contenu. Reproduction CRLF locale réussie ; revalidation CI attendue.
+- **Suite :** adapter les contrats HTTP/UI et règles encore fondés sur `String`/`Value` ; poursuivre les protections natives M02 et les cas d'usage M03. Aucun accès aux données utilisateur.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

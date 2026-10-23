@@ -433,7 +433,10 @@ mod tests {
             Some("synthetic-previous")
         );
         assert_eq!(
-            database.call(|store| store.settings()).await.unwrap(),
+            database
+                .call(|store| store.settings::<serde_json::Value>())
+                .await
+                .unwrap(),
             json!({})
         );
         assert!(

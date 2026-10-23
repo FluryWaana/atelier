@@ -7,6 +7,7 @@ use atelier_app::infrastructure::{
     store::{Documents, Store},
     token_vault::{self, KeyringPlatform},
 };
+use atelier_core::document::{Document, JsonString};
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -22,7 +23,7 @@ fn snapshot(store: &Store<'_>) -> Result<Value> {
         logs.extend(page);
     }
     Ok(
-        json!({"projects":store.documents(Documents::Projects)?, "cards":store.documents(Documents::Cards)?, "runs":store.documents(Documents::Runs)?, "times":store.documents(Documents::Times)?, "settings":store.settings()?, "logs":logs}),
+        json!({"projects":store.documents::<serde_json::Value>(Documents::Projects)?, "cards":store.documents::<serde_json::Value>(Documents::Cards)?, "runs":store.documents::<serde_json::Value>(Documents::Runs)?, "times":store.documents::<serde_json::Value>(Documents::Times)?, "settings":store.settings::<serde_json::Value>()?, "logs":logs}),
     )
 }
 
@@ -149,9 +150,61 @@ async fn test_data_lock(directory: &Path) -> Result<()> {
     Ok(())
 }
 
+async fn test_utf16(directory: &Path) -> Result<()> {
+    let source = directory.join("utf16.sqlite");
+    let reference = directory.join("utf16.json");
+    fixture("rust-utf16-reference.mjs", "seed", &source, &reference)?;
+    let metadata: Document = serde_json::from_slice(&std::fs::read(&reference)?)?;
+    let backup = directory.join("backups").join(
+        metadata
+            .get::<String>("backupName")?
+            .ok_or("Sauvegarde absente.")?,
+    );
+    let path = directory.join("utf16.sqlite.rust.sqlite");
+    let database = Database::open(&path)?;
+    database
+        .call(|store| {
+            store.transaction(|store| {
+                for table in [
+                    Documents::Projects,
+                    Documents::Cards,
+                    Documents::Runs,
+                    Documents::Times,
+                ] {
+                    for mut document in store.documents::<Document>(table)? {
+                        document.set("rustRoundTrip", &true)?;
+                        document.set("rustUnits", &JsonString(vec![0xd800, 0x61, 0xdc00]))?;
+                        store.put(table, &document)?;
+                    }
+                }
+                let mut settings = store.settings::<Document>()?;
+                settings.set("rustRoundTrip", &true)?;
+                settings.set("rustUnits", &JsonString(vec![0xd800, 0x61, 0xdc00]))?;
+                store.save_settings(&settings)
+            })
+        })
+        .await?;
+    database.close().await?;
+    fixture("rust-utf16-reference.mjs", "roundtrip", &path, &reference)?;
+    let database = Database::open(&path)?;
+    let rescue = directory.join("utf16-rescue.sqlite");
+    let rescue_path = rescue.clone();
+    database
+        .call(move |store| backups::restore(store, &backup, &rescue_path))
+        .await?;
+    database.close().await?;
+    fixture("rust-utf16-reference.mjs", "restored", &path, &reference)?;
+    fixture("rust-utf16-reference.mjs", "roundtrip", &rescue, &reference)?;
+    println!(
+        "Parité UTF-16 : duplication Node, clés/valeurs isolées, réécriture Rust, restauration et secours sans perte."
+    );
+    Ok(())
+}
+
 pub async fn test() -> Result<()> {
     let directory = tempfile::tempdir()?;
     test_data_lock(directory.path()).await?;
+    test_utf16(directory.path()).await?;
     let path = directory.path().join("reference.sqlite");
     let reference = directory.path().join("expected.json");
     let saved = directory.path().join("snapshot.sqlite");
@@ -170,16 +223,16 @@ pub async fn test() -> Result<()> {
                     Documents::Runs,
                     Documents::Times,
                 ] {
-                    for document in store.documents(table)? {
+                    for document in store.documents::<serde_json::Value>(table)? {
                         store.put(table, &document)?;
                     }
                 }
                 let mut card = store
-                    .document(Documents::Cards, "card-0")?
+                    .document::<serde_json::Value>(Documents::Cards, "card-0")?
                     .ok_or("Carte de référence absente.")?;
                 card["rustRoundTrip"] = json!({"preserved":true,"number":9_007_199_254_740_991u64});
                 store.put(Documents::Cards, &card)?;
-                let mut settings = store.settings()?;
+                let mut settings = store.settings::<serde_json::Value>()?;
                 settings["rustRoundTrip"] = json!(true);
                 store.save_settings(&settings)?;
                 store.log("run-0", "stderr", &format!("{}🔧tail", "a".repeat(65_535)))?;

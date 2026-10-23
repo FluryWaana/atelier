@@ -1,7 +1,7 @@
 use crate::Result;
+use atelier_core::document::Document;
 use rusqlite::{Connection, OptionalExtension, params};
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{path::Path, time::Duration};
 
 const SCHEMA: &str = "PRAGMA journal_mode=WAL;
@@ -54,7 +54,7 @@ impl<'a> Store<'a> {
         Self { connection }
     }
 
-    pub fn documents(&self, table: Documents) -> Result<Vec<Value>> {
+    pub fn documents<T: DeserializeOwned>(&self, table: Documents) -> Result<Vec<T>> {
         let mut statement = self.connection.prepare(&format!(
             "SELECT data FROM {} ORDER BY rowid DESC",
             table.table()
@@ -63,7 +63,7 @@ impl<'a> Store<'a> {
         rows.map(|row| Ok(serde_json::from_str(&row?)?)).collect()
     }
 
-    pub fn document(&self, table: Documents, id: &str) -> Result<Option<Value>> {
+    pub fn document<T: DeserializeOwned>(&self, table: Documents, id: &str) -> Result<Option<T>> {
         let data: Option<String> = self
             .connection
             .query_row(
@@ -76,12 +76,14 @@ impl<'a> Store<'a> {
             .transpose()
     }
 
-    pub fn put(&self, table: Documents, document: &Value) -> Result<()> {
+    pub fn put(&self, table: Documents, document: &impl Serialize) -> Result<()> {
+        let encoded = serde_json::to_string(document)?;
+        let document: Document =
+            serde_json::from_str(&encoded).map_err(|_| "Identifiant de document invalide.")?;
         let id = document
-            .get("id")
-            .and_then(Value::as_str)
+            .get::<String>("id")?
             .ok_or("Identifiant de document invalide.")?;
-        self.connection.execute(&format!("INSERT INTO {}(id,data) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", table.table()), params![id, serde_json::to_string(document)?])?;
+        self.connection.execute(&format!("INSERT INTO {}(id,data) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", table.table()), params![id, encoded])?;
         Ok(())
     }
 
@@ -91,18 +93,18 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    pub fn settings(&self) -> Result<Value> {
+    pub fn settings<T: DeserializeOwned>(&self) -> Result<T> {
         let data: Option<String> = self
             .connection
             .query_row("SELECT data FROM settings WHERE id=1", [], |row| row.get(0))
             .optional()?;
         match data {
             Some(data) => Ok(serde_json::from_str(&data)?),
-            None => Ok(json!({})),
+            None => Ok(serde_json::from_str("{}")?),
         }
     }
 
-    pub fn save_settings(&self, settings: &Value) -> Result<()> {
+    pub fn save_settings(&self, settings: &impl Serialize) -> Result<()> {
         self.connection.execute(
             "INSERT INTO settings VALUES (1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data",
             [serde_json::to_string(settings)?],
@@ -162,6 +164,7 @@ impl<'a> Store<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn schema_transactions_and_backups_preserve_documents_and_sequence() {
@@ -179,20 +182,30 @@ mod tests {
             store.put(table, &json!({"id":"two"})).unwrap();
             store.put(table, &first).unwrap();
             assert_eq!(
-                store.documents(table).unwrap(),
+                store.documents::<serde_json::Value>(table).unwrap(),
                 vec![json!({"id":"two"}), first]
             );
-            assert_eq!(store.document(table, "missing").unwrap(), None);
+            assert_eq!(
+                store
+                    .document::<serde_json::Value>(table, "missing")
+                    .unwrap(),
+                None
+            );
         }
-        assert_eq!(store.settings().unwrap(), json!({}));
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), json!({}));
         let failed: Result<()> = store.transaction(|store| {
             store.delete(Documents::Cards, "one")?;
             store.save_settings(&json!({"unexpected":true}))?;
             Err("Injected failure".into())
         });
         assert!(failed.is_err());
-        assert!(store.document(Documents::Cards, "one").unwrap().is_some());
-        assert_eq!(store.settings().unwrap(), json!({}));
+        assert!(
+            store
+                .document::<serde_json::Value>(Documents::Cards, "one")
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), json!({}));
         store
             .transaction(|store| {
                 store.save_settings(&json!({"extra":null}))?;
@@ -215,9 +228,17 @@ mod tests {
         store.delete(Documents::Cards, "one").unwrap();
         let copy = open(&saved).unwrap();
         let saved = Store::new(&copy);
-        assert!(saved.document(Documents::Cards, "one").unwrap().is_some());
+        assert!(
+            saved
+                .document::<serde_json::Value>(Documents::Cards, "one")
+                .unwrap()
+                .is_some()
+        );
         assert_eq!(saved.logs("run", 0).unwrap(), page);
-        assert_eq!(saved.settings().unwrap(), json!({"extra":null}));
+        assert_eq!(
+            saved.settings::<serde_json::Value>().unwrap(),
+            json!({"extra":null})
+        );
     }
 
     #[test]
@@ -245,13 +266,26 @@ mod tests {
                 })
                 .is_err()
         );
-        assert_eq!(store.settings().unwrap(), json!({}));
-        assert!(store.documents(Documents::Cards).unwrap().is_empty());
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), json!({}));
+        assert!(
+            store
+                .documents::<serde_json::Value>(Documents::Cards)
+                .unwrap()
+                .is_empty()
+        );
         connection
             .execute("INSERT INTO cards VALUES ('bad', '{')", [])
             .unwrap();
-        assert!(store.documents(Documents::Cards).is_err());
-        assert!(store.document(Documents::Cards, "bad").is_err());
+        assert!(
+            store
+                .documents::<serde_json::Value>(Documents::Cards)
+                .is_err()
+        );
+        assert!(
+            store
+                .document::<serde_json::Value>(Documents::Cards, "bad")
+                .is_err()
+        );
     }
 
     #[test]
