@@ -383,7 +383,7 @@ Prochaine action concrète :
 - **Revue :** aucun ajout de dépendance ni changement aux couches applicatives. Outillage de référence transitoire, assertions et tests, données temporaires uniquement. Inventaire lexical complété par la matrice comportementale ; ne vaut pas analyse sémantique automatique.
 - **Prochaine action :** M01, créer le workspace à quatre crates, verrouiller les outils et démontrer la tranche UI → API authentifiée → tâche persistée, puis les prototypes natifs requis. Les exclusions de qualification restent obligatoires avant validation de leurs lots ; M00 n'autorise pas la bascule de production.
 
-### 23 octobre 2026 / base `ec6dbe4` / M01, tranche verticale
+### 23 octobre 2026 / base `ec6dbe4`, incrément commis dans `c161512` / M01, tranche verticale
 
 - **Comportement livré :** workspace de quatre crates, toolchain 1.99.1 et dépendances verrouillées ; formulaire Leptos/WASM, API locale authentifiée, SQLite dédiée, session DPAPI Windows et verrou de dossier. Commandes `serve-prototype`, `cargo xtask build-ui` et `cargo xtask test-ui`. Coexistence documentée dans AGENTS ; workflow Rust ajouté sans modifier celui de livraison Node. Voir [périmètre et reproduction](rust-migration-m01.md).
 - **Commandes exécutées :** compilation native MSVC et WASM ; formatage et Clippy natif/WASM sans avertissements ; 10 tests Rust réussis, zéro ignoré ; parcours Edge réel réussi. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 425 tests, 422 réussis, zéro échec, trois exclus, 82,65 s. Les exclusions sont les mêmes qu'en M00 (installateur Windows, trays Linux/macOS). Aucun installateur ni publication activé.
@@ -391,6 +391,14 @@ Prochaine action concrète :
 - **Revue :** pas de nouvelle crate par fonctionnalité ; core sans adaptateur natif, UI sans secret de coffre ; primitives cryptographiques fournies par bibliothèques ; dépendances inutilisées retirées et verrou fourni par la bibliothèque standard. `Cargo.lock` et versions des outils épinglés. Aucun fichier utilisateur utilisé.
 - **Écarts ouverts :** prototype limité au titre et aux cartes ; aucune parité métier complète. Les protections fichiers/fermetures exceptionnelles et le verrou N1 sont à durcir en M02. La nouvelle CI cinq cibles n'a pas encore été exécutée ; trays, trousseaux POSIX, Firefox/Safari, descendant et worker Windows restent à prouver. M01 reste en cours, M02–M11 non validés.
 - **Prochaine action :** poursuivre M01 avec les prototypes natifs Windows (descendant, worker copié et tray), puis recueillir les résultats CI et bureaux Linux/macOS. Aucun retrait de Node ni accès aux données réelles avant les qualifications prévues.
+
+### 23 octobre 2026 / base `c161512` / M01, prototypes Windows
+
+- **Comportement livré :** helper Rust synthétique dans `xtask`, deux tests natifs Windows et `cargo xtask test-tray`. Aucun changement de l'application Node ou du serveur prototype. Le workspace conserve quatre crates ; `default-run` maintient l'alias `cargo xtask` malgré le binaire de fixture.
+- **Preuves locales :** Job Object fermant le parent et son descendant, témoin externe au job conservé ; worker copié vérifiant PID + date de création puis attendant le handle avant remplacement ; candidat réellement relancé. Icône tray ajoutée, version 4 acceptée, rectangle natif trouvé puis disparition vérifiée. Détails, sources Microsoft et limites dans le [relevé M01](rust-migration-m01.md).
+- **Vérifications :** 12 tests Rust réussis, zéro ignoré ; formatage et Clippy natif/WASM réussis. Suite Node avec `ATELIER_REQUIRE_RELEASE=1` : 425 tests, 422 réussis, zéro échec, trois exclusions inchangées, 82,89 s. Inventaire étendu aux supports de tests Rust. Répertoires temporaires et processus créés par les essais uniquement.
+- **Limites :** les fixtures prouvent les primitives, pas encore les adaptateurs complets M04/M08/M09. Pas de preuve Linux/macOS, trousseaux POSIX ou Firefox/Safari ; pas de nouvelle exécution CI distante. M01 reste en cours ; M02 n'est pas déclaré prêt ou validé tant que ses prérequis restent ouverts.
+- **Prochaine action :** exécuter la nouvelle CI sur les cinq runners et compléter les prototypes tray/trousseau sur des bureaux Linux et macOS dédiés. Aucun retrait de Node ni migration de données réelles.
 
 ## 12. Définition finale de terminé
 

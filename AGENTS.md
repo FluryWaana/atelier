@@ -28,6 +28,8 @@ The Cargo workspace contains exactly `atelier-core` (pure domain/application/pub
 
 Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full Node suite. `cargo xtask build-ui` requires Trunk 0.22.0 and wasm-bindgen CLI 0.2.129 on PATH; run `cargo fetch --locked` first because the UI build is offline. `cargo xtask test-ui` starts a separate server process and a temporary WebDriver profile, creates a synthetic task, restarts the server and checks persistence. Set `ATELIER_WEBDRIVER` to the driver executable if needed; `ATELIER_TEST_BROWSER` supports `edge`, `chrome`, `firefox`, or `safari`. A configured browser is not a verified browser until the test runs. See `docs/rust-migration-m01.md` for commands and remaining native proofs. Packaging commands remain Node until their migration lots are qualified.
 
+`cargo test -p xtask --test windows-native --locked` exercises synthetic Windows process trees and copied update workers. `cargo xtask test-tray` explicitly checks adding/removing a notification icon on an interactive Windows desktop; it fails if no desktop is available. These feasibility fixtures are not production launchers or updaters and must stay outside release packages.
+
 ### JavaScript conventions
 
 Use ES modules: `.mjs` for backend modules and tests, with browser code under `public/`. Follow nearby indentation and existing semicolon and single-quote conventions. Use camelCase for functions and variables and descriptive lowercase, hyphenated module names such as `time-tracking.mjs`. Keep integration logic in its corresponding `lib/` module. No formatter or linter is configured. Preserve the French user-facing text.

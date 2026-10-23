@@ -1,6 +1,6 @@
 # M01 — première tranche Rust exécutable
 
-Base : `ec6dbe4` (M00 commis). Incrément du 23 octobre 2026. **M01 en cours, pas de bascule de production.** Le workspace et le parcours vertical fonctionnent localement sur Windows x64 MSVC. La validation native complète reste ouverte.
+Base : `ec6dbe4` (M00 commis), tranche verticale commise dans `c161512`, puis prototypes Windows. Incréments du 23 octobre 2026. **M01 en cours, pas de bascule de production.** Le workspace et le parcours vertical fonctionnent localement sur Windows x64 MSVC. La validation native complète reste ouverte.
 
 ## Périmètre livré
 
@@ -63,6 +63,19 @@ Résultats locaux : compilation Windows MSVC et WASM réussie ; tests domaine, H
 
 Le workflow `rust.yml` ajoute les cinq runners natifs et un parcours Chrome Linux ; il ne remplace aucun contrôle Node et ne publie rien. Aucun résultat de cette nouvelle CI n'est encore disponible. `cargo test` sur Windows ne prouve pas les quatre autres cibles.
 
-Restent obligatoires pour fermer M01 : exécutions natives de cette CI, navigateurs Firefox/Safari, prototypes tray des trois OS, secrets des trousseaux POSIX, arrêt d'un descendant et remplacement d'un exécutable Windows depuis un worker copié. Le matériel Linux/macOS n'est pas disponible dans cette session. Les derniers prototypes Windows peuvent être réalisés dans l'incrément suivant sans attendre ces machines.
+### Prototypes Windows supplémentaires
+
+`cargo test -p xtask --test windows-native --locked` exécute deux scénarios avec un helper Rust de test, sans nouveau crate et sans modifier le produit Node :
+
+- `job_close_stops_parent_and_descendant_without_touching_another_process` : création d'un Job Object avec arrêt à la fermeture, association du parent avant autorisation explicite de créer son enfant, attente native des deux fins ; un processus témoin reste actif. Cela prouve la primitive Windows. M04 doit encore traiter le lancement d'un programme arbitraire sans course avant association, l'arrêt gracieux et les différentes CLI.
+- `staged_worker_verifies_identity_waits_and_replaces_a_real_executable` : copies d'exécutables dans un dossier temporaire marqué ; Windows refuse l'écrasement de l'image en cours ; un worker copié dans `stage` refuse une date de création incorrecte, conserve un handle du bon processus, attend sa fin, remplace le binaire puis le test lance le candidat. Ce helper n'est pas l'updater transactionnel M09 : pas de journal, signature, sauvegarde ni rollback applicatif.
+
+Sources de décision : [Job Objects Microsoft](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects), [identité par GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes). Les tests utilisent les bindings `windows-sys` déjà verrouillés et des handles possédés, pas une recherche destructive de PID.
+
+`cargo xtask test-tray` a réussi sur le bureau Windows courant : ajout d'une icône temporaire, version 4, rectangle réel retourné par le shell puis retrait vérifié. La fenêtre reste cachée, l'icône est retirée à la sortie y compris en échec. API : [Shell_NotifyIconW](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyiconw). Ce contrôle exige un bureau ; il échoue explicitement s'il manque, sans test ignoré. Il est distinct de la suite CI sans bureau et ne prouve pas les menus, clics, gestion du focus ou redémarrage d'Explorer exigés en M08.
+
+La suite Rust compte maintenant **12 tests réussis**, zéro ignoré, plus ce contrôle tray explicite ; formatage et Clippy natif/WASM réussis. Les helpers restent dans `xtask`, hors de tout paquet produit.
+
+Restent obligatoires pour fermer M01 : exécutions natives de cette CI, navigateurs Firefox/Safari, prototypes tray Linux/macOS et secrets des trousseaux POSIX. Le matériel Linux/macOS n'est pas disponible dans cette session ; leurs preuves ne peuvent pas être déduites des essais Windows. Aucun push ni lancement de workflow distant n'a été effectué.
 
 M02 doit durcir les lectures de session par descripteur (permissions/identité/liens/reparse points/courses), les chemins et les fermetures exceptionnelles, porter toutes les tables et sauvegardes, puis prouver Node → Rust → Node. Le prototype est limité aux données temporaires ; il ne doit jamais être utilisé avec une base personnelle. M03–M11 restent à faire. Aucun gain de performance ni paquet Rust livrable n'est annoncé.

@@ -308,8 +308,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/worktree-removal-ui.test.mjs](../test/worktree-removal-ui.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/worktrees.test.mjs](../test/worktrees.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/bin/native-fixture.rs](../xtask/src/bin/native-fixture.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/main.rs](../xtask/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/support/tray.rs](../xtask/tests/support/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/support/windows.rs](../xtask/tests/support/windows.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/windows-native.rs](../xtask/tests/windows-native.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 
 ## Exports et réexports
 
@@ -727,31 +731,52 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::Request;</code> |
 | [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [xtask/Cargo.toml:3](../xtask/Cargo.toml#L3) | <code>version.workspace = true</code> |
-| [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>edition.workspace = true</code> |
-| [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
-| [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>license.workspace = true</code> |
-| [xtask/Cargo.toml:8](../xtask/Cargo.toml#L8) | <code>[dependencies]</code> |
-| [xtask/Cargo.toml:9](../xtask/Cargo.toml#L9) | <code>atelier-app.workspace = true</code> |
-| [xtask/Cargo.toml:10](../xtask/Cargo.toml#L10) | <code>tokio.workspace = true</code> |
-| [xtask/Cargo.toml:11](../xtask/Cargo.toml#L11) | <code>serde_json.workspace = true</code> |
-| [xtask/Cargo.toml:12](../xtask/Cargo.toml#L12) | <code>tempfile.workspace = true</code> |
-| [xtask/Cargo.toml:13](../xtask/Cargo.toml#L13) | <code>reqwest.workspace = true</code> |
-| [xtask/Cargo.toml:14](../xtask/Cargo.toml#L14) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
+| [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>version.workspace = true</code> |
+| [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>edition.workspace = true</code> |
+| [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>rust-version.workspace = true</code> |
+| [xtask/Cargo.toml:7](../xtask/Cargo.toml#L7) | <code>license.workspace = true</code> |
+| [xtask/Cargo.toml:9](../xtask/Cargo.toml#L9) | <code>[dependencies]</code> |
+| [xtask/Cargo.toml:10](../xtask/Cargo.toml#L10) | <code>atelier-app.workspace = true</code> |
+| [xtask/Cargo.toml:11](../xtask/Cargo.toml#L11) | <code>tokio.workspace = true</code> |
+| [xtask/Cargo.toml:12](../xtask/Cargo.toml#L12) | <code>serde_json.workspace = true</code> |
+| [xtask/Cargo.toml:13](../xtask/Cargo.toml#L13) | <code>tempfile.workspace = true</code> |
+| [xtask/Cargo.toml:14](../xtask/Cargo.toml#L14) | <code>reqwest.workspace = true</code> |
+| [xtask/Cargo.toml:15](../xtask/Cargo.toml#L15) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
+| [xtask/Cargo.toml:17](../xtask/Cargo.toml#L17) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [xtask/Cargo.toml:18](../xtask/Cargo.toml#L18) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }</code> |
+| [xtask/src/bin/native-fixture.rs:1](../xtask/src/bin/native-fixture.rs#L1) | <code>use std::{</code> |
+| [xtask/src/bin/native-fixture.rs:9](../xtask/src/bin/native-fixture.rs#L9) | <code>mod windows;</code> |
+| [xtask/src/bin/native-fixture.rs:13](../xtask/src/bin/native-fixture.rs#L13) | <code>mod tray;</code> |
+| [xtask/src/bin/native-fixture.rs:44](../xtask/src/bin/native-fixture.rs#L44) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/bin/native-fixture.rs:61](../xtask/src/bin/native-fixture.rs#L61) | <code>use std::fs;</code> |
 | [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
 | [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
 | [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod ui;</code> |
 | [xtask/src/main.rs:21](../xtask/src/main.rs#L21) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:93](../xtask/src/main.rs#L93) | <code>mod tests {</code> |
-| [xtask/src/main.rs:94](../xtask/src/main.rs#L94) | <code>use super::*;</code> |
-| [xtask/src/main.rs:95](../xtask/src/main.rs#L95) | <code>#[test]</code> |
-| [xtask/src/main.rs:132](../xtask/src/main.rs#L132) | <code>#[test]</code> |
+| [xtask/src/main.rs:94](../xtask/src/main.rs#L94) | <code>mod tests {</code> |
+| [xtask/src/main.rs:95](../xtask/src/main.rs#L95) | <code>use super::*;</code> |
+| [xtask/src/main.rs:96](../xtask/src/main.rs#L96) | <code>#[test]</code> |
+| [xtask/src/main.rs:133](../xtask/src/main.rs#L133) | <code>#[test]</code> |
 | [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
 | [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::session;</code> |
 | [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
 | [xtask/src/ui.rs:4](../xtask/src/ui.rs#L4) | <code>use serde_json::{Value, json};</code> |
 | [xtask/src/ui.rs:5](../xtask/src/ui.rs#L5) | <code>use std::{</code> |
 | [xtask/src/ui.rs:110](../xtask/src/ui.rs#L110) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/tests/support/tray.rs:1](../xtask/tests/support/tray.rs#L1) | <code>use std::{</code> |
+| [xtask/tests/support/tray.rs:6](../xtask/tests/support/tray.rs#L6) | <code>use windows_sys::Win32::{</code> |
+| [xtask/tests/support/tray.rs:34](../xtask/tests/support/tray.rs#L34) | <code>pub fn probe() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {</code> |
+| [xtask/tests/support/windows.rs:1](../xtask/tests/support/windows.rs#L1) | <code>use std::{</code> |
+| [xtask/tests/support/windows.rs:5](../xtask/tests/support/windows.rs#L5) | <code>use windows_sys::Win32::{</code> |
+| [xtask/tests/support/windows.rs:13](../xtask/tests/support/windows.rs#L13) | <code>pub fn open_process(pid: u32) -&gt; io::Result&lt;OwnedHandle&gt; {</code> |
+| [xtask/tests/support/windows.rs:28](../xtask/tests/support/windows.rs#L28) | <code>pub fn creation_time(process: &amp;impl AsRawHandle) -&gt; io::Result&lt;u64&gt; {</code> |
+| [xtask/tests/support/windows.rs:51](../xtask/tests/support/windows.rs#L51) | <code>pub fn wait(process: &amp;impl AsRawHandle, milliseconds: u32) -&gt; u32 {</code> |
+| [xtask/tests/windows-native.rs:4](../xtask/tests/windows-native.rs#L4) | <code>mod windows;</code> |
+| [xtask/tests/windows-native.rs:6](../xtask/tests/windows-native.rs#L6) | <code>use std::{</code> |
+| [xtask/tests/windows-native.rs:17](../xtask/tests/windows-native.rs#L17) | <code>use windows_sys::Win32::{</code> |
+| [xtask/tests/windows-native.rs:98](../xtask/tests/windows-native.rs#L98) | <code>#[test]</code> |
+| [xtask/tests/windows-native.rs:128](../xtask/tests/windows-native.rs#L128) | <code>#[test]</code> |
+| [xtask/tests/windows-native.rs:130](../xtask/tests/windows-native.rs#L130) | <code>use std::fs;</code> |
 
 ## Tests et scénarios nommés
 
@@ -1319,14 +1344,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:159](../server.mjs#L159) | <code>}, syncTicketStatus: (id, required) =&gt; ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) =&gt; jiraWorkflows.execute(...args), linkPullRequest: card =&gt; linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset =&gt; ticketSync.sync(reset), repositories: repositoryHandlers,</code> |
 | [server.mjs:483](../server.mjs#L483) | <code>if (lock &amp;&amp; lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');</code> |
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
+| [xtask/src/bin/native-fixture.rs:21](../xtask/src/bin/native-fixture.rs#L21) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/bin/native-fixture.rs:22](../xtask/src/bin/native-fixture.rs#L22) | <code>match args</code> |
 | [xtask/src/main.rs:65](../xtask/src/main.rs#L65) | <code>run(command("trunk").args([</code> |
 | [xtask/src/main.rs:84](../xtask/src/main.rs#L84) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>.args([</code> |
+| [xtask/src/main.rs:87](../xtask/src/main.rs#L87) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>.args([</code> |
 | [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/ui.rs:127](../xtask/src/ui.rs#L127) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:163](../xtask/src/ui.rs#L163) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
 | [xtask/src/ui.rs:167](../xtask/src/ui.rs#L167) | <code>capabilities.insert("moz:firefoxOptions".into(), json!({"args":["-headless"]}));</code> |
+| [xtask/tests/windows-native.rs:31](../xtask/tests/windows-native.rs#L31) | <code>fn spawn(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Self {</code> |
+| [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
 
 ## Routes, méthodes et événements
 
@@ -2337,4 +2367,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
 
-Total : 300 fichiers ; 93 fichiers de tests Node.
+Total : 304 fichiers ; 93 fichiers de tests Node.

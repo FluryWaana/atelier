@@ -23,6 +23,9 @@ Les contrats des tableaux ne deviennent pas validés par ces seules preuves. Dé
 | C06 | `prototype_refuses_existing_data_and_locks_aliases_until_closed` | Verrou commun N1, liens/reparse points et remplacements concurrents |
 | C07 | `validates_before_constructing_a_card`, `uses_javascript_lengths_and_trim` | Tous les champs/actions métier au-delà du titre |
 | UI/session | `cargo xtask test-ui` dans Edge : formulaire WASM, texte Unicode/HTML échappé, création, redémarrage réel, relecture ; chargeur Trunk externalisé testé | Interface complète, clavier/focus/brouillons/traductions, Firefox/Safari, autres bureaux |
+| Processus M04 | Base `c161512` : `job_close_stops_parent_and_descendant_without_touching_another_process` sous Windows | Lancement arbitraire sans course, arrêt gracieux, CLI complètes et autres OS |
+| Livraison M09 | Base `c161512` : `staged_worker_verifies_identity_waits_and_replaces_a_real_executable`, vrai candidat relancé | Transactions, signatures, sauvegardes, rollback, autres modes d'installation |
+| Tray M08 | Base `c161512` : `cargo xtask test-tray`, ajout/position réelle/retrait Windows | Menus, clavier/clics/focus, reprise Explorer, trays Linux/macOS |
 
 ## Contrats serveur et système
 
