@@ -36,6 +36,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/session.rs](../crates/atelier-app/src/infrastructure/session.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/store.rs](../crates/atelier-app/src/infrastructure/store.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/token_vault.rs](../crates/atelier-app/src/infrastructure/token_vault.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs](../crates/atelier-app/src/infrastructure/windows_registration.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/local-http.rs](../crates/atelier-app/tests/local-http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -650,7 +651,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:29](../crates/atelier-app/Cargo.toml#L29) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
 | [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
 | [crates/atelier-app/Cargo.toml:32](../crates/atelier-app/Cargo.toml#L32) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:33](../crates/atelier-app/Cargo.toml#L33) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem"] }</code> |
+| [crates/atelier-app/Cargo.toml:33](../crates/atelier-app/Cargo.toml#L33) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization"] }</code> |
 | [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>[target.'cfg(unix)'.dependencies]</code> |
 | [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{application::create_card, contracts::Board};</code> |
@@ -744,14 +745,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use serde_json::Value;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:4](../crates/atelier-app/src/infrastructure/installation.rs#L4) | <code>use std::path::{Path, PathBuf};</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:7](../crates/atelier-app/src/infrastructure/installation.rs#L7) | <code>pub enum InstallationMode {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:13](../crates/atelier-app/src/infrastructure/installation.rs#L13) | <code>pub enum Platform {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:19](../crates/atelier-app/src/infrastructure/installation.rs#L19) | <code>pub fn mode(root: &amp;Path) -&gt; Result&lt;InstallationMode&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:37](../crates/atelier-app/src/infrastructure/installation.rs#L37) | <code>pub fn data_directory(</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:63](../crates/atelier-app/src/infrastructure/installation.rs#L63) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:64](../crates/atelier-app/src/infrastructure/installation.rs#L64) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:65](../crates/atelier-app/src/infrastructure/installation.rs#L65) | <code>use std::fs;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:67](../crates/atelier-app/src/infrastructure/installation.rs#L67) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:8](../crates/atelier-app/src/infrastructure/installation.rs#L8) | <code>mod windows_registration;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:10](../crates/atelier-app/src/infrastructure/installation.rs#L10) | <code>pub fn update_installed_version(root: &amp;Path, version: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:21](../crates/atelier-app/src/infrastructure/installation.rs#L21) | <code>pub enum InstallationMode {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:27](../crates/atelier-app/src/infrastructure/installation.rs#L27) | <code>pub enum Platform {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:33](../crates/atelier-app/src/infrastructure/installation.rs#L33) | <code>pub fn mode(root: &amp;Path) -&gt; Result&lt;InstallationMode&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:51](../crates/atelier-app/src/infrastructure/installation.rs#L51) | <code>pub fn data_directory(</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:77](../crates/atelier-app/src/infrastructure/installation.rs#L77) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:78](../crates/atelier-app/src/infrastructure/installation.rs#L78) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:79](../crates/atelier-app/src/infrastructure/installation.rs#L79) | <code>use std::fs;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:81](../crates/atelier-app/src/infrastructure/installation.rs#L81) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
@@ -866,6 +869,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:287](../crates/atelier-app/src/infrastructure/token_vault.rs#L287) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:401](../crates/atelier-app/src/infrastructure/token_vault.rs#L401) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:450](../crates/atelier-app/src/infrastructure/token_vault.rs#L450) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:1](../crates/atelier-app/src/infrastructure/windows_registration.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:2](../crates/atelier-app/src/infrastructure/windows_registration.rs#L2) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:7](../crates/atelier-app/src/infrastructure/windows_registration.rs#L7) | <code>use windows_sys::Win32::{</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:175](../crates/atelier-app/src/infrastructure/windows_registration.rs#L175) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:176](../crates/atelier-app/src/infrastructure/windows_registration.rs#L176) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:177](../crates/atelier-app/src/infrastructure/windows_registration.rs#L177) | <code>use windows_sys::Win32::System::Registry::{RegCreateKeyExW, RegDeleteTreeW, RegDeleteValueW};</code> |
+| [crates/atelier-app/src/infrastructure/windows_registration.rs:190](../crates/atelier-app/src/infrastructure/windows_registration.rs#L190) | <code>#[test]</code> |
 | [crates/atelier-app/src/lib.rs:1](../crates/atelier-app/src/lib.rs#L1) | <code>pub mod http;</code> |
 | [crates/atelier-app/src/lib.rs:2](../crates/atelier-app/src/lib.rs#L2) | <code>pub mod infrastructure;</code> |
 | [crates/atelier-app/src/lib.rs:4](../crates/atelier-app/src/lib.rs#L4) | <code>pub type Error = Box&lt;dyn std::error::Error + Send + Sync&gt;;</code> |
@@ -2664,4 +2674,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:284](../xtask/src/storage.rs#L284) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 323 fichiers ; 94 fichiers de tests Node.
+Total : 324 fichiers ; 94 fichiers de tests Node.

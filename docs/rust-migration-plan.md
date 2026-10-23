@@ -447,6 +447,13 @@ Prochaine action concrète :
 - **CI :** Safari réussi, `f9b1598` entièrement vert. L'import de `f9f53cf` échoue sur les quatre POSIX car `tempfile` créait un dossier trop permissif ; mode 0700 fixé dès création, assertion conservée. La nouvelle CI exécute les comparaisons historiques sur les cinq runners ; résultats attendus pour ce correctif et le verrou.
 - **Suite :** recueillir ces preuves ; compléter les trays POSIX et les protections de chemins. M01/M02 restent en cours, N0 doit toujours être arrêté avant migration.
 
+### 24 octobre 2026 / base `44dd895` / M02, registre Windows
+
+- **Livré :** synchronisation de version installée par API Windows, limitée à l'inscription correspondant au dossier courant ; aucun shell. Branchement au lanceur en M08.
+- **Preuves :** 35 tests Rust locaux réussis, Clippy propre ; test natif sur clé temporaire supprimée, y compris rollback, autre installation et chaînes développées. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,39 s.
+- **CI acquise :** les cinq jobs natifs de `44dd895` passent avec comparaison historique, verrou interopérable et staging privé POSIX corrigé. Trays POSIX et qualifications complémentaires des chemins/comptes restent ouverts.
+- **Suite :** prototypes tray Linux/macOS sur bureau natif CI, puis intégration progressive des règles et API métier sans retirer les références Node.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

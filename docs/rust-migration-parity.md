@@ -41,6 +41,8 @@ C05, incrément après `f9f53cf` : `tests/local-http.rs` couvre réponse 409, PO
 
 C02/C06, incrément après `4afa807` : verrou SQLite dédié commun au prototype et à l'adaptateur N1, exclusion croisée et libération après crash des deux runtimes prouvées localement ; intégration au paquet N1 en M09. La comparaison tourne désormais sur les cinq cibles. C03 : CI POSIX de l'import en échec sur le mode du staging, corrigé à 0700 avant copie, revalidation distante attendue. Safari macOS est réussi sur `f9b1598` ; trays POSIX encore ouverts.
 
+C25, incrément après `44dd895` : synchronisation de version par API registre native et test Windows sur clé temporaire, avec protection de l'autre installation et rollback. Les cinq jobs natifs de `44dd895` passent, notamment correction du staging POSIX et comparaison croisée du verrou. Le lanceur complet et ses branchements restent en M08.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

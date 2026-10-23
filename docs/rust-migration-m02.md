@@ -58,3 +58,9 @@ Ce choix réutilise les [transactions SQLite](https://www.sqlite.org/lang_transa
 34 tests Rust locaux réussis ; comparaison Node/Rust avec exclusions réciproques, aliases, ports indépendants et libération après arrêt brutal Node puis du vrai serveur Rust. Clippy propre. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,39 s. La comparaison historique passe maintenant dans les cinq jobs natifs, sans attendre les outils de navigateur.
 
 La CI de `f9f53cf` a détecté une permission trop large du dossier temporaire d'import sur les quatre runners POSIX : `tempfile` crée les dossiers avec 0777 filtré par umask. Le builder fixe désormais 0700 dès la création, avant toute copie ; le test de confidentialité est conservé. Cette correction et le verrou attendent leur validation native POSIX. Les courses hostiles sur les ancêtres et l'intégration N1 complète restent ouvertes.
+
+### Registre Windows — incrément après `44dd895`
+
+La synchronisation de DisplayVersion utilise les API Windows, sans PowerShell : clé HKCU 64 bits existante uniquement, InstallLocation résolu et comparé avec la casse ordinale Windows avant écriture. La clé absente ou une autre installation ne sont pas modifiées. Le test natif utilise exclusivement un sous-arbre temporaire `Software/AtelierKanbanTests/<uuid>` et le supprime : hausse/baisse de version, casse, séparateur final, chaîne littérale, valeur absente et REG_EXPAND_SZ. Le branchement au démarrage installé reste en M08.
+
+35 tests Rust locaux réussis, Clippy propre ; suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,39 s. Les [cinq jobs natifs de `44dd895`](https://github.com/FluryWaana/atelier/actions/runs/40036942056) sont désormais réussis, comparaison Node/Rust comprise : le mode privé du staging et le verrou commun sont vérifiés sur Linux/macOS x64/ARM64 et Windows x64.

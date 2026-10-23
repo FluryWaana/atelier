@@ -3,6 +3,20 @@ use crate::Result;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
+#[cfg(windows)]
+#[path = "windows_registration.rs"]
+mod windows_registration;
+
+pub fn update_installed_version(root: &Path, version: &str) -> Result<()> {
+    #[cfg(windows)]
+    if mode(root)? == InstallationMode::User {
+        windows_registration::update(root, version)?;
+    }
+    #[cfg(not(windows))]
+    let _ = (root, version);
+    Ok(())
+}
+
 #[derive(Debug, PartialEq)]
 pub enum InstallationMode {
     Portable,
