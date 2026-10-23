@@ -1,6 +1,6 @@
 # M03 — Règles et API métier
 
-État : en cours, règles pures préparatoires ; API et cas d'usage complets à porter. Les prérequis M01/M02 non clos ne deviennent pas validés par cet incrément.
+État : en cours, règles pures préparatoires ; API et cas d'usage complets à porter. M01 est désormais validé pour la faisabilité ; M02 reste en cours.
 
 ## Règles de tâches et profils — base `fec382f`
 
@@ -17,5 +17,11 @@ La validation des profils conserve les chemins absolus, refus réseau/périphér
 Les vecteurs couvrent notamment champs absents/null, Unicode, bornes des critères, cycles, profils disparus, héritage carte/fournisseur, changement d'agent, authentification CLI/API, chaînes hostiles et priorité des validations. Le test de chaîne longue complète les vecteurs. Clippy natif et WASM passent ; 37 tests Rust réussis. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 84,51 s.
 
 ## Limites et suite
+
+### Réglages de projets — base `05dbfc8`
+
+`domain/projects.rs` conserve les champs, valeurs par défaut, limites UTF-16, mappings Jira, profils et conditions d'automatisation de `lib/project-settings.mjs`. Les dossiers sont contrôlés selon les traversées Windows sur tous les OS, comme la référence ; sorties du worktree, racines et préfixes de lecteurs sont refusés. La comparaison de dépôts conserve casse/séparateurs Windows, sans normaliser les chemins POSIX ni inventer une équivalence de slash final. Un port explicite exige `{port}` dans la commande.
+
+Le comparateur couvre maintenant 246 résultats/messages Node. L'héritage conserve les champs inconnus et priorités projet/global. Aucun service ni agent n'est lancé ; les adaptateurs devront revalider chemins réels et liens à l'accès au disque. Formatage, Clippy natif/WASM et 37 tests Rust passent. Suite Node : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 83,19 s.
 
 Ces preuves concernent les règles et leurs messages, pas encore les codes HTTP, transactions, effets distants ou courses de mutations. Le serveur prototype conserve son périmètre M01. Porter ensuite les cas d'usage de tâches/projets/réglages/temps et leurs routes, avec réservations et revalidation après I/O, puis comparer les parcours HTTP. Les gardes d'archivage/suppression, worktrees, modèles et invalidation des reviews ne sont pas validés par ces seuls tests purs.

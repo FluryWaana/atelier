@@ -1,4 +1,4 @@
-use atelier_core::domain::{agent_options::*, checklist::*, tasks::*, text};
+use atelier_core::domain::{agent_options::*, checklist::*, projects::*, tasks::*, text};
 use serde_json::{Value, json};
 
 #[test]
@@ -33,6 +33,18 @@ fn historical_node_domain_results_and_errors_match() {
             "agentOptions" => agent_options(args[0].as_str().unwrap(), &args[1], args.get(2)),
             "resolveAgentOptions" => resolve_agent_options(&args[0], &args[1], &args[2]),
             "providerSettings" => provider_settings(&args[0]),
+            "projectSettings" => project_settings(&args[0], args.get(1).unwrap_or(&json!({}))),
+            "settingsForProject" => Ok(settings_for_project(
+                &args[0],
+                args[1].as_array().unwrap(),
+                args[2].as_str().unwrap(),
+                cfg!(windows),
+            )),
+            "sameRepository" => Ok(json!(same_repository(
+                args[0].as_str().unwrap(),
+                args[1].as_str().unwrap(),
+                args[2] == "win32"
+            ))),
             operation => panic!("Unknown contract: {operation}"),
         };
         let actual = match result {

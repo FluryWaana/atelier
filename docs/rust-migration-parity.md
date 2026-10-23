@@ -45,7 +45,9 @@ C25, incrément après `44dd895` : synchronisation de version par API registre n
 
 C25, incrément après `22545c2` : probes tray Linux/macOS ajoutés, contrôlés par Clippy en compilation croisée ; CI configure un vrai panneau XFCE isolé et la boucle AppKit native. Enregistrement/pixels/retrait Linux et visibilité/retrait macOS doivent encore passer sur les runners. Menus et actions restent en M08.
 
-C07/C11, incrément après `fec382f` : règles pures de critères, dépendances et profils d'agents portées dans core ; 175 contrats historiques de résultats/messages comparés sans Node dans les tests Rust ordinaires. Le comparateur historique vérifie aussi la provenance Node en CI. Chaîne de 10 000 dépendances testée. Cas d'usage, HTTP, effets et concurrence restent ouverts ; voir le relevé M03.
+C07/C10, incrément après `fec382f` : règles pures de critères, dépendances et profils d'agents portées dans core ; 175 contrats historiques de résultats/messages comparés sans Node dans les tests Rust ordinaires. Le comparateur historique vérifie aussi la provenance Node en CI. Chaîne de 10 000 dépendances testée. Cas d'usage, HTTP, effets et concurrence restent ouverts ; voir le relevé M03.
+
+C08, incrément après `05dbfc8` : validation des réglages de projet et héritage par dépôt portés, 246 vecteurs de domaine au total. Déplacement transactionnel, découverte des services et routes restent ouverts. M01 est validé pour la faisabilité : les cinq jobs natifs `fec382f` passent, trays POSIX compris. C02/C07 : cas des substituts UTF-16 isolés découvert lors de la préparation de la duplication, à corriger avant toute qualification des données.
 
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |

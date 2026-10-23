@@ -1,5 +1,6 @@
 pub mod agent_options;
 pub mod checklist;
+pub mod projects;
 pub mod tasks;
 
 pub(crate) fn truthy(value: &serde_json::Value) -> bool {

@@ -78,7 +78,7 @@ La suite Rust compte maintenant **12 tests réussis**, zéro ignoré, plus ce co
 
 Preuves suivantes : [CI `f9b1598`](https://github.com/FluryWaana/atelier/actions/runs/40034051039) entièrement réussie, cinq runners natifs, Chrome/Firefox Linux et Safari macOS. [CI `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672), cinq runners natifs réussis avec création/relecture/suppression d'un secret synthétique dans les trousseaux Linux et macOS, sur les deux architectures.
 
-Restent obligatoires pour fermer M01 : exécution native des prototypes tray Linux/macOS. Ubuntu 26.04 x64 est présent dans WSL sans outils de développement détectés ; les runners CI sont accessibles. Leurs bureaux ne sont pas qualifiés par la compilation ; les refus natifs de coffres verrouillés/autres comptes restent nécessaires pour M02. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
+Les cinq jobs natifs de [fec382f](https://github.com/FluryWaana/atelier/actions/runs/40038851567) réussissent, y compris les probes tray Linux/macOS sur les deux architectures. Avec les preuves antérieures Windows, coffres et quatre navigateurs, **M01 est validé pour la faisabilité**. Les refus natifs de coffres verrouillés/autres comptes restent nécessaires pour M02, et les comportements complets des trays pour M08. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
 
 ### Prototypes tray POSIX
 

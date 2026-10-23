@@ -3400,5 +3400,1687 @@
     "expected": {
       "error": "Fournisseur invalide."
     }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {}
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "projectRules": "  Règle\nseconde 🔧  "
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "Règle\nseconde 🔧",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "projectRules": 42
+      }
+    ],
+    "expected": {
+      "error": "Réglage de projet invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "projectRules": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    ],
+    "expected": {
+      "error": "Réglage de projet invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "agent": "claude"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "claude",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "agent": false
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "agent": "missing"
+      }
+    ],
+    "expected": {
+      "error": "Agent invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "baseBranch": "-danger"
+      }
+    ],
+    "expected": {
+      "error": "Réglage de projet invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "repositoryConnector": "../git"
+      }
+    ],
+    "expected": {
+      "error": "Fournisseur Git invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "repositoryConnector": "azure-devops"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "azure-devops",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraMode": "other"
+      }
+    ],
+    "expected": {
+      "error": "Réglage de projet invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraMode": "custom"
+      }
+    ],
+    "expected": {
+      "error": "Renseigne au moins un statut Jira."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraMode": "custom",
+        "jiraStatusMap": {
+          "review": " À revoir "
+        }
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "custom",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "À revoir",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraStatusMap": []
+      }
+    ],
+    "expected": {
+      "error": "Correspondance Jira invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraStatusMap": {
+          "unknown": "x"
+        }
+      }
+    ],
+    "expected": {
+      "error": "Correspondance Jira invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "jiraStatusMap": {
+          "todo": null
+        }
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "automationEnabled": null
+      }
+    ],
+    "expected": {
+      "error": "Option automatique invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "autoFix": "false"
+      }
+    ],
+    "expected": {
+      "error": "Option automatique invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "automationEnabled": true
+      }
+    ],
+    "expected": {
+      "error": "Renseigne la branche cible et la commande de vérification avant d’activer le mode automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "automationEnabled": true,
+        "prTarget": "main",
+        "testCommand": "cargo test"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": true,
+        "autoFix": true,
+        "prTarget": "main",
+        "testCommand": "cargo test"
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "prTarget": "-unsafe"
+      }
+    ],
+    "expected": {
+      "error": "Renseigne la branche cible et la commande de vérification avant d’activer le mode automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "linkedProjectId": null
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": " front "
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "front",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "src/Api"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "src/Api",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "front/../back"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "front/../back",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "."
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": ".",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "front/.."
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "front/..",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "a//b/../../c"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "a//b/../../c",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "../back"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "..\\back"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "a/../../outside"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "/back"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "C:\\back"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "C:back"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "\\\\server\\share"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "\\rooted"
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": "a/./../.."
+      }
+    ],
+    "expected": {
+      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": null
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontDirectory": 42
+      }
+    ],
+    "expected": {
+      "error": "Réglage de projet invalide."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "run --port {port}",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "0",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "run --port {port}",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": 0,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "run --port {port}",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "004317",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "run --port {port}",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 4317,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": 65535,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "run --port {port}",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 65535,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": 65536,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": -1,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": 1.5,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": " 80 ",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "+80",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "8e1",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": "٠٨",
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": null,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": true,
+        "frontCommand": "run --port {port}"
+      }
+    ],
+    "expected": {
+      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "frontPort": 4317,
+        "frontCommand": "run"
+      }
+    ],
+    "expected": {
+      "error": "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier."
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "backPort": "4318",
+        "backCommand": "run --port {port}",
+        "autoFix": false
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "run --port {port}",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 4318,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": false,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "projectSettings",
+    "args": [
+      {
+        "agent": "work"
+      },
+      {
+        "agentProviders": [
+          {
+            "id": "work",
+            "type": "claude"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "work",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      }
+    }
+  },
+  {
+    "operation": "settingsForProject",
+    "args": [
+      {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        }
+      },
+      [
+        {
+          "repo": "first",
+          "projectRules": "Règle A",
+          "agent": "claude",
+          "baseBranch": "develop",
+          "jiraMode": "off"
+        },
+        {
+          "repo": "second",
+          "projectRules": "Règle B",
+          "automationEnabled": true,
+          "autoFix": false,
+          "jiraMode": "custom",
+          "jiraStatusMap": {
+            "todo": "Ready"
+          }
+        },
+        {
+          "repo": "legacy"
+        }
+      ],
+      "first"
+    ],
+    "expected": {
+      "value": {
+        "repo": "first",
+        "agent": "claude",
+        "baseBranch": "develop",
+        "jiraAutoTransition": false,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        },
+        "projectRules": "Règle A",
+        "repositoryConnector": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "testCommand": "",
+        "prTarget": ""
+      }
+    }
+  },
+  {
+    "operation": "settingsForProject",
+    "args": [
+      {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        }
+      },
+      [
+        {
+          "repo": "first",
+          "projectRules": "Règle A",
+          "agent": "claude",
+          "baseBranch": "develop",
+          "jiraMode": "off"
+        },
+        {
+          "repo": "second",
+          "projectRules": "Règle B",
+          "automationEnabled": true,
+          "autoFix": false,
+          "jiraMode": "custom",
+          "jiraStatusMap": {
+            "todo": "Ready"
+          }
+        },
+        {
+          "repo": "legacy"
+        }
+      ],
+      "second"
+    ],
+    "expected": {
+      "value": {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Ready"
+        },
+        "extra": {
+          "untouched": true
+        },
+        "projectRules": "Règle B",
+        "repositoryConnector": "",
+        "automationEnabled": true,
+        "autoFix": false,
+        "testCommand": "",
+        "prTarget": ""
+      }
+    }
+  },
+  {
+    "operation": "settingsForProject",
+    "args": [
+      {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        }
+      },
+      [
+        {
+          "repo": "first",
+          "projectRules": "Règle A",
+          "agent": "claude",
+          "baseBranch": "develop",
+          "jiraMode": "off"
+        },
+        {
+          "repo": "second",
+          "projectRules": "Règle B",
+          "automationEnabled": true,
+          "autoFix": false,
+          "jiraMode": "custom",
+          "jiraStatusMap": {
+            "todo": "Ready"
+          }
+        },
+        {
+          "repo": "legacy"
+        }
+      ],
+      "legacy"
+    ],
+    "expected": {
+      "value": {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        },
+        "projectRules": "",
+        "repositoryConnector": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "testCommand": "",
+        "prTarget": ""
+      }
+    }
+  },
+  {
+    "operation": "settingsForProject",
+    "args": [
+      {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        }
+      },
+      [
+        {
+          "repo": "first",
+          "projectRules": "Règle A",
+          "agent": "claude",
+          "baseBranch": "develop",
+          "jiraMode": "off"
+        },
+        {
+          "repo": "second",
+          "projectRules": "Règle B",
+          "automationEnabled": true,
+          "autoFix": false,
+          "jiraMode": "custom",
+          "jiraStatusMap": {
+            "todo": "Ready"
+          }
+        },
+        {
+          "repo": "legacy"
+        }
+      ],
+      "unknown"
+    ],
+    "expected": {
+      "value": {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        },
+        "projectRules": "",
+        "repositoryConnector": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "testCommand": "",
+        "prTarget": ""
+      }
+    }
+  },
+  {
+    "operation": "settingsForProject",
+    "args": [
+      {
+        "repo": "first",
+        "agent": "codex",
+        "baseBranch": "main",
+        "jiraAutoTransition": true,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        }
+      },
+      [
+        {
+          "repo": "first",
+          "projectRules": "Règle A",
+          "agent": "claude",
+          "baseBranch": "develop",
+          "jiraMode": "off"
+        },
+        {
+          "repo": "second",
+          "projectRules": "Règle B",
+          "automationEnabled": true,
+          "autoFix": false,
+          "jiraMode": "custom",
+          "jiraStatusMap": {
+            "todo": "Ready"
+          }
+        },
+        {
+          "repo": "legacy"
+        }
+      ],
+      ""
+    ],
+    "expected": {
+      "value": {
+        "repo": "first",
+        "agent": "claude",
+        "baseBranch": "develop",
+        "jiraAutoTransition": false,
+        "jiraStatusMap": {
+          "todo": "Open"
+        },
+        "extra": {
+          "untouched": true
+        },
+        "projectRules": "",
+        "repositoryConnector": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "testCommand": "",
+        "prTarget": ""
+      }
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "C:\\É Space\\Repo",
+      "c:/é space/repo",
+      "win32"
+    ],
+    "expected": {
+      "value": true
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "/repo/",
+      "/repo",
+      "win32"
+    ],
+    "expected": {
+      "value": false
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "",
+      "",
+      "win32"
+    ],
+    "expected": {
+      "value": true
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "C:\\É Space\\Repo",
+      "c:/é space/repo",
+      "linux"
+    ],
+    "expected": {
+      "value": false
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "/repo/",
+      "/repo",
+      "linux"
+    ],
+    "expected": {
+      "value": false
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "",
+      "",
+      "linux"
+    ],
+    "expected": {
+      "value": true
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "C:\\É Space\\Repo",
+      "c:/é space/repo",
+      "darwin"
+    ],
+    "expected": {
+      "value": false
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "/repo/",
+      "/repo",
+      "darwin"
+    ],
+    "expected": {
+      "value": false
+    }
+  },
+  {
+    "operation": "sameRepository",
+    "args": [
+      "",
+      "",
+      "darwin"
+    ],
+    "expected": {
+      "value": true
+    }
   }
 ]

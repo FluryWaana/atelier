@@ -5,8 +5,10 @@ import { text } from '../../lib/domain/validation.mjs';
 import { checklist, checklistText } from '../../lib/domain/checklist.mjs';
 import { blockers, dependencies, reviewRequirements } from '../../lib/domain/tasks.mjs';
 import { agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings } from '../../lib/domain/agent-options.mjs';
+import { projectSettings, settingsForProject } from '../../lib/project-settings.mjs';
+import { sameRepository } from '../../lib/domain/paths.mjs';
 
-const functions = { text, checklist, checklistText, blockers, dependencies, reviewRequirements, agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings };
+const functions = { text, checklist, checklistText, blockers, dependencies, reviewRequirements, agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings, projectSettings, settingsForProject, sameRepository };
 const cases = [];
 function add(operation, ...args) {
   let expected;
@@ -53,6 +55,21 @@ add('providerSettings', { ...custom, versionArgs: [null], statusArgs: 'invalid' 
 for (const patch of [{ analyzeArgs: '--unsafe' }, { editArgs: [null] }, { statusArgs: ['\0'] }, { versionArgs: null }, { versionArgs: [] }, { command: '' }, { analyzeArgs: ['literal $() ; é', '\n', ''] }, { statusArgs: Array(101).fill('x') }, { npmPackage: '../private' }, { npmPackage: '@scope/package.name' }, { npmPackage: 'Upper' }, { npmPackage: '@scope/nested/path' }]) add('providerSettings', { ...custom, ...patch });
 add('providerSettings', { id: 'api', name: 'API', type: 'codex', auth: 'api', model: 'custom/model', effort: 'high' });
 for (const value of [null, [], 'text']) add('providerSettings', value);
+
+add('projectSettings', {});
+for (const patch of [{ projectRules: '  Règle\nseconde 🔧  ' }, { projectRules: 42 }, { projectRules: 'x'.repeat(12001) }, { agent: 'claude' }, { agent: false }, { agent: 'missing' }, { baseBranch: '-danger' }, { repositoryConnector: '../git' }, { repositoryConnector: 'azure-devops' }, { jiraMode: 'other' }, { jiraMode: 'custom' }, { jiraMode: 'custom', jiraStatusMap: { review: ' À revoir ' } }, { jiraStatusMap: [] }, { jiraStatusMap: { unknown: 'x' } }, { jiraStatusMap: { todo: null } }, { automationEnabled: null }, { autoFix: 'false' }, { automationEnabled: true }, { automationEnabled: true, prTarget: 'main', testCommand: 'cargo test' }, { prTarget: '-unsafe' }, { linkedProjectId: null }]) add('projectSettings', patch);
+for (const value of ['', ' front ', 'src/Api', 'front/../back', '.', 'front/..', 'a//b/../../c', '../back', '..\\back', 'a/../../outside', '/back', 'C:\\back', 'C:back', '\\\\server\\share', '\\rooted', 'a/./../..', null, 42]) add('projectSettings', { frontDirectory: value });
+for (const value of ['', '0', 0, '004317', 65535, 65536, -1, 1.5, ' 80 ', '+80', '8e1', '٠٨', null, true]) add('projectSettings', { frontPort: value, frontCommand: 'run --port {port}' });
+add('projectSettings', { frontPort: 4317, frontCommand: 'run' });
+add('projectSettings', { backPort: '4318', backCommand: 'run --port {port}', autoFix: false });
+add('projectSettings', { agent: 'work' }, { agentProviders: [{ id: 'work', type: 'claude' }] });
+const projects = [{ repo: 'first', projectRules: 'Règle A', agent: 'claude', baseBranch: 'develop', jiraMode: 'off' }, { repo: 'second', projectRules: 'Règle B', automationEnabled: true, autoFix: false, jiraMode: 'custom', jiraStatusMap: { todo: 'Ready' } }, { repo: 'legacy' }];
+for (const repo of ['first', 'second', 'legacy', 'unknown', '']) add('settingsForProject', { repo: 'first', agent: 'codex', baseBranch: 'main', jiraAutoTransition: true, jiraStatusMap: { todo: 'Open' }, extra: { untouched: true } }, projects, repo);
+for (const platform of ['win32', 'linux', 'darwin']) {
+  add('sameRepository', 'C:\\É Space\\Repo', 'c:/é space/repo', platform);
+  add('sameRepository', '/repo/', '/repo', platform);
+  add('sameRepository', '', '', platform);
+}
 
 const destination = fileURLToPath(new URL('./rust-domain-reference.json', import.meta.url));
 const content = JSON.stringify(cases, null, 2) + '\n';

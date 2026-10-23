@@ -2,7 +2,7 @@
 
 Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applicative `0.1.9`.
 
-Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 en cours, cinq cibles CI et Edge/Chrome démontrés ; M02 en cours, stockage/restauration/coffre comparés à Node sur données synthétiques ; preuves natives complémentaires encore requises**. La [matrice de parité](rust-migration-parity.md), le [relevé M00](rust-migration-baseline.md), le [relevé M01](rust-migration-m01.md) et le [relevé M02](rust-migration-m02.md) consignent l'inventaire, les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
+Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 validé pour la faisabilité ; M02 en cours pour les données et protections ; M03 en cours pour les règles pures, API encore à porter**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
 ## 1. Résultat attendu et périmètre
 
@@ -158,8 +158,8 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI, quatre navigateurs et trousseaux prouvés ; trays POSIX restants |
-| M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — cinq cibles, quatre navigateurs, coffres et trays natifs ; limites produit documentées |
+| M02 | M01 | Données, secrets et session compatibles | En cours — aller-retour synthétique ; chaînes UTF-16 isolées, courses de chemins et refus natifs des coffres encore ouverts |
 | M03 | M02 | Domaine et API métier équivalents | En cours — règles pures préparatoires ; API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
@@ -467,6 +467,14 @@ Prochaine action concrète :
 - **Vérification :** Clippy natif/WASM sans avertissement ; 37 tests Rust réussis, dont parité des résultats/messages et chaîne de dépendances de 10 000 cartes. Suite Node complète et inventaire vérifiés avant commit ; résultat détaillé dans le relevé M03.
 - **Preuves complémentaires :** CI de [44dd895](https://github.com/FluryWaana/atelier/actions/runs/40036942056) et [22545c2](https://github.com/FluryWaana/atelier/actions/runs/40037800280) entièrement réussies, cinq runners natifs et Chrome/Firefox/Safari. Les premiers probes tray `fec382f` passent sur Linux ARM64 et macOS ARM64 ; résultats des autres cibles encore attendus.
 - **Limites et suite :** règles seules, pas de remplacement de l'API ni d'exécution d'agent ; terminer les preuves natives ouvertes et porter les cas d'usage métier. Aucun lot globalement déclaré validé.
+
+### 24 octobre 2026 / base `05dbfc8` / M03, réglages de projets et clôture M01
+
+- **Comportement livré :** règles de réglages/héritage de projets et comparaison de dépôts dans core ; corpus historique porté à 246 cas. Aucune dépendance supplémentaire. Voir le relevé M03.
+- **Vérification :** formatage et Clippy natif/WASM propres ; 37 tests Rust réussis et 246 contrats Node comparés. Suite Node avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 83,19 s. Inventaire à jour.
+- **Preuve M01 :** les cinq jobs natifs de [fec382f](https://github.com/FluryWaana/atelier/actions/runs/40038851567) réussissent, incluant présence/retrait des trays Linux et macOS sur les deux architectures. Avec les parcours navigateurs antérieurs et les probes Windows réussis, les critères de faisabilité M01 sont satisfaits. Cela ne valide pas les menus/lanceurs produit de M08 ni la migration de données M02.
+- **Écart découvert :** la duplication Node peut couper une paire UTF-16 avec `.slice(0,300)` et persister un substitut isolé. Un probe synthétique confirme que `serde_json::Value` le refuse. Les corpus précédents couvraient Unicode valide seulement. Il faut conserver ces unités, sans remplacement silencieux ; voir le relevé M02.
+- **Suite :** traiter cette compatibilité de chaînes puis reprendre les cas d'usage et routes M03. Les données utilisateur restent hors périmètre des essais.
 
 ## 12. Définition finale de terminé
 
