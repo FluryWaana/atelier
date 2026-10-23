@@ -76,6 +76,8 @@ Sources de décision : [Job Objects Microsoft](https://learn.microsoft.com/en-us
 
 La suite Rust compte maintenant **12 tests réussis**, zéro ignoré, plus ce contrôle tray explicite ; formatage et Clippy natif/WASM réussis. Les helpers restent dans `xtask`, hors de tout paquet produit.
 
-Restent obligatoires pour fermer M01 : navigateurs Firefox/Safari, prototypes tray Linux/macOS et secrets des trousseaux POSIX. Ubuntu 26.04 x64 est présent dans WSL sans outils de développement détectés ; les runners CI sont accessibles. Leurs bureaux et trousseaux ne sont pas qualifiés par la compilation. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
+Preuves suivantes : [CI `f9b1598`](https://github.com/FluryWaana/atelier/actions/runs/40034051039), cinq runners natifs et Chrome/Firefox Linux réussis ; Safari macOS encore en cours. [CI `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672), cinq runners natifs réussis avec création/relecture/suppression d'un secret synthétique dans les trousseaux Linux et macOS, sur les deux architectures.
+
+Restent obligatoires pour fermer M01 : Safari et prototypes tray Linux/macOS. Ubuntu 26.04 x64 est présent dans WSL sans outils de développement détectés ; les runners CI sont accessibles. Leurs bureaux ne sont pas qualifiés par la compilation ; les refus natifs de coffres verrouillés/autres comptes restent nécessaires pour M02. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
 
 M02 doit durcir les lectures de session par descripteur (permissions/identité/liens/reparse points/courses), les chemins et les fermetures exceptionnelles, porter toutes les tables et sauvegardes, puis prouver Node → Rust → Node. Le prototype est limité aux données temporaires ; il ne doit jamais être utilisé avec une base personnelle. M03–M11 restent à faire. Aucun gain de performance ni paquet Rust livrable n'est annoncé.

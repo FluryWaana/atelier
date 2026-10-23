@@ -158,7 +158,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI et Edge/Chrome prouvés ; Firefox/Safari et prototypes POSIX restants |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI, Edge/Chrome/Firefox et trousseaux prouvés ; Safari et trays POSIX restants |
 | M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
 | M03 | M02 | Domaine et API métier équivalents | À faire |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
@@ -426,6 +426,13 @@ Prochaine action concrète :
 - **Livré :** coffre SQLite, AES-GCM POSIX et DPAPI Windows ; préparation chiffrée avant transaction, commandes système bornées et clé sur stdin. Réutilisation des dépendances ring/base64 déjà verrouillées. Probes natifs isolés Linux/macOS ajoutés à la CI.
 - **Preuves :** 25 tests Rust locaux réussis et Clippy propre, processus synthétiques bornés et arrêtés au délai compris ; comparaison historique stockage/restauration/coffre réussie, enveloppes lues dans les deux directions, DPAPI Windows réel. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions, 81,89 s. Aucun accès au trousseau de production.
 - **Limites :** résultats natifs POSIX du nouveau probe attendus ; comptes différents, parcours réglages et coffre verrouillé natif encore à qualifier. Catalogue/imports, chemins, session complète et verrou commun toujours à terminer.
+
+### 24 octobre 2026 / base `33d594a` / M02, import et catalogue
+
+- **Livré :** catalogue de sauvegardes et restauration par nom strict ; import privé avec snapshot WAL, fichiers annexes et sauvegarde ; modes d'installation et emplacements de données. Fonctions internes, aucune ouverture des données réelles.
+- **Preuves :** 29 tests Rust locaux réussis, Clippy propre ; import et sauvegarde comparés à Node sur le corpus complet. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions, 82,18 s.
+- **CI acquise :** cinq runners natifs de `33d594a` réussis, dont trousseaux Linux/macOS x64/ARM64 ; Chrome/Firefox Linux réussis sur `f9b1598`. Safari encore en cours. Voir les liens dans les relevés.
+- **Suite :** terminer verrou commun N1/Rust et protocole local du lanceur ; qualification des chemins concurrents et registre Windows encore ouverte. Les trays POSIX et la validation complète M01/M02 restent nécessaires.
 
 ## 12. Définition finale de terminé
 

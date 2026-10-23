@@ -1,11 +1,137 @@
 use super::{
-    checked_file::{CheckedFile, Identity},
+    checked_file::{CheckedFile, Identity, plain_metadata},
     store::{Documents, Store},
 };
 use crate::Result;
 use rusqlite::{Connection, OpenFlags, params};
+use serde::Serialize;
 use serde_json::{Value, json};
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+#[derive(Serialize)]
+pub struct Backup {
+    pub name: String,
+    pub date: String,
+    pub bytes: u64,
+}
+
+#[derive(Serialize)]
+pub struct CreatedBackup {
+    pub name: String,
+    pub directory: PathBuf,
+}
+
+#[derive(Serialize)]
+pub struct RestoredBackup {
+    pub restored: String,
+    pub rescue: String,
+}
+
+pub struct BackupDirectory {
+    pub directory: PathBuf,
+}
+
+pub(super) fn new_name() -> Result<String> {
+    Ok(format!(
+        "atelier-{}-{}.sqlite",
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis(),
+        uuid::Uuid::new_v4()
+    ))
+}
+
+fn valid_name(name: &str) -> bool {
+    let Some(value) = name
+        .strip_prefix("atelier-")
+        .and_then(|name| name.strip_suffix(".sqlite"))
+    else {
+        return false;
+    };
+    let bytes = value.as_bytes();
+    bytes.len() == 50
+        && bytes[..13].iter().all(u8::is_ascii_digit)
+        && bytes[13] == b'-'
+        && bytes[14..]
+            .iter()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte) || *byte == b'-')
+}
+
+impl BackupDirectory {
+    pub fn open(data_directory: &Path) -> Result<Self> {
+        let directory = data_directory.join("backups");
+        fs::create_dir_all(&directory)?;
+        if !plain_metadata(&directory)?.is_dir() {
+            return Err("Dossier de sauvegardes invalide.".into());
+        }
+        Ok(Self { directory })
+    }
+
+    pub fn list(&self) -> Result<Vec<Backup>> {
+        if !plain_metadata(&self.directory)?.is_dir() {
+            return Err("Dossier de sauvegardes invalide.".into());
+        }
+        let mut backups = Vec::new();
+        for entry in fs::read_dir(&self.directory)? {
+            let entry = entry?;
+            let Some(name) = entry
+                .file_name()
+                .to_str()
+                .map(str::to_owned)
+                .filter(|name| valid_name(name))
+            else {
+                continue;
+            };
+            let metadata = fs::symlink_metadata(entry.path())?;
+            if !metadata.is_file() || plain_metadata(&entry.path()).is_err() {
+                continue;
+            }
+            let date = time::OffsetDateTime::from(metadata.modified()?).format(
+                time::macros::format_description!(
+                    "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
+                ),
+            )?;
+            backups.push(Backup {
+                name,
+                date,
+                bytes: metadata.len(),
+            });
+        }
+        backups.sort_by(|left, right| right.name.cmp(&left.name));
+        Ok(backups)
+    }
+
+    pub fn create(&self, store: &Store<'_>) -> Result<CreatedBackup> {
+        if !plain_metadata(&self.directory)?.is_dir() {
+            return Err("Dossier de sauvegardes invalide.".into());
+        }
+        let name = new_name()?;
+        store.backup(&self.directory.join(&name))?;
+        Ok(CreatedBackup {
+            name,
+            directory: self.directory.clone(),
+        })
+    }
+
+    pub fn restore(&self, store: &Store<'_>, name: &str) -> Result<RestoredBackup> {
+        if !valid_name(name) || !self.list()?.iter().any(|backup| backup.name == name) {
+            return Err("Sauvegarde locale introuvable.".into());
+        }
+        let rescue = new_name()?;
+        restore(
+            store,
+            &self.directory.join(name),
+            &self.directory.join(&rescue),
+        )?;
+        Ok(RestoredBackup {
+            restored: name.into(),
+            rescue,
+        })
+    }
+}
 
 struct SavedDocument {
     id: String,
@@ -149,6 +275,46 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use crate::infrastructure::store::open;
+
+    #[test]
+    fn catalogue_only_restores_named_local_files_and_preserves_a_named_rescue() {
+        let root = tempfile::tempdir().unwrap();
+        let connection = open(&root.path().join("live.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        let backups = BackupDirectory::open(root.path()).unwrap();
+        store.put(Documents::Cards, &json!({"id":"saved"})).unwrap();
+        let saved = backups.create(&store).unwrap();
+        assert!(valid_name(&saved.name));
+        store
+            .put(Documents::Cards, &json!({"id":"recent"}))
+            .unwrap();
+        for invalid in [
+            "../live.sqlite",
+            "",
+            "atelier-0-unknown.sqlite",
+            "/etc/passwd",
+        ] {
+            assert!(backups.restore(&store, invalid).is_err());
+        }
+        fs::write(backups.directory.join("unlisted.sqlite"), "ignored").unwrap();
+        let directory_name = format!("atelier-0000000000000-{}.sqlite", uuid::Uuid::new_v4());
+        fs::create_dir(backups.directory.join(directory_name)).unwrap();
+        let listed = backups.list().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert!(listed[0].bytes > 0);
+        assert!(listed[0].date.ends_with('Z'));
+        let restored = backups.restore(&store, &saved.name).unwrap();
+        assert_eq!(restored.restored, saved.name);
+        assert_ne!(restored.rescue, saved.name);
+        assert!(backups.directory.join(restored.rescue).is_file());
+        assert!(
+            store
+                .document(Documents::Cards, "recent")
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(backups.list().unwrap().len(), 2);
+    }
 
     #[test]
     fn restore_keeps_order_invalidates_credentials_and_preserves_a_rescue() {

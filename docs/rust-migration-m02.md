@@ -33,4 +33,12 @@ Réutilisation de ring 0.17.14 et base64 0.22.1 déjà présents dans le lockfil
 
 ## Suite du lot
 
-Compléter les chemins et sessions, le coffre, le catalogue de sauvegardes et les imports, les chemins d'installation et le verrou commun N1/Rust. Vérifier les trousseaux natifs et leurs refus avant de valider M02. La compatibilité du schéma et des documents ne suffit pas à autoriser une migration de données utilisateur.
+### Imports, catalogue et installation — incrément après `33d594a`
+
+Le catalogue filtre les noms historiques et fichiers réguliers, conserve dates UTC et tailles, crée sans écrasement et restaure avec secours nommé. L'import prépare un dossier privé adjacent, copie les pièces jointes sans liens, écarte les sessions périmées et snapshotte SQLite avec WAL. Il refuse les destinations remplies, identiques ou imbriquées, y compris un parent résolu par alias ; un échec nettoie le staging et ne publie pas de base partielle. Les chemins portable/user/system reprennent LOCALAPPDATA et XDG absolu, avec refus des installations macOS non portables.
+
+29 tests Rust locaux réussis et Clippy propre. Le comparateur historique couvre maintenant aussi import, contenu complet, pièces jointes et sauvegarde, relus par Node. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions inchangées, 82,18 s. L'import reste une fonction interne de test : son branchement au lanceur, le verrou commun, les courses sur ancêtres et la synchronisation de version dans le registre Windows restent ouverts.
+
+La [CI du coffre `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672) a réussi sur les cinq runners natifs, incluant le probe trousseau Linux x64/ARM64 et macOS x64/ARM64 : création, relecture, suppression, refus après suppression. Ces essais utilisent un service aléatoire synthétique, jamais la clé de production. Le verrouillage interactif et le changement de compte ne sont pas couverts par ce probe.
+
+Compléter sessions/protocole HTTP du lanceur, chemins et verrou commun N1/Rust ; intégrer les adaptateurs aux cas d'usage et à l'intégration OS dans leurs lots. La compatibilité des données ne suffit pas à autoriser une migration de données utilisateur.

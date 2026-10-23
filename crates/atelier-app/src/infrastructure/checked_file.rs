@@ -5,6 +5,23 @@ use std::{
     path::Path,
 };
 
+pub fn plain_metadata(path: &Path) -> Result<std::fs::Metadata> {
+    let metadata = std::fs::symlink_metadata(path)?;
+    #[cfg(windows)]
+    let linked = {
+        use std::os::windows::fs::MetadataExt;
+        metadata.file_attributes()
+            & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+            != 0
+    };
+    #[cfg(unix)]
+    let linked = metadata.file_type().is_symlink();
+    if linked {
+        return Err("Les liens sont interdits dans les données importées.".into());
+    }
+    Ok(metadata)
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Identity {
     device: u64,

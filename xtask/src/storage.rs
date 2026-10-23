@@ -2,6 +2,7 @@ use crate::{Result, command, root, run};
 use atelier_app::infrastructure::{
     backups,
     database::Database,
+    portable_import,
     store::{Documents, Store},
     token_vault::{self, KeyringPlatform},
 };
@@ -171,6 +172,20 @@ pub async fn test() -> Result<()> {
     fixture("rust-vault-reference.mjs", "verify", &path, &reference)?;
     println!(
         "Parité coffre réussie : enveloppes AES-GCM Node/Rust dans les deux directions ; DPAPI et SQLite également sur Windows. Les trousseaux POSIX sont simulés ici."
+    );
+    let directory = directory.path().join("import");
+    let reference = directory.join("expected.json");
+    fixture("rust-import-reference.mjs", "seed", &directory, &reference)?;
+    let destination = directory.join("rust");
+    portable_import::import(&directory.join("source"), &destination)?;
+    fixture(
+        "rust-import-reference.mjs",
+        "verify",
+        &destination,
+        &reference,
+    )?;
+    println!(
+        "Parité import réussie : documents, logs, pièces jointes et sauvegarde identiques ; sessions périmées écartées."
     );
     Ok(())
 }
