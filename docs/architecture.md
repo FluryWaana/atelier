@@ -75,4 +75,4 @@ La compatibilité native doit être validée par la matrice GitHub avant diffusi
 
 Les prochaines évolutions de présentation doivent conserver l’état et les actions explicites, les routes existantes, la protection locale, les validations et les tests. Les comportements système réels et les intégrations externes doivent être vérifiés sur chaque plateforme avant diffusion.
 
-Chaque extraction doit laisser une application utilisable. Une migration de données ne se mélange pas à un déplacement de code. La version du format de données (`dataVersion`) est actuellement 1 ; l’installation automatique refuse un paquet d’un autre format. Une future évolution du format nécessite d’abord des migrations testées et une politique de restauration explicite.
+Chaque extraction doit laisser une application utilisable. Une migration de données ne se mélange pas à un déplacement de code. La version du format de données (`dataVersion`) est actuellement 2 ; l’installation automatique refuse un paquet d’un autre format. Une future évolution du format nécessite d’abord des migrations testées et une politique de restauration explicite.
