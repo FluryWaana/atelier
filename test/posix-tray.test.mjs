@@ -11,7 +11,7 @@ test('Linux indicator handles menu actions, refused shutdown and EOF on a virtua
   execFileSync('dbus-run-session', ['--', 'xvfb-run', '-a', '/usr/bin/python3', '-B', fileURLToPath(new URL('./linux-tray-check.py', import.meta.url))], { timeout: 25000, stdio: 'pipe' });
 });
 
-test('macOS menu bar helper compiles and exits when its server disconnects', { skip: process.platform !== 'darwin', timeout: 60000 }, async t => {
+test('macOS menu bar helper compiles and exits when its server disconnects', { skip: process.platform !== 'darwin', timeout: 195000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'atelier-mac-tray-'));
   let child;
   t.after(() => {
@@ -22,8 +22,9 @@ test('macOS menu bar helper compiles and exits when its server disconnects', { s
   mkdirSync(join(root, 'scripts')); mkdirSync(join(root, 'public'));
   copyFileSync(new URL('../public/atelier-kanban.png', import.meta.url), join(root, 'public', 'atelier-kanban.png'));
   const binary = join(root, 'scripts', 'MacTray');
-  execFileSync('xcrun', ['swiftc', '-parse-as-library', '-swift-version', '5', '-framework', 'AppKit', '-o', binary, fileURLToPath(new URL('../scripts/MacTray.swift', import.meta.url))], { timeout: 45000 });
-  child = spawn(binary, [], { stdio: ['pipe', 'ignore', 'pipe'] });
+  // Cold Swift compilation on shared Intel runners needs its own budget, separate from the helper's exit deadline.
+  execFileSync('xcrun', ['swiftc', '-parse-as-library', '-swift-version', '5', '-framework', 'AppKit', '-o', binary, fileURLToPath(new URL('../scripts/MacTray.swift', import.meta.url))], { timeout: 180000 });
+  child = spawn(binary, [], { stdio: ['pipe', 'ignore', 'pipe'], timeout: 15000 });
   let error = '';
   child.stderr.on('data', chunk => { error += chunk; });
   const closed = new Promise((resolve, reject) => { child.once('error', reject); child.once('close', resolve); });
