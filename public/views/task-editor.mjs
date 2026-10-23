@@ -21,7 +21,7 @@ function clearDraft(key) { try { localStorage.removeItem('atelier-draft:' + key)
 function attachDraft(form, key, host) {
   host.querySelector('.draft-notice')?.remove();
   const notice = document.createElement('div'); notice.className = 'draft-notice';
-  (host.querySelector('.detail-nav') || host.querySelector('.dialog-heading')).after(notice);
+  (host.querySelector('.task-heading') || host.querySelector('.dialog-heading')).after(notice);
   const snapshot = () => ({ fields: Object.fromEntries([...form.elements].filter(e => e.name && e.name !== 'status' && e.type !== 'password').map(e => [e.name, e.value])), ...(key !== 'new' ? { blockedBy: [...($('#blocked-by')?.selectedOptions || [])].map(o => o.value), checklist: [...$('#criteria-list').children].map(row => ({ text: row.querySelector('input[type=text]').value, done: row.querySelector('input[type=checkbox]').checked })) } : {}) });
   let saved; try { saved = JSON.parse(localStorage.getItem('atelier-draft:' + key) || 'null'); } catch { clearDraft(key); }
   if (saved?.fields && typeof saved.fields === 'object') {

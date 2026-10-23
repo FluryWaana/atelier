@@ -7,28 +7,43 @@ import { agentTime } from '../ui-helpers.mjs';
 import { effortLevels, agentName, agentSelect } from '../agent-options.mjs';
 import { usageText } from '../agent-usage.mjs';
 import { blockers, nextAction, prLabel } from '../workflow.mjs';
+import { createTaskWorkspace } from './task-workspace.mjs';
 
-export function createCardView({ document, getState, api, action, confirmAction, refresh, toast, connectorName, ticketSupports, taskAgentFields, attachDraft, clearDraft, openTime, devRunning, updateClocks, renderBrainstorm }) {
+export function createCardView({ document, getState, api, action, confirmAction, refresh, toast, connectorName, ticketSupports, taskAgentFields, attachDraft, clearDraft, openTime, devRunning, updateClocks, renderBrainstorm, onOpen = () => {}, onClose = () => {} }) {
   const $ = selector => document.querySelector(selector);
+  const workspace = createTaskWorkspace({ document, api });
   const { renderTicketPreparation } = createTicketPreparation({ document, getState, action, toast, addCriterion });
   const automation = createAutomationView({ document, getState, api, action, refresh,
-    onChanged: async () => { renderDetail(); await updateRun(); },
-    onRunSelected: async id => { selectedRun = id; renderDetail(); $('#run-select').value = id; await updateRun(); },
+    onChanged: refreshDetail,
+    onRunSelected: async id => { selectedRun = id; renderDetail(); workspace.show('details'); $('#run-select').value = id; await updateRun(); },
   });
   function updateAutomation() { automation.updateAutomation(selected); }
   let selected = null, selectedRun = null, cursor = 0, logRun = null, wasRunning = false, prPreview = null, prCardId = null;
   const savingCards = new Set();
 async function openCard(id) {
-  selected = id; selectedRun = null; renderDetail(); if (!$('#card-dialog').open) $('#card-dialog').showModal(); await updateRun();
+  const card = getState().cards.find(card => card.id === id);
+  if (!card) { closeCard(); toast(msg('Tâche introuvable.'), true); return; }
+  workspace.reset(card);
+  selected = id; selectedRun = null; $('#task-page').hidden = false;
+  renderDetail(); onOpen(id); $('#task-title').focus({ preventScroll: true }); await updateRun();
+}
+function isOpen() { return !$('#task-page').hidden; }
+function isCurrent(id) { return selected === id && isOpen(); }
+function closeCard() { $('#task-page').hidden = true; onClose(); }
+async function refreshDetail(id, runId) {
+  if (!isCurrent(id)) return;
+  renderDetail();
+  if (runId !== undefined) { selectedRun = runId; if (runId) $('#run-select').value = runId; }
+  await updateRun();
 }
 function renderDetail() {
-  const card = getState().cards.find(c => c.id === selected); if (!card) { $('#card-dialog').close(); return; }
+  const card = getState().cards.find(c => c.id === selected); if (!card) { closeCard(); return; }
   const effectiveSettings = projectConfig(card.repo);
   const runs = getState().runs.filter(r => r.cardId === card.id);
   const busyCard = card.publishing || runs.find(r => r.status === 'running');
   const active = card.archived || busyCard;
   wasRunning = Boolean(active);
-  $('#card-detail').innerHTML = `<div class="dialog-heading"><div><div class="eyebrow">${esc(card.ticket?.key || msg("TÂCHE LOCALE"))}</div><h2>${esc(card.title)}</h2></div><button id="close-card" aria-label="${markupText("Fermer")}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></div>
+  $('#card-detail').innerHTML = `<header class="task-heading"><button id="close-card" class="task-back"><span aria-hidden="true">←</span> ${markupText('Retour')}</button><div class="task-heading-body"><div><div class="eyebrow">${esc(card.ticket?.key || msg("TÂCHE LOCALE"))}</div><h1 id="task-title" tabindex="-1">${esc(card.title)}</h1></div><span class="task-status">${esc(names[card.status])}</span></div></header>
     ${card.ticket ? `<div class="detail-topline"><a href="${esc(card.ticket.url)}" target="_blank" rel="noopener noreferrer">${markupText("Ouvrir dans {0} ↗", esc(connectorName('tickets', card.ticket.connector || 'jira')))}</a> · ${esc(card.ticket.status)}</div>` : ''}
     ${card.ticket && (!card.ticket.connector || card.ticket.connector === 'jira') ? `<p class="hint">${effectiveSettings.jiraAutoTransition && effectiveSettings.jiraStatusMap?.[card.status] ? msg("Jira automatique pour cette colonne → {0}", esc(effectiveSettings.jiraStatusMap[card.status])) : msg("Cette colonne reste locale : aucune transition Jira automatique configurée.")}</p>${card.ticketSync?.state === 'error' ? `<p class="inline-error">${markupText("Avancement local enregistré, Jira à vérifier : {0}", esc(messageText(card.ticketSync.message)))}</p><button type="button" id="retry-jira-status" ${active ? 'disabled' : ''}>${markupText("Réessayer la mise à jour Jira")}</button>` : ''}` : ''}
     ${card.archived ? `<p class="archive-notice">${markupText("Tâche archivée · restaurez-la pour reprendre le travail.")}</p>` : ''}
@@ -70,19 +85,19 @@ function renderDetail() {
       await saveCard(true);
       const run = await api(cardPath(card.id) + '/prepare-ticket', 'POST', {});
       await refresh();
-      if (selected === card.id && $('#card-dialog').open) { renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun(); }
+      if (selected === card.id && isOpen()) { renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun(); }
       toast(msg("Préparation lancée. La proposition apparaîtra dans la fiche."));
     } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
   });
   $('#add-criterion').onclick = () => { if ($('#criteria-list').children.length >= 20) return toast(msg("Maximum 20 critères."), true); addCriterion({ text: '', done: false }, false); $('#criteria-list').lastElementChild.querySelector('input[type=text]').focus(); };
   if (card.archived) { [...$('#card-form').elements].forEach(field => field.disabled = true); if ($('#load-transitions')) $('#load-transitions').disabled = true; }
-  $('#duplicate-card').onclick = () => action(async () => { const copy = await api(cardPath(card.id) + '/duplicate', 'POST', {}); await refresh(); await openCard(copy.id); toast(msg("Copie locale créée, sans branche ni liaison Jira.")); });
-  if ($('#archive-card')) $('#archive-card').onclick = () => action(async () => { await api(cardPath(card.id) + '/archive', 'POST', { archived: !card.archived }); await refresh(); $('#card-dialog').close(); toast(card.archived ? msg("Tâche restaurée.") : msg("Tâche archivée. Retrouvez-la dans Archives.")); });
-  if ($('#retry-jira-status')) $('#retry-jira-status').onclick = () => action(async () => { const result = await api(cardPath(card.id) + '/sync-status', 'POST', {}); await refresh(); renderDetail(); await updateRun(); toast(result.ticketSync?.state === 'error' ? msg("Jira à vérifier : ") + result.ticketSync.message : msg("Statut Jira mis à jour."), result.ticketSync?.state === 'error'); });
+  $('#duplicate-card').onclick = () => action(async () => { const copy = await api(cardPath(card.id) + '/duplicate', 'POST', {}); await refresh(); if (isCurrent(card.id)) await openCard(copy.id); toast(msg("Copie locale créée, sans branche ni liaison Jira.")); });
+  if ($('#archive-card')) $('#archive-card').onclick = () => action(async () => { await api(cardPath(card.id) + '/archive', 'POST', { archived: !card.archived }); await refresh(); if (isCurrent(card.id)) closeCard(); toast(card.archived ? msg("Tâche restaurée.") : msg("Tâche archivée. Retrouvez-la dans Archives.")); });
+  if ($('#retry-jira-status')) $('#retry-jira-status').onclick = () => action(async () => { const result = await api(cardPath(card.id) + '/sync-status', 'POST', {}); await refresh(); await refreshDetail(card.id); toast(result.ticketSync?.state === 'error' ? msg("Jira à vérifier : ") + result.ticketSync.message : msg("Statut Jira mis à jour."), result.ticketSync?.state === 'error'); });
   $('#card-time').onclick = () => openTime(card.id);
   if (!active) attachDraft($('#card-form'), card.id, $('#card-detail'));
   if (active) { $('#card-form').elements.model.disabled = true; $('#card-form').elements.effort.disabled = true; $('#card-form').elements.agent.disabled = true; }
-  $('#close-card').onclick = () => $('#card-dialog').close();
+  $('#close-card').onclick = () => closeCard();
   async function saveCard(launchSeparately = false) { const body = Object.fromEntries(new FormData($('#card-form'))); body.blockedBy = [...$('#blocked-by').selectedOptions].map(option => option.value); body.checklist = [...$('#criteria-list').children].map(row => ({ text: row.querySelector('input[type=text]').value, done: row.querySelector('input[type=checkbox]').checked })); if (launchSeparately) body.status = getState().cards.find(c => c.id === card.id).status; const saved = await api(cardPath(card.id), 'PATCH', body); clearDraft(card.id); return saved; }
   const cardForm = $('#card-form'), statusSelect = cardForm.elements.status;
   async function persistCard(statusChanged = false) {
@@ -94,7 +109,7 @@ function renderDetail() {
       statusSelect.disabled = true; cardForm.querySelector('button[type=submit]').disabled = true;
       for (const selector of ['#launch', '#prepare-ticket', '#prepare-worktree']) $(selector).disabled = true;
       const saved = await pending; await refresh();
-      if (selected === card.id && $('#card-dialog').open) { renderDetail(); await updateRun(); }
+      if (selected === card.id && isOpen()) { renderDetail(); await updateRun(); }
       toast(saved.ticketSync?.state === 'error' ? msg("Avancement local enregistré. Jira à vérifier : {0}", saved.ticketSync.message) : statusChanged ? msg("Avancement enregistré : {0}.{1}", names[saved.status], saved.ticketSync?.state === 'synced' && saved.ticketSync.localStatus === saved.status ? msg(" Jira : ") + saved.ticket.status + '.' : '') : msg("Carte enregistrée."), saved.ticketSync?.state === 'error');
     } catch (error) {
       statusSelect.value = getState().cards.find(c => c.id === card.id)?.status || card.status;
@@ -116,7 +131,7 @@ function renderDetail() {
       await saveCard(true);
       const run = await api(cardPath(card.id) + '/run', 'POST', options);
       await refresh();
-      if (selected === card.id && $('#card-dialog').open) { renderDetail(); selectedRun = run.automation ? run.automation.runId || null : run.id; await updateRun(); }
+      if (selected === card.id && isOpen()) { renderDetail(); selectedRun = run.automation ? run.automation.runId || null : run.id; await updateRun(); }
     } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
   });
   $('#prepare-worktree').onclick = () => action(async () => {
@@ -125,7 +140,7 @@ function renderDetail() {
     $('#prepare-worktree').disabled = true;
     try {
       await saveCard(true); await api(cardPath(card.id) + '/worktree', 'POST', {}); await refresh();
-      if (selected === card.id && $('#card-dialog').open) { renderDetail(); await updateRun(); }
+      if (selected === card.id && isOpen()) { renderDetail(); await updateRun(); }
       toast(msg("Worktree prêt."));
     } finally { savingCards.delete(card.id); if (selected === card.id) await updateRun(); }
   });
@@ -136,13 +151,14 @@ function renderDetail() {
   $('#start-dev').onclick = () => action(async () => { await api(cardPath(card.id) + '/dev-servers', 'POST', {}); await refresh(); updateDevServers(); });
   $('#stop-dev').onclick = () => action(async () => { await api(cardPath(card.id) + '/dev-servers', 'DELETE', {}); await refresh(); updateDevServers(); });
   updateDevServers();
-  $('#remove-worktree').onclick = () => action(async () => { if (!await removeWorktree(card.id, { api, confirmAction })) return; await refresh(); renderDetail(); await updateRun(); toast(msg("Worktrees retirés, branches conservées.")); });
+  $('#remove-worktree').onclick = () => action(async () => { if (!await removeWorktree(card.id, { api, confirmAction })) return; await refresh(); await refreshDetail(card.id); toast(msg("Worktrees retirés, branches conservées.")); });
   renderReviewReport(card.id);
-  if ($('#review-pr')) $('#review-pr').onclick = () => action(async () => { $('#review-pr').disabled = true; try { const run = await api(cardPath(card.id) + '/review', 'POST', {}); await refresh(); renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun(); toast(msg("Review démarrée. Les constats apparaîtront ici.")); } finally { if ($('#review-pr')) $('#review-pr').disabled = getState().cards.find(c => c.id === card.id)?.publishing || getState().runs.some(r => r.cardId === card.id && r.status === 'running'); } });
+  if ($('#review-pr')) $('#review-pr').onclick = () => action(async () => { $('#review-pr').disabled = true; try { const run = await api(cardPath(card.id) + '/review', 'POST', {}); await refresh(); await refreshDetail(card.id, run.id); toast(msg("Review démarrée. Les constats apparaîtront ici.")); } finally { if (isCurrent(card.id) && $('#review-pr')) $('#review-pr').disabled = getState().cards.find(c => c.id === card.id)?.publishing || getState().runs.some(r => r.cardId === card.id && r.status === 'running'); } });
   $('#prepare-pr').onclick = () => action(async () => {
     $('#prepare-pr').disabled = true;
     try {
       const preview = await api(cardPath(card.id) + '/pr-preview');
+      if (!isCurrent(card.id)) return;
       prPreview = preview; prCardId = card.id;
       const form = $('#pr-form'); form.reset();
       for (const key of ['title', 'base', 'body']) form.elements[key].value = preview[key];
@@ -153,26 +169,28 @@ function renderDetail() {
       $('#pr-commit-label').hidden = !preview.dirty;
       form.elements.commitChanges.required = preview.dirty;
       $('#pr-dialog').showModal();
-    } finally { if ($('#prepare-pr')) $('#prepare-pr').disabled = false; }
+    } finally { if (isCurrent(card.id) && $('#prepare-pr')) $('#prepare-pr').disabled = false; }
   });
   if ($('#link-pr')) $('#link-pr').onclick = () => action(async () => {
     $('#link-pr').disabled = true;
-    try { const updated = await api(cardPath(card.id) + '/link-pr', 'POST', {}); await refresh(); renderDetail(); await updateRun(); toast(updated.pullRequest.ticketLinked ? msg("PR liée au ticket.") : updated.pullRequest.ticketError, !updated.pullRequest.ticketLinked); }
-    finally { if ($('#link-pr')) $('#link-pr').disabled = false; }
+    try { const updated = await api(cardPath(card.id) + '/link-pr', 'POST', {}); await refresh(); await refreshDetail(card.id); toast(updated.pullRequest.ticketLinked ? msg("PR liée au ticket.") : updated.pullRequest.ticketError, !updated.pullRequest.ticketLinked); }
+    finally { if (isCurrent(card.id) && $('#link-pr')) $('#link-pr').disabled = false; }
   });
-  $('#delete-card').onclick = () => action(async () => { if (!(await confirmAction(msg("Retirer cette carte du tableau ?"), msg("Supprimer la carte ?"), msg("Supprimer localement")))) return; await api(cardPath(card.id), 'DELETE', {}); $('#card-dialog').close(); await refresh(); });
+  $('#delete-card').onclick = () => action(async () => { if (!(await confirmAction(msg("Retirer cette carte du tableau ?"), msg("Supprimer la carte ?"), msg("Supprimer localement")))) return; await api(cardPath(card.id), 'DELETE', {}); if (isCurrent(card.id)) closeCard(); await refresh(); });
   $('#run-select').onchange = () => action(async () => { selectedRun = $('#run-select').value; await updateRun(); });
   $('#stop-run').onclick = () => action(async () => { $('#stop-run').disabled = true; try { await api(`/api/runs/${selectedRun}/cancel`, 'POST', {}); toast(msg("Arrêt demandé…")); } finally { $('#stop-run').disabled = false; } });
   if (card.ticket && $('#load-transitions')) {
-    $('#load-transitions').onclick = () => action(async () => { const result = await api(cardPath(card.id) + '/transitions'); $('#transitions').innerHTML = result.transitions.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join(''); $('#transitions').hidden = false; $('#apply-transition').hidden = !result.transitions.length; if (!result.transitions.length) toast(msg("Aucune transition disponible.")); });
-    $('#apply-transition').onclick = () => action(async () => { await api(cardPath(card.id) + '/transition', 'POST', { transitionId: $('#transitions').value }); await refresh(); renderDetail(); toast(msg("Statut Jira mis à jour.")); });
+    $('#load-transitions').onclick = () => action(async () => { const result = await api(cardPath(card.id) + '/transitions'); if (!isCurrent(card.id)) return; $('#transitions').innerHTML = result.transitions.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join(''); $('#transitions').hidden = false; $('#apply-transition').hidden = !result.transitions.length; if (!result.transitions.length) toast(msg("Aucune transition disponible.")); });
+    $('#apply-transition').onclick = () => action(async () => { await api(cardPath(card.id) + '/transition', 'POST', { transitionId: $('#transitions').value }); await refresh(); await refreshDetail(card.id); toast(msg("Statut Jira mis à jour.")); });
   }
+  workspace.mount(card);
   cursor = 0; logRun = null;
 }
 async function updateRun() {
-  if (!$('#card-dialog').open) return;
+  if (!isOpen()) return;
   const currentCard = getState().cards.find(c => c.id === selected);
-  if (!currentCard) { $('#card-dialog').close(); return; }
+  if (!currentCard) { closeCard(); return; }
+  $('.task-status').textContent = names[currentCard.status];
   updateAutomation();
   const busyCard = savingCards.has(selected) || currentCard.publishing || getState().runs.some(r => r.cardId === selected && r.status === 'running');
   const active = Boolean(currentCard.archived || busyCard);
@@ -224,7 +242,7 @@ async function updateRun() {
   let logs;
   do {
     logs = await api(`/api/runs/${requestedRun}/logs?after=${cursor}`);
-    if (requestedRun !== selectedRun || !$('#card-dialog').open || logElement !== $('#log')) return;
+    if (requestedRun !== selectedRun || !isOpen() || logElement !== $('#log')) return;
     for (const entry of logs) { if (entry.seq <= cursor) continue; cursor = entry.seq; if (entry.text) logElement.append(document.createTextNode(entry.text + '\n')); }
     if (logs.length && $('#follow-log').checked) logElement.scrollTop = logElement.scrollHeight;
   } while (logs.length === 500);
@@ -253,13 +271,7 @@ function compactCard() {
     if (section.querySelector('#prepare-pr') && getState().cards.find(c => c.id === selected)?.pullRequest) wrapper.open = true;
   });
   const journal = $('#run-details'), report = $('#agent-summary'); runBox.after(report); report.after(journal);
-  const headingBar = document.createElement('nav'); headingBar.className = 'detail-nav'; headingBar.setAttribute('aria-label', msg("Sections de la tâche"));
-  for (const [label, target] of [[msg("Contexte"), form], [msg("Agent"), runBox], [msg("Résultat"), report], [msg("PR & review"), $('#prepare-pr').closest('details')]]) {
-    if (label === msg("PR & review") && !connectorSupports(getState().connectors, 'repositories', 'preview', repositoryProvider(getState(), card))) { target.hidden = true; continue; }
-    const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
-    button.onclick = () => { if (target.hidden) { journal.open = true; journal.scrollIntoView({ block: 'start', behavior: 'instant' }); return; } if (target.tagName === 'DETAILS') target.open = true; target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'start', behavior: 'instant' }); }; headingBar.append(button);
-  }
-  detail.querySelector('.dialog-heading').after(headingBar);
+  $('#prepare-pr').closest('details').hidden = !connectorSupports(getState().connectors, 'repositories', 'preview', repositoryProvider(getState(), card));
   const editor = document.createElement('div'); editor.className = 'task-editor';
   form.before(editor); editor.append(form, runBox);
 }
@@ -275,7 +287,7 @@ function setupBrainstorm(card, active, saveCard) {
       if (!(await confirmAction(msg("Envoyer le contenu de cette carte à ") + connectorName('tickets') + ' ?', msg("Créer le ticket distant ?"), msg("Créer le ticket")))) return;
       publish.disabled = true;
       try { await saveCard(); await api(cardPath(card.id) + '/create-ticket', 'POST', {}); toast(msg("Ticket distant créé.")); }
-      finally { await refresh(); renderDetail(); await updateRun(); }
+      finally { await refresh(); await refreshDetail(card.id); }
     });
     section.append(publish);
   }
@@ -285,8 +297,8 @@ function setupBrainstorm(card, active, saveCard) {
     try {
       await saveCard(true);
       const run = await api(cardPath(card.id) + '/brainstorm', 'POST', { reply: msg("Propose maintenant le découpage en tâches à partir de notre discussion et des décisions prises.") });
-      await refresh(); renderDetail(); selectedRun = run.id; $('#run-select').value = run.id; await updateRun();
-    } finally { if ($('#brainstorm-ticket')) $('#brainstorm-ticket').disabled = getState().runs.some(r => r.cardId === card.id && r.status === 'running') || card.archived; }
+      await refresh(); await refreshDetail(card.id, run.id);
+    } finally { if (isCurrent(card.id) && $('#brainstorm-ticket')) $('#brainstorm-ticket').disabled = getState().runs.some(r => r.cardId === card.id && r.status === 'running') || card.archived; }
   });
   renderBrainstorm(card.id);
   if ($('#jira-create-form')) $('#jira-create-form').onsubmit = e => {
@@ -298,7 +310,7 @@ function setupBrainstorm(card, active, saveCard) {
       if (!(await confirmAction(msg("Site : {0}\nProjet : {1}\nType : {2}\nTitre : {3}\n\n{4}\n\nLes critères et les instructions de la fiche seront également envoyés.", getState().settings.jiraUrl, body.project || body.existingKey, body.issueType || msg("Rattachement"), $('#card-form').elements.title.value, $('#card-form').elements.description.value), body.existingKey ? msg("Rattacher le ticket existant ?") : msg("Créer ce ticket Jira ?"), body.existingKey ? msg("Rattacher") : msg("Créer dans Jira")))) return;
       $('#publish-jira').disabled = true;
       try { await api(cardPath(card.id) + '/create-ticket', 'POST', body); toast(msg("Ticket Jira lié à la carte.")); }
-      finally { await refresh(); renderDetail(); await updateRun(); }
+      finally { await refresh(); await refreshDetail(card.id); }
     });
   };
   if (card.archived) section.querySelectorAll('button, input').forEach(el => el.disabled = true);
@@ -328,13 +340,13 @@ function renderReviewReport(cardId) {
   if (run.reviewStaleReason) host.innerHTML += `<p class="inline-error">${markupText("Review à refaire : {0}", esc(run.reviewStaleReason))}</p>`;
   host.innerHTML += run.review.findings.map((f, index) => `<article class="review-finding"><label class="check"><input type="checkbox" data-finding="${index}" ${locked || run.reviewStaleReason ? 'disabled' : ''}> ${markupText("Inclure dans la correction")}</label><h4><span class="review-priority priority-${f.priority}">${f.priority} · ${labels[f.priority]}</span> ${esc(f.title)}</h4><code>${esc(f.file)}${f.line ? ':' + f.line : ''}</code><p>${esc(f.problem)}</p><p><strong>${markupText("Correction proposée :")}</strong> ${esc(f.suggestion)}</p></article>`).join('');
   host.innerHTML += `<div class="row-actions"><button id="check-review" ${locked ? 'disabled' : ''}>${markupText("Vérifier l’actualité")}</button>${run.review.findings.length ? `<button id="fix-review" class="primary" ${locked || run.reviewStaleReason ? 'disabled' : ''}>${markupText("Corriger la sélection avec l’agent")}</button>` : ''}</div><p class="hint">${markupText("La correction utilise le même worktree. Ensuite : relisez, publiez les changements, puis relancez Review. Aucune publication automatique.")}</p>`;
-  $('#check-review').onclick = () => action(async () => { $('#check-review').disabled = true; try { await api(cardPath(cardId) + '/check-review', 'POST', { runId: run.id }); await refresh(); renderReviewReport(cardId); } finally { if ($('#check-review')) $('#check-review').disabled = locked; } });
+  $('#check-review').onclick = () => action(async () => { $('#check-review').disabled = true; try { await api(cardPath(cardId) + '/check-review', 'POST', { runId: run.id }); await refresh(); if (isCurrent(cardId)) renderReviewReport(cardId); } finally { if (isCurrent(cardId) && $('#check-review')) $('#check-review').disabled = locked; } });
   if ($('#fix-review')) $('#fix-review').onclick = () => action(async () => {
     const indexes = [...host.querySelectorAll('[data-finding]:checked')].map(e => Number(e.dataset.finding));
     if (!indexes.length) return toast(msg("Sélectionnez au moins un problème à corriger."), true);
     $('#fix-review').disabled = true;
-    try { const correction = await api(cardPath(cardId) + '/fix-review', 'POST', { runId: run.id, indexes }); await refresh(); renderDetail(); selectedRun = correction.id; $('#run-select').value = correction.id; await updateRun(); toast(msg("Correction lancée dans le worktree de la tâche.")); }
-    finally { await refresh(); if ($('#pr-review-result')) renderReviewReport(cardId); }
+    try { const correction = await api(cardPath(cardId) + '/fix-review', 'POST', { runId: run.id, indexes }); await refresh(); await refreshDetail(cardId, correction.id); toast(msg("Correction lancée dans le worktree de la tâche.")); }
+    finally { await refresh(); if (isCurrent(cardId) && $('#pr-review-result')) renderReviewReport(cardId); }
   });
   if (!run.review.findings.length) host.insertAdjacentHTML('beforeend', `<p>${markupText("Aucun problème étayé relevé. Cela ne garantit pas l’absence de défaut.")}</p>`);
 }
@@ -375,7 +387,7 @@ function renderWorkflowDetail(card, active) {
   templateButton.onclick = () => { const form = $('#template-form'); form.elements.cardId.value = card.id; form.elements.name.value = card.title.slice(0, 100); $('#template-dialog').showModal(); form.elements.name.focus(); };
   $('.card-utilities').append(templateButton);
   const queueButton = document.createElement('button'); queueButton.type = 'button'; queueButton.textContent = getState().queue?.ids.includes(card.id) ? msg("Déjà dans la file") : msg("Ajouter à la file"); queueButton.disabled = active || card.status === 'done' || getState().queue?.ids.includes(card.id);
-  queueButton.onclick = () => action(async () => { await api(cardPath(card.id) + '/queue', 'POST', {}); await refresh(); renderDetail(); await updateRun(); toast(msg("Tâche ajoutée. La file se pilote dans Agents.")); });
+  queueButton.onclick = () => action(async () => { await api(cardPath(card.id) + '/queue', 'POST', {}); await refresh(); await refreshDetail(card.id); toast(msg("Tâche ajoutée. La file se pilote dans Agents.")); });
   $('#launch').after(queueButton);
   if (card.pullRequest) {
     const status = document.createElement('div'); status.innerHTML = prMarkup(card, false);
@@ -383,7 +395,7 @@ function renderWorkflowDetail(card, active) {
       const done = document.createElement('button'); done.type = 'button'; done.textContent = msg("Terminer la tâche après fusion");
       done.onclick = () => action(async () => {
         if (!(await confirmAction(msg("As-tu vérifié les critères ? Terminer la tâche appliquera aussi la correspondance des statuts si elle est activée."), msg("Terminer la tâche ?"), msg("Terminer")))) return;
-        await api(cardPath(card.id), 'PATCH', { status: 'done' }); await refresh(); renderDetail(); await updateRun();
+        await api(cardPath(card.id), 'PATCH', { status: 'done' }); await refresh(); await refreshDetail(card.id);
       }); status.append(done);
     }
     $('#prepare-pr').before(status); bindPrActions(status);
@@ -394,7 +406,7 @@ function bindPrActions(host = document) {
     button.disabled = true;
     try {
       const card = await api(cardPath(button.dataset.refreshPr) + '/refresh-pr', 'POST', {}); await refresh();
-      if ($('#card-dialog').open && selected === card.id) { renderDetail(); await updateRun(); }
+      if (isOpen() && selected === card.id) { renderDetail(); await updateRun(); }
       if (card.pullRequest.refreshError) toast(card.pullRequest.refreshError, true);
     } finally { if (button.isConnected) button.disabled = false; }
   }));
@@ -407,7 +419,7 @@ $('#pr-form').onsubmit = e => { e.preventDefault(); action(async () => {
     const body = Object.fromEntries(new FormData(e.target)); body.commitChanges = e.target.elements.commitChanges.checked; body.fingerprint = prPreview.fingerprint;
     const updated = await api(cardPath(prCardId) + '/pull-request', 'POST', body);
     $('#pr-dialog').close(); await refresh();
-    if ($('#card-dialog').open && selected === prCardId) { renderDetail(); await updateRun(); }
+    if (isOpen() && selected === prCardId) { renderDetail(); await updateRun(); }
     toast(updated.pullRequest.ticketError ? msg("PR publiée. Liaison au ticket à réessayer depuis la carte.") : msg("PR publiée") + (updated.pullRequest.ticketLinked ? msg(" et liée à Jira.") : '.'));
   } finally { button.disabled = false; button.textContent = msg("Pousser et créer la PR brouillon"); }
 }); };
@@ -415,7 +427,7 @@ $('#pr-form').onsubmit = e => { e.preventDefault(); action(async () => {
 
 }
 
-  return { bind, openCard, updateRun, updateAutomation, updateDevServers, prMarkup, bindPrActions, addCriterion, renderTicketPreparation, renderReviewReport, get selectedRun() { return selectedRun; } };
+  return { bind, openCard, closeCard, get selectedId() { return selected; }, updateRun, updateAutomation, updateDevServers, prMarkup, bindPrActions, addCriterion, renderTicketPreparation, renderReviewReport, get selectedRun() { return selectedRun; } };
 }
 
 export function createTicketPreparation({ document, getState, action, toast, addCriterion }) {
@@ -473,7 +485,7 @@ function updateAutomation(cardId) {
 ${esc(flow.tests.output)}
 ${esc(flow.tests.error || '')}</pre></details>` : ''}${flow?.state === 'running' ? `<button type="button" id="stop-automation" class="danger">${markupText("Arrêter le parcours")}</button>` : ['error', 'interrupted', 'cancelled'].includes(flow?.state) ? `<button type="button" id="resume-automation" ${card.archived || card.publishing ? 'disabled' : ''}>${markupText("Reprendre l’étape")}</button>` : ''}${flow?.reportId ? `<button type="button" id="show-automation-review">${markupText("Consulter la review")}</button>` : ''}`;
   if ($('#stop-automation')) $('#stop-automation').onclick = () => action(async () => { await api(cardPath(card.id) + '/stop-automation', 'POST', {}); await refresh(); });
-  if ($('#resume-automation')) $('#resume-automation').onclick = () => action(async () => { await api(cardPath(card.id) + '/resume-automation', 'POST', {}); await refresh(); await onChanged(); });
+  if ($('#resume-automation')) $('#resume-automation').onclick = () => action(async () => { await api(cardPath(card.id) + '/resume-automation', 'POST', {}); await refresh(); await onChanged(card.id); });
   if ($('#show-automation-review')) $('#show-automation-review').onclick = () => action(async () => { await onRunSelected(flow.reportId); $('#pr-review-result')?.scrollIntoView({ block: 'start' }); });
 }
   return { updateAutomation };

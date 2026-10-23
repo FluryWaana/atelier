@@ -43,15 +43,14 @@ test('sidebar displays the version returned by the server', async () => {
   assert.equal(badge['aria-label'], 'Version 2.3.4');
 });
 test('draft notices stay outside the task editor and keep saving form values', () => {
-  for (const key of ['new', 'card']) {
+  for (const key of ['new', 'page']) {
     let placedAfter, saved;
     const heading = { after(element) { placedAfter = ['heading', element]; } };
-    const navigation = key === 'card' ? { after(element) { placedAfter = ['navigation', element]; } } : null;
     const notice = {};
     const field = { name: 'title', value: 'Une tâche à reprendre', type: 'text' };
     const password = { name: 'token', value: 'not-for-storage', type: 'password' };
     const form = { elements: [field, password] }; field.form = form;
-    const host = { querySelector: selector => selector === '.detail-nav' ? navigation : selector === '.dialog-heading' ? heading : null };
+    const host = { querySelector: selector => selector === (key === 'page' ? '.task-heading' : '.dialog-heading') ? heading : null };
     const context = {
       document: { createElement: () => notice },
       localStorage: { getItem: () => null, setItem(name, value) { saved = { name, value: JSON.parse(value) }; } },
@@ -59,7 +58,7 @@ test('draft notices stay outside the task editor and keep saving form values', (
     };
     bindView(createTaskEditor, context);
     context.attachDraft(form, key, host);
-    assert.equal(placedAfter[0], key === 'card' ? 'navigation' : 'heading');
+    assert.equal(placedAfter[0], 'heading');
     assert.equal(placedAfter[1], notice);
     host.oninput({ target: field });
     assert.equal(saved.name, 'atelier-draft:' + key);

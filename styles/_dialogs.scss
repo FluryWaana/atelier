@@ -90,12 +90,9 @@ dialog .form-actions button { min-height: 44px; font-size: 14px; }
 .runtime-settings > h3 { margin: 0 0 12px; font-size: 14px; }
 .runtime-settings > .hint { font-size: 13px; }
 // Détail de tâche : contexte à gauche, exécution à droite.
-#card-dialog { width: 1120px; max-width: calc(100vw - 48px); max-height: calc(100dvh - 48px); padding: 0; }
 #card-detail { padding: 28px 32px; }
 #card-detail > .dialog-heading { position: sticky; top: 0; margin: -28px -32px 0; padding: 24px 32px 20px; background: $panel; border-bottom: 1px solid $line; align-items: flex-start; gap: 24px; }
 #card-detail > .dialog-heading h2 { font-size: 25px; line-height: 1.35; max-width: 820px; }
-#card-detail .detail-nav { position: static; padding: 14px 0 20px; margin: 0; gap: 6px; background: transparent; border: 0; }
-.detail-nav button { min-height: 32px; padding: 6px 11px; font-size: 13px; border-radius: 7px; background: #23232e; border-color: #3c354a; }
 .task-editor { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 22px; }
 #card-detail .task-editor > form, #card-detail .task-editor > .run-box { min-width: 0; padding: 22px; margin: 0; border: 1px solid #3b3849; border-radius: 12px; background: #181c24; }
 #card-detail .task-editor > .run-box { background: linear-gradient(150deg, #252130, #1b1e27); border-color: #4a3d5a; }
@@ -175,11 +172,10 @@ dialog .form-actions button { min-height: 44px; font-size: 14px; }
 }
 @media (max-width: 800px) {
   .task-editor { grid-template-columns: minmax(0, 1fr); }
-  #card-dialog { width: 720px; }
   #card-detail > .dialog-heading h2 { font-size: 22px; }
 }
 @media (max-width: 600px) {
-  dialog, #card-dialog { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 14px; }
+  dialog { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 14px; }
   dialog > form, #projects-dialog, #diagnostics-dialog, #tempo-dialog, #backups-dialog, #command-dialog, #card-detail { padding: 22px 18px; }
   dialog .dialog-heading, #card-detail > .dialog-heading { top: 0; margin: -22px -18px 20px; padding: 20px 18px 18px; gap: 16px; }
   dialog .dialog-heading h2 { font-size: 21px; }
@@ -204,8 +200,6 @@ dialog .form-actions button { min-height: 44px; font-size: 14px; }
   .project-row { padding: 14px; }
   #card-detail > .dialog-heading { margin-bottom: 0; }
   #card-detail > .dialog-heading h2 { font-size: 21px; }
-  #card-detail .detail-nav { padding: 14px 0 18px; gap: 5px; }
-  .detail-nav button { padding: 5px 8px; font-size: 11px; min-height: 31px; }
   #card-detail .task-editor > form, #card-detail .task-editor > .run-box { padding: 18px; }
   #card-detail .task-editor .form-row { flex-direction: column; }
   #card-detail .task-editor .run-controls > * { width: 100%; }

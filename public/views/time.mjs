@@ -57,7 +57,7 @@ async function saveTime(start) {
   const buttons = [...form.querySelectorAll('button')]; buttons.forEach(b => b.disabled = true);
   try {
     await api(timeEdit ? '/api/time/' + timeEdit : '/api/time', timeEdit ? 'PATCH' : 'POST', body);
-    $('#time-dialog').close(); $('#card-dialog').close(); setView('time'); await refresh(); toast(start ? msg("Chronomètre démarré. Retrouvez-le dans Temps.") : msg("Temps enregistré localement."));
+    $('#time-dialog').close(); setView('time'); await refresh(); toast(start ? msg("Chronomètre démarré. Retrouvez-le dans Temps.") : msg("Temps enregistré localement."));
   } finally { buttons.forEach(b => b.disabled = false); }
 }
 function renderTimerBanner() {

@@ -23,7 +23,8 @@ import { localFetch, eventsUrl } from './local-session.mjs';
 initializeLanguage(document);
 const $ = s => document.querySelector(s);
 let state = { projects: [], cards: [], runs: [], settings: {} }, refreshing = false;
-let currentView = ['settings', 'overview', 'board', 'brainstorm', 'agents', 'processes', 'worktrees', 'time', 'archives'].includes(new URLSearchParams(location.hash.slice(1)).get('view')) ? new URLSearchParams(location.hash.slice(1)).get('view') : 'overview', worktreeChecks = [], panelSignature = '';
+let currentView = ['settings', 'overview', 'board', 'brainstorm', 'agents', 'processes', 'worktrees', 'time', 'archives', 'task'].includes(new URLSearchParams(location.hash.slice(1)).get('view')) ? new URLSearchParams(location.hash.slice(1)).get('view') : 'overview', worktreeChecks = [], panelSignature = '';
+let taskReturnView = 'board';
 const launchWorktrees = {};
 let focusFilter = 'all', commandResults = [], commandIndex = 0;
 let livePending = false;
@@ -47,7 +48,18 @@ const { renderBrainstorm } = createBrainstormProposals({ document, getState: () 
 const brainstormView = createBrainstormView({ document, getState: () => state, localStorage, taskAgentFields, api, action, refresh, openCard, toast, renderBrainstorm });
 const timeView = createTimeView({ document, getState: () => state, api, action, confirmAction, refresh, toast, board, scopedCards, connectorName, setView: view => { currentView = view; }, getSelectedRun: () => cardView.selectedRun });
 const { openTime, updateClocks, renderTimerBanner } = timeView;
-const cardView = createCardView({ document, getState: () => state, api, action, confirmAction, refresh, toast, connectorName, ticketSupports, taskAgentFields, attachDraft, clearDraft, openTime, devRunning, updateClocks, renderBrainstorm });
+const cardView = createCardView({ document, getState: () => state, api, action, confirmAction, refresh, toast, connectorName, ticketSupports, taskAgentFields, attachDraft, clearDraft, openTime, devRunning, updateClocks, renderBrainstorm,
+  onOpen(id) {
+    if (currentView !== 'task') taskReturnView = currentView;
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (params.get('view') !== 'task' || params.get('card') !== id) {
+      params.set('view', 'task'); params.set('card', id);
+      history.pushState(null, '', '#' + params);
+    }
+    currentView = 'task'; board(); window.scrollTo({ top: 0 });
+  },
+  onClose() { currentView = taskReturnView; board(); $('#main-content').focus(); },
+});
 const { updateRun, updateAutomation, updateDevServers, prMarkup, bindPrActions } = cardView;
 function openCard(id) { return cardView.openCard(id); }
 function confirmAction(...args) { return showConfirmation(document, ...args); }
@@ -94,7 +106,9 @@ async function refresh() {
   $('#sync-button').hidden = !connectorSupports(state.connectors, 'tickets', 'sync');
   resetJiraButton.hidden = !connectorSupports(state.connectors, 'tickets', 'reset');
   $('#sync-button').textContent = msg("↻ Synchroniser · ") + connectorName('tickets');
-  if (firstLoad && currentView === 'settings') settings(); renderTemplates(); renderProjects(); board(); updateDevServers(); updateAutomation();
+  if (firstLoad && currentView === 'settings') settings(); renderTemplates(); renderProjects();
+  if (firstLoad && currentView === 'task') await cardView.openCard(new URLSearchParams(location.hash.slice(1)).get('card'));
+  board(); updateDevServers(); updateAutomation();
   notifyCompletions(state, previousRuns, previousFlows, { document, toast, currentView, brainstormSession: brainstormView.session });
 }
 function connectorName(capability, id = state.connectors?.providers?.[capability]) {
@@ -183,21 +197,25 @@ function renderWorkspace() {
   const project = state.projects.find(p => p.id === $('#project-filter').value);
   const cards = currentView === 'archives' ? scopedCards(true).filter(c => c.archived) : ['time', 'agents', 'worktrees'].includes(currentView) ? scopedCards(true) : scopedCards(), ids = new Set(cards.map(c => c.id));
   const runs = state.runs.filter(r => ids.has(r.cardId)), times = filterTimes((state.times || []).filter(e => ids.has(e.cardId)), currentView === 'time' ? timeView.filters : {});
-  history.replaceState(null, '', '#' + new URLSearchParams({ ...(project ? { project: project.id } : {}), view: currentView }));
+  history.replaceState(null, '', '#' + new URLSearchParams({ ...(project ? { project: project.id } : {}), view: currentView, ...(currentView === 'task' ? { card: cardView.selectedId } : {}) }));
   const viewCopy = { settings: [msg("Paramètres"), msg("Réglages généraux, modules et connexions.")], brainstorm: [msg("Brainstorming"), msg("Explorez une idée. Choisissez vos prochaines tâches. Jira reste facultatif.")], overview: [msg("Vue d’ensemble"), msg("Vos prochaines actions, en un coup d’œil.")], board: [msg("Tableau des tâches"), msg("Préparez, lancez, vérifiez. Une étape à la fois.")], agents: [msg("Activité des agents"), msg("Suivez les exécutions et retrouvez leurs résultats.")], processes: [msg("Processus"), msg("Lancez et pilotez les fronts et les backs de vos projets.")], worktrees: [msg("Branches & pull requests"), msg("Retrouvez les dossiers de travail, les branches et les PR.")], time: [msg("Temps passé"), msg("Relisez vos saisies avant leur envoi au service connecté.")], archives: [msg("Archives"), msg("Retrouvez l’historique et restaurez une tâche quand vous en avez besoin.")] };
-  $('#workspace-title').textContent = viewCopy[currentView][0];
+  $('#task-page').hidden = currentView !== 'task';
+  $('.heading').hidden = currentView === 'task';
+  $('#workspace-title').textContent = viewCopy[currentView]?.[0] || '';
   $('#overview-button').classList.toggle('nav-active', currentView === 'overview');
   $('#overview-button').setAttribute('aria-current', currentView === 'overview' ? 'page' : 'false');
-  $('#workspace-subtitle').textContent = viewCopy[currentView][1];
-  $('#breadcrumb').textContent = project?.name || msg("Tous les projets");
+  $('#workspace-subtitle').textContent = viewCopy[currentView]?.[1] || '';
+  const task = currentView === 'task' && state.cards.find(card => card.id === cardView.selectedId);
+  const taskProject = task && state.projects.find(item => sameRepository(item.repo, task.repo, state.settings.platform));
+  $('#breadcrumb').textContent = task ? `${taskProject?.name || msg("TÂCHE LOCALE")} / ${task.ticket?.key || msg("La tâche")}` : project?.name || msg("Tous les projets");
   $('#board').hidden = currentView !== 'board' || cards.length === 0;
   $('#settings-page').hidden = currentView !== 'settings';
   $('#settings-button').classList.toggle('nav-active', currentView === 'settings');
   $('#settings-button').setAttribute('aria-current', currentView === 'settings' ? 'page' : 'false');
-  $('#workspace-panel').hidden = currentView === 'settings' || currentView === 'brainstorm' || currentView === 'board' || currentView === 'overview' && !cards.length;
-  $('#project-summary').hidden = !project || ['brainstorm', 'settings'].includes(currentView);
+  $('#workspace-panel').hidden = ['settings', 'brainstorm', 'board', 'task'].includes(currentView) || currentView === 'overview' && !cards.length;
+  $('#project-summary').hidden = !project || ['brainstorm', 'settings', 'task'].includes(currentView);
   $('#brainstorm-page').hidden = currentView !== 'brainstorm';
-  for (const selector of ['.toolbar', '.toolbar-actions', '.board-meta', '#create-button']) $(selector).hidden = ['brainstorm', 'settings'].includes(currentView);
+  for (const selector of ['.toolbar', '.toolbar-actions', '.board-meta', '#create-button']) $(selector).hidden = ['brainstorm', 'settings', 'task'].includes(currentView);
   $('#brainstorm-button').classList.toggle('nav-active', currentView === 'brainstorm');
   $('#brainstorm-button').setAttribute('aria-current', currentView === 'brainstorm' ? 'page' : 'false');
   if (currentView === 'brainstorm') { renderBrainstormPage(); return; }
@@ -206,7 +224,7 @@ function renderWorkspace() {
   if (project) $('#project-summary').innerHTML = `<span><strong>${cards.length}</strong> ${markupText("tâches")}</span><span><strong>${runs.filter(r => r.status === 'running').length}</strong> ${markupText("agents actifs")}</span><span><strong>${cards.filter(c => c.worktree).length}</strong> worktrees</span><span><strong>${cards.filter(c => c.pullRequest).length}</strong> PR</span>`;
   if (currentView === 'processes') document.querySelectorAll('[data-process-log]').forEach(log => { log.textContent = (state.devServers || []).find(session => session.cardId === log.dataset.processLog)?.log || ''; });
   const signature = JSON.stringify([currentView, project?.id, cards, runs, state.queue, timeView.filters, timeView.day, currentView === 'overview' ? state.times : times, worktreeChecks, currentView === 'processes' ? [processCards(project), state.projects, (state.devServers || []).map(({ log, ...session }) => session)] : null]);
-  if (signature === panelSignature || ['board', 'settings'].includes(currentView)) return;
+  if (signature === panelSignature || ['board', 'settings', 'task'].includes(currentView)) return;
   panelSignature = signature;
   const cardButton = card => `<button data-open-card="${esc(card.id)}" aria-label="${markupText("Ouvrir {0}", esc(card.title))}">${markupText("Ouvrir la tâche ↗")}</button>`;
   let html = '';
@@ -269,8 +287,9 @@ $('#test-connections').onclick = () => action(async () => {
 });
 window.addEventListener('hashchange', () => {
   const params = new URLSearchParams(location.hash.slice(1));
-  currentView = ['overview', 'board', 'brainstorm', 'agents', 'processes', 'worktrees', 'time', 'archives'].includes(params.get('view')) ? params.get('view') : 'overview';
+  currentView = ['overview', 'board', 'brainstorm', 'agents', 'processes', 'worktrees', 'time', 'archives', 'settings', 'task'].includes(params.get('view')) ? params.get('view') : 'overview';
   $('#project-filter').value = state.projects.some(p => p.id === params.get('project')) ? params.get('project') : '';
+  if (currentView === 'task') { action(() => cardView.openCard(params.get('card'))); return; }
   board();
 });
 

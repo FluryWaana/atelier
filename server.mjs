@@ -5,6 +5,7 @@ import { connectorRoute } from './lib/http/connector-routes.mjs';
 import { loadConnectors, loadBuiltinConnectors } from './lib/infrastructure/connector-loader.mjs';
 import { createJiraCardWorkflows } from './lib/jira-card-workflows.mjs';
 import { createCardWorktrees } from './lib/application/card-worktrees.mjs';
+import { inspectTaskFiles } from './lib/infrastructure/task-files.mjs';
 import { createCardWorkflows } from './lib/application/card-workflows.mjs';
 import { cardWorkflowRoute } from './lib/http/card-workflow-routes.mjs';
 import { createSettings } from './lib/application/settings.mjs';
@@ -273,7 +274,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   });
 
   const jiraWorkflows = createJiraCardWorkflows({ store, busy, config, token: settingsService.token, jiraBase, requestJira, publishing, changed, timestamp });
-  const cardWorktrees = createCardWorktrees({ store, busy, configFor, publishing, changed, devServers, prepareWorktree, prepareApplicationWorktrees, samePath, removeApplicationWorktrees, removeWorktree });
+  const cardWorktrees = createCardWorktrees({ store, busy, configFor, publishing, changed, devServers, prepareWorktree, prepareApplicationWorktrees, samePath, removeApplicationWorktrees, removeWorktree, inspectTaskFiles });
   const cardWorkflows = createCardWorkflows({ store, manualLaunch, startRun, busy, publishing, changed, queue, refreshPR, invalidateReviews, automation, checkDependencies, samePath, syncCardStatus, correctionInstructions, reviewPR, previewPR, publishPR, linkTicketPullRequest, launchTask, worktrees: cardWorktrees, newId: randomUUID, timestamp });
 
   async function route(req, path, body) {
@@ -372,7 +373,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
     if (providerResult !== undefined) return providerResult;
     const settingsResult = settingsRoute(settingsService, req.method, path, body);
     if (settingsResult !== undefined) return settingsResult;
-    const cardResult = cardWorkflowRoute(cardWorkflows, req.method, path, body);
+    const cardResult = cardWorkflowRoute(cardWorkflows, req.method, path, body, Object.fromEntries(new URL(req.url, 'http://localhost').searchParams));
     if (cardResult !== undefined) return cardResult;
     const logsMatch = path.match(/^\/api\/runs\/([^/]+)\/logs$/);
     if (logsMatch && req.method === 'GET') {
@@ -393,6 +394,7 @@ export function createApp({ builtinModules = builtinConnectorModules, connectorM
   }
   const assets = { '/views/overview.mjs': ['views/overview.mjs', 'text/javascript'], '/views/workspace-workflows.mjs': ['views/workspace-workflows.mjs', 'text/javascript'], '/views/card.mjs': ['views/card.mjs', 'text/javascript'], '/views/brainstorm.mjs': ['views/brainstorm.mjs', 'text/javascript'], '/views/time.mjs': ['views/time.mjs', 'text/javascript'], '/views/task-editor.mjs': ['views/task-editor.mjs', 'text/javascript'], '/ui-actions.mjs': ['ui-actions.mjs', 'text/javascript'], "/connector-availability.mjs": ["connector-availability.mjs", "text/javascript"], '/views/settings.mjs': ['views/settings.mjs', 'text/javascript'], '/views/project-settings.mjs': ['views/project-settings.mjs', 'text/javascript'], '/views/processes.mjs': ['views/processes.mjs', 'text/javascript'], '/view-helpers.mjs': ['view-helpers.mjs', 'text/javascript'], '/views/board.mjs': ['views/board.mjs', 'text/javascript'], '/views/projects.mjs': ['views/projects.mjs', 'text/javascript'], '/lib/domain/agent-options.mjs': ['../lib/domain/agent-options.mjs', 'text/javascript'], '/lib/domain/tasks.mjs': ['../lib/domain/tasks.mjs', 'text/javascript'], '/lib/domain/paths.mjs': ['../lib/domain/paths.mjs', 'text/javascript'], '/lib/domain/validation.mjs': ['../lib/domain/validation.mjs', 'text/javascript'], '/updates.mjs': ['updates.mjs', 'text/javascript'], '/workflow.mjs': ['workflow.mjs', 'text/javascript'], '/agent-usage.mjs': ['agent-usage.mjs', 'text/javascript'], '/agent-options.mjs': ['agent-options.mjs', 'text/javascript'], '/ui-helpers.mjs': ['ui-helpers.mjs', 'text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
   assets['/views/agent-providers.mjs'] = ['views/agent-providers.mjs', 'text/javascript'];
+  assets['/views/task-workspace.mjs'] = ['views/task-workspace.mjs', 'text/javascript'];
   assets['/i18n.mjs'] = ['i18n.mjs', 'text/javascript'];
   assets['/atelier-kanban.png'] = ['atelier-kanban.png', 'image/png'];
   assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];

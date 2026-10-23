@@ -3,12 +3,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCardView } from '../public/views/card.mjs';
 
-function fixture(api = async () => []) {
+function fixture(api = async () => [], navigation = {}) {
   const nodes = new Map();
   const actions = [];
   function node() {
     return { value: '', textContent: '', dataset: {}, children: [], options: [], selectedOptions: [], isConnected: true,
-      before() {}, after() {}, append() {}, prepend() {}, remove() {}, setAttribute() {},
+      before() {}, after() {}, append() {}, prepend() {}, remove() {}, setAttribute() {}, addEventListener() {}, focus() {},
       querySelector: () => node(), querySelectorAll: () => [], closest: () => node(),
       showModal() { this.open = true; }, close() { this.open = false; }, reportValidity: () => true,
     };
@@ -24,6 +24,7 @@ function fixture(api = async () => []) {
   const view = createCardView({ document: { querySelector: $, createElement: node }, getState: () => state,
     api, action: fn => { const pending = fn(); actions.push(pending); return pending; }, refresh: async () => {}, toast() {}, taskAgentFields() {}, attachDraft() {}, clearDraft() {},
     devRunning: () => false, updateClocks() {}, renderBrainstorm() {}, ticketSupports: () => false,
+    ...navigation,
   });
   return { view, card, state, $, fields, actions };
 }
@@ -51,7 +52,24 @@ test('a card removed elsewhere closes its detail instead of leaving stale action
   await view.openCard(card.id);
   state.cards = [];
   await view.updateRun();
-  assert.equal($('#card-dialog').open, false);
+  assert.equal($('#task-page').hidden, true);
+});
+
+test('task pages notify application navigation and stop live updates when another page is visible', async () => {
+  const events = [];
+  const { view, card, state, $ } = fixture(async () => [], { onOpen: id => events.push(id), onClose: () => events.push('closed') });
+  await view.openCard(card.id);
+  assert.equal(view.selectedId, card.id);
+  assert.equal($('#task-page').hidden, false);
+  assert.deepEqual(events, [card.id]);
+  $('#task-page').hidden = true;
+  state.cards = [];
+  await view.updateRun();
+  assert.deepEqual(events, [card.id], 'a hidden task must not redirect the active page');
+  view.closeCard();
+  assert.deepEqual(events, [card.id, 'closed']);
+  await view.openCard('missing');
+  assert.equal($('#task-page').hidden, true);
 });
 
 test('live updates cannot unlock a pending save and a failed save allows retry', async t => {
@@ -114,6 +132,28 @@ test('a successful save unlocks the refreshed form after the original form is de
   assert.equal(fields.status.disabled, false);
   assert.equal($('#launch').disabled, false);
   assert.equal($('#card-form button[type=submit]').disabled, false);
+});
+
+test('completed actions do not close or rebuild another task or a page reached through the sidebar', async () => {
+  for (const selector of ['#archive-card', '#delete-card', '#review-pr']) for (const destination of ['task', 'sidebar']) {
+    let finish, closed = 0;
+    const { view, card, state, $ } = fixture(() => new Promise(resolve => { finish = resolve; }), {
+      confirmAction: async () => true, onClose: () => { closed++; },
+    });
+    await view.openCard(card.id);
+    const pending = $(selector).onclick();
+    await Promise.resolve();
+    if (destination === 'task') {
+      state.cards.push({ ...card, id: 'b', title: 'Autre tâche' });
+      await view.openCard('b');
+    } else $('#task-page').hidden = true;
+    $('#card-detail').innerHTML = 'saisies conservées';
+    finish({ id: 'run-a' });
+    await pending;
+    assert.equal(closed, 0, selector + ' must not redirect ' + destination);
+    assert.equal($('#card-detail').innerHTML, 'saisies conservées');
+    assert.equal($('#task-page').hidden, destination === 'sidebar');
+  }
 });
 
 test('an automatic launch follows the run when its worktree preparation finishes later', async t => {

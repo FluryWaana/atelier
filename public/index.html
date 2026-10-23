@@ -76,6 +76,7 @@
     <section id="welcome" class="welcome-guide"><div><div class="eyebrow">BIENVENUE DANS VOTRE ATELIER</div><h2>Un projet. Une tâche. On avance.</h2><p class="hint">Commencez localement. Ajoutez les connecteurs dont votre équipe a besoin.</p></div><div class="setup-steps"><button id="welcome-projects"><span class="step-number">1</span><span><strong id="welcome-project-label">Choisir un projet</strong><small>Associez un nom à votre dossier de code.</small></span><span>→</span></button><button id="welcome-create"><span class="step-number">2</span><span><strong>Créer la première tâche</strong><small>Décrivez le résultat attendu et choisissez votre agent.</small></span><span>→</span></button></div><button id="welcome-settings" class="text-button">Configurer les modules et connexions…</button></section>
     <p id="board-scroll-hint" class="board-scroll-hint">Faites défiler le tableau horizontalement pour voir toutes les étapes.</p><section id="board" class="board" aria-label="Tableau Kanban" tabindex="0"></section>
 
+    <section id="task-page" class="task-workspace" aria-label="Détail de la tâche" hidden><div id="card-detail"></div></section>
     <footer>ATELIER <span>Un peu moins de friction. Un peu plus de fait.</span><span>Stockage local · SQLite</span></footer>
   </main>
   
@@ -101,7 +102,6 @@
     <div class="form-actions"><button class="btn" type="button" data-close>Annuler</button><button class="btn btn-primary primary">Enregistrer</button></div>
   </form></dialog>
   <dialog id="template-dialog" aria-labelledby="template-title"><form id="template-form"><div class="dialog-heading"><h2 id="template-title">Enregistrer comme modèle</h2><button type="button" data-close aria-label="Fermer">×</button></div><p class="hint">Reprend la description, les instructions, le mode et les critères enregistrés de la carte. Les critères seront décochés. Le titre, le projet et les liens restent propres à chaque tâche.</p><input type="hidden" name="cardId"><label>Nom du modèle<input name="name" required maxlength="100"></label><div class="form-actions"><button type="button" data-close>Annuler</button><button class="primary">Enregistrer le modèle</button></div></form></dialog>
-  <dialog id="card-dialog" class="detail-dialog" aria-label="Détail de la tâche"><div id="card-detail"></div></dialog>
   <dialog id="pr-dialog" class="detail-dialog" aria-label="Préparer la pull request"><form id="pr-form">
     <div class="dialog-heading"><div><div class="eyebrow">PUBLICATION DE LA PULL REQUEST</div><h2>Préparer la pull request</h2></div><button type="button" data-close aria-label="Fermer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></div>
     <p class="hint" id="pr-destination"></p>
