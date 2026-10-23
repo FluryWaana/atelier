@@ -400,6 +400,13 @@ Prochaine action concrète :
 - **Limites :** les fixtures prouvent les primitives, pas encore les adaptateurs complets M04/M08/M09. Pas de preuve Linux/macOS, trousseaux POSIX ou Firefox/Safari ; pas de nouvelle exécution CI distante. M01 reste en cours ; M02 n'est pas déclaré prêt ou validé tant que ses prérequis restent ouverts.
 - **Prochaine action :** exécuter la nouvelle CI sur les cinq runners et compléter les prototypes tray/trousseau sur des bureaux Linux et macOS dédiés. Aucun retrait de Node ni migration de données réelles.
 
+### 24 octobre 2026 / base `cca14ae` / reprise et CI native
+
+- **Décision :** poursuivre les implémentations indépendantes pendant les preuves natives encore ouvertes, conformément à la section 10. M01 reste en cours ; un travail préparatoire M02 ne valide pas ses prérequis manquants.
+- **État :** dépôt propre à la reprise, aucun changement distant supplémentaire après fetch. GitHub accessible avec l'authentification existante ; Ubuntu 26.04 x64 présent dans WSL, sans toolchain de développement détectée.
+- **Changement :** branche `codex/rust-migration-2026-10-24` et déclenchement du seul workflow Rust sur `codex/rust-migration-*`. Aucun tag ni publication de release. Quatre tests Node de pipeline/security réussis ; inventaire régénéré.
+- **Suite :** recueillir les résultats des cinq runners et du navigateur Linux ; avancer sur le schéma SQLite, transactions et sauvegardes synthétiques de M02.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.
