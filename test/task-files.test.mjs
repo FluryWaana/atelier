@@ -73,8 +73,11 @@ test('source files remain readable without a worktree, but task diff needs its b
 });
 
 test('file preview rejects a file replaced between validation and opening', async t => {
-  const { repo, card } = await fixture(t);
-  const target = join(repo, 'changed.txt'), originalOpen = fs.promises.open;
+  const { dir, repo, card } = await fixture(t);
+  const alias = join(dir, 'repo-alias');
+  await symlink(repo, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  card.worktree.path = alias;
+  const target = await fs.promises.realpath(join(repo, 'changed.txt')), originalOpen = fs.promises.open;
   let replaced = false;
   const mock = t.mock.method(fs.promises, 'open', async (path, ...args) => {
     if (path === target && !replaced) {
