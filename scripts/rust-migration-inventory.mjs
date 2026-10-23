@@ -4,8 +4,8 @@ import { join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const folders = ['lib', 'public', 'scripts', 'test', 'examples', 'styles', '.github'];
-const entrypoints = ['server.mjs', 'launcher.mjs', 'Start.cmd', 'Stop.cmd', 'Start.command', 'Stop.command', 'package.json', 'package-lock.json', '.node-version', 'runtime/LICENSE', 'LICENSE', '.gitignore'];
+const folders = ['lib', 'public', 'scripts', 'test', 'examples', 'styles', '.github', 'crates', 'xtask', '.cargo'];
+const entrypoints = ['server.mjs', 'launcher.mjs', 'Start.cmd', 'Stop.cmd', 'Start.command', 'Stop.command', 'package.json', 'package-lock.json', '.node-version', 'runtime/LICENSE', 'LICENSE', '.gitignore', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'];
 function filesIn(directory) {
   return readdirSync(join(root, directory), { withFileTypes: true }).flatMap(entry => {
     const path = directory + '/' + entry.name;
@@ -17,13 +17,13 @@ const link = (path, line) => `[${path}${line ? ':' + line : ''}](../${path}${lin
 
 export function migrationInventory() {
   const files = [...entrypoints, ...folders.flatMap(filesIn)].sort();
-  const sources = new Map(files.filter(path => /\.(mjs|js|html|scss|ps1|cs|swift|py|sh|iss|spec|desktop|yml|cmd|command)$|\/atelier-kanban$/.test(path) && !path.includes('/vendor/')).map(path => [path, readFileSync(join(root, path), 'utf8')]));
+  const sources = new Map(files.filter(path => /\.(mjs|js|html|scss|ps1|cs|swift|py|sh|iss|spec|desktop|yml|cmd|command|rs|toml)$|\/atelier-kanban$/.test(path) && !path.includes('/vendor/')).map(path => [path, readFileSync(join(root, path), 'utf8')]));
   const imports = new Map();
   for (const [path, source] of sources) {
     imports.set(path, [...new Set([...source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.[^'"]+)['"]/g)].map(match => posix.normalize(posix.join(posix.dirname(path), match[1]))))].sort());
   }
-  const lines = ['# Inventaire de référence Node', '', 'Généré par `runtime/node.exe scripts/rust-migration-inventory.mjs`. Vérification sans écriture : ajouter `--check`.', '',
-    'Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles et .github ; aucune donnée utilisateur. Les imports sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.', '',
+  const lines = ['# Inventaire de migration Node et Rust', '', 'Généré par `runtime/node.exe scripts/rust-migration-inventory.mjs`. Vérification sans écriture : ajouter `--check`.', '',
+    'Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask et .cargo ; aucune donnée utilisateur ni artefact target. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.', '',
     'Les numéros de ligne servent à retrouver les contrats. Les extraits sont des repères lexicaux : les lignes voisines restent nécessaires pour interpréter validation, erreurs et limites.', '',
     '## Fichiers et appelants directs', '', '| Fichier | Nature | Importé directement par |', '| --- | --- | --- |'];
   for (const path of files) {
@@ -33,6 +33,7 @@ export function migrationInventory() {
   }
   const sections = [
     ['Exports et réexports', (path, line) => /\.(mjs|js)$/.test(path) && /^export\b/.test(line)],
+    ['Modules, dépendances et contrats Rust', (path, line) => /\.(rs|toml)$/.test(path) && /^\s*(?:pub |use |mod |#\[(?:test|tokio::test)|.*(?:workspace|version)\s*=|\[.*dependencies)/.test(line)],
     ['Tests et scénarios nommés', (path, line) => path.startsWith('test/') && /\btest\s*\(/.test(line)],
     ['Environnement et arguments CLI', (path, line) => !path.startsWith('test/') && /process\.(env|argv)|\b(?:env|environment)\s*(?:\.|\[)|\$env:|getenv|EnvironmentVariable|os\.environ|sys\.argv|CommandLine|GetCommandLineArgs|\bargs\b|^param\(|\$[@#0-9]|%(?:\*|~dp0)|\$\{?[A-Z][A-Z_]+/.test(line)],
     ['Routes, méthodes et événements', (path, line) => (path === 'server.mjs' || path.startsWith('lib/http/')) && /\/api\/|\\\/api\\\/|method|GET:|POST:|DELETE:|res\.write|heartbeat/.test(line)],

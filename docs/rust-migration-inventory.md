@@ -1,8 +1,8 @@
-# Inventaire de référence Node
+# Inventaire de migration Node et Rust
 
 Généré par `runtime/node.exe scripts/rust-migration-inventory.mjs`. Vérification sans écriture : ajouter `--check`.
 
-Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles et .github ; aucune donnée utilisateur. Les imports sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.
+Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask et .cargo ; aucune donnée utilisateur ni artefact target. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.
 
 Les numéros de ligne servent à retrouver les contrats. Les extraits sont des repères lexicaux : les lignes voisines restent nécessaires pour interpréter validation, erreurs et limites.
 
@@ -10,14 +10,36 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 
 | Fichier | Nature | Importé directement par |
 | --- | --- | --- |
+| [.cargo/config.toml](../.cargo/config.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [.github/workflows/release.yml](../.github/workflows/release.yml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [.github/workflows/rust.yml](../.github/workflows/rust.yml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [.gitignore](../.gitignore) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [.node-version](../.node-version) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [Cargo.lock](../Cargo.lock) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [Cargo.toml](../Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [LICENSE](../LICENSE) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [Start.cmd](../Start.cmd) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [Start.command](../Start.command) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [Stop.cmd](../Stop.cmd) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [Stop.command](../Stop.command) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/Cargo.toml](../crates/atelier-app/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/http.rs](../crates/atelier-app/src/http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/database.rs](../crates/atelier-app/src/infrastructure/database.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/mod.rs](../crates/atelier-app/src/infrastructure/mod.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/prototype.rs](../crates/atelier-app/src/infrastructure/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/session.rs](../crates/atelier-app/src/infrastructure/session.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/prototype.rs](../crates/atelier-app/tests/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/Cargo.toml](../crates/atelier-core/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/application.rs](../crates/atelier-core/src/application.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/contracts.rs](../crates/atelier-core/src/contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/domain.rs](../crates/atelier-core/src/domain.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/lib.rs](../crates/atelier-core/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [examples/connectors/demo/index.mjs](../examples/connectors/demo/index.mjs) | Source / configuration | [test/connectors-api.test.mjs](../test/connectors-api.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
 | [launcher.mjs](../launcher.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [lib/agent-account.mjs](../lib/agent-account.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-account.test.mjs](../test/agent-account.test.mjs) |
@@ -154,6 +176,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [public/views/workspace-workflows.mjs](../public/views/workspace-workflows.mjs) | Source / configuration | [public/app.js](../public/app.js), [public/views/card.mjs](../public/views/card.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs), [test/worktree-removal-ui.test.mjs](../test/worktree-removal-ui.test.mjs) |
 | [public/workflow.mjs](../public/workflow.mjs) | Source / configuration | [public/ui-helpers.mjs](../public/ui-helpers.mjs), [public/views/board.mjs](../public/views/board.mjs), [public/views/card.mjs](../public/views/card.mjs), [public/views/time.mjs](../public/views/time.mjs), [public/views/workspace-workflows.mjs](../public/views/workspace-workflows.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [runtime/LICENSE](../runtime/LICENSE) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [rust-toolchain.toml](../rust-toolchain.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/Compress-Release.ps1](../scripts/Compress-Release.ps1) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/Expand-Update.ps1](../scripts/Expand-Update.ps1) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/MacTray.swift](../scripts/MacTray.swift) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -284,6 +307,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/worktree-agent-context.test.mjs](../test/worktree-agent-context.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/worktree-removal-ui.test.mjs](../test/worktree-removal-ui.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/worktrees.test.mjs](../test/worktrees.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/Cargo.toml](../xtask/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/main.rs](../xtask/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 
 ## Exports et réexports
 
@@ -569,6 +595,163 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/migration-data.mjs:4](../test/fixtures/migration-data.mjs#L4) | <code>export function seedMigrationData(store) {</code> |
 | [test/helpers/french-locale.mjs:3](../test/helpers/french-locale.mjs#L3) | <code>export { msg, markupText, locale, messageText, localizeModule } from '../../public/i18n.mjs';</code> |
 | [test/helpers/view-context.mjs:1](../test/helpers/view-context.mjs#L1) | <code>export function bindView(factory, context) {</code> |
+
+## Modules, dépendances et contrats Rust
+
+| Source | Repère |
+| --- | --- |
+| [Cargo.toml:7](../Cargo.toml#L7) | <code>version = "0.1.9"</code> |
+| [Cargo.toml:9](../Cargo.toml#L9) | <code>rust-version = "1.99"</code> |
+| [Cargo.toml:12](../Cargo.toml#L12) | <code>[workspace.dependencies]</code> |
+| [Cargo.toml:15](../Cargo.toml#L15) | <code>serde = { version = "=1.0.229", features = ["derive"] }</code> |
+| [Cargo.toml:17](../Cargo.toml#L17) | <code>tokio = { version = "=1.54.1", features = ["macros", "rt-multi-thread", "net", "sync", "signal", "time", "process", "io-util"] }</code> |
+| [Cargo.toml:19](../Cargo.toml#L19) | <code>reqwest = { version = "=0.13.5", default-features = false, features = ["json", "rustls"] }</code> |
+| [crates/atelier-app/Cargo.toml:3](../crates/atelier-app/Cargo.toml#L3) | <code>version.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:4](../crates/atelier-app/Cargo.toml#L4) | <code>edition.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:5](../crates/atelier-app/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:6](../crates/atelier-app/Cargo.toml#L6) | <code>license.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:12](../crates/atelier-app/Cargo.toml#L12) | <code>[dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:13](../crates/atelier-app/Cargo.toml#L13) | <code>atelier-core.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:14](../crates/atelier-app/Cargo.toml#L14) | <code>serde.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:15](../crates/atelier-app/Cargo.toml#L15) | <code>serde_json.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:16](../crates/atelier-app/Cargo.toml#L16) | <code>tokio.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:18](../crates/atelier-app/Cargo.toml#L18) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
+| [crates/atelier-app/Cargo.toml:23](../crates/atelier-app/Cargo.toml#L23) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
+| [crates/atelier-app/Cargo.toml:24](../crates/atelier-app/Cargo.toml#L24) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
+| [crates/atelier-app/Cargo.toml:25](../crates/atelier-app/Cargo.toml#L25) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
+| [crates/atelier-app/Cargo.toml:27](../crates/atelier-app/Cargo.toml#L27) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory"] }</code> |
+| [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>[dev-dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>tempfile.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:32](../crates/atelier-app/Cargo.toml#L32) | <code>reqwest.workspace = true</code> |
+| [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
+| [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{application::create_card, contracts::Board};</code> |
+| [crates/atelier-app/src/http.rs:6](../crates/atelier-app/src/http.rs#L6) | <code>use axum::{</code> |
+| [crates/atelier-app/src/http.rs:15](../crates/atelier-app/src/http.rs#L15) | <code>use serde::Deserialize;</code> |
+| [crates/atelier-app/src/http.rs:16](../crates/atelier-app/src/http.rs#L16) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/http.rs:17](../crates/atelier-app/src/http.rs#L17) | <code>use std::{path::PathBuf, sync::Arc};</code> |
+| [crates/atelier-app/src/http.rs:18](../crates/atelier-app/src/http.rs#L18) | <code>use tokio::{net::TcpListener, sync::watch};</code> |
+| [crates/atelier-app/src/http.rs:19](../crates/atelier-app/src/http.rs#L19) | <code>use tower_http::services::ServeFile;</code> |
+| [crates/atelier-app/src/http.rs:21](../crates/atelier-app/src/http.rs#L21) | <code>pub const CSP: &amp;str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";</code> |
+| [crates/atelier-app/src/http.rs:185](../crates/atelier-app/src/http.rs#L185) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:1](../crates/atelier-app/src/infrastructure/database.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:2](../crates/atelier-app/src/infrastructure/database.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:3](../crates/atelier-app/src/infrastructure/database.rs#L3) | <code>use rusqlite::{Connection, params};</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:4](../crates/atelier-app/src/infrastructure/database.rs#L4) | <code>use std::path::Path;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:5](../crates/atelier-app/src/infrastructure/database.rs#L5) | <code>use tokio::sync::{mpsc, oneshot};</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:13](../crates/atelier-app/src/infrastructure/database.rs#L13) | <code>pub struct Database {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:19](../crates/atelier-app/src/infrastructure/database.rs#L19) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:45](../crates/atelier-app/src/infrastructure/database.rs#L45) | <code>pub async fn call&lt;T: Send + 'static&gt;(</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:59](../crates/atelier-app/src/infrastructure/database.rs#L59) | <code>pub async fn cards(&amp;self) -&gt; Result&lt;Vec&lt;Card&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:68](../crates/atelier-app/src/infrastructure/database.rs#L68) | <code>pub async fn put_card(&amp;self, card: Card) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:75](../crates/atelier-app/src/infrastructure/database.rs#L75) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:1](../crates/atelier-app/src/infrastructure/mod.rs#L1) | <code>pub mod database;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:2](../crates/atelier-app/src/infrastructure/mod.rs#L2) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:3](../crates/atelier-app/src/infrastructure/mod.rs#L3) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:2](../crates/atelier-app/src/infrastructure/prototype.rs#L2) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:7](../crates/atelier-app/src/infrastructure/prototype.rs#L7) | <code>pub struct PrototypeDirectory {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:8](../crates/atelier-app/src/infrastructure/prototype.rs#L8) | <code>pub path: PathBuf,</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:13](../crates/atelier-app/src/infrastructure/prototype.rs#L13) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:1](../crates/atelier-app/src/infrastructure/session.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:2](../crates/atelier-app/src/infrastructure/session.rs#L2) | <code>use hmac::{Hmac, KeyInit, Mac};</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:3](../crates/atelier-app/src/infrastructure/session.rs#L3) | <code>use sha2::Sha256;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:4](../crates/atelier-app/src/infrastructure/session.rs#L4) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:9](../crates/atelier-app/src/infrastructure/session.rs#L9) | <code>use subtle::ConstantTimeEq;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:11](../crates/atelier-app/src/infrastructure/session.rs#L11) | <code>pub fn hexadecimal(bytes: &amp;[u8]) -&gt; String {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:15](../crates/atelier-app/src/infrastructure/session.rs#L15) | <code>pub fn new_token() -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:21](../crates/atelier-app/src/infrastructure/session.rs#L21) | <code>pub fn same_secret(actual: &amp;str, expected: &amp;str) -&gt; bool {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:25](../crates/atelier-app/src/infrastructure/session.rs#L25) | <code>pub fn proof(token: &amp;str, challenge: &amp;str, port: u16) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:33](../crates/atelier-app/src/infrastructure/session.rs#L33) | <code>pub fn protect(value: &amp;str, decrypt: bool) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:34](../crates/atelier-app/src/infrastructure/session.rs#L34) | <code>use std::ptr::{null, null_mut};</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:35](../crates/atelier-app/src/infrastructure/session.rs#L35) | <code>use windows_sys::Win32::{</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:105](../crates/atelier-app/src/infrastructure/session.rs#L105) | <code>pub fn write(directory: &amp;Path, token: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:115](../crates/atelier-app/src/infrastructure/session.rs#L115) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:132](../crates/atelier-app/src/infrastructure/session.rs#L132) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/lib.rs:1](../crates/atelier-app/src/lib.rs#L1) | <code>pub mod http;</code> |
+| [crates/atelier-app/src/lib.rs:2](../crates/atelier-app/src/lib.rs#L2) | <code>pub mod infrastructure;</code> |
+| [crates/atelier-app/src/lib.rs:4](../crates/atelier-app/src/lib.rs#L4) | <code>pub type Error = Box&lt;dyn std::error::Error + Send + Sync&gt;;</code> |
+| [crates/atelier-app/src/lib.rs:5](../crates/atelier-app/src/lib.rs#L5) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Error&gt;;</code> |
+| [crates/atelier-app/src/main.rs:1](../crates/atelier-app/src/main.rs#L1) | <code>use atelier_app::{Result, http};</code> |
+| [crates/atelier-app/src/main.rs:2](../crates/atelier-app/src/main.rs#L2) | <code>use std::path::PathBuf;</code> |
+| [crates/atelier-app/tests/prototype.rs:1](../crates/atelier-app/tests/prototype.rs#L1) | <code>use atelier_app::{</code> |
+| [crates/atelier-app/tests/prototype.rs:5](../crates/atelier-app/tests/prototype.rs#L5) | <code>use atelier_core::contracts::Card;</code> |
+| [crates/atelier-app/tests/prototype.rs:6](../crates/atelier-app/tests/prototype.rs#L6) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/tests/prototype.rs:7](../crates/atelier-app/tests/prototype.rs#L7) | <code>use std::{path::Path, time::Duration};</code> |
+| [crates/atelier-app/tests/prototype.rs:59](../crates/atelier-app/tests/prototype.rs#L59) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:219](../crates/atelier-app/tests/prototype.rs#L219) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:238](../crates/atelier-app/tests/prototype.rs#L238) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:254](../crates/atelier-app/tests/prototype.rs#L254) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:278](../crates/atelier-app/tests/prototype.rs#L278) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:280](../crates/atelier-app/tests/prototype.rs#L280) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/tests/prototype.rs:281](../crates/atelier-app/tests/prototype.rs#L281) | <code>use std::{</code> |
+| [crates/atelier-core/Cargo.toml:3](../crates/atelier-core/Cargo.toml#L3) | <code>version.workspace = true</code> |
+| [crates/atelier-core/Cargo.toml:4](../crates/atelier-core/Cargo.toml#L4) | <code>edition.workspace = true</code> |
+| [crates/atelier-core/Cargo.toml:5](../crates/atelier-core/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
+| [crates/atelier-core/Cargo.toml:6](../crates/atelier-core/Cargo.toml#L6) | <code>license.workspace = true</code> |
+| [crates/atelier-core/Cargo.toml:8](../crates/atelier-core/Cargo.toml#L8) | <code>[dependencies]</code> |
+| [crates/atelier-core/Cargo.toml:9](../crates/atelier-core/Cargo.toml#L9) | <code>serde.workspace = true</code> |
+| [crates/atelier-core/Cargo.toml:10](../crates/atelier-core/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
+| [crates/atelier-core/src/application.rs:1](../crates/atelier-core/src/application.rs#L1) | <code>use crate::{contracts::Card, domain::text};</code> |
+| [crates/atelier-core/src/application.rs:2](../crates/atelier-core/src/application.rs#L2) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-core/src/application.rs:4](../crates/atelier-core/src/application.rs#L4) | <code>pub fn create_card(body: &amp;Value, id: String, timestamp: String) -&gt; Result&lt;Card, &amp;'static str&gt; {</code> |
+| [crates/atelier-core/src/application.rs:30](../crates/atelier-core/src/application.rs#L30) | <code>mod tests {</code> |
+| [crates/atelier-core/src/application.rs:31](../crates/atelier-core/src/application.rs#L31) | <code>use super::*;</code> |
+| [crates/atelier-core/src/application.rs:33](../crates/atelier-core/src/application.rs#L33) | <code>#[test]</code> |
+| [crates/atelier-core/src/application.rs:53](../crates/atelier-core/src/application.rs#L53) | <code>#[test]</code> |
+| [crates/atelier-core/src/contracts.rs:1](../crates/atelier-core/src/contracts.rs#L1) | <code>use serde::{Deserialize, Serialize};</code> |
+| [crates/atelier-core/src/contracts.rs:2](../crates/atelier-core/src/contracts.rs#L2) | <code>use serde_json::{Map, Value};</code> |
+| [crates/atelier-core/src/contracts.rs:5](../crates/atelier-core/src/contracts.rs#L5) | <code>pub struct Card {</code> |
+| [crates/atelier-core/src/contracts.rs:6](../crates/atelier-core/src/contracts.rs#L6) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/contracts.rs:7](../crates/atelier-core/src/contracts.rs#L7) | <code>pub title: String,</code> |
+| [crates/atelier-core/src/contracts.rs:9](../crates/atelier-core/src/contracts.rs#L9) | <code>pub fields: Map&lt;String, Value&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:13](../crates/atelier-core/src/contracts.rs#L13) | <code>pub struct Board {</code> |
+| [crates/atelier-core/src/contracts.rs:14](../crates/atelier-core/src/contracts.rs#L14) | <code>pub cards: Vec&lt;Card&gt;,</code> |
+| [crates/atelier-core/src/domain.rs:1](../crates/atelier-core/src/domain.rs#L1) | <code>pub fn text(value: &amp;str, limit: usize) -&gt; Result&lt;String, &amp;'static str&gt; {</code> |
+| [crates/atelier-core/src/domain.rs:10](../crates/atelier-core/src/domain.rs#L10) | <code>mod tests {</code> |
+| [crates/atelier-core/src/domain.rs:11](../crates/atelier-core/src/domain.rs#L11) | <code>use super::*;</code> |
+| [crates/atelier-core/src/domain.rs:13](../crates/atelier-core/src/domain.rs#L13) | <code>#[test]</code> |
+| [crates/atelier-core/src/lib.rs:1](../crates/atelier-core/src/lib.rs#L1) | <code>pub mod application;</code> |
+| [crates/atelier-core/src/lib.rs:2](../crates/atelier-core/src/lib.rs#L2) | <code>pub mod contracts;</code> |
+| [crates/atelier-core/src/lib.rs:3](../crates/atelier-core/src/lib.rs#L3) | <code>pub mod domain;</code> |
+| [crates/atelier-ui/Cargo.toml:3](../crates/atelier-ui/Cargo.toml#L3) | <code>version.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:4](../crates/atelier-ui/Cargo.toml#L4) | <code>edition.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:5](../crates/atelier-ui/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:6](../crates/atelier-ui/Cargo.toml#L6) | <code>license.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:8](../crates/atelier-ui/Cargo.toml#L8) | <code>[dependencies]</code> |
+| [crates/atelier-ui/Cargo.toml:9](../crates/atelier-ui/Cargo.toml#L9) | <code>atelier-core.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
+| [crates/atelier-ui/Cargo.toml:15](../crates/atelier-ui/Cargo.toml#L15) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Location", "Storage", "History", "UrlSearchParams"] }</code> |
+| [crates/atelier-ui/src/main.rs:1](../crates/atelier-ui/src/main.rs#L1) | <code>use atelier_core::contracts::{Board, Card};</code> |
+| [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::Request;</code> |
+| [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [xtask/Cargo.toml:3](../xtask/Cargo.toml#L3) | <code>version.workspace = true</code> |
+| [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>edition.workspace = true</code> |
+| [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
+| [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>license.workspace = true</code> |
+| [xtask/Cargo.toml:8](../xtask/Cargo.toml#L8) | <code>[dependencies]</code> |
+| [xtask/Cargo.toml:9](../xtask/Cargo.toml#L9) | <code>atelier-app.workspace = true</code> |
+| [xtask/Cargo.toml:10](../xtask/Cargo.toml#L10) | <code>tokio.workspace = true</code> |
+| [xtask/Cargo.toml:11](../xtask/Cargo.toml#L11) | <code>serde_json.workspace = true</code> |
+| [xtask/Cargo.toml:12](../xtask/Cargo.toml#L12) | <code>tempfile.workspace = true</code> |
+| [xtask/Cargo.toml:13](../xtask/Cargo.toml#L13) | <code>reqwest.workspace = true</code> |
+| [xtask/Cargo.toml:14](../xtask/Cargo.toml#L14) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
+| [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
+| [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
+| [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod ui;</code> |
+| [xtask/src/main.rs:21](../xtask/src/main.rs#L21) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/main.rs:93](../xtask/src/main.rs#L93) | <code>mod tests {</code> |
+| [xtask/src/main.rs:94](../xtask/src/main.rs#L94) | <code>use super::*;</code> |
+| [xtask/src/main.rs:95](../xtask/src/main.rs#L95) | <code>#[test]</code> |
+| [xtask/src/main.rs:132](../xtask/src/main.rs#L132) | <code>#[test]</code> |
+| [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
+| [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::session;</code> |
+| [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
+| [xtask/src/ui.rs:4](../xtask/src/ui.rs#L4) | <code>use serde_json::{Value, json};</code> |
+| [xtask/src/ui.rs:5](../xtask/src/ui.rs#L5) | <code>use std::{</code> |
+| [xtask/src/ui.rs:110](../xtask/src/ui.rs#L110) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 
 ## Tests et scénarios nommés
 
@@ -995,6 +1178,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Stop.cmd:2](../Stop.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" --stop</code> |
 | [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
+| [crates/atelier-app/src/main.rs:6](../crates/atelier-app/src/main.rs#L6) | <code>let mut args = std::env::args().skip(1);</code> |
+| [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
+| [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
+| [crates/atelier-app/src/main.rs:12](../crates/atelier-app/src/main.rs#L12) | <code>let value = args.next().ok_or("Valeur d’argument absente.")?;</code> |
+| [crates/atelier-app/tests/prototype.rs:297](../crates/atelier-app/tests/prototype.rs#L297) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
 | [launcher.mjs:16](../launcher.mjs#L16) | <code>const port = Number(process.env.PORT \|\| 4317);</code> |
 | [launcher.mjs:36](../launcher.mjs#L36) | <code>if (process.argv.includes('--import-data')) {</code> |
 | [launcher.mjs:39](../launcher.mjs#L39) | <code>const source = process.argv[process.argv.indexOf('--import-data') + 1] \|\| await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');</code> |
@@ -1131,6 +1319,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:159](../server.mjs#L159) | <code>}, syncTicketStatus: (id, required) =&gt; ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) =&gt; jiraWorkflows.execute(...args), linkPullRequest: card =&gt; linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset =&gt; ticketSync.sync(reset), repositories: repositoryHandlers,</code> |
 | [server.mjs:483](../server.mjs#L483) | <code>if (lock &amp;&amp; lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');</code> |
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
+| [xtask/src/main.rs:65](../xtask/src/main.rs#L65) | <code>run(command("trunk").args([</code> |
+| [xtask/src/main.rs:84](../xtask/src/main.rs#L84) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
+| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>.args([</code> |
+| [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
+| [xtask/src/ui.rs:127](../xtask/src/ui.rs#L127) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
+| [xtask/src/ui.rs:163](../xtask/src/ui.rs#L163) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
+| [xtask/src/ui.rs:167](../xtask/src/ui.rs#L167) | <code>capabilities.insert("moz:firefoxOptions".into(), json!({"args":["-headless"]}));</code> |
 
 ## Routes, méthodes et événements
 
@@ -2048,6 +2244,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | --- | --- |
 | [.github/workflows/release.yml:92](../.github/workflows/release.yml#L92) | <code>run: node --input-type=module -e "import {mkdirSync,writeFileSync} from 'node:fs'; const r=await fetch('https://raw.githubusercontent.com/nodejs/node/v'+process.versions.node+'/LICENSE'); if(!r.ok) throw Error('Licence Node indisponible'); mkdirSync('.updates',{recursive:true}); writeFileSync('.updates/Node-LICENSE', await r.text());"</code> |
 | [.github/workflows/release.yml:95](../.github/workflows/release.yml#L95) | <code>NODE_LICENSE: .updates/Node-LICENSE</code> |
+| [crates/atelier-app/src/http.rs:215](../crates/atelier-app/src/http.rs#L215) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite"))?;</code> |
+| [crates/atelier-app/src/infrastructure/database.rs:25](../crates/atelier-app/src/infrastructure/database.rs#L25) | <code>connection.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);")?;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:110](../crates/atelier-app/src/infrastructure/session.rs#L110) | <code>let temporary = directory.join(format!("local-session.{}", uuid::Uuid::new_v4()));</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:123](../crates/atelier-app/src/infrastructure/session.rs#L123) | <code>fs::rename(&amp;temporary, directory.join("local-session"))?;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:134](../crates/atelier-app/src/infrastructure/session.rs#L134) | <code>let stored = fs::read_to_string(directory.join("local-session"))?;</code> |
+| [crates/atelier-app/tests/prototype.rs:68](../crates/atelier-app/tests/prototype.rs#L68) | <code>std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:122](../crates/atelier-app/tests/prototype.rs#L122) | <code>"/local-session",</code> |
+| [crates/atelier-app/tests/prototype.rs:123](../crates/atelier-app/tests/prototype.rs#L123) | <code>"/data/local-session",</code> |
+| [crates/atelier-app/tests/prototype.rs:241](../crates/atelier-app/tests/prototype.rs#L241) | <code>std::fs::write(directory.path().join("kanban.sqlite"), "untouched").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:244](../crates/atelier-app/tests/prototype.rs#L244) | <code>std::fs::read_to_string(directory.path().join("kanban.sqlite")).unwrap(),</code> |
 | [launcher.mjs:11](../launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
 | [launcher.mjs:33](../launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |
 | [launcher.mjs:54](../launcher.mjs#L54) | <code>const out = openSync(join(dataDir, 'server.stdout.log'), 'a');</code> |
@@ -2131,4 +2337,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
 
-Total : 274 fichiers ; 93 fichiers de tests Node.
+Total : 300 fichiers ; 93 fichiers de tests Node.

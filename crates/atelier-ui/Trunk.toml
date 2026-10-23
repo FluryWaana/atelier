@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../.artifacts/rust-ui"
+locked = true
+
+[tools]
+wasm_bindgen = "0.2.129"

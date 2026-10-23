@@ -6,9 +6,23 @@ Référence : `843d3ea`, Atelier `0.1.9`, Node `24.22.1`, données version 2. In
 
 Cette matrice décrit les contrats à conserver et leurs erreurs, pas seulement une liste de fichiers à traduire. L'[inventaire généré](rust-migration-inventory.md) complète chaque ligne avec **tous** les fichiers applicatifs, ressources, exemples, tests/supports, imports/appelants statiques, exports de compatibilité, noms de scénarios et repères de contrats. Une entrée sans appelant statique n'est pas du code mort : routes, injection, scripts natifs, assets et chargements de connecteurs sont aussi des entrées.
 
-Dans les tableaux, les sources sans préfixe sont sous `lib/` et les noms de tests désignent `test/<nom>.test.mjs`. Chaque équivalent Rust est une **destination prévue**, pas un fichier existant. Tous les contrats Rust restent **à faire**. « Node » désigne une preuve de référence dans les tests existants ; les exclusions de plateforme et de livraison figurent dans le relevé d'exécution. Les tests de structure et les doubles ne sont pas des preuves natives ou E2E.
+Dans les tableaux, les sources sans préfixe sont sous `lib/` et les noms de tests désignent `test/<nom>.test.mjs`. Les équivalents Rust indiquent les destinations de migration ; leur qualification complète reste **à faire**, avec les preuves partielles M01 ci-dessous. « Node » désigne une preuve de référence dans les tests existants ; les exclusions de plateforme et de livraison figurent dans le relevé d'exécution. Les tests de structure et les doubles ne sont pas des preuves natives ou E2E.
 
 Après chaque incrément, remplacer « à faire » par les tests Rust précis, le résultat, le commit et les limites. Aucune suppression d'un test Node avant preuve équivalente de ses scénarios d'erreur. La couverture des fichiers est exhaustive ; les cas dynamiques sont décrits ci-dessous et les scénarios complémentaires exigés par le plan restent à implémenter dans leur lot.
+
+## Preuves partielles M01 — 23 octobre 2026, base `ec6dbe4`
+
+Les contrats des tableaux ne deviennent pas validés par ces seules preuves. Détails et limites dans le [relevé M01](rust-migration-m01.md).
+
+| Contrats concernés | Preuve Rust exécutée | Ce qui manque encore |
+| --- | --- | --- |
+| C01 | `xtask::tests::workspace_keeps_native_adapters_out_of_core_and_ui`, Clippy natif/WASM, compilation des quatre crates | Revue des futurs modules internes, exécution des quatre autres cibles natives |
+| C02 | `database_preserves_unknown_fields_null_and_row_order`, relecture après fermeture | Toutes les tables, sauvegardes, transactions et aller-retour Node/Rust complet |
+| C04 | `dpapi_is_compatible_with_powershell_in_both_directions`, sur compte Windows courant et secret synthétique | Coffre complet, compte différent, trousseaux POSIX |
+| C05 | `authenticated_http_preserves_tasks_after_close_and_rotates_sessions`, vecteur HMAC Node dans `session_tokens_and_constant_time_comparison_reject_malformed_values` | SSE, course fichiers/permissions, arrêts occupés, protocole lanceur complet |
+| C06 | `prototype_refuses_existing_data_and_locks_aliases_until_closed` | Verrou commun N1, liens/reparse points et remplacements concurrents |
+| C07 | `validates_before_constructing_a_card`, `uses_javascript_lengths_and_trim` | Tous les champs/actions métier au-delà du titre |
+| UI/session | `cargo xtask test-ui` dans Edge : formulaire WASM, texte Unicode/HTML échappé, création, redémarrage réel, relecture ; chargeur Trunk externalisé testé | Interface complète, clavier/focus/brouillons/traductions, Firefox/Safari, autres bureaux |
 
 ## Contrats serveur et système
 

@@ -20,6 +20,16 @@ Pure rules live in `lib/domain/`, use cases in `lib/application/`, HTTP adapters
 
 ## Coding Style & Naming Conventions
 
+### Rust migration coexistence
+
+The Node application remains the production implementation. Follow `docs/rust-migration-plan.md` and its parity matrix; never open user `data/` with the Rust prototype. M01 provides `atelier serve-prototype --data-dir <empty-test-directory> --assets .artifacts/rust-ui --port 4318`; its deliberately limited API is not a production replacement.
+
+The Cargo workspace contains exactly `atelier-core` (pure domain/application/public contracts), `atelier-app` (HTTP and native adapters), `atelier-ui` (Leptos CSR/WASM), and `xtask` (build and verification). Preserve those boundaries. Use the pinned `rust-toolchain.toml`, committed `Cargo.lock`, `cargo fmt`, and Clippy with warnings denied. Native checks exclude `atelier-ui`; check it separately with `--target wasm32-unknown-unknown`.
+
+Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full Node suite. `cargo xtask build-ui` requires Trunk 0.22.0 and wasm-bindgen CLI 0.2.129 on PATH; run `cargo fetch --locked` first because the UI build is offline. `cargo xtask test-ui` starts a separate server process and a temporary WebDriver profile, creates a synthetic task, restarts the server and checks persistence. Set `ATELIER_WEBDRIVER` to the driver executable if needed; `ATELIER_TEST_BROWSER` supports `edge`, `chrome`, `firefox`, or `safari`. A configured browser is not a verified browser until the test runs. See `docs/rust-migration-m01.md` for commands and remaining native proofs. Packaging commands remain Node until their migration lots are qualified.
+
+### JavaScript conventions
+
 Use ES modules: `.mjs` for backend modules and tests, with browser code under `public/`. Follow nearby indentation and existing semicolon and single-quote conventions. Use camelCase for functions and variables and descriptive lowercase, hyphenated module names such as `time-tracking.mjs`. Keep integration logic in its corresponding `lib/` module. No formatter or linter is configured. Preserve the French user-facing text.
 
 ## Testing Guidelines

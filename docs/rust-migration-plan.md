@@ -2,7 +2,7 @@
 
 Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applicative `0.1.9`.
 
-Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 prêt à commencer ; aucun portage Rust commencé**. La [matrice de parité](rust-migration-parity.md) et le [relevé M00](rust-migration-baseline.md) consignent l'inventaire, les preuves de référence et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
+Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 en cours, tranche UI/API/SQLite démontrée sur Windows MSVC et Edge ; preuves natives complémentaires encore requises**. La [matrice de parité](rust-migration-parity.md), le [relevé M00](rust-migration-baseline.md) et le [relevé M01](rust-migration-m01.md) consignent l'inventaire, les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
 ## 1. Résultat attendu et périmètre
 
@@ -158,7 +158,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | À faire |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — tranche Windows/WASM prouvée ; CI et prototypes natifs restants |
 | M02 | M01 | Données, secrets et session compatibles | À faire |
 | M03 | M02 | Domaine et API métier équivalents | À faire |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
@@ -374,7 +374,7 @@ Prochaine action concrète :
 
 État initial : plan créé, migration non commencée, aucun test de référence exécuté dans le cadre de sa rédaction. Aucun chiffrage de durée ni gain de performance validé.
 
-### 23 octobre 2026 / base `843d3ea` + modifications M00 non commises / M00
+### 23 octobre 2026 / base `843d3ea`, incrément commis dans `ec6dbe4` / M00
 
 - **Comportement livré :** aucune modification du produit ; `dataVersion` documentaire corrigée, dépendances M09 et verrou Node/Rust précisés. Matrice de parité et inventaire reproductible de 274 fichiers (93 fichiers de tests), fixtures synthétiques et benchmark isolé. Voir [matrice](rust-migration-parity.md), [inventaire](rust-migration-inventory.md), [preuves et protocole](rust-migration-baseline.md), [mesures brutes](rust-migration-measurements.json).
 - **Commandes exécutées :** inventaire généré et vérifié ; quatre tests de référence ; suite complète avec `ATELIER_REQUIRE_RELEASE=1` : 425 tests, 422 réussis, zéro échec, trois exclus ; preflight release réussi ; huit cas PowerShell d'archives réussis ; fabrication Windows puis quatre scénarios sur vrai paquet réussis. Benchmark final serveur/API/logs/mémoire/Edge réussi après la suite. Aucun installateur activé, aucune publication.
@@ -382,6 +382,15 @@ Prochaine action concrète :
 - **Écarts et risques ouverts :** aucune parité Rust acquise. Installateur Windows et trays POSIX exclus de cette exécution ; coffres POSIX simulés, autres OS/navigateurs, endurance et coût du lanceur/tray à qualifier dans leurs lots. Cache OS non purgé. Le plan distingue maintenant ces garanties des preuves N0 existantes ; aucun gain Rust revendiqué. Budgets et estimation indicative consignés dans le relevé.
 - **Revue :** aucun ajout de dépendance ni changement aux couches applicatives. Outillage de référence transitoire, assertions et tests, données temporaires uniquement. Inventaire lexical complété par la matrice comportementale ; ne vaut pas analyse sémantique automatique.
 - **Prochaine action :** M01, créer le workspace à quatre crates, verrouiller les outils et démontrer la tranche UI → API authentifiée → tâche persistée, puis les prototypes natifs requis. Les exclusions de qualification restent obligatoires avant validation de leurs lots ; M00 n'autorise pas la bascule de production.
+
+### 23 octobre 2026 / base `ec6dbe4` / M01, tranche verticale
+
+- **Comportement livré :** workspace de quatre crates, toolchain 1.99.1 et dépendances verrouillées ; formulaire Leptos/WASM, API locale authentifiée, SQLite dédiée, session DPAPI Windows et verrou de dossier. Commandes `serve-prototype`, `cargo xtask build-ui` et `cargo xtask test-ui`. Coexistence documentée dans AGENTS ; workflow Rust ajouté sans modifier celui de livraison Node. Voir [périmètre et reproduction](rust-migration-m01.md).
+- **Commandes exécutées :** compilation native MSVC et WASM ; formatage et Clippy natif/WASM sans avertissements ; 10 tests Rust réussis, zéro ignoré ; parcours Edge réel réussi. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 425 tests, 422 réussis, zéro échec, trois exclus, 82,65 s. Les exclusions sont les mêmes qu'en M00 (installateur Windows, trays Linux/macOS). Aucun installateur ni publication activé.
+- **Preuves :** compatibilité DPAPI avec PowerShell dans les deux directions ; vecteur HMAC Node/Rust ; refus HTTP, limites et rotation ; champs additionnels/null et ordre SQLite après fermeture ; refus d'un dossier Node et verrou d'alias ; création/relecture après redémarrage d'un vrai processus dans Edge 155.0.4283.62. Captures synthétiques `.artifacts/rust-ui-created.png` et `rust-ui-reopened.png` relues. CSP avec WASM ciblé, chargeur externalisé et texte HTML échappé.
+- **Revue :** pas de nouvelle crate par fonctionnalité ; core sans adaptateur natif, UI sans secret de coffre ; primitives cryptographiques fournies par bibliothèques ; dépendances inutilisées retirées et verrou fourni par la bibliothèque standard. `Cargo.lock` et versions des outils épinglés. Aucun fichier utilisateur utilisé.
+- **Écarts ouverts :** prototype limité au titre et aux cartes ; aucune parité métier complète. Les protections fichiers/fermetures exceptionnelles et le verrou N1 sont à durcir en M02. La nouvelle CI cinq cibles n'a pas encore été exécutée ; trays, trousseaux POSIX, Firefox/Safari, descendant et worker Windows restent à prouver. M01 reste en cours, M02–M11 non validés.
+- **Prochaine action :** poursuivre M01 avec les prototypes natifs Windows (descendant, worker copié et tray), puis recueillir les résultats CI et bureaux Linux/macOS. Aucun retrait de Node ni accès aux données réelles avant les qualifications prévues.
 
 ## 12. Définition finale de terminé
 

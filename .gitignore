@@ -1,4 +1,5 @@
 node_modules/
+target/
 .artifacts/
 connectors/*/
 data/

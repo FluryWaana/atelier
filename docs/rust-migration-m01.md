@@ -1,0 +1,68 @@
+# M01 — première tranche Rust exécutable
+
+Base : `ec6dbe4` (M00 commis). Incrément du 23 octobre 2026. **M01 en cours, pas de bascule de production.** Le workspace et le parcours vertical fonctionnent localement sur Windows x64 MSVC. La validation native complète reste ouverte.
+
+## Périmètre livré
+
+Quatre crates : `atelier-core` porte validation du titre et contrat JSON extensible ; `atelier-app` assemble HTTP, SQLite sur thread dédié avec file bornée, session et verrou de dossier ; `atelier-ui` fournit le formulaire Leptos CSR ; `xtask` construit et teste le parcours. Les tests de dépendances empêchent les adaptateurs natifs de rejoindre core/UI. Les frontières internes restent également à relire lors des lots suivants.
+
+La seule commande produit Rust disponible est `atelier serve-prototype --data-dir DOSSIER --assets .artifacts/rust-ui [--port 4318]`. Elle exige un dossier vide au premier démarrage, puis son marqueur `.atelier-rust-prototype`. Elle refuse un dossier Node existant. Deux instances Rust ne peuvent pas ouvrir le même dossier, y compris via `.` ; ce verrou n'est **pas encore** le protocole commun N1/Rust de M02.
+
+L'API du prototype propose `GET /api/health`, `GET /api/state`, `POST /api/cards` (titre seul) et `POST /api/prototype/stop`. Le tableau renvoyé ne contient que les cartes. Les autres contrats métier restent à porter. Les champs de création non pris en charge sont refusés explicitement. Les documents JSON persistés conservent les champs additionnels et null. Aucune compatibilité complète de la base Node n'est revendiquée.
+
+HTTP écoute sur loopback, contrôle Host/Origin, authentification Bearer, preuve HMAC, mutations JSON et taille. La preuve HMAC possède un vecteur provenant de `sessionProof` Node. La session change à chaque lancement. Les assets sont limités aux fichiers générés reconnus. La CSP ajoute uniquement `'wasm-unsafe-eval'` à `script-src 'self'` ; pas de `'unsafe-eval'` ni `'unsafe-inline'`. `xtask` externalise le chargeur produit par Trunk et refuse un format inattendu. Le code JavaScript de liaison reste généré.
+
+Le compte Windows chiffre la session par DPAPI directement depuis Rust. Le test compare les deux directions avec les mêmes commandes PowerShell que `windowsProtect`, sur un secret synthétique. Ce test ne valide ni les trousseaux POSIX ni le comportement sous un autre compte. Les sessions POSIX suivent le format Node en fichier privé ; ce fichier n'est pas le coffre des jetons d'intégration.
+
+## Outils et dépendances
+
+Toolchain Rust `1.99.1`, édition 2024, cible WASM `wasm32-unknown-unknown`, Trunk `0.22.0`, wasm-bindgen CLI `0.2.129`. Les dépendances directes sont épinglées et les transitives dans `Cargo.lock`. Source de version : [distribution Rust](https://static.rust-lang.org/dist/channel-rust-1.99.1.toml), [Trunk 0.22.0](https://github.com/trunk-rs/trunk/releases/tag/v0.22.0), [wasm-bindgen 0.2.129](https://github.com/wasm-bindgen/wasm-bindgen/releases/tag/0.2.129).
+
+| Usage | Dépendances directes et justification |
+| --- | --- |
+| Contrats | Serde 1.0.229 / serde_json 1.0.154 : préserver le JSON et les champs additionnels |
+| Serveur | Axum 0.8.9 / Tokio 1.54.1 / tower-http 0.7.1 : routage, arrêt asynchrone et fichiers statiques |
+| Données | rusqlite 0.40.2 avec SQLite embarqué ; time 0.3.55 pour dates UTC ISO avec millisecondes |
+| Session | getrandom 0.4.3, hmac 0.13.0, sha2 0.11.1, subtle 2.6.1 ; aucune primitive réécrite |
+| Système | uuid 1.29.0 pour identifiants ; windows-sys 0.61.2 pour DPAPI ; verrou par la bibliothèque standard |
+| UI | Leptos 0.8.22, gloo-net 0.7.0, web-sys 0.3.106, wasm-bindgen 0.2.129 et futures 0.4.79 |
+| Tests | tempfile 3.27.0, reqwest 0.13.5 et Fantoccini 0.22.1 : dossiers isolés, requêtes locales et WebDriver depuis Rust |
+
+Métadonnées des licences directes vérifiées via crates.io : MIT et/ou Apache-2.0, sauf subtle BSD-3-Clause ; projet AGPL-3.0-or-later conservé. L'audit complet des dépendances transitives, avis de sécurité et notices distribuées reste à rendre bloquant avant livraison. Le navigateur et son pilote doivent avoir des versions compatibles ; leurs versions sont relevées à chaque exécution, pas figées indépendamment des mises à jour du navigateur.
+
+## Reproduire
+
+Prérequis Windows : Rust/rustup, Build Tools C++ avec MSVC et SDK Windows. Ici, Build Tools 18.11.1 et SDK 10.0.26100.0 ont été détectés. Rust, Trunk, wasm-bindgen et EdgeDriver ont été installés dans `.artifacts/rust-tools`, sans changement du PATH système. Pour cette installation locale dans PowerShell :
+
+```powershell
+$env:CARGO_HOME = Join-Path (Get-Location) '.artifacts/rust-tools/cargo'
+$env:RUSTUP_HOME = Join-Path (Get-Location) '.artifacts/rust-tools/rustup'
+$env:PATH = "$env:CARGO_HOME/bin;$(Get-Location)/.artifacts/rust-tools/trunk;$(Get-Location)/.artifacts/rust-tools/wasm-bindgen-0.2.129-x86_64-pc-windows-msvc;$(Get-Location)/.artifacts/rust-tools/edgedriver;$env:PATH"
+```
+
+Avec une installation habituelle, mettre les outils épinglés sur PATH (`cargo install --locked trunk --version 0.22.0` et `cargo install --locked wasm-bindgen-cli --version 0.2.129`). Puis :
+
+```text
+cargo fetch --locked
+cargo fmt --all -- --check
+cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
+cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
+cargo test --workspace --exclude atelier-ui --locked
+cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+cargo xtask build-ui
+cargo xtask test-ui
+```
+
+`build-ui` est hors ligne après préparation du cache et exige les versions exactes des deux outils. Les captures sont `.artifacts/rust-ui-created.png` et `.artifacts/rust-ui-reopened.png`, exclusivement synthétiques. Le test navigateur démarre WebDriver avec un profil temporaire, ouvre une session par le fragment URL (jamais en argument de processus), crée la tâche, attend le DOM, arrête le processus serveur, le redémarre, refuse l'ancienne session et relit la tâche. Il ferme les processus qu'il a créés, y compris en échec. Il ne touche pas au profil navigateur personnel.
+
+`ATELIER_WEBDRIVER` sélectionne le binaire ; `ATELIER_TEST_BROWSER` vaut `edge`, `chrome`, `firefox` ou `safari`. Safari nécessite la permission native d'automatisation. La présence de ces options n'est pas une preuve d'exécution sur ces navigateurs.
+
+## Preuves et travaux restants
+
+Résultats locaux : compilation Windows MSVC et WASM réussie ; tests domaine, HTTP, SQLite, DPAPI, CSP et isolation réussis ; parcours Edge 155.0.4283.62 avec EdgeDriver de même version réussi. Captures relues : titre Unicode/texte HTML affiché comme texte, formulaire et carte lisibles après redémarrage. Les résultats finaux des commandes et de la suite Node sont consignés dans le suivi du plan.
+
+Le workflow `rust.yml` ajoute les cinq runners natifs et un parcours Chrome Linux ; il ne remplace aucun contrôle Node et ne publie rien. Aucun résultat de cette nouvelle CI n'est encore disponible. `cargo test` sur Windows ne prouve pas les quatre autres cibles.
+
+Restent obligatoires pour fermer M01 : exécutions natives de cette CI, navigateurs Firefox/Safari, prototypes tray des trois OS, secrets des trousseaux POSIX, arrêt d'un descendant et remplacement d'un exécutable Windows depuis un worker copié. Le matériel Linux/macOS n'est pas disponible dans cette session. Les derniers prototypes Windows peuvent être réalisés dans l'incrément suivant sans attendre ces machines.
+
+M02 doit durcir les lectures de session par descripteur (permissions/identité/liens/reparse points/courses), les chemins et les fermetures exceptionnelles, porter toutes les tables et sauvegardes, puis prouver Node → Rust → Node. Le prototype est limité aux données temporaires ; il ne doit jamais être utilisé avec une base personnelle. M03–M11 restent à faire. Aucun gain de performance ni paquet Rust livrable n'est annoncé.

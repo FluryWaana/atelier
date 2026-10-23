@@ -54,7 +54,7 @@ test('migration fixture creation rolls back all documents after a write failure'
 
 test('migration inventory includes compatibility exports, native helpers, test supports and dynamic route tables', () => {
   const inventory = migrationInventory();
-  for (const name of ['lib/infrastructure/windows-updater.mjs', 'scripts/WindowsTray.cs', 'test/linux-tray-check.py', 'test/fixtures/migration-agent.mjs', 'lib/http/card-workflow-routes.mjs']) assert.ok(inventory.includes(name), name);
+  for (const name of ['lib/infrastructure/windows-updater.mjs', 'scripts/WindowsTray.cs', 'test/linux-tray-check.py', 'test/fixtures/migration-agent.mjs', 'lib/http/card-workflow-routes.mjs', 'Cargo.lock', 'crates/atelier-app/src/http.rs', 'xtask/src/ui.rs', '.cargo/config.toml']) assert.ok(inventory.includes(name), name);
   assert.match(inventory, /atelier-session/);
   assert.match(inventory, /Environnement et arguments CLI/);
   assert.match(inventory, /brainstorm-draft/);
