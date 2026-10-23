@@ -12,6 +12,10 @@ mod windows;
 #[path = "../../tests/support/tray.rs"]
 mod tray;
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[path = "../../tests/support/tray_posix.rs"]
+mod tray;
+
 fn ready(value: impl std::fmt::Display) -> io::Result<()> {
     println!("{value}");
     io::stdout().flush()
@@ -64,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             child.wait()?;
             Ok(())
         }
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
         ["tray"] => tray::probe(),
         #[cfg(windows)]
         ["worker", directory, pid, created] => {

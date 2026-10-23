@@ -332,6 +332,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/keyring-execution.rs](../xtask/tests/keyring-execution.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/tray.rs](../xtask/tests/support/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/support/tray_posix.rs](../xtask/tests/support/tray_posix.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/windows.rs](../xtask/tests/support/windows.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/windows-native.rs](../xtask/tests/windows-native.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 
@@ -959,11 +960,18 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/Cargo.toml:15](../xtask/Cargo.toml#L15) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
 | [xtask/Cargo.toml:17](../xtask/Cargo.toml#L17) | <code>[target.'cfg(windows)'.dependencies]</code> |
 | [xtask/Cargo.toml:18](../xtask/Cargo.toml#L18) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }</code> |
+| [xtask/Cargo.toml:20](../xtask/Cargo.toml#L20) | <code>[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]</code> |
+| [xtask/Cargo.toml:21](../xtask/Cargo.toml#L21) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
+| [xtask/Cargo.toml:23](../xtask/Cargo.toml#L23) | <code>[target.'cfg(target_os = "linux")'.dependencies]</code> |
+| [xtask/Cargo.toml:26](../xtask/Cargo.toml#L26) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
+| [xtask/Cargo.toml:28](../xtask/Cargo.toml#L28) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSStatusItem", "NSStatusBarButton", "NSView", "NSWindow"] }</code> |
+| [xtask/Cargo.toml:29](../xtask/Cargo.toml#L29) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "block2", "NSDate", "NSRunLoop", "NSTimer"] }</code> |
 | [xtask/src/bin/native-fixture.rs:1](../xtask/src/bin/native-fixture.rs#L1) | <code>use std::{</code> |
 | [xtask/src/bin/native-fixture.rs:9](../xtask/src/bin/native-fixture.rs#L9) | <code>mod windows;</code> |
 | [xtask/src/bin/native-fixture.rs:13](../xtask/src/bin/native-fixture.rs#L13) | <code>mod tray;</code> |
-| [xtask/src/bin/native-fixture.rs:54](../xtask/src/bin/native-fixture.rs#L54) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/bin/native-fixture.rs:71](../xtask/src/bin/native-fixture.rs#L71) | <code>use std::fs;</code> |
+| [xtask/src/bin/native-fixture.rs:17](../xtask/src/bin/native-fixture.rs#L17) | <code>mod tray;</code> |
+| [xtask/src/bin/native-fixture.rs:58](../xtask/src/bin/native-fixture.rs#L58) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/bin/native-fixture.rs:75](../xtask/src/bin/native-fixture.rs#L75) | <code>use std::fs;</code> |
 | [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
 | [xtask/src/keyring.rs:2](../xtask/src/keyring.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/keyring.rs:7](../xtask/src/keyring.rs#L7) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
@@ -997,6 +1005,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/support/tray.rs:1](../xtask/tests/support/tray.rs#L1) | <code>use std::{</code> |
 | [xtask/tests/support/tray.rs:6](../xtask/tests/support/tray.rs#L6) | <code>use windows_sys::Win32::{</code> |
 | [xtask/tests/support/tray.rs:34](../xtask/tests/support/tray.rs#L34) | <code>pub fn probe() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {</code> |
+| [xtask/tests/support/tray_posix.rs:1](../xtask/tests/support/tray_posix.rs#L1) | <code>use tray_icon::{Icon, TrayIcon, TrayIconBuilder};</code> |
+| [xtask/tests/support/tray_posix.rs:18](../xtask/tests/support/tray_posix.rs#L18) | <code>pub fn probe() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/tests/support/tray_posix.rs:19](../xtask/tests/support/tray_posix.rs#L19) | <code>use std::time::{Duration, Instant};</code> |
+| [xtask/tests/support/tray_posix.rs:20](../xtask/tests/support/tray_posix.rs#L20) | <code>use zbus::blocking::{Proxy, connection::Builder};</code> |
+| [xtask/tests/support/tray_posix.rs:86](../xtask/tests/support/tray_posix.rs#L86) | <code>pub fn probe() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/tests/support/tray_posix.rs:87](../xtask/tests/support/tray_posix.rs#L87) | <code>use block2::RcBlock;</code> |
+| [xtask/tests/support/tray_posix.rs:88](../xtask/tests/support/tray_posix.rs#L88) | <code>use objc2::{MainThreadMarker, rc::autoreleasepool};</code> |
+| [xtask/tests/support/tray_posix.rs:89](../xtask/tests/support/tray_posix.rs#L89) | <code>use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};</code> |
+| [xtask/tests/support/tray_posix.rs:90](../xtask/tests/support/tray_posix.rs#L90) | <code>use objc2_foundation::{NSDate, NSRunLoop, NSTimer};</code> |
+| [xtask/tests/support/tray_posix.rs:91](../xtask/tests/support/tray_posix.rs#L91) | <code>use std::{cell::RefCell, ptr::NonNull};</code> |
 | [xtask/tests/support/windows.rs:1](../xtask/tests/support/windows.rs#L1) | <code>use std::{</code> |
 | [xtask/tests/support/windows.rs:5](../xtask/tests/support/windows.rs#L5) | <code>use windows_sys::Win32::{</code> |
 | [xtask/tests/support/windows.rs:13](../xtask/tests/support/windows.rs#L13) | <code>pub fn open_process(pid: u32) -&gt; io::Result&lt;OwnedHandle&gt; {</code> |
@@ -1429,8 +1447,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:79](../.github/workflows/rust.yml#L79) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:80](../.github/workflows/rust.yml#L80) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:91](../.github/workflows/rust.yml#L91) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:106](../.github/workflows/rust.yml#L106) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:107](../.github/workflows/rust.yml#L107) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1584,8 +1603,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:159](../server.mjs#L159) | <code>}, syncTicketStatus: (id, required) =&gt; ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) =&gt; jiraWorkflows.execute(...args), linkPullRequest: card =&gt; linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset =&gt; ticketSync.sync(reset), repositories: repositoryHandlers,</code> |
 | [server.mjs:483](../server.mjs#L483) | <code>if (lock &amp;&amp; lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');</code> |
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
-| [xtask/src/bin/native-fixture.rs:21](../xtask/src/bin/native-fixture.rs#L21) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
-| [xtask/src/bin/native-fixture.rs:22](../xtask/src/bin/native-fixture.rs#L22) | <code>match args</code> |
+| [xtask/src/bin/native-fixture.rs:25](../xtask/src/bin/native-fixture.rs#L25) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/bin/native-fixture.rs:26](../xtask/src/bin/native-fixture.rs#L26) | <code>match args</code> |
 | [xtask/src/keyring.rs:18](../xtask/src/keyring.rs#L18) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
 | [xtask/src/keyring.rs:19](../xtask/src/keyring.rs#L19) | <code>let args: Vec&lt;String&gt; = args</code> |
 | [xtask/src/keyring.rs:29](../xtask/src/keyring.rs#L29) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
@@ -2674,4 +2693,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:284](../xtask/src/storage.rs#L284) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 324 fichiers ; 94 fichiers de tests Node.
+Total : 325 fichiers ; 94 fichiers de tests Node.

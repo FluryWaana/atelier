@@ -35,7 +35,7 @@ jobs:
           ATELIER_NODE: node
       - name: Install isolated Linux keyring prerequisites
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb
       - name: Native Linux keyring with a disposable data directory
         if: runner.os == 'Linux'
         shell: bash
@@ -48,6 +48,25 @@ jobs:
       - name: Native macOS keyring with a unique synthetic service
         if: runner.os == 'macOS'
         run: cargo xtask test-keyring
+      - name: Native Linux tray in an isolated XFCE panel
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_CONFIG_HOME="$(mktemp -d)"
+          xvfb-run -a dbus-run-session -- bash -euo pipefail -c '
+            xfconf-query -c xfce4-panel -p /configver -n -t int -s 2
+            xfconf-query -c xfce4-panel -p /panels -n -a -t int -s 1
+            xfconf-query -c xfce4-panel -p /panels/panel-1/position -n -t string -s "p=6;x=0;y=0"
+            xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids -n -a -t int -s 1
+            xfconf-query -c xfce4-panel -p /plugins/plugin-1 -n -t string -s systray
+            xfce4-panel --disable-wm-check &
+            panel_pid=$!
+            trap "kill $panel_pid 2>/dev/null || true" EXIT
+            cargo xtask test-tray
+          '
+      - name: Native macOS tray on the main AppKit loop
+        if: runner.os == 'macOS'
+        run: cargo xtask test-tray
   browser:
     strategy:
       fail-fast: false
@@ -60,8 +79,16 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup show
-      - run: cargo install --locked trunk --version 0.22.0
-      - run: cargo install --locked wasm-bindgen-cli --version 0.2.129
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: wasm-tools
+        with:
+          path: ${{ runner.temp }}/atelier-tools
+          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.0-bindgen0.2.129
+      - run: cargo install --locked trunk --version 0.22.0 --root "${{ runner.temp }}/atelier-tools"
+        if: steps.wasm-tools.outputs.cache-hit != 'true'
+      - run: cargo install --locked wasm-bindgen-cli --version 0.2.129 --root "${{ runner.temp }}/atelier-tools"
+        if: steps.wasm-tools.outputs.cache-hit != 'true'
+      - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
       - run: cargo fetch --locked
       - name: Record browser and driver versions
         if: runner.os == 'Linux'

@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
         ["test-keyring"] => keyring::test().await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test().await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-tray (Windows). Les commandes de livraison seront portées en M09–M10.".into()),
+        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-keyring | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
     }
 }
 

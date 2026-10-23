@@ -454,6 +454,13 @@ Prochaine action concrète :
 - **CI acquise :** les cinq jobs natifs de `44dd895` passent avec comparaison historique, verrou interopérable et staging privé POSIX corrigé. Trays POSIX et qualifications complémentaires des chemins/comptes restent ouverts.
 - **Suite :** prototypes tray Linux/macOS sur bureau natif CI, puis intégration progressive des règles et API métier sans retirer les références Node.
 
+### 24 octobre 2026 / base `22545c2` / M01, prototypes tray POSIX
+
+- **Comportement livré :** contrôles natifs Linux StatusNotifier et macOS AppKit dans le helper de test existant ; panneau XFCE isolé en CI, dépendances épinglées et cache des outils WASM. Détails, licences et sources dans le relevé M01.
+- **Vérification locale :** Clippy des probes Linux/macOS en compilation croisée sans avertissement ; formatage, Clippy natif et 35 tests Rust réussis. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 81,97 s. Inventaire régénéré.
+- **Limites :** les probes POSIX doivent encore réussir sur leurs vrais bureaux CI ; la vérification des types depuis Windows ne les qualifie pas. Aucun menu ni lanceur complet ajouté, aucune donnée personnelle ni publication.
+- **Suite :** relever les résultats natifs, poursuivre les règles métier M03 indépendantes et les preuves de fichiers/coffres M02. M01/M02 restent en cours.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.
