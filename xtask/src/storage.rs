@@ -1,5 +1,6 @@
 use crate::{Result, command, root, run};
 use atelier_app::infrastructure::{
+    backups,
     database::Database,
     store::{Documents, Store},
 };
@@ -23,6 +24,10 @@ fn snapshot(store: &Store<'_>) -> Result<Value> {
 }
 
 fn node(mode: &str, database: &Path, reference: &Path) -> Result<()> {
+    fixture("rust-storage-reference.mjs", mode, database, reference)
+}
+
+fn fixture(script: &str, mode: &str, database: &Path, reference: &Path) -> Result<()> {
     let executable = std::env::var_os("ATELIER_NODE")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
@@ -33,7 +38,7 @@ fn node(mode: &str, database: &Path, reference: &Path) -> Result<()> {
             })
         });
     run(command(executable)
-        .arg("test/fixtures/rust-storage-reference.mjs")
+        .arg(format!("test/fixtures/{script}"))
         .arg(mode)
         .arg(database)
         .arg(reference))
@@ -92,6 +97,41 @@ pub async fn test() -> Result<()> {
     reopened.close().await?;
     println!(
         "Parité stockage réussie : Node → Rust → Node → Rust, 810 documents, paramètres, 10 002 logs et snapshot WAL."
+    );
+    let source = directory.path().join("restore.sqlite");
+    let expected_path = directory.path().join("restore.json");
+    fixture("rust-backup-reference.mjs", "seed", &source, &expected_path)?;
+    let expected: Value = serde_json::from_slice(&std::fs::read(&expected_path)?)?;
+    let source = directory.path().join("backups").join(
+        expected["backupName"]
+            .as_str()
+            .ok_or("Nom de sauvegarde absent.")?,
+    );
+    let rust_path = directory.path().join("restore.sqlite.rust.sqlite");
+    let database = Database::open(&rust_path)?;
+    let rescue = directory.path().join("rust-rescue.sqlite");
+    let rescue_path = rescue.clone();
+    database
+        .call(move |store| backups::restore(store, &source, &rescue_path))
+        .await?;
+    if database.call(snapshot).await? != expected["restored"] {
+        return Err("La restauration Rust diffère de Node.".into());
+    }
+    database.close().await?;
+    fixture(
+        "rust-backup-reference.mjs",
+        "verify",
+        &rust_path,
+        &expected_path,
+    )?;
+    fixture(
+        "rust-backup-reference.mjs",
+        "rescue",
+        &rescue,
+        &expected_path,
+    )?;
+    println!(
+        "Parité restauration réussie : documents, logs, invalidation du coffre/reviews/automatisation et sauvegarde de secours identiques à Node."
     );
     Ok(())
 }

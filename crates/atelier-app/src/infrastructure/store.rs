@@ -22,7 +22,7 @@ pub enum Documents {
 }
 
 impl Documents {
-    fn table(self) -> &'static str {
+    pub(super) fn table(self) -> &'static str {
         match self {
             Self::Projects => "projects",
             Self::Cards => "cards",

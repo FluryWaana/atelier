@@ -158,7 +158,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | Lot | Dépendances | Résultat démontrable | Statut |
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
-| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — tranche Windows/WASM prouvée ; CI et prototypes natifs restants |
+| M01 | M00 | Socle Rust et faisabilité des cinq cibles | En cours — cinq cibles CI et Edge/Chrome prouvés ; Firefox/Safari et prototypes POSIX restants |
 | M02 | M01 | Données, secrets et session compatibles | En cours — stockage préparatoire et aller-retour synthétique ; prérequis M01 non clos |
 | M03 | M02 | Domaine et API métier équivalents | À faire |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
@@ -413,6 +413,13 @@ Prochaine action concrète :
 - **Preuves :** 16 tests Rust réussis et Clippy natif propre ; comparaison `cargo xtask test-storage-parity` Node → Rust → Node → Rust sur 810 documents et 10 002 logs, sauvegarde relue par Node. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions inchangées, 82,11 s ; parcours Edge réussi. Voir [relevé M02](rust-migration-m02.md).
 - **CI :** push autorisé explicitement par l'utilisateur après le refus initial de la revue automatique ; [exécution M01 sur `371a1a9`](https://github.com/FluryWaana/atelier/actions/runs/40031351769). Les résultats de cette exécution ne qualifient pas les modifications M02 encore locales.
 - **Limites et suite :** restauration utilisateur, coffre complet, protections des fichiers, session, imports et verrou N1 encore à porter ; M01 et M02 restent en cours.
+
+### 24 octobre 2026 / base `52dcb43` / M02, restauration et fichiers
+
+- **Livré :** restauration transactionnelle avec secours, protections Tempo, invalidation du coffre/reviews/automatisation ; lecture de session par descripteur et refus des liens finaux. Fonctions internes, aucun accès aux données personnelles ni nouvelle route de restauration.
+- **Preuves :** 20 tests Rust réussis, Clippy natif propre ; comparateur stockage et restauration Node/Rust réussi, y compris contenu du secours ; suite Node avec paquet réel : 425 tests, 422 réussis, zéro échec, trois exclusions, 81,80 s.
+- **CI :** `371a1a9` et `52dcb43` passent sur les cinq runners natifs et Chrome Linux. Ajout de Firefox Linux, Safari macOS et comparaison historique POSIX ; résultats de ces nouveaux scénarios encore attendus.
+- **Limites et suite :** terminer catalogue/imports, chemins, coffre, session et verrou commun. Trays et trousseaux POSIX encore ouverts. M01/M02 restent en cours ; aucune qualification globale ni retrait de Node.
 
 ## 12. Définition finale de terminé
 

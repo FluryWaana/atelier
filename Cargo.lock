@@ -64,6 +64,7 @@ dependencies = [
  "axum",
  "getrandom 0.4.3",
  "hmac",
+ "libc",
  "reqwest",
  "rusqlite",
  "serde",

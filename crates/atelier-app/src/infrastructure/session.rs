@@ -1,3 +1,4 @@
+use super::checked_file::{CheckedFile, Identity};
 use crate::Result;
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
@@ -130,8 +131,13 @@ pub fn write(directory: &Path, token: &str) -> Result<()> {
 }
 
 pub fn read(directory: &Path) -> Result<String> {
-    // shortcut: isolated M01 test sessions only; add descriptor identity and permission checks in M02.
-    let stored = fs::read_to_string(directory.join("local-session"))?;
+    let path = directory.join("local-session");
+    let expected = Identity::inspect(&path)?;
+    let stored = String::from_utf8(
+        CheckedFile::open(&path, &expected)?
+            .private()?
+            .read(65_536)?,
+    )?;
     #[cfg(windows)]
     let token = protect(&stored, true)?;
     #[cfg(not(windows))]

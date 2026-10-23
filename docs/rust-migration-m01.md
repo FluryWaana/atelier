@@ -61,7 +61,7 @@ cargo xtask test-ui
 
 Résultats locaux : compilation Windows MSVC et WASM réussie ; tests domaine, HTTP, SQLite, DPAPI, CSP et isolation réussis ; parcours Edge 155.0.4283.62 avec EdgeDriver de même version réussi. Captures relues : titre Unicode/texte HTML affiché comme texte, formulaire et carte lisibles après redémarrage. Les résultats finaux des commandes et de la suite Node sont consignés dans le suivi du plan.
 
-Le workflow `rust.yml` ajoute les cinq runners natifs et un parcours Chrome Linux ; il ne remplace aucun contrôle Node et ne publie rien. Aucun résultat de cette nouvelle CI n'est encore disponible. `cargo test` sur Windows ne prouve pas les quatre autres cibles.
+Le workflow `rust.yml` ajoute les cinq runners natifs et un parcours Chrome Linux ; il ne remplace aucun contrôle Node et ne publie rien. Les exécutions sur [371a1a9](https://github.com/FluryWaana/atelier/actions/runs/40031351769) et [52dcb43](https://github.com/FluryWaana/atelier/actions/runs/40032438931) sont entièrement réussies : Windows x64, Linux x64/ARM64, macOS x64/ARM64 et Chrome Linux. L'incrément suivant ajoute Firefox Linux, Safari macOS et la comparaison historique de stockage/restauration ; leur configuration ne vaut pas encore preuve.
 
 ### Prototypes Windows supplémentaires
 
@@ -76,6 +76,6 @@ Sources de décision : [Job Objects Microsoft](https://learn.microsoft.com/en-us
 
 La suite Rust compte maintenant **12 tests réussis**, zéro ignoré, plus ce contrôle tray explicite ; formatage et Clippy natif/WASM réussis. Les helpers restent dans `xtask`, hors de tout paquet produit.
 
-Restent obligatoires pour fermer M01 : exécutions natives de cette CI, navigateurs Firefox/Safari, prototypes tray Linux/macOS et secrets des trousseaux POSIX. Le matériel Linux/macOS n'est pas disponible dans cette session ; leurs preuves ne peuvent pas être déduites des essais Windows. Aucun push ni lancement de workflow distant n'a été effectué.
+Restent obligatoires pour fermer M01 : navigateurs Firefox/Safari, prototypes tray Linux/macOS et secrets des trousseaux POSIX. Ubuntu 26.04 x64 est présent dans WSL sans outils de développement détectés ; les runners CI sont accessibles. Leurs bureaux et trousseaux ne sont pas qualifiés par la compilation. La branche de migration est poussée avec autorisation explicite ; aucune release publiée.
 
 M02 doit durcir les lectures de session par descripteur (permissions/identité/liens/reparse points/courses), les chemins et les fermetures exceptionnelles, porter toutes les tables et sauvegardes, puis prouver Node → Rust → Node. Le prototype est limité aux données temporaires ; il ne doit jamais être utilisé avec une base personnelle. M03–M11 restent à faire. Aucun gain de performance ni paquet Rust livrable n'est annoncé.

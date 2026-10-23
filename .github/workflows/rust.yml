@@ -27,7 +27,11 @@ jobs:
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
   browser:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -37,10 +41,35 @@ jobs:
       - run: cargo install --locked trunk --version 0.22.0
       - run: cargo install --locked wasm-bindgen-cli --version 0.2.129
       - run: cargo fetch --locked
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - name: Compare historical Node storage and restoration
+        run: cargo xtask test-storage-parity
+        env:
+          ATELIER_NODE: node
       - name: Record browser and driver versions
+        if: runner.os == 'Linux'
         run: |
           google-chrome --version
           chromedriver --version
       - run: cargo xtask test-ui
+        if: runner.os == 'Linux'
         env:
           ATELIER_TEST_BROWSER: chrome
+      - name: Firefox WASM and restart scenario
+        if: runner.os == 'Linux'
+        run: |
+          firefox --version
+          "$GECKOWEBDRIVER/geckodriver" --version
+          ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui
+        env:
+          ATELIER_TEST_BROWSER: firefox
+      - name: Safari WASM and restart scenario
+        if: runner.os == 'macOS'
+        run: |
+          sudo safaridriver --enable
+          safaridriver --version
+          cargo xtask test-ui
+        env:
+          ATELIER_TEST_BROWSER: safari
