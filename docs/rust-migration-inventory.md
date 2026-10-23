@@ -31,6 +31,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/prototype.rs](../crates/atelier-app/src/infrastructure/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/session.rs](../crates/atelier-app/src/infrastructure/session.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/store.rs](../crates/atelier-app/src/infrastructure/store.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/token_vault.rs](../crates/atelier-app/src/infrastructure/token_vault.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/prototype.rs](../crates/atelier-app/tests/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -137,7 +138,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/tempo.mjs](../lib/tempo.mjs) | Source / configuration | [lib/time-tracking.mjs](../lib/time-tracking.mjs), [server.mjs](../server.mjs) |
 | [lib/ticket-preparation.mjs](../lib/ticket-preparation.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs) |
 | [lib/time-tracking.mjs](../lib/time-tracking.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/time-tracking.test.mjs](../test/time-tracking.test.mjs) |
-| [lib/token-vault.mjs](../lib/token-vault.mjs) | Source / configuration | [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs), [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs), [test/token-vault.test.mjs](../test/token-vault.test.mjs) |
+| [lib/token-vault.mjs](../lib/token-vault.mjs) | Source / configuration | [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs), [server.mjs](../server.mjs), [test/fixtures/rust-vault-reference.mjs](../test/fixtures/rust-vault-reference.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs), [test/token-vault.test.mjs](../test/token-vault.test.mjs) |
 | [lib/verification.mjs](../lib/verification.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/verification.test.mjs](../test/verification.test.mjs) |
 | [lib/worktrees.mjs](../lib/worktrees.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/worktree-agent-context.test.mjs](../test/worktree-agent-context.test.mjs), [test/worktrees.test.mjs](../test/worktrees.test.mjs) |
 | [package-lock.json](../package-lock.json) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -255,6 +256,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/migration-data.mjs](../test/fixtures/migration-data.mjs) | Test / support | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs), [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
 | [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs) | Test / support | [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs) |
+| [test/fixtures/rust-vault-reference.mjs](../test/fixtures/rust-vault-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/helpers/french-locale.mjs](../test/helpers/french-locale.mjs) | Test / support | [test/agent-interactions-ui.test.mjs](../test/agent-interactions-ui.test.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs), [test/agent-options.test.mjs](../test/agent-options.test.mjs), [test/agent-time.test.mjs](../test/agent-time.test.mjs), [test/agent-usage.test.mjs](../test/agent-usage.test.mjs), [test/automation-ui.test.mjs](../test/automation-ui.test.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/card-live-state.test.mjs](../test/card-live-state.test.mjs), [test/card-project.test.mjs](../test/card-project.test.mjs), [test/confirm-dialog.test.mjs](../test/confirm-dialog.test.mjs), [test/connector-availability.test.mjs](../test/connector-availability.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs), [test/projects-view.test.mjs](../test/projects-view.test.mjs), [test/settings-connectors-ui.test.mjs](../test/settings-connectors-ui.test.mjs), [test/task-workspace.test.mjs](../test/task-workspace.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/time-save-view.test.mjs](../test/time-save-view.test.mjs), [test/ui-composition.test.mjs](../test/ui-composition.test.mjs), [test/updates-ui.test.mjs](../test/updates-ui.test.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs), [test/worktree-removal-ui.test.mjs](../test/worktree-removal-ui.test.mjs) |
 | [test/helpers/view-context.mjs](../test/helpers/view-context.mjs) | Test / support | [test/agent-time.test.mjs](../test/agent-time.test.mjs), [test/automation-ui.test.mjs](../test/automation-ui.test.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/ui-composition.test.mjs](../test/ui-composition.test.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs) |
@@ -314,9 +316,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/worktrees.test.mjs](../test/worktrees.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/bin/native-fixture.rs](../xtask/src/bin/native-fixture.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/keyring.rs](../xtask/src/keyring.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/main.rs](../xtask/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/storage.rs](../xtask/src/storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/keyring-execution.rs](../xtask/tests/keyring-execution.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/tray.rs](../xtask/tests/support/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/windows.rs](../xtask/tests/support/windows.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/windows-native.rs](../xtask/tests/windows-native.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -629,14 +633,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:16](../crates/atelier-app/Cargo.toml#L16) | <code>tokio.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:17](../crates/atelier-app/Cargo.toml#L17) | <code>tempfile.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:19](../crates/atelier-app/Cargo.toml#L19) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
-| [crates/atelier-app/Cargo.toml:24](../crates/atelier-app/Cargo.toml#L24) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
-| [crates/atelier-app/Cargo.toml:25](../crates/atelier-app/Cargo.toml#L25) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
-| [crates/atelier-app/Cargo.toml:26](../crates/atelier-app/Cargo.toml#L26) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
-| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:29](../crates/atelier-app/Cargo.toml#L29) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem"] }</code> |
-| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>[target.'cfg(unix)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:34](../crates/atelier-app/Cargo.toml#L34) | <code>[dev-dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>reqwest.workspace = true</code> |
+| [crates/atelier-app/Cargo.toml:26](../crates/atelier-app/Cargo.toml#L26) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
+| [crates/atelier-app/Cargo.toml:27](../crates/atelier-app/Cargo.toml#L27) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
+| [crates/atelier-app/Cargo.toml:28](../crates/atelier-app/Cargo.toml#L28) | <code>time = { version = "=0.3.55", features = ["formatting", "macros"] }</code> |
+| [crates/atelier-app/Cargo.toml:30](../crates/atelier-app/Cargo.toml#L30) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:31](../crates/atelier-app/Cargo.toml#L31) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem"] }</code> |
+| [crates/atelier-app/Cargo.toml:33](../crates/atelier-app/Cargo.toml#L33) | <code>[target.'cfg(unix)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>[dev-dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:37](../crates/atelier-app/Cargo.toml#L37) | <code>reqwest.workspace = true</code> |
 | [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{application::create_card, contracts::Board};</code> |
 | [crates/atelier-app/src/http.rs:6](../crates/atelier-app/src/http.rs#L6) | <code>use axum::{</code> |
@@ -697,6 +701,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:4](../crates/atelier-app/src/infrastructure/mod.rs#L4) | <code>pub mod prototype;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:5](../crates/atelier-app/src/infrastructure/mod.rs#L5) | <code>pub mod session;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:2](../crates/atelier-app/src/infrastructure/prototype.rs#L2) | <code>use std::{</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:7](../crates/atelier-app/src/infrastructure/prototype.rs#L7) | <code>pub struct PrototypeDirectory {</code> |
@@ -744,6 +749,29 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/store.rs:166](../crates/atelier-app/src/infrastructure/store.rs#L166) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:223](../crates/atelier-app/src/infrastructure/store.rs#L223) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:257](../crates/atelier-app/src/infrastructure/store.rs#L257) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:1](../crates/atelier-app/src/infrastructure/token_vault.rs#L1) | <code>use super::{database::Database, session, store::Store};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:2](../crates/atelier-app/src/infrastructure/token_vault.rs#L2) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:3](../crates/atelier-app/src/infrastructure/token_vault.rs#L3) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:4](../crates/atelier-app/src/infrastructure/token_vault.rs#L4) | <code>use ring::aead::{AES_256_GCM, Aad, LessSafeKey, Nonce, UnboundKey};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:5](../crates/atelier-app/src/infrastructure/token_vault.rs#L5) | <code>use rusqlite::OptionalExtension;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:6](../crates/atelier-app/src/infrastructure/token_vault.rs#L6) | <code>use serde::{Deserialize, Serialize};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:7](../crates/atelier-app/src/infrastructure/token_vault.rs#L7) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:8](../crates/atelier-app/src/infrastructure/token_vault.rs#L8) | <code>use std::{process::Stdio, time::Duration};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:9](../crates/atelier-app/src/infrastructure/token_vault.rs#L9) | <code>use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:12](../crates/atelier-app/src/infrastructure/token_vault.rs#L12) | <code>pub enum KeyringPlatform {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:50](../crates/atelier-app/src/infrastructure/token_vault.rs#L50) | <code>pub async fn keyring_protect(</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:170](../crates/atelier-app/src/infrastructure/token_vault.rs#L170) | <code>pub async fn execute_keyring(</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:208](../crates/atelier-app/src/infrastructure/token_vault.rs#L208) | <code>pub async fn protect(value: &amp;str, decrypt: bool) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:227](../crates/atelier-app/src/infrastructure/token_vault.rs#L227) | <code>pub fn read_encrypted(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:242](../crates/atelier-app/src/infrastructure/token_vault.rs#L242) | <code>pub fn save_encrypted(store: &amp;Store&lt;'_&gt;, encrypted: Option&lt;&amp;str&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:252](../crates/atelier-app/src/infrastructure/token_vault.rs#L252) | <code>pub async fn load(database: &amp;Database) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:259](../crates/atelier-app/src/infrastructure/token_vault.rs#L259) | <code>pub async fn encrypt_tokens(</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:276](../crates/atelier-app/src/infrastructure/token_vault.rs#L276) | <code>pub async fn save(database: &amp;Database, tokens: &amp;Value) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:284](../crates/atelier-app/src/infrastructure/token_vault.rs#L284) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:285](../crates/atelier-app/src/infrastructure/token_vault.rs#L285) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:287](../crates/atelier-app/src/infrastructure/token_vault.rs#L287) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:401](../crates/atelier-app/src/infrastructure/token_vault.rs#L401) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:450](../crates/atelier-app/src/infrastructure/token_vault.rs#L450) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/lib.rs:1](../crates/atelier-app/src/lib.rs#L1) | <code>pub mod http;</code> |
 | [crates/atelier-app/src/lib.rs:2](../crates/atelier-app/src/lib.rs#L2) | <code>pub mod infrastructure;</code> |
 | [crates/atelier-app/src/lib.rs:4](../crates/atelier-app/src/lib.rs#L4) | <code>pub type Error = Box&lt;dyn std::error::Error + Send + Sync&gt;;</code> |
@@ -820,28 +848,36 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/bin/native-fixture.rs:1](../xtask/src/bin/native-fixture.rs#L1) | <code>use std::{</code> |
 | [xtask/src/bin/native-fixture.rs:9](../xtask/src/bin/native-fixture.rs#L9) | <code>mod windows;</code> |
 | [xtask/src/bin/native-fixture.rs:13](../xtask/src/bin/native-fixture.rs#L13) | <code>mod tray;</code> |
-| [xtask/src/bin/native-fixture.rs:44](../xtask/src/bin/native-fixture.rs#L44) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/bin/native-fixture.rs:61](../xtask/src/bin/native-fixture.rs#L61) | <code>use std::fs;</code> |
+| [xtask/src/bin/native-fixture.rs:54](../xtask/src/bin/native-fixture.rs#L54) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/bin/native-fixture.rs:71](../xtask/src/bin/native-fixture.rs#L71) | <code>use std::fs;</code> |
+| [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
+| [xtask/src/keyring.rs:2](../xtask/src/keyring.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
+| [xtask/src/keyring.rs:7](../xtask/src/keyring.rs#L7) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
 | [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
-| [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod storage;</code> |
-| [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod ui;</code> |
-| [xtask/src/main.rs:22](../xtask/src/main.rs#L22) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:96](../xtask/src/main.rs#L96) | <code>mod tests {</code> |
-| [xtask/src/main.rs:97](../xtask/src/main.rs#L97) | <code>use super::*;</code> |
-| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>#[test]</code> |
-| [xtask/src/main.rs:135](../xtask/src/main.rs#L135) | <code>#[test]</code> |
+| [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod keyring;</code> |
+| [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod storage;</code> |
+| [xtask/src/main.rs:9](../xtask/src/main.rs#L9) | <code>mod ui;</code> |
+| [xtask/src/main.rs:23](../xtask/src/main.rs#L23) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>mod tests {</code> |
+| [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>use super::*;</code> |
+| [xtask/src/main.rs:100](../xtask/src/main.rs#L100) | <code>#[test]</code> |
+| [xtask/src/main.rs:137](../xtask/src/main.rs#L137) | <code>#[test]</code> |
 | [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
-| [xtask/src/storage.rs:7](../xtask/src/storage.rs#L7) | <code>use serde_json::{Value, json};</code> |
-| [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>use std::path::Path;</code> |
-| [xtask/src/storage.rs:47](../xtask/src/storage.rs#L47) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>use serde_json::{Value, json};</code> |
+| [xtask/src/storage.rs:9](../xtask/src/storage.rs#L9) | <code>use std::path::Path;</code> |
+| [xtask/src/storage.rs:48](../xtask/src/storage.rs#L48) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/ui.rs:1](../xtask/src/ui.rs#L1) | <code>use crate::{Result, command, root, run};</code> |
 | [xtask/src/ui.rs:2](../xtask/src/ui.rs#L2) | <code>use atelier_app::infrastructure::session;</code> |
 | [xtask/src/ui.rs:3](../xtask/src/ui.rs#L3) | <code>use fantoccini::{Client, ClientBuilder, Locator};</code> |
 | [xtask/src/ui.rs:4](../xtask/src/ui.rs#L4) | <code>use serde_json::{Value, json};</code> |
 | [xtask/src/ui.rs:5](../xtask/src/ui.rs#L5) | <code>use std::{</code> |
 | [xtask/src/ui.rs:110](../xtask/src/ui.rs#L110) | <code>pub async fn test() -&gt; Result&lt;()&gt; {</code> |
+| [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
+| [xtask/tests/keyring-execution.rs:2](../xtask/tests/keyring-execution.rs#L2) | <code>use std::time::{Duration, Instant};</code> |
+| [xtask/tests/keyring-execution.rs:4](../xtask/tests/keyring-execution.rs#L4) | <code>#[tokio::test]</code> |
+| [xtask/tests/keyring-execution.rs:21](../xtask/tests/keyring-execution.rs#L21) | <code>#[tokio::test]</code> |
 | [xtask/tests/support/tray.rs:1](../xtask/tests/support/tray.rs#L1) | <code>use std::{</code> |
 | [xtask/tests/support/tray.rs:6](../xtask/tests/support/tray.rs#L6) | <code>use windows_sys::Win32::{</code> |
 | [xtask/tests/support/tray.rs:34](../xtask/tests/support/tray.rs#L34) | <code>pub fn probe() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {</code> |
@@ -1276,8 +1312,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:64](../.github/workflows/rust.yml#L64) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:65](../.github/workflows/rust.yml#L65) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:79](../.github/workflows/rust.yml#L79) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:80](../.github/workflows/rust.yml#L80) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1285,6 +1321,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:199](../crates/atelier-app/src/infrastructure/checked_file.rs#L199) | <code>.args(["/D", "/C"])</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:172](../crates/atelier-app/src/infrastructure/token_vault.rs#L172) | <code>args: &amp;[&amp;str],</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:177](../crates/atelier-app/src/infrastructure/token_vault.rs#L177) | <code>.args(args)</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:292](../crates/atelier-app/src/infrastructure/token_vault.rs#L292) | <code>args: &amp;[&amp;str],</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:304](../crates/atelier-app/src/infrastructure/token_vault.rs#L304) | <code>stored = if args == ["-i"] {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:309](../crates/atelier-app/src/infrastructure/token_vault.rs#L309) | <code>assert!(!args.join(" ").contains(&amp;stored));</code> |
 | [crates/atelier-app/src/main.rs:6](../crates/atelier-app/src/main.rs#L6) | <code>let mut args = std::env::args().skip(1);</code> |
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
@@ -1428,11 +1469,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
 | [xtask/src/bin/native-fixture.rs:21](../xtask/src/bin/native-fixture.rs#L21) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/bin/native-fixture.rs:22](../xtask/src/bin/native-fixture.rs#L22) | <code>match args</code> |
-| [xtask/src/main.rs:66](../xtask/src/main.rs#L66) | <code>run(command("trunk").args([</code> |
-| [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
-| [xtask/src/main.rs:86](../xtask/src/main.rs#L86) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:89](../xtask/src/main.rs#L89) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:101](../xtask/src/main.rs#L101) | <code>.args([</code> |
+| [xtask/src/keyring.rs:18](../xtask/src/keyring.rs#L18) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
+| [xtask/src/keyring.rs:19](../xtask/src/keyring.rs#L19) | <code>let args: Vec&lt;String&gt; = args</code> |
+| [xtask/src/keyring.rs:29](../xtask/src/keyring.rs#L29) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
+| [xtask/src/keyring.rs:32](../xtask/src/keyring.rs#L32) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
+| [xtask/src/main.rs:67](../xtask/src/main.rs#L67) | <code>run(command("trunk").args([</code> |
+| [xtask/src/main.rs:86](../xtask/src/main.rs#L86) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/main.rs:87](../xtask/src/main.rs#L87) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
+| [xtask/src/main.rs:91](../xtask/src/main.rs#L91) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:103](../xtask/src/main.rs#L103) | <code>.args([</code> |
 | [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/ui.rs:127](../xtask/src/ui.rs#L127) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:163](../xtask/src/ui.rs#L163) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
@@ -2369,6 +2414,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/backups.rs:213](../crates/atelier-app/src/infrastructure/backups.rs#L213) | <code>store.log("review", "stdout", "after restore").unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:214](../crates/atelier-app/src/infrastructure/backups.rs#L214) | <code>assert_eq!(store.logs("review", 0).unwrap()[1].seq, 3);</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:224](../crates/atelier-app/src/infrastructure/backups.rs#L224) | <code>.query_row::&lt;i64, _, _&gt;("SELECT COUNT(*) FROM token_vault", [], \|row\| row.get(0))</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:111](../crates/atelier-app/src/infrastructure/session.rs#L111) | <code>let temporary = directory.join(format!("local-session.{}", uuid::Uuid::new_v4()));</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:124](../crates/atelier-app/src/infrastructure/session.rs#L124) | <code>fs::rename(&amp;temporary, directory.join("local-session"))?;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:134](../crates/atelier-app/src/infrastructure/session.rs#L134) | <code>let path = directory.join("local-session");</code> |
@@ -2389,6 +2435,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/store.rs:206](../crates/atelier-app/src/infrastructure/store.rs#L206) | <code>let page = store.logs("run", 0).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:209](../crates/atelier-app/src/infrastructure/store.rs#L209) | <code>store.logs("run", page.last().unwrap().seq).unwrap().len(),</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:264](../crates/atelier-app/src/infrastructure/store.rs#L264) | <code>let text = &amp;store.logs("run", 0).unwrap()[0].text;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:231](../crates/atelier-app/src/infrastructure/token_vault.rs#L231) | <code>.query_row("SELECT encrypted FROM token_vault WHERE id=1", [], \|row\| {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:238](../crates/atelier-app/src/infrastructure/token_vault.rs#L238) | <code>store.connection.execute_batch("CREATE TABLE IF NOT EXISTS token_vault (id INTEGER PRIMARY KEY CHECK(id=1), encrypted TEXT NOT NULL)")?;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:245](../crates/atelier-app/src/infrastructure/token_vault.rs#L245) | <code>store.connection.execute("INSERT INTO token_vault VALUES (1,?) ON CONFLICT(id) DO UPDATE SET encrypted=excluded.encrypted", [encrypted])?;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:247](../crates/atelier-app/src/infrastructure/token_vault.rs#L247) | <code>store.connection.execute("DELETE FROM token_vault", [])?;</code> |
 | [crates/atelier-app/tests/prototype.rs:68](../crates/atelier-app/tests/prototype.rs#L68) | <code>std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();</code> |
 | [crates/atelier-app/tests/prototype.rs:122](../crates/atelier-app/tests/prototype.rs#L122) | <code>"/local-session",</code> |
 | [crates/atelier-app/tests/prototype.rs:123](../crates/atelier-app/tests/prototype.rs#L123) | <code>"/data/local-session",</code> |
@@ -2476,7 +2526,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:385](../server.mjs#L385) | <code>return store.logs(logsMatch[1], after);</code> |
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
-| [xtask/src/storage.rs:14](../xtask/src/storage.rs#L14) | <code>let page = store.logs("run-0", cursor)?;</code> |
-| [xtask/src/storage.rs:79](../xtask/src/storage.rs#L79) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
+| [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>token_vault::{KeyringPlatform, execute_keyring, keyring_protect},</code> |
+| [xtask/src/storage.rs:6](../xtask/src/storage.rs#L6) | <code>token_vault::{self, KeyringPlatform},</code> |
+| [xtask/src/storage.rs:15](../xtask/src/storage.rs#L15) | <code>let page = store.logs("run-0", cursor)?;</code> |
+| [xtask/src/storage.rs:80](../xtask/src/storage.rs#L80) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
+| [xtask/src/storage.rs:154](../xtask/src/storage.rs#L154) | <code>let decoded = token_vault::keyring_protect(platform, envelope, true, &amp;mut key).await?;</code> |
+| [xtask/src/storage.rs:159](../xtask/src/storage.rs#L159) | <code>json!(token_vault::keyring_protect(platform, &amp;decoded, false, &amp;mut key).await?);</code> |
+| [xtask/src/storage.rs:164](../xtask/src/storage.rs#L164) | <code>if token_vault::load(&amp;database).await? != expected["tokens"] {</code> |
+| [xtask/src/storage.rs:167](../xtask/src/storage.rs#L167) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
+| [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 310 fichiers ; 93 fichiers de tests Node.
+Total : 314 fichiers ; 93 fichiers de tests Node.

@@ -3,6 +3,7 @@ use atelier_app::infrastructure::{
     backups,
     database::Database,
     store::{Documents, Store},
+    token_vault::{self, KeyringPlatform},
 };
 use serde_json::{Value, json};
 use std::path::Path;
@@ -132,6 +133,44 @@ pub async fn test() -> Result<()> {
     )?;
     println!(
         "Parité restauration réussie : documents, logs, invalidation du coffre/reviews/automatisation et sauvegarde de secours identiques à Node."
+    );
+    let path = directory.path().join("vault.sqlite");
+    let reference = directory.path().join("vault.json");
+    fixture("rust-vault-reference.mjs", "seed", &path, &reference)?;
+    let mut expected: Value = serde_json::from_slice(&std::fs::read(&reference)?)?;
+    for (name, platform) in [
+        ("linux", KeyringPlatform::Linux),
+        ("darwin", KeyringPlatform::Macos),
+    ] {
+        let mut key = async |_: &str, _: &[&str], input: Option<&str>| -> Result<(i32, String)> {
+            if input.is_some() {
+                return Err("La clé synthétique doit déjà exister.".into());
+            }
+            Ok((0, "11".repeat(32)))
+        };
+        let envelope = expected["envelopes"][name]
+            .as_str()
+            .ok_or("Enveloppe absente.")?;
+        let decoded = token_vault::keyring_protect(platform, envelope, true, &mut key).await?;
+        if serde_json::from_str::<Value>(&decoded)? != expected["tokens"] {
+            return Err("Coffre Node illisible par Rust.".into());
+        }
+        expected["envelopes"][name] =
+            json!(token_vault::keyring_protect(platform, &decoded, false, &mut key).await?);
+    }
+    #[cfg(windows)]
+    {
+        let database = Database::open(&path)?;
+        if token_vault::load(&database).await? != expected["tokens"] {
+            return Err("Coffre DPAPI Node illisible par Rust.".into());
+        }
+        token_vault::save(&database, &expected["tokens"]).await?;
+        database.close().await?;
+    }
+    std::fs::write(&reference, serde_json::to_vec(&expected)?)?;
+    fixture("rust-vault-reference.mjs", "verify", &path, &reference)?;
+    println!(
+        "Parité coffre réussie : enveloppes AES-GCM Node/Rust dans les deux directions ; DPAPI et SQLite également sur Windows. Les trousseaux POSIX sont simulés ici."
     );
     Ok(())
 }

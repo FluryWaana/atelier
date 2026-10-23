@@ -25,6 +25,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        ["keyring-echo"] => {
+            std::io::copy(&mut io::stdin(), &mut io::stdout())?;
+            Ok(())
+        }
+        ["keyring-flood"] => {
+            io::stderr().write_all(&vec![b'x'; 65_537])?;
+            io::stderr().flush()?;
+            std::thread::sleep(Duration::from_secs(60));
+            Ok(())
+        }
         ["idle"] => {
             ready("ready")?;
             loop {

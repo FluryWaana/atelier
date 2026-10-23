@@ -30,6 +30,8 @@ Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full
 
 `cargo test -p xtask --test windows-native --locked` exercises synthetic Windows process trees and copied update workers. `cargo xtask test-tray` explicitly checks adding/removing a notification icon on an interactive Windows desktop; it fails if no desktop is available. These feasibility fixtures are not production launchers or updaters and must stay outside release packages.
 
+`cargo xtask test-storage-parity` compares storage, restoration and token envelopes against the historical Node runtime (`ATELIER_NODE` overrides its path). Ordinary Rust tests do not need Node. `cargo xtask test-keyring` requires a native Linux/macOS keyring and creates, reads and deletes only a unique synthetic service; it never uses the production token key. Run it on disposable CI/test accounts.
+
 ### JavaScript conventions
 
 Use ES modules: `.mjs` for backend modules and tests, with browser code under `public/`. Follow nearby indentation and existing semicolon and single-quote conventions. Use camelCase for functions and variables and descriptive lowercase, hyphenated module names such as `time-tracking.mjs`. Keep integration logic in its corresponding `lib/` module. No formatter or linter is configured. Preserve the French user-facing text.

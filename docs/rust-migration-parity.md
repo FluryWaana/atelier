@@ -33,6 +33,8 @@ M02 préparatoire (bases `371a1a9`, puis `52dcb43`) : C02 dispose du schéma com
 
 CI M01 : les cinq cibles natives et Chrome Linux passent sur `371a1a9` et `52dcb43` (liens dans le relevé M01). Firefox/Safari et trays/trousseaux POSIX restent ouverts.
 
+C04, incrément après `f9b1598` : coffre SQLite et enveloppes AES-GCM/DPAPI portés ; `token_vault::tests` vérifie altération, mauvaise clé, absence, refus et conservation transactionnelle. Le comparateur historique relit les deux directions Node/Rust, DPAPI natif Windows inclus. Le trousseau POSIX reste simulé dans cette comparaison ; `cargo xtask test-keyring` utilise un service synthétique unique pour la preuve native CI encore attendue. Intégration aux réglages M03 et qualification des comptes/bureaux encore ouvertes.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

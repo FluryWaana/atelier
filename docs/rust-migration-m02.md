@@ -21,6 +21,16 @@ La sauvegarde utilise l'API SQLite pour inclure le WAL, écrit un fichier tempor
 
 Le comparateur Node est `test/fixtures/rust-storage-reference.mjs`, piloté par `xtask/src/storage.rs`. Il nécessite le runtime historique embarqué, ou `ATELIER_NODE` pour le désigner sur une autre plateforme. Cette dépendance de comparaison est transitoire ; les tests Rust courants n'exigent pas Node. Aucun résultat ni base personnelle n'est écrit dans le dépôt.
 
-## Suite
+## Coffre — incrément après `f9b1598`
+
+`token_vault.rs` conserve le format DPAPI UTF-16 Windows et l'enveloppe POSIX `keyring-aes-256-gcm-v1` (plateforme, IV 12 octets, tag 16 octets, données base64). Les commandes et identifiants `atelier-kanban` / `token-key` restent ceux de Node. La clé est transmise sur stdin, jamais dans les arguments ; les sorties sont bornées à 65 536 octets et le délai à 15 secondes. Les accès POSIX sont sérialisés pour éviter deux créations concurrentes dans le processus.
+
+Le chiffrement précède l'écriture SQL ; les adaptateurs peuvent enregistrer ensemble paramètres et enveloppe dans la transaction existante. Un coffre vide ne nécessite pas de trousseau. Une erreur de chiffrement ou une transaction avortée conserve l'ancien contenu. Aucun repli en clair.
+
+Réutilisation de ring 0.17.14 et base64 0.22.1 déjà présents dans le lockfile, désormais dépendances directes. [API AES-GCM ring](https://docs.rs/ring/0.17.14/ring/aead/struct.LessSafeKey.html) : nonce aléatoire neuf à chaque chiffrement, authentification avant restitution. Les primitives ne sont pas réimplémentées.
+
+25 tests Rust locaux réussis ; comparaison des enveloppes Node ↔ Rust pour Linux/macOS avec clé synthétique, et du coffre SQLite/DPAPI réel sous Windows. Altération, mauvaise clé, clé absente, trousseau verrouillé, sortie excessive et rollback sont couverts. Deux vrais processus synthétiques vérifient stdin/EOF, saturation stderr et arrêt au délai de 15 secondes. Clippy natif sans avertissements. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions inchangées, 81,89 s. `cargo xtask test-keyring` et les étapes CI dédiées produiront la preuve native POSIX ; elle n'est pas acquise par ces doubles. Le compte Windows différent et les refus natifs des bureaux restent à qualifier.
+
+## Suite du lot
 
 Compléter les chemins et sessions, le coffre, le catalogue de sauvegardes et les imports, les chemins d'installation et le verrou commun N1/Rust. Vérifier les trousseaux natifs et leurs refus avant de valider M02. La compatibilité du schéma et des documents ne suffit pas à autoriser une migration de données utilisateur.

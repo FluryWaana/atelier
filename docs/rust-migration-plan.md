@@ -2,7 +2,7 @@
 
 Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applicative `0.1.9`.
 
-Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 en cours, tranche UI/API/SQLite démontrée sur Windows MSVC et Edge ; preuves natives complémentaires encore requises**. La [matrice de parité](rust-migration-parity.md), le [relevé M00](rust-migration-baseline.md) et le [relevé M01](rust-migration-m01.md) consignent l'inventaire, les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
+Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 en cours, cinq cibles CI et Edge/Chrome démontrés ; M02 en cours, stockage/restauration/coffre comparés à Node sur données synthétiques ; preuves natives complémentaires encore requises**. La [matrice de parité](rust-migration-parity.md), le [relevé M00](rust-migration-baseline.md), le [relevé M01](rust-migration-m01.md) et le [relevé M02](rust-migration-m02.md) consignent l'inventaire, les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
 ## 1. Résultat attendu et périmètre
 
@@ -420,6 +420,12 @@ Prochaine action concrète :
 - **Preuves :** 20 tests Rust réussis, Clippy natif propre ; comparateur stockage et restauration Node/Rust réussi, y compris contenu du secours ; suite Node avec paquet réel : 425 tests, 422 réussis, zéro échec, trois exclusions, 81,80 s.
 - **CI :** `371a1a9` et `52dcb43` passent sur les cinq runners natifs et Chrome Linux. Ajout de Firefox Linux, Safari macOS et comparaison historique POSIX ; résultats de ces nouveaux scénarios encore attendus.
 - **Limites et suite :** terminer catalogue/imports, chemins, coffre, session et verrou commun. Trays et trousseaux POSIX encore ouverts. M01/M02 restent en cours ; aucune qualification globale ni retrait de Node.
+
+### 24 octobre 2026 / base `f9b1598` / M02, coffre compatible
+
+- **Livré :** coffre SQLite, AES-GCM POSIX et DPAPI Windows ; préparation chiffrée avant transaction, commandes système bornées et clé sur stdin. Réutilisation des dépendances ring/base64 déjà verrouillées. Probes natifs isolés Linux/macOS ajoutés à la CI.
+- **Preuves :** 25 tests Rust locaux réussis et Clippy propre, processus synthétiques bornés et arrêtés au délai compris ; comparaison historique stockage/restauration/coffre réussie, enveloppes lues dans les deux directions, DPAPI Windows réel. Suite Node : 425 tests, 422 réussis, zéro échec, trois exclusions, 81,89 s. Aucun accès au trousseau de production.
+- **Limites :** résultats natifs POSIX du nouveau probe attendus ; comptes différents, parcours réglages et coffre verrouillé natif encore à qualifier. Catalogue/imports, chemins, session complète et verrou commun toujours à terminer.
 
 ## 12. Définition finale de terminé
 

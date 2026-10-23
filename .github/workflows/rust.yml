@@ -26,6 +26,21 @@ jobs:
       - run: cargo test --workspace --exclude atelier-ui --locked
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+      - name: Install isolated Linux keyring prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11
+      - name: Native Linux keyring with a disposable data directory
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" "synthetic-ci-password" | gnome-keyring-daemon --unlock --components=secrets
+            cargo xtask test-keyring
+          '
+      - name: Native macOS keyring with a unique synthetic service
+        if: runner.os == 'macOS'
+        run: cargo xtask test-keyring
   browser:
     strategy:
       fail-fast: false
