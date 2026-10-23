@@ -16,6 +16,11 @@ function page({ state, storage = new Map() } = {}) {
   for (const id of ['brainstorm-new', 'brainstorm-generate', 'brainstorm-retry', 'brainstorm-context', 'brainstorm-editor-kicker', 'brainstorm-editor-title', 'brainstorm-editor-intro', 'brainstorm-chat', 'brainstorm-start', 'brainstorm-reply', 'brainstorm-send', 'brainstorm-reply-form', 'brainstorm-chat-history', 'brainstorm-composer-agent']) nodes['#' + id] = { dataset: {}, style: {}, value: '', scrollHeight: 0, scrollTop: 0, clientHeight: 0, reportValidity: () => true, querySelectorAll: () => [], focus() {} };
   nodes['#brainstorm-page-proposals'].replaceChildren = () => {};
   nodes['#brainstorm-composer-hint'] = {}; nodes['#brainstorm-generate-hint'] = {};
+  const questionHost = { controls: {}, radios: [], querySelector(selector) { return this.controls[selector] ||= { focus() { this.focused = true; } }; }, querySelectorAll() { return this.radios; } };
+  let questionMarkup = '';
+  Object.defineProperty(questionHost, 'innerHTML', { get: () => questionMarkup, set(value) { questionMarkup = value; this.controls = {}; this.radios = [...value.matchAll(/name="answer" value="([^"]+)"/g)].map(match => ({ value: match[1] })); } });
+  nodes['#brainstorm-question-context'] = questionHost;
+  nodes['#brainstorm-reply-form'].querySelector = () => nodes['#brainstorm-reply'];
   nodes['#brainstorm-results'] = { focus() { this.focused = true; }, scrollIntoView() { assert.fail('Task navigation must not scroll the page'); } };
   nodes['#brainstorm-layout'] = { dataset: { panel: 'chat' }, style: { setProperty(name, value) { this[name] = value; } }, getBoundingClientRect: () => ({ left: 100, width: 1000 }) };
   nodes['#brainstorm-splitter'] = {
@@ -180,7 +185,7 @@ test('first turn switches to chat and replies preserve the session and remain dr
   p.context.state.runs[0].status = 'completed';
   p.context.state.runs[0].proposals = [{ title: 'Export CSV', questions: ['Quel séparateur ?'] }];
   p.context.renderBrainstormPage();
-  assert.match(p.nodes['#brainstorm-chat-history'].innerHTML, /Quel séparateur/);
+  assert.match(p.nodes['#brainstorm-question-context'].innerHTML, /Quel séparateur/);
   const reply = p.nodes['#brainstorm-reply']; reply.value = 'Utiliser le point-virgule.';
   p.failLaunch(true);
   await assert.rejects(p.context.submitBrainstorm(false, true), /indisponible/);
@@ -212,21 +217,71 @@ test('chat composer sends on Enter, keeps Shift+Enter and composition, and sizes
   assert.equal(submissions, 1); assert.equal(send.disabled, true); assert.equal(input.style.height, '30px');
 });
 
-test('conversation shows escaped answers and clickable questions without requiring proposals', async () => {
+test('slides preserve choices and Other answers, and send once at the end with retry on failure', async () => {
   const p = page(); p.fields.title.value = 'Export'; await p.context.submitBrainstorm(false);
-  const question = { dataset: { brainstormQuestion: '0' } };
-  p.nodes['#brainstorm-chat-history'].querySelectorAll = selector => selector === '[data-brainstorm-question]' ? [question] : [];
-  Object.assign(p.context.state.runs[0], { status: 'completed', brainstorm: { message: '<script>Texte utilisateur</script>', questions: ['Pour qui ?'] }, proposals: [] });
+  const host = p.nodes['#brainstorm-question-context'];
+  Object.assign(p.context.state.runs[0], { status: 'completed', brainstorm: { message: '<script>Texte</script>', questions: [{ question: 'Pour qui <img src=x> ?', options: ['Comptables', 'Clients'] }, { question: 'Quel format ?', options: ['CSV', 'PDF'] }] }, proposals: [] });
   p.context.renderBrainstormPage();
+  const count = p.calls.length;
+  const submit = () => host.querySelector('form').onsubmit({ preventDefault() {} });
+  assert.match(host.innerHTML, /Question 1 sur 2/);
+  assert.match(host.innerHTML, /Pour qui &lt;img src=x&gt;/); assert.doesNotMatch(host.innerHTML, /<img/);
   assert.match(p.nodes['#brainstorm-chat-history'].innerHTML, /&lt;script&gt;/);
-  assert.doesNotMatch(p.nodes['#brainstorm-chat-history'].innerHTML, /<script>/i);
-  assert.equal(p.nodes['#brainstorm-generate'].disabled, false);
-  question.onclick();
-  assert.equal(p.nodes['#brainstorm-reply'].value, 'Pour qui ?\n');
-  assert.equal(p.nodes['#brainstorm-generate'].disabled, false);
-  assert.equal(p.nodes['#brainstorm-generate'].textContent, 'Envoyer et préparer les tâches');
-  assert.equal(p.nodes['#brainstorm-send'].disabled, false);
-  assert.deepEqual(Array.from(brainstormQuestions({ brainstorm: { questions: ['Pour qui ?'] }, proposals: [{ questions: ['Pour qui ?', 'Quel format ?'] }] })), ['Pour qui ?', 'Quel format ?']);
+  assert.equal(p.nodes['#brainstorm-reply-form'].hidden, true);
+  assert.equal(host.querySelector('[data-next]').disabled, true);
+  submit(); assert.equal(p.calls.length, count);
+  host.radios[0].onchange(); assert.equal(host.querySelector('[data-next]').disabled, false);
+  assert.match(host.innerHTML, /Question 1 sur 2/);
+  submit(); assert.match(host.innerHTML, /Question 2 sur 2/); assert.equal(p.calls.length, count);
+  host.radios[2].onchange(); assert.equal(host.querySelector('.brainstorm-question-custom').hidden, false);
+  assert.equal(host.querySelector('textarea').focused, true);
+  host.querySelector('textarea').oninput({ target: { value: '   ' } }); assert.equal(host.querySelector('[data-next]').disabled, true);
+  host.querySelector('textarea').oninput({ target: { value: 'Un fichier Excel.' } });
+  host.querySelector('[data-previous]').onclick(); assert.match(host.innerHTML, /value="0" checked/);
+  submit(); assert.match(host.innerHTML, /Un fichier Excel\./);
+  p.failLaunch(true); await assert.rejects(submit(), /indisponible/);
+  assert.equal(host.hidden, false); assert.match(host.innerHTML, /Un fichier Excel\./);
+  assert.equal(host.querySelector('[data-next]').disabled, false);
+  p.context.state.runs.unshift({ id: 'failed', cardId: 'session', kind: 'brainstorm', status: 'failed' });
+  p.context.renderBrainstormPage();
+  assert.equal(host.hidden, false); assert.match(host.innerHTML, /Un fichier Excel\./);
+  p.failLaunch(false); await submit();
+  assert.equal(p.calls.at(-1).body.reply, 'Pour qui <img src=x> ?\nComptables\n\nQuel format ?\nUn fichier Excel.');
+  assert.equal(host.hidden, true); assert.equal(p.nodes['#brainstorm-reply-form'].hidden, false);
+});
+
+test('open question drafts survive refresh, session changes and reload, with a free message escape', async () => {
+  const p = page(); p.fields.title.value = 'Export'; await p.context.submitBrainstorm(false);
+  Object.assign(p.context.state.runs[0], { status: 'completed', brainstorm: { message: 'Précisons.', questions: ['Pour qui ?', 'Quel format ?'] }, proposals: [{ questions: ['Quel format ?', 'Quand ?'] }] });
+  p.context.renderBrainstormPage(); let host = p.nodes['#brainstorm-question-context'];
+  assert.equal(host.radios.length, 0);
+  host.querySelector('textarea').oninput({ target: { value: 'Comptables' } });
+  host.querySelector('form').onsubmit({ preventDefault() {} });
+  host.querySelector('textarea').oninput({ target: { value: 'CSV' } });
+  const html = host.innerHTML; p.context.renderBrainstormPage(); assert.equal(host.innerHTML, html);
+  p.context.loadBrainstormSession(''); assert.equal(host.hidden, true);
+  p.context.loadBrainstormSession('session'); assert.match(host.innerHTML, /Question 2 sur 3/);
+  const reloaded = page({ state: p.context.state, storage: p.saved }); host = reloaded.nodes['#brainstorm-question-context'];
+  assert.match(host.innerHTML, /Question 2 sur 3/); assert.match(host.innerHTML, /CSV/);
+  host.querySelector('[data-free]').onclick(); assert.equal(reloaded.nodes['#brainstorm-reply-form'].hidden, false);
+  assert.match(host.innerHTML, /Reprendre les questions/);
+  host.querySelector('[data-free]').onclick(); assert.equal(reloaded.nodes['#brainstorm-reply-form'].hidden, true);
+  assert.match(host.innerHTML, /CSV/);
+  reloaded.context.state.runs.unshift({ id: 'next', cardId: 'session', kind: 'brainstorm', status: 'completed', brainstorm: { message: 'Très bien.', questions: [] }, proposals: [] });
+  reloaded.context.renderBrainstormPage(); assert.equal(host.hidden, true);
+  assert.match(reloaded.nodes['#brainstorm-chat-history'].innerHTML, /Pour qui/);
+  assert.doesNotMatch(reloaded.nodes['#brainstorm-chat-history'].innerHTML, /object Object/);
+  assert.deepEqual(brainstormQuestions({ brainstorm: { questions: [{ question: 'Pour qui ?', options: ['Clients'] }] }, proposals: [{ questions: ['Pour qui ?', 'Quel format ?'] }] }), [{ question: 'Pour qui ?', options: ['Clients'] }, { question: 'Quel format ?', options: [] }]);
+});
+
+test('task generation includes answers already entered in the questionnaire', async () => {
+  const p = page(); p.fields.title.value = 'Export'; await p.context.submitBrainstorm(false);
+  Object.assign(p.context.state.runs[0], { status: 'completed', brainstorm: { message: 'Précisons.', questions: [{ question: 'Quel public ?', options: ['Clients', 'Équipe'] }] }, proposals: [] });
+  p.context.renderBrainstormPage();
+  p.nodes['#brainstorm-question-context'].radios[0].onchange();
+  await p.nodes['#brainstorm-generate'].onclick();
+  assert.match(p.calls.at(-1).body.reply, /^Quel public \?\nClients/);
+  assert.match(p.calls.at(-1).body.reply, /découpage/);
 });
 
 test('drafts survive switching sessions and starting a session clears the initial draft', async () => {

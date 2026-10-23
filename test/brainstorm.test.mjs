@@ -30,6 +30,17 @@ test('brainstorm accepts a conversation without tickets and validates messages a
   for (const change of [{ message: '' }, { message: 'x'.repeat(12001) }, { questions: null }, { questions: Array(6).fill('Question ?') }, { questions: ['x'.repeat(501)] }, { questions: [null] }, { tickets: null }]) assert.throws(() => parseBrainstorm(JSON.stringify({ ...response, ...change })));
 });
 
+test('brainstorm accepts bounded question choices and keeps legacy open questions readable', () => {
+  const response = { message: 'Précisons.', questions: [{ question: ' Quel public ? ', options: [' Clients ', 'Équipe'] }, { question: 'Une contrainte ?', options: [] }, 'Ancienne question ?'], tickets: [] };
+  assert.deepEqual(parseBrainstorm(JSON.stringify(response)).questions, [{ question: 'Quel public ?', options: ['Clients', 'Équipe'] }, { question: 'Une contrainte ?', options: [] }, 'Ancienne question ?']);
+  for (const question of [null, {}, { question: '', options: [] }, { question: 'x'.repeat(501), options: [] }, { question: 'Public ?', options: null }, { question: 'Public ?', options: [''] }, { question: 'Public ?', options: [null] }, { question: 'Public ?', options: ['x'.repeat(301)] }, { question: 'Public ?', options: ['A', ' A '] }, { question: 'Public ?', options: ['A', 'B', 'C', 'D', 'E'] }]) {
+    assert.throws(() => parseBrainstorm(JSON.stringify({ ...response, questions: [question] })), /Brainstorming invalide/);
+  }
+  const prompt = brainstormPrompt({ title: 'Idée' });
+  assert.match(prompt, /de 1 à 5 questions/);
+  assert.match(prompt, /"options":\["Proposition A", "Proposition B"\]/);
+});
+
 test('concurrent sessions reject the same repository with a clear conflict and allow another', async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'brainstorm-concurrent-'));
   mkdirSync(join(dataDir, 'other'));
@@ -55,11 +66,12 @@ test('conversation answers survive restart, feed later turns and can become task
     const session = await request(app, '/api/brainstorms', { title: 'Export', description: 'Usage réservé aux gestionnaires.', agent: 'claude' });
     const path = `/api/cards/${session.body.id}/brainstorm`;
     const first = await request(app, path);
-    line('stdout', JSON.stringify({ type: 'result', result: JSON.stringify({ message: 'Un export simple suffit.', questions: ['Pour quel public ?'], tickets: [] }) })); finish(0);
+    line('stdout', JSON.stringify({ type: 'result', result: JSON.stringify({ message: 'Un export simple suffit.', questions: [{ question: 'Pour quel public ?', options: ['Comptables', 'Clients'] }], tickets: [] }) })); finish(0);
     assert.deepEqual(app.store.run(first.body.id).proposals, []);
     assert.equal((await request(app, `/api/cards/${session.body.id}/brainstorm-draft`, { runId: first.body.id, index: 0 })).status, 400);
     await app.close(); app = createApp({ dataDir, launch }); app.server.address = () => ({ port: 4317 });
     assert.equal(app.store.run(first.body.id).brainstorm.message, 'Un export simple suffit.');
+    assert.deepEqual(app.store.run(first.body.id).brainstorm.questions[0], { question: 'Pour quel public ?', options: ['Comptables', 'Clients'] });
     await request(app, `/api/cards/${session.body.id}`, { description: 'Usage ouvert aux comptables.' }, 'PATCH');
     const next = await request(app, path, { reply: 'Pour les comptables. Propose les tâches.' });
     assert.match(options.prompt, /Un export simple suffit/); assert.match(options.prompt, /Pour quel public/); assert.match(options.prompt, /comptables/);

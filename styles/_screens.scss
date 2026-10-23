@@ -74,9 +74,7 @@ body:has(#brainstorm-page:not([hidden]) #brainstorm-chat:not([hidden])) .heading
 .brainstorm-results .disclosure { margin: 16px 0 0; }
 .brainstorm-description { white-space: pre-wrap; overflow-wrap: anywhere; }
 .brainstorm-created { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11px; color: #a4d9bc; background: #20352c; }
-.brainstorm-questions { list-style: none; padding-left: 0 !important; display: grid; gap: 8px; }
-.brainstorm-questions button { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; width: 100%; min-height: 44px; padding: 12px 14px; font-size: 15px; line-height: 1.6; white-space: normal; color: #eee6fc; background: #30283e; border-color: #655278; }
-.brainstorm-questions button span { flex-shrink: 0; font-size: 12px; color: $muted; }
+.brainstorm-questions { display: grid; gap: 8px; color: #d7deec; }
 .brainstorm-raw { margin-top: 12px; }
 .brainstorm-raw pre { max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 #brainstorm-chat { display: flex; flex-direction: column; }
@@ -91,6 +89,30 @@ body:has(#brainstorm-page:not([hidden]) #brainstorm-chat:not([hidden])) .heading
 .brainstorm-message p + p { margin-top: 16px; }
 .brainstorm-message ul { margin: 16px 0 0; padding-left: 20px; }
 #brainstorm-reply-form { flex-shrink: 0; margin-top: 16px; }
+.brainstorm-question-context { flex-shrink: 0; max-height: 70%; overflow-y: auto; margin-top: 12px; border: 1px solid #494151; border-radius: 12px; background: #20212b; overflow-wrap: anywhere; }
+.brainstorm-question-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid $line; font-size: 12px; color: $muted; }
+.brainstorm-question-toolbar button { flex-shrink: 0; min-height: 32px; font-size: 12px; }
+.brainstorm-question-slide { max-width: 820px; margin: 0 auto; padding: 20px; }
+.brainstorm-question-progress { display: flex; justify-content: space-between; gap: 12px; color: $muted; font-size: 12px; }
+.brainstorm-question-progress > :first-child { color: $accent; font-weight: 600; }
+.brainstorm-question-steps { display: flex; gap: 5px; margin: 10px 0 20px; }
+.brainstorm-question-steps span { flex: 1; height: 3px; border-radius: 3px; background: #3a3e4b; }
+.brainstorm-question-steps .current { background: $accent; }
+.brainstorm-question-steps .answered { background: #8ccbb0; }
+.brainstorm-question-slide fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+.brainstorm-question-slide legend { float: none; width: 100%; margin: 0 0 16px; font-size: 20px; line-height: 1.4; font-weight: 550; }
+.brainstorm-question-slide legend:focus-visible { outline: 2px solid $accent; outline-offset: 4px; }
+.brainstorm-question-options { display: grid; gap: 8px; }
+.brainstorm-question-option { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 14px; min-height: 48px; border: 1px solid #414453; border-radius: 8px; background: #262933; cursor: pointer; color: $text; font-size: 14px; font-weight: 400; line-height: 1.5; }
+.brainstorm-question-option:hover { border-color: #867699; }
+.brainstorm-question-option:has(:checked) { border-color: $accent; background: #342c44; }
+.brainstorm-question-option:focus-within { outline: 2px solid $accent; outline-offset: 2px; }
+.brainstorm-question-option input { flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; margin: 0; padding: 0; accent-color: $accent; }
+.brainstorm-question-custom { display: block; margin: 12px 0 0; font-size: 13px; color: $muted; }
+.brainstorm-question-custom textarea { width: 100%; margin: 6px 0 0; max-height: 160px; font-size: 16px; resize: vertical; }
+.brainstorm-question-navigation { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
+.brainstorm-question-navigation .hint { font-size: 12px; text-align: center; }
+.brainstorm-question-navigation button { min-height: 44px; }
 .brainstorm-composer { display: flex; align-items: end; gap: 12px; padding: 10px; border: 1px solid #494151; border-radius: 12px; background: #22232c; transition: border-color .15s, box-shadow .15s; }
 .brainstorm-composer:focus-within { border-color: #a18bc1; box-shadow: 0 0 0 3px #a18bc114; }
 #brainstorm-reply { display: block; flex: 1; min-width: 0; width: 100%; min-height: 44px; max-height: 180px; margin: 0; padding: 8px; resize: none; border: 0; border-radius: 0; background: transparent; color: $text; box-shadow: none; outline: none; font-size: 16px; line-height: 1.6; }
@@ -146,6 +168,12 @@ body:has(#brainstorm-page:not([hidden]) #brainstorm-chat:not([hidden])) {
     .brainstorm-next-step > div { display: none; }
     .brainstorm-composer { flex-wrap: nowrap; }
     #brainstorm-reply { flex-basis: auto; }
+    &:has(#brainstorm-question-context:not([hidden])) {
+      height: auto; min-height: 100dvh; overflow: auto;
+      #brainstorm-layout { display: block; }
+      .brainstorm-chat-history { flex: none; max-height: 160px; }
+      .brainstorm-question-context { max-height: none; overflow: visible; }
+    }
   }
 }
 @media (max-width: 600px) {
@@ -162,7 +190,11 @@ body:has(#brainstorm-page:not([hidden]) #brainstorm-chat:not([hidden])) {
   .brainstorm-chat-history { padding-right: 4px; gap: 20px; }
   .brainstorm-message { padding: 14px; }
   .brainstorm-message.user { max-width: 95%; }
-  .brainstorm-questions button { flex-direction: column; align-items: start; gap: 4px; }
+  .brainstorm-question-toolbar { padding: 8px 12px; flex-wrap: wrap; gap: 0; }
+  .brainstorm-question-toolbar > span, .brainstorm-question-navigation .hint { display: none; }
+  .brainstorm-question-slide { padding: 14px; }
+  .brainstorm-question-slide legend { font-size: 17px; }
+  .brainstorm-question-navigation { gap: 8px; }
   .brainstorm-composer { flex-wrap: wrap; }
   #brainstorm-reply { flex-basis: 100%; }
   .brainstorm-composer-actions { margin-left: auto; }

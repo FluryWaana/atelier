@@ -2,10 +2,12 @@ import { agentName, agentProviders } from '../agent-options.mjs';
 import { messageText, msg, markupText, locale } from '../i18n.mjs';
 import { esc, cardPath } from '../view-helpers.mjs';
 import { sameRepository } from '../../lib/domain/paths.mjs';
+import { createBrainstormQuestions } from './brainstorm-questions.mjs';
 
 export function createBrainstormView({ document, getState, localStorage, taskAgentFields, api, action, refresh, openCard, toast, renderBrainstorm, FormData = globalThis.FormData, Option = globalThis.Option }) {
   const $ = selector => document.querySelector(selector);
   let brainstormSession = '', brainstormInitialized = false, brainstormingBusy = false;
+  const questionView = createBrainstormQuestions({ host: $('#brainstorm-question-context'), replyForm: $('#brainstorm-reply-form'), localStorage, action, onSubmit: reply => submitBrainstorm(false, true, reply) });
 function rememberBrainstorm() {
   try {
     const draft = JSON.stringify({ id: brainstormSession, reply: $('#brainstorm-reply').value, fields: Object.fromEntries([...$('#brainstorm-form').elements].filter(field => field.name).map(field => [field.name, field.value])) });
@@ -168,7 +170,7 @@ async function submitBrainstorm(local, replying = false, message = '', includeDr
   if (brainstormingBusy || getState().runs.some(run => run.cardId === brainstormSession && run.status === 'running') || local && brainstormSession) return;
   if (!brainstormSession && !form.reportValidity()) return;
   const draft = $('#brainstorm-reply').value.trim();
-  const reply = replying ? includeDraft ? [draft, message].filter(Boolean).join('\n\n') : message || draft : '';
+  const reply = replying ? includeDraft ? [questionView.active ? questionView.reply() : '', draft, message].filter(Boolean).join('\n\n') : message || draft : '';
   if (replying && (!brainstormSession || !reply || (!message || includeDraft && draft) && !$('#brainstorm-reply-form').reportValidity())) return;
   let body;
   if (!brainstormSession) {
@@ -226,6 +228,10 @@ function renderBrainstormChat(active) {
   $('#brainstorm-reply').disabled = brainstormingBusy;
   $('#brainstorm-reply-form').dataset.active = String(active);
   $('#brainstorm-composer-agent').textContent = agentName(getState().settings, $('#brainstorm-form').elements.agent.value);
+  const latest = getState().runs.find(run => run.cardId === brainstormSession && run.kind === 'brainstorm');
+  const questionRun = latest?.status === 'failed' && !latest.brainstorm ? getState().runs.find(run => run.cardId === brainstormSession && run.kind === 'brainstorm' && (run.brainstorm || run.proposals)) : latest;
+  const questions = discussing && !active ? brainstormQuestions(questionRun) : [];
+  questionView.render(questionRun, questions, brainstormingBusy);
   if (!discussing) return;
   const turns = getState().runs.filter(run => run.cardId === brainstormSession && run.kind === 'brainstorm').slice().reverse();
   const host = $('#brainstorm-chat-history');
@@ -235,18 +241,12 @@ function renderBrainstormChat(active) {
   host.dataset.signature = signature;
   host.innerHTML = turns.map((run, index) => {
     const user = index === 0 || !run.instructions ? [run.requirements?.description || run.requirements?.title, run.requirements?.instructions, run.instructions].filter(Boolean).join('\n\n') : run.instructions;
-    const questions = brainstormQuestions(run);
-    const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? brainstormParagraphs(run.brainstorm.message) : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${questions.length ? `<ul class="brainstorm-questions">${questions.map((question, q) => `<li>${index === turns.length - 1 ? `<button type="button" data-brainstorm-question="${q}">${esc(question)}<span>${markupText("Répondre")}</span></button>` : esc(question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
+    const previousQuestions = index < turns.length - 1 ? brainstormQuestions(run) : [];
+    const answer = run.brainstorm || run.proposals ? `${run.brainstorm?.message ? brainstormParagraphs(run.brainstorm.message) : ''}${run.proposals?.length ? `<p class="hint">${index === turns.length - 1 ? `<button type="button" class="text-button" data-brainstorm-show-tasks>${markupText("Voir les tâches proposées ({0})", run.proposals.length)}</button>` : markupText("{0} proposition(s) dans le panneau des tâches.", run.proposals.length)}</p>` : ''}${previousQuestions.length ? `<ul class="brainstorm-questions">${previousQuestions.map(question => `<li>${esc(question.question)}</li>`).join('')}</ul>` : ''}` : `<p>${esc(run.status === 'running' ? messageText(run.activity) || msg("Réflexion en cours…") : messageText(run.attention) || msg("Exploration interrompue ou échouée. Votre message reste dans la discussion ; vous pouvez réessayer."))}</p>`;
     const raw = !run.brainstorm && !run.proposals && run.status !== 'running' && run.summary ? `<details class="brainstorm-raw"><summary>${markupText("Voir la réponse brute de l’agent")}</summary><pre>${esc(run.summary)}</pre></details>` : '';
     return `<article class="brainstorm-message user"><strong>${markupText("Vous")}</strong>${brainstormParagraphs(user)}</article><article class="brainstorm-message assistant"><strong>${esc(agentName(getState().settings, run.agent, run))}</strong>${answer}${raw}</article>`;
   }).join('') || `<p class="hint">${markupText("Envoyez un message pour poursuivre votre idée.")}</p>`;
-  const questions = brainstormQuestions(turns.at(-1));
   host.querySelectorAll('[data-brainstorm-show-tasks]').forEach(button => button.onclick = () => { showBrainstormTasks(true); $('#brainstorm-results').focus({ preventScroll: true }); });
-  host.querySelectorAll('[data-brainstorm-question]').forEach(button => button.onclick = () => {
-    const input = $('#brainstorm-reply');
-    input.value += (input.value ? '\n\n' : '') + questions[Number(button.dataset.brainstormQuestion)] + '\n';
-    rememberBrainstorm(); resizeBrainstormComposer(); input.focus();
-  });
   if (follow) host.scrollTop = host.scrollHeight;
 }
 
@@ -312,7 +312,8 @@ function renderBrainstorm(cardId, host = $('#brainstorm-proposals')) {
 }
 
 export function brainstormQuestions(run) {
-  return [...new Set([...(run?.brainstorm?.questions || []), ...(run?.proposals?.flatMap(proposal => proposal.questions) || [])])];
+  const questions = [...(run?.brainstorm?.questions || []), ...(run?.proposals?.flatMap(proposal => proposal.questions) || [])].map(question => typeof question === 'string' ? { question, options: [] } : question);
+  return questions.filter((question, index) => questions.findIndex(item => item.question === question.question) === index);
 }
 
 function brainstormParagraphs(text) {
