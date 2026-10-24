@@ -4,6 +4,8 @@ Référence : `843d3ea`, Atelier `0.1.9`, Node `24.22.1`, données version 2. In
 
 ## Lecture et statut
 
+Dernière preuve Windows recueillie : `0e7a252`, trois jobs réussis, journaux et captures Edge relus. L'interface historique sur Rust permet création/édition, sauvegarde/restauration et reprise ; ses autres fonctions restent partielles. L'identité du handle SQLite principal Windows est vérifiée jusque dans le scénario de remplacement. Diagnostic POSIX candidat après cette base, courses WAL/SHM et qualification finale des autres OS encore ouvertes. Voir [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md).
+
 Cette matrice décrit les contrats à conserver et leurs erreurs, pas seulement une liste de fichiers à traduire. L'[inventaire généré](rust-migration-inventory.md) complète chaque ligne avec **tous** les fichiers applicatifs, ressources, exemples, tests/supports, imports/appelants statiques, exports de compatibilité, noms de scénarios et repères de contrats. Une entrée sans appelant statique n'est pas du code mort : routes, injection, scripts natifs, assets et chargements de connecteurs sont aussi des entrées.
 
 Dans les tableaux, les sources sans préfixe sont sous `lib/` et les noms de tests désignent `test/<nom>.test.mjs`. Les équivalents Rust indiquent les destinations de migration ; leur qualification complète reste **à faire**, avec les preuves partielles M01 ci-dessous. « Node » désigne une preuve de référence dans les tests existants ; les exclusions de plateforme et de livraison figurent dans le relevé d'exécution. Les tests de structure et les doubles ne sont pas des preuves natives ou E2E.

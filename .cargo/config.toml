@@ -1,2 +1,5 @@
 [alias]
 xtask = "run --locked -p xtask --"
+
+[env]
+LIBSQLITE3_FLAGS = "SQLITE_ENABLE_FILESTAT"

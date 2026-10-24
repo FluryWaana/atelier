@@ -162,14 +162,13 @@ fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) 
     let prepared = (|| -> Result<()> {
         let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;
         copy_tree(source, &stage, true)?;
-        // shortcut: POSIX source/sidecar identity and ancestor races still require M02 qualification.
+        // shortcut: sidecar identity and ancestor races still require M02 qualification.
         // Keep both descriptors until SQLite closes: earlier POSIX closes can release its locks.
         let _checked = selected.open_same(database)?;
         let connection = Connection::open_with_flags(
             database,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
-        #[cfg(windows)]
         selected.verify_sqlite(&connection)?;
         let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
         if integrity != "ok" {

@@ -1,6 +1,14 @@
 # M02 — données et protections locales
 
+## Descripteur SQLite POSIX — candidat après `0e7a252`
+
+Le contrôle du fichier principal est étendu à POSIX sans lire la disposition privée des structures C de SQLite. Le build active `SQLITE_ENABLE_FILESTAT` ; l'[opcode public `SQLITE_FCNTL_FILESTAT`](https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html) fournit le diagnostic du fichier déjà ouvert, dont le champ `h` est le descripteur natif dans la source embarquée SQLite 3.53.2 (`libsqlite3-sys` 0.38.2). `fstat` compare ensuite le périphérique, l'inode et les liens au fichier sélectionné. Aucun descripteur n'est dupliqué/fermé et aucune requête SQL n'est préparée avant ce contrôle. Les allocations de diagnostic sont libérées par SQLite ; leur contenu n'est ni exposé ni journalisé.
+
+Ce choix dépend du format de diagnostic du VFS natif verrouillé : VFS non qualifié, option de compilation absente ou champ manquant entraînent un refus. Le test confronte aussi ce diagnostic au véritable handle Windows pour vérifier le branchement et le flag en CI Windows. Le même scénario de remplacement est prêt pour POSIX, mais son exécution Linux/macOS reste réservée à la qualification finale. Toute mise à jour de SQLite doit revalider ces contrôles. Les fichiers WAL/SHM et les courses d'ancêtres restent ouverts ; aucune qualification complète de l'import n'est revendiquée.
+
 ## Identité du handle SQLite Windows — candidat après `8028632`
+
+La [CI Windows `0e7a252`](https://github.com/FluryWaana/atelier/actions/runs/40113045258/job/120928577620) valide le scénario natif de `f89cd4a`, journal relu : fichier correct accepté, autre fichier et remplacement après sélection refusés, handle encore utilisable après le contrôle. Clippy natif/WASM, comparateurs historiques et DPAPI entre comptes réussissent. Cette preuve ne couvre ni le nouveau diagnostic POSIX ci-dessus ni les courses des fichiers auxiliaires.
 
 L'import confronte maintenant le fichier réellement ouvert par SQLite au descripteur source sélectionné, avant toute requête de validation ou sauvegarde. L'[opcode public `SQLITE_FCNTL_WIN32_GET_HANDLE`](https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html) fournit le handle emprunté ; `GetFileInformationByHandle` compare le volume, l'identifiant entier du fichier et son nombre de liens. Aucun handle SQLite n'est fermé ni dupliqué par ce contrôle. Le contrôle de chemin préalable et `SQLITE_OPEN_NOFOLLOW` restent en place.
 

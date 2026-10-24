@@ -77,6 +77,47 @@ impl Identity {
     }
 }
 
+#[cfg(any(unix, test))]
+fn sqlite_descriptor(connection: &rusqlite::Connection) -> Result<u64> {
+    use rusqlite::ffi;
+    struct Diagnostic(*mut ffi::sqlite3_str);
+    impl Drop for Diagnostic {
+        fn drop(&mut self) {
+            // Both allocations belong to SQLite; finishing consumes the builder, free accepts NULL.
+            unsafe { ffi::sqlite3_free(ffi::sqlite3_str_finish(self.0).cast()) };
+        }
+    }
+    // The connection outlives its diagnostic builder and the borrowed native descriptor.
+    let builder = Diagnostic(unsafe { ffi::sqlite3_str_new(connection.handle()) });
+    if builder.0.is_null() {
+        return Err("Diagnostic SQLite indisponible.".into());
+    }
+    // FILESTAT inspects the open file without preparing SQL or reading the database schema.
+    let (code, output) = unsafe {
+        (
+            ffi::sqlite3_file_control(
+                connection.handle(),
+                c"main".as_ptr(),
+                ffi::SQLITE_FCNTL_FILESTAT,
+                builder.0.cast(),
+            ),
+            ffi::sqlite3_str_value(builder.0),
+        )
+    };
+    if code != ffi::SQLITE_OK || output.is_null() {
+        return Err("Identité SQLite indisponible : SQLITE_ENABLE_FILESTAT requis.".into());
+    }
+    // sqlite3_str_value is NUL-terminated and remains valid until the builder is finished.
+    let diagnostic: serde_json::Value =
+        serde_json::from_slice(unsafe { std::ffi::CStr::from_ptr(output) }.to_bytes())?;
+    if !matches!(diagnostic["vfs"].as_str(), Some("unix" | "win32")) {
+        return Err("VFS SQLite non qualifié pour le contrôle d’identité.".into());
+    }
+    diagnostic["h"]
+        .as_u64()
+        .ok_or_else(|| "Descripteur SQLite absent.".into())
+}
+
 impl CheckedFile {
     pub(crate) fn open_in(directory: &cap_std::fs::Dir, name: &Path) -> Result<Self> {
         use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
@@ -169,6 +210,31 @@ impl CheckedFile {
         Ok(())
     }
 
+    #[cfg(unix)]
+    #[allow(clippy::unnecessary_cast)] // libc field widths differ; match std MetadataExt's u64 representation.
+    pub(super) fn verify_sqlite(&self, connection: &rusqlite::Connection) -> Result<()> {
+        let descriptor = i32::try_from(sqlite_descriptor(connection)?)?;
+        let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
+        // SQLite retains the descriptor; fstat initializes the structure on success without closing it.
+        let metadata = unsafe {
+            if libc::fstat(descriptor, metadata.as_mut_ptr()) != 0 {
+                return Err(std::io::Error::last_os_error().into());
+            }
+            metadata.assume_init()
+        };
+        let identity = Identity {
+            device: metadata.st_dev as u64,
+            inode: metadata.st_ino as u64,
+            links: metadata.st_nlink as u64,
+        };
+        if metadata.st_mode & libc::S_IFMT != libc::S_IFREG || identity != self.identity {
+            return Err(
+                "La base SQLite ouverte ne correspond plus à la source sélectionnée.".into(),
+            );
+        }
+        Ok(())
+    }
+
     pub fn private(self) -> Result<Self> {
         #[cfg(unix)]
         {
@@ -218,7 +284,6 @@ mod tests {
     use super::*;
     use std::fs;
 
-    #[cfg(windows)]
     #[test]
     fn sqlite_handle_identity_accepts_only_the_selected_file_without_closing_its_handle() {
         use rusqlite::{Connection, OpenFlags};
@@ -235,6 +300,17 @@ mod tests {
         let correct =
             Connection::open_with_flags(&first, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let wrong = Connection::open_with_flags(&other, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let descriptor = sqlite_descriptor(&correct).unwrap();
+        #[cfg(windows)]
+        assert_eq!(
+            Identity::from_windows_handle(
+                usize::try_from(descriptor).unwrap() as windows_sys::Win32::Foundation::HANDLE
+            )
+            .unwrap(),
+            selected.identity
+        );
+        #[cfg(unix)]
+        assert!(i32::try_from(descriptor).is_ok());
         selected.verify_sqlite(&correct).unwrap();
         assert!(selected.verify_sqlite(&wrong).is_err());
         assert!(
