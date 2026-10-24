@@ -123,6 +123,8 @@ La copie ancrée est maintenant prouvée sur les quatre cibles POSIX (`7c729a0`,
 
 Les coffres Linux entre comptes sont prouvés sur x64 et ARM64 (`513f728`, journaux relus). Sessions et marqueur d'installation emploient maintenant une lecture ancrée commune ; les publications privées et leur nettoyage restent dans le dossier ouvert. Tests Windows et parcours Edge validés ; nouveaux scénarios POSIX attendus en CI. Acquisition initiale des racines, sauvegardes et import SQLite restent des travaux M02 distincts.
 
+Le premier essai macOS ARM64 entre comptes (`83ec5da`) échoue avant le probe, pendant le provisionnement Directory Service. Correction de la fixture et diagnostic de ligne ajoutés ; les assertions de coffre sont conservées et la preuve reste attendue.
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "macOS account fixture failed at line $LINENO" >&2' ERR
 
 # CI-only directory-service records; no password or interactive login is provisioned.
 [[ ${GITHUB_ACTIONS:-} == true && ${ATELIER_TEST_DISPOSABLE_KEYRING:-} == 1 && $(uname -s) == Darwin && $# == 0 ]] || exit 2
@@ -50,7 +51,6 @@ sudo dscl . -create "/Users/$probe_user" PrimaryGroupID 20
 sudo dscl . -create "/Users/$probe_user" GeneratedUID "$(uuidgen)"
 sudo dscl . -create "/Users/$probe_user" NFSHomeDirectory "$probe_root/home"
 sudo dscl . -create "/Users/$probe_user" UserShell /bin/bash
-sudo dscl . -create "/Users/$probe_user" Password '*'
 sudo chown "$probe_uid:20" "$probe_root/home"
 [[ $(id -u "$probe_user") == "$probe_uid" ]]
 "$probe_root/fixture" test-keyring-account prepare "$probe_root/shared"

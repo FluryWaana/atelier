@@ -554,6 +554,11 @@ Prochaine action concrète :
 - **Preuves recueillies :** CI `513f728` entièrement réussie ; isolation native Linux x64/ARM64 entre comptes confirmée dans les journaux.
 - **Attendu :** nouveaux tests de chemins POSIX et isolation macOS entre comptes. Acquisition initiale des racines, sauvegardes/import SQLite et intégrations M02 restent ouverts.
 
+### Correction du scénario macOS entre comptes
+
+- La CI ARM64 `83ec5da` refuse le provisionnement Directory Service avant le probe. L'écriture directe de `Password` est retirée ; diagnostic de ligne ajouté, sans affaiblissement des contrôles du coffre.
+- Syntaxe Bash et refus local vérifiés sous WSL sans provisionnement ; aucune preuve native macOS entre comptes revendiquée. L'application reste au niveau vérifié de `4405a65`.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

@@ -1772,8 +1772,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [scripts/rust-keyring-accounts.sh:10](../scripts/rust-keyring-accounts.sh#L10) | <code>probe_user=$3</code> |
 | [scripts/rust-keyring-accounts.sh:17](../scripts/rust-keyring-accounts.sh#L17) | <code>mkdir -p "$XDG_DATA_HOME" "$XDG_RUNTIME_DIR"</code> |
 | [scripts/rust-keyring-accounts.sh:51](../scripts/rust-keyring-accounts.sh#L51) | <code>[[ $# == 0 ]] \|\| exit 2</code> |
-| [scripts/rust-keyring-macos-accounts.sh:5](../scripts/rust-keyring-macos-accounts.sh#L5) | <code>[[ ${GITHUB_ACTIONS:-} == true &amp;&amp; ${ATELIER_TEST_DISPOSABLE_KEYRING:-} == 1 &amp;&amp; $(uname -s) == Darwin &amp;&amp; $# == 0 ]] \|\| exit 2</code> |
-| [scripts/rust-keyring-macos-accounts.sh:13](../scripts/rust-keyring-macos-accounts.sh#L13) | <code>"$probe_root/fixture" test-keyring-account "$1" "$probe_root/shared"</code> |
+| [scripts/rust-keyring-macos-accounts.sh:3](../scripts/rust-keyring-macos-accounts.sh#L3) | <code>trap 'echo "macOS account fixture failed at line $LINENO" &gt;&amp;2' ERR</code> |
+| [scripts/rust-keyring-macos-accounts.sh:6](../scripts/rust-keyring-macos-accounts.sh#L6) | <code>[[ ${GITHUB_ACTIONS:-} == true &amp;&amp; ${ATELIER_TEST_DISPOSABLE_KEYRING:-} == 1 &amp;&amp; $(uname -s) == Darwin &amp;&amp; $# == 0 ]] \|\| exit 2</code> |
+| [scripts/rust-keyring-macos-accounts.sh:14](../scripts/rust-keyring-macos-accounts.sh#L14) | <code>"$probe_root/fixture" test-keyring-account "$1" "$probe_root/shared"</code> |
 | [scripts/rust-migration-baseline.mjs:124](../scripts/rust-migration-baseline.mjs#L124) | <code>const args = process.argv.slice(2);</code> |
 | [scripts/rust-migration-baseline.mjs:125](../scripts/rust-migration-baseline.mjs#L125) | <code>assert.ok(args.length === 0 \|\| args.length === 2 &amp;&amp; args[0] === '--browser', 'Usage : rust-migration-baseline.mjs [--browser chemin-exécutable]');</code> |
 | [scripts/rust-migration-baseline.mjs:135](../scripts/rust-migration-baseline.mjs#L135) | <code>child = fork(here, ['--serve'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: Object.fromEntries(Object.entries(process.env).filter(([key]) =&gt; /^(path\|systemroot\|windir\|temp\|tmp)$/i.test(key))) });</code> |

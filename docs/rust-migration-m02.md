@@ -60,6 +60,8 @@ Vérification : 51 tests Rust réussis, Clippy natif tous targets, parcours Edge
 
 La CI `513f728` est entièrement réussie. Le [journal Linux x64](https://github.com/FluryWaana/atelier/actions/runs/40047240914/job/120731670597), comme ARM64, confirme le refus sous UID identique puis les contrôles positifs/refus réciproques entre comptes natifs distincts. Le délai x64 venait de l'installation des prérequis, pas d'un échec du probe.
 
+Correction du provisionnement macOS, après `4405a65` : le [job ARM64 de `83ec5da`](https://github.com/FluryWaana/atelier/actions/runs/40047712917/job/120733127395) échoue dans Directory Service (`eDSPermissionError`), avant tout probe de coffre. Retrait de l'écriture directe de l'attribut `Password`, inutile pour l'exécution par `sudo` et distincte de l'opération de changement de mot de passe documentée par Apple. Ajout d'un diagnostic du numéro de ligne en cas d'échec, sans afficher les arguments/secrets. Aucune assertion de coffre retirée ; preuve native toujours attendue. Contrôles locaux limités à syntaxe Bash et refus sans marqueurs CI ; la suite complète précédente de `4405a65` reste la référence applicative.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.
