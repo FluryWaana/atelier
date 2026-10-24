@@ -292,11 +292,12 @@ fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) 
     let stage = private_directory(parent, Path::new(&stage_name))?;
     let prepared = (|| -> Result<()> {
         let snapshot = snapshot_source(database, source)?;
-        copy_tree(source, &stage, true)?;
         let connection = Connection::open_with_flags(
             snapshot.path().join("kanban.sqlite"),
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
+        super::store::validate_format(&connection)?;
+        copy_tree(source, &stage, true)?;
         let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
         if integrity != "ok" {
             return Err("La base portable est endommagée.".into());
@@ -374,6 +375,25 @@ mod tests {
     use super::*;
     use crate::infrastructure::store::{self, Documents};
     use serde_json::json;
+
+    #[test]
+    fn incompatible_portable_database_is_refused_without_publishing_or_changing_source() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let destination = root.path().join("destination");
+        fs::create_dir(&source).unwrap();
+        let database = source.join("kanban.sqlite");
+        let connection = store::open(&database).unwrap();
+        connection.pragma_update(None, "application_id", 0).unwrap();
+        connection.pragma_update(None, "user_version", 0).unwrap();
+        connection.close().unwrap();
+        fs::write(source.join("synthetic-note.txt"), "must remain at source").unwrap();
+        let before = fs::read(&database).unwrap();
+        assert!(import(&source, &destination).is_err());
+        assert!(!destination.exists());
+        assert_eq!(fs::read(&database).unwrap(), before);
+        assert_eq!(fs::read_dir(root.path()).unwrap().count(), 1);
+    }
 
     #[test]
     fn source_writer_remains_locked_to_other_processes_after_import_refusal() {

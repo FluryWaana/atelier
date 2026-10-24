@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
 use std::{path::Path, time::Duration};
 
-const SCHEMA: &str = "PRAGMA journal_mode=WAL;
-    CREATE TABLE IF NOT EXISTS time_entries (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+const APPLICATION_ID: i32 = 0x41544b52;
+const FORMAT_VERSION: i32 = 1;
+const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS time_entries (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, data TEXT NOT NULL);
@@ -57,8 +58,67 @@ pub(super) fn temporary_directory() -> Result<tempfile::TempDir> {
 
 pub(super) fn open(path: &Path) -> Result<Connection> {
     let connection = Connection::open(path)?;
-    connection.execute_batch(SCHEMA)?;
+    initialize(&connection)?;
     Ok(connection)
+}
+
+fn identity(connection: &Connection) -> Result<(i32, i32)> {
+    Ok((
+        connection.pragma_query_value(None, "application_id", |row| row.get(0))?,
+        connection.pragma_query_value(None, "user_version", |row| row.get(0))?,
+    ))
+}
+
+pub(super) fn validate_format(connection: &Connection) -> Result<()> {
+    if identity(connection)? != (APPLICATION_ID, FORMAT_VERSION) {
+        return Err("Base incompatible : ce format n’est pas pris en charge par Atelier Rust. Utilisez un nouveau dossier ou une sauvegarde Rust compatible.".into());
+    }
+    for query in [
+        "SELECT id,data FROM cards LIMIT 0",
+        "SELECT id,data FROM projects LIMIT 0",
+        "SELECT id,data FROM runs LIMIT 0",
+        "SELECT id,data FROM time_entries LIMIT 0",
+        "SELECT id,data FROM settings LIMIT 0",
+        "SELECT seq,runId,stream,text FROM logs LIMIT 0",
+    ] {
+        connection.prepare(query)?;
+    }
+    Ok(())
+}
+
+fn initialize(connection: &Connection) -> Result<()> {
+    if identity(connection)? == (0, 0) {
+        let objects: i64 = connection.query_row(
+            "SELECT count(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'",
+            [],
+            |row| row.get(0),
+        )?;
+        if objects == 0 {
+            let transaction = rusqlite::Transaction::new_unchecked(
+                connection,
+                rusqlite::TransactionBehavior::Immediate,
+            )?;
+            // Recheck after the write lock: another opener may have initialized the empty file.
+            if identity(&transaction)? == (0, 0) {
+                let objects: i64 = transaction.query_row(
+                    "SELECT count(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if objects != 0 {
+                    return Err("Le fichier SQLite a été modifié pendant son ouverture.".into());
+                }
+                transaction.execute_batch(SCHEMA)?;
+                transaction.pragma_update(None, "application_id", APPLICATION_ID)?;
+                transaction.pragma_update(None, "user_version", FORMAT_VERSION)?;
+            }
+            validate_format(&transaction)?;
+            transaction.commit()?;
+        }
+    }
+    validate_format(connection)?;
+    connection.execute_batch("PRAGMA journal_mode=WAL;")?;
+    Ok(())
 }
 
 pub(super) fn open_checked(path: &Path, directory: &cap_std::fs::Dir) -> Result<Connection> {
@@ -90,7 +150,7 @@ pub(super) fn open_checked(path: &Path, directory: &cap_std::fs::Dir) -> Result<
 
 pub(super) fn open_in(path: &Path, directory: &cap_std::fs::Dir) -> Result<Connection> {
     let connection = open_checked(path, directory)?;
-    connection.execute_batch(SCHEMA)?;
+    initialize(&connection)?;
     Ok(connection)
 }
 
@@ -280,6 +340,58 @@ impl<'a> Store<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn new_database_has_a_rust_identity_and_reopens_with_its_content() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("synthetic.sqlite");
+        let connection = open(&path).unwrap();
+        assert_eq!(
+            identity(&connection).unwrap(),
+            (APPLICATION_ID, FORMAT_VERSION)
+        );
+        Store::new(&connection)
+            .put(Documents::Cards, &json!({"id":"kept", "title":"Synthetic"}))
+            .unwrap();
+        connection.close().unwrap();
+        let connection = open(&path).unwrap();
+        assert_eq!(
+            Store::new(&connection)
+                .document::<serde_json::Value>(Documents::Cards, "kept")
+                .unwrap()
+                .unwrap()["title"],
+            "Synthetic"
+        );
+    }
+
+    #[test]
+    fn unidentified_foreign_future_and_incomplete_databases_are_refused_without_writes() {
+        for (application, version, schema) in [
+            (0, 0, SCHEMA),
+            (42, 1, SCHEMA),
+            (APPLICATION_ID, 2, SCHEMA),
+            (APPLICATION_ID, 1, "CREATE TABLE unrelated(value);"),
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("synthetic.sqlite");
+            let connection = Connection::open(&path).unwrap();
+            connection.execute_batch(schema).unwrap();
+            connection
+                .pragma_update(None, "application_id", application)
+                .unwrap();
+            connection
+                .pragma_update(None, "user_version", version)
+                .unwrap();
+            connection.close().unwrap();
+            let before = std::fs::read(&path).unwrap();
+            let root =
+                cap_std::fs::Dir::open_ambient_dir(directory.path(), cap_std::ambient_authority())
+                    .unwrap();
+            assert!(open_in(&path, &root).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
+        }
+    }
 
     #[test]
     fn checked_database_rejects_another_root_before_schema_or_journal_writes() {

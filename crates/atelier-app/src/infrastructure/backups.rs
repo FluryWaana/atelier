@@ -194,6 +194,9 @@ fn restore_checked(
     let mut snapshot = tempfile::NamedTempFile::new_in(private.path())?;
     checked.copy_to(snapshot.as_file_mut())?;
     let source = Connection::open_with_flags(snapshot.path(), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    super::store::validate_format(&source).map_err(|_| {
+        BackupFailure::Invalid("Sauvegarde incompatible avec cette version d’Atelier Rust.")
+    })?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
         return Err(BackupFailure::Invalid("Sauvegarde endommagée.").into());
@@ -302,6 +305,30 @@ fn restore_checked(
 mod tests {
     use super::*;
     use crate::infrastructure::store::open;
+
+    #[test]
+    fn incompatible_restore_preserves_current_data_and_creates_no_rescue() {
+        let directory = tempfile::tempdir().unwrap();
+        let current = open(&directory.path().join("current.sqlite")).unwrap();
+        let source = directory.path().join("foreign.sqlite");
+        let foreign = open(&source).unwrap();
+        foreign.pragma_update(None, "user_version", 999).unwrap();
+        foreign.close().unwrap();
+        let store = Store::new(&current);
+        store
+            .put(
+                Documents::Cards,
+                &serde_json::json!({"id":"kept", "title":"Synthetic"}),
+            )
+            .unwrap();
+        let rescue = directory.path().join("rescue.sqlite");
+        assert!(restore(&store, &source, &rescue).is_err());
+        assert!(!rescue.exists());
+        assert_eq!(
+            store.documents::<Document>(Documents::Cards).unwrap().len(),
+            1
+        );
+    }
     use serde_json::json;
 
     #[test]

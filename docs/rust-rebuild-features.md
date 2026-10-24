@@ -31,6 +31,9 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 
 ## Points de contrôle
 
+- Format Rust candidat : identité SQLite `ATKR`, version `1`, initialisation transactionnelle uniquement sur fichier vide. Ouverture, restauration et transfert refusent les anciens formats, les identités étrangères et les versions futures. Tests synthétiques ajoutés pour la conservation octet pour octet des bases refusées, la réouverture, l'absence de restauration et de destination publiée. Les anciens comparateurs de stockage Node nécessitent désormais le checkout archivé ; ils ne constituent plus une commande de qualification de cette branche.
+- CI de `a7e1c34` : deux échecs identifiés dans les journaux et corrigés avant le push suivant. Le build WASM exigeait le type explicite de l'événement `cancel` des dialogues. Le test HTTP conservait une ancienne assertion `todo` après la nouvelle assertion `doing` ; cette contradiction a été retirée, sans supprimer le contrôle de persistance. Aucun parcours enrichi n'est encore déclaré réussi.
+
 - Candidat projets : le renommage auparavant ignoré est désormais validé et enregistré. Son ancien vecteur d'absence d'effet est remplacé par des contrôles du nom et de la conservation des réglages/dépôts. Le parcours Edge prépare création, renommage, branche/consignes, refus d'un dépôt en double sans perte du brouillon, création d'une tâche dans le projet sélectionné et retrait/archivage sans suppression du dossier. Aucun dossier utilisateur n'est utilisé.
 - Tableau `dd69aae` : [contrôles natifs Windows réussis](https://github.com/FluryWaana/atelier/actions/runs/40121728616), journal relu (Clippy natif/WASM, Rust et DPAPI). Le parcours navigateur échouait pendant la création de sa fixture, car `standby` n'est pas accepté comme statut initial. Préparation corrigée par `1b020c9` en utilisant `review` ; la CI du parcours enrichi reste à recueillir.
 

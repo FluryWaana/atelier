@@ -25,7 +25,7 @@ Restent requis : persistance fiable, sauvegarde/restauration de la nouvelle appl
 
 Le workspace, l'outillage verrouillé et les protections déjà présentes sont réutilisés. Pas de nouvelle couche générique sans appelant concret. Les modèles ouverts du prototype sont remplacés lorsqu'un parcours est reconstruit ; conserver tout son moteur de compatibilité n'est pas un objectif.
 
-La nouvelle base porte une identité et une version propres. L'application refuse une base ancienne/inconnue avec un diagnostic clair ; elle ne l'efface ni ne la migre implicitement. Les développements utilisent exclusivement des répertoires synthétiques séparés de `data/`.
+La nouvelle base porte l'identité SQLite `0x41544b52` (`ATKR`) et la version de format `1`. L'application refuse une base ancienne/inconnue ou une version non prise en charge avec un diagnostic clair ; elle ne l'efface ni ne la migre implicitement. L'initialisation marque uniquement un fichier réellement vide, dans une transaction. Le même contrôle s'applique aux sauvegardes et transferts portables Rust. Cette implémentation reste candidate jusqu'à validation CI. Les développements utilisent exclusivement des répertoires synthétiques séparés de `data/`.
 
 SQLite garde une file d'accès bornée et des transactions courtes. Une opération externe réserve son état, libère la transaction, effectue l'I/O puis revalide avant commit. Les jetons ne sont jamais exposés dans les réponses ou journaux ; l'absence de coffre natif ne déclenche pas un stockage en clair. Les programmes enfants ont des flux et délais bornés et un propriétaire chargé de leur arrêt.
 
