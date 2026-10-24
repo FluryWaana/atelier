@@ -44,6 +44,8 @@ impl<'de> Deserialize<'de> for Card {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Board {
+    #[serde(default)]
+    pub settings: Document,
     pub cards: Vec<Card>,
     #[serde(default)]
     pub brainstorms: Vec<Card>,

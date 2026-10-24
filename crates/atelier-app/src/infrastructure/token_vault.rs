@@ -260,17 +260,19 @@ pub async fn encrypt_tokens(
     tokens: &Document,
     protect: &mut impl AsyncFnMut(&str, bool) -> Result<String>,
 ) -> Result<Option<String>> {
-    let mut empty = true;
+    match tokens_plaintext(tokens)? {
+        Some(plain) => Ok(Some(protect(&plain, false).await?)),
+        None => Ok(None),
+    }
+}
+
+pub fn tokens_plaintext(tokens: &Document) -> Result<Option<String>> {
     for key in tokens.keys() {
         if tokens.truthy_key(key)? {
-            empty = false;
-            break;
+            return Ok(Some(serde_json::to_string(tokens)?));
         }
     }
-    if empty {
-        return Ok(None);
-    }
-    Ok(Some(protect(&serde_json::to_string(tokens)?, false).await?))
+    Ok(None)
 }
 
 pub async fn save(database: &Database, tokens: &Document) -> Result<()> {

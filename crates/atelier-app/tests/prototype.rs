@@ -56,6 +56,214 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
         .unwrap();
 }
 
+#[cfg(windows)]
+#[tokio::test]
+async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_back() {
+    use atelier_app::infrastructure::{settings, token_vault};
+    use atelier_core::document::{Document, JsonString};
+    for fault in [false, true] {
+        let data = tempfile::tempdir().unwrap();
+        let assets = tempfile::tempdir().unwrap();
+        let repo = tempfile::tempdir().unwrap();
+        let directory = PrototypeDirectory::open(data.path()).unwrap();
+        let database = Database::open(&directory.path.join("kanban.sqlite")).unwrap();
+        database.call(|store| {
+            let settings: Document = serde_json::from_str(r#"{"baseBranch":"old","taskQueue":{"ids":["card"]},"future":{"\ud800":"\udc00"}}"#)?;
+            store.save_settings(&settings)
+        }).await.unwrap();
+        let old: Document =
+            serde_json::from_str(r#"{"jira":"old-synthetic","future":{"\ud800":"\udc00"}}"#)
+                .unwrap();
+        token_vault::save(&database, &old).await.unwrap();
+        let encrypted = database
+            .call(token_vault::read_encrypted)
+            .await
+            .unwrap()
+            .unwrap();
+        database.close().await.unwrap();
+        drop(database);
+        drop(directory);
+        if fault {
+            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_settings BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();
+        }
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let client = reqwest::Client::new();
+        let request = |method, path: &str| {
+            client
+                .request(method, format!("{address}{path}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+        };
+        let state = request(reqwest::Method::GET, "/api/state")
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        assert!(!state.contains("old-synthetic"));
+        let state: Document = serde_json::from_str(&state).unwrap();
+        let settings: Document = state.get("settings").unwrap().unwrap();
+        assert_eq!(settings.get::<bool>("tokenSet").unwrap(), Some(true));
+        assert_eq!(
+            request(reqwest::Method::PUT, "/api/settings")
+                .json(&json!({"jiraUrl":"http://invalid.test","token":"secret"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            400
+        );
+        assert_eq!(
+            request(reqwest::Method::DELETE, "/api/settings/tokens/unknown")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            404
+        );
+        let mut body: Document = serde_json::from_str(r#"{"baseBranch":"new","jiraEmail":"\ud800","token":"new-synthetic-\udc00","taskQueue":null,"future":false}"#).unwrap();
+        body.set("repo", &repo.path().to_string_lossy()).unwrap();
+        let response = request(reqwest::Method::PUT, "/api/settings")
+            .header("content-type", "application/json")
+            .body(serde_json::to_string(&body).unwrap())
+            .send()
+            .await
+            .unwrap();
+        if fault {
+            assert_eq!(response.status(), 500);
+            assert_eq!(
+                response.json::<Value>().await.unwrap()["error"],
+                "Modification des réglages impossible."
+            );
+            stop(&address, &token, task).await;
+            let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+            assert_eq!(
+                database
+                    .call(token_vault::read_encrypted)
+                    .await
+                    .unwrap()
+                    .as_deref(),
+                Some(encrypted.as_str())
+            );
+            let config: Document = database.call(settings::public_config).await.unwrap();
+            assert!(config.string_equals("baseBranch", "old").unwrap());
+            assert_eq!(config.get::<bool>("tokenSet").unwrap(), Some(true));
+            database.close().await.unwrap();
+            continue;
+        }
+        assert_eq!(response.status(), 200);
+        let config: Document = serde_json::from_str(&response.text().await.unwrap()).unwrap();
+        assert_eq!(
+            config.get::<JsonString>("jiraEmail").unwrap(),
+            Some(JsonString(vec![0xd800]))
+        );
+        assert_eq!(
+            config.raw("future").unwrap().get(),
+            r#"{"\ud800":"\udc00"}"#
+        );
+        assert!(config.raw("taskQueue").is_some());
+        assert!(
+            !serde_json::to_string(&config)
+                .unwrap()
+                .contains("new-synthetic")
+        );
+        let a = request(reqwest::Method::PUT, "/api/settings")
+            .json(&json!({"azureToken":"azure-synthetic","baseBranch":"concurrent"}))
+            .send();
+        let b = request(reqwest::Method::PUT, "/api/settings")
+            .json(&json!({"tempoToken":"tempo-synthetic","jql":"updated"}))
+            .send();
+        let (a, b) = tokio::join!(a, b);
+        assert_eq!(a.unwrap().status(), 200);
+        assert_eq!(b.unwrap().status(), 200);
+        let created: Value = request(reqwest::Method::POST, "/api/cards")
+            .json(&json!({"title":"settings inheritance"}))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::canonicalize(created["repo"].as_str().unwrap()).unwrap(),
+            std::fs::canonicalize(repo.path()).unwrap()
+        );
+        let template = request(reqwest::Method::POST, "/api/templates")
+            .json(&json!({"cardId":created["id"],"name":"concurrent template"}))
+            .send();
+        let changed = request(reqwest::Method::PUT, "/api/settings")
+            .json(&json!({"jql":"with template"}))
+            .send();
+        let (template, changed) = tokio::join!(template, changed);
+        assert_eq!(template.unwrap().status(), 200);
+        assert_eq!(changed.unwrap().status(), 200);
+        stop(&address, &token, task).await;
+        let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+        let tokens = token_vault::load(&database).await.unwrap();
+        assert!(tokens.string_equals("azure", "azure-synthetic").unwrap());
+        assert!(tokens.string_equals("tempo", "tempo-synthetic").unwrap());
+        assert!(tokens.raw("future").is_some());
+        let stored = database
+            .call(|store| store.settings::<Document>())
+            .await
+            .unwrap();
+        assert!(stored.string_equals("baseBranch", "concurrent").unwrap());
+        assert!(stored.string_equals("jql", "with template").unwrap());
+        assert_eq!(
+            stored
+                .get::<Vec<Document>>("taskTemplates")
+                .unwrap()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(
+            !serde_json::to_string(&stored)
+                .unwrap()
+                .contains("synthetic")
+        );
+        database.close().await.unwrap();
+        drop(database);
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let state: Document = serde_json::from_str(
+            &client
+                .get(format!("{address}/api/state"))
+                .bearer_auth(&token)
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        let config: Document = state.get("settings").unwrap().unwrap();
+        assert_eq!(config.get::<bool>("tokenSet").unwrap(), Some(true));
+        assert_eq!(config.get::<bool>("azureTokenSet").unwrap(), Some(true));
+        for service in ["jira", "azure", "tempo"] {
+            let response = client
+                .delete(format!("{address}/api/settings/tokens/{service}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), 200);
+        }
+        stop(&address, &token, task).await;
+        let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+        let tokens = token_vault::load(&database).await.unwrap();
+        assert!(tokens.raw("future").is_some());
+        for service in ["jira", "azure", "tempo"] {
+            assert!(!tokens.truthy(service).unwrap());
+        }
+        database.close().await.unwrap();
+    }
+}
+
 #[tokio::test]
 async fn empty_repository_paths_resolve_the_synthetic_working_directory() {
     const CHILD: &str = "ATELIER_TEST_EMPTY_REPOSITORY";
@@ -1554,7 +1762,7 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .unwrap();
     assert_eq!(
         board,
-        json!({"cards":[card], "brainstorms":[], "projects":[], "times":[]})
+        json!({"cards":[card], "brainstorms":[], "projects":[], "times":[], "settings": atelier_core::application::settings::public_config(&Default::default(), &Default::default(), atelier_app::infrastructure::settings::platform()).unwrap()})
     );
     stop(&address, &next_token, task).await;
 }

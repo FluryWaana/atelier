@@ -160,6 +160,16 @@ La CI Windows `38ceb6c` a ensuite détecté une fixture qui enregistrait les che
 
 ## Preuves reproductibles
 
+### Réglages globaux HTTP et coffre atomique — candidat après `c613dc2`
+
+PUT `/api/settings`, DELETE `/api/settings/tokens/{service}` et `state.settings` utilisent le préparateur historique. Lecture, préparation, chiffrement et transaction occupent une seule opération du worker SQLite : aucune écriture de modèle/réglage ne s'intercale, et aucun verrou SQLite de transaction n'est détenu pendant le chiffrement. Les jetons sont relus depuis le coffre, sans cache mutable distinct susceptible de survivre à un rollback. Une faute de chiffrement refuse la commande ; une faute d'écriture annule coffre et réglages ensemble. La réponse expose uniquement les indicateurs de présence des jetons, avec les champs de configuration historiques.
+
+L'adaptateur d'URL réutilise `reqwest::Url` déjà présent. Les contrats [URL Node](https://nodejs.org/api/url.html#the-whatwg-url-api) et [URL Rust](https://docs.rs/url/2.5.8/url/struct.Url.html) sont confrontés à 23 cas : HTTPS, identifiants, paramètres, fragments vides/non vides, chemins, IPv6 et substitution USV des unités UTF-16 isolées. Aucun appel Jira réel. Le test HTTP Windows utilise uniquement DPAPI sur des secrets synthétiques et vérifie héritage du dépôt, concurrence avec les modèles, réouverture, oubli et rollback après trigger SQL. Le test d'état historique conserve toutes ses assertions en ajoutant le champ public `settings`.
+
+Limite explicite : le prototype POSIX refuse encore les écritures nécessitant un coffre, avant mutation, pour ne jamais appeler le service de production du trousseau. Un service isolé doit être branché avant qualification POSIX. L'overlay de configuration des connecteurs reste lié à M05. Tous les nouveaux résultats sont attendus en CI, aucun test local exécuté.
+
+La [CI `9a6721d`](https://github.com/FluryWaana/atelier/actions/runs/40106480434) est entièrement réussie ; le journal Edge confirme WASM/CSP, création, redémarrage, relecture et rotation. La CI suivante `c613dc2` a passé les tests Rust et Clippy, puis signalé trois défauts des lectures de fichiers Node ; correction exacte des identifiants décrite en M02, sans retirer ces scénarios. Les comparaisons historiques du nouveau préparateur restent attendues.
+
 ### Réglages globaux — candidat après `9a6721d`
 
 `application/settings.rs` prépare les paramètres et les jetons sans accès système ni écriture : défauts, héritage des profils, limites UTF-16, priorité des erreurs, mapping Jira, changement d'identité et oubli explicite. Les modèles, la file et les champs inconnus déjà stockés sont préservés ; leur remplacement depuis ce formulaire reste ignoré comme dans Node. Les profils et noms de champs historiques peuvent conserver des unités UTF-16 isolées. La recherche de profil réutilise maintenant la même construction des défauts complets.

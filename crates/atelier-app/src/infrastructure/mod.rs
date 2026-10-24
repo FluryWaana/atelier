@@ -9,6 +9,7 @@ pub mod projects;
 pub mod prototype;
 mod publish;
 pub mod session;
+pub mod settings;
 pub mod store;
 pub mod task_creation;
 pub mod task_editing;

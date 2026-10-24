@@ -162,7 +162,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — tâches locales, modèles, chronomètres et projets avec réglages/déplacements HTTP ; détection, paramètres/profils globaux, effets distants et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — tâches locales, modèles, chronomètres et projets avec réglages/déplacements HTTP ; réglages globaux/coffre HTTP candidats ; profils, détection, effets distants et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
