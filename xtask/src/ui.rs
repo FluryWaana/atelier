@@ -322,6 +322,17 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .click()
         .await?;
     wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.activeElement?.id === 'edit-title';", vec![]).await?;
+    client
+        .find(Locator::Css("#edit-title"))
+        .await?
+        .send_keys("\u{e00c}")
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.activeElement?.classList.contains('card-open') === true;", vec![]).await?;
+    client
+        .find(Locator::Css("[data-status=todo] .card-open"))
+        .await?
+        .click()
+        .await?;
     let title = "Tâche modifiée é 🔧 <script>";
     client
         .find(Locator::Css("#edit-title"))
@@ -362,9 +373,9 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .click()
         .await?;
     client
-        .find(Locator::Css("#close-editor"))
+        .find(Locator::Css("#edit-title"))
         .await?
-        .click()
+        .send_keys("\u{e00c}")
         .await?;
     wait_dom(
         client,
