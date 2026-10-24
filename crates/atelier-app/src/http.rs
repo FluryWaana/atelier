@@ -31,6 +31,8 @@ mod files;
 mod mutations;
 mod projects;
 #[cfg(windows)]
+mod runs;
+#[cfg(windows)]
 mod services;
 mod settings;
 mod task_creation;
@@ -42,7 +44,7 @@ mod worktrees;
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 struct AppState {
-    database: Database,
+    database: Arc<Database>,
     prototype_paths: [PathBuf; 2],
     prototype_directory: Arc<cap_std::fs::Dir>,
     vault: crate::infrastructure::token_vault::PrototypeVault,
@@ -55,6 +57,8 @@ struct AppState {
     mutations: Arc<tokio::sync::RwLock<()>>,
     #[cfg(windows)]
     services: Arc<crate::infrastructure::dev_servers::DevServers>,
+    #[cfg(windows)]
+    runs: Arc<crate::infrastructure::command_runs::CommandRuns>,
 }
 type Shared = Arc<AppState>;
 
@@ -136,13 +140,21 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/services/start")
             || path.ends_with("/services/stop")
             || path.ends_with("/services/restart")
+            || path.ends_with("/runs/start")
+            || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
         let changed = state.changed.clone();
         #[cfg(windows)]
         let services = state.services.clone();
+        #[cfg(windows)]
+        let runs = state.runs.clone();
         mutations::run(state.mutations.clone(), exclusive, async move {
             #[cfg(windows)]
             if let Some(response) = services::guard(&services, request.uri().path()) {
+                return response;
+            }
+            #[cfg(windows)]
+            if let Some(response) = runs::guard(&runs, request.uri().path()) {
                 return response;
             }
             let response = next.run(request).await;
@@ -340,12 +352,19 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     directory.write_session(&token)?;
     let database = directory.database()?;
     database
+        .call(|store| {
+            let now = time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)?;
+            crate::infrastructure::runs::recover(store, &now)
+        })
+        .await?;
+    database
         .call(|store| store.transaction(atelier_core::application::time_tracking::initialize))
         .await?;
     let (shutdown, mut stopped) = watch::channel(false);
     let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
-        database,
+        database: Arc::new(database),
         prototype_paths: [directory.path.clone(), original_directory],
         prototype_directory: Arc::new(directory.opened_directory()?),
         vault,
@@ -355,12 +374,17 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         shutdown,
         #[cfg(windows)]
         services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
+        #[cfg(windows)]
+        runs: crate::infrastructure::command_runs::CommandRuns::new(changed.clone()),
         changed,
         file_reads: tokio::sync::Semaphore::new(2),
         mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
     #[cfg(windows)]
     let app = app
+        .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route("/api/runs/{id}/stop", post(runs::stop))
+        .route("/api/runs/{id}/logs", get(runs::logs))
         .route("/api/cards/{id}/services", get(services::get))
         .route("/api/cards/{id}/services/start", post(services::start))
         .route("/api/cards/{id}/services/restart", post(services::restart))
@@ -437,6 +461,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let _mutations = state.mutations.write().await;
     #[cfg(windows)]
     let services_result = state.services.close().await;
+    #[cfg(windows)]
+    let runs_result = state.runs.close().await;
     let timers = state
         .database
         .call(|store| {
@@ -452,6 +478,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     drop(directory);
     #[cfg(windows)]
     services_result?;
+    #[cfg(windows)]
+    runs_result?;
     clock_result??;
     timers?;
     result?;

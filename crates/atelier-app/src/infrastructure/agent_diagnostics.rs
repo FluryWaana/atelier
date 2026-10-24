@@ -244,7 +244,7 @@ fn authentication(
     Ok(())
 }
 
-pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
+async fn resolve(profile: &Document) -> Result<(PathBuf, Environment)> {
     static LOOKUPS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
     let permit = LOOKUPS
         .try_acquire()
@@ -253,7 +253,7 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         .map(|(key, value)| (key.to_string_lossy().to_ascii_uppercase(), value))
         .collect();
     let input = profile.clone();
-    let search = environment(&profile, &inherited, false)?;
+    let search = environment(profile, &inherited, false)?;
     let lookup = tokio::task::spawn_blocking(move || {
         // Keep the slot until filesystem I/O returns, even if the HTTP deadline expires.
         let _permit = permit;
@@ -263,6 +263,20 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         .await
         .map_err(|_| "La recherche de l’exécutable a dépassé son délai.")?;
     let binary = resolved??;
+    Ok((binary, inherited))
+}
+
+pub(crate) async fn command(profile: &Document) -> Result<tokio::process::Command> {
+    let (binary, inherited) = resolve(profile).await?;
+    let mut command = tokio::process::Command::new(binary);
+    command
+        .env_clear()
+        .envs(environment(profile, &inherited, false)?);
+    Ok(command)
+}
+
+pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
+    let (binary, inherited) = resolve(&profile).await?;
     let kind = profile.get::<String>("type")?.ok_or("Agent invalide.")?;
     let api = profile.string_equals("auth", "api")?;
     let mut result = AgentDiagnostic {

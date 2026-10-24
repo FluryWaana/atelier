@@ -228,7 +228,7 @@ fn restore_checked(
     }
     let unfinished = "Cette sauvegarde contient des opérations inachevées.";
     for run in &runs {
-        if run.value.string_equals("status", "running")? {
+        if super::runs::active(&run.value)? {
             return Err(BackupFailure::Invalid(unfinished).into());
         }
     }
@@ -534,6 +534,14 @@ mod tests {
             (
                 Documents::Runs,
                 json!({"id":"unfinished","status":"running"}),
+            ),
+            (
+                Documents::Runs,
+                json!({"id":"unfinished","status":"starting"}),
+            ),
+            (
+                Documents::Runs,
+                json!({"id":"unfinished","status":"stopping"}),
             ),
             (
                 Documents::Cards,

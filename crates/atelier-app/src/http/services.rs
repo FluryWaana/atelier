@@ -28,7 +28,9 @@ pub(super) fn guard(manager: &DevServers, path: &str) -> Option<Response> {
             .is_some_and(|tail| projects.iter().any(|id| tail == id))
         || path.strip_prefix("/api/cards/").is_some_and(|tail| {
             let (id, action) = tail.split_once('/').unwrap_or((tail, ""));
-            cards.iter().any(|card| card == id) && !action.starts_with("services")
+            cards.iter().any(|card| card == id)
+                && !action.starts_with("services")
+                && action != "runs/start"
         });
     blocked.then(|| failure(StatusCode::CONFLICT, "Arrête les services concernés avant de modifier la tâche, le projet ou les sauvegardes."))
 }

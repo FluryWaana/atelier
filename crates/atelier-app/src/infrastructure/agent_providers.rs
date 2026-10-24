@@ -31,12 +31,18 @@ pub fn save(
     body: &Document,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<Vec<Document>> {
-    // shortcut: prototype cannot launch/update agents; wire M04 reservations and cache invalidation before enabling those operations.
+    let busy = store
+        .documents::<Document>(Documents::Runs)?
+        .iter()
+        .map(super::runs::active)
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .any(|active| active);
     let next = agent_providers::prepare_save(
         &store.settings()?,
         &settings::load(store, protect)?,
         body,
-        false,
+        busy,
     )?;
     let response = agent_providers::describe(&next.settings, &next.tokens)?;
     settings::persist(store, &next, protect)?;
@@ -49,6 +55,13 @@ pub fn remove(
     body: &Document,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<Vec<Document>> {
+    let busy = store
+        .documents::<Document>(Documents::Runs)?
+        .iter()
+        .map(super::runs::active)
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .any(|active| active);
     let next = agent_providers::prepare_remove(
         &store.settings()?,
         &settings::load(store, protect)?,
@@ -56,7 +69,7 @@ pub fn remove(
         body,
         &store.documents(Documents::Cards)?,
         &store.documents(Documents::Projects)?,
-        false,
+        busy,
     )?;
     let response = agent_providers::describe(&next.settings, &next.tokens)?;
     settings::persist(store, &next, protect)?;

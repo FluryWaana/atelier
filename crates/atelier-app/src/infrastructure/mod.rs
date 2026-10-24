@@ -4,6 +4,8 @@ pub mod agent_diagnostics;
 pub mod agent_providers;
 pub mod backups;
 pub mod checked_file;
+#[cfg(windows)]
+pub mod command_runs;
 pub mod data_lock;
 pub mod database;
 mod dependencies;
@@ -23,6 +25,7 @@ pub mod process_tree;
 pub mod projects;
 pub mod prototype;
 mod publish;
+pub mod runs;
 pub mod service_launch;
 pub mod session;
 pub mod settings;

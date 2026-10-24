@@ -1,6 +1,13 @@
 use crate::document::{Document, JsonString};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct RunLog {
+    pub seq: i64,
+    pub stream: String,
+    pub text: String,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AgentAuthentication {

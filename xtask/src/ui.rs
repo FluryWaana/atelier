@@ -1605,6 +1605,58 @@ async fn files_scenario(
     {
         return Err("Un projet actif peut être retiré.".into());
     }
+    // Run commands alongside the remaining service, then prove cancellation leaves it alive.
+    let run_fixture = root()
+        .join("target/debug")
+        .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request", "1").json(&json!({"id":"ui-run-command","name":"Commande de parcours","type":"command","auth":"cli","command":run_fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","hang"],"expected":null})).send().await?.error_for_status()?;
+    let run_marker = Path::new(&worktree.path).join(".run-fixture");
+    std::fs::write(&run_marker, "atelier-r03-synthetic-only")?;
+    wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options || []).some(option=>option.value === 'ui-run-command');",vec![]).await?;
+    client.execute("const select=document.querySelector('#run-agent'); select.value='ui-run-command'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    click(client, "#start-run").await?;
+    wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#runs-heading')?.parentElement.querySelector('code')?.textContent.includes('Commande synthétique é😀') && window.syntheticRunExecuted !== true;",vec![]).await?;
+    client.execute("const select=document.querySelector('#run-mode'); select.value='edit'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    click(client, "#start-run").await?;
+    wait_dom(client,"return document.querySelector('#stop-run')?.disabled === false && document.querySelector('#runs-heading')?.parentElement.textContent.includes('Processus actif');",vec![]).await?;
+    for path in [
+        format!("{address}/api/cards/{}/worktree/remove", card.id),
+        format!("{address}/api/backups"),
+    ] {
+        if http
+            .post(path)
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&json!({"confirmed":true,"discardChanges":true}))
+            .send()
+            .await?
+            .status()
+            != reqwest::StatusCode::CONFLICT
+        {
+            return Err("Une opération destructive a accepté un agent actif.".into());
+        }
+    }
+    for path in [
+        format!("{address}/api/cards/{}", card.id),
+        format!("{address}/api/projects/{project_id}"),
+        format!("{address}/api/agent-providers/ui-run-command"),
+    ] {
+        if http
+            .delete(path)
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&json!({"confirmed":true}))
+            .send()
+            .await?
+            .status()
+            != reqwest::StatusCode::CONFLICT
+        {
+            return Err("Une suppression a accepté un agent actif.".into());
+        }
+    }
+    click(client, "#stop-run").await?;
+    wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution arrêtée') && document.querySelectorAll('.service-status')[1]?.textContent === 'Processus actif';",vec![]).await?;
+    std::fs::remove_file(run_marker)?;
     click(client, "#stop-services").await?;
     wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Arrêté') && document.querySelector('#start-services')?.disabled === false;", vec![]).await?;
     if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?

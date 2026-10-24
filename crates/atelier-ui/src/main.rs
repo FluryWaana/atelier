@@ -11,6 +11,7 @@ mod files;
 mod i18n;
 mod live;
 mod projects;
+mod runs;
 mod services;
 mod settings;
 mod task_editor;

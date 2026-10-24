@@ -1,7 +1,7 @@
 use crate::Result;
 use atelier_core::document::{Document, JsonString};
 use rusqlite::{Connection, OptionalExtension, params, types::Value};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 use serde_json::value::RawValue;
 use std::{path::Path, time::Duration};
 
@@ -34,12 +34,7 @@ impl Documents {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Log {
-    pub seq: i64,
-    pub stream: String,
-    pub text: String,
-}
+pub use atelier_core::contracts::RunLog as Log;
 
 pub struct Store<'a> {
     pub(crate) connection: &'a Connection,

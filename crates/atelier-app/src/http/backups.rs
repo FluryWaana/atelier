@@ -54,8 +54,10 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
                     interrupted |= atelier_core::application::worktrees::interrupted(&card)?;
                 }
                 if interrupted { return Err(BackupFailure::Conflict("Termine ou vérifie les opérations de worktree avant une sauvegarde ou une restauration.").into()); }
-                // shortcut: add active agents, servers and connector reservations when R03–R05 enable them.
-                backups::require_idle(false, false, false, &store.documents(Documents::Times)?)?;
+                let mut active_runs = false;
+                for run in store.documents::<Document>(Documents::Runs)? { active_runs |= crate::infrastructure::runs::active(&run)?; }
+                // shortcut: connector reservations must join this guard when R04 enables their effects.
+                backups::require_idle(active_runs, false, false, &store.documents(Documents::Times)?)?;
                 if !restore {
                     return Ok(serde_json::to_value(directory.create(store)?)?);
                 }

@@ -91,6 +91,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::thread::sleep(Duration::from_secs(60));
             Ok(())
         }
+        ["run-command", mode @ ("success" | "hang")] => {
+            if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
+            let mut prompt = String::new();
+            std::io::Read::read_to_string(&mut io::stdin(), &mut prompt)?;
+            if prompt.is_empty() { return Err("Missing synthetic task input".into()); }
+            io::stdout().write_all(b"<script>window.syntheticRunExecuted=true</script>\n")?;
+            io::stdout().write_all("Commande synthétique é😀\n".as_bytes())?;
+            io::stdout().flush()?;
+            if *mode == "hang" { loop { std::thread::sleep(Duration::from_secs(60)); } }
+            Ok(())
+        }
         ["process-streams"] => {
             let stderr = std::thread::spawn(|| -> io::Result<()> {
                 io::stderr().write_all(&vec![b'e'; 200_000])
