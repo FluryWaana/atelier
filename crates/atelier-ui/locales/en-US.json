@@ -1,4 +1,5 @@
 {
+  "La fin de l’exécution n’est pas confirmée. Redémarre Atelier et vérifie le dépôt avant de relancer.": "The run has not been confirmed finished. Restart Atelier and check the repository before starting again.",
   "Crée un profil de commande dans Agents pour démarrer une exécution.": "Create a command profile in Agents to start a run.",
   "Chargement du journal…": "Loading log…",
   "Exécutions": "Runs",

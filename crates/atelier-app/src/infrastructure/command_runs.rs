@@ -102,6 +102,12 @@ impl CommandRuns {
             .await;
             if result.is_ok() {
                 let _ = finished.send(true);
+            } else {
+                let _ = database.call(move |store| {
+                    let mut run = store.document::<Document>(super::store::Documents::Runs, &id)?.ok_or("Exécution introuvable.")?;
+                    run.set("attention", &"La fin de l’exécution n’est pas confirmée. Redémarre Atelier et vérifie le dépôt avant de relancer.")?;
+                    store.put(super::store::Documents::Runs, &run)
+                }).await;
             }
             // A storage/cleanup failure keeps the activity reservation until restart.
             let _ = manager.changed.send(());

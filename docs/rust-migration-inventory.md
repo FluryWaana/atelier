@@ -998,11 +998,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/command_runs.rs:32](../crates/atelier-app/src/infrastructure/command_runs.rs#L32) | <code>pub fn new(changed: broadcast::Sender&lt;()&gt;) -&gt; Arc&lt;Self&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/command_runs.rs:43](../crates/atelier-app/src/infrastructure/command_runs.rs#L43) | <code>pub fn active_cards(&amp;self) -&gt; Vec&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/command_runs.rs:50](../crates/atelier-app/src/infrastructure/command_runs.rs#L50) | <code>pub async fn start(</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:111](../crates/atelier-app/src/infrastructure/command_runs.rs#L111) | <code>pub async fn stop(&amp;self, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:129](../crates/atelier-app/src/infrastructure/command_runs.rs#L129) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:280](../crates/atelier-app/src/infrastructure/command_runs.rs#L280) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:281](../crates/atelier-app/src/infrastructure/command_runs.rs#L281) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:283](../crates/atelier-app/src/infrastructure/command_runs.rs#L283) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:117](../crates/atelier-app/src/infrastructure/command_runs.rs#L117) | <code>pub async fn stop(&amp;self, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:135](../crates/atelier-app/src/infrastructure/command_runs.rs#L135) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:286](../crates/atelier-app/src/infrastructure/command_runs.rs#L286) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:287](../crates/atelier-app/src/infrastructure/command_runs.rs#L287) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:289](../crates/atelier-app/src/infrastructure/command_runs.rs#L289) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:1](../crates/atelier-app/src/infrastructure/data_lock.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:2](../crates/atelier-app/src/infrastructure/data_lock.rs#L2) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:3](../crates/atelier-app/src/infrastructure/data_lock.rs#L3) | <code>use rusqlite::Connection;</code> |
@@ -3895,11 +3895,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/backups.rs:485](../crates/atelier-app/src/infrastructure/backups.rs#L485) | <code>assert_eq!(store.logs("review", 0).unwrap()[1].seq, 3);</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:495](../crates/atelier-app/src/infrastructure/backups.rs#L495) | <code>.query_row::&lt;i64, _, _&gt;("SELECT COUNT(*) FROM token_vault", [], \|row\| row.get(0))</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:344](../crates/atelier-app/src/infrastructure/checked_file.rs#L344) | <code>.execute_batch("CREATE TABLE sample(value); INSERT INTO sample VALUES (42);")</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:146](../crates/atelier-app/src/infrastructure/command_runs.rs#L146) | <code>stream: &amp;'static str,</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:163](../crates/atelier-app/src/infrastructure/command_runs.rs#L163) | <code>.send((stream, text))</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:217](../crates/atelier-app/src/infrastructure/command_runs.rs#L217) | <code>while let Some((stream, text)) = receiver.recv().await {</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:220](../crates/atelier-app/src/infrastructure/command_runs.rs#L220) | <code>.call(move \|store\| runs::append(store, &amp;id, stream, &amp;text))</code> |
-| [crates/atelier-app/src/infrastructure/command_runs.rs:236](../crates/atelier-app/src/infrastructure/command_runs.rs#L236) | <code>// Preserve the actual root exit status separately from successful stream draining.</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:152](../crates/atelier-app/src/infrastructure/command_runs.rs#L152) | <code>stream: &amp;'static str,</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:169](../crates/atelier-app/src/infrastructure/command_runs.rs#L169) | <code>.send((stream, text))</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:223](../crates/atelier-app/src/infrastructure/command_runs.rs#L223) | <code>while let Some((stream, text)) = receiver.recv().await {</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:226](../crates/atelier-app/src/infrastructure/command_runs.rs#L226) | <code>.call(move \|store\| runs::append(store, &amp;id, stream, &amp;text))</code> |
+| [crates/atelier-app/src/infrastructure/command_runs.rs:242](../crates/atelier-app/src/infrastructure/command_runs.rs#L242) | <code>// Preserve the actual root exit status separately from successful stream draining.</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:63](../crates/atelier-app/src/infrastructure/data_lock.rs#L63) | <code>assert!(!root.path().join("kanban.sqlite").exists());</code> |
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:297](../crates/atelier-app/src/infrastructure/dev_servers.rs#L297) | <code>let streams = child.child.stdout.take().zip(child.child.stderr.take());</code> |
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:298](../crates/atelier-app/src/infrastructure/dev_servers.rs#L298) | <code>let Some((stdout, stderr)) = streams else {</code> |
