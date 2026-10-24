@@ -14,6 +14,12 @@ Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est va
 
 ## Stockage porté
 
+### Correction de précision des identifiants de fichiers Node — après `c613dc2`
+
+La suite Node du [runner Windows](https://github.com/FluryWaana/atelier/actions/runs/40108115590/job/120913943402) échoue dans les trois scénarios de remplacement entre validation et ouverture (session, manifeste et aperçu PR), sans changement de ces sources dans l'incrément Rust. L'inspection révèle que les comparaisons `dev`/`ino` utilisent des `Number`, qui ne représentent pas tous les identifiants 64 bits. Les lectures concernées et le helper partagé demandent maintenant des statistiques `BigInt`, conformément à [l'API Node](https://nodejs.org/docs/latest-v24.x/api/fs.html#class-fsstats), avec adaptation des masques de permissions et nombres de liens ; les contenus et messages restent inchangés.
+
+Les scénarios natifs existants sont conservés. Trois variantes injectent deux identifiants distincts au-delà de la précision des `Number` qui s'arrondissent au même nombre : le remplacement doit toujours être refusé avant lecture/appel distant, puis le descripteur fermé. Le helper de contexte agent, la configuration MCP et les aperçus asynchrones utilisent également les statistiques exactes. Ce correctif est candidat, à valider sur GitHub ; aucune exécution locale et aucune preuve POSIX nouvelle revendiquée. La cause précise des identifiants du runner précédent n'a pas été mesurée : la régression synthétique vérifie le défaut identifié dans le code.
+
 ### Reprise après `492fa78` — preuves natives et comptes
 
 La [CI `492fa78`](https://github.com/FluryWaana/atelier/actions/runs/40044528315) est entièrement réussie : cinq cibles natives et deux jobs navigateur. Journaux vérifiés pour le verrouillage Linux x64/ARM64 et macOS Intel ; avec macOS ARM64, les quatre probes POSIX démontrent maintenant refus pendant le verrouillage et conservation de la clé après déverrouillage. Cela ne prouve pas un changement de compte.

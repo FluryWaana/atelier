@@ -8,7 +8,7 @@ import { readSession } from '../lib/infrastructure/local-session.mjs';
 import { detectLaunch } from '../lib/launch-detection.mjs';
 import { previewPullRequest } from '../lib/pull-requests.mjs';
 
-for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a file replaced between validation and opening`, async t => {
+for (const largeIds of [false, true]) for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a file replaced between validation and opening${largeIds ? ' with file IDs beyond Number precision' : ''}`, async t => {
   const root = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'atelier-read-race-')));
   const name = { session: 'local-session', manifest: 'package.json', preview: 'untracked.txt' }[kind];
   const path = join(root, name);
@@ -16,6 +16,7 @@ for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a f
   fs.writeFileSync(path, content, { mode: 0o600 });
   fs.writeFileSync(path + '.replacement', content, { mode: 0o600 });
   const open = fs.openSync;
+  const lstat = fs.lstatSync, fstat = fs.fstatSync;
   let replaced = false, fd;
   t.after(() => {
     t.mock.restoreAll(); syncBuiltinESMExports();
@@ -31,6 +32,20 @@ for (const kind of ['session', 'manifest', 'preview']) test(`${kind} refuses a f
     fd = open(file, ...args);
     return fd;
   });
+  if (largeIds) {
+    const before = 2n ** 60n + 1n, after = before + 1n;
+    assert.equal(Number(before), Number(after));
+    t.mock.method(fs, 'lstatSync', (file, options) => {
+      const stat = lstat(file, options);
+      if (file === path) stat.ino = options?.bigint ? before : Number(before);
+      return stat;
+    });
+    t.mock.method(fs, 'fstatSync', (file, options) => {
+      const stat = fstat(file, options);
+      if (file === fd) stat.ino = options?.bigint ? after : Number(after);
+      return stat;
+    });
+  }
   syncBuiltinESMExports();
   if (kind === 'session') assert.throws(() => readSession(root), /session locale a changé/);
   if (kind === 'manifest') {
