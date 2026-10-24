@@ -40,6 +40,8 @@ Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full
 
 `cargo xtask test-task-editing-parity` compares edit guards, fields, review invalidation and effect order with Node. Agent launch and status synchronization in this corpus are synthetic; their success does not qualify real M04/M05 operations. Ordinary core tests require no Node runtime.
 
+`cargo xtask test-project-lifecycle-parity` compares project creation, archival and removal with Node on synthetic documents. Real SQLite rollback, concurrent duplicate creation and timer guards are checked by the prototype HTTP tests. Project settings, relocation and launch detection require their own qualification.
+
 `cargo xtask test-keyring-lock` requires `ATELIER_TEST_DISPOSABLE_KEYRING=1` on disposable Linux/macOS accounts. Linux locks the session's default collection: run only inside the isolated D-Bus/XDG session configured in Rust CI, with its synthetic password, never on a personal desktop session. macOS creates and deletes a separate temporary keychain, including its search-list entry, and never locks the default keychain. Both verify refusal while locked and preservation of the original key after unlocking.
 
 The Windows CI account-isolation step creates and removes a temporary local account on the disposable runner only. Its Rust `native-fixture keyring-account` probe checks native process SIDs, successful DPAPI access for each owning account and reciprocal refusal for the other account. Never run account provisioning on the developer's machine; the ordinary Rust test only verifies that reusing the current account cannot satisfy this probe.

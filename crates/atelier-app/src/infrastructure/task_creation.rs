@@ -33,8 +33,9 @@ impl CreationContext for Store<'_> {
         let value: JsonString = serde_json::from_str(value.get())
             .map_err(|_| CardFailure::Invalid("Texte invalide ou trop long."))?;
         let value = text_units(&value, 2000).map_err(CardFailure::Invalid)?;
+        let value = String::from_utf16_lossy(&value.0);
         // shortcut: OS diagnostics differ from Node's lstat messages; qualify them before closing M03.
-        let path = std::fs::canonicalize(String::from_utf16_lossy(&value.0))?;
+        let path = std::fs::canonicalize(if value.is_empty() { "." } else { &value })?;
         if !path.metadata()?.is_dir() {
             return Err(CardFailure::Invalid("Le dépôt doit être un dossier.").into());
         }

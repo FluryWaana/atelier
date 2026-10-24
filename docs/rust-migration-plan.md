@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — création/édition locales, duplication/archivage/suppression/modèles HTTP et chronomètres ; projets/réglages, effets distants et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — tâches locales, modèles, chronomètres et création/archivage/retrait de projets HTTP ; réglages/déplacements, effets distants et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -655,6 +655,14 @@ Prochaine action concrète :
 - **Correction :** liste `state.brainstorms`, filtre historique conservé ; parcours Node/Rust vérifiant deux cartes et un brainstorm, y compris après redémarrage Rust. Résultats complets dans M03.
 - **CI précédente :** journaux Windows/Linux x64 `0ac6993` relus, 63 éditions réussies ; Intel et édition HTTP `d86c57c` encore attendus.
 - **Suite :** poursuivre les projets puis réglages/profils et protections/intégrations M02. Interface complète des brainstorms en M07.
+
+### Incrément M03 — cycle de vie des projets
+
+- **Livré :** création, archivage des cartes d'un dépôt, retrait avec option d'archivage et `state.projects`. Mutations transactionnelles ; doublons concurrents refusés et faute de suppression annulant aussi l'archivage.
+- **Référence :** 39 opérations Node comparées, scénario HTTP Node équivalent et parcours Rust avec timer, reprise et rollback. Réglages/déplacements/détection encore indisponibles ; activité réelle M04/M06 à brancher.
+- **Vérification :** bilan détaillé dans M03. Contrôles locaux désormais séquentiels, un job Cargo/un thread de test et deux processeurs logiques en priorité basse ; Node `--test-concurrency=1`.
+- **CI recueillie :** `1c49fb4` entièrement réussi, cinq journaux natifs relus pour l'édition atomique et la séparation des brainstorms ; projets en attente de leur CI.
+- **Suite :** réglages/déplacements de projets avec sauvegarde, paramètres/profils et protections/intégrations M02 restantes.
 
 ## 12. Définition finale de terminé
 

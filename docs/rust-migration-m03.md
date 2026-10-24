@@ -114,6 +114,22 @@ La confrontation de `/api/state` à `server.mjs` a révélé que les brainstorms
 
 Contrôles complets : 68 tests Rust et Clippy natif/WASM réussis ; parcours réel Edge (WASM/CSP, création, redémarrage et relecture) réussi. Suite Node avec contrôle release : 431 tests, 428 réussis, aucun échec, trois exclusions, 85,844 s. Le frontend complet des brainstorms reste en M07 ; cet incrément corrige le contrat de données. Les journaux Windows/Linux x64 `0ac6993` sont relus et confirment les 63 éditions ; macOS Intel reste attendu, ainsi que la CI de l'édition HTTP `d86c57c`.
 
+## Création, archivage et retrait des projets — après `df8b42c`
+
+`application/projects` et ses adaptateurs portent la création de projet, l'archivage des cartes d'un dépôt et le retrait avec option d'archivage. Nom, repo, doublons et ordre des gardes sont conservés ; cartes archivées déjà présentes, champs inconnus, unités UTF-16 et historique de temps restent préservés. L'archivage d'un dépôt orphelin compare le chemin enregistré sans exiger que ce dossier existe encore. `state.projects` expose les documents comme Node.
+
+Chaque commande HTTP s'exécute dans une seule transaction du worker. Deux créations concurrentes du même dossier donnent un succès et un conflit. Un chrono actif ou un envoi `sending` empêche l'archivage ; retirer le projet sans archivage conserve les cartes. La suppression du projet et l'archivage demandé sont atomiques : un trigger de suppression en échec annule les cartes déjà archivées, sans exposer le détail de la faute SQL. Cela renforce la référence Node, dont la suppression suit la transaction d'archivage.
+
+`cargo xtask test-project-lifecycle-parity` compare 39 opérations capturées depuis `createProjects` : validation, casse par plateforme, portée d'archivage, activité/serveurs simulés, chronomètres/envois, champs additionnels/UTF-16 et faute d'écriture. Le parcours HTTP Node équivalent et le parcours Rust vérifient doublons, timer, conservation des cartes/temps, dépôt devenu absent ; Rust vérifie aussi rollback de suppression et reprises successives. Le comparateur est ajouté aux cinq cibles CI.
+
+La comparaison native révèle aussi que Node résout un chemin vide après nettoyage vers le dossier courant, alors que Rust le refusait. Le résolveur partagé conserve désormais ce comportement. Les tests HTTP Node et Rust vérifient création de projet, création et édition de carte dans un processus enfant dont le dossier courant est temporaire et synthétique, sans changer celui des autres tests.
+
+Les réglages/déplacements de projets et la détection de lancement restent à porter ; leurs routes répondent explicitement 503 pour un projet existant, 404 sinon. Les gardes de processus/serveurs sont éprouvées dans core mais restent à relier aux producteurs M04/M06 avant activation. Aucun dossier utilisateur ni fichier de dépôt n'est déplacé par ces commandes.
+
+Contrôles locaux : 71 tests Rust réussis, Clippy natif/WASM et comparateur des 39 opérations réussis. Parcours Edge réel réussi après rebuild WASM : CSP, création, redémarrage et relecture. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 433 tests, 430 réussis, aucun échec, trois exclusions, 138,020 s. Les vérifications sur ce poste suivent désormais le budget demandé : un job Cargo, un thread de test, priorité BelowNormal et deux processeurs logiques ; aucune commande lourde en parallèle. La suite Node utilise `--test-concurrency=1`. La CI distante garde sa concurrence.
+
+La [CI `1c49fb4`](https://github.com/FluryWaana/atelier/actions/runs/40100250745) est entièrement réussie. Les cinq journaux natifs confirment les scénarios HTTP d'édition atomique et de création avec séparation des brainstorms, ainsi que les 63 modifications historiques. Les CI `0ac6993` et `d86c57c` sont également terminées avec succès. La nouvelle preuve native du cycle de vie des projets reste attendue.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

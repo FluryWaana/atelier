@@ -48,5 +48,7 @@ pub struct Board {
     #[serde(default)]
     pub brainstorms: Vec<Card>,
     #[serde(default)]
+    pub projects: Vec<Document>,
+    #[serde(default)]
     pub times: Vec<Document>,
 }

@@ -56,6 +56,81 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
         .unwrap();
 }
 
+#[tokio::test]
+async fn empty_repository_paths_resolve_the_synthetic_working_directory() {
+    const CHILD: &str = "ATELIER_TEST_EMPTY_REPOSITORY";
+    if let Some(directory) = std::env::var_os(CHILD) {
+        let expected = std::fs::canonicalize(&directory).unwrap();
+        assert_eq!(
+            std::fs::canonicalize(std::env::current_dir().unwrap()).unwrap(),
+            expected
+        );
+        let data = tempfile::tempdir().unwrap();
+        let assets = tempfile::tempdir().unwrap();
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let client = reqwest::Client::new();
+        let request = |method, path: &str| {
+            client
+                .request(method, format!("{address}{path}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+        };
+        let project = request(reqwest::Method::POST, "/api/projects")
+            .json(&json!({"name":"Synthetic current directory", "repo":""}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(project.status(), 200);
+        let project: Value = project.json().await.unwrap();
+        let repo = project["repo"].as_str().unwrap();
+        assert_eq!(std::fs::canonicalize(repo).unwrap(), expected);
+        assert!(!repo.starts_with(r"\\?\"));
+        let card = request(reqwest::Method::POST, "/api/cards")
+            .json(&json!({"title":"Synthetic current directory", "repo":" \t "}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(card.status(), 200);
+        let card: Value = card.json().await.unwrap();
+        assert_eq!(card["repo"], repo);
+        let edited = request(
+            reqwest::Method::PATCH,
+            &format!("/api/cards/{}", card["id"].as_str().unwrap()),
+        )
+        .json(&json!({"repo":" \t "}))
+        .send()
+        .await
+        .unwrap();
+        assert_eq!(edited.status(), 200);
+        assert_eq!(edited.json::<Value>().await.unwrap()["repo"], repo);
+        stop(&address, &token, task).await;
+    } else {
+        // Isolate cwd in a child so concurrent tests cannot observe a process-wide directory change.
+        let directory = tempfile::tempdir().unwrap();
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--exact",
+                "empty_repository_paths_resolve_the_synthetic_working_directory",
+                "--nocapture",
+            ])
+            .current_dir(directory.path())
+            .env(CHILD, directory.path());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let output = command.output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
 async fn next_event(response: &mut reqwest::Response, buffered: &mut String) -> String {
     tokio::time::timeout(Duration::from_secs(17), async {
         loop {
@@ -335,6 +410,202 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
             .status(),
         404
     );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
+async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival_with_deletion() {
+    use atelier_core::{
+        contracts::Board,
+        document::{Document, JsonString},
+    };
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let repositories = tempfile::tempdir().unwrap();
+    let repo = repositories.path().join("project");
+    std::fs::create_dir(&repo).unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let request = |method, path: &str| {
+        client
+            .request(method, format!("{address}{path}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let mut body = Document::default();
+    body.set("name", &JsonString(vec![0xd800])).unwrap();
+    body.set("repo", &repo).unwrap();
+    let (first, second) = tokio::join!(
+        request(reqwest::Method::POST, "/api/projects")
+            .json(&body)
+            .send(),
+        request(reqwest::Method::POST, "/api/projects")
+            .json(&body)
+            .send()
+    );
+    let mut project = None;
+    for response in [first.unwrap(), second.unwrap()] {
+        if response.status() == 200 {
+            assert!(project.is_none());
+            project = Some(response.json::<Document>().await.unwrap());
+        } else {
+            assert_eq!(response.status(), 409);
+        }
+    }
+    let project = project.unwrap();
+    let id = project.get::<String>("id").unwrap().unwrap();
+    let repo_string = project.get::<String>("repo").unwrap().unwrap();
+    assert_eq!(
+        project.get::<JsonString>("name").unwrap(),
+        Some(JsonString(vec![0xd800]))
+    );
+    let mut cards = Vec::new();
+    for title in ["First", "Second"] {
+        let response = request(reqwest::Method::POST, "/api/cards")
+            .json(&json!({"title":title,"repo":repo}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+        cards.push(response.json::<Card>().await.unwrap());
+    }
+    let timer = request(reqwest::Method::POST, "/api/time").json(&json!({"cardId":cards[0].id,"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":"synthetic","start":true})).send().await.unwrap();
+    assert_eq!(timer.status(), 200);
+    let timer: Value = timer.json().await.unwrap();
+    assert_eq!(
+        request(reqwest::Method::DELETE, &format!("/api/projects/{id}"))
+            .json(&json!({"archiveTasks":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, "/api/projects/archive-tasks")
+            .json(&json!({"repo":repo_string}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    for (method, path) in [
+        (reqwest::Method::PATCH, format!("/api/projects/{id}")),
+        (
+            reqwest::Method::GET,
+            format!("/api/projects/{id}/detect-launch"),
+        ),
+    ] {
+        assert_eq!(
+            request(method, &path)
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            503
+        );
+    }
+    assert_eq!(
+        request(
+            reqwest::Method::POST,
+            &format!("/api/time/{}/stop", timer["id"].as_str().unwrap())
+        )
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        200
+    );
+    stop(&address, &token, task).await;
+    {
+        let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();
+        injection.execute_batch("CREATE TRIGGER reject_project_deletion BEFORE DELETE ON projects BEGIN SELECT RAISE(ABORT, 'private synthetic deletion failure'); END;").unwrap();
+    }
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let response = client
+        .delete(format!("{address}/api/projects/{id}"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"archiveTasks":true}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 500);
+    assert_eq!(
+        response.json::<Value>().await.unwrap(),
+        json!({"error":"Modification du projet impossible."})
+    );
+    let board: Board = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board.projects.len(), 1);
+    assert_eq!(board.cards.len(), 2);
+    assert_eq!(board.times.len(), 1);
+    for card in &board.cards {
+        assert!(!card.fields.truthy("archived").unwrap());
+    }
+    assert_eq!(
+        board.projects[0].get::<JsonString>("name").unwrap(),
+        Some(JsonString(vec![0xd800]))
+    );
+    stop(&address, &token, task).await;
+    {
+        let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();
+        injection
+            .execute_batch("DROP TRIGGER reject_project_deletion")
+            .unwrap();
+    }
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let response = client
+        .delete(format!("{address}/api/projects/{id}"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"archiveTasks":true}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(
+        response.json::<Value>().await.unwrap(),
+        json!({"ok":true,"archived":2})
+    );
+    std::fs::rename(&repo, repositories.path().join("moved-synthetic-directory")).unwrap();
+    let response = client
+        .post(format!("{address}/api/projects/archive-tasks"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"repo":repo_string}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.json::<Value>().await.unwrap(), json!({"count":2}));
+    stop(&address, &token, task).await;
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let board: Board = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(board.projects.is_empty());
+    assert_eq!(board.cards.len(), 2);
+    assert_eq!(board.times.len(), 1);
+    for card in &board.cards {
+        assert!(card.fields.truthy("archived").unwrap());
+    }
     stop(&address, &token, task).await;
 }
 
@@ -1020,7 +1291,10 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .json()
         .await
         .unwrap();
-    assert_eq!(board, json!({"cards":[card], "brainstorms":[], "times":[]}));
+    assert_eq!(
+        board,
+        json!({"cards":[card], "brainstorms":[], "projects":[], "times":[]})
+    );
     stop(&address, &next_token, task).await;
 }
 

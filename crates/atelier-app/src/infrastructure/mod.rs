@@ -5,6 +5,7 @@ pub mod database;
 pub mod installation;
 pub mod local_http;
 pub mod portable_import;
+pub mod projects;
 pub mod prototype;
 mod publish;
 pub mod session;

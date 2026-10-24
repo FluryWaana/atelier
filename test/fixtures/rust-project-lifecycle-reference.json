@@ -1,0 +1,2850 @@
+[
+  {
+    "action": "create",
+    "body": {
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": null,
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "",
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Un nom de projet est nécessaire.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": " ",
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Un nom de projet est nécessaire.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": " \ud800 ",
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "new-project",
+        "name": "\ud800",
+        "repo": "checked:new"
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        },
+        {
+          "id": "new-project",
+          "name": "\ud800",
+          "repo": "checked:new"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "new-project",
+        "name": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+        "repo": "checked:new"
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        },
+        {
+          "id": "new-project",
+          "name": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+          "repo": "checked:new"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧",
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "New",
+      "repo": "repo"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Ce répertoire figure déjà dans les projets.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "New"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "New",
+      "repo": false
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "New",
+      "repo": "REPO"
+    },
+    "windows": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Ce répertoire figure déjà dans les projets.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "create",
+    "body": {
+      "name": "New",
+      "repo": "REPO"
+    },
+    "windows": false,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "new-project",
+        "name": "New",
+        "repo": "checked:REPO"
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        },
+        {
+          "id": "new-project",
+          "name": "New",
+          "repo": "checked:REPO"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {},
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": null
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": ""
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Répertoire requis.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": " "
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Répertoire requis.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": " checked:repo "
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "absent"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 0
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "times": [
+      {
+        "cardId": "card",
+        "runningSince": "now"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "times": [
+      {
+        "cardId": "card",
+        "exportState": "sending"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "times": [
+      {
+        "cardId": "card",
+        "exportState": "uncertain"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "times": [
+      {
+        "cardId": true,
+        "runningSince": "now"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "times": [
+      {
+        "cardId": "other",
+        "runningSince": "now"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "active": [
+      "archived"
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "projects": [],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "count": 2
+      },
+      "projects": [],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "archive",
+    "body": {
+      "repo": "checked:repo"
+    },
+    "failCard": "archived",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Synthetic card write failure",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {},
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "ok": true,
+        "archived": 0
+      },
+      "projects": [],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": null
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Option d’archivage invalide.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": false
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "ok": true,
+        "archived": 0
+      },
+      "projects": [],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": true
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "ok": true,
+        "archived": 2
+      },
+      "projects": [],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": 1
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Option d’archivage invalide.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": "true"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Option d’archivage invalide.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {},
+    "id": "missing",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Projet introuvable.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": true
+    },
+    "active": [
+      "card"
+    ],
+    "running": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Attends la fin des opérations du projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": "invalid"
+    },
+    "running": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les serveurs Front / Back de ce projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": true
+    },
+    "times": [
+      {
+        "cardId": "card",
+        "runningSince": "now"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": false
+    },
+    "times": [
+      {
+        "cardId": "card",
+        "runningSince": "now"
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "ok": true,
+        "archived": 0
+      },
+      "projects": [],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  },
+  {
+    "action": "remove",
+    "body": {
+      "archiveTasks": true
+    },
+    "failCard": "archived",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Synthetic card write failure",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ]
+    }
+  }
+]

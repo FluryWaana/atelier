@@ -24,6 +24,7 @@ use tower_http::services::ServeFile;
 
 mod card_lifecycle;
 mod events;
+mod projects;
 mod task_creation;
 mod task_editing;
 mod task_templates;
@@ -161,6 +162,7 @@ async fn board(State(state): State<Shared>) -> Response {
             Ok(Board {
                 cards,
                 brainstorms,
+                projects: store.documents(Documents::Projects)?,
                 times: store.documents(Documents::Times)?,
             })
         })
@@ -296,6 +298,16 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}", any(time_tracking::entry))
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
+        .route("/api/projects", post(projects::create))
+        .route("/api/projects/archive-tasks", post(projects::archive))
+        .route(
+            "/api/projects/{id}",
+            axum::routing::delete(projects::remove).patch(projects::unavailable),
+        )
+        .route(
+            "/api/projects/{id}/detect-launch",
+            get(projects::unavailable).post(projects::unavailable),
+        )
         .route("/api/cards", post(task_creation::create))
         .route("/api/brainstorms", post(task_creation::create))
         .route("/api/templates", post(task_templates::create))
