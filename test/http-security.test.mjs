@@ -144,6 +144,40 @@ test('update restarts preserve the browser session without allowing anonymous ac
   assert.notEqual((await context.restart()).authToken, token);
 });
 
+test('backup HTTP routes require idle timers and confirmation, preserve a rescue and pause the restored queue', async t => {
+  const context = await fixture(t);
+  const { request, app } = context;
+  const created = await request('/api/cards', 'POST', { title: 'Saved task' });
+  assert.equal(created.status, 200);
+  const saved = await request('/api/backups', 'POST', {});
+  assert.equal(saved.status, 200);
+  assert.equal((await request('/api/backups')).body.backups.length, 1);
+  assert.equal((await request('/api/backups/restore', 'POST', { name: saved.body.name, confirmed: 'true' })).status, 400);
+  assert.equal((await request('/api/backups/restore', 'POST', { name: '../kanban.sqlite', confirmed: true })).status, 400);
+  assert.equal((await request('/api/cards/' + created.body.id, 'PATCH', { title: 'Current task' })).status, 200);
+  const timer = await request('/api/time', 'POST', { cardId: created.body.id, start: true, seconds: 0, date: '2026-10-24', startTime: '09:00:00', description: 'Synthetic' });
+  assert.equal(timer.status, 200);
+  for (const path of ['/api/backups', '/api/backups/restore']) {
+    const refused = await request(path, 'POST', {});
+    assert.equal(refused.status, 409);
+    assert.match(refused.body.error, /chronomètres/);
+  }
+  assert.equal((await request('/api/time/' + timer.body.id + '/stop', 'POST', {})).status, 200);
+  const restored = await request('/api/backups/restore', 'POST', { name: saved.body.name, confirmed: true });
+  assert.equal(restored.status, 200);
+  assert.equal(restored.body.restored, saved.body.name);
+  assert.notEqual(restored.body.rescue, saved.body.name);
+  const state = (await request('/api/state')).body;
+  assert.equal(state.cards[0].title, 'Saved task');
+  assert.equal(state.queue.paused, true);
+  assert.equal(state.queue.message, 'File en pause ; la tâche active peut se terminer.');
+  assert.equal(state.times.length, 0);
+  const rescue = new DatabaseSync(join(context.dataDir, 'backups', restored.body.rescue), { readOnly: true });
+  try { assert.equal(JSON.parse(rescue.prepare('SELECT data FROM cards WHERE id=?').get(created.body.id).data).title, 'Current task'); }
+  finally { rescue.close(); }
+  assert.equal(app.store.settings().credentialsReset, true);
+});
+
 test('restoration clears persisted credentials and environment fallback after restart', async t => {
   const sent = [];
   const environmentToken = process.env.JIRA_TOKEN;

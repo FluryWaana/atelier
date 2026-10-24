@@ -58,6 +58,201 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
 
 #[cfg(windows)]
 #[tokio::test]
+async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transaction() {
+    use atelier_app::infrastructure::token_vault;
+    for fault in [false, true] {
+        let data = tempfile::tempdir().unwrap();
+        let assets = tempfile::tempdir().unwrap();
+        let directory = PrototypeDirectory::open(data.path()).unwrap();
+        let database = Database::open(&directory.path.join("kanban.sqlite")).unwrap();
+        database
+            .call(|store| {
+                store.save_settings(
+                    &json!({"taskQueue":{"ids":[],"paused":true,"future":"preserved"}}),
+                )
+            })
+            .await
+            .unwrap();
+        database.close().await.unwrap();
+        drop(database);
+        drop(directory);
+        if fault {
+            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_queue BEFORE UPDATE ON settings WHEN json_extract(NEW.data,'$.taskQueue.message')='File en pause ; la tâche active peut se terminer.' BEGIN SELECT RAISE(ABORT, 'private synthetic queue failure'); END;").unwrap();
+        }
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let client = reqwest::Client::new();
+        let request = |method, path: &str| {
+            client
+                .request(method, format!("{address}{path}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+        };
+        let post = |path: &str| request(reqwest::Method::POST, path);
+        assert_eq!(
+            request(reqwest::Method::PUT, "/api/settings")
+                .json(&json!({"token":"synthetic-old","baseBranch":"saved"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        let card: Value = post("/api/cards")
+            .json(&json!({"title":"Saved task"}))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        let id = card["id"].as_str().unwrap();
+        let saved: Value = post("/api/backups")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        let name = saved["name"].as_str().unwrap();
+        let catalog: Value = request(reqwest::Method::GET, "/api/backups")
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(catalog["backups"].as_array().unwrap().len(), 1);
+        for body in [
+            json!({"name":name,"confirmed":"true"}),
+            json!({"name":"../kanban.sqlite","confirmed":true}),
+            json!({"name":null,"confirmed":true}),
+        ] {
+            assert_eq!(
+                post("/api/backups/restore")
+                    .json(&body)
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                400
+            );
+        }
+        assert_eq!(
+            request(reqwest::Method::PATCH, &format!("/api/cards/{id}"))
+                .json(&json!({"title":"Current task"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        assert_eq!(
+            request(reqwest::Method::PUT, "/api/settings")
+                .json(&json!({"token":"synthetic-current","baseBranch":"current"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        let timer: Value = post("/api/time").json(&json!({"cardId":id,"start":true,"seconds":0,"date":"2026-10-24","startTime":"09:00:00","description":"Synthetic"})).send().await.unwrap().json().await.unwrap();
+        let timer_id = timer["id"].as_str().unwrap();
+        for path in ["/api/backups", "/api/backups/restore"] {
+            let response = post(path).json(&json!({})).send().await.unwrap();
+            assert_eq!(response.status(), 409);
+            assert!(response.text().await.unwrap().contains("chronomètres"));
+        }
+        assert_eq!(
+            post(&format!("/api/time/{timer_id}/stop"))
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        let restored = post("/api/backups/restore")
+            .json(&json!({"name":name,"confirmed":true}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(restored.status(), if fault { 500 } else { 200 });
+        let restored: Value = restored.json().await.unwrap();
+        let state: Value = request(reqwest::Method::GET, "/api/state")
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        if fault {
+            assert_eq!(
+                restored,
+                json!({"error":"Opération de sauvegarde impossible."})
+            );
+            assert_eq!(state["cards"][0]["title"], "Current task");
+            assert_eq!(state["settings"]["baseBranch"], "current");
+            assert_eq!(state["settings"]["tokenSet"], true);
+            assert!(state["settings"].get("credentialsReset").is_none());
+            assert!(state["settings"]["taskQueue"].get("message").is_none());
+            assert_eq!(state["times"].as_array().unwrap().len(), 1);
+        } else {
+            assert_eq!(restored["restored"], name);
+            assert_ne!(restored["rescue"], name);
+            assert_eq!(state["cards"][0]["title"], "Saved task");
+            assert_eq!(state["settings"]["baseBranch"], "saved");
+            assert_eq!(state["settings"]["tokenSet"], false);
+            assert_eq!(state["settings"]["credentialsReset"], true);
+            assert_eq!(
+                state["settings"]["taskQueue"],
+                json!({"ids":[],"paused":true,"future":"preserved","message":"File en pause ; la tâche active peut se terminer."})
+            );
+            assert_eq!(state["times"].as_array().unwrap().len(), 0);
+            let rescue = rusqlite::Connection::open_with_flags(
+                data.path()
+                    .join("backups")
+                    .join(restored["rescue"].as_str().unwrap()),
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            )
+            .unwrap();
+            let source: String = rescue
+                .query_row("SELECT data FROM cards WHERE id=?", [id], |row| row.get(0))
+                .unwrap();
+            assert_eq!(
+                serde_json::from_str::<Value>(&source).unwrap()["title"],
+                "Current task"
+            );
+        }
+        stop(&address, &token, task).await;
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let state: Value = client
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(state["settings"]["tokenSet"], fault);
+        stop(&address, &token, task).await;
+        let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+        let encrypted = database.call(token_vault::read_encrypted).await.unwrap();
+        assert_eq!(encrypted.is_some(), fault);
+        if let Some(encrypted) = encrypted {
+            assert!(
+                session::protect(&encrypted, true)
+                    .unwrap()
+                    .contains("synthetic-current")
+            );
+        }
+        database.close().await.unwrap();
+    }
+}
+
+#[cfg(windows)]
+#[tokio::test]
 async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_failure() {
     use atelier_app::infrastructure::token_vault;
     use atelier_core::document::Document;

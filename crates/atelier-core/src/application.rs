@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub mod agent_providers;
+pub mod backups;
 pub mod card_lifecycle;
 pub mod projects;
 pub mod settings;

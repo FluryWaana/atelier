@@ -3,7 +3,7 @@ use super::{
     store::{Documents, Store},
 };
 use crate::Result;
-use atelier_core::document::{Document, JsonString};
+use atelier_core::{application::backups::BackupFailure, document::Document};
 use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
 use rusqlite::{Connection, OpenFlags, params};
@@ -124,14 +124,24 @@ impl BackupDirectory {
     }
 
     pub fn restore(&self, store: &Store<'_>, name: &str) -> Result<RestoredBackup> {
+        self.restore_with(store, name, |_| Ok(()))
+    }
+
+    pub fn restore_with(
+        &self,
+        store: &Store<'_>,
+        name: &str,
+        after: impl FnOnce(&Store<'_>) -> Result<()>,
+    ) -> Result<RestoredBackup> {
         if !valid_name(name) || !self.list()?.iter().any(|backup| backup.name == name) {
-            return Err("Sauvegarde locale introuvable.".into());
+            return Err(BackupFailure::Invalid("Sauvegarde locale introuvable.").into());
         }
         let rescue = new_name()?;
         restore_checked(
             store,
             CheckedFile::open_in(&self.handle, Path::new(name))?,
             || store.backup_in(&self.handle, Path::new(&rescue)),
+            after,
         )?;
         Ok(RestoredBackup {
             restored: name.into(),
@@ -162,33 +172,6 @@ fn documents(source: &Connection, table: Documents) -> Result<Vec<SavedDocument>
     .collect()
 }
 
-fn automation_fields(raw: &serde_json::value::RawValue) -> Result<Document> {
-    let mut document = Document::default();
-    match raw.get().as_bytes().first() {
-        Some(b'{') => return Ok(serde_json::from_str(raw.get())?),
-        Some(b'[') => {
-            for (index, value) in
-                serde_json::from_str::<Vec<Box<serde_json::value::RawValue>>>(raw.get())?
-                    .iter()
-                    .enumerate()
-            {
-                document.set(&index.to_string(), value)?;
-            }
-        }
-        Some(b'"') => {
-            for (index, unit) in serde_json::from_str::<JsonString>(raw.get())?
-                .0
-                .into_iter()
-                .enumerate()
-            {
-                document.set(&index.to_string(), &JsonString(vec![unit]))?;
-            }
-        }
-        _ => {}
-    }
-    Ok(document)
-}
-
 pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
     let directory = Dir::open_ambient_dir(
         source.parent().ok_or("Dossier de sauvegarde absent.")?,
@@ -198,20 +181,21 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
         &directory,
         Path::new(source.file_name().ok_or("Nom de sauvegarde absent.")?),
     )?;
-    restore_checked(store, source, || store.backup(rescue))
+    restore_checked(store, source, || store.backup(rescue), |_| Ok(()))
 }
 
 fn restore_checked(
     store: &Store<'_>,
     checked: CheckedFile,
     rescue: impl FnOnce() -> Result<()>,
+    after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
     let mut snapshot = tempfile::NamedTempFile::new()?;
     checked.copy_to(snapshot.as_file_mut())?;
     let source = Connection::open_with_flags(snapshot.path(), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
-        return Err("Sauvegarde endommagée.".into());
+        return Err(BackupFailure::Invalid("Sauvegarde endommagée.").into());
     }
     let projects = documents(&source, Documents::Projects)?;
     let cards = documents(&source, Documents::Cards)?;
@@ -235,20 +219,20 @@ fn restore_checked(
             false
         };
         if !same {
-            return Err("Restauration refusée : des envois Tempo plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.".into());
+            return Err(BackupFailure::Invalid("Restauration refusée : des envois Tempo plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.").into());
         }
     }
     let unfinished = "Cette sauvegarde contient des opérations inachevées.";
     for run in &runs {
         if run.value.string_equals("status", "running")? {
-            return Err(unfinished.into());
+            return Err(BackupFailure::Invalid(unfinished).into());
         }
     }
     for card in &cards {
         if let Some(raw) = card.value.raw("automation")
-            && automation_fields(raw)?.string_equals("state", "running")?
+            && Document::spread(raw)?.string_equals("state", "running")?
         {
-            return Err(unfinished.into());
+            return Err(BackupFailure::Invalid(unfinished).into());
         }
     }
     for time in times.values() {
@@ -256,7 +240,7 @@ fn restore_checked(
             || time.string_equals("exportState", "sending")?
             || time.string_equals("exportState", "uncertain")?
         {
-            return Err(unfinished.into());
+            return Err(BackupFailure::Invalid(unfinished).into());
         }
     }
     let mut statement = source.prepare("SELECT seq,runId,stream,text FROM logs ORDER BY seq")?;
@@ -300,7 +284,7 @@ fn restore_checked(
         }
         for mut card in store.documents::<Document>(Documents::Cards)? {
             if card.truthy("automation")? {
-                let mut automation = automation_fields(card.raw("automation").ok_or("Automatisation absente.")?)?;
+                let mut automation = Document::spread(card.raw("automation").ok_or("Automatisation absente.")?)?;
                 automation.set("state", &"interrupted")?;
                 automation.set("step", &"tests")?;
                 automation.set("message", &"Données restaurées : reprends les vérifications et la review sur le worktree actuel.")?;
@@ -309,7 +293,7 @@ fn restore_checked(
                 store.put(Documents::Cards, &card)?;
             }
         }
-        Ok(())
+        after(store)
     })
 }
 

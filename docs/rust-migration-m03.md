@@ -1,5 +1,13 @@
 # M03 — Règles et API métier
 
+## API de sauvegarde — candidat après `fbfac16`
+
+GET/POST `/api/backups` et POST `/api/backups/restore` réutilisent le répertoire ancré M02. Gardes métier, confirmation strictement booléenne et messages sont confrontés à `server.mjs`, `lib/backups.mjs` et `lib/task-queue.mjs`. Le contrôle des chronomètres/envois et l'opération restent dans un seul travail SQLite : une mutation concurrente ne peut pas s'intercaler entre contrôle et snapshot/restauration. Les réservations de fournisseurs, processus, connecteurs et file active restent à raccorder avec leurs producteurs M04–M06 ; ces opérations ne sont pas activées dans le prototype.
+
+La restauration conserve la sauvegarde de secours et inclut maintenant la remise en pause de la file dans sa transaction, avec l'invalidation des jetons, reviews et automatisations. La référence Node remet sa file en pause après le commit : Rust renforce l'atomicité en annulant aussi le remplacement des cartes et l'effacement du coffre si cette dernière écriture échoue. Il n'existe pas encore de cache de jetons à purger en mémoire. Le helper de spread JSON déjà présent dans la restauration est déplacé dans `Document` et réutilisé pour préserver les champs inconnus et UTF-16 de la file.
+
+Nouveaux scénarios à vérifier en CI Windows : parcours HTTP Node/Rust avec liste, confirmation, noms sortants, chrono actif, sauvegarde de secours et état restauré ; côté Rust, panne SQL injectée à la dernière écriture de la file, conservation des secrets courants et réouverture. Les erreurs métier gardent 400/409 ; une faute d'I/O/SQL interne reçoit un 500 générique, sans détail privé, au lieu du diagnostic brut 400 de Node. JSON de sauvegarde invalide reçoit un 400 générique. Aucun contrôle exécuté sur le poste.
+
 ## Validation des saisies de temps — base `de8083a`
 
 `domain/time.rs` porte `lib/domain/time.mjs` sans dépendance supplémentaire. Les durées gardent les conversions JSON observables de `Number` (chaînes décimales/exponentielles/radix, booléens et tableaux), la borne 1–86 400 et l'ordre des erreurs. Les dates grégoriennes incluent l'année zéro et les siècles bissextiles ; une date hors plage conserve même l'erreur historique `Invalid time value`. Les heures restent au format strict `HH:mm:ss`.

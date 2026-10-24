@@ -173,6 +173,32 @@ impl Document {
         }
     }
 
+    pub fn spread(raw: &RawValue) -> serde_json::Result<Self> {
+        let mut document = Self::default();
+        match raw.get().as_bytes().first() {
+            Some(b'{') => return serde_json::from_str(raw.get()),
+            Some(b'[') => {
+                for (index, value) in serde_json::from_str::<Vec<Box<RawValue>>>(raw.get())?
+                    .iter()
+                    .enumerate()
+                {
+                    document.set(&index.to_string(), value)?;
+                }
+            }
+            Some(b'"') => {
+                for (index, unit) in serde_json::from_str::<JsonString>(raw.get())?
+                    .0
+                    .into_iter()
+                    .enumerate()
+                {
+                    document.set(&index.to_string(), &JsonString(vec![unit]))?;
+                }
+            }
+            _ => {}
+        }
+        Ok(document)
+    }
+
     pub fn remove(&mut self, key: &str) {
         let key = JsonString::from(key);
         self.0.retain(|(name, _)| name != &key);
