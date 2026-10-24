@@ -109,6 +109,10 @@ C20, incrément après `de8083a` : validation pure des saisies de temps portée 
 | U10 · M01/M07/M10 | SCSS/CSS/images/Bootstrap : `styles/`, `public/style.css`, icônes ; CSP et liste blanche assets dans serveur | `static-assets`, `http-security`, `ui-composition` ; build CSS | WASM sous CSP sans ouverture générale, navigation sans ressource privée, fontes/icônes/couleurs, build sans npm ; comparaison visuelle | Ressources conservées, Sass autonome ; à faire |
 | R01 · M00/M11 | Référence et doubles : `test/helpers/`, `test/fixtures/migration-*`, `scripts/rust-migration-{inventory,baseline}.mjs` | `rust-migration-reference`, scénarios nommés de l'inventaire | Sources/tests oubliés, fixture non déterministe, secret réel, runner absent ; portage ou retrait justifié après équivalence | Tests Rust/fixtures historiques ; à faire |
 
+## Preuves M02 après `492fa78`
+
+La CI native de `492fa78` a réussi sur les cinq cibles. Les journaux Linux x64/ARM64 et macOS x64/ARM64 prouvent le refus des coffres verrouillés et la conservation de la clé après déverrouillage. Le nouveau probe DPAPI vérifie les SID natifs, les contrôles positifs et le refus entre deux comptes dans les deux directions ; son exécution entre comptes reste attendue en CI. Son test local refuse explicitement deux exécutions sous le même compte. Aucun de ces résultats ne ferme les courses de chemins ou les intégrations restantes ; voir [le relevé M02](rust-migration-m02.md).
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

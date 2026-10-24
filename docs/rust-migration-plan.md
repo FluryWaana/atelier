@@ -159,7 +159,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
-| M02 | M01 | Données, secrets et session compatibles | En cours — aller-retour synthétique ; chaînes UTF-16 isolées, courses de chemins et refus natifs des coffres encore ouverts |
+| M02 | M01 | Données, secrets et session compatibles | En cours — aller-retour UTF-16 et refus des coffres verrouillés prouvés ; changements de compte, courses de chemins et intégrations restantes ouverts |
 | M03 | M02 | Domaine et API métier équivalents | En cours — règles pures et duplication HTTP ; autres cas d'usage/API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
@@ -518,6 +518,13 @@ Prochaine action concrète :
 - **Vérification :** 44 tests Rust réussis, 305 contrats Node/Rust comparés (246 précédents inchangés), Clippy natif/WASM propre ; suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 82,01 s ; inventaire vérifié.
 - **CI coffres :** macOS ARM64 réussit le scénario verrouillé. Linux signale `items_after_test_module` avant le probe ; déplacement du module et contrôle croisé `--all-targets` corrigent cet écart, sans désactivation de Clippy. Reprise Linux et macOS Intel encore attendues au relevé.
 - **Suite :** cas d'usage/chronomètres/routes de temps, autres opérations métier et preuves M02 restantes. La validation pure ne qualifie pas leurs transactions ou concurrence.
+
+### Incrément M02 — isolation DPAPI entre comptes, après `492fa78`
+
+- **Preuves recueillies :** CI `492fa78` entièrement réussie ; refus des coffres verrouillés Linux x64/ARM64 et macOS x64/ARM64 vérifiés dans les journaux natifs.
+- **Livré :** probe Windows à deux comptes jetables, identités natives et contrôles positifs, refus réciproque et conservation du chiffré initial. Provisionnement exclusivement sur le runner CI.
+- **Vérification locale :** 45 tests Rust réussis ; Clippy natif tous targets ; syntaxe PowerShell du scénario vérifiée sans provisionnement local ; suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions documentées, 79,673 s.
+- **Attendu :** exécution Windows entre comptes en CI. Les preuves POSIX entre comptes, courses de chemins et intégrations M02 restent ouvertes.
 
 ## 12. Définition finale de terminé
 

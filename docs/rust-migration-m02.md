@@ -4,6 +4,16 @@ Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est va
 
 ## Stockage porté
 
+### Reprise après `492fa78` — preuves natives et comptes
+
+La [CI `492fa78`](https://github.com/FluryWaana/atelier/actions/runs/40044528315) est entièrement réussie : cinq cibles natives et deux jobs navigateur. Journaux vérifiés pour le verrouillage Linux x64/ARM64 et macOS Intel ; avec macOS ARM64, les quatre probes POSIX démontrent maintenant refus pendant le verrouillage et conservation de la clé après déverrouillage. Cela ne prouve pas un changement de compte.
+
+`xtask/tests/support/keyring_windows.rs` ajoute cette dernière preuve pour DPAPI : identité réelle lue dans le token de processus, contrôle positif pour chaque compte, refus croisé dans les deux directions et relecture finale du chiffré initial. Rejouer le probe sous le même compte échoue explicitement et ne crée pas de résultat « autre compte ». Le compte temporaire et le dossier de partage appartiennent uniquement au runner Windows jetable ; aucune création de compte locale. Le script CI vérifie les codes de sortie, borne le processus à 30 s, puis supprime le compte et son dossier de fixture.
+
+Décision conforme au périmètre utilisateur de [CryptProtectData](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata), sans `CRYPTPROTECT_LOCAL_MACHINE`. [Start-Process](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process) charge le profil du compte de test et garde sa fenêtre cachée ; les identifiants ne sont ni écrits dans les arguments ni affichés. Le probe ne lit que ses chiffrés synthétiques, jamais les secrets du compte courant. Le résultat Windows entre comptes reste attendu en CI ; POSIX entre comptes et courses de chemins restent ouverts.
+
+Contrôles locaux de cet incrément : 45 tests Rust réussis, Clippy natif tous targets, syntaxe du script PowerShell vérifiée sans exécution du provisionnement ; suite Node avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, aucun échec, trois exclusions documentées, 79,673 s. Les journaux restent dans `.artifacts/rust-m02-account-*`, ignorés.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

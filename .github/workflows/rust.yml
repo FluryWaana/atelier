@@ -37,6 +37,50 @@ jobs:
         run: cargo xtask test-domain-parity
         env:
           ATELIER_NODE: node
+      - name: Native DPAPI isolation between disposable Windows accounts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $name = 'atelier' + [Guid]::NewGuid().ToString('N').Substring(0, 10)
+          $probeBase = [IO.Path]::GetFullPath([Environment]::GetFolderPath('CommonDocuments'))
+          $probeRoot = Join-Path $probeBase ('atelier-keyring-' + [Guid]::NewGuid().ToString('N'))
+          $source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'
+          $probeUser = $null
+          $probeProcess = $null
+          $created = $false
+          try {
+            New-Item -ItemType Directory -Path $probeRoot | Out-Null
+            $created = $true
+            Set-Content -LiteralPath (Join-Path $probeRoot '.keyring-fixture') -Value 'atelier-m02-synthetic-keyring' -NoNewline
+            $probeExecutable = Join-Path $probeRoot 'fixture.exe'
+            Copy-Item -LiteralPath $source -Destination $probeExecutable
+            $password = ConvertTo-SecureString ([Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)) + 'aA1!') -AsPlainText -Force
+            $probeUser = New-LocalUser -Name $name -Password $password -AccountNeverExpires
+            Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $probeUser
+            & icacls.exe $probeRoot /grant "*$($probeUser.SID.Value):(OI)(CI)M" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }
+            Push-Location $probeRoot
+            try {
+              & $probeExecutable keyring-account prepare
+              if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }
+              $credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)
+              $probeProcess = Start-Process -FilePath $probeExecutable -ArgumentList 'keyring-account other' -WorkingDirectory $probeRoot -Credential $credential -LoadUserProfile -WindowStyle Hidden -PassThru
+              if (-not $probeProcess.WaitForExit(30000)) { throw 'DPAPI other-account deadline exceeded' }
+              $probeProcess.Refresh()
+              if ($probeProcess.ExitCode -ne 0) { throw 'DPAPI other-account control failed' }
+              & $probeExecutable keyring-account verify
+              if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }
+            } finally { Pop-Location }
+          } finally {
+            if ($probeProcess -and -not $probeProcess.HasExited) { $probeProcess.Kill(); $probeProcess.WaitForExit() }
+            if ($probeUser) { Remove-LocalUser -SID $probeUser.SID }
+            if ($created) {
+              $resolved = [IO.Path]::GetFullPath($probeRoot)
+              if ([IO.Path]::GetDirectoryName($resolved) -ne $probeBase -or [IO.Path]::GetFileName($resolved) -notlike 'atelier-keyring-*') { throw 'Unexpected fixture cleanup path' }
+              Remove-Item -LiteralPath $resolved -Recurse -Force
+            }
+          }
       - name: Install isolated Linux keyring prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb

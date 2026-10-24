@@ -9,6 +9,10 @@ use std::{
 mod windows;
 
 #[cfg(windows)]
+#[path = "../../tests/support/keyring_windows.rs"]
+mod keyring_windows;
+
+#[cfg(windows)]
 #[path = "../../tests/support/tray.rs"]
 mod tray;
 
@@ -29,6 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        #[cfg(windows)]
+        ["keyring-account", phase] => keyring_windows::probe(&std::env::current_dir()?, phase),
         ["keyring-echo"] => {
             std::io::copy(&mut io::stdin(), &mut io::stdout())?;
             Ok(())
@@ -102,7 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
         _ => Err(
-            "Native test fixture only: idle | family | worker DIRECTORY PID CREATION_TIME | tray"
+            "Native test fixture only: idle | family | worker DIRECTORY PID CREATION_TIME | tray | keyring-account PHASE"
                 .into(),
         ),
     }
