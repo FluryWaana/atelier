@@ -99,6 +99,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/backups.rs](../crates/atelier-ui/src/backups.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/live.rs](../crates/atelier-ui/src/live.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/projects.rs](../crates/atelier-ui/src/projects.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -1576,6 +1577,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
 | [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Document", "HtmlElement", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent", "EventSource", "MessageEvent"] }</code> |
+| [crates/atelier-ui/src/backups.rs:1](../crates/atelier-ui/src/backups.rs#L1) | <code>use crate::{field, live::BoardState, read, write};</code> |
+| [crates/atelier-ui/src/backups.rs:2](../crates/atelier-ui/src/backups.rs#L2) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-ui/src/backups.rs:3](../crates/atelier-ui/src/backups.rs#L3) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/backups.rs:4](../crates/atelier-ui/src/backups.rs#L4) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/backups.rs:5](../crates/atelier-ui/src/backups.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/backups.rs:20](../crates/atelier-ui/src/backups.rs#L20) | <code>pub fn Backups(</code> |
 | [crates/atelier-ui/src/live.rs:1](../crates/atelier-ui/src/live.rs#L1) | <code>use crate::load;</code> |
 | [crates/atelier-ui/src/live.rs:2](../crates/atelier-ui/src/live.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/live.rs:6](../crates/atelier-ui/src/live.rs#L6) | <code>use leptos::prelude::*;</code> |
@@ -1596,14 +1603,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::{Method, Request, RequestBuilder, Response};</code> |
 | [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/main.rs:6](../crates/atelier-ui/src/main.rs#L6) | <code>mod live;</code> |
-| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>mod projects;</code> |
-| [crates/atelier-ui/src/main.rs:8](../crates/atelier-ui/src/main.rs#L8) | <code>mod settings;</code> |
-| [crates/atelier-ui/src/main.rs:9](../crates/atelier-ui/src/main.rs#L9) | <code>mod task_editor;</code> |
-| [crates/atelier-ui/src/main.rs:10](../crates/atelier-ui/src/main.rs#L10) | <code>use live::BoardState;</code> |
-| [crates/atelier-ui/src/main.rs:11](../crates/atelier-ui/src/main.rs#L11) | <code>use projects::Projects;</code> |
-| [crates/atelier-ui/src/main.rs:12](../crates/atelier-ui/src/main.rs#L12) | <code>use settings::Settings;</code> |
-| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/main.rs:6](../crates/atelier-ui/src/main.rs#L6) | <code>mod backups;</code> |
+| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>mod live;</code> |
+| [crates/atelier-ui/src/main.rs:8](../crates/atelier-ui/src/main.rs#L8) | <code>mod projects;</code> |
+| [crates/atelier-ui/src/main.rs:9](../crates/atelier-ui/src/main.rs#L9) | <code>mod settings;</code> |
+| [crates/atelier-ui/src/main.rs:10](../crates/atelier-ui/src/main.rs#L10) | <code>mod task_editor;</code> |
+| [crates/atelier-ui/src/main.rs:11](../crates/atelier-ui/src/main.rs#L11) | <code>use backups::Backups;</code> |
+| [crates/atelier-ui/src/main.rs:12](../crates/atelier-ui/src/main.rs#L12) | <code>use live::BoardState;</code> |
+| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>use projects::Projects;</code> |
+| [crates/atelier-ui/src/main.rs:14](../crates/atelier-ui/src/main.rs#L14) | <code>use settings::Settings;</code> |
+| [crates/atelier-ui/src/main.rs:15](../crates/atelier-ui/src/main.rs#L15) | <code>use task_editor::TaskEditor;</code> |
 | [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::{field, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use atelier_core::document::Document;</code> |
 | [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use atelier_core::domain::agent_options::providers;</code> |
@@ -3645,4 +3654,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 410 fichiers ; 97 fichiers de tests Node.
+Total : 411 fichiers ; 97 fichiers de tests Node.

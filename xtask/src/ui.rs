@@ -549,6 +549,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     settings_scenario(client, http, &address, &next_token, data.path()).await?;
+    backups_scenario(client, http, &address, &next_token).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
@@ -864,6 +865,96 @@ async fn settings_scenario(
         .send_keys("\u{e00c}")
         .await?;
     wait_dom(client,"return !document.querySelector('#settings-dialog') && document.activeElement?.id === 'manage-settings';",vec![]).await?;
+    Ok(())
+}
+
+async fn backups_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    let post = |path: &str| {
+        http.post(format!("{address}{path}"))
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+    };
+    let card: atelier_core::contracts::Card = post("/api/cards")
+        .json(&json!({"title":"État avant sauvegarde"}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    wait_title(client, "État avant sauvegarde").await?;
+    click(client, "#manage-backups").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('.backup-list')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    let count = client
+        .execute(
+            "return document.querySelectorAll('[data-backup]').length;",
+            vec![],
+        )
+        .await?
+        .as_u64()
+        .ok_or("Liste des sauvegardes absente")?;
+    let timer: serde_json::Value = post("/api/time").json(&json!({"cardId":card.id,"start":true,"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":"Chronomètre synthétique"})).send().await?.error_for_status()?.json().await?;
+    click(client, "#create-backup").await?;
+    wait_dom(client,"return document.querySelector('#backups-error')?.textContent.includes('chronomètres') && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count)]).await?;
+    post(&format!(
+        "/api/time/{}/stop",
+        timer["id"].as_str().ok_or("Chronomètre absent")?
+    ))
+    .json(&json!({}))
+    .send()
+    .await?
+    .error_for_status()?;
+    click(client, "#create-backup").await?;
+    wait_dom(client,"return document.querySelector('#backups-notice')?.textContent === 'Sauvegarde créée.' && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count+1)]).await?;
+    let name = client
+        .execute(
+            "return document.querySelector('[data-backup]').dataset.backup;",
+            vec![],
+        )
+        .await?;
+    let selector = format!(
+        "[data-backup='{}']",
+        name.as_str().ok_or("Sauvegarde absente")?
+    );
+    http.patch(format!("{address}/api/cards/{}", card.id))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(
+            &json!({"title":"État après sauvegarde", "expected":{"title":"État avant sauvegarde"}}),
+        )
+        .send()
+        .await?
+        .error_for_status()?;
+    wait_title(client, "État après sauvegarde").await?;
+    click(client, &selector).await?;
+    click(client, "#cancel-restore").await?;
+    wait_title(client, "État après sauvegarde").await?;
+    click(client, &selector).await?;
+    click(client, "#restore-backup").await?;
+    wait_dom(client,"return document.querySelector('#backups-notice')?.textContent.startsWith('Restauration terminée.') && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count+2)]).await?;
+    wait_title(client, "État avant sauvegarde").await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-backups.png"),
+        client.screenshot().await?,
+    )?;
+    // The newest backup is the automatically saved state from before restoration.
+    click(client, "[data-backup]").await?;
+    click(client, "#restore-backup").await?;
+    wait_dom(client,"return document.querySelector('#backups-notice')?.textContent.startsWith('Restauration terminée.') && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count+3)]).await?;
+    wait_title(client, "État après sauvegarde").await?;
+    click(client, "#close-backups").await?;
+    wait_dom(client,"return !document.querySelector('#backups-dialog') && document.activeElement?.id === 'manage-backups';",vec![]).await?;
+    client.refresh().await?;
+    wait_title(client, "État après sauvegarde").await?;
     Ok(())
 }
 
