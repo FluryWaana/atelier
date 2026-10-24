@@ -63,6 +63,7 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; margin: 0; 
 .backup-list { display: grid; gap: .5rem; margin-top: 1rem; max-height: 16rem; overflow: auto; }
 .backup-name { overflow-wrap: anywhere; font-size: .82rem; }
 .task-files { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dce5e0; }
+.workspace-path { overflow-wrap: anywhere; font-size: .85rem; }
 .editor.workspace { width: min(1100px, calc(100vw - 2rem)); }
 .file-explorer { margin-top: 1rem; }
 .file-browser { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 1rem; margin-top: 1rem; }

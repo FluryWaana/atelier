@@ -140,7 +140,7 @@ pub fn Files(card_id: String, token: StoredValue<Result<String, String>>) -> imp
                 <button id="show-changes" type="button" aria-pressed=move || changes.get().to_string() disabled=move || pending.get() on:click=move |_| { changes.set(true); load(None); }>{move || i18n.text("Changements")}</button>
             </div>
             <p class="field-help">{move || i18n.text("Lecture seule : fichiers suivis et nouveaux fichiers non ignorés par Git.")}</p>
-            <p class="field-help" hidden=move || !changes.get()>{move || i18n.text("Comparaison avec le dernier commit : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.")}</p>
+            <p class="field-help" hidden=move || !changes.get()>{move || i18n.text("Comparaison avec le point de départ du worktree, ou le dernier commit du dépôt principal : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.")}</p>
             <p class="field-help" hidden=move || base.get().is_empty()>{move || i18n.text("Commit de référence : {0}").replace("{0}", &base.get())}</p>
             <div class="editor-actions"><button id="refresh-files" type="button" disabled=move || pending.get() on:click=move |_| load(None)>{move || i18n.text("Actualiser")}</button><span role="status">{move || if pending.get() { i18n.text("Chargement des fichiers…") } else { i18n.text("{0} fichier(s)").replace("{0}",&matching.with(Vec::len).to_string()) }}</span></div>
             <label for="file-search">{move || i18n.text("Filtrer les fichiers")}</label><input id="file-search" type="search" prop:value=move || filter.get() on:input=move |event| { filter.set(event_target_value(&event)); page.set(0); } />

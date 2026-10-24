@@ -98,6 +98,234 @@ async fn general_settings_reject_stale_fields_and_preserve_independent_edits_aft
     stop(&address, &token, task).await;
 }
 
+#[cfg(windows)]
+#[tokio::test]
+async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_actions() {
+    use atelier_app::infrastructure::{process_tree, store::Documents};
+    use atelier_core::contracts::{Worktree, WorktreeState};
+    async fn git(repo: &Path, args: &[&str]) {
+        let mut command = tokio::process::Command::new("git");
+        command
+            .current_dir(repo)
+            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .args([
+                "-c",
+                "core.hooksPath=NUL",
+                "-c",
+                "user.name=Synthetic",
+                "-c",
+                "user.email=synthetic@example.invalid",
+            ])
+            .args(args);
+        let output = process_tree::capture(&mut command, &[], Duration::from_secs(15), 1024 * 1024)
+            .await
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let repo = std::fs::canonicalize(data.path())
+        .unwrap()
+        .join("repositories/worktree-http");
+    std::fs::create_dir_all(&repo).unwrap();
+    git(&repo, &["init", "-b", "main"]).await;
+    std::fs::write(repo.join("source.txt"), "source\n").unwrap();
+    std::fs::write(repo.join(".gitignore"), "ignored.txt\n").unwrap();
+    git(&repo, &["add", "."]).await;
+    git(&repo, &["commit", "-qm", "Synthetic baseline"]).await;
+    let client = reqwest::Client::new();
+    let card: Card = client
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Synthetic worktree", "repo":repo}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let id = card.id;
+    let post = |suffix: &str, body: Value| {
+        client
+            .post(format!("{address}/api/cards/{id}{suffix}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&body)
+    };
+    let created: Card = post(
+        "/worktree",
+        json!({"branch":"feature/http-synthetic","base":"main"}),
+    )
+    .send()
+    .await
+    .unwrap()
+    .error_for_status()
+    .unwrap()
+    .json()
+    .await
+    .unwrap();
+    let worktree = created.fields.get::<Worktree>("worktree").unwrap().unwrap();
+    assert_eq!(worktree.state, WorktreeState::Ready);
+    assert_eq!(
+        post("/worktree/remove", json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    assert_eq!(
+        client
+            .delete(format!("{address}/api/cards/{id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    stop(&address, &token, task).await;
+    // Simulate a process interruption after Git succeeds but before the ready-state transaction.
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    let key = id.clone();
+    database
+        .call(move |store| {
+            let mut card = store.document::<Card>(Documents::Cards, &key)?.unwrap();
+            let mut intent = card.fields.get::<Worktree>("worktree")?.unwrap();
+            intent.state = WorktreeState::Creating;
+            card.fields.set("worktree", &intent)?;
+            store.put(Documents::Cards, &card)
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+    drop(database);
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    assert_eq!(
+        client
+            .post(format!("{address}/api/backups"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    assert_eq!(
+        client
+            .get(format!("{address}/api/cards/{id}/files"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    let post = |suffix: &str, body: Value| {
+        client
+            .post(format!("{address}/api/cards/{id}{suffix}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&body)
+    };
+    let resumed: Card = post("/worktree", json!({}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let resumed = resumed.fields.get::<Worktree>("worktree").unwrap().unwrap();
+    assert_eq!(resumed, worktree);
+    assert_eq!(
+        client
+            .get(format!("{address}/api/cards/{id}/files"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        200
+    );
+    std::fs::write(
+        Path::new(&worktree.path).join("ignored.txt"),
+        "preserved ignored content",
+    )
+    .unwrap();
+    assert_eq!(
+        post("/worktree/remove", json!({"confirmed":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    assert!(Path::new(&worktree.path).join("ignored.txt").exists());
+    let restored: Card = post("/worktree", json!({}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        restored
+            .fields
+            .get::<Worktree>("worktree")
+            .unwrap()
+            .unwrap()
+            .state,
+        WorktreeState::Ready
+    );
+    let removed: Card = post(
+        "/worktree/remove",
+        json!({"confirmed":true,"discardChanges":true}),
+    )
+    .send()
+    .await
+    .unwrap()
+    .error_for_status()
+    .unwrap()
+    .json()
+    .await
+    .unwrap();
+    assert!(
+        removed
+            .fields
+            .get::<Worktree>("worktree")
+            .unwrap()
+            .is_none()
+    );
+    assert!(!Path::new(&worktree.path).exists());
+    git(
+        &repo,
+        &["show-ref", "--verify", "refs/heads/feature/http-synthetic"],
+    )
+    .await;
+    assert_eq!(
+        std::fs::read_to_string(repo.join("source.txt")).unwrap(),
+        "source\n"
+    );
+    stop(&address, &token, task).await;
+}
+
 #[tokio::test]
 async fn project_field_guards_reject_stale_relocations_before_creating_backups() {
     let data = tempfile::tempdir().unwrap();

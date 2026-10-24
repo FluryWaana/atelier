@@ -49,7 +49,11 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
         state
             .database
             .call(move |store| {
-                // shortcut: wire provider, process, queue and connector reservations before M04–M06 enable those producers.
+                let interrupted = store.documents::<atelier_core::contracts::Card>(Documents::Cards)?.iter().any(|card| {
+                    card.fields.get::<atelier_core::contracts::Worktree>("worktree").ok().flatten().is_some_and(|worktree| worktree.state != atelier_core::contracts::WorktreeState::Ready)
+                });
+                if interrupted { return Err(BackupFailure::Conflict("Termine ou vérifie les opérations de worktree avant une sauvegarde ou une restauration.").into()); }
+                // shortcut: add active agents, servers and connector reservations when R03–R05 enable them.
                 backups::require_idle(false, false, false, &store.documents(Documents::Times)?)?;
                 if !restore {
                     return Ok(serde_json::to_value(directory.create(store)?)?);

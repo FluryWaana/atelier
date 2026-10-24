@@ -11,6 +11,7 @@ mod live;
 mod projects;
 mod settings;
 mod task_editor;
+mod worktree;
 use backups::Backups;
 use live::BoardState;
 use projects::Projects;

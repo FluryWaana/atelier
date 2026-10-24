@@ -12,6 +12,7 @@ pub mod task_creation;
 pub mod task_editing;
 pub mod task_templates;
 pub mod time_tracking;
+pub mod worktrees;
 
 pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json::Result<Card> {
     let mut title = JsonString::from("Copie — ");

@@ -91,3 +91,22 @@ pub struct FileDiff {
     pub patch: Option<String>,
     pub unavailable: Option<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Worktree {
+    pub path: String,
+    pub source: String,
+    pub branch: String,
+    pub base: String,
+    pub base_commit: String,
+    pub state: WorktreeState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WorktreeState {
+    Creating,
+    Ready,
+    Removing,
+}

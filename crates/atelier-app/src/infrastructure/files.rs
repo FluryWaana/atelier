@@ -14,12 +14,23 @@ use cap_std::fs::Dir;
 use std::path::PathBuf;
 
 pub struct Repository {
-    path: PathBuf,
-    directory: Dir,
+    pub(super) path: PathBuf,
+    pub(super) directory: Dir,
 }
 
 impl Repository {
     pub fn synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
+        let repository = Self::open_synthetic(root, roots, repo)?;
+        if !repository.directory.symlink_metadata(".git")?.is_dir() {
+            return Err(
+                "L’inspection des worktrees nécessite leur association vérifiée à une tâche."
+                    .into(),
+            );
+        }
+        Ok(repository)
+    }
+
+    pub(super) fn open_synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
         let path = launch_detection::synthetic_repository(
             root,
             roots,
@@ -33,16 +44,10 @@ impl Repository {
             .symlink_metadata(".git")
             .map_err(|_| "Ce dossier n’est pas une racine Git accessible.")?;
         require_plain(&metadata)?;
-        if !metadata.is_dir() {
-            return Err(
-                "L’inspection des worktrees nécessite leur association vérifiée à une tâche."
-                    .into(),
-            );
-        }
         Ok(Self { path, directory })
     }
 
-    async fn verify_root(&self) -> Result<()> {
+    pub(super) async fn verify_root(&self) -> Result<()> {
         let top = self.git(&["rev-parse", "--show-toplevel"]).await?;
         let top = String::from_utf8(top)?;
         if !atelier_core::domain::projects::same_repository(
@@ -205,7 +210,21 @@ impl Repository {
         let paths = self.list().await?.files;
         let directory = self.directory.try_clone()?;
         tokio::task::spawn_blocking(move || check_diff_paths(directory, paths)).await??;
-        // Git diff can invoke clean/process filters even when external diff/textconv are disabled.
+        let mut args = vec![
+            "-c",
+            "diff.submodule=short",
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--ignore-submodules=dirty",
+        ];
+        args.extend_from_slice(arguments);
+        self.without_programs(&args).await
+    }
+
+    pub(super) async fn without_programs(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+        // Checkout/status/diff can invoke clean/smudge/process filters independently of diff drivers.
         let config = self
             .git(&["config", "--includes", "--null", "--name-only", "--list"])
             .await?;
@@ -238,15 +257,7 @@ impl Repository {
             }
         }
         let mut args = options.iter().map(String::as_str).collect::<Vec<_>>();
-        args.extend([
-            "-c",
-            "diff.submodule=short",
-            "diff",
-            "--no-ext-diff",
-            "--no-textconv",
-            "--no-renames",
-            "--ignore-submodules=dirty",
-        ]);
+        args.extend(["-c", "core.hooksPath=NUL", "-c", "submodule.recurse=false"]);
         args.extend_from_slice(arguments);
         self.git(&args).await
     }
@@ -298,7 +309,7 @@ impl Repository {
     }
 
     #[cfg(windows)]
-    async fn git(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+    pub(super) async fn git(&self, arguments: &[&str]) -> Result<Vec<u8>> {
         let mut command = tokio::process::Command::new("git");
         for (key, _) in std::env::vars_os() {
             if key
@@ -324,6 +335,8 @@ impl Repository {
                 "-c",
                 "core.fsmonitor=false",
                 "-c",
+                "core.longpaths=true",
+                "-c",
                 "core.excludesFile=NUL",
             ])
             .args(arguments);
@@ -343,12 +356,12 @@ impl Repository {
     }
 
     #[cfg(not(windows))]
-    async fn git(&self, _arguments: &[&str]) -> Result<Vec<u8>> {
+    pub(super) async fn git(&self, _arguments: &[&str]) -> Result<Vec<u8>> {
         Err("L’explorateur Git natif attend sa qualification sur ce système.".into())
     }
 }
 
-fn validate_commit(commit: &str) -> Result<()> {
+pub(super) fn validate_commit(commit: &str) -> Result<()> {
     if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err("Commit de départ invalide.".into());
     }

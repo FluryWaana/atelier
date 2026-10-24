@@ -1,6 +1,10 @@
 use super::{Shared, failure};
-use crate::infrastructure::{files::Repository, store::Documents};
-use atelier_core::{contracts::Card, document::JsonString};
+use crate::infrastructure::{files::Repository, store::Documents, worktrees};
+use atelier_core::{
+    contracts::{Card, Worktree, WorktreeState},
+    document::JsonString,
+    domain::projects::same_repository,
+};
 use axum::{
     Json,
     extract::{Path, Query, State},
@@ -47,12 +51,15 @@ async fn inspect(
             );
         }
     };
-    if card.fields.truthy("worktree").unwrap_or(false) {
-        return failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "L’inspection des worktrees nécessite leur association vérifiée à une tâche.",
-        );
-    }
+    let worktree = match card.fields.get::<Worktree>("worktree") {
+        Ok(worktree) => worktree,
+        Err(_) => {
+            return failure(
+                StatusCode::BAD_REQUEST,
+                "Association Git du worktree invalide.",
+            );
+        }
+    };
     let repo = match card.fields.get::<JsonString>("repo") {
         Ok(Some(repo)) if !repo.0.is_empty() => repo,
         _ => {
@@ -62,20 +69,43 @@ async fn inspect(
             );
         }
     };
-    let repository =
-        match Repository::synthetic(&state.prototype_directory, &state.prototype_paths, &repo) {
-            Ok(repository) => repository,
-            Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
-        };
+    let repository = if let Some(worktree) = &worktree {
+        if worktree.state != WorktreeState::Ready {
+            return failure(
+                StatusCode::CONFLICT,
+                "Vérifie ou termine l’opération interrompue sur ce worktree.",
+            );
+        }
+        if !same_repository(
+            &String::from_utf16_lossy(&repo.0),
+            &worktree.source,
+            cfg!(windows),
+        ) {
+            return failure(
+                StatusCode::CONFLICT,
+                "Le dépôt source ne correspond plus au worktree.",
+            );
+        }
+        worktrees::inspect(&state.prototype_directory, &state.prototype_paths, worktree).await
+    } else {
+        Repository::synthetic(&state.prototype_directory, &state.prototype_paths, &repo)
+    };
+    let repository = match repository {
+        Ok(repository) => repository,
+        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+    };
+    let base = worktree
+        .as_ref()
+        .map(|worktree| worktree.base_commit.as_str());
     let result = if changes {
         if let Some(selection) = selection {
             repository
-                .file_diff(selection.path, None, selection.untracked)
+                .file_diff(selection.path, base, selection.untracked)
                 .await
                 .and_then(|value| Ok(serde_json::to_value(value)?))
         } else {
             repository
-                .changes(None)
+                .changes(base)
                 .await
                 .and_then(|value| Ok(serde_json::to_value(value)?))
         }

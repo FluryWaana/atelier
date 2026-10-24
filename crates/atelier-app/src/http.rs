@@ -28,12 +28,14 @@ mod backups;
 mod card_lifecycle;
 mod events;
 mod files;
+mod mutations;
 mod projects;
 mod settings;
 mod task_creation;
 mod task_editing;
 mod task_templates;
 mod time_tracking;
+mod worktrees;
 
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
@@ -48,6 +50,7 @@ struct AppState {
     shutdown: watch::Sender<bool>,
     changed: tokio::sync::broadcast::Sender<()>,
     file_reads: tokio::sync::Semaphore,
+    mutations: Arc<tokio::sync::RwLock<()>>,
 }
 type Shared = Arc<AppState>;
 
@@ -63,11 +66,7 @@ fn header_value<'a>(request: &'a Request, name: &str) -> Option<&'a str> {
 }
 
 async fn security(State(state): State<Shared>, request: Request, next: Next) -> Response {
-    let mutating = request.method() != Method::GET;
     let mut response = authorize(&state, request, next).await;
-    if mutating && response.status().is_success() {
-        let _ = state.changed.send(());
-    }
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_SECURITY_POLICY,
@@ -127,7 +126,20 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
         }
     }
-    next.run(request).await
+    if request.method() != Method::GET && path.starts_with("/api/") {
+        let exclusive = path.ends_with("/worktree") || path.ends_with("/worktree/remove");
+        let changed = state.changed.clone();
+        mutations::run(state.mutations.clone(), exclusive, async move {
+            let response = next.run(request).await;
+            if response.status().is_success() {
+                let _ = changed.send(());
+            }
+            response
+        })
+        .await
+    } else {
+        next.run(request).await
+    }
 }
 
 fn valid_token(value: &str) -> bool {
@@ -327,6 +339,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         shutdown,
         changed: tokio::sync::broadcast::channel(16).0,
         file_reads: tokio::sync::Semaphore::new(2),
+        mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
     let app = app
         .route("/api/health", get(health))
@@ -377,6 +390,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/cards/{id}/file", get(files::preview))
         .route("/api/cards/{id}/changes", get(files::changes))
         .route("/api/cards/{id}/file-diff", get(files::diff))
+        .route("/api/cards/{id}/worktree", post(worktrees::create))
+        .route("/api/cards/{id}/worktree/remove", post(worktrees::remove))
         .route("/api/prototype/stop", post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
@@ -391,6 +406,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .await;
     let _ = state.shutdown.send(true);
     let clock_result = clock.await;
+    let _mutations = state.mutations.write().await;
     let timers = state
         .database
         .call(|store| {

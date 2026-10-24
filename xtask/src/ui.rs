@@ -1153,6 +1153,59 @@ async fn files_scenario(
     std::fs::write(repo.join("src/tracked.txt"), "tracked synthetic file\n")?;
     click(client, "#refresh-files").await?;
     wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 0 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    client
+        .find(Locator::Css("#worktree-base"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#worktree-base"))
+        .await?
+        .send_keys("main")
+        .await?;
+    click(client, "#create-worktree").await?;
+    wait_dom(client,"return document.querySelector('#worktree-state')?.textContent === 'Worktree prêt.' && document.querySelector('#worktree-error')?.textContent === '' && document.querySelector('#verify-worktree')?.disabled === false;",vec![]).await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let worktree = board
+        .cards
+        .iter()
+        .find(|value| value.id == card.id)
+        .ok_or("Tâche synthétique absente.")?
+        .fields
+        .get::<atelier_core::contracts::Worktree>("worktree")?
+        .ok_or("Worktree synthétique absent.")?;
+    std::fs::write(
+        Path::new(&worktree.path).join("src/tracked.txt"),
+        "worktree synthetic modification\n",
+    )?;
+    click(client, "#browse-task-files").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    click(client, "#show-changes").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 1 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('#file-content')?.textContent.includes('+worktree synthetic modification');",vec![]).await?;
+    if std::fs::read_to_string(repo.join("src/tracked.txt"))? != "tracked synthetic file\n" {
+        return Err("Le worktree a modifié le dépôt source.".into());
+    }
+    click(client, "#remove-worktree").await?;
+    click(client, "#confirm-remove-worktree").await?;
+    wait_dom(client,"return document.querySelector('#worktree-error')?.textContent.includes('modifiés') && document.querySelector('#confirm-remove-worktree')?.disabled === false;",vec![]).await?;
+    if !Path::new(&worktree.path).join("src/tracked.txt").exists() {
+        return Err("Le retrait non confirmé a perdu les modifications.".into());
+    }
+    click(client, "#discard-worktree-files").await?;
+    click(client, "#confirm-remove-worktree").await?;
+    wait_dom(client,"return document.querySelector('#worktree-notice')?.textContent === 'Worktree retiré. La branche Git est conservée.' && document.querySelector('#create-worktree')?.disabled === false;",vec![]).await?;
+    if Path::new(&worktree.path).exists() {
+        return Err("Le retrait du worktree n’a pas terminé.".into());
+    }
     click(client, "#close-editor").await?;
     Ok(())
 }
