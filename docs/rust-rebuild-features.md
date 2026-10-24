@@ -31,6 +31,8 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 
 ## Points de contrôle
 
+- [`411ffb9`, contrôles natifs Windows réussis](https://github.com/FluryWaana/atelier/actions/runs/40123784385), journal relu : nouveau format/réouverture/refus sans écriture, refus de restauration et de transfert incompatibles, transfert WAL, renommage, statuts manuels et éditions HTTP concurrentes passent. Clippy natif/WASM et DPAPI entre comptes réussissent également. Le parcours Edge compile mais s'arrête sur un clic intercepté au bord du dialogue défilant ; le test centre désormais les contrôles avant un vrai clic WebDriver. Critères, modèles et conflits dans le navigateur attendent donc encore leur preuve de bout en bout.
+
 - Modèles candidats : création depuis une tâche enregistrée, utilisation à la création, retrait confirmé sans supprimer les tâches. Parcours navigateur préparé pour description/critères hérités, validation humaine remise à zéro et absence de dépendances copiées.
 - `5bb3725` : les nouveaux tests de format incompatible passent dans le journal natif ; le contrôle WAL supposait encore que le schéma se trouvait dans le journal. Il vérifie désormais l'absence de la carte dans la copie du fichier principal puis sa présence après transfert complet. Le build UI exige des accolades autour des expressions génériques dans les attributs Leptos ; les boucles de critères/dépendances sont corrigées. Cette CI reste en échec et n'est pas une qualification.
 

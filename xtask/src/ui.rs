@@ -272,11 +272,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .send_keys(title)
         .await?;
-    client
-        .find(Locator::Css("#create-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#create-task").await?;
     wait_title(client, title).await?;
     wait_dom(client, "return document.querySelectorAll('.kanban-column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=review] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
     client
@@ -293,17 +289,9 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     // WebDriver clear does not consistently emit the input event across browsers.
     client.execute("document.querySelector('#board-search').dispatchEvent(new Event('input', {bubbles:true})); const select=document.querySelector('#board-project'); select.value=arguments[0]; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![project["repo"].clone()]).await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
-    client
-        .find(Locator::Css("#show-archives"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#show-archives").await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![archived["id"].clone()]).await?;
-    client
-        .find(Locator::Css("#show-archives"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#show-archives").await?;
     client.execute("const select=document.querySelector('#board-project'); select.value=''; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![]).await?;
     wait_title(client, title).await?;
     std::fs::write(
@@ -316,11 +304,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
             vec![],
         )
         .await?;
-    client
-        .find(Locator::Css("[data-status=todo] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=todo] .card-open").await?;
     wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.activeElement?.id === 'edit-title';", vec![]).await?;
     client
         .find(Locator::Css("#edit-title"))
@@ -328,11 +312,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("\u{e00c}")
         .await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.activeElement?.classList.contains('card-open') === true;", vec![]).await?;
-    client
-        .find(Locator::Css("[data-status=todo] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=todo] .card-open").await?;
     let title = "Tâche modifiée é 🔧 <script>";
     client
         .find(Locator::Css("#edit-title"))
@@ -349,29 +329,21 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .send_keys("Description enregistrée")
         .await?;
-    client
-        .find(Locator::Css("#add-criterion"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#add-criterion").await?;
     client
         .find(Locator::Css(".criterion-text"))
         .await?
         .send_keys("Vérification humaine synthétique")
         .await?;
-    client
-        .find(Locator::Css(".criterion-done"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css(&format!(
+    click(client, ".criterion-done").await?;
+    click(
+        client,
+        &format!(
             "[data-dependency='{}']",
             queued["id"].as_str().ok_or("Dépendance sans id")?
-        )))
-        .await?
-        .click()
-        .await?;
+        ),
+    )
+    .await?;
     client
         .find(Locator::Css("#edit-title"))
         .await?
@@ -383,43 +355,23 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#cancel-confirmation"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#cancel-confirmation").await?;
     wait_dom(
         client,
         "return document.querySelector('#edit-title')?.value === arguments[0];",
         vec![json!(title)],
     )
     .await?;
-    client
-        .find(Locator::Css("#save-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-task").await?;
     wait_title(client, title).await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=todo] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
-    client
-        .find(Locator::Css("[data-status=todo] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=todo] .card-open").await?;
     // Exercise a real HTTP validation error and retain the draft, without changing server fixtures.
     client.execute("const select=document.querySelector('#edit-status'); select.add(new Option('Invalide', 'invalid')); select.value='invalid'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
-    client
-        .find(Locator::Css("#save-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-task").await?;
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent === 'Statut invalide.' && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
     client.execute("const select=document.querySelector('#edit-status'); select.value='doing'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
-    client
-        .find(Locator::Css("#save-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-task").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0];", vec![original_id.clone()]).await?;
     let board: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
@@ -432,11 +384,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     if !board.runs.is_empty() {
         return Err("Un déplacement manuel a lancé un agent.".into());
     }
-    client
-        .find(Locator::Css("[data-status=doing] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=doing] .card-open").await?;
     client
         .find(Locator::Css("#edit-description"))
         .await?
@@ -446,27 +394,11 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .bearer_auth(&token).header("x-local-request", "1")
         .json(&json!({"description":"Modification externe", "expected":{"description":"Description enregistrée"}}))
         .send().await?.error_for_status()?;
-    client
-        .find(Locator::Css("#save-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-task").await?;
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('changé ailleurs') && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;
-    client
-        .find(Locator::Css("#close-editor"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-editor"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("[data-status=doing] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-editor").await?;
+    click(client, "#confirm-editor").await?;
+    click(client, "[data-status=doing] .card-open").await?;
     wait_dom(
         client,
         "return document.querySelector('#edit-description')?.value === 'Modification externe';",
@@ -483,22 +415,10 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .send_keys("Description enregistrée")
         .await?;
-    client
-        .find(Locator::Css("#save-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-task").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
-    client
-        .find(Locator::Css("[data-status=doing] .card-open"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#duplicate-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=doing] .card-open").await?;
+    click(client, "#duplicate-task").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
     let copy_id = client
         .execute(
@@ -510,86 +430,26 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         "article.card[data-id='{}'] .card-open",
         copy_id.as_str().ok_or("Copie sans id")?
     );
-    client
-        .find(Locator::Css(&copy_selector))
-        .await?
-        .click()
-        .await?;
+    click(client, &copy_selector).await?;
     wait_dom(client, "return document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === false && document.querySelectorAll('[data-dependency]:checked').length === 0;", vec![]).await?;
-    client
-        .find(Locator::Css("#archive-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#archive-task").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
-    client
-        .find(Locator::Css("[data-status=review] .card-open"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#delete-task"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-editor"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=review] .card-open").await?;
+    click(client, "#delete-task").await?;
+    click(client, "#confirm-editor").await?;
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('Bloquée par') && document.querySelector('#task-editor')?.open === true;", vec![]).await?;
-    client
-        .find(Locator::Css("#close-editor"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#show-archives"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css(&copy_selector))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-editor").await?;
+    click(client, "#show-archives").await?;
+    click(client, &copy_selector).await?;
     wait_dom(client, "return document.querySelector('#edit-title')?.disabled === true || document.querySelector('#edit-title')?.matches(':disabled') === true;", vec![]).await?;
-    client
-        .find(Locator::Css("#archive-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#archive-task").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 1;", vec![]).await?;
-    client
-        .find(Locator::Css("#show-archives"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css(&copy_selector))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#delete-task"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#cancel-confirmation"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#delete-task"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-editor"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#show-archives").await?;
+    click(client, &copy_selector).await?;
+    click(client, "#delete-task").await?;
+    click(client, "#cancel-confirmation").await?;
+    click(client, "#delete-task").await?;
+    click(client, "#confirm-editor").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
     stop_server(&mut server, port, &token).await?;
     let (mut restarted, next_token) = start_server(data.path(), port, &assets).await?;
@@ -614,42 +474,26 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .map_err(|_| "Navigation après redémarrage refusée.")?;
     wait_title(client, title).await?;
     wait_dom(client, "return document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0] && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée' && !document.querySelector('.card-title script');", vec![original_id]).await?;
-    client
-        .find(Locator::Css("[data-status=doing] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=doing] .card-open").await?;
     wait_dom(client, "return document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === true && document.querySelectorAll('[data-dependency]:checked').length === 1;", vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-editor.png"),
         client.screenshot().await?,
     )?;
-    client
-        .find(Locator::Css("#make-template"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#make-template").await?;
     client
         .find(Locator::Css("#template-name"))
         .await?
         .send_keys("Modèle synthétique")
         .await?;
-    client
-        .find(Locator::Css("#save-template"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-template").await?;
     wait_dom(
         client,
         "return document.querySelector('#editor-notice')?.textContent === 'Modèle enregistré.';",
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#close-editor"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-editor").await?;
     if !client
         .find(Locator::Css("#error"))
         .await?
@@ -669,33 +513,13 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .send_keys("Tâche issue du modèle")
         .await?;
-    client
-        .find(Locator::Css("#create-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#create-task").await?;
     wait_title(client, "Tâche issue du modèle").await?;
-    client
-        .find(Locator::Css("[data-status=todo] .card-open"))
-        .await?
-        .click()
-        .await?;
+    click(client, "[data-status=todo] .card-open").await?;
     wait_dom(client, "return document.querySelector('#edit-description')?.value === 'Description enregistrée' && document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === false && document.querySelectorAll('[data-dependency]:checked').length === 0;", vec![]).await?;
-    client
-        .find(Locator::Css("#close-editor"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#remove-template"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-remove-template"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-editor").await?;
+    click(client, "#remove-template").await?;
+    click(client, "#confirm-remove-template").await?;
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     stop_server(&mut restarted, port, &next_token).await?;
@@ -711,11 +535,7 @@ async fn projects_scenario(
 ) -> Result<()> {
     let repo = data.join("repositories/project-ui");
     std::fs::create_dir_all(&repo)?;
-    client
-        .find(Locator::Css("#manage-projects"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#manage-projects").await?;
     client
         .find(Locator::Css("#project-name"))
         .await?
@@ -726,11 +546,7 @@ async fn projects_scenario(
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
-    client
-        .find(Locator::Css("#save-project"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelectorAll('.project-choice').length === 2 && document.querySelector('#new-project')?.disabled === false && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
     let id = client.execute("return document.querySelector('.project-choice[aria-pressed=true]').dataset.projectId;", vec![]).await?;
     client
@@ -753,21 +569,13 @@ async fn projects_scenario(
         .await?
         .send_keys("main")
         .await?;
-    client
-        .find(Locator::Css("#save-project"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-project-editor.png"),
         client.screenshot().await?,
     )?;
-    client
-        .find(Locator::Css("#new-project"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#new-project").await?;
     client
         .find(Locator::Css("#project-name"))
         .await?
@@ -778,39 +586,19 @@ async fn projects_scenario(
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
-    client
-        .find(Locator::Css("#save-project"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelector('#project-error')?.textContent.includes('déjà') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
-    client
-        .find(Locator::Css("#reset-project"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-project"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#reset-project").await?;
+    click(client, "#confirm-project").await?;
     wait_dom(client, "return document.querySelector('#project-name')?.value === '' && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
-    client
-        .find(Locator::Css("#close-projects"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-projects").await?;
     wait_dom(client, "return !document.querySelector('#projects-dialog') && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
     client
         .find(Locator::Css("#task-title"))
         .await?
         .send_keys("Tâche du nouveau projet")
         .await?;
-    client
-        .find(Locator::Css("#create-task"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#create-task").await?;
     wait_title(client, "Tâche du nouveau projet").await?;
     let board: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
@@ -840,55 +628,23 @@ async fn projects_scenario(
         return Err("La tâche n’est pas associée au projet sélectionné.".into());
     }
     let card_id = card.id.clone();
-    client
-        .find(Locator::Css("#manage-projects"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css(&format!(
+    click(client, "#manage-projects").await?;
+    click(
+        client,
+        &format!(
             "[data-project-id='{}']",
             id.as_str().ok_or("Projet sans id")?
-        )))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#remove-project"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#cancel-project-confirmation"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#remove-project"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#archive-project-tasks"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#confirm-project"))
-        .await?
-        .click()
-        .await?;
+        ),
+    )
+    .await?;
+    click(client, "#remove-project").await?;
+    click(client, "#cancel-project-confirmation").await?;
+    click(client, "#remove-project").await?;
+    click(client, "#archive-project-tasks").await?;
+    click(client, "#confirm-project").await?;
     wait_dom(client, "return document.querySelectorAll('.project-choice').length === 1 && document.querySelector('#project-name')?.value === '' && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
-    client
-        .find(Locator::Css("#close-projects"))
-        .await?
-        .click()
-        .await?;
-    client
-        .find(Locator::Css("#show-archives"))
-        .await?
-        .click()
-        .await?;
+    click(client, "#close-projects").await?;
+    click(client, "#show-archives").await?;
     wait_dom(client, "return Array.from(document.querySelectorAll('article.card')).some(card => card.dataset.id === arguments[0]);", vec![json!(card_id)]).await?;
     if !repo.is_dir() {
         return Err("Le retrait du projet a supprimé son dossier.".into());
@@ -897,6 +653,13 @@ async fn projects_scenario(
         root().join(".artifacts/rust-ui-projects.png"),
         client.screenshot().await?,
     )?;
+    Ok(())
+}
+
+async fn click(client: &Client, selector: &str) -> Result<()> {
+    // Center controls inside scrolling dialogs; retain WebDriver's native click and hit testing.
+    client.execute("document.querySelector(arguments[0])?.scrollIntoView({block:'center', inline:'nearest', behavior:'instant'});", vec![json!(selector)]).await?;
+    client.find(Locator::Css(selector)).await?.click().await?;
     Ok(())
 }
 
