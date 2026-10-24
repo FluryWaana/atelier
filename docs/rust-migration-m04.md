@@ -1,5 +1,11 @@
 # M04 — Git, fichiers, processus et agents
 
+## Réservation des ports — candidat après `4be03dc`
+
+`launch_ports::PortLease` garde un socket IPv4 lié à `127.0.0.1`, avec choix automatique ou port validé explicite. La libération consomme la réservation ; son abandon ferme aussi le socket. Le refus conserve le message de `lib/launch-ports.mjs`. Windows utilise `SO_EXCLUSIVEADDRUSE` avant `bind`, conformément à la [documentation Microsoft](https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse), pour refuser aussi la réutilisation forcée depuis le même compte. Tokio et windows-sys sont déjà présents ; aucune nouvelle dépendance.
+
+Les scénarios candidats Node/Rust réservent seize ports distincts, refusent un port occupé puis le réservent après libération. Rust vérifie aussi l'adresse loopback, la libération sur abandon et le refus d'un socket concurrent avec `SO_REUSEADDR`. Exécution attendue sur Windows distant. Le gestionnaire de serveurs reste à porter : cette primitive ne qualifie ni la réservation logique par carte, ni le redémarrage, ni la course entre libération du socket et écoute du programme enfant.
+
 ## Détection des manifestes — candidat après `c819fd0`
 
 `infrastructure/launch_detection.rs` porte `lib/launch-detection.mjs` sans lancer les commandes détectées. Les lectures réutilisent `CheckedFile` et les dossiers ouverts de `cap-std`. Limites historiques : profondeur trois, 300 dossiers visités, 1 Mio par fichier, dossiers exclus, héritage npm/pnpm/yarn. Les scripts Vite/Next/Angular conservent les arguments de port ; les commandes composées perdent la détection automatique. Les profils .NET exposent noms, type et origines HTTP(S), jamais leurs variables d'environnement. Les profils invalides restent visibles et non sélectionnables.

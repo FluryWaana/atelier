@@ -7,6 +7,20 @@ import { createDevServers } from '../lib/dev-servers.mjs';
 import { reservePort } from '../lib/launch-ports.mjs';
 import { projectSettings } from '../lib/project-settings.mjs';
 
+test('native port reservations remain unique and occupied until released', async () => {
+  const leases = [];
+  try {
+    for (let index = 0; index < 16; index++) leases.push(await reservePort());
+    assert.equal(new Set(leases.map(lease => lease.port)).size, leases.length);
+    const port = leases[0].port;
+    assert.ok(port > 0 && port <= 65535);
+    await assert.rejects(reservePort(port), { message: `Le port ${port} est indisponible. Choisissez un autre port ou laissez Atelier le choisir.` });
+    await leases.shift().release();
+    leases.push(await reservePort(port));
+    assert.equal(leases.at(-1).port, port);
+  } finally { await Promise.all(leases.map(lease => lease.release())); }
+});
+
 test('ports accept automatic or explicit values and require the command placeholder', () => {
   assert.equal(projectSettings({ frontCommand: 'vite --port {port}', frontPort: '5174' }).frontPort, 5174);
   assert.equal(projectSettings({}).frontPort, 0);

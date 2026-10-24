@@ -42,6 +42,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/database.rs](../crates/atelier-app/src/infrastructure/database.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/installation.rs](../crates/atelier-app/src/infrastructure/installation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs](../crates/atelier-app/src/infrastructure/launch_detection.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs](../crates/atelier-app/src/infrastructure/launch_ports.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/local_http.rs](../crates/atelier-app/src/infrastructure/local_http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/mod.rs](../crates/atelier-app/src/infrastructure/mod.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/portable_import.rs](../crates/atelier-app/src/infrastructure/portable_import.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -733,7 +734,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
 | [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }</code> |
 | [crates/atelier-app/Cargo.toml:38](../crates/atelier-app/Cargo.toml#L38) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:39](../crates/atelier-app/Cargo.toml#L39) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization"] }</code> |
+| [crates/atelier-app/Cargo.toml:39](../crates/atelier-app/Cargo.toml#L39) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock"] }</code> |
 | [crates/atelier-app/Cargo.toml:41](../crates/atelier-app/Cargo.toml#L41) | <code>[target.'cfg(unix)'.dependencies]</code> |
 | [crates/atelier-app/src/http.rs:1](../crates/atelier-app/src/http.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http.rs:5](../crates/atelier-app/src/http.rs#L5) | <code>use atelier_core::{</code> |
@@ -947,6 +948,18 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:547](../crates/atelier-app/src/infrastructure/launch_detection.rs#L547) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:606](../crates/atelier-app/src/infrastructure/launch_detection.rs#L606) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:635](../crates/atelier-app/src/infrastructure/launch_detection.rs#L635) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:1](../crates/atelier-app/src/infrastructure/launch_ports.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:2](../crates/atelier-app/src/infrastructure/launch_ports.rs#L2) | <code>use std::net::{Ipv4Addr, SocketAddr};</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:3](../crates/atelier-app/src/infrastructure/launch_ports.rs#L3) | <code>use tokio::net::{TcpListener, TcpSocket};</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:5](../crates/atelier-app/src/infrastructure/launch_ports.rs#L5) | <code>pub struct PortLease {</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:7](../crates/atelier-app/src/infrastructure/launch_ports.rs#L7) | <code>pub port: u16,</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:11](../crates/atelier-app/src/infrastructure/launch_ports.rs#L11) | <code>pub fn reserve(port: u16) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:25](../crates/atelier-app/src/infrastructure/launch_ports.rs#L25) | <code>use std::os::windows::io::AsRawSocket;</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:26](../crates/atelier-app/src/infrastructure/launch_ports.rs#L26) | <code>use windows_sys::Win32::Networking::WinSock::{</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:54](../crates/atelier-app/src/infrastructure/launch_ports.rs#L54) | <code>pub fn release(self) {</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:60](../crates/atelier-app/src/infrastructure/launch_ports.rs#L60) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:61](../crates/atelier-app/src/infrastructure/launch_ports.rs#L61) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/launch_ports.rs:63](../crates/atelier-app/src/infrastructure/launch_ports.rs#L63) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
@@ -967,19 +980,20 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:5](../crates/atelier-app/src/infrastructure/mod.rs#L5) | <code>pub mod database;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod installation;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod launch_detection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod local_http;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod portable_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:10](../crates/atelier-app/src/infrastructure/mod.rs#L10) | <code>pub mod projects;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod prototype;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:12](../crates/atelier-app/src/infrastructure/mod.rs#L12) | <code>mod publish;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:13](../crates/atelier-app/src/infrastructure/mod.rs#L13) | <code>pub mod session;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:14](../crates/atelier-app/src/infrastructure/mod.rs#L14) | <code>pub mod settings;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:15](../crates/atelier-app/src/infrastructure/mod.rs#L15) | <code>pub mod store;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:16](../crates/atelier-app/src/infrastructure/mod.rs#L16) | <code>pub mod task_creation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:17](../crates/atelier-app/src/infrastructure/mod.rs#L17) | <code>pub mod task_editing;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:18](../crates/atelier-app/src/infrastructure/mod.rs#L18) | <code>pub mod task_templates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:19](../crates/atelier-app/src/infrastructure/mod.rs#L19) | <code>pub mod time_tracking;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:20](../crates/atelier-app/src/infrastructure/mod.rs#L20) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod launch_ports;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod local_http;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:10](../crates/atelier-app/src/infrastructure/mod.rs#L10) | <code>pub mod portable_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod projects;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:12](../crates/atelier-app/src/infrastructure/mod.rs#L12) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:13](../crates/atelier-app/src/infrastructure/mod.rs#L13) | <code>mod publish;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:14](../crates/atelier-app/src/infrastructure/mod.rs#L14) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:15](../crates/atelier-app/src/infrastructure/mod.rs#L15) | <code>pub mod settings;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:16](../crates/atelier-app/src/infrastructure/mod.rs#L16) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:17](../crates/atelier-app/src/infrastructure/mod.rs#L17) | <code>pub mod task_creation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:18](../crates/atelier-app/src/infrastructure/mod.rs#L18) | <code>pub mod task_editing;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:19](../crates/atelier-app/src/infrastructure/mod.rs#L19) | <code>pub mod task_templates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:20](../crates/atelier-app/src/infrastructure/mod.rs#L20) | <code>pub mod time_tracking;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:21](../crates/atelier-app/src/infrastructure/mod.rs#L21) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:1](../crates/atelier-app/src/infrastructure/portable_import.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:5](../crates/atelier-app/src/infrastructure/portable_import.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use cap_fs_ext::DirExt;</code> |
@@ -1921,8 +1935,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/launch-detection.test.mjs:8](../test/launch-detection.test.mjs#L8) | <code>test('detects front and ASP.NET apps, inherits package manager and proposes port overrides without running scripts', () =&gt; {</code> |
 | [test/launch-detection.test.mjs:30](../test/launch-detection.test.mjs#L30) | <code>test('.NET detection lists projects and profiles, keeps profile URLs but never returns environment secrets', () =&gt; {</code> |
 | [test/launch-detection.test.mjs:57](../test/launch-detection.test.mjs#L57) | <code>test('does not assume port support for custom scripts or execute project code, and reports broken manifests', () =&gt; {</code> |
-| [test/launch-ports.test.mjs:10](../test/launch-ports.test.mjs#L10) | <code>test('ports accept automatic or explicit values and require the command placeholder', () =&gt; {</code> |
-| [test/launch-ports.test.mjs:17](../test/launch-ports.test.mjs#L17) | <code>test('managed launches allocate unique ports per worktree, preserve commands, and reject occupied or reused fixed ports', async t =&gt; {</code> |
+| [test/launch-ports.test.mjs:10](../test/launch-ports.test.mjs#L10) | <code>test('native port reservations remain unique and occupied until released', async () =&gt; {</code> |
+| [test/launch-ports.test.mjs:24](../test/launch-ports.test.mjs#L24) | <code>test('ports accept automatic or explicit values and require the command placeholder', () =&gt; {</code> |
+| [test/launch-ports.test.mjs:31](../test/launch-ports.test.mjs#L31) | <code>test('managed launches allocate unique ports per worktree, preserve commands, and reject occupied or reused fixed ports', async t =&gt; {</code> |
 | [test/launch-settings.test.mjs:12](../test/launch-settings.test.mjs#L12) | <code>test('launch settings preserve legacy commands and validate service directories', () =&gt; {</code> |
 | [test/launch-settings.test.mjs:24](../test/launch-settings.test.mjs#L24) | <code>test('front and back use their worktree subdirectories and validate both before spawning', async t =&gt; {</code> |
 | [test/local-http.test.mjs:7](../test/local-http.test.mjs#L7) | <code>test('local control requests avoid fetch and preserve errors, authentication, bounds and cancellation', async t =&gt; {</code> |
@@ -3293,7 +3308,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/backups.rs:468](../crates/atelier-app/src/infrastructure/backups.rs#L468) | <code>.query_row::&lt;i64, _, _&gt;("SELECT COUNT(*) FROM token_vault", [], \|row\| row.get(0))</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:337](../crates/atelier-app/src/infrastructure/checked_file.rs#L337) | <code>.execute_batch("CREATE TABLE sample(value); INSERT INTO sample VALUES (42);")</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:63](../crates/atelier-app/src/infrastructure/data_lock.rs#L63) | <code>assert!(!root.path().join("kanban.sqlite").exists());</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:20](../crates/atelier-app/src/infrastructure/mod.rs#L20) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:21](../crates/atelier-app/src/infrastructure/mod.rs#L21) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:45](../crates/atelier-app/src/infrastructure/portable_import.rs#L45) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:53](../crates/atelier-app/src/infrastructure/portable_import.rs#L53) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:186](../crates/atelier-app/src/infrastructure/portable_import.rs#L186) | <code>let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;</code> |
@@ -3537,4 +3552,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:339](../xtask/src/storage.rs#L339) | <code>token_vault::save(&amp;database, &amp;tokens).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 403 fichiers ; 97 fichiers de tests Node.
+Total : 404 fichiers ; 97 fichiers de tests Node.
