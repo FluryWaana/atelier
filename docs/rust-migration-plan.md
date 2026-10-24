@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication/archivage/suppression HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication/archivage/suppression/modèles HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -613,6 +613,13 @@ Prochaine action concrète :
 - **Vérification :** 63 tests Rust, Clippy natif/WASM ; scénario Node équivalent ajouté et parcours HTTP complet avec temps/reprise. Suite Node complète avec contrôle release : 428 tests, 425 réussis, aucun échec, trois exclusions, 83,291 s.
 - **Preuves recueillies :** chronomètres macOS Intel `6529ea2` ; préparation privée de racine Linux/macOS ARM64 `07691c8`, journaux relus. Revalidation Windows CRLF et nouvelles cibles toujours attendues.
 - **Suite :** création/édition complètes, modèles, projets/réglages et autres cas d'usage M03 ; protections/intégrations M02 restantes. Aucun lot globalement qualifié par cet incrément.
+
+### Incrément M03 — modèles de tâches
+
+- **Livré :** création/retrait de modèles transactionnels, critères réinitialisés, 50 modèles maximum, conservation des réglages et de l'UTF-16. Application à la création complète et interface encore ouvertes.
+- **Preuves :** 65 tests Rust, Clippy natif/WASM ; test Node équivalent et scénario HTTP concurrent avec reprise. Résultat complet Node dans le relevé M03.
+- **CI recueillie :** `ec85b26` entièrement réussie ; journaux des cinq cibles natifs relus pour les chronomètres et l'archivage/suppression, quatre POSIX pour le dossier privé. Correction CRLF Windows confirmée. Aucun nouveau lot globalement clos.
+- **Suite :** création/édition complètes, projets/réglages ; protections/intégrations M02 restantes.
 
 ## 12. Définition finale de terminé
 

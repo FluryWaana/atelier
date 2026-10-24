@@ -9,5 +9,6 @@ pub mod prototype;
 mod publish;
 pub mod session;
 pub mod store;
+pub mod task_templates;
 pub mod time_tracking;
 pub mod token_vault;

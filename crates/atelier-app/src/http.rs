@@ -24,6 +24,7 @@ use tower_http::services::ServeFile;
 
 mod card_lifecycle;
 mod events;
+mod task_templates;
 mod time_tracking;
 
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
@@ -306,6 +307,11 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
         .route("/api/cards", post(create))
+        .route("/api/templates", post(task_templates::create))
+        .route(
+            "/api/templates/{id}",
+            axum::routing::delete(task_templates::remove),
+        )
         .route(
             "/api/cards/{id}",
             axum::routing::delete(card_lifecycle::remove),

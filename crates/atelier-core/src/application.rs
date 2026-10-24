@@ -6,6 +6,7 @@ use crate::{
 use serde_json::json;
 
 pub mod card_lifecycle;
+pub mod task_templates;
 pub mod time_tracking;
 
 pub fn create_card(body: &Document, id: String, timestamp: String) -> Result<Card, &'static str> {
@@ -56,10 +57,17 @@ pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json:
     if let Some(agent) = card.fields.raw("agent") {
         fields.set("agent", &agent)?;
     }
+    fields.set("checklist", &reset_checklist(&card.fields)?)?;
+    fields.set("status", &"todo")?;
+    fields.set("createdAt", &timestamp)?;
+    fields.set("updatedAt", &timestamp)?;
+    Ok(Card { id, title, fields })
+}
+
+fn reset_checklist(source: &Document) -> serde_json::Result<Vec<Document>> {
     let mut criteria = Vec::new();
-    if card.fields.truthy("checklist")? {
-        for original in card
-            .fields
+    if source.truthy("checklist")? {
+        for original in source
             .get::<Vec<Document>>("checklist")?
             .unwrap_or_default()
         {
@@ -71,11 +79,7 @@ pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json:
             criteria.push(criterion);
         }
     }
-    fields.set("checklist", &criteria)?;
-    fields.set("status", &"todo")?;
-    fields.set("createdAt", &timestamp)?;
-    fields.set("updatedAt", &timestamp)?;
-    Ok(Card { id, title, fields })
+    Ok(criteria)
 }
 
 #[cfg(test)]

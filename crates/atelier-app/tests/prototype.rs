@@ -339,6 +339,89 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
 }
 
 #[tokio::test]
+async fn template_routes_serialize_the_limit_and_preserve_it_across_restart() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let card: Value = client
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Template source"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let responses = futures_util::future::join_all((0..55).map(|index| {
+        client
+            .post(format!("{address}/api/templates"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"name":format!("Template {index}"), "cardId":card["id"]}))
+            .send()
+    }))
+    .await;
+    let mut ids = Vec::new();
+    for response in responses {
+        let response = response.unwrap();
+        if response.status().is_success() {
+            let template: Value = response.json().await.unwrap();
+            ids.push(template["id"].as_str().unwrap().to_owned());
+            assert_eq!(template["mode"], "edit");
+        } else {
+            assert_eq!(response.status(), 400);
+        }
+    }
+    assert_eq!(ids.len(), 50);
+    stop(&address, &token, task).await;
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    for id in [&ids[0], &"missing".to_owned()] {
+        assert_eq!(
+            client
+                .delete(format!("{address}/api/templates/{id}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+    }
+    for expected in [200, 400] {
+        assert_eq!(
+            client
+                .post(format!("{address}/api/templates"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+                .json(&json!({"name":"Again", "cardId":card["id"]}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            expected
+        );
+    }
+    assert_eq!(
+        client
+            .post(format!("{address}/api/templates"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"name":"Missing", "cardId":"missing"}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn events_authenticate_notify_commits_reconnect_and_end_on_shutdown() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

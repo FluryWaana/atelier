@@ -101,6 +101,25 @@ test('archive and deletion preserve historical guards, UTF-16 and strict card li
   assert.deepEqual(tasks.remove(card.id), { ok: true });
 });
 
+test('task templates preserve settings and UTF-16, reset criteria and enforce fifty entries', () => {
+  const { tasks, store } = fixture();
+  const card = tasks.create({ title: 'Source', description: '\ud800', checklist: [{ text: '\udc00', done: true }] });
+  store.saveSettings({ future: { '\ud800': '\udc00' }, taskQueue: { paused: true, ids: [card.id] } });
+  const first = tasks.createTemplate({ cardId: card.id, name: ' \ud800 ' });
+  assert.equal(first.name, '\ud800'); assert.equal(first.description, '\ud800');
+  assert.deepEqual(first.checklist, [{ text: '\udc00', done: false }]);
+  for (let index = 1; index < 50; index++) tasks.createTemplate({ cardId: card.id, name: 'Template' });
+  assert.throws(() => tasks.createTemplate({ cardId: card.id, name: 'Overflow' }), /50 maximum/);
+  tasks.removeTemplate('missing'); assert.equal(store.settings().taskTemplates.length, 50);
+  tasks.removeTemplate(first.id);
+  tasks.createTemplate({ cardId: card.id, name: '🔧'.repeat(50) });
+  assert.throws(() => tasks.createTemplate({ cardId: card.id, name: '🔧'.repeat(51) }), /Texte invalide/);
+  assert.throws(() => tasks.createTemplate({ cardId: card.id, name: ' ' }), /Nom de modèle/);
+  assert.deepEqual(store.settings().future, { '\ud800': '\udc00' });
+  assert.deepEqual(store.settings().taskQueue, { paused: true, ids: [card.id] });
+  assert.equal(store.card(card.id).checklist[0].done, true);
+});
+
 test('project relocation backs up before writes and rolls back cards when an operation fails', () => {
   const { projects, store, events, projectOptions } = fixture();
   const project = projects.create({ name: 'Projet', repo: 'C:/old' });

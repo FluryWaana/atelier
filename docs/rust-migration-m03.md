@@ -56,6 +56,16 @@ Contrôles Windows : 63 tests Rust réussis, Clippy natif/WASM. Suite Node compl
 
 Preuves précédentes : journal macOS Intel `6529ea2` relu, transitions de temps et scénario HTTP réussis ; Windows attend la correction CRLF `e281b44`. Les journaux Linux ARM64/macOS ARM64 `07691c8` confirment le dossier privé, le contrôle de marqueur et la préparation après remplacement du chemin.
 
+## Modèles de tâches — après `ec85b26`
+
+`application/task_templates` et les routes POST/DELETE `/api/templates` reprennent la validation du nom, la copie des seuls champs éditables, la remise à zéro des critères et la limite de 50 modèles. Chaque mutation tient dans une transaction SQLite et notifie après commit. Les réglages additionnels, la file et les chaînes UTF-16 restent intacts ; le retrait d'un identifiant absent est sans effet sur les autres modèles. La conversion des identifiants SQLite est partagée avec les temps sans changement de contrat.
+
+Sources confrontées : `lib/application/tasks.mjs`, `lib/http/task-routes.mjs`, `lib/store.mjs` et `test/board-use-cases.test.mjs`. Le scénario Node équivalent et le test SQLite Rust vérifient les bornes et la conservation des données. Le test HTTP lance 55 créations concurrentes (50 succès, cinq refus), redémarre le serveur puis vérifie retrait, remplacement, limite et carte absente. L'application des modèles à la création complète, les réglages publics et leur interface restent à porter.
+
+Contrôles locaux : 65 tests Rust réussis, Clippy natif/WASM réussi (avertissements de copie du cache de compilation uniquement). Suite Node complète avec contrôle release : 429 tests, 426 réussis, aucun échec, trois exclusions, 85,001 s. Les nouvelles preuves natives de cet incrément restent attendues.
+
+La [CI `ec85b26`](https://github.com/FluryWaana/atelier/actions/runs/40053199326) est entièrement réussie. Journaux des cinq jobs natifs relus : les 46 transitions de temps, le parcours HTTP et les deux gardes de cycle de vie passent ; les quatre cibles POSIX passent la préparation privée après remplacement du chemin. Le journal Windows confirme la correction du comparateur CRLF. Les cinq journaux confirment aussi le refus entre comptes des coffres, avec relecture finale du second secret sur macOS. Ces preuves ne qualifient pas les fonctionnalités encore absentes.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

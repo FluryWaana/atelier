@@ -171,6 +171,8 @@ C02/C05, après `6529ea2` : dossier du prototype préparé relativement à son d
 
 C07, après `e281b44` : archivage/restauration et suppression HTTP transactionnels, gardes d'historique/chronomètres/dépendances/worktrees et messages/statuts historiques. Scénarios Node/Rust et parcours HTTP avec reprise réussis ; activité/file restent à brancher lors de M04/M06. 63 tests Rust Windows, Clippy natif/WASM et 428 tests Node (425 réussis, trois exclusions). Création complète/édition/modèles et preuve native du nouvel incrément restent ouverts.
 
+C07, après `ec85b26` : création/retrait de modèles portés avec conservation des réglages/UTF-16, limite de 50 sous concurrence et reprise HTTP. 65 tests Rust locaux et Clippy natif/WASM réussis ; application des modèles à la création complète et UI ouvertes. La CI `ec85b26` est réussie ; journaux des cinq cibles relus pour C20 et le cycle de vie C07, des quatre POSIX pour la préparation privée C02/C05. Le comparateur Windows passe désormais après correction CRLF. Les preuves natives des modèles restent attendues.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.
