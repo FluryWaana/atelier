@@ -316,7 +316,10 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
                     .as_deref(),
                 Some(encrypted.as_str())
             );
-            let config: Document = database.call(settings::public_config).await.unwrap();
+            let config: Document = database
+                .call(|store| settings::public_config(store, &mut session::protect))
+                .await
+                .unwrap();
             assert!(config.string_equals("baseBranch", "old").unwrap());
             assert_eq!(config.get::<bool>("tokenSet").unwrap(), Some(true));
             database.close().await.unwrap();

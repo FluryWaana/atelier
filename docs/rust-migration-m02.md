@@ -1,5 +1,11 @@
 # M02 — données et protections locales
 
+## Coffres propres aux prototypes — candidat après `bcb158d`
+
+Chaque dossier synthétique reçoit un identifiant aléatoire persistant dans `.atelier-prototype-vault`, ouvert relativement au répertoire détenu, privé sous POSIX et validé avant usage. Les adaptateurs Linux/macOS emploient exclusivement le service `atelier-kanban-prototype-<identifiant>` ; le service historique `atelier-kanban` reste réservé au comparateur de compatibilité. Windows conserve DPAPI. Les routes réglages/profils et l'état public passent le protecteur du prototype au worker SQLite ; chiffrement et appels au trousseau précèdent la transaction d'écriture, sans exposer les secrets dans les arguments.
+
+Deux tests ajoutés couvrent l'identifiant stable/distinct/invalide et les commandes des coffres isolés avec doubles Linux/macOS. `xtask test-keyring` prépare aussi une preuve native : deux dossiers synthétiques, écriture de réglages, fermeture/réouverture, refus du chiffré d'un autre prototype, conservation de sa propre clé et tentative de nettoyage des deux services même en cas d'échec. Ce scénario attend la qualification finale Linux/macOS ; les doubles et la compilation Windows ne constituent pas cette preuve. Aucun test ni compilation locale, aucun trousseau utilisateur consulté.
+
 ## Coffre UTF-16 — candidat après `38ceb6c`
 
 La préparation des réglages globaux a révélé que le coffre décodait encore les jetons en `serde_json::Value`, qui refuse les substituts UTF-16 isolés. Chargement, préparation du chiffrement et sauvegarde utilisent maintenant `Document`, y compris pour les clés inconnues. La suppression d'un coffre entièrement vide garde les conditions de vérité Node ; tableaux/objets vides restent des valeurs vraies.

@@ -14,19 +14,6 @@ impl std::fmt::Display for VaultFailure {
 }
 impl std::error::Error for VaultFailure {}
 
-pub fn prototype_protect(value: &str, decrypt: bool) -> Result<String> {
-    #[cfg(windows)]
-    {
-        super::session::protect(value, decrypt)
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = (value, decrypt);
-        // shortcut: never query the production keyring from this prototype; add an isolated service before POSIX qualification.
-        Err(VaultFailure.into())
-    }
-}
-
 pub fn platform() -> &'static str {
     if cfg!(windows) {
         "win32"
@@ -74,12 +61,11 @@ fn encrypt(
         .transpose()
 }
 
-pub fn public_config(store: &Store<'_>) -> Result<Document> {
-    settings::public_config(
-        &store.settings()?,
-        &load(store, &mut prototype_protect)?,
-        platform(),
-    )
+pub fn public_config(
+    store: &Store<'_>,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<Document> {
+    settings::public_config(&store.settings()?, &load(store, protect)?, platform())
 }
 
 // The caller owns one SQLite worker operation: no other settings/template write can interleave.

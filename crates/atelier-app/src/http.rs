@@ -36,6 +36,7 @@ pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval';
 
 struct AppState {
     database: Database,
+    vault: crate::infrastructure::token_vault::PrototypeVault,
     backups: Arc<crate::infrastructure::backups::BackupDirectory>,
     token: String,
     port: u16,
@@ -149,9 +150,10 @@ async fn health(State(state): State<Shared>, Query(query): Query<HealthQuery>) -
 }
 
 async fn board(State(state): State<Shared>) -> Response {
+    let vault = state.vault.clone();
     match state
         .database
-        .call(|store| {
+        .call(move |store| {
             use crate::infrastructure::store::Documents;
             let mut cards = Vec::new();
             let mut brainstorms = Vec::new();
@@ -163,7 +165,10 @@ async fn board(State(state): State<Shared>) -> Response {
                 }
             }
             Ok(Board {
-                settings: crate::infrastructure::settings::public_config(store)?,
+                settings: crate::infrastructure::settings::public_config(
+                    store,
+                    &mut |value, decrypt| vault.protect(value, decrypt),
+                )?,
                 cards,
                 brainstorms,
                 projects: store.documents(Documents::Projects)?,
@@ -281,6 +286,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         app = app.route(&path, get_service(ServeFile::new(entry.path())));
     }
     let directory = PrototypeDirectory::open(&directory)?;
+    let vault =
+        crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;
     let token = session::new_token()?;
     session::write(&directory.path, &token)?;
     let database = Database::open(&directory.path.join("kanban.sqlite"))?;
@@ -290,6 +297,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let (shutdown, mut stopped) = watch::channel(false);
     let state = Arc::new(AppState {
         database,
+        vault,
         backups: Arc::new(directory.backups()?),
         token,
         port: listener.local_addr()?.port(),

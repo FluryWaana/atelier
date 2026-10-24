@@ -39,6 +39,44 @@ impl PrototypeDirectory {
     pub fn backups(&self) -> Result<super::backups::BackupDirectory> {
         super::backups::BackupDirectory::open_in(&self.path, &self.directory)
     }
+
+    pub fn vault_service(&self) -> Result<String> {
+        use std::io::Write;
+        let name = Path::new(".atelier-prototype-vault");
+        let id = match self.directory.symlink_metadata(name) {
+            Ok(_) => String::from_utf8(
+                CheckedFile::open_in(&self.directory, name)?
+                    .private()?
+                    .read(64)?,
+            )?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                let id = super::session::new_token()?;
+                let mut options = cap_std::fs::OpenOptions::new();
+                options.write(true).create_new(true);
+                #[cfg(unix)]
+                {
+                    use cap_std::fs::OpenOptionsExt;
+                    options.mode(0o600);
+                }
+                let mut file = self.directory.open_with(name, &options)?;
+                file.write_all(id.as_bytes())?;
+                file.sync_all()?;
+                id
+            }
+            Err(error) => return Err(error.into()),
+        };
+        if id.len() != 64
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err("Identifiant de coffre prototype invalide.".into());
+        }
+        Ok(format!(
+            "{}{id}",
+            super::token_vault::PROTOTYPE_SERVICE_PREFIX
+        ))
+    }
 }
 
 fn prepare(directory: &Dir) -> Result<()> {
@@ -91,6 +129,43 @@ fn prepare(directory: &Dir) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn prototype_vault_identifiers_are_private_stable_distinct_and_validated() {
+        let root = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let opened = PrototypeDirectory::open(root.path()).unwrap();
+        let service = opened.vault_service().unwrap();
+        assert!(service.starts_with(super::super::token_vault::PROTOTYPE_SERVICE_PREFIX));
+        assert_ne!(
+            service,
+            PrototypeDirectory::open(other.path())
+                .unwrap()
+                .vault_service()
+                .unwrap()
+        );
+        drop(opened);
+        let opened = PrototypeDirectory::open(root.path()).unwrap();
+        assert_eq!(opened.vault_service().unwrap(), service);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(root.path().join(".atelier-prototype-vault"))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
+        }
+        fs::write(
+            root.path().join(".atelier-prototype-vault"),
+            "atelier-kanban",
+        )
+        .unwrap();
+        assert!(opened.vault_service().is_err());
+    }
 
     #[test]
     fn prototype_markers_must_be_empty_regular_files_before_storage_opens() {

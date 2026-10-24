@@ -53,6 +53,37 @@ pub async fn keyring_protect(
     decrypt: bool,
     execute: &mut impl AsyncFnMut(&str, &[&str], Option<&str>) -> Result<(i32, String)>,
 ) -> Result<String> {
+    keyring_protect_service(platform, "atelier-kanban", value, decrypt, execute).await
+}
+
+pub const PROTOTYPE_SERVICE_PREFIX: &str = "atelier-kanban-prototype-";
+
+fn validate_prototype_service(service: &str) -> Result<()> {
+    let id = service
+        .strip_prefix(PROTOTYPE_SERVICE_PREFIX)
+        .ok_or("Service du prototype invalide.")?;
+    unhex::<32>(id)?;
+    Ok(())
+}
+
+pub async fn keyring_protect_scoped(
+    platform: KeyringPlatform,
+    service: &str,
+    value: &str,
+    decrypt: bool,
+    execute: &mut impl AsyncFnMut(&str, &[&str], Option<&str>) -> Result<(i32, String)>,
+) -> Result<String> {
+    validate_prototype_service(service)?;
+    keyring_protect_service(platform, service, value, decrypt, execute).await
+}
+
+async fn keyring_protect_service(
+    platform: KeyringPlatform,
+    service: &str,
+    value: &str,
+    decrypt: bool,
+    execute: &mut impl AsyncFnMut(&str, &[&str], Option<&str>) -> Result<(i32, String)>,
+) -> Result<String> {
     // Validate the envelope before querying a keyring or attempting to create a key.
     let envelope = if decrypt {
         let envelope: Envelope = serde_json::from_str(value)?;
@@ -68,13 +99,7 @@ pub async fn keyring_protect(
     let (command, lookup, missing) = match platform {
         KeyringPlatform::Linux => (
             "secret-tool",
-            vec![
-                "lookup",
-                "application",
-                "atelier-kanban",
-                "purpose",
-                "token-key",
-            ],
+            vec!["lookup", "application", service, "purpose", "token-key"],
             1,
         ),
         KeyringPlatform::Macos => (
@@ -82,7 +107,7 @@ pub async fn keyring_protect(
             vec![
                 "find-generic-password",
                 "-s",
-                "atelier-kanban",
+                service,
                 "-a",
                 "token-key",
                 "-w",
@@ -101,7 +126,7 @@ pub async fn keyring_protect(
                         "store",
                         "--label=Atelier Kanban",
                         "application",
-                        "atelier-kanban",
+                        service,
                         "purpose",
                         "token-key",
                     ],
@@ -114,7 +139,7 @@ pub async fn keyring_protect(
                     command,
                     &["-i"],
                     Some(&format!(
-                        "add-generic-password -s atelier-kanban -a token-key -w {generated}\n"
+                        "add-generic-password -s {service} -a token-key -w {generated}\n"
                     )),
                 )
                 .await?
@@ -155,6 +180,49 @@ pub async fn keyring_protect(
             tag: session::hexadecimal(tag.as_ref()),
             data: STANDARD.encode(data),
         })?)
+    }
+}
+
+#[derive(Clone)]
+pub struct PrototypeVault {
+    #[cfg(unix)]
+    service: String,
+    #[cfg(unix)]
+    runtime: tokio::runtime::Handle,
+}
+
+impl PrototypeVault {
+    pub fn new(service: String) -> Result<Self> {
+        validate_prototype_service(&service)?;
+        Ok(Self {
+            #[cfg(unix)]
+            service,
+            #[cfg(unix)]
+            runtime: tokio::runtime::Handle::try_current()?,
+        })
+    }
+
+    // Called only on the dedicated SQLite thread, before opening its write transaction.
+    pub fn protect(&self, value: &str, decrypt: bool) -> Result<String> {
+        #[cfg(windows)]
+        {
+            session::protect(value, decrypt)
+        }
+        #[cfg(unix)]
+        {
+            let platform = if cfg!(target_os = "macos") {
+                KeyringPlatform::Macos
+            } else {
+                KeyringPlatform::Linux
+            };
+            self.runtime.block_on(keyring_protect_scoped(
+                platform,
+                &self.service,
+                value,
+                decrypt,
+                &mut execute_keyring,
+            ))
+        }
     }
 }
 
@@ -287,6 +355,90 @@ mod tests {
     use super::*;
     use atelier_core::document::JsonString;
     use serde_json::{Value, json};
+
+    #[tokio::test]
+    async fn prototype_keyrings_use_only_their_validated_service_and_keep_ciphertexts_isolated() {
+        for platform in [KeyringPlatform::Linux, KeyringPlatform::Macos] {
+            let service = format!("{PROTOTYPE_SERVICE_PREFIX}{}", "ab".repeat(32));
+            let mut key: Option<String> = None;
+            let mut execute =
+                async |_: &str, args: &[&str], input: Option<&str>| -> Result<(i32, String)> {
+                    assert!(!args.contains(&"atelier-kanban"));
+                    if let Some(input) = input {
+                        let generated = match platform {
+                            KeyringPlatform::Linux => {
+                                assert!(args.contains(&service.as_str()));
+                                input
+                            }
+                            KeyringPlatform::Macos => {
+                                assert_eq!(args, ["-i"]);
+                                assert!(input.starts_with(&format!(
+                                    "add-generic-password -s {service} -a token-key -w "
+                                )));
+                                input.split_whitespace().last().unwrap()
+                            }
+                        };
+                        unhex::<32>(generated)?;
+                        assert!(!args.contains(&generated));
+                        key = Some(generated.into());
+                        Ok((0, String::new()))
+                    } else {
+                        assert!(args.contains(&service.as_str()));
+                        Ok(match &key {
+                            Some(key) => (0, key.clone()),
+                            None => (
+                                if matches!(platform, KeyringPlatform::Linux) {
+                                    1
+                                } else {
+                                    44
+                                },
+                                String::new(),
+                            ),
+                        })
+                    }
+                };
+            let encrypted =
+                keyring_protect_scoped(platform, &service, "synthetic", false, &mut execute)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                keyring_protect_scoped(platform, &service, &encrypted, true, &mut execute)
+                    .await
+                    .unwrap(),
+                "synthetic"
+            );
+            let mut foreign =
+                async |_: &str, _: &[&str], _: Option<&str>| -> Result<(i32, String)> {
+                    Ok((0, "11".repeat(32)))
+                };
+            assert!(
+                keyring_protect_scoped(
+                    platform,
+                    &format!("{PROTOTYPE_SERVICE_PREFIX}{}", "cd".repeat(32)),
+                    &encrypted,
+                    true,
+                    &mut foreign
+                )
+                .await
+                .is_err()
+            );
+            for invalid in [
+                "atelier-kanban",
+                "atelier-kanban-prototype-abc",
+                "atelier-kanban-prototype-a\ncommand",
+            ] {
+                let mut forbidden =
+                    async |_: &str, _: &[&str], _: Option<&str>| -> Result<(i32, String)> {
+                        panic!("invalid service must not reach a keyring")
+                    };
+                assert!(
+                    keyring_protect_scoped(platform, invalid, "synthetic", false, &mut forbidden)
+                        .await
+                        .is_err()
+                );
+            }
+        }
+    }
 
     #[tokio::test]
     async fn token_documents_preserve_utf16_keys_values_and_empty_containers() {

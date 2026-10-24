@@ -9,6 +9,7 @@ use axum::{
 };
 
 async fn execute(state: Shared, service: Option<String>, request: Request) -> Response {
+    let vault = state.vault.clone();
     let body = match object(request.into_body()).await {
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
@@ -16,10 +17,12 @@ async fn execute(state: Shared, service: Option<String>, request: Request) -> Re
     match state
         .database
         .call(move |store| match service {
-            Some(service) => {
-                settings::remove_token(store, &service, &mut settings::prototype_protect)
-            }
-            None => settings::update(store, &body, &mut settings::prototype_protect),
+            Some(service) => settings::remove_token(store, &service, &mut |value, decrypt| {
+                vault.protect(value, decrypt)
+            }),
+            None => settings::update(store, &body, &mut |value, decrypt| {
+                vault.protect(value, decrypt)
+            }),
         })
         .await
     {

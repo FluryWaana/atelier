@@ -31,10 +31,21 @@ fn response(result: crate::Result<Vec<atelier_core::document::Document>>) -> Res
 }
 
 pub(super) async fn describe(State(state): State<Shared>) -> Response {
-    response(state.database.call(agent_providers::describe).await)
+    let vault = state.vault.clone();
+    response(
+        state
+            .database
+            .call(move |store| {
+                agent_providers::describe(store, &mut |value, decrypt| {
+                    vault.protect(value, decrypt)
+                })
+            })
+            .await,
+    )
 }
 
 pub(super) async fn save(State(state): State<Shared>, request: Request) -> Response {
+    let vault = state.vault.clone();
     let body = match object(request.into_body()).await {
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
@@ -42,7 +53,11 @@ pub(super) async fn save(State(state): State<Shared>, request: Request) -> Respo
     response(
         state
             .database
-            .call(move |store| agent_providers::save(store, &body))
+            .call(move |store| {
+                agent_providers::save(store, &body, &mut |value, decrypt| {
+                    vault.protect(value, decrypt)
+                })
+            })
             .await,
     )
 }
@@ -52,13 +67,18 @@ pub(super) async fn remove(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
+    let vault = state.vault.clone();
     if let Err((status, message)) = object(request.into_body()).await {
         return failure(status, message);
     }
     response(
         state
             .database
-            .call(move |store| agent_providers::remove(store, &id))
+            .call(move |store| {
+                agent_providers::remove(store, &id, &mut |value, decrypt| {
+                    vault.protect(value, decrypt)
+                })
+            })
             .await,
     )
 }

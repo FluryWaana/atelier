@@ -72,6 +72,110 @@ pub async fn test(locked: bool) -> Result<()> {
     println!(
         "Trousseau natif : création, relecture et suppression du seul secret synthétique réussies."
     );
+    if !locked {
+        test_prototype_vaults(platform).await?;
+    }
+    Ok(())
+}
+
+async fn test_prototype_vaults(platform: KeyringPlatform) -> Result<()> {
+    use atelier_app::infrastructure::{
+        database::Database,
+        prototype::PrototypeDirectory,
+        settings,
+        token_vault::{self, PrototypeVault},
+    };
+    use atelier_core::document::Document;
+    let first = tempfile::tempdir()?;
+    let second = tempfile::tempdir()?;
+    let first_service = PrototypeDirectory::open(first.path())?.vault_service()?;
+    let second_service = PrototypeDirectory::open(second.path())?.vault_service()?;
+    if first_service == second_service {
+        return Err("Deux prototypes partagent leur service de coffre.".into());
+    }
+    let result: Result<()> = async {
+        let directory = PrototypeDirectory::open(first.path())?;
+        let database = Database::open(&directory.path.join("kanban.sqlite"))?;
+        let vault = PrototypeVault::new(first_service.clone())?;
+        database.call(move |store| {
+            let body: Document = serde_json::from_str(r#"{"baseBranch":"synthetic","token":"prototype-one-\ud800","tempoToken":"synthetic-tempo"}"#)?;
+            let config = settings::update(store, &body, &mut |value, decrypt| vault.protect(value, decrypt))?;
+            if !config.get::<bool>("tokenSet")?.unwrap_or_default() || serde_json::to_string(&config)?.contains("prototype-one") { return Err("Réponse publique du coffre incorrecte.".into()); }
+            Ok(())
+        }).await?;
+        let encrypted = database.call(token_vault::read_encrypted).await?.ok_or("Coffre absent.")?;
+        database.close().await?; drop(database); drop(directory);
+        let directory = PrototypeDirectory::open(first.path())?;
+        if directory.vault_service()? != first_service { return Err("Service perdu après réouverture.".into()); }
+        let database = Database::open(&directory.path.join("kanban.sqlite"))?;
+        let vault = PrototypeVault::new(first_service.clone())?;
+        database.call(move |store| {
+            let public = settings::public_config(store, &mut |value, decrypt| vault.protect(value, decrypt))?;
+            if !public.get::<bool>("tokenSet")?.unwrap_or_default() || !public.string_equals("baseBranch", "synthetic")? { return Err("Réouverture du coffre prototype incorrecte.".into()); }
+            Ok(())
+        }).await?;
+        database.close().await?; drop(database); drop(directory);
+        let directory = PrototypeDirectory::open(second.path())?;
+        let database = Database::open(&directory.path.join("kanban.sqlite"))?;
+        let vault = PrototypeVault::new(second_service.clone())?;
+        database.call(move |store| {
+            let body: Document = serde_json::from_str(r#"{"token":"prototype-two"}"#)?;
+            settings::update(store, &body, &mut |value, decrypt| vault.protect(value, decrypt))?;
+            Ok(())
+        }).await?;
+        let own = database.call(token_vault::read_encrypted).await?.ok_or("Second coffre absent.")?;
+        database.call(move |store| token_vault::save_encrypted(store, Some(&encrypted))).await?;
+        let vault = PrototypeVault::new(second_service.clone())?;
+        if database.call(move |store| settings::public_config(store, &mut |value, decrypt| vault.protect(value, decrypt))).await.is_ok() {
+            return Err("Un prototype a déchiffré le coffre d'un autre.".into());
+        }
+        database.call(move |store| token_vault::save_encrypted(store, Some(&own))).await?;
+        let vault = PrototypeVault::new(second_service.clone())?;
+        database.call(move |store| {
+            if !settings::public_config(store, &mut |value, decrypt| vault.protect(value, decrypt))?.get::<bool>("tokenSet")?.unwrap_or_default() { return Err("Clé du second prototype perdue.".into()); }
+            Ok(())
+        }).await?;
+        database.close().await?;
+        Ok(())
+    }.await;
+    let mut cleanup_failed = false;
+    for service in [&first_service, &second_service] {
+        let (command, args, missing) = match platform {
+            KeyringPlatform::Linux => (
+                "secret-tool",
+                vec![
+                    "clear",
+                    "application",
+                    service.as_str(),
+                    "purpose",
+                    "token-key",
+                ],
+                1,
+            ),
+            KeyringPlatform::Macos => (
+                "security",
+                vec![
+                    "delete-generic-password",
+                    "-s",
+                    service.as_str(),
+                    "-a",
+                    "token-key",
+                ],
+                44,
+            ),
+        };
+        cleanup_failed |= match execute_keyring(command, &args, None).await {
+            Ok((status, _)) => status != 0 && (result.is_ok() || status != missing),
+            Err(_) => true,
+        };
+    }
+    if cleanup_failed {
+        return Err("Nettoyage du coffre prototype synthétique impossible.".into());
+    }
+    result?;
+    println!(
+        "Coffres de prototypes natifs : réglages atomiques, réouverture, refus entre services et nettoyage vérifiés."
+    );
     Ok(())
 }
 
