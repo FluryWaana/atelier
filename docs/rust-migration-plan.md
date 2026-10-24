@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — création complète, duplication/archivage/suppression/modèles HTTP et chronomètres locaux ; édition, autres API et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — création/édition locales, duplication/archivage/suppression/modèles HTTP et chronomètres ; projets/réglages, effets distants et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -641,6 +641,13 @@ Prochaine action concrète :
 - **Référence :** 63 modifications exécutées par Node et comparées à Rust, avec valeurs, état sauvegardé, erreurs et ordre des effets. Lancements et synchronisations synthétiques, aucune qualification M04/M05 revendiquée.
 - **CI recueillie :** `e027e70` entièrement réussi, journal Intel relu. Création HTTP `567a529` vérifiée dans les journaux Windows, Linux x64/ARM64 et macOS ARM64 ; Intel attendu.
 - **Suite :** édition locale transactionnelle et invalidation des reviews, refus explicite des effets non portés, puis projets/réglages et intégrations M02 restantes.
+
+### Incrément M03 — édition HTTP et reviews atomiques
+
+- **Livré :** PATCH local, gardes historiques et invalidation transactionnelle des reviews/automatisations. Deux modifications concurrentes conservées ; panne injectée pendant l'invalidation annulant aussi la carte.
+- **Limites :** lancement/synchronisation non portés refusés en 503 sans écriture ; activité réelle à brancher en M04/M06. Aucun effet distant simulé comme réussi.
+- **Vérification :** scénario Node réel d'invalidation ajouté, parcours Rust HTTP/reprise ; bilans complets dans M03. Création `567a529` qualifiée sur les cinq cibles natives, journal Intel relu ; préparation d'édition `0ac6993` vérifiée sur les deux ARM64.
+- **Suite :** projets, réglages/profils et protections/intégrations M02 restantes. Lots globaux toujours en cours.
 
 ## 12. Définition finale de terminé
 

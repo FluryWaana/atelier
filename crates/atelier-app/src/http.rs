@@ -25,6 +25,7 @@ use tower_http::services::ServeFile;
 mod card_lifecycle;
 mod events;
 mod task_creation;
+mod task_editing;
 mod task_templates;
 mod time_tracking;
 
@@ -294,7 +295,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         )
         .route(
             "/api/cards/{id}",
-            axum::routing::delete(card_lifecycle::remove),
+            axum::routing::delete(card_lifecycle::remove).patch(task_editing::update),
         )
         .route("/api/cards/{id}/archive", post(card_lifecycle::archive))
         .route("/api/cards/{id}/duplicate", post(duplicate))

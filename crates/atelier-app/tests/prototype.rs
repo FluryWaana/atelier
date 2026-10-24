@@ -339,6 +339,214 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
 }
 
 #[tokio::test]
+async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported_effects() {
+    use atelier_app::infrastructure::store::Documents;
+    use atelier_core::{
+        contracts::Board,
+        document::{Document, JsonString},
+    };
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    {
+        let root = PrototypeDirectory::open(data.path()).unwrap();
+        let database = Database::open(&root.path.join("kanban.sqlite")).unwrap();
+        database.call(|store| {
+            let seed: Document = serde_json::from_str(r#"{"id":"local","title":"Source","description":"\ud800","instructions":"","agent":"codex","mode":"edit","status":"todo","updatedAt":"before","unknown":"\udc00","checklist":[{"text":"\ud800","done":false}],"automation":{"state":"ready","future":"\ud800"}}"#)?;
+            for id in ["local", "ticket", "worktree", "archived", "rollback"] {
+                let mut card = seed.clone(); card.set("id", &id)?;
+                match id {
+                    "ticket" => card.set("ticket", &json!({"key":"TEST-1"}))?,
+                    "worktree" => { card.set("worktree", &json!({"path":"protected"}))?; card.set("branch", &"main")?; },
+                    "archived" => card.set("archived", &true)?,
+                    _ => (),
+                }
+                store.put(Documents::Cards, &card)?;
+                store.put(Documents::Runs, &json!({"id":id,"cardId":id,"kind":"pr-review","future":{"keep":true}}))?;
+            }
+            store.put(Documents::Cards, &json!({"id":"dependent","title":"Dependency","agent":"codex","status":"todo","blockedBy":["local"]}))?;
+            store.put(Documents::Runs, &json!({"id":"other","cardId":"local","kind":"edit"}))?;
+            Ok(())
+        }).await.unwrap();
+        database.close().await.unwrap();
+        let injection = rusqlite::Connection::open(root.path.join("kanban.sqlite")).unwrap();
+        injection.execute_batch("CREATE TRIGGER reject_review BEFORE UPDATE ON runs WHEN NEW.id='rollback' BEGIN SELECT RAISE(ABORT, 'private synthetic review failure'); END;").unwrap();
+    }
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let edit = |id: &str| {
+        client
+            .patch(format!("{address}/api/cards/{id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let checked = edit("local")
+        .header("content-type", "application/json")
+        .body(r#"{"checklist":[{"text":"\ud800","done":true}]}"#)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(checked.status(), 200);
+    let checked: Card = checked.json().await.unwrap();
+    assert!(
+        checked
+            .fields
+            .get::<Document>("automation")
+            .unwrap()
+            .unwrap()
+            .string_equals("state", "ready")
+            .unwrap()
+    );
+    let renamed = edit("local")
+        .json(&json!({"title":"Renamed", "agent":"claude"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(renamed.status(), 200);
+    let renamed: Card = renamed.json().await.unwrap();
+    assert_eq!(
+        renamed.fields.get::<bool>("agentExplicit").unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        renamed.fields.get::<JsonString>("description").unwrap(),
+        Some(JsonString(vec![0xd800]))
+    );
+    let automation = renamed
+        .fields
+        .get::<Document>("automation")
+        .unwrap()
+        .unwrap();
+    assert!(automation.string_equals("state", "interrupted").unwrap());
+    assert_eq!(
+        automation.get::<JsonString>("future").unwrap(),
+        Some(JsonString(vec![0xd800]))
+    );
+    let (description, instructions) = tokio::join!(
+        edit("local")
+            .json(&json!({"description":"New description"}))
+            .send(),
+        edit("local")
+            .json(&json!({"instructions":"New instructions"}))
+            .send()
+    );
+    assert_eq!(description.unwrap().status(), 200);
+    assert_eq!(instructions.unwrap().status(), 200);
+    for (id, body, status) in [
+        (
+            "local",
+            json!({"status":"doing", "title":"Must not persist"}),
+            503,
+        ),
+        (
+            "ticket",
+            json!({"status":"review", "instructions":"Must not persist"}),
+            503,
+        ),
+        ("local", json!({"blockedBy":["dependent"]}), 400),
+        ("worktree", json!({"branch":"changed"}), 400),
+        ("archived", json!({"title":null}), 409),
+        ("missing", json!({}), 404),
+    ] {
+        assert_eq!(edit(id).json(&body).send().await.unwrap().status(), status);
+    }
+    let ticket = edit("ticket")
+        .json(&json!({"title":null,"description":false,"instructions":"Local note"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(ticket.status(), 200);
+    let ticket: Card = ticket.json().await.unwrap();
+    assert_eq!(ticket.title, JsonString::from("Source"));
+    assert_eq!(
+        ticket.fields.get::<JsonString>("description").unwrap(),
+        Some(JsonString(vec![0xd800]))
+    );
+    let rejected = edit("rollback")
+        .json(&json!({"title":"Must roll back"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(rejected.status(), 500);
+    assert_eq!(
+        rejected.json::<Value>().await.unwrap(),
+        json!({"error":"Modification de la carte impossible."})
+    );
+    stop(&address, &token, task).await;
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    database
+        .call(|store| {
+            let review = store
+                .document::<Document>(Documents::Runs, "local")?
+                .unwrap();
+            assert!(review.string_equals(
+                "reviewStaleReason",
+                atelier_core::application::task_editing::REVIEW_CHANGE_REASON
+            )?);
+            assert!(review.raw("future").is_some());
+            assert!(
+                store
+                    .document::<Document>(Documents::Runs, "other")?
+                    .unwrap()
+                    .raw("reviewStaleReason")
+                    .is_none()
+            );
+            assert!(
+                store
+                    .document::<Document>(Documents::Runs, "rollback")?
+                    .unwrap()
+                    .raw("reviewStaleReason")
+                    .is_none()
+            );
+            let rollback = store
+                .document::<Card>(Documents::Cards, "rollback")?
+                .unwrap();
+            assert_eq!(rollback.title, JsonString::from("Source"));
+            assert!(rollback.fields.string_equals("updatedAt", "before")?);
+            assert!(
+                rollback
+                    .fields
+                    .get::<Document>("automation")?
+                    .unwrap()
+                    .string_equals("state", "ready")?
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let board: Board = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let local = board.cards.iter().find(|card| card.id == "local").unwrap();
+    assert_eq!(local.title, JsonString::from("Renamed"));
+    assert!(
+        local
+            .fields
+            .string_equals("description", "New description")
+            .unwrap()
+    );
+    assert!(
+        local
+            .fields
+            .string_equals("instructions", "New instructions")
+            .unwrap()
+    );
+    assert!(local.fields.string_equals("status", "todo").unwrap());
+    assert_eq!(
+        local.fields.get::<JsonString>("unknown").unwrap(),
+        Some(JsonString(vec![0xdc00]))
+    );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn complete_creation_uses_templates_projects_native_paths_and_atomic_storage() {
     use atelier_app::infrastructure::store::Documents;
     use atelier_core::{

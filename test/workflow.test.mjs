@@ -65,6 +65,22 @@ test('personal templates persist only reusable content and survive settings chan
   assert.equal((await request('/api/cards', 'POST', { title: 'Bug', templateId: saved.id })).status, 400);
 });
 
+test('local edits invalidate only matching reviews and interrupt ready automation without losing UTF-16', async t => {
+  const { app, request } = fixture(t);
+  app.store.putCard({ id: 'card', title: 'Source', agent: 'codex', status: 'todo', description: '\ud800', checklist: [{ text: '\udc00', done: false }], automation: { state: 'ready', future: '\ud800' }, unknown: '\udc00' });
+  for (const [id, cardId, kind] of [['review', 'card', 'pr-review'], ['other', 'card', 'edit'], ['foreign', 'other', 'pr-review']]) app.store.putRun({ id, cardId, kind, future: { keep: true } });
+  const checked = await request('/api/cards/card', 'PATCH', { checklist: [{ text: '\udc00', done: true }] });
+  assert.equal(checked.status, 200); assert.equal(checked.body.automation.state, 'ready');
+  assert.equal(app.store.run('review').reviewStaleReason, undefined);
+  const renamed = await request('/api/cards/card', 'PATCH', { title: 'Changed', agent: 'claude' });
+  assert.equal(renamed.status, 200); assert.equal(renamed.body.agentExplicit, true);
+  assert.equal(renamed.body.description, '\ud800'); assert.equal(renamed.body.unknown, '\udc00');
+  assert.deepEqual(renamed.body.automation, { state: 'interrupted', step: 'tests', message: 'Le besoin ou les critères ont changé. Relancez la review.', future: '\ud800' });
+  assert.equal(app.store.run('review').reviewStaleReason, renamed.body.automation.message);
+  assert.deepEqual(app.store.run('review').future, { keep: true });
+  for (const id of ['other', 'foreign']) assert.equal(app.store.run(id).reviewStaleReason, undefined);
+});
+
 test('PR refresh preserves local work, reports errors and invalidates reviews on changed commits', async t => {
   let failed = false;
   const { app, request } = fixture(t, { refreshPR: async () => { if (failed) throw new Error('Connexion refusée'); return { status: 'completed', sourceCommit: 'new', checkedAt: new Date().toISOString() }; } });

@@ -98,6 +98,16 @@ Ce corpus ne lance aucun agent et ne synchronise aucun ticket distant. Le branch
 
 Contrôles locaux : 67 tests Rust réussis, Clippy natif/WASM et comparateur historique d'édition réussis. Suite Node complète avec contrôle release : 430 tests, 427 réussis, aucun échec, trois exclusions, 86,634 s. Les 305 contrats de domaine et 84 créations précédents restent couverts par les tests Rust. La CI `e027e70` est entièrement réussie, journal macOS Intel relu pour les 77 créations. Les journaux Windows, Linux x64/ARM64 et macOS ARM64 de `567a529` confirment 84 créations et le scénario HTTP avec chemins natifs/panne SQL/reprise ; macOS Intel encore attendu.
 
+## Édition HTTP locale et invalidation transactionnelle — après `0ac6993`
+
+PATCH `/api/cards/{id}` applique les règles d'édition dans une transaction unique du worker SQLite. La modification de la carte, les motifs d'obsolescence des seules reviews PR associées et l'interruption des automatisations `ready`/`blocked` sont atomiques. Les champs additionnels des cartes, runs et automatisations restent intacts. Les coches seules ne périment pas une review, conformément au scénario exécuté dans le serveur Node réel.
+
+Une transition nécessitant un lancement d'agent ou une synchronisation de ticket répond 503 avant toute écriture jusqu'à M04/M05. Le branchement à l'activité réelle reste explicitement requis lors de M04/M06 ; le prototype ne peut pas lancer ces opérations. Les éditions locales de notes restent possibles sur les cartes Jira, sans modifier leur titre/description. Une erreur SQL/document répond 500 avec message public générique.
+
+Le parcours HTTP synthétique vérifie deux modifications concurrentes sans perte, guards archive/worktree/dépendances, 404, refus 503 sans écriture, critères UTF-16 et reprise. Un trigger rejetant l'invalidation d'une review annule la modification de carte déjà exécutée dans la transaction, conserve son horodatage/automatisation et ne divulgue pas le détail de la faute. Le scénario Node ajouté confirme les reviews concernées, la conservation UTF-16 et les transitions d'automatisation réussies ; la garantie transactionnelle renforcée est testée côté Rust.
+
+Contrôles locaux : 68 tests Rust réussis, Clippy natif/WASM réussi ; 305 contrats de domaine, 84 créations, 63 modifications et 46 transitions de temps couverts par les tests Rust. Suite Node complète avec contrôle release : 431 tests, 428 réussis, aucun échec, trois exclusions, 85,370 s. La CI `567a529` est entièrement réussie ; le journal macOS Intel confirme les 84 créations et le scénario HTTP natif. Les journaux Linux ARM64/macOS ARM64 `0ac6993` confirment les 63 modifications historiques. Les autres résultats de cet incrément et la nouvelle CI de l'édition HTTP restent attendus.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

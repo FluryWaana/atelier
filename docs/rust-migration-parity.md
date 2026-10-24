@@ -179,6 +179,8 @@ C07, après `e027e70` : création complète HTTP tâches/brainstorms, héritage 
 
 C07, après `567a529` : préparation d'édition portée dans core et 63 modifications historiques comparées (gardes, champs, erreurs, invalidation et ordre des effets). HTTP/SQLite restent à brancher ; lancement/synchronisation simulés ne qualifient pas M04/M05. Les 84 créations et leur scénario HTTP natif passent dans les journaux `567a529` Windows, Linux x64/ARM64 et macOS ARM64 ; Intel encore attendu.
 
+C07, après `0ac6993` : édition HTTP locale et invalidation des reviews/automatisations dans la même transaction. Scénario Node réel d'invalidation et parcours Rust concurrence/guards/rollback/reprise ; les effets M04/M05 absents répondent 503 sans écriture. Création `567a529` réussie sur les cinq cibles natives, Intel relu. Les journaux ARM64 de `0ac6993` confirment les 63 modifications historiques ; autres résultats encore attendus.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

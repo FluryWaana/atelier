@@ -23,6 +23,48 @@ pub struct Edit {
     pub requirements_changed: bool,
 }
 
+pub const REVIEW_CHANGE_REASON: &str = "Le besoin ou les critères ont changé. Relancez la review.";
+
+pub struct ReviewInvalidation {
+    pub runs: Vec<Document>,
+    pub automation_changed: bool,
+}
+
+pub fn invalidate_reviews(
+    card: &mut Card,
+    runs: Vec<Document>,
+    reason: &str,
+) -> Result<ReviewInvalidation> {
+    let mut changed = Vec::new();
+    for mut run in runs {
+        if run.string_equals("cardId", &card.id)? && run.string_equals("kind", "pr-review")? {
+            run.set("reviewStaleReason", &reason)?;
+            changed.push(run);
+        }
+    }
+    let mut automation_changed = false;
+    if let Some(raw) = card
+        .fields
+        .raw("automation")
+        .filter(|raw| raw.get().starts_with('{'))
+    {
+        let mut automation: Document = serde_json::from_str(raw.get())?;
+        if automation.string_equals("state", "ready")?
+            || automation.string_equals("state", "blocked")?
+        {
+            automation.set("state", &"interrupted")?;
+            automation.set("step", &"tests")?;
+            automation.set("message", &reason)?;
+            card.fields.set("automation", &automation)?;
+            automation_changed = true;
+        }
+    }
+    Ok(ReviewInvalidation {
+        runs: changed,
+        automation_changed,
+    })
+}
+
 fn same_scalar(a: Option<&RawValue>, b: Option<&RawValue>) -> Result<bool> {
     let (Some(a), Some(b)) = (a, b) else {
         return Ok(a.is_none() && b.is_none());

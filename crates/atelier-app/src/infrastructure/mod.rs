@@ -10,6 +10,7 @@ mod publish;
 pub mod session;
 pub mod store;
 pub mod task_creation;
+pub mod task_editing;
 pub mod task_templates;
 pub mod time_tracking;
 pub mod token_vault;
