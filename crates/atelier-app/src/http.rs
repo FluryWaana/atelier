@@ -262,7 +262,30 @@ async fn events(State(state): State<Shared>) -> Response {
 }
 
 async fn unavailable(request: Request) -> Response {
-    if request.uri().path().starts_with("/api/") {
+    let namespace = request
+        .uri()
+        .path()
+        .strip_prefix("/api/")
+        .and_then(|path| path.split('/').next());
+    if matches!(
+        namespace,
+        Some(
+            "agents"
+                | "agent-providers"
+                | "connectors"
+                | "updates"
+                | "cards"
+                | "brainstorms"
+                | "runs"
+                | "queue"
+                | "diagnostics"
+                | "tickets"
+                | "worktrees"
+                | "dev-servers"
+                | "folders"
+                | "shutdown"
+        )
+    ) {
         failure(
             StatusCode::SERVICE_UNAVAILABLE,
             "Cette fonction n’est pas encore disponible dans le prototype Rust.",

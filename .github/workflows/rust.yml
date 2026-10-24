@@ -223,6 +223,7 @@ jobs:
         with:
           name: rust-ui-Windows-${{ runner.arch }}
           path: .artifacts/rust-*.png
+          include-hidden-files: true
           if-no-files-found: ignore
       - name: Record browser and driver versions
         if: runner.os == 'Linux'
