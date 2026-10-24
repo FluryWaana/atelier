@@ -226,7 +226,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?;
     let queued: serde_json::Value = http.post(format!("{address}/api/cards"))
         .bearer_auth(&token).header("x-local-request", "1")
-        .json(&json!({"title":"Attente projet", "description":"Une description à retrouver", "status":"standby", "repo":repo}))
+        .json(&json!({"title":"Attente projet", "description":"Une description à retrouver", "status":"review", "repo":repo}))
         .send().await?.error_for_status()?.json().await?;
     let archived: serde_json::Value = http
         .post(format!("{address}/api/cards"))
@@ -272,7 +272,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .click()
         .await?;
     wait_title(client, title).await?;
-    wait_dom(client, "return document.querySelectorAll('.kanban-column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=standby] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
+    wait_dom(client, "return document.querySelectorAll('.kanban-column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=review] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
     client
         .find(Locator::Css("#board-search"))
         .await?
