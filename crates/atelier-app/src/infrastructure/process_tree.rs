@@ -5,7 +5,10 @@ use std::{
     process::ExitStatus,
     time::Duration,
 };
-use tokio::process::{Child, Command};
+use tokio::{
+    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+    process::{Child, Command},
+};
 use windows_sys::Win32::{
     Foundation::{ERROR_NO_MORE_FILES, HANDLE, INVALID_HANDLE_VALUE},
     System::{
@@ -185,4 +188,70 @@ impl ContainedChild {
             .await
             .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
     }
+}
+
+async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &str) -> Result<Vec<u8>> {
+    let count = u64::try_from(limit.checked_add(1).ok_or("Limite de sortie invalide.")?)?;
+    let mut bytes = Vec::new();
+    reader.take(count).read_to_end(&mut bytes).await?;
+    if bytes.len() > limit {
+        return Err(format!("Limite de sortie {stream} dépassée.").into());
+    }
+    Ok(bytes)
+}
+
+pub async fn capture(
+    command: &mut Command,
+    input: &[u8],
+    timeout: Duration,
+    limit: usize,
+) -> Result<std::process::Output> {
+    use std::process::Stdio;
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = ContainedChild::spawn(command).await?;
+    let mut stdin = child
+        .child
+        .stdin
+        .take()
+        .ok_or("Entrée du processus absente.")?;
+    let stdout = child
+        .child
+        .stdout
+        .take()
+        .ok_or("Sortie du processus absente.")?;
+    let stderr = child
+        .child
+        .stderr
+        .take()
+        .ok_or("Sortie d’erreur du processus absente.")?;
+    let operation = async {
+        let input = async {
+            // Like Node runCommand, a child may close stdin without consuming the whole input.
+            let _ = stdin.write_all(input).await;
+            drop(stdin);
+            Ok::<(), crate::Error>(())
+        };
+        let (stdout, stderr, (), status) = tokio::try_join!(
+            bounded(stdout, limit, "stdout"),
+            bounded(stderr, limit, "stderr"),
+            input,
+            child.wait()
+        )?;
+        Ok(std::process::Output {
+            status,
+            stdout,
+            stderr,
+        })
+    };
+    let result = match tokio::time::timeout(timeout, operation).await {
+        Ok(result) => result,
+        Err(_) => Err("Durée maximale du processus dépassée.".into()),
+    };
+    if result.is_err() {
+        child.stop().await?;
+    }
+    result
 }

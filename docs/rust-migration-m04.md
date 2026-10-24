@@ -1,5 +1,13 @@
 # M04 — Git, fichiers, processus et agents
 
+## Capture bornée des processus Windows — candidat après `47e6c00`
+
+`process_tree::capture` utilise le lancement contenu, lit stdout/stderr en même temps que l'envoi de stdin et attend la fin du parent. Chaque flux a une limite indépendante, comme `runCommand` historique ; un enfant peut fermer son entrée sans faire échouer un résultat valide. Un dépassement ou délai provoque l'arrêt du job et l'attente du nettoyage avant retour d'erreur. La suppression de la future ferme les handles propriétaires et tue le job. Le code de sortie non nul et les octets stderr restent disponibles pour le futur adaptateur métier.
+
+La fixture synthétique écrit simultanément 200 000 octets sur chaque sortie avant de consommer 200 000 octets d'entrée, ce qui vérifie le drainage sans interblocage. Les autres scénarios vérifient sortie excessive, délai, annulation et erreur de programme, chacun avec descendant natif dont le handle est conservé avant l'incident et un processus témoin indépendant. Tests Windows distants attendus ; la capture des commandes métier, les lignes/protocoles d'agents et les variantes POSIX restent à raccorder.
+
+La [première CI scanner/ports `41e7742`](https://github.com/FluryWaana/atelier/actions/runs/40118938351) a refusé `unwrap_or_else` sur une locale constante dans Clippy. `47e6c00` remplace cette évaluation paresseuse par `unwrap_or` ; aucun avertissement n'est désactivé, aucune preuve native du scanner n'est encore acquise à cette collecte.
+
 ## Arbres de processus Windows — candidat après `41e7742`
 
 `process_tree::ContainedChild` prépare un Job Object non héritable avec fermeture destructrice, crée le programme suspendu et sans fenêtre, l'affecte au job, puis reprend son unique thread initial. Aucun protocole de coopération du programme n'est nécessaire, contrairement à la fixture M01. L'énumération est limitée au PID du processus encore détenu ; le handle de thread est revalidé avant reprise. Un état inattendu (plusieurs threads, affectation impossible) refuse le lancement et arrête le processus suspendu. Les API stables de Rust ne donnent pas encore directement le handle du thread initial ; cette stratégie utilise les API Microsoft [CREATE_SUSPENDED](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags) et [ToolHelp](https://learn.microsoft.com/en-us/windows/win32/toolhelp/traversing-the-thread-list), sans dépendance ni API Rust nightly.

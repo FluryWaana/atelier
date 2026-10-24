@@ -1030,13 +1030,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:848](../crates/atelier-app/src/infrastructure/portable_import.rs#L848) | <code>use std::os::unix::fs::symlink;</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:1](../crates/atelier-app/src/infrastructure/process_tree.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:2](../crates/atelier-app/src/infrastructure/process_tree.rs#L2) | <code>use std::{</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:8](../crates/atelier-app/src/infrastructure/process_tree.rs#L8) | <code>use tokio::process::{Child, Command};</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:9](../crates/atelier-app/src/infrastructure/process_tree.rs#L9) | <code>use windows_sys::Win32::{</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:146](../crates/atelier-app/src/infrastructure/process_tree.rs#L146) | <code>pub struct ContainedChild {</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:147](../crates/atelier-app/src/infrastructure/process_tree.rs#L147) | <code>pub child: Child,</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:152](../crates/atelier-app/src/infrastructure/process_tree.rs#L152) | <code>pub async fn spawn(command: &amp;mut Command) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:175](../crates/atelier-app/src/infrastructure/process_tree.rs#L175) | <code>pub async fn wait(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:182](../crates/atelier-app/src/infrastructure/process_tree.rs#L182) | <code>pub async fn stop(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:8](../crates/atelier-app/src/infrastructure/process_tree.rs#L8) | <code>use tokio::{</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:12](../crates/atelier-app/src/infrastructure/process_tree.rs#L12) | <code>use windows_sys::Win32::{</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:149](../crates/atelier-app/src/infrastructure/process_tree.rs#L149) | <code>pub struct ContainedChild {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:150](../crates/atelier-app/src/infrastructure/process_tree.rs#L150) | <code>pub child: Child,</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:155](../crates/atelier-app/src/infrastructure/process_tree.rs#L155) | <code>pub async fn spawn(command: &amp;mut Command) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:178](../crates/atelier-app/src/infrastructure/process_tree.rs#L178) | <code>pub async fn wait(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:185](../crates/atelier-app/src/infrastructure/process_tree.rs#L185) | <code>pub async fn stop(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:203](../crates/atelier-app/src/infrastructure/process_tree.rs#L203) | <code>pub async fn capture(</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:209](../crates/atelier-app/src/infrastructure/process_tree.rs#L209) | <code>use std::process::Stdio;</code> |
 | [crates/atelier-app/src/infrastructure/projects.rs:1](../crates/atelier-app/src/infrastructure/projects.rs#L1) | <code>use super::store::{Documents, Store};</code> |
 | [crates/atelier-app/src/infrastructure/projects.rs:2](../crates/atelier-app/src/infrastructure/projects.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use super::{</code> |
@@ -1588,9 +1590,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/bin/native-fixture.rs:13](../xtask/src/bin/native-fixture.rs#L13) | <code>mod keyring_windows;</code> |
 | [xtask/src/bin/native-fixture.rs:17](../xtask/src/bin/native-fixture.rs#L17) | <code>mod tray;</code> |
 | [xtask/src/bin/native-fixture.rs:21](../xtask/src/bin/native-fixture.rs#L21) | <code>mod tray;</code> |
-| [xtask/src/bin/native-fixture.rs:64](../xtask/src/bin/native-fixture.rs#L64) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/bin/native-fixture.rs:79](../xtask/src/bin/native-fixture.rs#L79) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/bin/native-fixture.rs:103](../xtask/src/bin/native-fixture.rs#L103) | <code>use std::fs;</code> |
+| [xtask/src/bin/native-fixture.rs:59](../xtask/src/bin/native-fixture.rs#L59) | <code>use std::{fs, os::windows::process::CommandExt};</code> |
+| [xtask/src/bin/native-fixture.rs:96](../xtask/src/bin/native-fixture.rs#L96) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/bin/native-fixture.rs:111](../xtask/src/bin/native-fixture.rs#L111) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/bin/native-fixture.rs:135](../xtask/src/bin/native-fixture.rs#L135) | <code>use std::fs;</code> |
 | [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
 | [xtask/src/keyring.rs:3](../xtask/src/keyring.rs#L3) | <code>pub mod accounts;</code> |
 | [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>use atelier_app::infrastructure::{</code> |
@@ -1678,8 +1681,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:128](../xtask/tests/windows-native.rs#L128) | <code>#[tokio::test]</code> |
 | [xtask/tests/windows-native.rs:130](../xtask/tests/windows-native.rs#L130) | <code>use atelier_app::infrastructure::process_tree::ContainedChild;</code> |
 | [xtask/tests/windows-native.rs:131](../xtask/tests/windows-native.rs#L131) | <code>use tokio::io::{AsyncBufReadExt, BufReader};</code> |
-| [xtask/tests/windows-native.rs:201](../xtask/tests/windows-native.rs#L201) | <code>#[test]</code> |
-| [xtask/tests/windows-native.rs:203](../xtask/tests/windows-native.rs#L203) | <code>use std::fs;</code> |
+| [xtask/tests/windows-native.rs:201](../xtask/tests/windows-native.rs#L201) | <code>#[tokio::test]</code> |
+| [xtask/tests/windows-native.rs:203](../xtask/tests/windows-native.rs#L203) | <code>use atelier_app::infrastructure::process_tree::capture;</code> |
+| [xtask/tests/windows-native.rs:285](../xtask/tests/windows-native.rs#L285) | <code>#[test]</code> |
+| [xtask/tests/windows-native.rs:287](../xtask/tests/windows-native.rs#L287) | <code>use std::fs;</code> |
 
 ## Tests et scénarios nommés
 
@@ -2378,6 +2383,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
 | [xtask/tests/windows-native.rs:138](../xtask/tests/windows-native.rs#L138) | <code>.args([</code> |
 | [xtask/tests/windows-native.rs:170](../xtask/tests/windows-native.rs#L170) | <code>.args(["family-immediate", "breakaway"])</code> |
+| [xtask/tests/windows-native.rs:230](../xtask/tests/windows-native.rs#L230) | <code>.args([</code> |
 
 ## Routes, méthodes et événements
 
@@ -3369,6 +3375,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:839](../crates/atelier-app/src/infrastructure/portable_import.rs#L839) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:840](../crates/atelier-app/src/infrastructure/portable_import.rs#L840) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:852](../crates/atelier-app/src/infrastructure/portable_import.rs#L852) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:193](../crates/atelier-app/src/infrastructure/process_tree.rs#L193) | <code>async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &amp;str) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:198](../crates/atelier-app/src/infrastructure/process_tree.rs#L198) | <code>return Err(format!("Limite de sortie {stream} dépassée.").into());</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:45](../crates/atelier-app/src/infrastructure/prototype.rs#L45) | <code>self.path.join("kanban.sqlite"),</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:92](../crates/atelier-app/src/infrastructure/prototype.rs#L92) | <code>super::token_vault::PROTOTYPE_SERVICE_PREFIX</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:126](../crates/atelier-app/src/infrastructure/prototype.rs#L126) | <code>if let Some(metadata) = match directory.symlink_metadata("kanban.sqlite") {</code> |
@@ -3551,6 +3559,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:385](../server.mjs#L385) | <code>return store.logs(logsMatch[1], after);</code> |
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
+| [xtask/src/bin/native-fixture.rs:48](../xtask/src/bin/native-fixture.rs#L48) | <code>["process-streams"] =&gt; {</code> |
 | [xtask/src/keyring.rs:6](../xtask/src/keyring.rs#L6) | <code>token_vault::{KeyringPlatform, execute_keyring, keyring_protect},</code> |
 | [xtask/src/keyring.rs:86](../xtask/src/keyring.rs#L86) | <code>token_vault::{self, PrototypeVault},</code> |
 | [xtask/src/keyring.rs:98](../xtask/src/keyring.rs#L98) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite"))?;</code> |
@@ -3568,5 +3577,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:336](../xtask/src/storage.rs#L336) | <code>if serde_json::to_string(&amp;token_vault::load(&amp;database).await?)? != encoded_tokens {</code> |
 | [xtask/src/storage.rs:339](../xtask/src/storage.rs#L339) | <code>token_vault::save(&amp;database, &amp;tokens).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
+| [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
+| [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
 Total : 405 fichiers ; 97 fichiers de tests Node.

@@ -45,6 +45,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::thread::sleep(Duration::from_secs(60));
             Ok(())
         }
+        ["process-streams"] => {
+            let stderr = std::thread::spawn(|| -> io::Result<()> {
+                io::stderr().write_all(&vec![b'e'; 200_000])
+            });
+            io::stdout().write_all(&vec![b'o'; 200_000])?;
+            stderr.join().map_err(|_| "Synthetic stderr writer panicked")??;
+            std::io::copy(&mut io::stdin(), &mut io::stdout())?;
+            Ok(())
+        }
+        #[cfg(windows)]
+        ["process-output", mode @ ("flood" | "hang" | "failure"), directory] => {
+            use std::{fs, os::windows::process::CommandExt};
+            let directory = fs::canonicalize(directory)?;
+            if fs::read_to_string(directory.join(".process-fixture"))? != "atelier-m04-synthetic-only" {
+                return Err("Not a process test fixture".into());
+            }
+            let mut child = Command::new(std::env::current_exe()?).arg("idle")
+                .creation_flags(0x08000000).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+            fs::write(directory.join("pid"), child.id().to_string())?;
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            while !directory.join("go").exists() {
+                if std::time::Instant::now() >= deadline { let _ = child.kill(); let _ = child.wait(); return Err("Missing synthetic output gate".into()); }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            match *mode {
+                "failure" => { io::stderr().write_all(b"synthetic failure\n")?; std::process::exit(7); }
+                "flood" => { io::stderr().write_all(&vec![b'e'; 32_000])?; }
+                _ => {}
+            }
+            child.wait()?;
+            Ok(())
+        }
         ["idle"] => {
             ready("ready")?;
             loop {

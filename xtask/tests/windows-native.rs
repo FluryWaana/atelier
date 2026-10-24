@@ -198,6 +198,90 @@ async fn suspended_launch_contains_immediate_detached_and_orphaned_children() {
     assert!(unrelated.child.try_wait().unwrap().is_none());
 }
 
+#[tokio::test]
+async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {
+    use atelier_app::infrastructure::process_tree::capture;
+    let executable = Path::new(env!("CARGO_BIN_EXE_native-fixture"));
+    let input = vec![b'i'; 200_000];
+    let output = capture(
+        tokio::process::Command::new(executable).arg("process-streams"),
+        &input,
+        Duration::from_secs(10),
+        500_000,
+    )
+    .await
+    .unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stderr, vec![b'e'; 200_000]);
+    assert_eq!(output.stdout, [vec![b'o'; 200_000], input].concat());
+    let mut unrelated = Fixture::spawn(executable, &["idle"]);
+    assert_eq!(unrelated.line(), "ready");
+    for mode in ["flood", "hang", "failure", "cancel"] {
+        let fixture = tempfile::tempdir().unwrap();
+        std::fs::write(
+            fixture.path().join(".process-fixture"),
+            "atelier-m04-synthetic-only",
+        )
+        .unwrap();
+        let directory = fixture.path().to_owned();
+        let running = tokio::spawn(async move {
+            capture(
+                tokio::process::Command::new(executable)
+                    .args([
+                        "process-output",
+                        if mode == "cancel" { "hang" } else { mode },
+                    ])
+                    .arg(directory),
+                &[],
+                Duration::from_secs(5),
+                1024,
+            )
+            .await
+        });
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(4);
+        let descendant = loop {
+            if let Ok(value) = std::fs::read_to_string(fixture.path().join("pid"))
+                && let Ok(pid) = value.parse()
+            {
+                break windows::open_process(pid).unwrap();
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "Synthetic descendant did not start: {mode}"
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        };
+        assert_eq!(windows::wait(&descendant, 0), WAIT_TIMEOUT);
+        if mode == "cancel" {
+            running.abort();
+            assert!(running.await.unwrap_err().is_cancelled());
+        } else {
+            std::fs::write(fixture.path().join("go"), "go").unwrap();
+            let result = tokio::time::timeout(Duration::from_secs(12), running)
+                .await
+                .unwrap()
+                .unwrap();
+            match mode {
+                "failure" => {
+                    let output = result.unwrap();
+                    assert_eq!(output.status.code(), Some(7));
+                    assert_eq!(output.stderr, b"synthetic failure\n");
+                }
+                "flood" => assert_eq!(
+                    result.unwrap_err().to_string(),
+                    "Limite de sortie stderr dépassée."
+                ),
+                _ => assert_eq!(
+                    result.unwrap_err().to_string(),
+                    "Durée maximale du processus dépassée."
+                ),
+            }
+        }
+        assert_eq!(windows::wait(&descendant, 5000), WAIT_OBJECT_0, "{mode}");
+        assert!(unrelated.child.try_wait().unwrap().is_none());
+    }
+}
+
 #[test]
 fn staged_worker_verifies_identity_waits_and_replaces_a_real_executable() {
     use std::fs;
