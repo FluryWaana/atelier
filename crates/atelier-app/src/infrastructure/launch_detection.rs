@@ -137,13 +137,24 @@ pub fn detect(repo: &Path) -> Result<Document> {
     )?)
 }
 
-fn synthetic_relative(root_path: &Path, repo: &JsonString) -> Result<std::path::PathBuf> {
-    let root = std::path::PathBuf::from(super::task_creation::path_string(root_path).utf8()?)
-        .join("repositories");
+fn synthetic_relative(
+    roots: &[std::path::PathBuf],
+    repo: &JsonString,
+) -> Result<std::path::PathBuf> {
     let path = std::path::PathBuf::from(String::from_utf16_lossy(&repo.0));
-    let relative = path.strip_prefix(root).map_err(
-        |_| "Le prototype analyse uniquement les dépôts synthétiques de son dossier repositories.",
-    )?;
+    let path = std::path::PathBuf::from(super::task_creation::path_string(&path).utf8()?);
+    // Recognize only the selected root's canonical spelling and its original startup spelling.
+    let relative = roots
+        .iter()
+        .find_map(|root| {
+            let root =
+                std::path::PathBuf::from(super::task_creation::path_string(root).utf8().ok()?)
+                    .join("repositories");
+            path.strip_prefix(root).ok()
+        })
+        .ok_or(
+            "Le prototype analyse uniquement les dépôts synthétiques de son dossier repositories.",
+        )?;
     if relative.as_os_str().is_empty()
         || relative
             .components()
@@ -154,23 +165,32 @@ fn synthetic_relative(root_path: &Path, repo: &JsonString) -> Result<std::path::
     Ok(Path::new("repositories").join(relative))
 }
 
-pub fn detect_synthetic(root: &Dir, root_path: &Path, repo: &JsonString) -> Result<Document> {
+pub fn detect_synthetic(
+    root: &Dir,
+    roots: &[std::path::PathBuf],
+    repo: &JsonString,
+) -> Result<Document> {
     // The HTTP prototype must never scan a caller-supplied directory outside its synthetic data root.
-    let relative = synthetic_relative(root_path, repo)?;
+    let relative = synthetic_relative(roots, repo)?;
     detect_opened(&root.open_dir_nofollow(relative)?)
 }
 
 pub fn synthetic_repository(
     root: &Dir,
-    root_path: &Path,
+    roots: &[std::path::PathBuf],
     value: &serde_json::value::RawValue,
 ) -> Result<JsonString> {
     let input: JsonString =
         serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
     let repo = atelier_core::domain::text_units(&input, 2000)?;
-    let relative = synthetic_relative(root_path, &repo)?;
+    let relative = synthetic_relative(roots, &repo)?;
     root.open_dir_nofollow(&relative)?;
-    Ok(super::task_creation::path_string(&root_path.join(relative)))
+    Ok(super::task_creation::path_string(
+        &roots
+            .first()
+            .ok_or("Racine synthétique absente.")?
+            .join(relative),
+    ))
 }
 
 struct Scan {
@@ -548,13 +568,14 @@ mod tests {
     fn prototype_scan_refuses_paths_outside_its_synthetic_repository_subtree() {
         let fixture = tempfile::tempdir().unwrap();
         let path = fs::canonicalize(fixture.path()).unwrap();
+        let roots = [path.clone(), fixture.path().to_owned()];
         let root = Dir::open_ambient_dir(&path, ambient_authority()).unwrap();
         let repo = path.join("repositories/synthetic");
         fs::create_dir_all(&repo).unwrap();
         fs::write(repo.join("package.json"), r#"{"scripts":{"dev":"vite"}}"#).unwrap();
         let result = detect_synthetic(
             &root,
-            &path,
+            &roots,
             &super::super::task_creation::path_string(&repo),
         )
         .unwrap();
@@ -565,6 +586,19 @@ mod tests {
                 .unwrap()
                 .len(),
             1
+        );
+        let original =
+            serde_json::value::to_raw_value(&fixture.path().join("repositories/synthetic"))
+                .unwrap();
+        let selected = synthetic_repository(&root, &roots, &original).unwrap();
+        assert_eq!(selected, super::super::task_creation::path_string(&repo));
+        assert!(
+            detect_synthetic(
+                &root,
+                &roots,
+                &serde_json::from_str::<JsonString>(original.get()).unwrap()
+            )
+            .is_ok()
         );
         let outside = tempfile::tempdir().unwrap();
         fs::write(
@@ -579,11 +613,11 @@ mod tests {
             path.join("repositories/../outside"),
         ] {
             let value = super::super::task_creation::path_string(&forbidden);
-            assert!(detect_synthetic(&root, &path, &value).is_err());
+            assert!(detect_synthetic(&root, &roots, &value).is_err());
             assert!(
                 synthetic_repository(
                     &root,
-                    &path,
+                    &roots,
                     &serde_json::value::to_raw_value(&value).unwrap()
                 )
                 .is_err()
@@ -595,7 +629,7 @@ mod tests {
             assert!(
                 detect_synthetic(
                     &root,
-                    &path,
+                    &roots,
                     &super::super::task_creation::path_string(&path.join("repositories/escape"))
                 )
                 .is_err()
@@ -616,11 +650,11 @@ mod tests {
                     .unwrap();
             assert!(output.status.success(), "Junction fixture creation failed");
             let escaped = super::super::task_creation::path_string(&junction);
-            assert!(detect_synthetic(&root, &path, &escaped).is_err());
+            assert!(detect_synthetic(&root, &roots, &escaped).is_err());
             assert!(
                 synthetic_repository(
                     &root,
-                    &path,
+                    &roots,
                     &serde_json::value::to_raw_value(&escaped).unwrap()
                 )
                 .is_err()

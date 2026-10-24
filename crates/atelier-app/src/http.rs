@@ -38,7 +38,7 @@ pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval';
 
 struct AppState {
     database: Database,
-    prototype_path: PathBuf,
+    prototype_paths: [PathBuf; 2],
     prototype_directory: Arc<cap_std::fs::Dir>,
     vault: crate::infrastructure::token_vault::PrototypeVault,
     backups: Arc<crate::infrastructure::backups::BackupDirectory>,
@@ -302,6 +302,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         return Err("Écoute distante interdite.".into());
     }
     let app = assets::router(&assets)?;
+    let original_directory = std::path::absolute(&directory)?;
     let directory = PrototypeDirectory::open(&directory)?;
     let vault =
         crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;
@@ -314,7 +315,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let (shutdown, mut stopped) = watch::channel(false);
     let state = Arc::new(AppState {
         database,
-        prototype_path: directory.path.clone(),
+        prototype_paths: [directory.path.clone(), original_directory],
         prototype_directory: Arc::new(directory.opened_directory()?),
         vault,
         backups: Arc::new(directory.backups()?),

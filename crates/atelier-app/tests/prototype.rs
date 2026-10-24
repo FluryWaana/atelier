@@ -1377,8 +1377,10 @@ async fn project_detection_reads_only_synthetic_repositories_and_never_saves_dra
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), 200);
-    let detected: Value = response.json().await.unwrap();
+    let status = response.status();
+    let response = response.text().await.unwrap();
+    assert_eq!(status, 200, "{response}; draft={draft:?}; saved={project}");
+    let detected: Value = serde_json::from_str(&response).unwrap();
     assert_eq!(detected["candidates"].as_array().unwrap().len(), 1);
     assert_eq!(detected["candidates"][0]["role"], "front");
     assert_eq!(detected["candidates"][0]["technology"], "Express");

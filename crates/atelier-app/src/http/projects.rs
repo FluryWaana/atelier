@@ -182,7 +182,7 @@ pub(super) async fn detect(
         }
     };
     let root = state.prototype_directory.clone();
-    let path = state.prototype_path.clone();
+    let paths = state.prototype_paths.clone();
     // Both callbacks enforce the synthetic repositories subtree before any manifest access.
     let result = tokio::task::spawn_blocking(move || {
         use crate::infrastructure::launch_detection;
@@ -190,8 +190,8 @@ pub(super) async fn detect(
             project.as_ref(),
             &body,
             use_draft,
-            |value| launch_detection::synthetic_repository(&root, &path, value),
-            |repo| launch_detection::detect_synthetic(&root, &path, repo),
+            |value| launch_detection::synthetic_repository(&root, &paths, value),
+            |repo| launch_detection::detect_synthetic(&root, &paths, repo),
         )
     })
     .await;

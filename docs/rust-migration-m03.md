@@ -1,5 +1,9 @@
 # M03 — Règles et API métier
 
+La [CI `ce8904d`](https://github.com/FluryWaana/atelier/actions/runs/40119536906) passe Clippy et les tests unitaires natifs du scanner, de sa garde contre les jonctions et des ports. Le nouveau parcours HTTP échoue au POST d'un dépôt brouillon (400 au lieu de 200), après réussite du GET. La garde candidate reconnaît désormais les deux écritures connues du dossier sélectionné — canonique et argument de démarrage — et normalise lexicalement le préfixe Windows. Elle n'effectue aucune résolution d'un chemin arbitraire : le suffixe reste validé puis ouvert via le handle initial. Le test HTTP conserve son attente 200 et ajoute le diagnostic synthétique ; le test de garde vérifie aussi le chemin original. Nouvelle preuve distante attendue.
+
+Les journaux Node et Edge de cette exécution sont relus : Node 443 tests, 439 réussis, aucun échec, quatre exclusions ; les deux nouveaux contrats HTTP/ports passent. Les deux parcours Edge passent également. Le comparateur des onze arbres et les nouveaux scénarios de processus n'ont pas été atteints par le job natif arrêté sur l'échec HTTP.
+
 La [CI Windows `c819fd0`](https://github.com/FluryWaana/atelier/actions/runs/40118164288) est entièrement réussie, journaux relus : 24 contrats de sélection des sources et leurs équivalents Rust, comparateurs existants, Clippy natif/WASM, DPAPI entre comptes et les deux parcours Edge. Node : 441 tests, 437 réussis, aucun échec, quatre exclusions inchangées. Le scanner natif et les nouvelles routes HTTP appartiennent aux incréments suivants, encore en vérification.
 
 ## Détection HTTP avec scanner natif — candidat après `c819fd0`
