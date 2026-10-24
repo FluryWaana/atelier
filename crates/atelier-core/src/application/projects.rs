@@ -38,6 +38,87 @@ pub struct ProjectEdit {
     pub moved: bool,
 }
 
+pub fn detect(
+    project: Option<&Document>,
+    body: &Document,
+    use_draft: bool,
+    mut repository: impl FnMut(&serde_json::value::RawValue) -> Result<JsonString>,
+    mut scan: impl FnMut(&JsonString) -> Result<Document>,
+) -> Result<Document> {
+    let project = project.ok_or(ProjectFailure::Missing)?;
+    let role = if body.raw("role").is_some() {
+        if body.string_equals("role", "front")? {
+            Some("front")
+        } else if body.string_equals("role", "back")? {
+            Some("back")
+        } else {
+            return Err(ProjectFailure::Invalid("Application à détecter invalide.").into());
+        }
+    } else {
+        None
+    };
+    let mut sources = project.clone();
+    if use_draft {
+        for key in ["repo", "frontRepo", "backRepo"] {
+            if let Some(value) = body.raw(key)
+                && (role.is_none()
+                    || key == "repo"
+                    || role.is_some_and(|role| key == format!("{role}Repo")))
+            {
+                let value = if key == "repo" || body.truthy(key)? {
+                    repository(value)?
+                } else {
+                    JsonString::default()
+                };
+                sources.set(key, &value)?;
+            }
+        }
+    }
+    let mut scans: Vec<(JsonString, Document)> = Vec::new();
+    let mut candidates: Vec<Document> = Vec::new();
+    let mut warnings: Vec<JsonString> = Vec::new();
+    for current in ["front", "back"] {
+        if role.is_some_and(|role| role != current) {
+            continue;
+        }
+        let key = format!("{current}Repo");
+        let dedicated = sources.truthy(&key)?;
+        let repo = sources
+            .get::<JsonString>(if dedicated { &key } else { "repo" })?
+            .unwrap_or_default();
+        let index = if let Some(index) = scans.iter().position(|(source, _)| source == &repo) {
+            index
+        } else {
+            let detected = scan(&repo)?;
+            scans.push((repo.clone(), detected));
+            scans.len() - 1
+        };
+        let detected = &scans[index].1;
+        for mut candidate in detected
+            .get::<Vec<Document>>("candidates")?
+            .unwrap_or_default()
+        {
+            if dedicated || candidate.string_equals("role", current)? {
+                candidate.set("role", &current)?;
+                candidate.set("sourceRepo", &repo)?;
+                candidates.push(candidate);
+            }
+        }
+        for warning in detected
+            .get::<Vec<JsonString>>("warnings")?
+            .unwrap_or_default()
+        {
+            if !warnings.contains(&warning) {
+                warnings.push(warning);
+            }
+        }
+    }
+    let mut result = Document::default();
+    result.set("candidates", &candidates)?;
+    result.set("warnings", &warnings)?;
+    Ok(result)
+}
+
 pub fn prepare_update(
     repository: &impl ProjectRepository,
     id: &str,

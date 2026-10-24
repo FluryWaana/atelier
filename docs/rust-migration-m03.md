@@ -1,5 +1,11 @@
 # M03 — Règles et API métier
 
+## Sélection des sources de détection — candidat après `544b294`
+
+Le cas d'usage pur `projects::detect` porte la sélection de dépôts de `lib/application/projects.mjs` : projet absent prioritaire, rôle Front/Back strict, formulaire POST non sauvegardé, valeurs GET ignorées, effacement des dépôts dédiés, filtrage ou réaffectation des rôles, une analyse par chaîne de dépôt et déduplication ordonnée des avertissements. Résolution native des chemins et lecture des manifestes sont des ports explicites ; aucune I/O ni nouvelle dépendance dans core. Candidats, avertissements et chemins conservent leurs unités UTF-16.
+
+24 attentes synthétiques explicites sont partagées par le test Rust sans Node et le comparateur appelant le véritable cas d'usage historique. Elles incluent erreurs avant résolution, absence de mutation du projet Node, source partagée, rôles dédiés, données de brouillon invalides ignorées hors rôle, échec d'analyse et substituts isolés. Les 70 opérations de cycle de vie précédentes restent inchangées. Le comparateur existant `test-project-lifecycle-parity` inclut cette référence ; la suite Node inclut aussi le scénario. Résultats Windows attendus ; aucune exécution locale. La route de détection conserve son indisponibilité explicite tant que le scanner natif M04 n'est pas implémenté : cette tranche ne prétend pas détecter réellement un projet.
+
 ## Interface actuelle sur le serveur Rust — candidat après `46338b8`
 
 La [CI `0e7a252`](https://github.com/FluryWaana/atelier/actions/runs/40113045258) réussit dans les trois jobs Windows, journaux relus : routes inconnues 404, assets figés et privés refusés, Clippy natif/WASM, comparateurs historiques ; Node 440 tests, 436 réussis, aucun échec, quatre exclusions documentées. Les deux parcours Edge réussissent. L'artefact `rust-ui-Windows-X64` (ID 12567232088) contient cette fois les captures : création et restauration de l'interface historique ont été inspectées visuellement, texte HTML affiché littéralement, titre restauré et formulaire lisible. Le toast de fonction indisponible et la détection d'agents inachevée restent visibles : cette passerelle ne qualifie pas les fonctions M04–M06.

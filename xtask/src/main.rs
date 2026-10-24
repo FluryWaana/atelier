@@ -139,7 +139,8 @@ async fn main() -> Result<()> {
         ["test-keyring"] => keyring::test(false).await,
         ["test-project-lifecycle-parity"] => {
             run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--locked"]))
+            run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;
+            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))
         }
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,

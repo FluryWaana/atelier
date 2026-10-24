@@ -85,6 +85,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/domain/time.rs](../crates/atelier-core/src/domain/time.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/lib.rs](../crates/atelier-core/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/domain-contracts.rs](../crates/atelier-core/tests/domain-contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/tests/project-detection.rs](../crates/atelier-core/tests/project-detection.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/project-lifecycle.rs](../crates/atelier-core/tests/project-lifecycle.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/project-settings.rs](../crates/atelier-core/tests/project-settings.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/provider-settings.rs](../crates/atelier-core/tests/provider-settings.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -112,7 +113,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/application/connector-time.mjs](../lib/application/connector-time.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/connectors.test.mjs](../test/connectors.test.mjs) |
 | [lib/application/connectors.mjs](../lib/application/connectors.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/connectors.test.mjs](../test/connectors.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs), [test/project-connector-diagnostics.test.mjs](../test/project-connector-diagnostics.test.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs) |
 | [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/jira-sync-races.test.mjs](../test/jira-sync-races.test.mjs) |
-| [lib/application/projects.mjs](../lib/application/projects.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs) |
+| [lib/application/projects.mjs](../lib/application/projects.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-project-detection-reference.mjs](../test/fixtures/rust-project-detection-reference.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs) |
 | [lib/application/runs.mjs](../lib/application/runs.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs), [test/agent-updates.test.mjs](../test/agent-updates.test.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs), [test/run-preparation.test.mjs](../test/run-preparation.test.mjs) |
 | [lib/application/settings.mjs](../lib/application/settings.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-provider-use-cases.test.mjs](../test/agent-provider-use-cases.test.mjs), [test/fixtures/rust-settings-reference.mjs](../test/fixtures/rust-settings-reference.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs) |
 | [lib/application/tasks.mjs](../lib/application/tasks.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs), [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs) |
@@ -141,7 +142,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/domain/tasks.mjs](../lib/domain/tasks.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [public/workflow.mjs](../public/workflow.mjs), [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/tickets.mjs](../lib/domain/tickets.mjs) | Source / configuration | [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
 | [lib/domain/time.mjs](../lib/domain/time.mjs) | Source / configuration | [lib/application/time-tracking.mjs](../lib/application/time-tracking.mjs), [lib/tempo-export.mjs](../lib/tempo-export.mjs), [lib/time-tracking.mjs](../lib/time-tracking.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
-| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs), [test/fixtures/rust-settings-reference.mjs](../test/fixtures/rust-settings-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs) |
+| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-project-detection-reference.mjs](../test/fixtures/rust-project-detection-reference.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs), [test/fixtures/rust-settings-reference.mjs](../test/fixtures/rust-settings-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs) |
 | [lib/folders.mjs](../lib/folders.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs) |
 | [lib/forge-repositories.mjs](../lib/forge-repositories.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [lib/connectors/gitlab.mjs](../lib/connectors/gitlab.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
 | [lib/forges/github.mjs](../lib/forges/github.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
@@ -318,6 +319,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/rust-jira-url-reference.json](../test/fixtures/rust-jira-url-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-jira-url-reference.mjs](../test/fixtures/rust-jira-url-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-lock-reference.mjs](../test/fixtures/rust-lock-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-project-detection-reference.json](../test/fixtures/rust-project-detection-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-project-detection-reference.mjs](../test/fixtures/rust-project-detection-reference.mjs) | Test / support | [test/project-detection.test.mjs](../test/project-detection.test.mjs) |
 | [test/fixtures/rust-project-lifecycle-reference.json](../test/fixtures/rust-project-lifecycle-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-project-settings-reference.json](../test/fixtures/rust-project-settings-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -357,6 +360,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/process-inspection.test.mjs](../test/process-inspection.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/processes-ui.test.mjs](../test/processes-ui.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/project-connector-diagnostics.test.mjs](../test/project-connector-diagnostics.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/project-detection.test.mjs](../test/project-detection.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/project-lifecycle.test.mjs](../test/project-lifecycle.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/project-location.test.mjs](../test/project-location.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/project-rules.test.mjs](../test/project-rules.test.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -692,6 +696,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/migration-data.mjs:1](../test/fixtures/migration-data.mjs#L1) | <code>export const migrationShape = Object.freeze({ projects: 10, cards: 500, runs: 100, times: 200, logs: 10000 });</code> |
 | [test/fixtures/migration-data.mjs:2](../test/fixtures/migration-data.mjs#L2) | <code>export const migrationDate = '2026-10-23T08:00:00.123Z';</code> |
 | [test/fixtures/migration-data.mjs:4](../test/fixtures/migration-data.mjs#L4) | <code>export function seedMigrationData(store) {</code> |
+| [test/fixtures/rust-project-detection-reference.mjs:7](../test/fixtures/rust-project-detection-reference.mjs#L7) | <code>export function verifyProjectDetection() {</code> |
 | [test/fixtures/rust-storage-reference.mjs:7](../test/fixtures/rust-storage-reference.mjs#L7) | <code>export function snapshot(store) {</code> |
 | [test/fixtures/rust-storage-reference.mjs:18](../test/fixtures/rust-storage-reference.mjs#L18) | <code>export function assertSnapshot(actual, expected) {</code> |
 | [test/helpers/french-locale.mjs:3](../test/helpers/french-locale.mjs#L3) | <code>export { msg, markupText, locale, messageText, localizeModule } from '../../public/i18n.mjs';</code> |
@@ -1284,10 +1289,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/projects.rs:36](../crates/atelier-core/src/application/projects.rs#L36) | <code>pub project: Document,</code> |
 | [crates/atelier-core/src/application/projects.rs:37](../crates/atelier-core/src/application/projects.rs#L37) | <code>pub cards: Vec&lt;Document&gt;,</code> |
 | [crates/atelier-core/src/application/projects.rs:38](../crates/atelier-core/src/application/projects.rs#L38) | <code>pub moved: bool,</code> |
-| [crates/atelier-core/src/application/projects.rs:41](../crates/atelier-core/src/application/projects.rs#L41) | <code>pub fn prepare_update(</code> |
-| [crates/atelier-core/src/application/projects.rs:173](../crates/atelier-core/src/application/projects.rs#L173) | <code>pub fn create(</code> |
-| [crates/atelier-core/src/application/projects.rs:243](../crates/atelier-core/src/application/projects.rs#L243) | <code>pub fn archive_tasks(</code> |
-| [crates/atelier-core/src/application/projects.rs:256](../crates/atelier-core/src/application/projects.rs#L256) | <code>pub fn remove(</code> |
+| [crates/atelier-core/src/application/projects.rs:41](../crates/atelier-core/src/application/projects.rs#L41) | <code>pub fn detect(</code> |
+| [crates/atelier-core/src/application/projects.rs:122](../crates/atelier-core/src/application/projects.rs#L122) | <code>pub fn prepare_update(</code> |
+| [crates/atelier-core/src/application/projects.rs:254](../crates/atelier-core/src/application/projects.rs#L254) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/projects.rs:324](../crates/atelier-core/src/application/projects.rs#L324) | <code>pub fn archive_tasks(</code> |
+| [crates/atelier-core/src/application/projects.rs:337](../crates/atelier-core/src/application/projects.rs#L337) | <code>pub fn remove(</code> |
 | [crates/atelier-core/src/application/settings.rs:1](../crates/atelier-core/src/application/settings.rs#L1) | <code>use super::task_creation::{Result, options, present, provider, text};</code> |
 | [crates/atelier-core/src/application/settings.rs:2](../crates/atelier-core/src/application/settings.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/settings.rs:6](../crates/atelier-core/src/application/settings.rs#L6) | <code>use serde_json::value::RawValue;</code> |
@@ -1461,6 +1467,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/domain-contracts.rs:2](../crates/atelier-core/tests/domain-contracts.rs#L2) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:4](../crates/atelier-core/tests/domain-contracts.rs#L4) | <code>#[test]</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:74](../crates/atelier-core/tests/domain-contracts.rs#L74) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-detection.rs:1](../crates/atelier-core/tests/project-detection.rs#L1) | <code>use atelier_core::{</code> |
+| [crates/atelier-core/tests/project-detection.rs:6](../crates/atelier-core/tests/project-detection.rs#L6) | <code>use std::cell::RefCell;</code> |
+| [crates/atelier-core/tests/project-detection.rs:8](../crates/atelier-core/tests/project-detection.rs#L8) | <code>mod json;</code> |
+| [crates/atelier-core/tests/project-detection.rs:10](../crates/atelier-core/tests/project-detection.rs#L10) | <code>#[test]</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:1](../crates/atelier-core/tests/project-lifecycle.rs#L1) | <code>use atelier_core::{</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:9](../crates/atelier-core/tests/project-lifecycle.rs#L9) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:10](../crates/atelier-core/tests/project-lifecycle.rs#L10) | <code>use std::cell::RefCell;</code> |
@@ -1557,10 +1567,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod storage;</code> |
 | [xtask/src/main.rs:9](../xtask/src/main.rs#L9) | <code>mod ui;</code> |
 | [xtask/src/main.rs:23](../xtask/src/main.rs#L23) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:154](../xtask/src/main.rs#L154) | <code>mod tests {</code> |
-| [xtask/src/main.rs:155](../xtask/src/main.rs#L155) | <code>use super::*;</code> |
-| [xtask/src/main.rs:156](../xtask/src/main.rs#L156) | <code>#[test]</code> |
-| [xtask/src/main.rs:193](../xtask/src/main.rs#L193) | <code>#[test]</code> |
+| [xtask/src/main.rs:155](../xtask/src/main.rs#L155) | <code>mod tests {</code> |
+| [xtask/src/main.rs:156](../xtask/src/main.rs#L156) | <code>use super::*;</code> |
+| [xtask/src/main.rs:157](../xtask/src/main.rs#L157) | <code>#[test]</code> |
+| [xtask/src/main.rs:194](../xtask/src/main.rs#L194) | <code>#[test]</code> |
 | [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, node_executable, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use atelier_core::document::{Document, JsonString};</code> |
@@ -1910,6 +1920,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/processes-ui.test.mjs:259](../test/processes-ui.test.mjs#L259) | <code>test('starting an entire project from the process view also uses the worktree launcher', async () =&gt; {</code> |
 | [test/processes-ui.test.mjs:271](../test/processes-ui.test.mjs#L271) | <code>test('stop-all attempts every running stack in the current view even if one stop fails', async () =&gt; {</code> |
 | [test/project-connector-diagnostics.test.mjs:5](../test/project-connector-diagnostics.test.mjs#L5) | <code>test('repository diagnostics follow the selected project and report a missing module without fallback', async () =&gt; {</code> |
+| [test/project-detection.test.mjs:4](../test/project-detection.test.mjs#L4) | <code>test('project detection preserves draft selection, role filters, scan caching and error priority', verifyProjectDetection);</code> |
 | [test/project-lifecycle.test.mjs:9](../test/project-lifecycle.test.mjs#L9) | <code>test('empty repository paths resolve the synthetic process working directory for projects and tasks', () =&gt; {</code> |
 | [test/project-lifecycle.test.mjs:33](../test/project-lifecycle.test.mjs#L33) | <code>test('project HTTP lifecycle rejects duplicates and active timers while retaining archived cards and time history', async () =&gt; {</code> |
 | [test/project-location.test.mjs:32](../test/project-location.test.mjs#L32) | <code>test('changing a project location backs up and updates its cards without moving files or history', async t =&gt; {</code> |
@@ -2289,9 +2300,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:136](../xtask/src/main.rs#L136) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
 | [xtask/src/main.rs:137](../xtask/src/main.rs#L137) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
 | [xtask/src/main.rs:141](../xtask/src/main.rs#L141) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:142](../xtask/src/main.rs#L142) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--locked"]))</code> |
-| [xtask/src/main.rs:146](../xtask/src/main.rs#L146) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:159](../xtask/src/main.rs#L159) | <code>.args([</code> |
+| [xtask/src/main.rs:142](../xtask/src/main.rs#L142) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:143](../xtask/src/main.rs#L143) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))</code> |
+| [xtask/src/main.rs:147](../xtask/src/main.rs#L147) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:160](../xtask/src/main.rs#L160) | <code>.args([</code> |
 | [xtask/src/storage.rs:44](../xtask/src/storage.rs#L44) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
 | [xtask/src/storage.rs:69](../xtask/src/storage.rs#L69) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
 | [xtask/src/storage.rs:95](../xtask/src/storage.rs#L95) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
@@ -3492,4 +3504,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:339](../xtask/src/storage.rs#L339) | <code>token_vault::save(&amp;database, &amp;tokens).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 396 fichiers ; 96 fichiers de tests Node.
+Total : 400 fichiers ; 97 fichiers de tests Node.
