@@ -8,10 +8,9 @@ pub fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
             let expected: Document = serde_json::from_str(expected.get()).unwrap();
             actual.keys().count() == expected.keys().count()
                 && actual.keys().all(|key| {
-                    let key = key.utf8().unwrap();
                     expected
-                        .raw(&key)
-                        .is_some_and(|expected| equivalent(actual.raw(&key).unwrap(), expected))
+                        .raw_key(key)
+                        .is_some_and(|expected| equivalent(actual.raw_key(key).unwrap(), expected))
                 })
         }
         (b'[', b'[') => {

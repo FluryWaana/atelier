@@ -162,7 +162,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — tâches locales, modèles, chronomètres et création/archivage/retrait de projets HTTP ; réglages/déplacements, effets distants et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — tâches locales, modèles, chronomètres et projets avec réglages/déplacements HTTP ; détection, paramètres/profils globaux, effets distants et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -672,6 +672,13 @@ Prochaine action concrète :
 - **Référence :** 51 cas Node supplémentaires ; 305 contrats précédents inchangés, créations/éditions revérifiées après partage de la recherche de fournisseur. Bilan dans M03.
 - **Validation :** Windows uniquement pendant la migration ; Linux/macOS reportés à la fin suivant la demande utilisateur.
 - **Suite :** brancher l'édition et le déplacement de projet avec sauvegarde, puis réglages/profils et intégrations M02 restantes.
+
+### Incrément M03 — édition et déplacement de projets
+
+- **Livré :** PATCH projet local, héritage des champs, gardes worktrees/doublons et sauvegarde avant changement de dépôt. Projet, cartes et invalidation des reviews/automatisations partagent une transaction ; aucun fichier de dépôt déplacé.
+- **Référence :** 70 opérations Node (39 précédentes inchangées), ordre résolution/sauvegarde/écritures/invalidation et erreurs comparés. Parcours HTTP Node et Windows Rust avec reprise ; panne de sauvegarde et rollback après faute sur review.
+- **Limites :** détection et branchement activité/serveurs/connecteurs à M04–M06 restent ouverts. Tests natifs Linux/macOS reportés à la qualification finale ; bilans et preuves dans M03.
+- **Suite :** paramètres/profils globaux, autres contrats M03 et protections/intégrations M02 restantes.
 
 ## 12. Définition finale de terminé
 

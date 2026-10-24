@@ -34,6 +34,7 @@ pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval';
 
 struct AppState {
     database: Database,
+    backups: Arc<crate::infrastructure::backups::BackupDirectory>,
     token: String,
     port: u16,
     shutdown: watch::Sender<bool>,
@@ -286,6 +287,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let (shutdown, mut stopped) = watch::channel(false);
     let state = Arc::new(AppState {
         database,
+        backups: Arc::new(directory.backups()?),
         token,
         port: listener.local_addr()?.port(),
         shutdown,
@@ -302,7 +304,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/projects/archive-tasks", post(projects::archive))
         .route(
             "/api/projects/{id}",
-            axum::routing::delete(projects::remove).patch(projects::unavailable),
+            axum::routing::delete(projects::remove).patch(projects::update),
         )
         .route(
             "/api/projects/{id}/detect-launch",

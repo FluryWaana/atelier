@@ -414,6 +414,271 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
 }
 
 #[tokio::test]
+async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews() {
+    use atelier_app::infrastructure::{backups::BackupDirectory, store::Documents};
+    use atelier_core::{
+        contracts::Board,
+        document::{Document, JsonString},
+    };
+    #[cfg(windows)]
+    fn deny_creation(path: &Path, denied: bool) {
+        use std::os::windows::process::CommandExt;
+        let executable = std::path::PathBuf::from(std::env::var_os("SystemRoot").unwrap())
+            .join("System32/icacls.exe");
+        let output = std::process::Command::new(executable)
+            .arg(path)
+            .args(if denied {
+                ["/deny", "*S-1-1-0:(WD,AD)"]
+            } else {
+                ["/remove:d", "*S-1-1-0"]
+            })
+            .creation_flags(0x08000000)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    fn read(path: &Path, table: &str) -> Vec<Document> {
+        let connection =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        let mut query = connection
+            .prepare(&format!("SELECT data FROM {table} ORDER BY id"))
+            .unwrap();
+        query
+            .query_map([], |row| row.get::<_, String>(0))
+            .unwrap()
+            .map(|row| serde_json::from_str(&row.unwrap()).unwrap())
+            .collect()
+    }
+    for fault in ["none", "review", "backup"] {
+        let data = tempfile::tempdir().unwrap();
+        let assets = tempfile::tempdir().unwrap();
+        let repositories = tempfile::tempdir().unwrap();
+        let old = repositories.path().join("old");
+        let new = repositories.path().join("new");
+        let other = repositories.path().join("other");
+        for path in [&old, &new, &other] {
+            std::fs::create_dir(path).unwrap();
+        }
+        std::fs::write(old.join("keep.txt"), "synthetic files stay here").unwrap();
+        {
+            let _directory = PrototypeDirectory::open(data.path()).unwrap();
+            let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+            let repo = old.clone();
+            let other_repo = other.clone();
+            database.call(move |store| {
+                let mut project: Document = serde_json::from_str(r#"{"id":"project","name":"\ud800","frontRepo":null,"\ud800":"\udc00"}"#)?;
+                project.set("repo", &repo)?;
+                store.put(Documents::Projects, &project)?;
+                store.put(Documents::Projects, &json!({"id":"other","name":"Other","repo":other_repo}))?;
+                for id in ["one", "two"] {
+                    let mut card: Document = serde_json::from_str(r#"{"title":"\ud800","status":"todo","automation":{"state":"ready","unknown":"\udc00"},"extra":"\udc00"}"#)?;
+                    card.set("id", &id)?; card.set("repo", &repo)?; card.set("archived", &(id == "two"))?;
+                    store.put(Documents::Cards, &card)?;
+                    store.put(Documents::Runs, &json!({"id":format!("review-{id}"),"cardId":id,"kind":"pr-review","status":"completed","repo":repo}))?;
+                }
+                store.put(Documents::Runs, &json!({"id":"analyze","cardId":"one","kind":"analyze","status":"completed"}))?;
+                Ok(())
+            }).await.unwrap();
+            database.close().await.unwrap();
+        }
+        if fault == "review" {
+            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch(
+                "CREATE TRIGGER fail_project_review BEFORE UPDATE ON runs WHEN OLD.id='review-one' BEGIN SELECT RAISE(ABORT,'private synthetic review failure'); END;"
+            ).unwrap();
+        }
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let client = reqwest::Client::new();
+        let patch = |body: Document| {
+            client
+                .patch(format!("{address}/api/projects/project"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+                .json(&body)
+                .send()
+        };
+        let rules: Document =
+            serde_json::from_str(r#"{"projectRules":" \ud800 ","unknown":"ignored"}"#).unwrap();
+        let response = patch(rules).await.unwrap();
+        assert_eq!(response.status(), 200);
+        let response: Document = response.json().await.unwrap();
+        assert_eq!(
+            response.get::<JsonString>("projectRules").unwrap(),
+            Some(JsonString(vec![0xd800]))
+        );
+        assert_eq!(
+            response.raw_key(&JsonString(vec![0xd800])).unwrap().get(),
+            r#""\udc00""#
+        );
+        assert!(response.raw("unknown").is_none());
+        let (branch, target) = tokio::join!(
+            patch(serde_json::from_str(r#"{"baseBranch":"develop"}"#).unwrap()),
+            patch(serde_json::from_str(r#"{"prTarget":"main"}"#).unwrap())
+        );
+        assert_eq!(branch.unwrap().status(), 200);
+        assert_eq!(target.unwrap().status(), 200);
+        for (body, status) in [
+            (json!({"repo":other}), 409),
+            (json!({"repo":repositories.path().join("missing")}), 400),
+            (json!({"linkedProjectId":"project"}), 400),
+            (json!({"frontDirectory":"../outside"}), 400),
+            (json!({"repositoryConnector":"git"}), 400),
+        ] {
+            assert_eq!(
+                patch(serde_json::from_str(&body.to_string()).unwrap())
+                    .await
+                    .unwrap()
+                    .status(),
+                status
+            );
+        }
+        assert!(
+            BackupDirectory::open(data.path())
+                .unwrap()
+                .list()
+                .unwrap()
+                .is_empty()
+        );
+        if fault == "backup" {
+            #[cfg(windows)]
+            deny_creation(&data.path().join("backups"), true);
+            #[cfg(not(windows))]
+            {
+                // The held handle must not follow a replacement of this empty synthetic directory.
+                std::fs::remove_dir(data.path().join("backups")).unwrap();
+                std::fs::create_dir(data.path().join("backups")).unwrap();
+            }
+        }
+        let mut body = Document::default();
+        body.set("repo", &new).unwrap();
+        let response = patch(body).await;
+        #[cfg(windows)]
+        if fault == "backup" {
+            deny_creation(&data.path().join("backups"), false);
+        }
+        let response = response.unwrap();
+        assert_eq!(response.status(), if fault == "none" { 200 } else { 500 });
+        if fault != "none" {
+            assert_eq!(
+                response.json::<Value>().await.unwrap(),
+                json!({"error":"Modification du projet impossible."})
+            );
+        }
+        let board: Board = client
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        let project = board
+            .projects
+            .iter()
+            .find(|project| project.string_equals("id", "project").unwrap())
+            .unwrap();
+        let expected = if fault == "none" { &new } else { &old };
+        assert_eq!(
+            std::fs::canonicalize(project.get::<String>("repo").unwrap().unwrap()).unwrap(),
+            std::fs::canonicalize(expected).unwrap()
+        );
+        assert_eq!(
+            project.get::<String>("baseBranch").unwrap().as_deref(),
+            Some("develop")
+        );
+        assert_eq!(
+            project.get::<String>("prTarget").unwrap().as_deref(),
+            Some("main")
+        );
+        for card in &board.cards {
+            assert_eq!(card.title, JsonString(vec![0xd800]));
+            assert_eq!(
+                std::fs::canonicalize(card.fields.get::<String>("repo").unwrap().unwrap()).unwrap(),
+                std::fs::canonicalize(expected).unwrap()
+            );
+            let automation: Document = card.fields.get("automation").unwrap().unwrap();
+            assert_eq!(
+                automation.get::<String>("state").unwrap().as_deref(),
+                Some(if fault == "none" {
+                    "interrupted"
+                } else {
+                    "ready"
+                })
+            );
+            assert_eq!(
+                automation.get::<JsonString>("unknown").unwrap(),
+                Some(JsonString(vec![0xdc00]))
+            );
+        }
+        stop(&address, &token, task).await;
+        let backups = BackupDirectory::open(data.path()).unwrap().list().unwrap();
+        assert_eq!(backups.len(), usize::from(fault != "backup"));
+        if let Some(backup) = backups.first() {
+            let snapshot = data.path().join("backups").join(&backup.name);
+            for card in read(&snapshot, "cards") {
+                assert_eq!(
+                    card.get::<String>("repo").unwrap().unwrap(),
+                    old.to_string_lossy()
+                );
+            }
+            let projects = read(&snapshot, "projects");
+            let project = projects
+                .iter()
+                .find(|project| project.string_equals("id", "project").unwrap())
+                .unwrap();
+            assert_eq!(
+                project.get::<String>("repo").unwrap().unwrap(),
+                old.to_string_lossy()
+            );
+            assert_eq!(
+                project.get::<JsonString>("projectRules").unwrap(),
+                Some(JsonString(vec![0xd800]))
+            );
+            for run in read(&snapshot, "runs") {
+                assert!(run.raw("reviewStaleReason").is_none());
+            }
+        }
+        for run in read(&data.path().join("kanban.sqlite"), "runs") {
+            assert_eq!(
+                run.raw("reviewStaleReason").is_some(),
+                fault == "none" && run.string_equals("kind", "pr-review").unwrap()
+            );
+            if run.string_equals("kind", "pr-review").unwrap() {
+                assert_eq!(
+                    run.get::<String>("repo").unwrap().unwrap(),
+                    old.to_string_lossy()
+                );
+            }
+        }
+        assert_eq!(
+            std::fs::read_to_string(old.join("keep.txt")).unwrap(),
+            "synthetic files stay here"
+        );
+        assert!(!new.join("keep.txt").exists());
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let restored: Board = client
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_string(&restored).unwrap(),
+            serde_json::to_string(&board).unwrap()
+        );
+        stop(&address, &token, task).await;
+    }
+}
+
+#[tokio::test]
 async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival_with_deletion() {
     use atelier_core::{
         contracts::Board,
@@ -490,11 +755,12 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
             .status(),
         409
     );
-    for (method, path) in [
-        (reqwest::Method::PATCH, format!("/api/projects/{id}")),
+    for (method, path, expected) in [
+        (reqwest::Method::PATCH, format!("/api/projects/{id}"), 200),
         (
             reqwest::Method::GET,
             format!("/api/projects/{id}/detect-launch"),
+            503,
         ),
     ] {
         assert_eq!(
@@ -504,7 +770,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
                 .await
                 .unwrap()
                 .status(),
-            503
+            expected
         );
     }
     assert_eq!(

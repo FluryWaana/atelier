@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Readable } from 'node:stream';
 import { createApp } from '../server.mjs';
+import { DatabaseSync } from 'node:sqlite';
 
 function request(app, body, headers = {}) {
   return new Promise(resolve => {
@@ -58,6 +59,36 @@ test('location changes reject existing worktrees, duplicate and invalid director
   assert.equal(app.store.card('card').repo, old);
   assert.equal(readdirSync(join(root, 'data/backups')).length, 0);
   assert.equal((await request(app, { repo: old, frontCommand: 'changed' })).status, 200, 'normal settings can still be saved with existing worktrees');
+});
+
+test('project edits preserve UTF-16 fields and snapshot the previous location before invalidating reviews', async t => {
+  const { app, root, old, destination } = fixture(t);
+  app.store.putProject({ ...app.store.projects()[0], '\ud800': '\udc00', unknown: { keep: '\udc00' } });
+  app.store.putCard({ ...app.store.card('card'), title: '\ud800', automation: { state: 'ready', unknown: '\udc00' } });
+  app.store.putRun({ id: 'review', cardId: 'card', kind: 'pr-review', status: 'completed', repo: old });
+  const saved = await request(app, { projectRules: ' \ud800 ', name: 'ignored', unknown: 'ignored' });
+  assert.equal(saved.status, 200); assert.equal(saved.body.projectRules, '\ud800');
+  assert.equal(saved.body.name, 'Projet'); assert.equal(saved.body['\ud800'], '\udc00');
+  assert.deepEqual(saved.body.unknown, { keep: '\udc00' });
+  const changed = await request(app, { repo: destination });
+  assert.equal(changed.status, 200); assert.equal(changed.body.projectRules, '\ud800');
+  assert.equal(app.store.card('card').title, '\ud800');
+  assert.equal(app.store.card('card').automation.state, 'interrupted');
+  assert.equal(app.store.card('card').automation.unknown, '\udc00');
+  assert.equal(app.store.run('review').repo, old);
+  assert.match(app.store.run('review').reviewStaleReason, /Emplacement/);
+  const snapshots = readdirSync(join(root, 'data/backups'));
+  assert.equal(snapshots.length, 1);
+  const snapshot = new DatabaseSync(join(root, 'data/backups', snapshots[0]), { readOnly: true });
+  try {
+    const project = JSON.parse(snapshot.prepare('SELECT data FROM projects WHERE id=?').get('project').data);
+    assert.equal(project.repo, old); assert.equal(project.projectRules, '\ud800');
+    assert.equal(project['\ud800'], '\udc00');
+    const card = JSON.parse(snapshot.prepare('SELECT data FROM cards WHERE id=?').get('card').data);
+    assert.equal(card.repo, old); assert.equal(card.automation.state, 'ready');
+    const review = JSON.parse(snapshot.prepare('SELECT data FROM runs WHERE id=?').get('review').data);
+    assert.equal(review.reviewStaleReason, undefined);
+  } finally { snapshot.close(); }
 });
 
 test('a failed card update rolls back the project location and every card', async t => {

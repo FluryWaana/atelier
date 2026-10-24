@@ -29,6 +29,138 @@ pub trait ProjectRepository: CreationContext {
     fn delete_project(&self, id: &str) -> Result<()>;
 }
 
+pub const LOCATION_CHANGE_REASON: &str =
+    "Emplacement du projet modifié : relancez les vérifications et la review.";
+
+pub struct ProjectEdit {
+    pub project: Document,
+    pub cards: Vec<Document>,
+    pub moved: bool,
+}
+
+pub fn prepare_update(
+    repository: &impl ProjectRepository,
+    id: &str,
+    body: &Document,
+    windows: bool,
+    busy: impl Fn(&str) -> bool,
+    connector_available: impl Fn(&JsonString) -> bool,
+    servers_running: bool,
+) -> Result<ProjectEdit> {
+    let projects = repository.projects()?;
+    let project = projects
+        .iter()
+        .find(|project| project.string_equals("id", id).unwrap_or(false))
+        .ok_or(ProjectFailure::Missing)?;
+    let previous_repo = project.get::<JsonString>("repo")?.unwrap_or_default();
+    let mut cards = Vec::new();
+    for card in repository.cards()? {
+        if same_repo(&card, &previous_repo, windows)? {
+            if busy(
+                &card
+                    .get::<String>("id")?
+                    .ok_or("Identifiant de carte absent.")?,
+            ) {
+                return Err(ProjectFailure::Conflict(
+                    "Attends la fin des opérations du projet avant de modifier ses réglages.",
+                )
+                .into());
+            }
+            cards.push(card);
+        }
+    }
+    let mut input = project.clone();
+    input.overlay(body);
+    let mut options = crate::domain::projects::project_settings(&input, &repository.settings()?)
+        .map_err(ProjectFailure::Invalid)?;
+    if body.raw("repositoryConnector").is_some()
+        && !options.repository_connector.0.is_empty()
+        && !connector_available(&options.repository_connector)
+    {
+        return Err(
+            ProjectFailure::Invalid("Ce module Git est absent ou ne gère pas les dépôts.").into(),
+        );
+    }
+    for (role, selected) in [
+        ("front", &mut options.front_repo),
+        ("back", &mut options.back_repo),
+    ] {
+        if !selected.0.is_empty() {
+            *selected = repository.repository(&serde_json::value::to_raw_value(selected)?)?;
+        }
+        let key = format!("{role}Repo");
+        let previous = if project.truthy(&key)? {
+            project.get::<JsonString>(&key)?.unwrap_or_default()
+        } else {
+            JsonString::default()
+        };
+        if !same_repository_units(selected, &previous, windows) {
+            for card in &cards {
+                if let Some(raw) = card
+                    .raw("serviceWorktrees")
+                    .filter(|raw| raw.get().starts_with('{'))
+                {
+                    let worktrees: Document = serde_json::from_str(raw.get())?;
+                    if worktrees.truthy(role)? {
+                        return Err(ProjectFailure::Conflict(if role == "front" {
+                            "Retire les worktrees associés au Front avant de changer son dépôt."
+                        } else {
+                            "Retire les worktrees associés au Back avant de changer son dépôt."
+                        })
+                        .into());
+                    }
+                }
+            }
+        }
+    }
+    if !options.linked_project_id.0.is_empty()
+        && (options.linked_project_id == JsonString::from(id)
+            || !projects.iter().any(|project| {
+                project.get::<JsonString>("id").ok().flatten().as_ref()
+                    == Some(&options.linked_project_id)
+            }))
+    {
+        return Err(
+            ProjectFailure::Invalid("Choisis un autre projet enregistré pour les tests.").into(),
+        );
+    }
+    let repo = if let Some(value) = body.raw("repo") {
+        repository.repository(value)?
+    } else {
+        previous_repo.clone()
+    };
+    let moved = !same_repository_units(&repo, &previous_repo, windows);
+    if moved {
+        for card in &cards {
+            if card.truthy("worktree")? {
+                return Err(ProjectFailure::Conflict("Retire les worktrees de ce projet avant de modifier son emplacement. Aucun fichier ne sera déplacé automatiquement.").into());
+            }
+        }
+        if servers_running {
+            return Err(ProjectFailure::Conflict(
+                "Arrête les applications de ce projet avant de modifier son emplacement.",
+            )
+            .into());
+        }
+        for other in &projects {
+            if !other.string_equals("id", id)? && same_repo(other, &repo, windows)? {
+                return Err(ProjectFailure::Conflict(
+                    "Ce répertoire figure déjà dans les projets.",
+                )
+                .into());
+            }
+        }
+    }
+    let mut updated = project.clone();
+    updated.overlay(&serde_json::from_str(&serde_json::to_string(&options)?)?);
+    updated.set("repo", &repo)?;
+    Ok(ProjectEdit {
+        project: updated,
+        cards,
+        moved,
+    })
+}
+
 fn same_repo(document: &Document, repo: &JsonString, windows: bool) -> Result<bool> {
     let value = if document.truthy("repo")? {
         document.get::<JsonString>("repo")?.unwrap_or_default()

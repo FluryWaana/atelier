@@ -12,7 +12,7 @@ use std::{
 pub struct PrototypeDirectory {
     pub path: PathBuf,
     _lock: DataLock,
-    _directory: Dir,
+    directory: Dir,
 }
 
 impl PrototypeDirectory {
@@ -32,8 +32,12 @@ impl PrototypeDirectory {
         Ok(Self {
             path,
             _lock: lock,
-            _directory: directory,
+            directory,
         })
+    }
+
+    pub fn backups(&self) -> Result<super::backups::BackupDirectory> {
+        super::backups::BackupDirectory::open_in(&self.path, &self.directory)
     }
 }
 

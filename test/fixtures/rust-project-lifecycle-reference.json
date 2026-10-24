@@ -2846,5 +2846,3253 @@
         }
       ]
     }
+  },
+  {
+    "action": "update",
+    "body": {},
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "name": "ignored",
+      "unknown": "ignored"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "projectRules": " \ud800 "
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "\ud800",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "\ud800",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:new",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:new",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:new",
+          "status": "doing",
+          "unknown": "\udc00",
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:new",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        },
+        "backup",
+        "transaction",
+        "project:project",
+        "timestamp",
+        "card:card",
+        {
+          "invalidate": "card",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        },
+        "timestamp",
+        "card:archived",
+        {
+          "invalidate": "archived",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "repo"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "repo"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": null
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": null
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": false
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": false
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "frontRepo": "front",
+      "backRepo": "back"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "checked:front",
+        "backRepo": "checked:back",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "checked:front",
+          "backRepo": "checked:back",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "front"
+        },
+        {
+          "repository": "back"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "linkedProjectId": "project"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Choisis un autre projet enregistré pour les tests.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": []
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "linkedProjectId": "missing"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Choisis un autre projet enregistré pour les tests.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": []
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "projectRules": "\ud800"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "\ud800": "\udc00",
+        "frontRepo": null
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "\ud800": "\udc00",
+        "frontRepo": "",
+        "projectRules": "\ud800",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "\ud800": "\udc00",
+          "frontRepo": "",
+          "projectRules": "\ud800",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "id": "missing",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Projet introuvable.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": []
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "projectRules": false
+    },
+    "active": [
+      "archived"
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Attends la fin des opérations du projet avant de modifier ses réglages.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": []
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "REPO"
+    },
+    "windows": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:REPO",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:REPO",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "REPO"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "REPO"
+    },
+    "windows": false,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:REPO",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:REPO",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:REPO",
+          "status": "doing",
+          "unknown": "\udc00",
+          "updatedAt": "now"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:REPO",
+          "status": "done",
+          "archived": true,
+          "updatedAt": "now"
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "REPO"
+        },
+        "backup",
+        "transaction",
+        "project:project",
+        "timestamp",
+        "card:card",
+        {
+          "invalidate": "card",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        },
+        "timestamp",
+        "card:archived",
+        {
+          "invalidate": "archived",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "repo"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "worktree": {
+          "path": "kept"
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "worktree": {
+            "path": "kept"
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "repo"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "repo"
+    },
+    "running": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "repo"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "worktree": {
+          "path": "kept"
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "expected": {
+      "error": "Retire les worktrees de ce projet avant de modifier son emplacement. Aucun fichier ne sera déplacé automatiquement.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "worktree": {
+            "path": "kept"
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "running": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Arrête les applications de ce projet avant de modifier son emplacement.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "frontRepo": "service"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "serviceWorktrees": {
+          "front": {
+            "path": "kept"
+          }
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "frontRepo": "checked:service"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "frontRepo": "checked:service",
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "frontRepo": "checked:service",
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "serviceWorktrees": {
+            "front": {
+              "path": "kept"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "service"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "frontRepo": "other-service"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "serviceWorktrees": {
+          "front": {
+            "path": "kept"
+          }
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "frontRepo": "checked:service"
+      }
+    ],
+    "expected": {
+      "error": "Retire les worktrees associés au Front avant de changer son dépôt.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "frontRepo": "checked:service"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "serviceWorktrees": {
+            "front": {
+              "path": "kept"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "other-service"
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "backRepo": "service"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "serviceWorktrees": {
+          "back": {
+            "path": "kept"
+          }
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "backRepo": "checked:service"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "backRepo": "checked:service",
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "backRepo": "checked:service",
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "serviceWorktrees": {
+            "back": {
+              "path": "kept"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "service"
+        },
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "backRepo": "other-service"
+    },
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00",
+        "serviceWorktrees": {
+          "back": {
+            "path": "kept"
+          }
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "backRepo": "checked:service"
+      }
+    ],
+    "expected": {
+      "error": "Retire les worktrees associés au Back avant de changer son dépôt.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "backRepo": "checked:service"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00",
+          "serviceWorktrees": {
+            "back": {
+              "path": "kept"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "repository": "other-service"
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "other"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      },
+      {
+        "id": "other-project",
+        "name": "Other",
+        "repo": "checked:other"
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Ce répertoire figure déjà dans les projets.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        },
+        {
+          "id": "other-project",
+          "name": "Other",
+          "repo": "checked:other"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "other"
+        }
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "linkedProjectId": "other-project"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      },
+      {
+        "id": "other-project",
+        "name": "Other",
+        "repo": "checked:other"
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "other-project",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "other-project",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        },
+        {
+          "id": "other-project",
+          "name": "Other",
+          "repo": "checked:other"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repositoryConnector": "git"
+    },
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Ce module Git est absent ou ne gère pas les dépôts.",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": []
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repositoryConnector": "git"
+    },
+    "connectorAvailable": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "git",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "repositoryConnector": "git",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {},
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "repositoryConnector": "missing"
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        },
+        "repositoryConnector": "missing",
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": ""
+      },
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          },
+          "repositoryConnector": "missing",
+          "projectRules": "",
+          "agent": "",
+          "baseBranch": "",
+          "jiraMode": "inherit",
+          "jiraStatusMap": {
+            "todo": "",
+            "doing": "",
+            "review": "",
+            "done": "",
+            "standby": ""
+          },
+          "frontCommand": "",
+          "backCommand": "",
+          "frontRepo": "",
+          "backRepo": "",
+          "frontDirectory": "",
+          "backDirectory": "",
+          "frontPort": 0,
+          "backPort": 0,
+          "linkedProjectId": "",
+          "automationEnabled": false,
+          "autoFix": true,
+          "prTarget": "",
+          "testCommand": ""
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        "project:project"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "failBackup": true,
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Synthetic backup failure",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        },
+        "backup"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "failCard": "archived",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Synthetic card write failure",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        },
+        "backup",
+        "transaction",
+        "project:project",
+        "timestamp",
+        "card:card",
+        {
+          "invalidate": "card",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        },
+        "timestamp",
+        "card:archived"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "body": {
+      "repo": "new"
+    },
+    "failReview": "card",
+    "projects": [
+      {
+        "id": "project",
+        "name": "\ud800",
+        "repo": "checked:repo",
+        "unknown": {
+          "keep": "\udc00"
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "card",
+        "title": "\ud800",
+        "repo": "checked:repo",
+        "status": "doing",
+        "unknown": "\udc00"
+      },
+      {
+        "id": "archived",
+        "title": "Archived",
+        "repo": "checked:repo",
+        "status": "done",
+        "archived": true
+      },
+      {
+        "id": "other",
+        "title": "Other",
+        "repo": "elsewhere"
+      }
+    ],
+    "expected": {
+      "error": "Synthetic review failure",
+      "projects": [
+        {
+          "id": "project",
+          "name": "\ud800",
+          "repo": "checked:repo",
+          "unknown": {
+            "keep": "\udc00"
+          }
+        }
+      ],
+      "cards": [
+        {
+          "id": "card",
+          "title": "\ud800",
+          "repo": "checked:repo",
+          "status": "doing",
+          "unknown": "\udc00"
+        },
+        {
+          "id": "archived",
+          "title": "Archived",
+          "repo": "checked:repo",
+          "status": "done",
+          "archived": true
+        },
+        {
+          "id": "other",
+          "title": "Other",
+          "repo": "elsewhere"
+        }
+      ],
+      "events": [
+        {
+          "repository": "new"
+        },
+        "backup",
+        "transaction",
+        "project:project",
+        "timestamp",
+        "card:card",
+        {
+          "invalidate": "card",
+          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+        }
+      ]
+    }
   }
 ]

@@ -1,7 +1,11 @@
 use super::{Shared, failure, object};
-use crate::infrastructure::store::Documents;
+use crate::{Result, infrastructure::store::Documents};
 use atelier_core::{
-    application::projects::{self, ProjectFailure},
+    application::{
+        projects::{self, ProjectFailure},
+        task_creation::CreationContext,
+        task_editing,
+    },
     document::Document,
 };
 use axum::{
@@ -17,12 +21,21 @@ enum Action {
     Remove(String),
 }
 
+#[derive(Debug)]
+struct BackupFailure;
+impl std::fmt::Display for BackupFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Sauvegarde du projet impossible.")
+    }
+}
+impl std::error::Error for BackupFailure {}
+
 async fn mutate(state: Shared, action: Action, request: Request) -> Response {
     let body = match object(request.into_body()).await {
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
     };
-    match state
+    let result = state
         .database
         .call(move |store| {
             store.transaction(|store| {
@@ -47,13 +60,18 @@ async fn mutate(state: Shared, action: Action, request: Request) -> Response {
                 }
             })
         })
-        .await
-    {
+        .await;
+    response(result)
+}
+
+fn response(result: Result<Document>) -> Response {
+    match result {
         Ok(result) => Json(result).into_response(),
         Err(error) => {
             let status = match error.downcast_ref::<ProjectFailure>() {
                 Some(ProjectFailure::Missing) => StatusCode::NOT_FOUND,
                 Some(ProjectFailure::Conflict(_)) => StatusCode::CONFLICT,
+                _ if error.is::<BackupFailure>() => StatusCode::INTERNAL_SERVER_ERROR,
                 _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => {
                     StatusCode::INTERNAL_SERVER_ERROR
                 }
@@ -66,6 +84,64 @@ async fn mutate(state: Shared, action: Action, request: Request) -> Response {
             }
         }
     }
+}
+
+pub(super) async fn update(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let backups = state.backups.clone();
+    let result = state
+        .database
+        .call(move |store| {
+            // shortcut: wire actual activity, servers and repository connectors during M04–M06.
+            let edit = projects::prepare_update(
+                store,
+                &id,
+                &body,
+                cfg!(windows),
+                |_| false,
+                |_| false,
+                false,
+            )?;
+            if edit.moved {
+                backups.create(store).map_err(|_| BackupFailure)?;
+            }
+            store.transaction(|store| {
+                store.put(Documents::Projects, &edit.project)?;
+                if edit.moved {
+                    let repo = edit.project.raw("repo").ok_or("Répertoire absent.")?;
+                    for mut card in edit.cards {
+                        card.set("repo", &repo)?;
+                        card.set("updatedAt", &store.timestamp()?)?;
+                        store.put(Documents::Cards, &card)?;
+                        let id = card
+                            .get::<String>("id")?
+                            .ok_or("Identifiant de carte absent.")?;
+                        let invalidation = task_editing::invalidate_reviews(
+                            &id,
+                            &mut card,
+                            store.documents(Documents::Runs)?,
+                            projects::LOCATION_CHANGE_REASON,
+                        )?;
+                        for run in invalidation.runs {
+                            store.put(Documents::Runs, &run)?;
+                        }
+                        if invalidation.automation_changed {
+                            store.put(Documents::Cards, &card)?;
+                        }
+                    }
+                }
+                Ok(edit.project)
+            })
+        })
+        .await;
+    response(result)
 }
 
 pub(super) async fn create(State(state): State<Shared>, request: Request) -> Response {

@@ -108,10 +108,13 @@ impl Document {
         self.0.iter().map(|(key, _)| key)
     }
     pub fn raw(&self, key: &str) -> Option<&RawValue> {
-        let key = JsonString::from(key);
+        self.raw_key(&JsonString::from(key))
+    }
+
+    pub fn raw_key(&self, key: &JsonString) -> Option<&RawValue> {
         self.0
             .iter()
-            .find(|(name, _)| name == &key)
+            .find(|(name, _)| name == key)
             .map(|(_, raw)| raw.as_ref())
     }
 
@@ -144,13 +147,22 @@ impl Document {
 
     pub fn set(&mut self, key: &str, value: &impl Serialize) -> serde_json::Result<()> {
         let raw = serde_json::value::to_raw_value(value)?;
-        let key = JsonString::from(key);
+        self.insert(JsonString::from(key), raw);
+        Ok(())
+    }
+
+    fn insert(&mut self, key: JsonString, raw: Box<RawValue>) {
         if let Some((_, previous)) = self.0.iter_mut().find(|(name, _)| name == &key) {
             *previous = raw;
         } else {
             self.0.push((key, raw));
         }
-        Ok(())
+    }
+
+    pub fn overlay(&mut self, other: &Self) {
+        for (key, raw) in &other.0 {
+            self.insert(key.clone(), raw.clone());
+        }
     }
 
     pub fn remove(&mut self, key: &str) {
@@ -188,13 +200,7 @@ impl<'de> Deserialize<'de> for Document {
             fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Document, M::Error> {
                 let mut document = Document::default();
                 while let Some((key, value)) = map.next_entry::<JsonString, Box<RawValue>>()? {
-                    if let Some((_, previous)) =
-                        document.0.iter_mut().find(|(name, _)| name == &key)
-                    {
-                        *previous = value;
-                    } else {
-                        document.0.push((key, value));
-                    }
+                    document.insert(key, value);
                 }
                 Ok(document)
             }

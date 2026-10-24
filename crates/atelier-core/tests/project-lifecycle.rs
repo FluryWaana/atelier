@@ -15,15 +15,21 @@ struct Context {
     scenario: Document,
     projects: RefCell<Vec<Document>>,
     cards: RefCell<Vec<Document>>,
+    events: RefCell<Vec<Box<RawValue>>>,
 }
 impl CreationContext for Context {
     fn settings(&self) -> Result<Document> {
-        panic!("Project lifecycle does not read settings");
+        Ok(self.scenario.get("settings")?.unwrap_or_default())
     }
     fn agent_for(&self, _: &Document) -> Result<JsonString> {
         panic!("Project lifecycle does not select agents");
     }
     fn repository(&self, value: &RawValue) -> Result<JsonString> {
+        let mut event = Document::default();
+        event.set("repository", &value)?;
+        self.events
+            .borrow_mut()
+            .push(serde_json::value::to_raw_value(&event)?);
         let value: JsonString =
             serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
         let value = text_units(&value, 2000)?;
@@ -35,6 +41,9 @@ impl CreationContext for Context {
         "new-project".into()
     }
     fn timestamp(&self) -> Result<String> {
+        self.events
+            .borrow_mut()
+            .push(serde_json::value::to_raw_value(&"timestamp")?);
         Ok("now".into())
     }
 }
@@ -49,11 +58,26 @@ impl ProjectRepository for Context {
         Ok(self.scenario.get("times")?.unwrap_or_default())
     }
     fn save_project(&self, project: &Document) -> Result<()> {
-        self.projects.borrow_mut().push(project.clone());
+        let id = project.get::<String>("id")?.unwrap();
+        self.events
+            .borrow_mut()
+            .push(serde_json::value::to_raw_value(&format!("project:{id}"))?);
+        let mut projects = self.projects.borrow_mut();
+        if let Some(existing) = projects
+            .iter_mut()
+            .find(|project| project.string_equals("id", &id).unwrap())
+        {
+            *existing = project.clone();
+        } else {
+            projects.push(project.clone());
+        }
         Ok(())
     }
     fn save_card(&self, card: &Document) -> Result<()> {
         let id = card.get::<String>("id")?.unwrap();
+        self.events
+            .borrow_mut()
+            .push(serde_json::value::to_raw_value(&format!("card:{id}"))?);
         if self.scenario.string_equals("failCard", &id)? {
             return Err("Synthetic card write failure".into());
         }
@@ -83,6 +107,7 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         let context = Context {
             projects: RefCell::new(scenario.get("projects").unwrap().unwrap()),
             cards: RefCell::new(scenario.get("cards").unwrap().unwrap()),
+            events: RefCell::new(Vec::new()),
             scenario,
         };
         let previous_projects = context.projects.borrow().clone();
@@ -94,6 +119,54 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         let result = (|| -> Result<Document> {
             match context.scenario.get::<String>("action")?.unwrap().as_str() {
                 "create" => projects::create(&context, &body, windows),
+                "update" => {
+                    let id = context
+                        .scenario
+                        .get::<String>("id")?
+                        .unwrap_or("project".into());
+                    let edit = projects::prepare_update(
+                        &context,
+                        &id,
+                        &body,
+                        windows,
+                        busy,
+                        |_| context.scenario.truthy("connectorAvailable").unwrap(),
+                        context.scenario.truthy("running")?,
+                    )?;
+                    if edit.moved {
+                        context
+                            .events
+                            .borrow_mut()
+                            .push(serde_json::value::to_raw_value(&"backup")?);
+                        if context.scenario.truthy("failBackup")? {
+                            return Err("Synthetic backup failure".into());
+                        }
+                        context
+                            .events
+                            .borrow_mut()
+                            .push(serde_json::value::to_raw_value(&"transaction")?);
+                    }
+                    context.save_project(&edit.project)?;
+                    if edit.moved {
+                        for mut card in edit.cards {
+                            card.set("repo", &edit.project.raw("repo").unwrap())?;
+                            card.set("updatedAt", &context.timestamp()?)?;
+                            context.save_card(&card)?;
+                            let id = card.get::<String>("id")?.unwrap();
+                            let mut event = Document::default();
+                            event.set("invalidate", &id)?;
+                            event.set("reason", &projects::LOCATION_CHANGE_REASON)?;
+                            context
+                                .events
+                                .borrow_mut()
+                                .push(serde_json::value::to_raw_value(&event)?);
+                            if context.scenario.string_equals("failReview", &id)? {
+                                return Err("Synthetic review failure".into());
+                            }
+                        }
+                    }
+                    Ok(edit.project)
+                }
                 "archive" => {
                     let count = projects::archive_tasks(&context, &body, windows, busy)?;
                     let mut result = Document::default();
@@ -132,6 +205,9 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         }
         actual.set("projects", &*context.projects.borrow()).unwrap();
         actual.set("cards", &*context.cards.borrow()).unwrap();
+        if context.scenario.string_equals("action", "update").unwrap() {
+            actual.set("events", &*context.events.borrow()).unwrap();
+        }
         let actual = serde_json::value::to_raw_value(&actual).unwrap();
         let expected = context.scenario.raw("expected").unwrap();
         assert!(

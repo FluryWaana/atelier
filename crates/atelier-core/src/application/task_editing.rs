@@ -31,20 +31,20 @@ pub struct ReviewInvalidation {
 }
 
 pub fn invalidate_reviews(
-    card: &mut Card,
+    card_id: &str,
+    fields: &mut Document,
     runs: Vec<Document>,
     reason: &str,
 ) -> Result<ReviewInvalidation> {
     let mut changed = Vec::new();
     for mut run in runs {
-        if run.string_equals("cardId", &card.id)? && run.string_equals("kind", "pr-review")? {
+        if run.string_equals("cardId", card_id)? && run.string_equals("kind", "pr-review")? {
             run.set("reviewStaleReason", &reason)?;
             changed.push(run);
         }
     }
     let mut automation_changed = false;
-    if let Some(raw) = card
-        .fields
+    if let Some(raw) = fields
         .raw("automation")
         .filter(|raw| raw.get().starts_with('{'))
     {
@@ -55,7 +55,7 @@ pub fn invalidate_reviews(
             automation.set("state", &"interrupted")?;
             automation.set("step", &"tests")?;
             automation.set("message", &reason)?;
-            card.fields.set("automation", &automation)?;
+            fields.set("automation", &automation)?;
             automation_changed = true;
         }
     }

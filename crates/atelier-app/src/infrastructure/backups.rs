@@ -66,9 +66,13 @@ fn valid_name(name: &str) -> bool {
 
 impl BackupDirectory {
     pub fn open(data_directory: &Path) -> Result<Self> {
-        let directory = data_directory.join("backups");
         fs::create_dir_all(data_directory)?;
         let root = Dir::open_ambient_dir(data_directory, ambient_authority())?;
+        Self::open_in(data_directory, &root)
+    }
+
+    pub(super) fn open_in(data_directory: &Path, root: &Dir) -> Result<Self> {
+        let directory = data_directory.join("backups");
         if let Err(error) = root.create_dir("backups")
             && error.kind() != std::io::ErrorKind::AlreadyExists
         {

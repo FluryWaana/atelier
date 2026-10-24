@@ -34,7 +34,7 @@ pub(super) async fn update(
         let mut card = edit.card;
         store.put(Documents::Cards, &card)?;
         if edit.requirements_changed {
-            let invalidation = task_editing::invalidate_reviews(&mut card, store.documents(Documents::Runs)?, task_editing::REVIEW_CHANGE_REASON)?;
+            let invalidation = task_editing::invalidate_reviews(&card.id, &mut card.fields, store.documents(Documents::Runs)?, task_editing::REVIEW_CHANGE_REASON)?;
             for run in invalidation.runs { store.put(Documents::Runs, &run)?; }
             if invalidation.automation_changed { store.put(Documents::Cards, &card)?; }
         }
