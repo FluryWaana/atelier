@@ -30,6 +30,8 @@ test('complete creation inherits templates and projects, resolves local director
       assert.equal((await create('/api/cards', { title: 'Bad', ...body })).status, 400);
     }
     assert.equal(app.store.cards().length, 3); assert.equal(launches, 0);
+    const state = await (await fetch(url + '/api/state', { headers: { Authorization: 'Bearer ' + app.authToken } })).json();
+    assert.equal(state.cards.length, 2); assert.equal(state.brainstorms.length, 1); assert.equal(state.brainstorms[0].id, idea.id);
   } finally { await app.close(); rmSync(root, { recursive: true, force: true }); }
 });
 

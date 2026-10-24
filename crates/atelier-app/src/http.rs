@@ -149,8 +149,18 @@ async fn board(State(state): State<Shared>) -> Response {
         .database
         .call(|store| {
             use crate::infrastructure::store::Documents;
+            let mut cards = Vec::new();
+            let mut brainstorms = Vec::new();
+            for card in store.documents::<Card>(Documents::Cards)? {
+                if card.fields.truthy("brainstormSession")? {
+                    brainstorms.push(card);
+                } else {
+                    cards.push(card);
+                }
+            }
             Ok(Board {
-                cards: store.documents(Documents::Cards)?,
+                cards,
+                brainstorms,
                 times: store.documents(Documents::Times)?,
             })
         })

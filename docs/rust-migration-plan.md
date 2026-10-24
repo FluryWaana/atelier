@@ -649,6 +649,13 @@ Prochaine action concrète :
 - **Vérification :** scénario Node réel d'invalidation ajouté, parcours Rust HTTP/reprise ; bilans complets dans M03. Création `567a529` qualifiée sur les cinq cibles natives, journal Intel relu ; préparation d'édition `0ac6993` vérifiée sur les deux ARM64.
 - **Suite :** projets, réglages/profils et protections/intégrations M02 restantes. Lots globaux toujours en cours.
 
+### Correction M03 — séparation des brainstorms dans l'état
+
+- **Écart trouvé :** la création de brainstorms Rust les exposait encore dans `state.cards`, contrairement à Node.
+- **Correction :** liste `state.brainstorms`, filtre historique conservé ; parcours Node/Rust vérifiant deux cartes et un brainstorm, y compris après redémarrage Rust. Résultats complets dans M03.
+- **CI précédente :** journaux Windows/Linux x64 `0ac6993` relus, 63 éditions réussies ; Intel et édition HTTP `d86c57c` encore attendus.
+- **Suite :** poursuivre les projets puis réglages/profils et protections/intégrations M02. Interface complète des brainstorms en M07.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

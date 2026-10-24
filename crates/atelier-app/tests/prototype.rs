@@ -660,7 +660,9 @@ async fn complete_creation_uses_templates_projects_native_paths_and_atomic_stora
         .json()
         .await
         .unwrap();
-    assert_eq!(board.cards.len(), 3);
+    assert_eq!(board.cards.len(), 2);
+    assert_eq!(board.brainstorms.len(), 1);
+    assert_eq!(board.brainstorms[0].id, idea.id);
     let saved = board.cards.iter().find(|card| card.id == first.id).unwrap();
     let criteria = saved
         .fields
@@ -1018,7 +1020,7 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .json()
         .await
         .unwrap();
-    assert_eq!(board, json!({"cards":[card], "times":[]}));
+    assert_eq!(board, json!({"cards":[card], "brainstorms":[], "times":[]}));
     stop(&address, &next_token, task).await;
 }
 

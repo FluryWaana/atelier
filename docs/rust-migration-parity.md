@@ -181,6 +181,8 @@ C07, après `567a529` : préparation d'édition portée dans core et 63 modifica
 
 C07, après `0ac6993` : édition HTTP locale et invalidation des reviews/automatisations dans la même transaction. Scénario Node réel d'invalidation et parcours Rust concurrence/guards/rollback/reprise ; les effets M04/M05 absents répondent 503 sans écriture. Création `567a529` réussie sur les cinq cibles natives, Intel relu. Les journaux ARM64 de `0ac6993` confirment les 63 modifications historiques ; autres résultats encore attendus.
 
+C07, après `d86c57c` : correction de l'état public pour séparer `brainstorms` et `cards` comme Node. Les parcours de création existants contrôlent désormais cette séparation, avec relecture après redémarrage Rust. Cette preuve de contrat ne qualifie pas encore la vue M07.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

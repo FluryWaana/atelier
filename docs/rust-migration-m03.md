@@ -108,6 +108,12 @@ Le parcours HTTP synthétique vérifie deux modifications concurrentes sans pert
 
 Contrôles locaux : 68 tests Rust réussis, Clippy natif/WASM réussi ; 305 contrats de domaine, 84 créations, 63 modifications et 46 transitions de temps couverts par les tests Rust. Suite Node complète avec contrôle release : 431 tests, 428 réussis, aucun échec, trois exclusions, 85,370 s. La CI `567a529` est entièrement réussie ; le journal macOS Intel confirme les 84 créations et le scénario HTTP natif. Les journaux Linux ARM64/macOS ARM64 `0ac6993` confirment les 63 modifications historiques. Les autres résultats de cet incrément et la nouvelle CI de l'édition HTTP restent attendus.
 
+## Séparation des brainstorms dans l'état — après `d86c57c`
+
+La confrontation de `/api/state` à `server.mjs` a révélé que les brainstorms créés par la nouvelle route restaient dans `cards` côté Rust. Le serveur les range désormais dans `brainstorms` selon la même condition de vérité que Node, tout en préservant l'ordre de stockage et les documents. Le contrat partagé ajoute cette liste avec une valeur par défaut à la désérialisation. Le parcours de création Node vérifie deux cartes ordinaires et un brainstorm ; le scénario Rust vérifie aussi cette séparation après redémarrage. Le test d'état M01 est adapté sans retirer sa vérification de persistance.
+
+Contrôles complets : 68 tests Rust et Clippy natif/WASM réussis ; parcours réel Edge (WASM/CSP, création, redémarrage et relecture) réussi. Suite Node avec contrôle release : 431 tests, 428 réussis, aucun échec, trois exclusions, 85,844 s. Le frontend complet des brainstorms reste en M07 ; cet incrément corrige le contrat de données. Les journaux Windows/Linux x64 `0ac6993` sont relus et confirment les 63 éditions ; macOS Intel reste attendu, ainsi que la CI de l'édition HTTP `d86c57c`.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.
