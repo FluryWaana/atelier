@@ -1,5 +1,6 @@
 use crate::{STATUSES, field, replace_card, write};
 use atelier_core::contracts::Card;
+use atelier_core::domain::checklist::Criterion;
 use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -10,6 +11,8 @@ struct Draft {
     description: String,
     instructions: String,
     status: String,
+    criteria: Vec<Criterion>,
+    dependencies: Vec<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -34,6 +37,18 @@ pub fn TaskEditor(
         description: field(&card.fields, "description"),
         instructions: field(&card.fields, "instructions"),
         status: field(&card.fields, "status"),
+        criteria: card
+            .fields
+            .get("checklist")
+            .ok()
+            .flatten()
+            .unwrap_or_default(),
+        dependencies: card
+            .fields
+            .get("blockedBy")
+            .ok()
+            .flatten()
+            .unwrap_or_default(),
     });
     let id = StoredValue::new(card.id);
     let draft = RwSignal::new(original.get_value());
@@ -84,7 +99,7 @@ pub fn TaskEditor(
         let (method, body) = match action {
             Action::Save => (
                 Method::PATCH,
-                serde_json::json!({"title":value.title, "description":value.description, "instructions":value.instructions, "status":value.status}),
+                serde_json::json!({"title":value.title, "description":value.description, "instructions":value.instructions, "status":value.status, "checklist":value.criteria, "blockedBy":value.dependencies}),
             ),
             Action::Archive => {
                 path.push_str("/archive");
@@ -130,6 +145,21 @@ pub fn TaskEditor(
                     <label for="edit-description">"Description"</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=ticket prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
                     <label for="edit-instructions">"Instructions pour l’agent"</label><textarea id="edit-instructions" rows="4" maxlength="20000" prop:value=move || draft.get().instructions on:input=move |event| draft.update(|draft| draft.instructions = event_target_value(&event))></textarea>
                     <p class="field-help">"Changer le statut ne lance pas d’agent."</p>
+                    <section class="criteria" aria-labelledby="criteria-heading"><h3 id="criteria-heading">"Critères de réussite"</h3><p class="field-help">"Cochez les critères après votre vérification. Maximum 20 critères."</p>
+                        <For each=move || (0..draft.get().criteria.len()).collect::<Vec<_>>() key=|index| *index children=move |index| view! {
+                            <div class="criterion"><label><span class="sr-only">{format!("Critère {}", index + 1)}</span><input class="criterion-text" required maxlength="500" prop:value=move || draft.with(|draft| draft.criteria.get(index).map(|criterion| String::from_utf16_lossy(&criterion.text.0)).unwrap_or_default()) on:input=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.text = event_target_value(&event).as_str().into(); } }) /></label>
+                            <label class="check-filter"><input class="criterion-done" type="checkbox" prop:checked=move || draft.with(|draft| draft.criteria.get(index).is_some_and(|criterion| criterion.done)) on:change=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.done = event_target_checked(&event); } }) />"Validé"</label>
+                            <button type="button" aria-label=format!("Retirer le critère {}", index + 1) on:click=move |_| draft.update(|draft| { draft.criteria.remove(index); })>"Retirer"</button></div>
+                        } />
+                        <button id="add-criterion" type="button" disabled=move || draft.get().criteria.len() >= 20 on:click=move |_| draft.update(|draft| draft.criteria.push(Criterion { text: "".into(), done: false }))>"Ajouter un critère"</button>
+                    </section>
+                    <section class="dependencies" aria-labelledby="dependencies-heading"><h3 id="dependencies-heading">"Bloquée par"</h3><p class="field-help">"Choisissez les tâches préalables. Une tâche terminée ne bloque plus le travail."</p>
+                        <For each=move || cards.get().into_iter().filter(|card| card.id != id.get_value()).collect::<Vec<_>>() key=|card| card.id.clone() children=move |card| {
+                            let dependency = StoredValue::new(card.id);
+                            view! { <label class="dependency-choice"><input type="checkbox" data-dependency=dependency.get_value() prop:checked=move || draft.with(|draft| draft.dependencies.contains(&dependency.get_value())) disabled=move || draft.with(|draft| draft.dependencies.len() >= 20 && !draft.dependencies.contains(&dependency.get_value())) on:change=move |event| draft.update(|draft| { let id = dependency.get_value(); if event_target_checked(&event) { if !draft.dependencies.contains(&id) { draft.dependencies.push(id); } } else { draft.dependencies.retain(|value| value != &id); } }) /><span>{String::from_utf16_lossy(&card.title.0)}</span></label> }
+                        } />
+                        <p class="field-help" hidden=move || cards.get().len() > 1>"Aucune autre tâche disponible."</p>
+                    </section>
                 </fieldset>
                 <p id="editor-error" class="error" role="alert">{move || error.get()}</p>
                 <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || !dirty.get()>{move || if pending.get() { "Enregistrement…" } else { "Enregistrer" }}</button><span role="status">{move || if dirty.get() { "Modifications non enregistrées" } else { "" }}</span></div>

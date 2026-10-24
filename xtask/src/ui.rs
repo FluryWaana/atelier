@@ -339,6 +339,29 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("Description enregistrée")
         .await?;
     client
+        .find(Locator::Css("#add-criterion"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css(".criterion-text"))
+        .await?
+        .send_keys("Vérification humaine synthétique")
+        .await?;
+    client
+        .find(Locator::Css(".criterion-done"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css(&format!(
+            "[data-dependency='{}']",
+            queued["id"].as_str().ok_or("Dépendance sans id")?
+        )))
+        .await?
+        .click()
+        .await?;
+    client
         .find(Locator::Css("#close-editor"))
         .await?
         .click()
@@ -424,12 +447,34 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .click()
         .await?;
+    wait_dom(client, "return document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === false && document.querySelectorAll('[data-dependency]:checked').length === 0;", vec![]).await?;
     client
         .find(Locator::Css("#archive-task"))
         .await?
         .click()
         .await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
+    client
+        .find(Locator::Css("[data-status=review] .card-open"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#delete-task"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-editor"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('Bloquée par') && document.querySelector('#task-editor')?.open === true;", vec![]).await?;
+    client
+        .find(Locator::Css("#close-editor"))
+        .await?
+        .click()
+        .await?;
     client
         .find(Locator::Css("#show-archives"))
         .await?
@@ -501,6 +546,17 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .map_err(|_| "Navigation après redémarrage refusée.")?;
     wait_title(client, title).await?;
     wait_dom(client, "return document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0] && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée' && !document.querySelector('.card-title script');", vec![original_id]).await?;
+    client
+        .find(Locator::Css("[data-status=doing] .card-open"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === true && document.querySelectorAll('[data-dependency]:checked').length === 1;", vec![]).await?;
+    client
+        .find(Locator::Css("#close-editor"))
+        .await?
+        .click()
+        .await?;
     if !client
         .find(Locator::Css("#error"))
         .await?

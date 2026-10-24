@@ -1585,10 +1585,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/projects.rs:28](../crates/atelier-ui/src/projects.rs#L28) | <code>pub fn Projects(</code> |
 | [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::{STATUSES, field, replace_card, write};</code> |
 | [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
-| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:24](../crates/atelier-ui/src/task_editor.rs#L24) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use atelier_core::domain::checklist::Criterion;</code> |
+| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/task_editor.rs:27](../crates/atelier-ui/src/task_editor.rs#L27) | <code>pub fn TaskEditor(</code> |
 | [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>version.workspace = true</code> |
 | [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>edition.workspace = true</code> |
 | [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>rust-version.workspace = true</code> |
