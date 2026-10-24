@@ -3,6 +3,7 @@ use crate::{
     document::{Document, JsonString},
 };
 
+pub mod agent_providers;
 pub mod card_lifecycle;
 pub mod projects;
 pub mod settings;

@@ -1,6 +1,6 @@
-use super::{text, truthy};
+use super::{text, text_units, truthy};
 use crate::document::{Document, JsonString};
-use serde_json::{Value, json};
+use serde_json::{Value, json, value::RawValue};
 
 type Result<T> = std::result::Result<T, &'static str>;
 
@@ -146,16 +146,30 @@ pub fn resolve_agent_options(settings: &Value, card: &Value, body: &Value) -> Re
     )
 }
 
-fn provider_text(body: &Value, key: &str, limit: usize) -> Result<String> {
+pub fn options_document(kind: &str, body: &Document) -> Result<Value> {
+    let mut options = serde_json::Map::new();
+    for key in ["model", "effort"] {
+        if let Some(raw) = body.raw(key) {
+            // Both fields are ASCII-only; malformed UTF-16 keeps the normal validation priority.
+            options.insert(
+                key.into(),
+                serde_json::from_str(raw.get()).unwrap_or(Value::Null),
+            );
+        }
+    }
+    agent_options(kind, &Value::Object(options), None)
+}
+
+fn provider_text(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
     let invalid = "Réglage du fournisseur invalide.";
     let value = body
-        .get(key)
-        .map_or(Some(""), Value::as_str)
-        .ok_or(invalid)?;
-    if value.chars().any(|c| c <= '\u{1f}') {
+        .get::<JsonString>(key)
+        .map_err(|_| invalid)?
+        .unwrap_or_default();
+    if value.0.iter().any(|unit| *unit <= 0x1f) {
         return Err(invalid);
     }
-    text(value, limit).map_err(|_| invalid)
+    text_units(&value, limit).map_err(|_| invalid)
 }
 
 fn absolute(path: &str) -> bool {
@@ -177,64 +191,78 @@ fn package_part(value: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"._-".contains(&c))
 }
 
-fn arguments(value: Option<&Value>) -> Result<Value> {
+fn arguments(value: Option<&RawValue>) -> Result<Vec<JsonString>> {
     let Some(value) = value else {
-        return Ok(json!([]));
+        return Ok(Vec::new());
     };
-    let list = value
-        .as_array()
-        .filter(|list| list.len() <= 100)
-        .ok_or("Les arguments doivent être une liste JSON.")?;
-    if list.iter().any(|value| {
-        value
-            .as_str()
-            .is_none_or(|value| value.encode_utf16().count() > 4000 || value.contains('\0'))
-    }) {
-        return Err("Argument invalide.");
+    let list: Vec<Box<RawValue>> = serde_json::from_str(value.get())
+        .map_err(|_| "Les arguments doivent être une liste JSON.")?;
+    if list.len() > 100 {
+        return Err("Les arguments doivent être une liste JSON.");
     }
-    Ok(value.clone())
+    list.iter()
+        .map(|raw| {
+            let value: JsonString =
+                serde_json::from_str(raw.get()).map_err(|_| "Argument invalide.")?;
+            if value.0.len() > 4000 || value.0.contains(&0) {
+                return Err("Argument invalide.");
+            }
+            Ok(value)
+        })
+        .collect()
 }
 
-pub fn provider_settings(body: &Value) -> Result<Value> {
-    if !body.is_object() {
-        return Err("Fournisseur invalide.");
-    }
-    let id = provider_text(body, "id", 64)?;
-    let name = provider_text(body, "name", 100)?;
-    let kind = body["type"].as_str().unwrap_or_default();
+pub fn provider_settings(raw: &RawValue) -> Result<Document> {
+    let body: Document = serde_json::from_str(raw.get()).map_err(|_| "Fournisseur invalide.")?;
+    let id = provider_text(&body, "id", 64)?;
+    let name = provider_text(&body, "name", 100)?;
+    let id = id.utf8().map_err(|_| "Fournisseur invalide.")?;
+    let kind = body
+        .get::<String>("type")
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let kind = kind.as_str();
     if !id.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
         || !id
             .bytes()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
         || ["constructor", "prototype", "__proto__"].contains(&id.as_str())
-        || name.is_empty()
+        || name.0.is_empty()
         || !["codex", "claude", "command"].contains(&kind)
     {
         return Err("Fournisseur invalide.");
     }
     let auth = body
-        .get("auth")
-        .filter(|value| !value.is_null())
-        .map_or(Some("cli"), Value::as_str);
-    let auth = auth
+        .raw("auth")
+        .filter(|value| value.get() != "null")
+        .map(|raw| serde_json::from_str::<String>(raw.get()))
+        .transpose()
+        .map_err(|_| "Authentification invalide.")?
+        .unwrap_or_else(|| "cli".into());
+    let auth = Some(auth.as_str())
         .filter(|auth| ["cli", "api"].contains(auth) && (*auth != "api" || kind == "codex"))
         .ok_or("Authentification invalide.")?;
-    let command = provider_text(body, "command", 2000)?;
-    let config_dir = provider_text(body, "configDir", 2000)?;
-    let account_label = provider_text(body, "accountLabel", 200)?;
-    let npm_package = provider_text(body, "npmPackage", 200)?;
-    if [&command, &config_dir]
+    let command = provider_text(&body, "command", 2000)?;
+    let config_dir = provider_text(&body, "configDir", 2000)?;
+    let account_label = provider_text(&body, "accountLabel", 200)?;
+    let npm_package = provider_text(&body, "npmPackage", 200)?;
+    // Classification uses ASCII delimiters; preserve original UTF-16 units in the saved profile.
+    let command_view = String::from_utf16_lossy(&command.0);
+    let config_view = String::from_utf16_lossy(&config_dir.0);
+    if [&command_view, &config_view]
         .iter()
         .any(|path| path.len() >= 2 && path.as_bytes()[..2].iter().all(|c| b"/\\".contains(c)))
     {
         return Err("Les chemins réseau et périphériques ne sont pas autorisés.");
     }
-    if !config_dir.is_empty() && !absolute(&config_dir) {
+    if !config_view.is_empty() && !absolute(&config_view) {
         return Err("Le dossier de configuration doit être absolu.");
     }
-    if command.contains(['/', '\\']) && !absolute(&command) {
+    if command_view.contains(['/', '\\']) && !absolute(&command_view) {
         return Err("Le chemin de l’exécutable doit être absolu.");
     }
+    let npm_package = npm_package.utf8().map_err(|_| "Paquet npm invalide.")?;
     if !npm_package.is_empty()
         && !match npm_package.strip_prefix('@') {
             Some(scoped) => scoped
@@ -245,21 +273,51 @@ pub fn provider_settings(body: &Value) -> Result<Value> {
     {
         return Err("Paquet npm invalide.");
     }
-    if command.starts_with('-') || (kind == "command" && command.is_empty()) {
+    if command_view.starts_with('-') || (kind == "command" && command_view.is_empty()) {
         return Err("Exécutable requis.");
     }
-    let options = agent_options(kind, body, None)?;
-    let mut provider = json!({"id": id, "name": name, "type": kind, "auth": auth, "command": command, "configDir": config_dir, "accountLabel": account_label, "model": options["model"], "effort": options["effort"]});
+    let options = options_document(kind, &body)?;
+    let mut provider = Document::default();
+    for (key, value) in [
+        ("id", JsonString::from(id.as_str())),
+        ("name", name),
+        ("type", JsonString::from(kind)),
+        ("auth", JsonString::from(auth)),
+        ("command", command),
+        ("configDir", config_dir),
+        ("accountLabel", account_label),
+    ] {
+        provider
+            .set(key, &value)
+            .map_err(|_| "Fournisseur invalide.")?;
+    }
+    for key in ["model", "effort"] {
+        provider
+            .set(key, &options[key])
+            .map_err(|_| "Fournisseur invalide.")?;
+    }
     if kind == "command" {
         for key in ["analyzeArgs", "editArgs"] {
-            provider[key] = arguments(body.get(key))?;
+            provider
+                .set(key, &arguments(body.raw(key))?)
+                .map_err(|_| "Fournisseur invalide.")?;
         }
-        provider["versionArgs"] = match body.get("versionArgs").filter(|value| !value.is_null()) {
+        let version = match body
+            .raw("versionArgs")
+            .filter(|value| value.get() != "null")
+        {
             Some(value) => arguments(Some(value))?,
-            None => json!(["--version"]),
+            None => vec![JsonString::from("--version")],
         };
-        provider["statusArgs"] = arguments(body.get("statusArgs"))?;
-        provider["npmPackage"] = json!(npm_package);
+        provider
+            .set("versionArgs", &version)
+            .map_err(|_| "Fournisseur invalide.")?;
+        provider
+            .set("statusArgs", &arguments(body.raw("statusArgs"))?)
+            .map_err(|_| "Fournisseur invalide.")?;
+        provider
+            .set("npmPackage", &npm_package)
+            .map_err(|_| "Fournisseur invalide.")?;
     }
     Ok(provider)
 }

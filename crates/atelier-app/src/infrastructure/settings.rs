@@ -52,7 +52,7 @@ pub fn jira_base(value: &JsonString) -> Result<JsonString> {
     Ok(JsonString::from(value.strip_suffix('/').unwrap_or(value)))
 }
 
-fn load(
+pub(super) fn load(
     store: &Store<'_>,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<Document> {
@@ -97,13 +97,21 @@ pub fn update(
         |raw| store.repository(raw),
         jira_base,
     )?;
-    let encrypted = encrypt(&next.tokens, protect)?;
     let response = settings::public_config(&next.settings, &next.tokens, platform())?;
+    persist(store, &next, protect)?;
+    Ok(response)
+}
+
+pub(super) fn persist(
+    store: &Store<'_>,
+    next: &settings::SettingsUpdate,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<()> {
+    let encrypted = encrypt(&next.tokens, protect)?;
     store.transaction(|store| {
         token_vault::save_encrypted(store, encrypted.as_deref())?;
         store.save_settings(&next.settings)
-    })?;
-    Ok(response)
+    })
 }
 
 pub fn remove_token(

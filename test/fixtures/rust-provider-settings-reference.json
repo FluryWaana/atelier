@@ -1,0 +1,24 @@
+{
+  "body": {"id":"custom","name":"Custom","type":"command","command":"custom"},
+  "defaults": {"id":"custom","name":"Custom","type":"command","auth":"cli","command":"custom","configDir":"","accountLabel":"","model":"","effort":"","analyzeArgs":[],"editArgs":[],"versionArgs":["--version"],"statusArgs":[],"npmPackage":""},
+  "cases": [
+    {"body":{"name":" \ud800 "},"settings":{"name":"\ud800"}},
+    {"body":{"command":"C:\\tools\\\ud800.exe"},"settings":{"command":"C:\\tools\\\ud800.exe"}},
+    {"body":{"configDir":"/synthetic/\udc00"},"settings":{"configDir":"/synthetic/\udc00"}},
+    {"body":{"accountLabel":"\ufeff\ud800\u00a0"},"settings":{"accountLabel":"\ud800"}},
+    {"body":{"analyzeArgs":[" \ud800 ","\udc00","\n","{model}"]},"settings":{"analyzeArgs":[" \ud800 ","\udc00","\n","{model}"]}},
+    {"body":{"editArgs":["\ud800"],"versionArgs":null,"statusArgs":["\udc00"]},"settings":{"editArgs":["\ud800"],"statusArgs":["\udc00"]}},
+    {"body":{"ignored":{"\ud800":"\udc00"}},"settings":{}},
+    {"body":{"id":"\ud800","name":null},"error":"Réglage du fournisseur invalide."},
+    {"body":{"id":"\ud800"},"error":"Fournisseur invalide."},
+    {"body":{"auth":"\ud800"},"error":"Authentification invalide."},
+    {"body":{"command":"\\\\\ud800\\share","npmPackage":"\ud800"},"error":"Les chemins réseau et périphériques ne sont pas autorisés."},
+    {"body":{"configDir":"\ud800/relative","npmPackage":"\ud800"},"error":"Le dossier de configuration doit être absolu."},
+    {"body":{"command":"\ud800/relative"},"error":"Le chemin de l’exécutable doit être absolu."},
+    {"body":{"npmPackage":"\ud800","model":false},"error":"Paquet npm invalide."},
+    {"body":{"model":"\ud800","effort":false},"error":"Modèle invalide."},
+    {"body":{"effort":"\ud800","analyzeArgs":[null]},"error":"Niveau de réflexion invalide pour cet agent."},
+    {"body":{"analyzeArgs":["\ud800\u0000"],"editArgs":false},"error":"Argument invalide."},
+    {"body":{"name":"\ud800\n"},"error":"Réglage du fournisseur invalide."}
+  ]
+}

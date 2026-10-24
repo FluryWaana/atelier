@@ -1,3 +1,4 @@
+pub mod agent_providers;
 pub mod backups;
 pub mod checked_file;
 pub mod data_lock;

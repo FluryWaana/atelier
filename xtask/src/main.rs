@@ -103,8 +103,9 @@ async fn main() -> Result<()> {
             run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
             run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;
             run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;
+            run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;
             run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--locked"]))?;
+            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;
             run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))
         }
         ["test-time-parity"] => {

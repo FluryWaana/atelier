@@ -58,6 +58,175 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
 
 #[cfg(windows)]
 #[tokio::test]
+async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_failure() {
+    use atelier_app::infrastructure::token_vault;
+    use atelier_core::document::Document;
+    for fault in [false, true] {
+        let data = tempfile::tempdir().unwrap();
+        let assets = tempfile::tempdir().unwrap();
+        let directory = PrototypeDirectory::open(data.path()).unwrap();
+        let database = Database::open(&directory.path.join("kanban.sqlite")).unwrap();
+        database
+            .call(|store| store.save_settings(&json!({"future":"keep"})))
+            .await
+            .unwrap();
+        database.close().await.unwrap();
+        drop(database);
+        drop(directory);
+        if fault {
+            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_profiles BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();
+        }
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let client = reqwest::Client::new();
+        let request = |method, path: &str| {
+            client
+                .request(method, format!("{address}{path}"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+        };
+        let response = request(reqwest::Method::POST, "/api/agent-providers").header("content-type", "application/json").body(r#"{"id":"api","name":"\ud800","type":"codex","auth":"api","apiKey":"synthetic-key","model":"custom/model"}"#).send().await.unwrap();
+        if fault {
+            assert_eq!(response.status(), 500);
+            let catalog: Value = request(reqwest::Method::GET, "/api/agent-providers")
+                .send()
+                .await
+                .unwrap()
+                .json()
+                .await
+                .unwrap();
+            assert_eq!(catalog.as_array().unwrap().len(), 2);
+            stop(&address, &token, task).await;
+            let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+            assert!(
+                database
+                    .call(token_vault::read_encrypted)
+                    .await
+                    .unwrap()
+                    .is_none()
+            );
+            assert_eq!(
+                database
+                    .call(|store| store.settings::<Value>())
+                    .await
+                    .unwrap(),
+                json!({"future":"keep"})
+            );
+            database.close().await.unwrap();
+            continue;
+        }
+        assert_eq!(response.status(), 200);
+        let response = response.text().await.unwrap();
+        assert!(!response.contains("synthetic-key"));
+        let catalog: Vec<Document> = serde_json::from_str(&response).unwrap();
+        assert_eq!(catalog.len(), 3);
+        assert_eq!(catalog[2].get::<bool>("apiKeySet").unwrap(), Some(true));
+        assert_eq!(
+            request(reqwest::Method::PUT, "/api/settings")
+                .json(&json!({"agent":"api"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        assert_eq!(
+            request(reqwest::Method::DELETE, "/api/agent-providers/api")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            409
+        );
+        let card: Value = request(reqwest::Method::POST, "/api/cards")
+            .json(&json!({"title":"provider reference"}))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(card["agent"], "api");
+        assert_eq!(
+            request(reqwest::Method::PUT, "/api/settings")
+                .json(&json!({"agent":"codex"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            200
+        );
+        assert_eq!(
+            request(reqwest::Method::DELETE, "/api/agent-providers/api")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            409
+        );
+        let changed = request(
+            reqwest::Method::PATCH,
+            &format!("/api/cards/{}", card["id"].as_str().unwrap()),
+        )
+        .json(&json!({"agent":"codex"}))
+        .send()
+        .await
+        .unwrap();
+        assert_eq!(changed.status(), 200);
+        assert_eq!(
+            request(reqwest::Method::POST, "/api/agent-providers")
+                .json(&json!({"id":"api","name":"API","type":"claude"}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            400
+        );
+        stop(&address, &token, task).await;
+        let (address, token, task) = start(data.path(), assets.path()).await;
+        let catalog = client
+            .get(format!("{address}/api/agent-providers"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        assert!(!catalog.contains("synthetic-key"));
+        let catalog: Vec<Document> = serde_json::from_str(&catalog).unwrap();
+        assert_eq!(catalog[2].get::<bool>("apiKeySet").unwrap(), Some(true));
+        let response = client
+            .delete(format!("{address}/api/agent-providers/api"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+        stop(&address, &token, task).await;
+        let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+        assert!(
+            database
+                .call(token_vault::read_encrypted)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        let stored = database
+            .call(|store| store.settings::<Document>())
+            .await
+            .unwrap();
+        assert!(stored.string_equals("future", "keep").unwrap());
+        assert!(stored.string_equals("apiModel", "custom/model").unwrap());
+        database.close().await.unwrap();
+    }
+}
+
+#[cfg(windows)]
+#[tokio::test]
 async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_back() {
     use atelier_app::infrastructure::{settings, token_vault};
     use atelier_core::document::{Document, JsonString};

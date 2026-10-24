@@ -160,6 +160,18 @@ La CI Windows `38ceb6c` a ensuite détecté une fixture qui enregistrait les che
 
 ## Preuves reproductibles
 
+### Profils d'agents — candidat après `c59d929`
+
+Le validateur de profils reçoit maintenant un document sans perte : nom, chemins, libellé et arguments conservent les unités UTF-16 isolées. La classification des chemins ne transforme pas les valeurs sauvegardées. Les options modèle/effort partagent leur validation ASCII avec la création/édition de cartes et les réglages globaux. Les 305 anciens contrats restent inchangés ; 18 cas supplémentaires comparent les textes, arguments et priorités de refus avec Node.
+
+`application/agent_providers` prépare ajout, remplacement et suppression, avec type immuable, limite de 50, validation des clés, références de cartes/projets (archives comprises) et gardes d'activité. Les routes GET/POST `/api/agent-providers` et DELETE `/api/agent-providers/{id}` réutilisent le même commit atomique réglages/coffre. Les descriptions n'exposent que la présence de la clé. Les tests de cas d'usage Node et Rust reproduisent les mêmes gardes ; le scénario HTTP Windows couvre chiffrement, héritage, refus de suppression, réouverture et rollback injecté. Résultats de cet incrément attendus sur GitHub.
+
+Les diagnostics, informations de mise à jour, lancement CLI et réservations d'activité restent à brancher en M04 ; l'API ne prétend pas les avoir exécutés. Le coffre du prototype POSIX conserve son refus explicite jusqu'au service isolé requis en M02. Aucun programme d'agent ni appel payant lancé.
+
+Preuve recueillie pour `76ed18c`/`c59d929` : [suite Node Windows](https://github.com/FluryWaana/atelier/actions/runs/40108724090/job/120915769191) réussie, journal relu : 437 tests, 433 réussis, aucun échec, quatre exclusions inchangées. Les trois remplacements natifs et les trois variantes d'identifiants au-delà de la précision des `Number` sont réussis. Les tests asynchrones de lecture de fichiers passent aussi.
+
+La CI `c59d929` est maintenant entièrement réussie. Journaux natif et Edge relus : 79 tests Rust, 42 réglages globaux et 23 URL comparés à Node, rollback du coffre/réglages, concurrence HTTP avec modèles, conservation UTF-16, réouverture, Clippy natif/WASM et parcours Edge réussis. Cela qualifie cet incrément Windows ; les nouveaux profils ci-dessus, l'intégration POSIX et les producteurs M04/M05 ne sont pas couverts par cette exécution.
+
 ### Réglages globaux HTTP et coffre atomique — candidat après `c613dc2`
 
 PUT `/api/settings`, DELETE `/api/settings/tokens/{service}` et `state.settings` utilisent le préparateur historique. Lecture, préparation, chiffrement et transaction occupent une seule opération du worker SQLite : aucune écriture de modèle/réglage ne s'intercale, et aucun verrou SQLite de transaction n'est détenu pendant le chiffrement. Les jetons sont relus depuis le coffre, sans cache mutable distinct susceptible de survivre à un rollback. Une faute de chiffrement refuse la commande ; une faute d'écriture annule coffre et réglages ensemble. La réponse expose uniquement les indicateurs de présence des jetons, avec les champs de configuration historiques.

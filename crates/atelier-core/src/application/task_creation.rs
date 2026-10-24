@@ -2,7 +2,7 @@ use super::card_lifecycle::CardFailure;
 use crate::{
     contracts::Card,
     document::{Document, JsonString},
-    domain::{agent_options::agent_options, checklist::checklist, text_units},
+    domain::{agent_options::options_document, checklist::checklist, text_units},
 };
 use serde_json::{Value, value::RawValue};
 
@@ -93,17 +93,7 @@ pub(super) fn options(agent: &JsonString, body: &Document, settings: &Document) 
         .get::<String>("type")
         .map_err(|_| CardFailure::Invalid("Agent invalide."))?
         .ok_or(CardFailure::Invalid("Agent invalide."))?;
-    let mut options = serde_json::Map::new();
-    for key in ["model", "effort"] {
-        if let Some(raw) = body.raw(key) {
-            // These ASCII-only options reject lone surrogates; keep the validator's error order.
-            options.insert(
-                key.into(),
-                serde_json::from_str(raw.get()).unwrap_or(Value::Null),
-            );
-        }
-    }
-    Ok(agent_options(&kind, &Value::Object(options), None).map_err(CardFailure::Invalid)?)
+    Ok(options_document(&kind, body).map_err(CardFailure::Invalid)?)
 }
 
 pub fn create(

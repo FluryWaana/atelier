@@ -22,6 +22,7 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
 use tower_http::services::ServeFile;
 
+mod agent_providers;
 mod card_lifecycle;
 mod events;
 mod projects;
@@ -302,6 +303,14 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}", any(time_tracking::entry))
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
+        .route(
+            "/api/agent-providers",
+            get(agent_providers::describe).post(agent_providers::save),
+        )
+        .route(
+            "/api/agent-providers/{id}",
+            axum::routing::delete(agent_providers::remove),
+        )
         .route("/api/settings", axum::routing::put(settings::update))
         .route(
             "/api/settings/tokens/{service}",
