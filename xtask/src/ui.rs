@@ -550,6 +550,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     settings_scenario(client, http, &address, &next_token, data.path()).await?;
     backups_scenario(client, http, &address, &next_token).await?;
+    language_scenario(client).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
@@ -955,6 +956,58 @@ async fn backups_scenario(
     wait_dom(client,"return !document.querySelector('#backups-dialog') && document.activeElement?.id === 'manage-backups';",vec![]).await?;
     client.refresh().await?;
     wait_title(client, "État après sauvegarde").await?;
+    Ok(())
+}
+
+async fn language_scenario(client: &Client) -> Result<()> {
+    click(client, "#manage-settings").await?;
+    let original = client
+        .find(Locator::Css("#settings-branch"))
+        .await?
+        .prop("value")
+        .await?
+        .ok_or("Branche absente")?;
+    client
+        .find(Locator::Css("#settings-branch"))
+        .await?
+        .send_keys("-draft")
+        .await?;
+    client.execute("const select=document.querySelector('#interface-language'); select.value='en-US'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#settings-title')?.textContent === 'Application settings' && document.querySelector('#settings-branch')?.value === arguments[0] && document.querySelector('#save-settings')?.textContent === 'Save';",vec![json!(format!("{original}-draft"))]).await?;
+    click(client, "#close-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-dialog .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
+    click(client, "#discard-settings").await?;
+    wait_dom(client,"return document.querySelector('h1')?.textContent === 'Your workspace' && document.querySelector('#board-search')?.placeholder === 'Title or description…' && Array.from(document.querySelectorAll('.column-heading h2')).map(node=>node.textContent).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
+    wait_title(client, "État après sauvegarde").await?;
+    click(client, ".card-open").await?;
+    wait_dom(client,"return document.querySelector('#editor-heading')?.textContent === 'Task details' && document.querySelector('#criteria-heading')?.textContent === 'Acceptance criteria' && document.querySelector('#edit-status option')?.textContent === 'To do';",vec![]).await?;
+    click(client, "#add-criterion").await?;
+    wait_dom(client,"return document.querySelector('.criterion .sr-only')?.textContent === 'Criterion 1' && document.querySelector('.criterion button')?.getAttribute('aria-label') === 'Remove criterion 1';",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#confirm-editor").await?;
+    client.refresh().await?;
+    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false' && document.querySelector('#manage-settings')?.textContent === 'Settings';",vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-english.png"),
+        client.screenshot().await?,
+    )?;
+    click(client, "#manage-backups").await?;
+    wait_dom(client,"return document.querySelector('#backups-title')?.textContent === 'Backups and restore' && document.querySelector('#create-backup')?.disabled === false;",vec![]).await?;
+    click(client, "#close-backups").await?;
+    click(client, "#manage-settings").await?;
+    client
+        .find(Locator::Css("#settings-repo"))
+        .await?
+        .send_keys("/missing-synthetic-directory")
+        .await?;
+    click(client, "#save-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-error')?.textContent === 'The repository could not be found or accessed.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    click(client, "#close-settings").await?;
+    click(client, "#discard-settings").await?;
+    click(client, "#manage-settings").await?;
+    client.execute("const select=document.querySelector('#interface-language'); select.value='fr-FR'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#settings-title')?.textContent === 'Paramètres de l’application';",vec![]).await?;
+    click(client, "#close-settings").await?;
     Ok(())
 }
 

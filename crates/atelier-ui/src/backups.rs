@@ -1,3 +1,4 @@
+use crate::i18n::I18n;
 use crate::{field, live::BoardState, read, write};
 use atelier_core::document::Document;
 use gloo_net::http::Method;
@@ -22,6 +23,7 @@ pub fn Backups(
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
+    let i18n = expect_context::<I18n>();
     let items = RwSignal::new(Vec::<Document>::new());
     let selected = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
@@ -107,17 +109,17 @@ pub fn Backups(
     on_cleanup(move || unload.remove());
     view! {
         <dialog id="backups-dialog" class="editor" node_ref=dialog aria-labelledby="backups-title" on:cancel=move |event: web_sys::Event| { event.prevent_default(); close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">"VOS DONNÉES"</p><h2 id="backups-title">"Sauvegardes et restauration"</h2></div><button id="close-backups" type="button" disabled=move || pending.get() on:click=move |_| close()>"Fermer"</button></header>
-            <p class="field-help">"Les sauvegardes conservent les données de l’application. Les fichiers des dépôts et worktrees restent à leur emplacement et ne sont pas restaurés."</p>
-            <div class="editor-actions"><button id="create-backup" class="primary" type="button" autofocus disabled=move || pending.get() on:click=move |_| execute(false)>"Créer une sauvegarde"</button><button id="refresh-backups" type="button" disabled=move || pending.get() on:click=move |_| refresh()>"Actualiser"</button></div>
-            <p id="backups-notice" class="field-help" role="status">{move || if pending.get() { "Opération en cours…".into() } else { notice.get() }}</p><p id="backups-error" class="error" role="alert">{move || error.get()}</p>
-            <div class="backup-list" aria-label="Sauvegardes locales" aria-busy=move || pending.get().to_string()><For each=move || items.get() key=|backup| field(backup,"name") children=move |backup| {
+            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("VOS DONNÉES")}</p><h2 id="backups-title">{move || i18n.text("Sauvegardes et restauration")}</h2></div><button id="close-backups" type="button" disabled=move || pending.get() on:click=move |_| close()>{move || i18n.text("Fermer")}</button></header>
+            <p class="field-help">{move || i18n.text("Les sauvegardes conservent les données de l’application. Les fichiers des dépôts et worktrees restent à leur emplacement et ne sont pas restaurés.")}</p>
+            <div class="editor-actions"><button id="create-backup" class="primary" type="button" autofocus disabled=move || pending.get() on:click=move |_| execute(false)>{move || i18n.text("Créer une sauvegarde")}</button><button id="refresh-backups" type="button" disabled=move || pending.get() on:click=move |_| refresh()>{move || i18n.text("Actualiser")}</button></div>
+            <p id="backups-notice" class="field-help" role="status">{move || i18n.text(&(if pending.get() { "Opération en cours…".to_owned() } else { notice.get() }))}</p><p id="backups-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
+            <div class="backup-list" aria-label=move || i18n.text("Sauvegardes locales") aria-busy=move || pending.get().to_string()><For each=move || items.get() key=|backup| field(backup,"name") children=move |backup| {
                 let name = StoredValue::new(field(&backup,"name"));
                 let date = field(&backup,"date").replace('T'," ").replace('Z'," UTC");
                 let size = backup.get::<u64>("bytes").ok().flatten().unwrap_or(0).div_ceil(1024);
-                view! { <button type="button" class="project-choice" data-backup=name.get_value() aria-pressed=move || (selected.get() == name.get_value()).to_string() disabled=move || pending.get() on:click=move |_| selected.set(name.get_value())><strong>{format!("{date} · {size} Kio")}</strong><small>{name.get_value()}</small></button> }
-            } /><p class="field-help" hidden=move || pending.get() || !items.get().is_empty()>"Aucune sauvegarde disponible."</p></div>
-            <div class="confirmation" role="alert" hidden=move || selected.get().is_empty()><p>"Restaurer cette sauvegarde remplacera les tâches, projets, réglages et temps actuels. Une sauvegarde de secours conservera l’état précédent. Les connexions seront réinitialisées et les automatisations mises en pause."</p><p class="backup-name">{move || selected.get()}</p><button id="restore-backup" class="danger" type="button" disabled=move || pending.get() on:click=move |_| execute(true)>"Restaurer cette sauvegarde"</button><button id="cancel-restore" type="button" disabled=move || pending.get() on:click=move |_| selected.set(String::new())>"Annuler"</button></div>
+                view! { <button type="button" class="project-choice" data-backup=name.get_value() aria-pressed=move || (selected.get() == name.get_value()).to_string() disabled=move || pending.get() on:click=move |_| selected.set(name.get_value())><strong>{move || format!("{date} · {size} {}", if i18n.code() == "en-US" { "KiB" } else { "Kio" })}</strong><small>{name.get_value()}</small></button> }
+            } /><p class="field-help" hidden=move || pending.get() || !items.get().is_empty()>{move || i18n.text("Aucune sauvegarde disponible.")}</p></div>
+            <div class="confirmation" role="alert" hidden=move || selected.get().is_empty()><p>{move || i18n.text("Restaurer cette sauvegarde remplacera les tâches, projets, réglages et temps actuels. Une sauvegarde de secours conservera l’état précédent. Les connexions seront réinitialisées et les automatisations mises en pause.")}</p><p class="backup-name">{move || selected.get()}</p><button id="restore-backup" class="danger" type="button" disabled=move || pending.get() on:click=move |_| execute(true)>{move || i18n.text("Restaurer cette sauvegarde")}</button><button id="cancel-restore" type="button" disabled=move || pending.get() on:click=move |_| selected.set(String::new())>{move || i18n.text("Annuler")}</button></div>
         </dialog>
     }
 }

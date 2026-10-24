@@ -34,9 +34,10 @@ impl CreationContext for Store<'_> {
             .map_err(|_| CardFailure::Invalid("Texte invalide ou trop long."))?;
         let value = text_units(&value, 2000).map_err(CardFailure::Invalid)?;
         let value = String::from_utf16_lossy(&value.0);
-        // shortcut: OS diagnostics differ from Node's lstat messages; qualify them before closing M03.
-        let path = std::fs::canonicalize(if value.is_empty() { "." } else { &value })?;
-        if !path.metadata()?.is_dir() {
+        let unavailable = |_| CardFailure::Invalid("Le dépôt est introuvable ou inaccessible.");
+        let path = std::fs::canonicalize(if value.is_empty() { "." } else { &value })
+            .map_err(unavailable)?;
+        if !path.metadata().map_err(unavailable)?.is_dir() {
             return Err(CardFailure::Invalid("Le dépôt doit être un dossier.").into());
         }
         Ok(path_string(&path))

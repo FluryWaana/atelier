@@ -99,7 +99,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/locales/en-US.json](../crates/atelier-ui/locales/en-US.json) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/backups.rs](../crates/atelier-ui/src/backups.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/i18n.rs](../crates/atelier-ui/src/i18n.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/live.rs](../crates/atelier-ui/src/live.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/projects.rs](../crates/atelier-ui/src/projects.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -420,6 +422,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/support/tray.rs](../xtask/tests/support/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/tray_posix.rs](../xtask/tests/support/tray_posix.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/support/windows.rs](../xtask/tests/support/windows.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/tests/translations.rs](../xtask/tests/translations.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/tests/windows-native.rs](../xtask/tests/windows-native.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 
 ## Exports et réexports
@@ -1577,12 +1580,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
 | [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Document", "HtmlElement", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent", "EventSource", "MessageEvent"] }</code> |
-| [crates/atelier-ui/src/backups.rs:1](../crates/atelier-ui/src/backups.rs#L1) | <code>use crate::{field, live::BoardState, read, write};</code> |
-| [crates/atelier-ui/src/backups.rs:2](../crates/atelier-ui/src/backups.rs#L2) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-ui/src/backups.rs:3](../crates/atelier-ui/src/backups.rs#L3) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/backups.rs:4](../crates/atelier-ui/src/backups.rs#L4) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/backups.rs:5](../crates/atelier-ui/src/backups.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/backups.rs:20](../crates/atelier-ui/src/backups.rs#L20) | <code>pub fn Backups(</code> |
+| [crates/atelier-ui/src/backups.rs:1](../crates/atelier-ui/src/backups.rs#L1) | <code>use crate::i18n::I18n;</code> |
+| [crates/atelier-ui/src/backups.rs:2](../crates/atelier-ui/src/backups.rs#L2) | <code>use crate::{field, live::BoardState, read, write};</code> |
+| [crates/atelier-ui/src/backups.rs:3](../crates/atelier-ui/src/backups.rs#L3) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-ui/src/backups.rs:4](../crates/atelier-ui/src/backups.rs#L4) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/backups.rs:5](../crates/atelier-ui/src/backups.rs#L5) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/backups.rs:6](../crates/atelier-ui/src/backups.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/backups.rs:21](../crates/atelier-ui/src/backups.rs#L21) | <code>pub fn Backups(</code> |
+| [crates/atelier-ui/src/i18n.rs:1](../crates/atelier-ui/src/i18n.rs#L1) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/i18n.rs:2](../crates/atelier-ui/src/i18n.rs#L2) | <code>use std::{collections::BTreeMap, sync::OnceLock};</code> |
+| [crates/atelier-ui/src/i18n.rs:5](../crates/atelier-ui/src/i18n.rs#L5) | <code>pub struct I18n(RwSignal&lt;&amp;'static str&gt;);</code> |
+| [crates/atelier-ui/src/i18n.rs:24](../crates/atelier-ui/src/i18n.rs#L24) | <code>pub fn code(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-ui/src/i18n.rs:37](../crates/atelier-ui/src/i18n.rs#L37) | <code>pub fn select(self, value: &amp;str) -&gt; Result&lt;(), &amp;'static str&gt; {</code> |
+| [crates/atelier-ui/src/i18n.rs:46](../crates/atelier-ui/src/i18n.rs#L46) | <code>pub fn text(self, source: &amp;str) -&gt; String {</code> |
 | [crates/atelier-ui/src/live.rs:1](../crates/atelier-ui/src/live.rs#L1) | <code>use crate::load;</code> |
 | [crates/atelier-ui/src/live.rs:2](../crates/atelier-ui/src/live.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/live.rs:6](../crates/atelier-ui/src/live.rs#L6) | <code>use leptos::prelude::*;</code> |
@@ -1599,42 +1609,47 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/live.rs:37](../crates/atelier-ui/src/live.rs#L37) | <code>pub fn apply(self, board: Board) {</code> |
 | [crates/atelier-ui/src/live.rs:59](../crates/atelier-ui/src/live.rs#L59) | <code>pub async fn refresh(self, token: &amp;str) -&gt; Result&lt;(), String&gt; {</code> |
 | [crates/atelier-ui/src/live.rs:72](../crates/atelier-ui/src/live.rs#L72) | <code>pub fn listen(self, token: String) -&gt; Result&lt;(), String&gt; {</code> |
-| [crates/atelier-ui/src/main.rs:1](../crates/atelier-ui/src/main.rs#L1) | <code>use atelier_core::contracts::{Board, Card};</code> |
-| [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::{Method, Request, RequestBuilder, Response};</code> |
-| [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/main.rs:6](../crates/atelier-ui/src/main.rs#L6) | <code>mod backups;</code> |
-| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>mod live;</code> |
-| [crates/atelier-ui/src/main.rs:8](../crates/atelier-ui/src/main.rs#L8) | <code>mod projects;</code> |
-| [crates/atelier-ui/src/main.rs:9](../crates/atelier-ui/src/main.rs#L9) | <code>mod settings;</code> |
-| [crates/atelier-ui/src/main.rs:10](../crates/atelier-ui/src/main.rs#L10) | <code>mod task_editor;</code> |
-| [crates/atelier-ui/src/main.rs:11](../crates/atelier-ui/src/main.rs#L11) | <code>use backups::Backups;</code> |
-| [crates/atelier-ui/src/main.rs:12](../crates/atelier-ui/src/main.rs#L12) | <code>use live::BoardState;</code> |
-| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>use projects::Projects;</code> |
-| [crates/atelier-ui/src/main.rs:14](../crates/atelier-ui/src/main.rs#L14) | <code>use settings::Settings;</code> |
-| [crates/atelier-ui/src/main.rs:15](../crates/atelier-ui/src/main.rs#L15) | <code>use task_editor::TaskEditor;</code> |
-| [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::{field, live::BoardState, write};</code> |
-| [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use atelier_core::domain::agent_options::providers;</code> |
-| [crates/atelier-ui/src/projects.rs:4](../crates/atelier-ui/src/projects.rs#L4) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/projects.rs:5](../crates/atelier-ui/src/projects.rs#L5) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/projects.rs:6](../crates/atelier-ui/src/projects.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/projects.rs:44](../crates/atelier-ui/src/projects.rs#L44) | <code>pub fn Projects(</code> |
-| [crates/atelier-ui/src/settings.rs:1](../crates/atelier-ui/src/settings.rs#L1) | <code>use crate::{field, live::BoardState, write};</code> |
-| [crates/atelier-ui/src/settings.rs:2](../crates/atelier-ui/src/settings.rs#L2) | <code>use atelier_core::{document::Document, domain::agent_options::providers};</code> |
-| [crates/atelier-ui/src/settings.rs:3](../crates/atelier-ui/src/settings.rs#L3) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/settings.rs:4](../crates/atelier-ui/src/settings.rs#L4) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/settings.rs:5](../crates/atelier-ui/src/settings.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/settings.rs:40](../crates/atelier-ui/src/settings.rs#L40) | <code>pub fn Settings(</code> |
-| [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::{STATUSES, field, live::BoardState, replace_card, write};</code> |
-| [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
-| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use atelier_core::domain::checklist::Criterion;</code> |
-| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/task_editor.rs:7](../crates/atelier-ui/src/task_editor.rs#L7) | <code>use wasm_bindgen::JsCast;</code> |
-| [crates/atelier-ui/src/task_editor.rs:8](../crates/atelier-ui/src/task_editor.rs#L8) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:50](../crates/atelier-ui/src/task_editor.rs#L50) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/main.rs:1](../crates/atelier-ui/src/main.rs#L1) | <code>use crate::i18n::I18n;</code> |
+| [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use atelier_core::contracts::{Board, Card};</code> |
+| [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use gloo_net::http::{Method, Request, RequestBuilder, Response};</code> |
+| [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/main.rs:5](../crates/atelier-ui/src/main.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>mod backups;</code> |
+| [crates/atelier-ui/src/main.rs:8](../crates/atelier-ui/src/main.rs#L8) | <code>mod i18n;</code> |
+| [crates/atelier-ui/src/main.rs:9](../crates/atelier-ui/src/main.rs#L9) | <code>mod live;</code> |
+| [crates/atelier-ui/src/main.rs:10](../crates/atelier-ui/src/main.rs#L10) | <code>mod projects;</code> |
+| [crates/atelier-ui/src/main.rs:11](../crates/atelier-ui/src/main.rs#L11) | <code>mod settings;</code> |
+| [crates/atelier-ui/src/main.rs:12](../crates/atelier-ui/src/main.rs#L12) | <code>mod task_editor;</code> |
+| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>use backups::Backups;</code> |
+| [crates/atelier-ui/src/main.rs:14](../crates/atelier-ui/src/main.rs#L14) | <code>use live::BoardState;</code> |
+| [crates/atelier-ui/src/main.rs:15](../crates/atelier-ui/src/main.rs#L15) | <code>use projects::Projects;</code> |
+| [crates/atelier-ui/src/main.rs:16](../crates/atelier-ui/src/main.rs#L16) | <code>use settings::Settings;</code> |
+| [crates/atelier-ui/src/main.rs:17](../crates/atelier-ui/src/main.rs#L17) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::i18n::I18n;</code> |
+| [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use crate::{field, live::BoardState, write};</code> |
+| [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-ui/src/projects.rs:4](../crates/atelier-ui/src/projects.rs#L4) | <code>use atelier_core::domain::agent_options::providers;</code> |
+| [crates/atelier-ui/src/projects.rs:5](../crates/atelier-ui/src/projects.rs#L5) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/projects.rs:6](../crates/atelier-ui/src/projects.rs#L6) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/projects.rs:7](../crates/atelier-ui/src/projects.rs#L7) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/projects.rs:45](../crates/atelier-ui/src/projects.rs#L45) | <code>pub fn Projects(</code> |
+| [crates/atelier-ui/src/settings.rs:1](../crates/atelier-ui/src/settings.rs#L1) | <code>use crate::i18n::I18n;</code> |
+| [crates/atelier-ui/src/settings.rs:2](../crates/atelier-ui/src/settings.rs#L2) | <code>use crate::{field, live::BoardState, write};</code> |
+| [crates/atelier-ui/src/settings.rs:3](../crates/atelier-ui/src/settings.rs#L3) | <code>use atelier_core::{document::Document, domain::agent_options::providers};</code> |
+| [crates/atelier-ui/src/settings.rs:4](../crates/atelier-ui/src/settings.rs#L4) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/settings.rs:5](../crates/atelier-ui/src/settings.rs#L5) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/settings.rs:6](../crates/atelier-ui/src/settings.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/settings.rs:41](../crates/atelier-ui/src/settings.rs#L41) | <code>pub fn Settings(</code> |
+| [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::i18n::I18n;</code> |
+| [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use crate::{STATUSES, field, live::BoardState, replace_card, write};</code> |
+| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use atelier_core::contracts::Card;</code> |
+| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use atelier_core::domain::checklist::Criterion;</code> |
+| [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/task_editor.rs:7](../crates/atelier-ui/src/task_editor.rs#L7) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/task_editor.rs:8](../crates/atelier-ui/src/task_editor.rs#L8) | <code>use wasm_bindgen::JsCast;</code> |
+| [crates/atelier-ui/src/task_editor.rs:9](../crates/atelier-ui/src/task_editor.rs#L9) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/task_editor.rs:51](../crates/atelier-ui/src/task_editor.rs#L51) | <code>pub fn TaskEditor(</code> |
 | [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>version.workspace = true</code> |
 | [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>edition.workspace = true</code> |
 | [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>rust-version.workspace = true</code> |
@@ -1744,6 +1759,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/support/windows.rs:13](../xtask/tests/support/windows.rs#L13) | <code>pub fn open_process(pid: u32) -&gt; io::Result&lt;OwnedHandle&gt; {</code> |
 | [xtask/tests/support/windows.rs:28](../xtask/tests/support/windows.rs#L28) | <code>pub fn creation_time(process: &amp;impl AsRawHandle) -&gt; io::Result&lt;u64&gt; {</code> |
 | [xtask/tests/support/windows.rs:51](../xtask/tests/support/windows.rs#L51) | <code>pub fn wait(process: &amp;impl AsRawHandle, milliseconds: u32) -&gt; u32 {</code> |
+| [xtask/tests/translations.rs:1](../xtask/tests/translations.rs#L1) | <code>use std::collections::BTreeMap;</code> |
+| [xtask/tests/translations.rs:3](../xtask/tests/translations.rs#L3) | <code>#[test]</code> |
 | [xtask/tests/windows-native.rs:4](../xtask/tests/windows-native.rs#L4) | <code>mod windows;</code> |
 | [xtask/tests/windows-native.rs:6](../xtask/tests/windows-native.rs#L6) | <code>use std::{</code> |
 | [xtask/tests/windows-native.rs:17](../xtask/tests/windows-native.rs#L17) | <code>use windows_sys::Win32::{</code> |
@@ -3654,4 +3671,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 411 fichiers ; 97 fichiers de tests Node.
+Total : 414 fichiers ; 97 fichiers de tests Node.
