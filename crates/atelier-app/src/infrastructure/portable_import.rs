@@ -199,14 +199,7 @@ fn snapshot_source(database: &Path, source: &Dir) -> Result<tempfile::TempDir> {
 }
 
 fn copy_snapshot(source: &Dir, lock: &SourceLock) -> Result<tempfile::TempDir> {
-    let mut builder = tempfile::Builder::new();
-    builder.prefix("atelier-import-");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        builder.permissions(fs::Permissions::from_mode(0o700));
-    }
-    let snapshot = builder.tempdir()?;
+    let snapshot = super::store::temporary_directory()?;
     let target = Dir::open_ambient_dir(snapshot.path(), ambient_authority())?;
     // shortcut: refuse rollback journals until isolated recovery is qualified before M08.
     match source.symlink_metadata("kanban.sqlite-journal") {

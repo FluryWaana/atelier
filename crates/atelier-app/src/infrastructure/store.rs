@@ -44,6 +44,17 @@ pub struct Store<'a> {
     pub(crate) connection: &'a Connection,
 }
 
+pub(super) fn temporary_directory() -> Result<tempfile::TempDir> {
+    let mut builder = tempfile::Builder::new();
+    builder.prefix("atelier-sqlite-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(std::fs::Permissions::from_mode(0o700));
+    }
+    Ok(builder.tempdir()?)
+}
+
 pub(super) fn open(path: &Path) -> Result<Connection> {
     let connection = Connection::open(path)?;
     connection.execute_batch(SCHEMA)?;
@@ -201,7 +212,9 @@ impl<'a> Store<'a> {
     }
 
     pub(super) fn backup_in(&self, directory: &cap_std::fs::Dir, name: &Path) -> Result<()> {
-        let mut temporary = tempfile::NamedTempFile::new()?;
+        // SQLite's adjacent journals must be protected along with the temporary database.
+        let private = temporary_directory()?;
+        let mut temporary = tempfile::NamedTempFile::new_in(private.path())?;
         let mut copy = Connection::open(temporary.path())?;
         {
             let backup = rusqlite::backup::Backup::new(self.connection, &mut copy)?;
@@ -234,6 +247,37 @@ impl<'a> Store<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn temporary_sqlite_sidecars_stay_inside_a_private_directory() {
+        let private = temporary_directory().unwrap();
+        let path = private.path().to_owned();
+        let temporary = tempfile::NamedTempFile::new_in(&path).unwrap();
+        let connection = open(temporary.path()).unwrap();
+        Store::new(&connection)
+            .put(Documents::Cards, &json!({"id":"private"}))
+            .unwrap();
+        let wal = std::path::PathBuf::from(format!("{}-wal", temporary.path().display()));
+        assert!(wal.is_file());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+            for file in [temporary.path(), wal.as_path()] {
+                assert_eq!(
+                    std::fs::metadata(file).unwrap().permissions().mode() & 0o077,
+                    0
+                );
+            }
+        }
+        connection.close().unwrap();
+        drop(temporary);
+        drop(private);
+        assert!(!path.exists());
+    }
 
     #[test]
     fn schema_transactions_and_backups_preserve_documents_and_sequence() {

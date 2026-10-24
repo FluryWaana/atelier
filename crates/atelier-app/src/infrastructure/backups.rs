@@ -190,7 +190,8 @@ fn restore_checked(
     rescue: impl FnOnce() -> Result<()>,
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
-    let mut snapshot = tempfile::NamedTempFile::new()?;
+    let private = super::store::temporary_directory()?;
+    let mut snapshot = tempfile::NamedTempFile::new_in(private.path())?;
     checked.copy_to(snapshot.as_file_mut())?;
     let source = Connection::open_with_flags(snapshot.path(), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
