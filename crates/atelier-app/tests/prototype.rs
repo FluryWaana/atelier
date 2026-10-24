@@ -417,6 +417,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
 async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews() {
     use atelier_app::infrastructure::{backups::BackupDirectory, store::Documents};
     use atelier_core::{
+        application::task_creation::CreationContext,
         contracts::Board,
         document::{Document, JsonString},
     };
@@ -471,6 +472,8 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
             let repo = old.clone();
             let other_repo = other.clone();
             database.call(move |store| {
+                let repo = store.repository(&serde_json::value::to_raw_value(&repo)?)?.utf8()?;
+                let other_repo = store.repository(&serde_json::value::to_raw_value(&other_repo)?)?.utf8()?;
                 let mut project: Document = serde_json::from_str(r#"{"id":"project","name":"\ud800","frontRepo":null,"\ud800":"\udc00"}"#)?;
                 project.set("repo", &repo)?;
                 store.put(Documents::Projects, &project)?;
@@ -506,6 +509,7 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
         let response = patch(rules).await.unwrap();
         assert_eq!(response.status(), 200);
         let response: Document = response.json().await.unwrap();
+        let saved_repo = response.get::<String>("repo").unwrap().unwrap();
         assert_eq!(
             response.get::<JsonString>("projectRules").unwrap(),
             Some(JsonString(vec![0xd800]))
@@ -621,20 +625,14 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
         if let Some(backup) = backups.first() {
             let snapshot = data.path().join("backups").join(&backup.name);
             for card in read(&snapshot, "cards") {
-                assert_eq!(
-                    card.get::<String>("repo").unwrap().unwrap(),
-                    old.to_string_lossy()
-                );
+                assert_eq!(card.get::<String>("repo").unwrap().unwrap(), saved_repo);
             }
             let projects = read(&snapshot, "projects");
             let project = projects
                 .iter()
                 .find(|project| project.string_equals("id", "project").unwrap())
                 .unwrap();
-            assert_eq!(
-                project.get::<String>("repo").unwrap().unwrap(),
-                old.to_string_lossy()
-            );
+            assert_eq!(project.get::<String>("repo").unwrap().unwrap(), saved_repo);
             assert_eq!(
                 project.get::<JsonString>("projectRules").unwrap(),
                 Some(JsonString(vec![0xd800]))
@@ -649,10 +647,7 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
                 fault == "none" && run.string_equals("kind", "pr-review").unwrap()
             );
             if run.string_equals("kind", "pr-review").unwrap() {
-                assert_eq!(
-                    run.get::<String>("repo").unwrap().unwrap(),
-                    old.to_string_lossy()
-                );
+                assert_eq!(run.get::<String>("repo").unwrap().unwrap(), saved_repo);
             }
         }
         assert_eq!(

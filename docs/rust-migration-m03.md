@@ -156,6 +156,8 @@ Détection de lancement toujours indisponible ; activité, serveurs et connecteu
 
 La [CI Windows `8e73f7c`](https://github.com/FluryWaana/atelier/actions/runs/40103677444) est réussie. Son journal confirme les 51 réglages UTF-16, les 39 opérations de cycle de vie précédentes et les parcours HTTP de projets/chemins vides. La CI de report `d2deabe` est également réussie, avec Windows seul et le job de navigateurs ignoré. Les preuves du présent incrément restent à recueillir après son push.
 
+La CI Windows `38ceb6c` a ensuite détecté une fixture qui enregistrait les chemins temporaires bruts du runner au lieu des chemins résolus normalement enregistrés par l'application : le doublon attendu n'était pas reconnu. La fixture utilise désormais le résolveur réel pour préparer ces dépôts et conserve cette valeur pour vérifier les snapshots. La nouvelle CI Node `dd57bfa` a aussi révélé que `--check` comparait littéralement les CRLF du checkout à la sortie LF du générateur ; seuls les séparateurs de lignes sont maintenant normalisés, sans tolérer un inventaire périmé. Corrections candidates, preuves distantes attendues. Aucun test local n'est relancé.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

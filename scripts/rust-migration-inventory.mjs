@@ -61,7 +61,7 @@ if (import.meta.main) {
   assert.ok(process.argv.slice(2).every(arg => arg === '--check'), 'Seule option admise : --check');
   const destination = join(root, 'docs', 'rust-migration-inventory.md');
   const content = migrationInventory();
-  if (process.argv.includes('--check')) assert.equal(readFileSync(destination, 'utf8'), content, 'Inventaire périmé : régénérer puis revoir les nouveaux contrats.');
+  if (process.argv.includes('--check')) assert.equal(readFileSync(destination, 'utf8').replaceAll('\r\n', '\n'), content, 'Inventaire périmé : régénérer puis revoir les nouveaux contrats.');
   else writeFileSync(destination, content);
   console.log('Inventaire de migration ' + (process.argv.includes('--check') ? 'vérifié.' : 'généré.'));
 }
