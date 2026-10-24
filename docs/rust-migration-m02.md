@@ -72,6 +72,14 @@ Tests Windows : destination existante conservée, nom hors racine refusé, fichi
 
 Le diagnostic du [second essai macOS ARM64 `0c1771c`](https://github.com/FluryWaana/atelier/actions/runs/40048263155/job/120734849585) localise précisément `eDSPermissionError` à l'écriture `GeneratedUID`, avant le coffre. L'hypothèse initiale sur `Password` n'était donc pas la cause observée. Le scénario conserve maintenant le GUID attribué par Directory Service et en exige la lecture, sans tenter de le remplacer ; syntaxe et refus local vérifiés, preuve native toujours attendue.
 
+### Destination d'import ancrée — après `5332203`
+
+Staging 0700, copie des pièces jointes, snapshot, sauvegarde initiale, suppression éventuelle du seul dossier final vide et publication sans remplacement utilisent le parent ouvert. Le snapshot terminé est recopié par descripteur pour la sauvegarde initiale ; aucune réouverture SQLite par le chemin mutable du staging. Le nettoyage d'un échec est relatif au même parent. Les refus existants de destinations remplies, internes à la source et de fichiers spéciaux sont conservés.
+
+Le nouveau scénario garde le parent ouvert, remplace son chemin sous POSIX (renommage refusé sous Windows), importe dans un dossier final initialement vide, vérifie documents/pièce jointe/sauvegarde, refuse une seconde importation et injecte une source corrompue. Aucune destination partielle ni modification du dossier extérieur. Vérification locale : 54 tests Rust, Clippy natif tous targets, comparateur stockage/import/restauration Node/Rust réussis ; suite Node complète avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,563 s. L'ouverture de la base source par SQLite reste par chemin et doit encore être qualifiée ; le portage de la destination ne ferme pas ce point.
+
+Preuves `5332203` recueillies : les journaux Linux x64/ARM64 et macOS ARM64 confirment publication sans écrasement et catalogue/création/restauration après remplacement d'ancêtre. Le [job macOS ARM64](https://github.com/FluryWaana/atelier/actions/runs/40049206403/job/120737819055) valide désormais aussi les UID distincts, les refus croisés de coffres et la relecture finale du second propriétaire avant suppression. macOS Intel reste attendu à ce relevé.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

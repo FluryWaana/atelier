@@ -566,6 +566,13 @@ Prochaine action concrète :
 - **CI macOS :** le diagnostic identifie `GeneratedUID`, pas `Password`, comme attribut refusé. Le GUID attribué est maintenant lu sans modification ; garde-fou local vérifié.
 - **Suite :** exécution native POSIX des sauvegardes et macOS entre comptes ; publication finale/import SQLite et acquisition initiale des racines. Mesurer le coût de copie supplémentaire et qualifier les systèmes de fichiers avant livraison.
 
+### Incrément M02 — publication d'import ancrée
+
+- **Livré :** staging, sauvegarde initiale, publication sans écrasement et nettoyage dans le parent de destination ouvert. Le snapshot terminé est copié par descripteur.
+- **Vérification :** 54 tests Rust, Clippy natif, parité stockage/import/restauration Node/Rust ; suite Node complète avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,563 s.
+- **Preuves recueillies :** sauvegardes ancrées sur Linux x64/ARM64 et macOS ARM64 (`5332203`), journaux relus. Coffres macOS ARM64 entre comptes réussis, y compris conservation finale du second secret.
+- **Suite :** macOS Intel, nouveaux scénarios POSIX d'import ; ouverture SQLite de la source et acquisition des racines restent à qualifier.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

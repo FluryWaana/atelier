@@ -20,6 +20,19 @@ fn create_directory(path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn private_directory(parent: &Dir, name: &Path) -> Result<Dir> {
+    let builder = cap_std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    let builder = {
+        use cap_std::fs::DirBuilderExt;
+        let mut builder = builder;
+        builder.mode(0o700);
+        builder
+    };
+    parent.create_dir_with(name, &builder)?;
+    Ok(parent.open_dir_nofollow(name)?)
+}
+
 fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
     require_plain(&source.dir_metadata()?)?;
     require_plain(&destination.dir_metadata()?)?;
@@ -44,16 +57,11 @@ fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
         }
         if metadata.is_dir() {
             let child = source.open_dir_nofollow(&name)?;
-            let builder = cap_std::fs::DirBuilder::new();
-            #[cfg(unix)]
-            let builder = {
-                use cap_std::fs::DirBuilderExt;
-                let mut builder = builder;
-                builder.mode(0o700);
-                builder
-            };
-            destination.create_dir_with(&name, &builder)?;
-            copy_tree(&child, &destination.open_dir_nofollow(&name)?, false)?;
+            copy_tree(
+                &child,
+                &private_directory(destination, Path::new(&name))?,
+                false,
+            )?;
         } else if metadata.is_file() {
             let checked = CheckedFile::open_in(source, Path::new(&name))?;
             let mut options = cap_std::fs::OpenOptions::new();
@@ -129,52 +137,91 @@ pub fn import(source: &Path, destination: &Path) -> Result<()> {
     if destination == source || destination.starts_with(&source) {
         return Err("Le dossier de destination doit être distinct de la source.".into());
     }
-    let mut builder = tempfile::Builder::new();
-    builder.prefix(".atelier-import-");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        builder.permissions(fs::Permissions::from_mode(0o700));
-    }
-    let stage = builder.tempdir_in(&parent)?;
+    let parent = Dir::open_ambient_dir(&parent, ambient_authority())?;
     let source_directory = Dir::open_ambient_dir(
         source.parent().ok_or("Dossier source invalide.")?,
         ambient_authority(),
     )?
     .open_dir_nofollow(source.file_name().ok_or("Dossier source invalide.")?)?;
-    {
-        let stage_directory = Dir::open_ambient_dir(stage.path(), ambient_authority())?;
-        copy_tree(&source_directory, &stage_directory, true)?;
+    import_into(
+        &database,
+        &source_directory,
+        &parent,
+        Path::new(
+            destination
+                .file_name()
+                .ok_or("Dossier de destination invalide.")?,
+        ),
+    )
+}
+
+fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) -> Result<()> {
+    require_empty_in(parent, destination)?;
+    let stage_name = format!(".atelier-import-{}", uuid::Uuid::new_v4());
+    let stage = private_directory(parent, Path::new(&stage_name))?;
+    let prepared = (|| -> Result<()> {
+        copy_tree(source, &stage, true)?;
+        // shortcut: source SQLite still opens a path; qualify its ancestor races in M02 before real-data use.
+        let identity = Identity::inspect(database)?;
+        let connection = Connection::open_with_flags(database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        let _checked = CheckedFile::open(database, &identity)?;
+        let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
+        if integrity != "ok" {
+            return Err("La base portable est endommagée.".into());
+        }
+        for table in ["cards", "projects", "settings"] {
+            connection.prepare(&format!("SELECT * FROM {table} LIMIT 0"))?;
+        }
+        // SQLite includes committed WAL; copy the finished snapshot without reopening its path.
+        Store::new(&connection).backup_in(&stage, Path::new("kanban.sqlite"))?;
+        connection.close().map_err(|(_, error)| error)?;
+        let backups = match stage.open_dir_nofollow("backups") {
+            Ok(directory) => directory,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                private_directory(&stage, Path::new("backups"))?
+            }
+            Err(error) => return Err(error.into()),
+        };
+        require_plain(&backups.dir_metadata()?)?;
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use cap_std::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut output = backups.open_with(super::backups::new_name()?, &options)?;
+        CheckedFile::open_in(&stage, Path::new("kanban.sqlite"))?.copy_to(&mut output)?;
+        output.sync_all()?;
+        Ok(())
+    })();
+    drop(stage);
+    let result = prepared.and_then(|()| {
+        if require_empty_in(parent, destination)? {
+            parent.remove_dir(destination)?;
+        }
+        super::publish::rename_new(parent, Path::new(&stage_name), destination)
+    });
+    if result.is_err() {
+        let _ = parent.remove_dir_all(&stage_name);
     }
-    // shortcut: SQLite and final publication still use paths; qualify their ancestor races in M02 before real-data use.
-    let identity = Identity::inspect(&database)?;
-    let connection = Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let _checked = CheckedFile::open(&database, &identity)?;
-    let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
-    if integrity != "ok" {
-        return Err("La base portable est endommagée.".into());
+    result
+}
+
+fn require_empty_in(parent: &Dir, name: &Path) -> Result<bool> {
+    match parent.symlink_metadata(name) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error.into()),
+        Ok(metadata) => {
+            require_plain(&metadata)?;
+            let directory = parent.open_dir_nofollow(name)?;
+            require_plain(&directory.dir_metadata()?)?;
+            if directory.entries()?.next().is_some() {
+                return Err("Des données existent déjà. L’import ne les écrasera pas.".into());
+            }
+            Ok(true)
+        }
     }
-    for table in ["cards", "projects", "settings"] {
-        connection.prepare(&format!("SELECT * FROM {table} LIMIT 0"))?;
-    }
-    // Snapshot through SQLite includes committed WAL; the source stays open read-only.
-    Store::new(&connection).backup(&stage.path().join("kanban.sqlite"))?;
-    connection.close().map_err(|(_, error)| error)?;
-    let backups = stage.path().join("backups");
-    create_directory(&backups)?;
-    let name = super::backups::new_name()?;
-    let copied = Connection::open_with_flags(
-        stage.path().join("kanban.sqlite"),
-        OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )?;
-    Store::new(&copied).backup(&backups.join(name))?;
-    copied.close().map_err(|(_, error)| error)?;
-    require_empty(&destination)?;
-    if destination.exists() {
-        fs::remove_dir(&destination)?;
-    }
-    fs::rename(stage.path(), &destination)?;
-    Ok(())
 }
 
 fn require_empty(path: &Path) -> Result<()> {
@@ -195,6 +242,84 @@ mod tests {
     use super::*;
     use crate::infrastructure::store::{self, Documents};
     use serde_json::json;
+
+    #[test]
+    fn staging_snapshot_and_publication_stay_in_the_opened_destination_parent() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let parent = root.path().join("parent");
+        let outside = root.path().join("outside");
+        for path in [&source, &parent, &outside] {
+            fs::create_dir(path).unwrap();
+        }
+        let database = source.join("kanban.sqlite");
+        let connection = store::open(&database).unwrap();
+        Store::new(&connection)
+            .put(Documents::Cards, &json!({"id":"preserved"}))
+            .unwrap();
+        fs::write(source.join("attachment"), "synthetic").unwrap();
+        fs::write(outside.join("untouched"), "preserved").unwrap();
+        let source_directory = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        let parent_directory = Dir::open_ambient_dir(&parent, ambient_authority()).unwrap();
+        parent_directory.create_dir("data").unwrap();
+        #[cfg(unix)]
+        let actual = {
+            let actual = root.path().join("moved");
+            fs::rename(&parent, &actual).unwrap();
+            std::os::unix::fs::symlink(&outside, &parent).unwrap();
+            actual
+        };
+        #[cfg(windows)]
+        let actual = {
+            assert!(fs::rename(&parent, root.path().join("moved")).is_err());
+            parent
+        };
+        import_into(
+            &database,
+            &source_directory,
+            &parent_directory,
+            Path::new("data"),
+        )
+        .unwrap();
+        let copied = store::open(&actual.join("data/kanban.sqlite")).unwrap();
+        assert_eq!(
+            Store::new(&copied)
+                .document::<serde_json::Value>(Documents::Cards, "preserved")
+                .unwrap(),
+            Some(json!({"id":"preserved"}))
+        );
+        assert_eq!(
+            fs::read(actual.join("data/attachment")).unwrap(),
+            b"synthetic"
+        );
+        assert_eq!(
+            fs::read_dir(actual.join("data/backups")).unwrap().count(),
+            1
+        );
+        assert!(
+            import_into(
+                &database,
+                &source_directory,
+                &parent_directory,
+                Path::new("data")
+            )
+            .is_err()
+        );
+        drop(connection);
+        fs::write(&database, "corrupt").unwrap();
+        assert!(
+            import_into(
+                &database,
+                &source_directory,
+                &parent_directory,
+                Path::new("failed")
+            )
+            .is_err()
+        );
+        assert_eq!(fs::read_dir(actual).unwrap().count(), 1);
+        assert_eq!(fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(fs::read(outside.join("untouched")).unwrap(), b"preserved");
+    }
 
     #[test]
     fn opened_directories_cannot_be_redirected_during_attachment_copy() {
