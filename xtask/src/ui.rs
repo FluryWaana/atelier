@@ -200,7 +200,7 @@ pub async fn test(legacy: bool) -> Result<()> {
         );
     } else {
         println!(
-            "Parcours {browser} réussi : WASM sous CSP, création, redémarrage du processus, relecture et rotation de session."
+            "Parcours {browser} réussi : tableau, filtres, cartes, critères/dépendances, conflits d’édition, projets, persistance et rotation de session sous CSP."
         );
     }
     Ok(())
@@ -421,6 +421,63 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     if !board.runs.is_empty() {
         return Err("Un déplacement manuel a lancé un agent.".into());
     }
+    client
+        .find(Locator::Css("[data-status=doing] .card-open"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .send_keys(" brouillon local")
+        .await?;
+    http.patch(format!("{address}/api/cards/{}", original_id.as_str().ok_or("Carte sans id")?))
+        .bearer_auth(&token).header("x-local-request", "1")
+        .json(&json!({"description":"Modification externe", "expected":{"description":"Description enregistrée"}}))
+        .send().await?.error_for_status()?;
+    client
+        .find(Locator::Css("#save-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('changé ailleurs') && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;
+    client
+        .find(Locator::Css("#close-editor"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-editor"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("[data-status=doing] .card-open"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#edit-description')?.value === 'Modification externe';",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .send_keys("Description enregistrée")
+        .await?;
+    client
+        .find(Locator::Css("#save-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
     client
         .find(Locator::Css("[data-status=doing] .card-open"))
         .await?

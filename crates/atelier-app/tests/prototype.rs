@@ -57,6 +57,81 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
 }
 
 #[tokio::test]
+async fn guarded_task_edits_reject_lost_updates_and_merge_independent_fields() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let card: Card = client
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Original"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let edit = || {
+        client
+            .patch(format!("{address}/api/cards/{}", card.id))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let (first, second) = tokio::join!(
+        edit()
+            .json(&json!({"title":"First", "expected":{"title":"Original"}}))
+            .send(),
+        edit()
+            .json(&json!({"title":"Second", "expected":{"title":"Original"}}))
+            .send()
+    );
+    let mut statuses = [
+        first.unwrap().status().as_u16(),
+        second.unwrap().status().as_u16(),
+    ];
+    statuses.sort();
+    assert_eq!(statuses, [200, 409]);
+    let (description, instructions) = tokio::join!(
+        edit()
+            .json(&json!({"description":"Description", "expected":{"description":""}}))
+            .send(),
+        edit()
+            .json(&json!({"instructions":"Instructions", "expected":{"instructions":""}}))
+            .send()
+    );
+    assert_eq!(description.unwrap().status(), 200);
+    assert_eq!(instructions.unwrap().status(), 200);
+    for body in [
+        json!({"title":"Bad", "expected":{}}),
+        json!({"title":"Bad", "expected":true}),
+        json!({"title":"Bad", "expected":{"title":"First", "extra":0}}),
+    ] {
+        assert_eq!(edit().json(&body).send().await.unwrap().status(), 400);
+    }
+    stop(&address, &token, task).await;
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    let cards = database.cards().await.unwrap();
+    assert_eq!(cards.len(), 1);
+    assert!(cards[0].title == "First".into() || cards[0].title == "Second".into());
+    assert!(
+        cards[0]
+            .fields
+            .string_equals("description", "Description")
+            .unwrap()
+    );
+    assert!(
+        cards[0]
+            .fields
+            .string_equals("instructions", "Instructions")
+            .unwrap()
+    );
+    database.close().await.unwrap();
+}
+
+#[tokio::test]
 async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_paths() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

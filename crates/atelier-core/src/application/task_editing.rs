@@ -24,6 +24,57 @@ pub struct Edit {
 
 pub const REVIEW_CHANGE_REASON: &str = "Le besoin ou les critères ont changé. Relancez la review.";
 
+fn check_expected(card: &Card, body: &Document) -> Result<()> {
+    let Some(expected) = body.get::<Value>("expected")? else {
+        return Ok(());
+    };
+    let invalid = || CardFailure::Invalid("Condition de modification invalide.");
+    let expected = expected.as_object().ok_or_else(invalid)?;
+    let fields = [
+        "title",
+        "description",
+        "instructions",
+        "status",
+        "checklist",
+        "blockedBy",
+    ];
+    if expected
+        .keys()
+        .any(|key| !fields.contains(&key.as_str()) || body.raw(key).is_none())
+        || fields
+            .iter()
+            .any(|key| body.raw(key).is_some() && !expected.contains_key(*key))
+    {
+        return Err(invalid().into());
+    }
+    let conflict = || {
+        CardFailure::Conflict(
+            "Cette tâche a changé ailleurs. Ton brouillon est conservé ; ferme-le puis rouvre la tâche pour charger la dernière version.",
+        )
+    };
+    for (key, previous) in expected {
+        let current = if key == "title" {
+            serde_json::to_string(&card.title)?
+        } else {
+            card.fields
+                .raw(key)
+                .map(|value| value.get().to_owned())
+                .unwrap_or_else(|| {
+                    if key == "checklist" || key == "blockedBy" {
+                        "[]".into()
+                    } else {
+                        "\"\"".into()
+                    }
+                })
+        };
+        let current: Value = serde_json::from_str(&current).map_err(|_| conflict())?;
+        if &current != previous {
+            return Err(conflict().into());
+        }
+    }
+    Ok(())
+}
+
 pub struct ReviewInvalidation {
     pub runs: Vec<Document>,
     pub automation_changed: bool,
@@ -141,7 +192,8 @@ pub fn prepare(
     if busy {
         return Err(CardFailure::Conflict("Arrête l’agent avant de modifier cette carte.").into());
     }
-    // Validate stored requirements before edits, as Node does before touching the card.
+    check_expected(&card, body)?;
+    // Validate stored requirements before touching the card.
     requirements_changed(&card, &card)?;
     if card.fields.truthy("worktree")? {
         let empty = RawValue::from_string("\"\"".into())?;

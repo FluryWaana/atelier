@@ -1,4 +1,4 @@
-use crate::{STATUSES, field, replace_card, write};
+use crate::{STATUSES, field, load, replace_card, write};
 use atelier_core::contracts::Card;
 use atelier_core::domain::checklist::Criterion;
 use gloo_net::http::Method;
@@ -13,6 +13,26 @@ struct Draft {
     status: String,
     criteria: Vec<Criterion>,
     dependencies: Vec<String>,
+}
+
+impl Draft {
+    fn fields(&self) -> serde_json::Value {
+        serde_json::json!({"title":self.title, "description":self.description, "instructions":self.instructions, "status":self.status, "checklist":self.criteria, "blockedBy":self.dependencies})
+    }
+    fn patch(&self, original: &Self) -> serde_json::Value {
+        let current = self.fields();
+        let previous = original.fields();
+        let mut patch = serde_json::Map::new();
+        let mut expected = serde_json::Map::new();
+        for (key, value) in current.as_object().expect("draft fields are an object") {
+            if value != &previous[key] {
+                patch.insert(key.clone(), value.clone());
+                expected.insert(key.clone(), previous[key].clone());
+            }
+        }
+        patch.insert("expected".into(), expected.into());
+        patch.into()
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -97,10 +117,7 @@ pub fn TaskEditor(
         let mut path = format!("/api/cards/{}", id.get_value());
         let value = draft.get_untracked();
         let (method, body) = match action {
-            Action::Save => (
-                Method::PATCH,
-                serde_json::json!({"title":value.title, "description":value.description, "instructions":value.instructions, "status":value.status, "checklist":value.criteria, "blockedBy":value.dependencies}),
-            ),
+            Action::Save => (Method::PATCH, value.patch(&original.get_value())),
             Action::Archive => {
                 path.push_str("/archive");
                 (Method::POST, serde_json::json!({"archived":!archived}))
@@ -128,10 +145,18 @@ pub fn TaskEditor(
                 Ok::<(), String>(())
             }
             .await;
-            pending.set(false);
             match result {
-                Ok(()) => close(),
-                Err(message) => error.set(message),
+                Ok(()) => {
+                    pending.set(false);
+                    close();
+                }
+                Err(message) => {
+                    if let Ok(board) = load(&token).await {
+                        cards.set(board.cards);
+                    }
+                    error.set(message);
+                    pending.set(false);
+                }
             }
         });
     };
