@@ -110,7 +110,7 @@ fn default_locale() -> String {
 fn detect_opened(directory: &Dir) -> Result<Document> {
     let locale = default_locale()
         .parse::<icu_locale_core::Locale>()
-        .unwrap_or_else(|_| icu_locale_core::locale!("en-US"));
+        .unwrap_or(icu_locale_core::locale!("en-US"));
     let collator = Collator::try_new(locale.into(), Default::default())?;
     let mut scan = Scan {
         collator,
