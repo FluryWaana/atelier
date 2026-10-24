@@ -1029,10 +1029,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:736](../crates/atelier-app/src/infrastructure/portable_import.rs#L736) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:738](../crates/atelier-app/src/infrastructure/portable_import.rs#L738) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:763](../crates/atelier-app/src/infrastructure/portable_import.rs#L763) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:841](../crates/atelier-app/src/infrastructure/portable_import.rs#L841) | <code>use std::os::unix::fs::PermissionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:849](../crates/atelier-app/src/infrastructure/portable_import.rs#L849) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:866](../crates/atelier-app/src/infrastructure/portable_import.rs#L866) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:868](../crates/atelier-app/src/infrastructure/portable_import.rs#L868) | <code>use std::os::unix::fs::symlink;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:846](../crates/atelier-app/src/infrastructure/portable_import.rs#L846) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:854](../crates/atelier-app/src/infrastructure/portable_import.rs#L854) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:871](../crates/atelier-app/src/infrastructure/portable_import.rs#L871) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:873](../crates/atelier-app/src/infrastructure/portable_import.rs#L873) | <code>use std::os::unix::fs::symlink;</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:1](../crates/atelier-app/src/infrastructure/process_tree.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:2](../crates/atelier-app/src/infrastructure/process_tree.rs#L2) | <code>use std::{</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:8](../crates/atelier-app/src/infrastructure/process_tree.rs#L8) | <code>use tokio::{</code> |
@@ -1586,11 +1586,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/projects.rs:28](../crates/atelier-ui/src/projects.rs#L28) | <code>pub fn Projects(</code> |
 | [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::{STATUSES, field, load, replace_card, write};</code> |
 | [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
-| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use atelier_core::domain::checklist::Criterion;</code> |
-| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:47](../crates/atelier-ui/src/task_editor.rs#L47) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use atelier_core::domain::checklist::Criterion;</code> |
+| [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/task_editor.rs:7](../crates/atelier-ui/src/task_editor.rs#L7) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/task_editor.rs:49](../crates/atelier-ui/src/task_editor.rs#L49) | <code>pub fn TaskEditor(</code> |
 | [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>version.workspace = true</code> |
 | [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>edition.workspace = true</code> |
 | [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>rust-version.workspace = true</code> |
@@ -3394,13 +3395,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:775](../crates/atelier-app/src/infrastructure/portable_import.rs#L775) | <code>fs::write(source.join("local-browser.html"), "expired").unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:794](../crates/atelier-app/src/infrastructure/portable_import.rs#L794) | <code>let originals: Vec&lt;_&gt; = ["kanban.sqlite", "kanban.sqlite-wal", "kanban.sqlite-shm"]</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:801](../crates/atelier-app/src/infrastructure/portable_import.rs#L801) | <code>fs::copy(source.join("kanban.sqlite"), &amp;main_only).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:813](../crates/atelier-app/src/infrastructure/portable_import.rs#L813) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:824](../crates/atelier-app/src/infrastructure/portable_import.rs#L824) | <code>assert!(!destination.join("local-session").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:825](../crates/atelier-app/src/infrastructure/portable_import.rs#L825) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:855](../crates/atelier-app/src/infrastructure/portable_import.rs#L855) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:859](../crates/atelier-app/src/infrastructure/portable_import.rs#L859) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:860](../crates/atelier-app/src/infrastructure/portable_import.rs#L860) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:872](../crates/atelier-app/src/infrastructure/portable_import.rs#L872) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:818](../crates/atelier-app/src/infrastructure/portable_import.rs#L818) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:829](../crates/atelier-app/src/infrastructure/portable_import.rs#L829) | <code>assert!(!destination.join("local-session").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:830](../crates/atelier-app/src/infrastructure/portable_import.rs#L830) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:860](../crates/atelier-app/src/infrastructure/portable_import.rs#L860) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:864](../crates/atelier-app/src/infrastructure/portable_import.rs#L864) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:865](../crates/atelier-app/src/infrastructure/portable_import.rs#L865) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:877](../crates/atelier-app/src/infrastructure/portable_import.rs#L877) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:193](../crates/atelier-app/src/infrastructure/process_tree.rs#L193) | <code>async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &amp;str) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:198](../crates/atelier-app/src/infrastructure/process_tree.rs#L198) | <code>return Err(format!("Limite de sortie {stream} dépassée.").into());</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:45](../crates/atelier-app/src/infrastructure/prototype.rs#L45) | <code>self.path.join("kanban.sqlite"),</code> |

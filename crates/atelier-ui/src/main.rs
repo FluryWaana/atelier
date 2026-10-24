@@ -126,6 +126,10 @@ async fn load(token: &str) -> Result<Board, String> {
 fn App() -> impl IntoView {
     let cards = RwSignal::new(Vec::<Card>::new());
     let projects = RwSignal::new(Vec::<atelier_core::document::Document>::new());
+    let templates = RwSignal::new(Vec::<atelier_core::document::Document>::new());
+    let template = RwSignal::new(String::new());
+    let remove_template = RwSignal::new(false);
+    let template_pending = RwSignal::new(false);
     let search = RwSignal::new(String::new());
     let repository = RwSignal::new(String::new());
     let archives = RwSignal::new(false);
@@ -144,6 +148,14 @@ fn App() -> impl IntoView {
                     Ok(value) => {
                         cards.set(value.cards);
                         projects.set(value.projects);
+                        templates.set(
+                            value
+                                .settings
+                                .get("taskTemplates")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default(),
+                        );
                     }
                     Err(message) => error.set(message),
                 }
@@ -191,15 +203,17 @@ fn App() -> impl IntoView {
             </div>
             <form class="quick-create" on:submit=move |event| {
                 event.prevent_default();
-                if pending.get_untracked() { return; }
+                if pending.get_untracked() || template_pending.get_untracked() { return; }
                 let Ok(token) = token.get_value() else { return; };
                 let entered = title.get_untracked();
                 let repo = repository.get_untracked();
+                let selected_template = template.get_untracked();
                 pending.set(true); error.set(String::new());
                 spawn_local(async move {
                     let operation = async {
                         let mut body = serde_json::json!({"title":entered});
                         if !repo.is_empty() { body["repo"] = serde_json::json!(repo); }
+                        if !selected_template.is_empty() { body["templateId"] = serde_json::json!(selected_template); }
                         let response = write(&token, Method::POST, "/api/cards", &body).await?;
                         let card: Card = response.json().await.map_err(|_| "Réponse du serveur invalide.".to_owned())?;
                         replace_card(cards, card); title.set(String::new()); archives.set(false); Ok::<(), String>(())
@@ -208,9 +222,22 @@ fn App() -> impl IntoView {
                     pending.set(false);
                 });
             }>
-                <div><label for="task-title">"Nouvelle tâche"</label><input id="task-title" name="title" required maxlength="300" placeholder="Que voulez-vous accomplir ?" prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
-                <button id="create-task" class="primary" type="submit" disabled=move || pending.get() || loading.get()>{move || if pending.get() { "Création…" } else { "Créer la tâche" }}</button>
+                <div><label for="task-title">"Nouvelle tâche"</label><input id="task-title" name="title" required maxlength="300" disabled=move || pending.get() placeholder="Que voulez-vous accomplir ?" prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
+                <div class="template-picker" hidden=move || templates.get().is_empty()><label for="task-template">"Modèle"</label><select id="task-template" disabled=move || pending.get() || template_pending.get() prop:value=move || template.get() on:change=move |event| { template.set(event_target_value(&event)); remove_template.set(false); }><option value="">"Sans modèle"</option><For each=move || templates.get() key=|item| field(item,"id") children=|item| view! { <option value=field(&item,"id")>{field(&item,"name")}</option> } /></select><button id="remove-template" type="button" class="text-action" hidden=move || template.get().is_empty() disabled=move || pending.get() || template_pending.get() on:click=move |_| remove_template.set(true)>"Retirer ce modèle…"</button></div>
+                <button id="create-task" class="primary" type="submit" disabled=move || pending.get() || template_pending.get() || loading.get()>{move || if pending.get() { "Création…" } else { "Créer la tâche" }}</button>
             </form>
+            <div class="confirmation" hidden=move || !remove_template.get()><p>"Retirer ce modèle ? Les tâches existantes sont conservées."</p><button id="confirm-remove-template" type="button" disabled=move || template_pending.get() on:click=move |_| {
+                if template_pending.get_untracked() { return; }
+                let Ok(token) = token.get_value() else { return; };
+                let id = template.get_untracked(); template_pending.set(true); error.set(String::new());
+                spawn_local(async move {
+                    match write(&token, Method::DELETE, &format!("/api/templates/{id}"), &serde_json::json!({})).await {
+                        Ok(_) => { templates.update(|items| items.retain(|item| field(item,"id") != id)); template.set(String::new()); remove_template.set(false); },
+                        Err(message) => error.set(message),
+                    }
+                    template_pending.set(false);
+                });
+            }>"Retirer le modèle"</button><button type="button" disabled=move || template_pending.get() on:click=move |_| remove_template.set(false)>"Annuler"</button></div>
             <p role="alert" id="error">{move || error.get()}</p>
             <p class="loading" role="status" hidden=move || !loading.get()>"Chargement du tableau…"</p>
             <section aria-label="Tableau des tâches" id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
@@ -223,7 +250,7 @@ fn App() -> impl IntoView {
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>"Aucune tâche"</p></div></section> }
                 } />
             </section>
-            {move || selected.get().map(|card| view! { <TaskEditor card cards token on_close=Callback::new(move |()| selected.set(None)) /> })}
+            {move || selected.get().map(|card| view! { <TaskEditor card cards templates token on_close=Callback::new(move |()| selected.set(None)) /> })}
             <Show when=move || show_projects.get()><Projects projects cards repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
         </main>
     }

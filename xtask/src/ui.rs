@@ -614,6 +614,27 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         client.screenshot().await?,
     )?;
     client
+        .find(Locator::Css("#make-template"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#template-name"))
+        .await?
+        .send_keys("Modèle synthétique")
+        .await?;
+    client
+        .find(Locator::Css("#save-template"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#editor-notice')?.textContent === 'Modèle enregistré.';",
+        vec![],
+    )
+    .await?;
+    client
         .find(Locator::Css("#close-editor"))
         .await?
         .click()
@@ -631,6 +652,40 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-reopened.png"),
         client.screenshot().await?,
     )?;
+    client.execute("const select=document.querySelector('#task-template'); select.selectedIndex=1; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#task-title"))
+        .await?
+        .send_keys("Tâche issue du modèle")
+        .await?;
+    client
+        .find(Locator::Css("#create-task"))
+        .await?
+        .click()
+        .await?;
+    wait_title(client, "Tâche issue du modèle").await?;
+    client
+        .find(Locator::Css("[data-status=todo] .card-open"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#edit-description')?.value === 'Description enregistrée' && document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === false && document.querySelectorAll('[data-dependency]:checked').length === 0;", vec![]).await?;
+    client
+        .find(Locator::Css("#close-editor"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#remove-template"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-remove-template"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     stop_server(&mut restarted, port, &next_token).await?;
     Ok(())
