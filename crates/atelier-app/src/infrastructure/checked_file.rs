@@ -51,6 +51,58 @@ pub struct CheckedFile {
 }
 
 impl Identity {
+    #[cfg(unix)]
+    pub(super) fn sqlite_source(directory: &cap_std::fs::Dir) -> Result<Self> {
+        use std::os::fd::AsRawFd;
+        let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
+        // statat never opens/closes the database inode, preserving other POSIX SQLite locks.
+        let metadata = unsafe {
+            if libc::fstatat(
+                directory.as_raw_fd(),
+                c"kanban.sqlite".as_ptr(),
+                metadata.as_mut_ptr(),
+                libc::AT_SYMLINK_NOFOLLOW,
+            ) != 0
+            {
+                return Err(std::io::Error::last_os_error().into());
+            }
+            metadata.assume_init()
+        };
+        Self::from_unix_stat(&metadata)
+    }
+
+    #[cfg(unix)]
+    #[allow(clippy::unnecessary_cast)] // libc field widths differ across supported targets.
+    fn from_unix_stat(metadata: &libc::stat) -> Result<Self> {
+        if metadata.st_mode & libc::S_IFMT != libc::S_IFREG {
+            return Err("Fichier régulier sans lien requis.".into());
+        }
+        Ok(Self {
+            device: metadata.st_dev as u64,
+            inode: metadata.st_ino as u64,
+            links: metadata.st_nlink as u64,
+        })
+    }
+
+    #[cfg(unix)]
+    pub(super) fn verify_sqlite(&self, connection: &rusqlite::Connection) -> Result<()> {
+        let descriptor = i32::try_from(sqlite_descriptor(connection)?)?;
+        let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
+        // SQLite retains its descriptor; fstat does not duplicate or close it.
+        let metadata = unsafe {
+            if libc::fstat(descriptor, metadata.as_mut_ptr()) != 0 {
+                return Err(std::io::Error::last_os_error().into());
+            }
+            metadata.assume_init()
+        };
+        if &Self::from_unix_stat(&metadata)? != self {
+            return Err(
+                "La base SQLite ouverte ne correspond plus à la source sélectionnée.".into(),
+            );
+        }
+        Ok(())
+    }
+
     pub fn inspect(path: &Path) -> Result<Self> {
         Ok(CheckedFile::open_unchecked(path)?.identity)
     }
@@ -181,6 +233,7 @@ impl CheckedFile {
         Ok(opened)
     }
 
+    #[cfg(any(windows, test))]
     pub(super) fn open_same(&self, path: &Path) -> Result<Self> {
         Self::open(path, &self.identity)
     }
@@ -210,29 +263,9 @@ impl CheckedFile {
         Ok(())
     }
 
-    #[cfg(unix)]
-    #[allow(clippy::unnecessary_cast)] // libc field widths differ; match std MetadataExt's u64 representation.
+    #[cfg(all(unix, test))]
     pub(super) fn verify_sqlite(&self, connection: &rusqlite::Connection) -> Result<()> {
-        let descriptor = i32::try_from(sqlite_descriptor(connection)?)?;
-        let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
-        // SQLite retains the descriptor; fstat initializes the structure on success without closing it.
-        let metadata = unsafe {
-            if libc::fstat(descriptor, metadata.as_mut_ptr()) != 0 {
-                return Err(std::io::Error::last_os_error().into());
-            }
-            metadata.assume_init()
-        };
-        let identity = Identity {
-            device: metadata.st_dev as u64,
-            inode: metadata.st_ino as u64,
-            links: metadata.st_nlink as u64,
-        };
-        if metadata.st_mode & libc::S_IFMT != libc::S_IFREG || identity != self.identity {
-            return Err(
-                "La base SQLite ouverte ne correspond plus à la source sélectionnée.".into(),
-            );
-        }
-        Ok(())
+        self.identity.verify_sqlite(connection)
     }
 
     pub fn private(self) -> Result<Self> {
@@ -264,12 +297,10 @@ impl CheckedFile {
         Ok(bytes)
     }
 
-    pub fn copy_to(self, output: &mut impl Write) -> Result<()> {
+    pub fn copy_to(&self, output: &mut impl Write) -> Result<()> {
         let size = self.file.metadata()?.len();
         let copied = std::io::copy(
-            &mut self
-                .file
-                .take(size.checked_add(1).ok_or("Fichier trop volumineux.")?),
+            &mut (&self.file).take(size.checked_add(1).ok_or("Fichier trop volumineux.")?),
             output,
         )?;
         if copied != size {

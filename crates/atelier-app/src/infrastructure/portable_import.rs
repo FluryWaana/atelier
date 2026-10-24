@@ -5,7 +5,7 @@ use super::{
 use crate::Result;
 use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{Connection, OpenFlags, ffi};
 use std::{fs, path::Path};
 
 fn create_directory(path: &Path) -> Result<()> {
@@ -106,6 +106,143 @@ fn resolve_destination(path: &Path) -> Result<std::path::PathBuf> {
     Ok(resolved)
 }
 
+struct SourceLock {
+    _connection: Connection,
+    file: *mut ffi::sqlite3_file,
+    unlock: unsafe extern "C" fn(*mut ffi::sqlite3_file, i32) -> i32,
+}
+
+impl SourceLock {
+    fn acquire(connection: Connection) -> Result<Self> {
+        let mut file: *mut ffi::sqlite3_file = std::ptr::null_mut();
+        // No SQL is prepared on this connection: only its main-file VFS lock is used.
+        let code = unsafe {
+            ffi::sqlite3_file_control(
+                connection.handle(),
+                c"main".as_ptr(),
+                ffi::SQLITE_FCNTL_FILE_POINTER,
+                (&mut file as *mut *mut ffi::sqlite3_file).cast(),
+            )
+        };
+        if code != ffi::SQLITE_OK || file.is_null() {
+            return Err("Verrou SQLite indisponible.".into());
+        }
+        // The connection owns this file and its VFS methods until SourceLock is dropped.
+        let methods = unsafe { (*file).pMethods.as_ref() }
+            .ok_or("Méthodes de verrouillage SQLite absentes.")?;
+        let lock = methods.xLock.ok_or("Verrou SQLite indisponible.")?;
+        let guard = Self {
+            unlock: methods
+                .xUnlock
+                .ok_or("Déverrouillage SQLite indisponible.")?,
+            file,
+            _connection: connection,
+        };
+        for level in [ffi::SQLITE_LOCK_SHARED, ffi::SQLITE_LOCK_EXCLUSIVE] {
+            // VFS bookkeeping also detects competing connections within this process.
+            if unsafe { lock(guard.file, level) } != ffi::SQLITE_OK {
+                return Err("Fermez l’application source et rendez sa base accessible en écriture avant l’import.".into());
+            }
+        }
+        Ok(guard)
+    }
+
+    fn copy_main(&self, output: &mut impl std::io::Write) -> Result<()> {
+        // Read through the locking handle: Windows byte-range locks also block other handles here.
+        let methods = unsafe { &*(*self.file).pMethods };
+        let size = methods.xFileSize.ok_or("Taille SQLite indisponible.")?;
+        let read = methods.xRead.ok_or("Lecture SQLite indisponible.")?;
+        let mut length = 0;
+        // The VFS initializes length; the guard retains the file throughout every read.
+        if unsafe { size(self.file, &mut length) } != ffi::SQLITE_OK || length < 0 {
+            return Err("Taille de la source SQLite invalide.".into());
+        }
+        let mut buffer = [0u8; 64 * 1024];
+        let mut offset = 0;
+        while offset < length {
+            let count = usize::try_from((length - offset).min(buffer.len() as i64))?;
+            // count fits the live buffer; offset stays inside the locked file's measured length.
+            if unsafe { read(self.file, buffer.as_mut_ptr().cast(), count as i32, offset) }
+                != ffi::SQLITE_OK
+            {
+                return Err("Lecture de la source SQLite impossible.".into());
+            }
+            output.write_all(&buffer[..count])?;
+            offset += count as i64;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for SourceLock {
+    fn drop(&mut self) {
+        // Release even a partial PENDING lock before SQLite closes the still-owned file.
+        unsafe { (self.unlock)(self.file, ffi::SQLITE_LOCK_NONE) };
+    }
+}
+
+fn snapshot_source(database: &Path, source: &Dir) -> Result<tempfile::TempDir> {
+    #[cfg(windows)]
+    let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;
+    #[cfg(windows)]
+    let _checked = selected.open_same(database)?;
+    #[cfg(unix)]
+    let selected = super::checked_file::Identity::sqlite_source(source)?;
+    // shortcut: POSIX exclusive locks need write access; qualify read-only media before M08.
+    let connection = Connection::open_with_flags(
+        database,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )?;
+    selected.verify_sqlite(&connection)?;
+    let lock = SourceLock::acquire(connection)?;
+    copy_snapshot(source, &lock)
+}
+
+fn copy_snapshot(source: &Dir, lock: &SourceLock) -> Result<tempfile::TempDir> {
+    let mut builder = tempfile::Builder::new();
+    builder.prefix("atelier-import-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o700));
+    }
+    let snapshot = builder.tempdir()?;
+    let target = Dir::open_ambient_dir(snapshot.path(), ambient_authority())?;
+    // shortcut: refuse rollback journals until isolated recovery is qualified before M08.
+    match source.symlink_metadata("kanban.sqlite-journal") {
+        Ok(_) => return Err("Journal de récupération présent : ouvrez puis fermez la version source avant l’import.".into()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    let wal = match source.symlink_metadata("kanban.sqlite-wal") {
+        Ok(_) => Some(CheckedFile::open_in(
+            source,
+            Path::new("kanban.sqlite-wal"),
+        )?),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error.into()),
+    };
+    for (name, input) in [("kanban.sqlite", None), ("kanban.sqlite-wal", wal.as_ref())] {
+        if name == "kanban.sqlite" || input.is_some() {
+            let mut options = cap_std::fs::OpenOptions::new();
+            options.write(true).create_new(true);
+            #[cfg(unix)]
+            {
+                use cap_std::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut output = target.open_with(name, &options)?;
+            if let Some(input) = input {
+                input.copy_to(&mut output)?;
+            } else {
+                lock.copy_main(&mut output)?;
+            }
+            output.sync_all()?;
+        }
+    }
+    Ok(snapshot)
+}
+
 pub fn import(source: &Path, destination: &Path) -> Result<()> {
     if !plain_metadata(source)?.is_dir() {
         return Err("Choisissez le dossier data de la version portable.".into());
@@ -160,16 +297,12 @@ fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) 
     let stage_name = format!(".atelier-import-{}", uuid::Uuid::new_v4());
     let stage = private_directory(parent, Path::new(&stage_name))?;
     let prepared = (|| -> Result<()> {
-        let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;
+        let snapshot = snapshot_source(database, source)?;
         copy_tree(source, &stage, true)?;
-        // shortcut: sidecar identity and ancestor races still require M02 qualification.
-        // Keep both descriptors until SQLite closes: earlier POSIX closes can release its locks.
-        let _checked = selected.open_same(database)?;
         let connection = Connection::open_with_flags(
-            database,
-            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+            snapshot.path().join("kanban.sqlite"),
+            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
-        selected.verify_sqlite(&connection)?;
         let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
         if integrity != "ok" {
             return Err("La base portable est endommagée.".into());
@@ -177,7 +310,7 @@ fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) 
         for table in ["cards", "projects", "settings"] {
             connection.prepare(&format!("SELECT * FROM {table} LIMIT 0"))?;
         }
-        // SQLite includes committed WAL; copy the finished snapshot without reopening its path.
+        // Recover committed WAL only in the private copy, then use SQLite's backup API.
         Store::new(&connection).backup_in(&stage, Path::new("kanban.sqlite"))?;
         connection.close().map_err(|(_, error)| error)?;
         let backups = match stage.open_dir_nofollow("backups") {
@@ -247,6 +380,160 @@ mod tests {
     use super::*;
     use crate::infrastructure::store::{self, Documents};
     use serde_json::json;
+
+    #[test]
+    fn source_writer_remains_locked_to_other_processes_after_import_refusal() {
+        const VARIABLE: &str = "ATELIER_TEST_IMPORT_LOCK_SOURCE";
+        if let Some(path) = std::env::var_os(VARIABLE) {
+            let connection =
+                Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE).unwrap();
+            assert!(SourceLock::acquire(connection).is_err());
+            return;
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source");
+        fs::create_dir(&source).unwrap();
+        let path = source.join("kanban.sqlite");
+        let writer = store::open(&path).unwrap();
+        Store::new(&writer)
+            .put(Documents::Cards, &json!({"id":"active"}))
+            .unwrap();
+        assert!(import(&source, &directory.path().join("destination")).is_err());
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])
+            .env(VARIABLE, &path);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let output = command.output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        writer.close().unwrap();
+        import(&source, &directory.path().join("destination")).unwrap();
+    }
+
+    #[test]
+    fn exclusive_source_lock_survives_copy_failure_and_releases_readers() {
+        struct FullDisk;
+        impl std::io::Write for FullDisk {
+            fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("synthetic disk full"))
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let database = directory.path().join("source.sqlite");
+        let original = store::open(&database).unwrap();
+        Store::new(&original)
+            .put(Documents::Cards, &json!({"id":"preserved"}))
+            .unwrap();
+        original.close().unwrap();
+        let before = fs::read(&database).unwrap();
+        let lock = SourceLock::acquire(
+            Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_WRITE).unwrap(),
+        )
+        .unwrap();
+        assert!(lock.copy_main(&mut FullDisk).is_err());
+        let reader =
+            Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        reader.busy_timeout(std::time::Duration::ZERO).unwrap();
+        assert!(reader.prepare("SELECT * FROM cards").is_err());
+        drop(lock);
+        assert_eq!(
+            reader
+                .query_row("SELECT count(*) FROM cards", [], |row| row.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        reader.close().unwrap();
+        assert_eq!(fs::read(&database).unwrap(), before);
+    }
+
+    #[test]
+    fn rollback_journal_is_refused_without_recovery_or_partial_publication() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source");
+        fs::create_dir(&source).unwrap();
+        store::open(&source.join("kanban.sqlite"))
+            .unwrap()
+            .close()
+            .unwrap();
+        let before = fs::read(source.join("kanban.sqlite")).unwrap();
+        fs::write(
+            source.join("kanban.sqlite-journal"),
+            "synthetic pending recovery",
+        )
+        .unwrap();
+        assert!(import(&source, &directory.path().join("destination")).is_err());
+        assert_eq!(fs::read(source.join("kanban.sqlite")).unwrap(), before);
+        assert_eq!(
+            fs::read(source.join("kanban.sqlite-journal")).unwrap(),
+            b"synthetic pending recovery"
+        );
+        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn locked_snapshot_uses_opened_source_after_ancestor_replacement() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source");
+        let outside = directory.path().join("outside");
+        fs::create_dir(&source).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let database = source.join("kanban.sqlite");
+        let connection = store::open(&database).unwrap();
+        Store::new(&connection)
+            .put(Documents::Cards, &json!({"id":"selected"}))
+            .unwrap();
+        connection
+            .set_db_config(
+                rusqlite::config::DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE,
+                true,
+            )
+            .unwrap();
+        connection.close().unwrap();
+        fs::write(
+            outside.join("kanban.sqlite-wal"),
+            "outside must stay untouched",
+        )
+        .unwrap();
+        let opened = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        let selected = CheckedFile::open_in(&opened, Path::new("kanban.sqlite")).unwrap();
+        let connection =
+            Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_WRITE).unwrap();
+        selected.verify_sqlite(&connection).unwrap();
+        let lock = SourceLock::acquire(connection).unwrap();
+        #[cfg(unix)]
+        {
+            fs::rename(&source, directory.path().join("moved")).unwrap();
+            std::os::unix::fs::symlink(&outside, &source).unwrap();
+        }
+        #[cfg(windows)]
+        assert!(fs::rename(&source, directory.path().join("moved")).is_err());
+        let copied = copy_snapshot(&opened, &lock).unwrap();
+        drop(lock);
+        let recovered = Connection::open(copied.path().join("kanban.sqlite")).unwrap();
+        assert_eq!(
+            recovered
+                .query_row("SELECT id FROM cards", [], |row| row.get::<_, String>(0))
+                .unwrap(),
+            "selected"
+        );
+        recovered.close().unwrap();
+        assert_eq!(
+            fs::read(outside.join("kanban.sqlite-wal")).unwrap(),
+            b"outside must stay untouched"
+        );
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 1);
+    }
 
     #[test]
     fn import_refuses_a_database_path_from_another_opened_source() {
@@ -328,6 +615,7 @@ mod tests {
         Store::new(&connection)
             .put(Documents::Cards, &json!({"id":"preserved"}))
             .unwrap();
+        connection.close().unwrap();
         fs::write(source.join("attachment"), "synthetic").unwrap();
         fs::write(outside.join("untouched"), "preserved").unwrap();
         let source_directory = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
@@ -376,7 +664,6 @@ mod tests {
             )
             .is_err()
         );
-        drop(connection);
         fs::write(&database, "corrupt").unwrap();
         assert!(
             import_into(
@@ -473,13 +760,42 @@ mod tests {
         fs::write(source.join("local-session"), "expired").unwrap();
         fs::write(source.join("local-browser.html"), "expired").unwrap();
         let destination = root.path().join("user/data");
-        import(&source, &destination).unwrap();
+        assert!(import(&source, &destination).is_err());
+        assert!(!destination.exists());
+        // A refused exclusive lock must not disturb the live writer or its transaction state.
+        store.put(Documents::Cards, &card).unwrap();
         assert_eq!(
             store
                 .document::<serde_json::Value>(Documents::Cards, "preserved")
                 .unwrap(),
             Some(card.clone())
         );
+        connection
+            .set_db_config(
+                rusqlite::config::DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE,
+                true,
+            )
+            .unwrap();
+        connection.close().unwrap();
+        let originals: Vec<_> = ["kanban.sqlite", "kanban.sqlite-wal", "kanban.sqlite-shm"]
+            .into_iter()
+            .map(|name| (name, fs::read(source.join(name)).ok()))
+            .collect();
+        assert!(originals[1].1.as_ref().unwrap().len() > 32);
+        // The committed card is in WAL; a main-file-only snapshot cannot satisfy this test.
+        let main_only = root.path().join("main-only.sqlite");
+        fs::copy(source.join("kanban.sqlite"), &main_only).unwrap();
+        let incomplete = Connection::open(&main_only).unwrap();
+        assert!(incomplete.prepare("SELECT * FROM cards").is_err());
+        incomplete.close().unwrap();
+        import(&source, &destination).unwrap();
+        for (name, bytes) in originals {
+            assert_eq!(
+                fs::read(source.join(name)).ok(),
+                bytes,
+                "source changed: {name}"
+            );
+        }
         let copied = store::open(&destination.join("kanban.sqlite")).unwrap();
         assert_eq!(
             Store::new(&copied)
