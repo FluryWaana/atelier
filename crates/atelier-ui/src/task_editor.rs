@@ -1,3 +1,4 @@
+use crate::files::Files;
 use crate::i18n::I18n;
 use crate::{STATUSES, field, live::BoardState, replace_card, write};
 use atelier_core::contracts::Card;
@@ -81,6 +82,7 @@ pub fn TaskEditor(
     let draft = RwSignal::new(original.get_value());
     let dirty = Memo::new(move |_| draft.get() != original.get_value());
     let pending = RwSignal::new(false);
+    let show_files = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let confirmation = RwSignal::new("");
     let show_template = RwSignal::new(false);
@@ -210,7 +212,7 @@ pub fn TaskEditor(
         });
     };
     view! {
-        <dialog id="task-editor" class="editor" node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
+        <dialog id="task-editor" class="editor" class:workspace=move || show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text(if archived { "ARCHIVE" } else { "TÂCHE" })}</p><h2 id="editor-heading">{move || i18n.text("Détails de la tâche")}</h2></div><button id="close-editor" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
             <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
                 <fieldset disabled=move || pending.get() || archived || show_template.get()>
@@ -238,6 +240,7 @@ pub fn TaskEditor(
                 <p id="editor-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
                 <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
             </form>
+            <section class="task-files"><button id="browse-task-files" type="button" aria-expanded=move || show_files.get().to_string() on:click=move |_| show_files.update(|shown| *shown = !*shown)>{move || i18n.text("Fichiers du projet")}</button><Show when=move || show_files.get()><Files card_id=id.get_value() token /></Show></section>
             <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("Dupliquer")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "Restaurer" } else { "Archiver" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("Supprimer…")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("Créer un modèle")}</button></div>
             <form class="template-form" hidden=move || !show_template.get() on:submit=move |event| { event.prevent_default(); perform(Action::Template); }><label for="template-name">{move || i18n.text("Nom du modèle")}</label><input id="template-name" required maxlength="100" disabled=move || pending.get() prop:value=move || template_name.get() on:input=move |event| template_name.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text("Le modèle reprend la description, les instructions et les critères à vérifier.")}</p><button id="save-template" class="primary" type="submit" disabled=move || pending.get()>{move || i18n.text("Enregistrer le modèle")}</button><button type="button" disabled=move || pending.get() on:click=move |_| { template_name.set(String::new()); show_template.set(false); }>{move || i18n.text("Annuler le modèle")}</button></form>
             <p id="editor-notice" role="status">{move || i18n.text(&notice.get())}</p>

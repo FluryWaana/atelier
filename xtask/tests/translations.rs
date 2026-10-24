@@ -11,6 +11,7 @@ fn every_explicit_ui_translation_has_a_nonempty_english_message() {
         include_str!("../../crates/atelier-ui/src/projects.rs"),
         include_str!("../../crates/atelier-ui/src/settings.rs"),
         include_str!("../../crates/atelier-ui/src/backups.rs"),
+        include_str!("../../crates/atelier-ui/src/files.rs"),
     ] {
         for call in source.split("i18n.text(\"").skip(1) {
             let key = call.split('"').next().unwrap();

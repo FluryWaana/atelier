@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 mod backups;
+mod files;
 mod i18n;
 mod live;
 mod projects;

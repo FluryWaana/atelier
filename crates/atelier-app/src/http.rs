@@ -27,6 +27,7 @@ pub use assets::LEGACY_ASSETS;
 mod backups;
 mod card_lifecycle;
 mod events;
+mod files;
 mod projects;
 mod settings;
 mod task_creation;
@@ -46,6 +47,7 @@ struct AppState {
     port: u16,
     shutdown: watch::Sender<bool>,
     changed: tokio::sync::broadcast::Sender<()>,
+    file_reads: tokio::sync::Semaphore,
 }
 type Shared = Arc<AppState>;
 
@@ -324,6 +326,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         port: listener.local_addr()?.port(),
         shutdown,
         changed: tokio::sync::broadcast::channel(16).0,
+        file_reads: tokio::sync::Semaphore::new(2),
     });
     let app = app
         .route("/api/health", get(health))
@@ -370,6 +373,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         )
         .route("/api/cards/{id}/archive", post(card_lifecycle::archive))
         .route("/api/cards/{id}/duplicate", post(duplicate))
+        .route("/api/cards/{id}/files", get(files::list))
+        .route("/api/cards/{id}/file", get(files::preview))
         .route("/api/prototype/stop", post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))

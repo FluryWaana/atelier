@@ -1,5 +1,6 @@
 pub mod agent_options;
 pub mod checklist;
+pub mod files;
 pub mod projects;
 pub mod tasks;
 pub mod time;

@@ -59,3 +59,15 @@ pub struct Board {
     #[serde(default)]
     pub times: Vec<Document>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileListing {
+    pub files: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FilePreview {
+    pub path: String,
+    pub content: Option<String>,
+    pub unavailable: Option<String>,
+}

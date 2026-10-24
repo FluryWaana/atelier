@@ -551,6 +551,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     settings_scenario(client, http, &address, &next_token, data.path()).await?;
     backups_scenario(client, http, &address, &next_token).await?;
     language_scenario(client).await?;
+    files_scenario(client, http, &address, &next_token, data.path()).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
@@ -1008,6 +1009,119 @@ async fn language_scenario(client: &Client) -> Result<()> {
     client.execute("const select=document.querySelector('#interface-language'); select.value='fr-FR'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#settings-title')?.textContent === 'Paramètres de l’application';",vec![]).await?;
     click(client, "#close-settings").await?;
+    Ok(())
+}
+
+async fn files_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    data: &Path,
+) -> Result<()> {
+    let repo = data.join("repositories/files-ui");
+    std::fs::create_dir_all(repo.join("src"))?;
+    run(command("git")
+        .current_dir(&repo)
+        .env("GIT_CONFIG_GLOBAL", "NUL")
+        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .args(["init", "-b", "main"]))?;
+    std::fs::write(repo.join(".gitignore"), "ignored.txt\n")?;
+    std::fs::write(repo.join("src/tracked.txt"), "tracked synthetic file\n")?;
+    run(command("git")
+        .current_dir(&repo)
+        .env("GIT_CONFIG_GLOBAL", "NUL")
+        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .args(["add", "--", ".gitignore", "src/tracked.txt"]))?;
+    let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
+    std::fs::write(repo.join("new file é.txt"), text)?;
+    std::fs::write(
+        repo.join("ignored.txt"),
+        "synthetic private ignored content",
+    )?;
+    std::fs::write(repo.join("binary.bin"), [1, 0, 2])?;
+    for index in 0..205 {
+        std::fs::write(repo.join(format!("src/file-{index:03}.txt")), "synthetic")?;
+    }
+    let card: atelier_core::contracts::Card = http
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Explorateur synthétique","repo":repo}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let endpoint = format!("{address}/api/cards/{}/file", card.id);
+    if http
+        .get(format!("{address}/api/cards/{}/files", card.id))
+        .send()
+        .await?
+        .status()
+        != 403
+    {
+        return Err("L’explorateur a accepté une lecture sans session.".into());
+    }
+    for path in ["ignored.txt", ".git/config", "../outside"] {
+        if http
+            .get(&endpoint)
+            .bearer_auth(token)
+            .query(&[("path", path)])
+            .send()
+            .await?
+            .status()
+            != 400
+        {
+            return Err("L’explorateur a accepté un chemin interdit.".into());
+        }
+    }
+    wait_title(client, "Explorateur synthétique").await?;
+    click(client, &format!("[data-id='{}'] .card-open", card.id)).await?;
+    click(client, "#browse-task-files").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 200 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    click(client, "#next-files").await?;
+    wait_dom(client,"return document.querySelectorAll('.file-choice').length > 0 && document.querySelectorAll('.file-choice').length < 200 && document.querySelector('#next-files')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#file-search"))
+        .await?
+        .send_keys("é")
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelectorAll('.file-choice').length === 1;",
+        vec![],
+    )
+    .await?;
+    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('#file-content')?.textContent === arguments[0] && !window.syntheticPreviewExecuted;",vec![json!(text)]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-files.png"),
+        client.screenshot().await?,
+    )?;
+    std::fs::write(repo.join("new file é.txt"), "Contenu modifié sur disque")?;
+    click(client, "#refresh-files").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('#file-content')?.textContent === 'Contenu modifié sur disque';",vec![]).await?;
+    client
+        .find(Locator::Css("#file-search"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#file-search"))
+        .await?
+        .send_keys("binary")
+        .await?;
+    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('#file-unavailable')?.textContent.includes('binaire') && document.querySelector('#file-content')?.hidden === true;",vec![]).await?;
+    click(client, "#close-editor").await?;
     Ok(())
 }
 

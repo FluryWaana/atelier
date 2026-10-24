@@ -1,0 +1,174 @@
+use super::{
+    checked_file::{CheckedFile, require_plain},
+    launch_detection,
+    task_creation::path_string,
+};
+use crate::Result;
+use atelier_core::{
+    contracts::{FileListing, FilePreview},
+    document::JsonString,
+    domain::files::{PREVIEW_LIMIT, validate_path},
+};
+use cap_fs_ext::DirExt;
+use cap_std::fs::Dir;
+use std::path::PathBuf;
+
+pub struct Repository {
+    path: PathBuf,
+    directory: Dir,
+}
+
+impl Repository {
+    pub fn synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
+        let path = launch_detection::synthetic_repository(
+            root,
+            roots,
+            &serde_json::value::to_raw_value(repo)?,
+        )?;
+        let path = PathBuf::from(path.utf8()?);
+        let base =
+            PathBuf::from(path_string(roots.first().ok_or("Racine synthétique absente.")?).utf8()?);
+        let directory = root.open_dir_nofollow(path.strip_prefix(base)?)?;
+        let metadata = directory
+            .symlink_metadata(".git")
+            .map_err(|_| "Ce dossier n’est pas une racine Git accessible.")?;
+        require_plain(&metadata)?;
+        if !metadata.is_dir() {
+            return Err(
+                "L’inspection des worktrees nécessite leur association vérifiée à une tâche."
+                    .into(),
+            );
+        }
+        Ok(Self { path, directory })
+    }
+
+    pub async fn list(&self) -> Result<FileListing> {
+        let top = self.git(&["rev-parse", "--show-toplevel"]).await?;
+        let top = String::from_utf8(top)?;
+        if !atelier_core::domain::projects::same_repository(
+            top.trim_end_matches(['\r', '\n']),
+            &path_string(&self.path).utf8()?,
+            cfg!(windows),
+        ) {
+            return Err("Le dossier de travail ne correspond plus à la racine du dépôt.".into());
+        }
+        let output = self
+            .git(&[
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--deduplicate",
+                "-z",
+            ])
+            .await?;
+        let mut files = String::from_utf8(output)
+            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?
+            .split('\0')
+            .filter(|name| !name.is_empty())
+            .map(str::to_owned)
+            .collect::<Vec<_>>();
+        files.sort();
+        files.dedup();
+        if files.len() > 50_000 {
+            return Err("Le dépôt dépasse la limite de 50 000 fichiers de l’explorateur.".into());
+        }
+        Ok(FileListing { files })
+    }
+
+    pub async fn preview(self, path: String) -> Result<FilePreview> {
+        validate_path(&path, cfg!(windows))?;
+        if !self.list().await?.files.contains(&path) {
+            return Err("Fichier absent du projet ou ignoré par Git.".into());
+        }
+        tokio::task::spawn_blocking(move || self.read(path)).await?
+    }
+
+    fn read(self, path: String) -> Result<FilePreview> {
+        let mut directory = self.directory;
+        let parts = path.split('/').collect::<Vec<_>>();
+        for part in &parts[..parts.len() - 1] {
+            require_plain(&directory.symlink_metadata(part)?)?;
+            directory = directory.open_dir_nofollow(part)?;
+        }
+        let name = PathBuf::from(*parts.last().ok_or("Chemin de fichier invalide.")?);
+        let metadata = directory.symlink_metadata(&name)?;
+        require_plain(&metadata)?;
+        let mut preview = FilePreview {
+            path,
+            content: None,
+            unavailable: None,
+        };
+        if !metadata.is_file() {
+            return Err("Ce chemin ne désigne pas un fichier ordinaire.".into());
+        }
+        if metadata.len() > PREVIEW_LIMIT as u64 {
+            preview.unavailable =
+                Some("Fichier trop volumineux pour l’aperçu (512 Kio maximum).".into());
+        } else {
+            let bytes = CheckedFile::open_in(&directory, &name)?.read(PREVIEW_LIMIT)?;
+            if bytes.contains(&0) {
+                preview.unavailable = Some("Fichier binaire : aperçu textuel indisponible.".into());
+            } else {
+                match String::from_utf8(bytes) {
+                    Ok(content) => preview.content = Some(content),
+                    Err(_) => {
+                        preview.unavailable =
+                            Some("Encodage non UTF-8 : aperçu textuel indisponible.".into())
+                    }
+                }
+            }
+        }
+        Ok(preview)
+    }
+
+    #[cfg(windows)]
+    async fn git(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+        let mut command = tokio::process::Command::new("git");
+        for (key, _) in std::env::vars_os() {
+            if key
+                .to_string_lossy()
+                .to_ascii_uppercase()
+                .starts_with("GIT_")
+            {
+                command.env_remove(key);
+            }
+        }
+        // Synthetic inspection never loads personal Git configuration or fetches missing objects.
+        command
+            .current_dir(&self.path)
+            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .args([
+                "--no-pager",
+                "--no-optional-locks",
+                "--literal-pathspecs",
+                "--no-lazy-fetch",
+                "--no-replace-objects",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.excludesFile=NUL",
+            ])
+            .args(arguments);
+        let output = super::process_tree::capture(
+            &mut command,
+            &[],
+            std::time::Duration::from_secs(15),
+            4 * 1024 * 1024,
+        )
+        .await?;
+        if !output.status.success() {
+            return Err(
+                "Lecture Git impossible. Vérifie le dépôt et l’installation de Git.".into(),
+            );
+        }
+        Ok(output.stdout)
+    }
+
+    #[cfg(not(windows))]
+    async fn git(&self, _arguments: &[&str]) -> Result<Vec<u8>> {
+        Err("L’explorateur Git natif attend sa qualification sur ce système.".into())
+    }
+}
