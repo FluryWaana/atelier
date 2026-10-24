@@ -155,8 +155,8 @@ test('backup HTTP routes require idle timers and confirmation, preserve a rescue
   assert.equal((await request('/api/backups/restore', 'POST', { name: saved.body.name, confirmed: 'true' })).status, 400);
   assert.equal((await request('/api/backups/restore', 'POST', { name: '../kanban.sqlite', confirmed: true })).status, 400);
   assert.equal((await request('/api/cards/' + created.body.id, 'PATCH', { title: 'Current task' })).status, 200);
-  const timer = await request('/api/time', 'POST', { cardId: created.body.id, start: true, seconds: 0, date: '2026-10-24', startTime: '09:00:00', description: 'Synthetic' });
-  assert.equal(timer.status, 200);
+  const timer = await request('/api/time', 'POST', { cardId: created.body.id, start: true, seconds: 60, date: '2026-10-24', startTime: '09:00:00', description: 'Synthetic' });
+  assert.equal(timer.status, 200, JSON.stringify(timer.body));
   for (const path of ['/api/backups', '/api/backups/restore']) {
     const refused = await request(path, 'POST', {});
     assert.equal(refused.status, 409);

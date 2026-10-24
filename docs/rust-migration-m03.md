@@ -2,6 +2,8 @@
 
 ## API de sauvegarde — candidat après `fbfac16`
 
+Le premier [essai CI `589bdba`](https://github.com/FluryWaana/atelier/actions/runs/40111051509) échoue dans les deux nouveaux scénarios avant leurs assertions de restauration : leur chrono synthétique fournit `seconds: 0`, refusé par la validation historique même avec `start: true`. La fixture utilise désormais 60 secondes ; les validations produit restent inchangées. Nouvelle exécution complète attendue.
+
 GET/POST `/api/backups` et POST `/api/backups/restore` réutilisent le répertoire ancré M02. Gardes métier, confirmation strictement booléenne et messages sont confrontés à `server.mjs`, `lib/backups.mjs` et `lib/task-queue.mjs`. Le contrôle des chronomètres/envois et l'opération restent dans un seul travail SQLite : une mutation concurrente ne peut pas s'intercaler entre contrôle et snapshot/restauration. Les réservations de fournisseurs, processus, connecteurs et file active restent à raccorder avec leurs producteurs M04–M06 ; ces opérations ne sont pas activées dans le prototype.
 
 La restauration conserve la sauvegarde de secours et inclut maintenant la remise en pause de la file dans sa transaction, avec l'invalidation des jetons, reviews et automatisations. La référence Node remet sa file en pause après le commit : Rust renforce l'atomicité en annulant aussi le remplacement des cartes et l'effacement du coffre si cette dernière écriture échoue. Il n'existe pas encore de cache de jetons à purger en mémoire. Le helper de spread JSON déjà présent dans la restauration est déplacé dans `Document` et réutilisé pour préserver les champs inconnus et UTF-16 de la file.

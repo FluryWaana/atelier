@@ -156,7 +156,7 @@ async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transact
                 .status(),
             200
         );
-        let timer: Value = post("/api/time").json(&json!({"cardId":id,"start":true,"seconds":0,"date":"2026-10-24","startTime":"09:00:00","description":"Synthetic"})).send().await.unwrap().json().await.unwrap();
+        let timer: Value = post("/api/time").json(&json!({"cardId":id,"start":true,"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":"Synthetic"})).send().await.unwrap().json().await.unwrap();
         let timer_id = timer["id"].as_str().unwrap();
         for path in ["/api/backups", "/api/backups/restore"] {
             let response = post(path).json(&json!({})).send().await.unwrap();
