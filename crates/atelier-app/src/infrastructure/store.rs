@@ -148,16 +148,40 @@ impl<'a> Store<'a> {
         let parent = destination
             .parent()
             .ok_or("Dossier de sauvegarde absent.")?;
-        let temporary = tempfile::NamedTempFile::new_in(parent)?;
+        let directory = cap_std::fs::Dir::open_ambient_dir(parent, cap_std::ambient_authority())?;
+        self.backup_in(
+            &directory,
+            Path::new(destination.file_name().ok_or("Nom de sauvegarde absent.")?),
+        )
+    }
+
+    pub(super) fn backup_in(&self, directory: &cap_std::fs::Dir, name: &Path) -> Result<()> {
+        let mut temporary = tempfile::NamedTempFile::new()?;
         let mut copy = Connection::open(temporary.path())?;
         {
             let backup = rusqlite::backup::Backup::new(self.connection, &mut copy)?;
             backup.run_to_completion(100, Duration::from_millis(10), None)?;
         }
         copy.close().map_err(|(_, error)| error)?;
-        temporary.as_file().sync_all()?;
-        temporary.persist_noclobber(destination)?;
-        Ok(())
+        let stage = format!(".atelier-backup-{}", uuid::Uuid::new_v4());
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use cap_std::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut output = directory.open_with(&stage, &options)?;
+        let result = (|| -> Result<()> {
+            std::io::copy(temporary.as_file_mut(), &mut output)?;
+            output.sync_all()?;
+            drop(output);
+            super::publish::rename_new(directory, Path::new(&stage), name)
+        })();
+        if result.is_err() {
+            let _ = directory.remove_file(&stage);
+        }
+        result
     }
 }
 
@@ -225,6 +249,21 @@ mod tests {
         let saved = directory.path().join("snapshot.sqlite");
         store.backup(&saved).unwrap();
         assert!(store.backup(&saved).is_err());
+        assert!(std::fs::read_dir(directory.path()).unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".atelier-backup-")
+        }));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&saved).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
         store.delete(Documents::Cards, "one").unwrap();
         let copy = open(&saved).unwrap();
         let saved = Store::new(&copy);

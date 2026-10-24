@@ -1,5 +1,5 @@
 use super::{
-    checked_file::{CheckedFile, Identity, plain_metadata},
+    checked_file::{CheckedFile, Identity, plain_metadata, require_plain},
     store::Store,
 };
 use crate::Result;
@@ -17,22 +17,6 @@ fn create_directory(path: &Path) -> Result<()> {
         builder.mode(0o700);
     }
     builder.create(path)?;
-    Ok(())
-}
-
-fn require_plain(metadata: &cap_std::fs::Metadata) -> Result<()> {
-    #[cfg(windows)]
-    let linked = {
-        use cap_std::fs::MetadataExt;
-        metadata.file_attributes()
-            & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
-            != 0
-    };
-    #[cfg(unix)]
-    let linked = metadata.file_type().is_symlink();
-    if linked {
-        return Err("Les liens sont interdits dans les données importées.".into());
-    }
     Ok(())
 }
 

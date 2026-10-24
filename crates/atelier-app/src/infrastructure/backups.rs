@@ -1,9 +1,11 @@
 use super::{
-    checked_file::{CheckedFile, Identity, plain_metadata},
+    checked_file::{CheckedFile, require_plain},
     store::{Documents, Store},
 };
 use crate::Result;
 use atelier_core::document::{Document, JsonString};
+use cap_fs_ext::DirExt;
+use cap_std::{ambient_authority, fs::Dir};
 use rusqlite::{Connection, OpenFlags, params};
 use serde::Serialize;
 use serde_json::Value;
@@ -35,6 +37,7 @@ pub struct RestoredBackup {
 
 pub struct BackupDirectory {
     pub directory: PathBuf,
+    handle: Dir,
 }
 
 pub(super) fn new_name() -> Result<String> {
@@ -64,19 +67,21 @@ fn valid_name(name: &str) -> bool {
 impl BackupDirectory {
     pub fn open(data_directory: &Path) -> Result<Self> {
         let directory = data_directory.join("backups");
-        fs::create_dir_all(&directory)?;
-        if !plain_metadata(&directory)?.is_dir() {
-            return Err("Dossier de sauvegardes invalide.".into());
+        fs::create_dir_all(data_directory)?;
+        let root = Dir::open_ambient_dir(data_directory, ambient_authority())?;
+        if let Err(error) = root.create_dir("backups")
+            && error.kind() != std::io::ErrorKind::AlreadyExists
+        {
+            return Err(error.into());
         }
-        Ok(Self { directory })
+        let handle = root.open_dir_nofollow("backups")?;
+        require_plain(&handle.dir_metadata()?)?;
+        Ok(Self { directory, handle })
     }
 
     pub fn list(&self) -> Result<Vec<Backup>> {
-        if !plain_metadata(&self.directory)?.is_dir() {
-            return Err("Dossier de sauvegardes invalide.".into());
-        }
         let mut backups = Vec::new();
-        for entry in fs::read_dir(&self.directory)? {
+        for entry in self.handle.entries()? {
             let entry = entry?;
             let Some(name) = entry
                 .file_name()
@@ -86,11 +91,11 @@ impl BackupDirectory {
             else {
                 continue;
             };
-            let metadata = fs::symlink_metadata(entry.path())?;
-            if !metadata.is_file() || plain_metadata(&entry.path()).is_err() {
+            let metadata = self.handle.symlink_metadata(&name)?;
+            if !metadata.is_file() || require_plain(&metadata).is_err() {
                 continue;
             }
-            let date = time::OffsetDateTime::from(metadata.modified()?).format(
+            let date = time::OffsetDateTime::from(metadata.modified()?.into_std()).format(
                 time::macros::format_description!(
                     "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
                 ),
@@ -106,11 +111,8 @@ impl BackupDirectory {
     }
 
     pub fn create(&self, store: &Store<'_>) -> Result<CreatedBackup> {
-        if !plain_metadata(&self.directory)?.is_dir() {
-            return Err("Dossier de sauvegardes invalide.".into());
-        }
         let name = new_name()?;
-        store.backup(&self.directory.join(&name))?;
+        store.backup_in(&self.handle, Path::new(&name))?;
         Ok(CreatedBackup {
             name,
             directory: self.directory.clone(),
@@ -122,10 +124,10 @@ impl BackupDirectory {
             return Err("Sauvegarde locale introuvable.".into());
         }
         let rescue = new_name()?;
-        restore(
+        restore_checked(
             store,
-            &self.directory.join(name),
-            &self.directory.join(&rescue),
+            CheckedFile::open_in(&self.handle, Path::new(name))?,
+            || store.backup_in(&self.handle, Path::new(&rescue)),
         )?;
         Ok(RestoredBackup {
             restored: name.into(),
@@ -184,9 +186,24 @@ fn automation_fields(raw: &serde_json::value::RawValue) -> Result<Document> {
 }
 
 pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
-    let expected = Identity::inspect(source)?;
+    let directory = Dir::open_ambient_dir(
+        source.parent().ok_or("Dossier de sauvegarde absent.")?,
+        ambient_authority(),
+    )?;
+    let source = CheckedFile::open_in(
+        &directory,
+        Path::new(source.file_name().ok_or("Nom de sauvegarde absent.")?),
+    )?;
+    restore_checked(store, source, || store.backup(rescue))
+}
+
+fn restore_checked(
+    store: &Store<'_>,
+    checked: CheckedFile,
+    rescue: impl FnOnce() -> Result<()>,
+) -> Result<()> {
     let mut snapshot = tempfile::NamedTempFile::new()?;
-    CheckedFile::open(source, &expected)?.copy_to(snapshot.as_file_mut())?;
+    checked.copy_to(snapshot.as_file_mut())?;
     let source = Connection::open_with_flags(snapshot.path(), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
@@ -255,7 +272,7 @@ pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
             Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
-    store.backup(rescue)?;
+    rescue()?;
     store.transaction(|store| {
         for (kind, rows) in [(Documents::Projects, projects), (Documents::Cards, cards), (Documents::Runs, runs), (Documents::Times, entries)] {
             let table = kind.table();
@@ -297,6 +314,54 @@ mod tests {
     use super::*;
     use crate::infrastructure::store::open;
     use serde_json::json;
+
+    #[test]
+    fn backup_catalogue_creation_and_restore_survive_replaced_parent_paths() {
+        let root = tempfile::tempdir().unwrap();
+        let data = root.path().join("data");
+        fs::create_dir(&data).unwrap();
+        let connection = open(&root.path().join("live.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        store.put(Documents::Cards, &json!({"id":"saved"})).unwrap();
+        let backups = BackupDirectory::open(&data).unwrap();
+        let saved = backups.create(&store).unwrap();
+        store
+            .put(Documents::Cards, &json!({"id":"recent"}))
+            .unwrap();
+        let outside = root.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("preserved"), "unchanged").unwrap();
+        #[cfg(unix)]
+        let actual = {
+            let actual = root.path().join("moved");
+            fs::rename(&data, &actual).unwrap();
+            std::os::unix::fs::symlink(&outside, &data).unwrap();
+            actual
+        };
+        #[cfg(windows)]
+        let actual = {
+            assert!(fs::rename(&data, root.path().join("moved")).is_err());
+            data
+        };
+        assert_eq!(backups.list().unwrap().len(), 1);
+        let created = backups.create(&store).unwrap();
+        assert!(actual.join("backups").join(&created.name).is_file());
+        let restored = backups.restore(&store, &saved.name).unwrap();
+        assert!(actual.join("backups").join(restored.rescue).is_file());
+        assert!(
+            store
+                .document::<Value>(Documents::Cards, "recent")
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(backups.list().unwrap().len(), 3);
+        assert_eq!(fs::read_dir(&outside).unwrap().count(), 1);
+        assert_eq!(
+            fs::read_to_string(outside.join("preserved")).unwrap(),
+            "unchanged"
+        );
+        assert_eq!(fs::read_dir(actual.join("backups")).unwrap().count(), 3);
+    }
 
     #[test]
     fn catalogue_only_restores_named_local_files_and_preserves_a_named_rescue() {

@@ -48,7 +48,7 @@ sudo dscl . -create "/Users/$probe_user"
 created=1
 sudo dscl . -create "/Users/$probe_user" UniqueID "$probe_uid"
 sudo dscl . -create "/Users/$probe_user" PrimaryGroupID 20
-sudo dscl . -create "/Users/$probe_user" GeneratedUID "$(uuidgen)"
+sudo dscl . -read "/Users/$probe_user" GeneratedUID >/dev/null
 sudo dscl . -create "/Users/$probe_user" NFSHomeDirectory "$probe_root/home"
 sudo dscl . -create "/Users/$probe_user" UserShell /bin/bash
 sudo chown "$probe_uid:20" "$probe_root/home"

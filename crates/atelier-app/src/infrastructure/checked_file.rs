@@ -22,6 +22,22 @@ pub fn plain_metadata(path: &Path) -> Result<std::fs::Metadata> {
     Ok(metadata)
 }
 
+pub(super) fn require_plain(metadata: &cap_std::fs::Metadata) -> Result<()> {
+    #[cfg(windows)]
+    let linked = {
+        use cap_std::fs::MetadataExt;
+        metadata.file_attributes()
+            & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+            != 0
+    };
+    #[cfg(unix)]
+    let linked = metadata.file_type().is_symlink();
+    if linked {
+        return Err("Les liens sont interdits dans les données importées.".into());
+    }
+    Ok(())
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Identity {
     device: u64,

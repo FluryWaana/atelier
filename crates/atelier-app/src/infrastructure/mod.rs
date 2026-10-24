@@ -6,6 +6,7 @@ pub mod installation;
 pub mod local_http;
 pub mod portable_import;
 pub mod prototype;
+mod publish;
 pub mod session;
 pub mod store;
 pub mod token_vault;

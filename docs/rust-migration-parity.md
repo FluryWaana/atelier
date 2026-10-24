@@ -125,6 +125,8 @@ Les coffres Linux entre comptes sont prouvés sur x64 et ARM64 (`513f728`, journ
 
 Le premier essai macOS ARM64 entre comptes (`83ec5da`) échoue avant le probe, pendant le provisionnement Directory Service. Correction de la fixture et diagnostic de ligne ajoutés ; les assertions de coffre sont conservées et la preuve reste attendue.
 
+Catalogue, création et restauration des sauvegardes sont désormais ancrés sur le dossier détenu ; le secours utilise le même ancrage. Publication native sans écrasement et préservation d'une destination existante vérifiées sous Windows ; scénarios POSIX attendus. L'import SQLite initial reste distinct. Le nouvel essai macOS situe le refus CI dans le remplacement du `GeneratedUID` automatiquement attribué ; la fixture le lit désormais, sans le réécrire.
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

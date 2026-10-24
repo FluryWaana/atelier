@@ -559,6 +559,13 @@ Prochaine action concrète :
 - La CI ARM64 `83ec5da` refuse le provisionnement Directory Service avant le probe. L'écriture directe de `Password` est retirée ; diagnostic de ligne ajouté, sans affaiblissement des contrôles du coffre.
 - Syntaxe Bash et refus local vérifiés sous WSL sans provisionnement ; aucune preuve native macOS entre comptes revendiquée. L'application reste au niveau vérifié de `4405a65`.
 
+### Incrément M02 — sauvegardes ancrées
+
+- **Livré :** catalogue/création/restauration/secours relatifs au dossier ouvert, snapshot privé et publication atomique native sans remplacement ; nettoyage des temporaires après refus.
+- **Vérification :** 53 tests Rust, Clippy natif et contrôles de types/Clippy POSIX ; parité stockage/import/restauration Node/Rust réussie. Suite Node avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,045 s.
+- **CI macOS :** le diagnostic identifie `GeneratedUID`, pas `Password`, comme attribut refusé. Le GUID attribué est maintenant lu sans modification ; garde-fou local vérifié.
+- **Suite :** exécution native POSIX des sauvegardes et macOS entre comptes ; publication finale/import SQLite et acquisition initiale des racines. Mesurer le coût de copie supplémentaire et qualifier les systèmes de fichiers avant livraison.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.
