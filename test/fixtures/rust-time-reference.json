@@ -1,0 +1,1740 @@
+[
+  {
+    "name": "creation and validation",
+    "steps": [
+      {
+        "action": "create",
+        "body": {
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Provided value cannot be bound to SQLite parameter 1."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": null,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": 1,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "missing",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "archived",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Restaure cette tâche avant de saisir du temps."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": null
+        },
+        "expected": {
+          "error": "Action de chronomètre invalide."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": 1
+        },
+        "expected": {
+          "error": "Action de chronomètre invalide."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": "true"
+        },
+        "expected": {
+          "error": "Action de chronomètre invalide."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 0,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+        },
+        "times": []
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "value": {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": false
+        },
+        "expected": {
+          "value": {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": true
+        },
+        "expected": {
+          "value": {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:00.000Z",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:00.000Z",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "start": true
+        },
+        "expected": {
+          "error": "Arrête le chronomètre actif avant d’en démarrer un autre."
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:00.000Z",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792659601999,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 1,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:01.000Z",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792659602999,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 2,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:02.000Z",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792659599000,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 2,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "runningSince": "2026-10-22T09:00:02.000Z",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "stop",
+        "id": "entry-3",
+        "now": 1792659665001,
+        "expected": {
+          "value": {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 65,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": "card",
+            "seconds": 65,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "remove",
+        "id": "entry-3",
+        "expected": {
+          "value": {
+            "ok": true
+          }
+        },
+        "times": [
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "remove",
+        "id": "entry-3",
+        "expected": {
+          "error": "Entrée de temps introuvable."
+        },
+        "times": [
+          {
+            "id": "entry-2",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      }
+    ],
+    "initialized": []
+  },
+  {
+    "name": "restart and uncertain exports",
+    "initial": [
+      {
+        "id": "seed",
+        "cardId": "card",
+        "seconds": 60,
+        "date": "2026-10-22",
+        "startTime": "09:00:00",
+        "description": " Work \ud800 ",
+        "exportState": "sending",
+        "extra": {
+          "future": "\udc00",
+          "nullable": null
+        },
+        "runningSince": "2026-10-22T08:00:00.000Z",
+        "exportPayload": {
+          "work": 1
+        },
+        "exportJira": {
+          "id": 42
+        },
+        "error": "lost"
+      },
+      {
+        "id": "empty",
+        "cardId": "card",
+        "seconds": 60,
+        "date": "2026-10-22",
+        "startTime": "09:00:00",
+        "description": " Work \ud800 ",
+        "exportState": "exported",
+        "extra": {
+          "future": "\udc00",
+          "nullable": null
+        },
+        "runningSince": ""
+      }
+    ],
+    "steps": [
+      {
+        "action": "update",
+        "id": "seed",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "uncertain",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "exportPayload": {
+              "work": 1
+            },
+            "exportJira": {
+              "id": 42
+            },
+            "error": "lost",
+            "interrupted": true
+          }
+        ]
+      },
+      {
+        "action": "reset-export",
+        "id": "seed",
+        "body": {
+          "confirmed": "true"
+        },
+        "expected": {
+          "error": "Vérifie d’abord dans Tempo que cette entrée n’existe pas."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "uncertain",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "exportPayload": {
+              "work": 1
+            },
+            "exportJira": {
+              "id": 42
+            },
+            "error": "lost",
+            "interrupted": true
+          }
+        ]
+      },
+      {
+        "action": "reset-export",
+        "id": "seed",
+        "body": {
+          "confirmed": true
+        },
+        "busy": true,
+        "expected": {
+          "error": "Envoi en cours."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "uncertain",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "exportPayload": {
+              "work": 1
+            },
+            "exportJira": {
+              "id": 42
+            },
+            "error": "lost",
+            "interrupted": true
+          }
+        ]
+      },
+      {
+        "action": "reset-export",
+        "id": "seed",
+        "body": {
+          "confirmed": true
+        },
+        "busy": false,
+        "expected": {
+          "value": {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": true
+          }
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": true
+          }
+        ]
+      },
+      {
+        "action": "update",
+        "id": "seed",
+        "body": {
+          "cardId": "card",
+          "seconds": "0x78",
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "value": {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      },
+      {
+        "action": "reset-export",
+        "id": "seed",
+        "body": {
+          "confirmed": true
+        },
+        "expected": {
+          "error": "Vérifie d’abord dans Tempo que cette entrée n’existe pas."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      },
+      {
+        "action": "remove",
+        "id": "empty",
+        "expected": {
+          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      },
+      {
+        "action": "stop",
+        "id": "empty",
+        "busy": true,
+        "expected": {
+          "error": "Envoi en cours."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      },
+      {
+        "action": "unknown",
+        "id": "seed",
+        "busy": false,
+        "expected": {
+          "error": "Action inconnue."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      },
+      {
+        "action": "update",
+        "id": "missing",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Entrée de temps introuvable."
+        },
+        "times": [
+          {
+            "id": "empty",
+            "cardId": "card",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "exported",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": ""
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 120,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "interrupted": false
+          }
+        ]
+      }
+    ],
+    "initialized": [
+      {
+        "id": "empty",
+        "cardId": "card",
+        "seconds": 60,
+        "date": "2026-10-22",
+        "startTime": "09:00:00",
+        "description": " Work \ud800 ",
+        "exportState": "exported",
+        "extra": {
+          "future": "\udc00",
+          "nullable": null
+        },
+        "runningSince": ""
+      },
+      {
+        "id": "seed",
+        "cardId": "card",
+        "seconds": 60,
+        "date": "2026-10-22",
+        "startTime": "09:00:00",
+        "description": " Work \ud800 ",
+        "exportState": "uncertain",
+        "extra": {
+          "future": "\udc00",
+          "nullable": null
+        },
+        "exportPayload": {
+          "work": 1
+        },
+        "exportJira": {
+          "id": 42
+        },
+        "error": "lost",
+        "interrupted": true
+      }
+    ]
+  },
+  {
+    "name": "cap, fractions, multiple timers and close",
+    "steps": [
+      {
+        "action": "put",
+        "body": {
+          "id": "seed",
+          "cardId": "card",
+          "seconds": 86399,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "exportState": "draft",
+          "extra": {
+            "future": "\udc00",
+            "nullable": null
+          },
+          "runningSince": "2026-10-22T09:00:00.100Z"
+        },
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86399,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.100Z"
+          }
+        ]
+      },
+      {
+        "action": "put",
+        "body": {
+          "id": "other",
+          "cardId": "card",
+          "seconds": 0,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 ",
+          "exportState": "draft",
+          "extra": {
+            "future": "\udc00",
+            "nullable": null
+          },
+          "runningSince": "2026-10-22T09:00:00.500Z"
+        },
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86399,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.100Z"
+          }
+        ]
+      },
+      {
+        "action": "update",
+        "id": "other",
+        "body": {
+          "cardId": "card",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86399,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.100Z"
+          }
+        ]
+      },
+      {
+        "action": "remove",
+        "id": "other",
+        "expected": {
+          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86399,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.100Z"
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792659601099,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86399,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.100Z"
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792659601100,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 0,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:00.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86400,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          }
+        ]
+      },
+      {
+        "action": "stop",
+        "id": "seed",
+        "now": 1792659602900,
+        "expected": {
+          "value": {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86400,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          }
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 2,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            },
+            "runningSince": "2026-10-22T09:00:02.500Z"
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86400,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          }
+        ]
+      },
+      {
+        "action": "close",
+        "now": 1792659603200,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 2,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86400,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          }
+        ]
+      },
+      {
+        "action": "tick",
+        "now": 1792660599999,
+        "expected": {
+          "value": null
+        },
+        "times": [
+          {
+            "id": "other",
+            "cardId": "card",
+            "seconds": 2,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          },
+          {
+            "id": "seed",
+            "cardId": "card",
+            "seconds": 86400,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": " Work \ud800 ",
+            "exportState": "draft",
+            "extra": {
+              "future": "\udc00",
+              "nullable": null
+            }
+          }
+        ]
+      }
+    ],
+    "initialized": []
+  },
+  {
+    "name": "historical card identifier bindings",
+    "steps": [
+      {
+        "action": "create",
+        "body": {
+          "cardId": "1",
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "value": {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": 1,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": [
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": 1.5,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "value": {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": true,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "value": {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": false,
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": {},
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": [],
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Carte introuvable."
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      },
+      {
+        "action": "create",
+        "body": {
+          "cardId": [
+            "card"
+          ],
+          "seconds": 60,
+          "date": "2026-10-22",
+          "startTime": "09:00:00",
+          "description": " Work \ud800 "
+        },
+        "expected": {
+          "error": "Unknown named parameter '0'"
+        },
+        "times": [
+          {
+            "id": "entry-3",
+            "cardId": true,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-2",
+            "cardId": 1.5,
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          },
+          {
+            "id": "entry-1",
+            "cardId": "1",
+            "seconds": 60,
+            "date": "2026-10-22",
+            "startTime": "09:00:00",
+            "description": "Work \ud800",
+            "exportState": "draft"
+          }
+        ]
+      }
+    ],
+    "initialized": []
+  }
+]

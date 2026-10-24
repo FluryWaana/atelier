@@ -96,6 +96,8 @@ Réutilisation de SSE Axum et `futures-util` 0.3.34 (déjà verrouillé, MIT/Apa
 
 Vérification Windows : 57 tests Rust réussis, Clippy natif tous targets ; suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 427 tests, 424 réussis, aucun échec, trois exclusions, 80,166 s. La nouvelle CI SSE reste à exécuter. Les cinq jobs natifs et deux jobs navigateur de `a457449` sont tous réussis ; journaux des remplacements de parent pendant import relus sur les quatre cibles POSIX. Les limites d'ouverture SQLite et les intégrations restantes gardent M02 ouvert.
 
+CI suivantes entièrement réussies : [source `43ba63a`](https://github.com/FluryWaana/atelier/actions/runs/40050402339), [notifications `3b4302e`](https://github.com/FluryWaana/atelier/actions/runs/40050788365). Les journaux des quatre cibles POSIX ont été relus pour les refus de source étrangère/alias, `events_authenticate_notify_commits_reconnect_and_end_on_shutdown` et `slow_or_closing_subscribers_end_and_release_their_subscription`. Ces résultats valident ces scénarios précis, sans supprimer la limite d'ouverture SQLite par chemin.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

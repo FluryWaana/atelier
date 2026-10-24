@@ -14,7 +14,7 @@ use axum::{
     http::{Method, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, get_service, post},
+    routing::{any, get, get_service, post},
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -23,6 +23,7 @@ use tokio::{net::TcpListener, sync::watch};
 use tower_http::services::ServeFile;
 
 mod events;
+mod time_tracking;
 
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
@@ -140,8 +141,18 @@ async fn health(State(state): State<Shared>, Query(query): Query<HealthQuery>) -
 }
 
 async fn board(State(state): State<Shared>) -> Response {
-    match state.database.cards().await {
-        Ok(cards) => Json(Board { cards }).into_response(),
+    match state
+        .database
+        .call(|store| {
+            use crate::infrastructure::store::Documents;
+            Ok(Board {
+                cards: store.documents(Documents::Cards)?,
+                times: store.documents(Documents::Times)?,
+            })
+        })
+        .await
+    {
+        Ok(board) => Json(board).into_response(),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Lecture du stockage impossible.",
@@ -275,6 +286,9 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let token = session::new_token()?;
     session::write(&directory.path, &token)?;
     let database = Database::open(&directory.path.join("kanban.sqlite"))?;
+    database
+        .call(|store| store.transaction(atelier_core::application::time_tracking::initialize))
+        .await?;
     let (shutdown, mut stopped) = watch::channel(false);
     let state = Arc::new(AppState {
         database,
@@ -286,6 +300,9 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let app = app
         .route("/api/health", get(health))
         .route("/api/events", get(events))
+        .route("/api/time", any(time_tracking::create))
+        .route("/api/time/{id}", any(time_tracking::entry))
+        .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
         .route("/api/cards", post(create))
         .route("/api/cards/{id}/duplicate", post(duplicate))
@@ -293,14 +310,30 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());
     let stop_events = state.shutdown.clone();
+    let clock = tokio::spawn(time_tracking::run(state.clone()));
     let result = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             tokio::select! { _ = stopped.changed() => {}, _ = tokio::signal::ctrl_c() => {} }
             let _ = stop_events.send(true);
         })
         .await;
+    let _ = state.shutdown.send(true);
+    let clock_result = clock.await;
+    let timers = state
+        .database
+        .call(|store| {
+            store.transaction(|store| {
+                atelier_core::application::time_tracking::close(
+                    store,
+                    &crate::infrastructure::time_tracking::Clock,
+                )
+            })
+        })
+        .await;
     state.database.close().await?;
     drop(directory);
+    clock_result??;
+    timers?;
     result?;
     Ok(())
 }

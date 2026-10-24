@@ -28,6 +28,18 @@ Le parcours de dépendances est itératif : une chaîne de 10 000 cartes ne cons
 
 La validation des profils conserve les chemins absolus, refus réseau/périphériques, contrôles des arguments, paquets npm et identifiants réservés. Elle n'exécute aucun programme. Aucune nouvelle dépendance, aucun accès système dans core.
 
+## Saisies et chronomètres locaux — après `3b4302e`
+
+`application/time_tracking` porte création, modification, suppression, arrêt, remise en brouillon confirmée et reprise des entrées interrompues/envois incertains. Deux petits ports couvrent le stockage et l'horloge ; core reste sans dépendance native. Les adaptateurs SQLite et UTC réutilisent `Store` et `time` (fonction parsing activée, aucune bibliothèque ajoutée). Les champs additionnels et descriptions UTF-16 sont conservés. La liaison d'identifiant reprend aussi les conversions réelles Node/SQLite, y compris REAL/INTEGER et les erreurs de paramètres nommés.
+
+Les routes locales `/api/time`, `/api/time/{id}` et `/api/time/{id}/stop|reset-export` s'exécutent dans une seule transaction du thread SQLite. Deux démarrages concurrents ne créent qu'un chronomètre actif. Le réveil à cinq secondes calcule le temps écoulé réel, conserve les fractions, plafonne à 24 heures et notifie SSE après commit. L'arrêt attend les requêtes puis enregistre les derniers temps avant fermeture SQLite ; la reprise interrompt les anciens chronomètres et rend les envois `sending` incertains. `state.times` expose les entrées, comme Node.
+
+Les routes export/reconcile répondent explicitement 503 jusqu'au portage M05. Le port de garde d'export est testé, mais son branchement aux réservations distantes attend ce lot. L'interface de saisie reste en M07 ; les autres cas d'usage M03 et les protections M02 ouvertes ne sont pas déclarés terminés.
+
+Sources confrontées : `lib/application/time-tracking.mjs`, `lib/time-tracking.mjs`, `lib/http/time-routes.mjs`, `lib/store.mjs`, `test/time-tracking.test.mjs` et routes d'état. `cargo xtask test-time-parity` reproduit 46 transitions capturées depuis ces vraies fonctions sur SQLite synthétique : erreurs et priorité des gardes, démarrage unique, fractions/recul d'horloge/plafond, arrêt des autres chronomètres, fermeture, champs additionnels/UTF-16, restart et reset confirmé. Un trigger SQL injecté prouve le rollback de toutes les entrées après faute lors d'un tick. Le scénario HTTP vérifie concurrence, modification/suppression, tick périodique/SSE, arrêt et redémarrage.
+
+Contrôles Windows : 60 tests Rust réussis ; Clippy natif et WASM ; 305 contrats de domaine, 46 transitions de temps et comparateur stockage/import/restauration réussis. Parcours Edge avec WASM/CSP, redémarrage du processus, relecture et rotation de session réussi. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 427 tests, 424 réussis, zéro échec, trois exclusions, 81,145 s. Le test de réouverture historique a été adapté à l'ajout de `times: []`, sans supprimer ses vérifications de cartes. L'exécution native du nouvel incrément reste attendue en CI.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

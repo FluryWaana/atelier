@@ -2,7 +2,7 @@
 
 Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applicative `0.1.9`.
 
-Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 validé pour la faisabilité, vraie réouverture requalifiée dans les quatre navigateurs ; M02 en cours pour les données et protections ; M03 en cours, règles pures et première route métier portées**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
+Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 validé pour la faisabilité, vraie réouverture requalifiée dans les quatre navigateurs ; M02 en cours pour les données et protections ; M03 en cours, règles pures, duplication et chronomètres locaux portés**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
 ## 1. Résultat attendu et périmètre
 
@@ -159,8 +159,8 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | --- | --- | --- | --- |
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
-| M02 | M01 | Données, secrets et session compatibles | En cours — aller-retour UTF-16 et refus des coffres verrouillés prouvés ; changements de compte, courses de chemins et intégrations restantes ouverts |
-| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures et duplication HTTP ; autres cas d'usage/API et prérequis M02 non clos |
+| M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
+| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -586,6 +586,14 @@ Prochaine action concrète :
 - **Vérification :** 57 tests Rust et Clippy natif tous targets ; contrat SSE Node ajouté. Suite Node complète avec contrôle release : 427 tests, 424 réussis, aucun échec, trois exclusions, 80,166 s.
 - **Preuves recueillies :** CI `a457449` entièrement réussie ; journaux des scénarios d'import ancré relus sur les quatre cibles POSIX.
 - **Suite :** CI des refus source et de SSE, producteurs internes futurs, ouverture SQLite et intégrations restantes ; aucune qualification globale M02.
+
+### Incrément M03 — saisies et chronomètres locaux
+
+- **Livré :** cas d'usage, ports stockage/horloge, routes locales, transactions, réveil/SSE, fermeture et reprise. Export/reconcile explicitement 503 jusqu'à M05 ; interface de saisie en M07.
+- **Vérification :** 60 tests Rust, Clippy natif/WASM, 46 transitions Node/Rust sur SQLite, 305 contrats de domaine et parité stockage/import/restauration. Concurrence HTTP et rollback d'un tick après faute SQL vérifiés.
+- **Référence Node :** suite complète avec contrôle release : 427 tests, 424 réussis, zéro échec, trois exclusions, 81,145 s.
+- **Preuves M02 recueillies :** CI `43ba63a` et `3b4302e` entièrement réussies ; journaux des refus source et de SSE relus sur les quatre cibles POSIX. Les limites d'ouverture SQLite restent documentées, sans qualification atomique revendiquée.
+- **Suite :** CI de ce nouvel incrément ; autres cas d'usage/API M03 et protections/intégrations M02 restantes. La migration n'est pas qualifiée globalement.
 
 ## 12. Définition finale de terminé
 

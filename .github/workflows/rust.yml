@@ -37,6 +37,10 @@ jobs:
         run: cargo xtask test-domain-parity
         env:
           ATELIER_NODE: node
+      - name: Compare historical Node timer transitions
+        run: cargo xtask test-time-parity
+        env:
+          ATELIER_NODE: node
       - name: Native DPAPI isolation between disposable Windows accounts
         if: runner.os == 'Windows'
         shell: pwsh

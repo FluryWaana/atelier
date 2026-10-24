@@ -71,6 +71,158 @@ async fn next_event(response: &mut reqwest::Response, buffered: &mut String) -> 
 }
 
 #[tokio::test]
+async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cleanly() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let request = |method, path: &str| {
+        client
+            .request(method, format!("{address}{path}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let card: Value = request(reqwest::Method::POST, "/api/cards")
+        .json(&json!({"title":"Synthetic timer"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let fields = json!({"cardId":card["id"], "seconds":60, "date":"2026-10-22", "startTime":"09:00:00", "description":"Work", "start":true});
+    let (first, second) = tokio::join!(
+        request(reqwest::Method::POST, "/api/time")
+            .json(&fields)
+            .send(),
+        request(reqwest::Method::POST, "/api/time")
+            .json(&fields)
+            .send()
+    );
+    let first = first.unwrap();
+    let second = second.unwrap();
+    let (created, refused) = if first.status().is_success() {
+        (first, second)
+    } else {
+        (second, first)
+    };
+    assert_eq!(created.status(), 200);
+    assert_eq!(refused.status(), 400);
+    let created: Value = created.json().await.unwrap();
+    assert_eq!(created["seconds"], 0);
+    let id = created["id"].as_str().unwrap();
+    assert_eq!(
+        request(reqwest::Method::DELETE, &format!("/api/time/{id}"))
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    let stopped: Value = request(reqwest::Method::POST, &format!("/api/time/{id}/stop"))
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(stopped.get("runningSince").is_none());
+    let mut update = fields.clone();
+    update["seconds"] = json!(90);
+    update["description"] = json!(" Modified ");
+    let modified: Value = request(reqwest::Method::PATCH, &format!("/api/time/{id}"))
+        .json(&update)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(modified["seconds"], 90);
+    assert_eq!(modified["description"], "Modified");
+    assert_eq!(modified["interrupted"], false);
+    let mut events = request(reqwest::Method::GET, "/api/events")
+        .send()
+        .await
+        .unwrap();
+    let mut buffered = String::new();
+    assert!(
+        next_event(&mut events, &mut buffered)
+            .await
+            .contains("data: connected")
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, &format!("/api/time/{id}/export"))
+            .json(&json!({"confirmed":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        503
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, "/api/time")
+            .json(&fields)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        200
+    );
+    assert_eq!(
+        next_event(&mut events, &mut buffered).await,
+        "data: changed\n\n"
+    );
+    assert_eq!(
+        next_event(&mut events, &mut buffered).await,
+        "data: changed\n\n"
+    );
+    let ticking: Value = request(reqwest::Method::GET, "/api/state")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(ticking["times"][0]["seconds"].as_f64().unwrap() >= 1.0);
+    stop(&address, &token, task).await;
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["times"].as_array().unwrap().len(), 2);
+    assert!(
+        board["times"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|entry| entry.get("runningSince").is_none())
+    );
+    assert_eq!(board["times"][1]["description"], "Modified");
+    assert_eq!(
+        client
+            .delete(format!("{address}/api/time/{id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        200
+    );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn events_authenticate_notify_commits_reconnect_and_end_on_shutdown() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
@@ -331,7 +483,7 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .json()
         .await
         .unwrap();
-    assert_eq!(board, json!({"cards":[card]}));
+    assert_eq!(board, json!({"cards":[card], "times":[]}));
     stop(&address, &next_token, task).await;
 }
 

@@ -103,12 +103,16 @@ async fn main() -> Result<()> {
             run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
             run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))
         }
+        ["test-time-parity"] => {
+            run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;
+            run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))
+        }
         ["test-keyring"] => keyring::test(false).await,
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test().await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
+        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-time-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
     }
 }
 
