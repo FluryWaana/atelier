@@ -154,6 +154,16 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
     }
     let target =
         Repository::open_synthetic(root, roots, &JsonString::from(worktree.path.as_str()))?;
+    metadata(&source, &target)?;
+    target.verify_root().await?;
+    let branch = String::from_utf8(target.git(&["symbolic-ref", "HEAD"]).await?)?;
+    if branch.trim() != format!("refs/heads/{}", worktree.branch) {
+        return Err("Le worktree associé a disparu ou sa branche a changé.".into());
+    }
+    Ok(target)
+}
+
+pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> {
     let link =
         String::from_utf8(CheckedFile::open_in(&target.directory, Path::new(".git"))?.read(8192)?)?;
     let gitdir = link
@@ -187,12 +197,7 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
     {
         return Err("Association Git du worktree invalide.".into());
     }
-    target.verify_root().await?;
-    let branch = String::from_utf8(target.git(&["symbolic-ref", "HEAD"]).await?)?;
-    if branch.trim() != format!("refs/heads/{}", worktree.branch) {
-        return Err("Le worktree associé a disparu ou sa branche a changé.".into());
-    }
-    Ok(target)
+    Ok(metadata)
 }
 
 pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<()> {
@@ -203,8 +208,7 @@ pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resul
         .iter()
         .any(|entry| same(&entry.path, &worktree.path))
     {
-        inspect(root, roots, worktree).await?;
-        return Ok(());
+        return super::agent_context::sync(root, roots, worktree).await;
     }
     if registered
         .iter()
@@ -246,8 +250,7 @@ pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resul
         },
     ]);
     source.without_programs(&args).await?;
-    inspect(root, roots, worktree).await?;
-    Ok(())
+    super::agent_context::sync(root, roots, worktree).await
 }
 
 pub async fn remove(
@@ -289,19 +292,35 @@ pub async fn remove(
     }
     if !missing {
         let target = inspect(root, roots, worktree).await?;
-        if !discard
-            && !target
-                .without_programs(&[
-                    "status",
-                    "--porcelain=v1",
-                    "--untracked-files=all",
-                    "--ignored=matching",
-                    "-z",
-                ])
+        if !discard {
+            let changed = !target
+                .without_programs(&["status", "--porcelain=v1", "--untracked-files=all", "-z"])
                 .await?
-                .is_empty()
-        {
-            return Err("Ce worktree contient des fichiers modifiés, nouveaux ou ignorés. Confirme leur abandon pour le retirer.".into());
+                .is_empty();
+            let ignored = String::from_utf8(
+                target
+                    .git(&[
+                        "ls-files",
+                        "--others",
+                        "--ignored",
+                        "--exclude-standard",
+                        "-z",
+                    ])
+                    .await?,
+            )?
+            .split('\0')
+            .filter(|path| !path.is_empty())
+            .map(str::to_owned)
+            .collect();
+            let metadata = metadata(&source, &target)?;
+            let files = target.directory.try_clone()?;
+            let unowned = tokio::task::spawn_blocking(move || {
+                super::agent_context::has_unowned_ignored(metadata, files, ignored)
+            })
+            .await??;
+            if changed || unowned {
+                return Err("Ce worktree contient des fichiers modifiés, nouveaux ou ignorés. Confirme leur abandon pour le retirer.".into());
+            }
         }
     }
     let mut args = vec!["worktree", "remove"];

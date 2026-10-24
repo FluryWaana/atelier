@@ -1,3 +1,4 @@
+mod agent_context;
 pub mod agent_providers;
 pub mod backups;
 pub mod checked_file;

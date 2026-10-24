@@ -1,12 +1,9 @@
 use super::checked_file::CheckedFile;
 use crate::Result;
-use cap_std::{
-    ambient_authority,
-    fs::{Dir, OpenOptions},
-};
+use cap_std::{ambient_authority, fs::Dir};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
-use std::{io::Write, path::Path};
+use std::path::Path;
 use subtle::ConstantTimeEq;
 
 pub fn hexadecimal(bytes: &[u8]) -> String {
@@ -132,26 +129,7 @@ fn write_private(path: &Path, stored: &str) -> Result<()> {
 }
 
 fn write_private_in(directory: &Dir, name: &Path, stored: &str) -> Result<()> {
-    let temporary = name.with_extension(uuid::Uuid::new_v4().to_string());
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use cap_std::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let result = (|| -> Result<()> {
-        let mut file = directory.open_with(&temporary, &options)?;
-        file.write_all(stored.as_bytes())?;
-        file.sync_all()?;
-        drop(file);
-        directory.rename(&temporary, directory, name)?;
-        Ok(())
-    })();
-    if result.is_err() {
-        let _ = directory.remove_file(&temporary);
-    }
-    result
+    super::publish::write_private(directory, name, stored.as_bytes(), false)
 }
 
 pub fn read_optional(directory: &Path) -> Result<Option<String>> {

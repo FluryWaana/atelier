@@ -1,3 +1,4 @@
+pub mod agent_context;
 pub mod agent_options;
 pub mod checklist;
 pub mod files;

@@ -2,6 +2,51 @@ use crate::Result;
 use cap_std::fs::Dir;
 use std::path::{Component, Path};
 
+pub(super) fn write_private(
+    directory: &Dir,
+    name: &Path,
+    bytes: &[u8],
+    executable: bool,
+) -> Result<()> {
+    write_private_from(directory, directory, name, bytes, executable)
+}
+
+pub(super) fn write_private_from(
+    staging: &Dir,
+    directory: &Dir,
+    name: &Path,
+    bytes: &[u8],
+    _executable: bool,
+) -> Result<()> {
+    if !matches!(
+        name.components().collect::<Vec<_>>().as_slice(),
+        [Component::Normal(_)]
+    ) {
+        return Err("Nom de publication invalide.".into());
+    }
+    let temporary = Path::new(".atelier-write").with_extension(uuid::Uuid::new_v4().to_string());
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use cap_std::fs::OpenOptionsExt;
+        options.mode(if _executable { 0o700 } else { 0o600 });
+    }
+    let result = (|| -> Result<()> {
+        use std::io::Write;
+        let mut file = staging.open_with(&temporary, &options)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        drop(file);
+        staging.rename(&temporary, directory, name)?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = staging.remove_file(&temporary);
+    }
+    result
+}
+
 pub(super) fn rename_new(directory: &Dir, source: &Path, destination: &Path) -> Result<()> {
     for name in [source, destination] {
         if !matches!(
@@ -128,6 +173,36 @@ mod tests {
     use super::*;
     use cap_std::ambient_authority;
     use std::fs;
+
+    #[test]
+    fn failed_private_publication_cleans_staging_and_preserves_existing_data() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("metadata")).unwrap();
+        fs::create_dir(root.path().join("target")).unwrap();
+        let metadata =
+            Dir::open_ambient_dir(root.path().join("metadata"), ambient_authority()).unwrap();
+        let target =
+            Dir::open_ambient_dir(root.path().join("target"), ambient_authority()).unwrap();
+        target.create_dir("occupied").unwrap();
+        target.write("occupied/preserved", b"keep").unwrap();
+        assert!(
+            write_private_from(
+                &metadata,
+                &target,
+                Path::new("occupied"),
+                b"private synthetic bytes",
+                false
+            )
+            .is_err()
+        );
+        assert_eq!(metadata.entries().unwrap().count(), 0);
+        assert_eq!(target.entries().unwrap().count(), 1);
+        assert_eq!(target.read("occupied/preserved").unwrap(), b"keep");
+        write_private_from(&metadata, &target, Path::new("saved"), b"first", false).unwrap();
+        write_private_from(&metadata, &target, Path::new("saved"), b"second", false).unwrap();
+        assert_eq!(target.read("saved").unwrap(), b"second");
+        assert_eq!(metadata.entries().unwrap().count(), 0);
+    }
 
     #[test]
     fn publication_is_anchored_and_never_replaces_an_existing_destination() {

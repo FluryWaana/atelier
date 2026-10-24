@@ -1,4 +1,13 @@
 {
+  "La préparation et la vérification actualisent le contexte local des agents. Les fichiers suivis par Git et tes modifications dans le worktree sont conservés ; les copies locales restent exclues des nouveaux fichiers Git.": "Preparation and verification refresh local agent context. Git-tracked files and your worktree edits are preserved; local copies remain excluded from new Git files.",
+  "Configuration agent remplacée par un lien ou un dossier.": "Agent configuration was replaced by a link or folder.",
+  "Chemin de configuration agent invalide.": "Invalid agent configuration path.",
+  "Inventaire du contexte agent invalide.": "Invalid agent context inventory.",
+  "Règles d’exclusion Git trop volumineuses.": "Git exclusion rules are too large.",
+  "Configuration agent trop volumineuse (1 Mio par fichier, 8 Mio au total).": "Agent configuration is too large (1 MiB per file, 8 MiB total).",
+  "Configuration agent trop volumineuse (2 000 fichiers maximum).": "Agent configuration is too large (2,000 files maximum).",
+  "Configuration agent disparue.": "Agent configuration is missing.",
+  "Le contexte agent a changé pendant la synchronisation. Réessaie après vérification.": "Agent context changed during synchronization. Verify it before trying again.",
   "Comparaison avec le point de départ du worktree, ou le dernier commit du dépôt principal : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.": "Compared with the worktree's starting point, or the main repository's latest commit: additions (A), modifications (M), deletions (D). Renames appear as a deletion and an addition.",
   "Espace de travail Git": "Git workspace",
   "Un worktree isole les fichiers de cette tâche dans un dossier et une branche dédiés.": "A worktree isolates this task's files in a dedicated folder and branch.",

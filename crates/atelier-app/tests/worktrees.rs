@@ -43,6 +43,162 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn local_agent_context_refreshes_owned_files_preserves_task_edits_and_rejects_links() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+    let repo = root_path.join("repositories/context");
+    std::fs::create_dir_all(&repo).unwrap();
+    git(&repo, &["init", "-b", "main"]).await;
+    git(&repo, &["config", "core.autocrlf", "false"]).await;
+    std::fs::write(repo.join("CLAUDE.md"), "tracked instructions").unwrap();
+    std::fs::write(repo.join(".gitignore"), ".claude/\n.mcp.json\n").unwrap();
+    git(&repo, &["add", "."]).await;
+    git(&repo, &["commit", "-qm", "Synthetic context baseline"]).await;
+    std::fs::write(repo.join("CLAUDE.md"), "uncommitted source edit").unwrap();
+    let local = [
+        ("AGENTS.md", "local agent instructions"),
+        (".mcp.json", "{\"syntheticToken\":\"private-fixture\"}"),
+        (".claude/settings.local.json", "{\"fixture\":true}"),
+        (".claude/skills/review/SKILL.md", "synthetic review skill"),
+        (".claude/rules/task.md", "original rule"),
+        (".claude/commands/check.md", "original command"),
+    ];
+    for (name, bytes) in local {
+        std::fs::create_dir_all(repo.join(name).parent().unwrap()).unwrap();
+        std::fs::write(repo.join(name), bytes).unwrap();
+    }
+    std::fs::write(repo.join(".env"), "uncopied synthetic secret").unwrap();
+    std::fs::create_dir_all(repo.join(".claude/worktrees/other")).unwrap();
+    std::fs::write(
+        repo.join(".claude/worktrees/other/private.txt"),
+        "uncopied other workspace",
+    )
+    .unwrap();
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path.clone()];
+    let plan = worktrees::prepare(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "feature/context".into(),
+        "main".into(),
+    )
+    .await
+    .unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    let target = Path::new(&plan.path);
+    for (name, bytes) in local {
+        assert_eq!(std::fs::read_to_string(target.join(name)).unwrap(), bytes);
+    }
+    assert_eq!(
+        std::fs::read_to_string(target.join("CLAUDE.md")).unwrap(),
+        "tracked instructions"
+    );
+    assert!(!target.join(".env").exists());
+    assert!(!target.join(".claude/worktrees").exists());
+    assert!(git(target, &["status", "--porcelain"]).await.is_empty());
+    std::fs::write(
+        repo.join(".claude/settings.local.json"),
+        "{\"updated\":true}",
+    )
+    .unwrap();
+    std::fs::write(target.join(".claude/rules/task.md"), "task-specific rule").unwrap();
+    std::fs::write(repo.join(".claude/rules/task.md"), "changed source rule").unwrap();
+    std::fs::remove_file(repo.join(".claude/commands/check.md")).unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(target.join(".claude/settings.local.json")).unwrap(),
+        "{\"updated\":true}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(target.join(".claude/rules/task.md")).unwrap(),
+        "task-specific rule"
+    );
+    assert!(!target.join(".claude/commands/check.md").exists());
+    assert!(
+        worktrees::remove(&root, &roots, &plan, false)
+            .await
+            .is_err()
+    );
+    let outside = root_path.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(
+        outside.join("settings.json"),
+        "outside synthetic configuration",
+    )
+    .unwrap();
+    std::fs::remove_file(target.join(".claude/settings.local.json")).unwrap();
+    std::fs::hard_link(
+        outside.join("settings.json"),
+        target.join(".claude/settings.local.json"),
+    )
+    .unwrap();
+    assert!(worktrees::create(&root, &roots, &plan).await.is_err());
+    assert_eq!(
+        std::fs::read_to_string(outside.join("settings.json")).unwrap(),
+        "outside synthetic configuration"
+    );
+    std::fs::remove_file(target.join(".claude/settings.local.json")).unwrap();
+    // Ownership is relinquished after a task edit, even when a later source copy happens to match it.
+    std::fs::write(repo.join(".claude/rules/task.md"), "task-specific rule").unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    std::fs::write(
+        repo.join(".claude/rules/task.md"),
+        "do not replace task ownership",
+    )
+    .unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(target.join(".claude/rules/task.md")).unwrap(),
+        "task-specific rule"
+    );
+    worktrees::remove(&root, &roots, &plan, true).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(repo.join("CLAUDE.md")).unwrap(),
+        "uncommitted source edit"
+    );
+    let clean = worktrees::prepare(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "feature/context-clean".into(),
+        "main".into(),
+    )
+    .await
+    .unwrap();
+    worktrees::create(&root, &roots, &clean).await.unwrap();
+    worktrees::remove(&root, &roots, &clean, false)
+        .await
+        .unwrap();
+    let linked = worktrees::prepare(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "feature/context-link".into(),
+        "main".into(),
+    )
+    .await
+    .unwrap();
+    worktrees::create(&root, &roots, &linked).await.unwrap();
+    let linked_path = Path::new(&linked.path);
+    std::fs::rename(
+        linked_path.join(".claude"),
+        linked_path.join("saved-context"),
+    )
+    .unwrap();
+    std::os::windows::fs::symlink_dir(&outside, linked_path.join(".claude")).unwrap();
+    assert!(worktrees::create(&root, &roots, &linked).await.is_err());
+    assert!(!outside.join("settings.local.json").exists());
+    worktrees::remove(&root, &roots, &linked, true)
+        .await
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(outside.join("settings.json")).unwrap(),
+        "outside synthetic configuration"
+    );
+}
+
+#[tokio::test]
 async fn worktrees_resume_verify_ownership_and_require_explicit_discard_without_deleting_branches()
 {
     let fixture = tempfile::tempdir().unwrap();

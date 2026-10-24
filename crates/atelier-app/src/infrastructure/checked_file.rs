@@ -291,6 +291,13 @@ impl CheckedFile {
         Ok(self)
     }
 
+    pub(super) fn single_link(self) -> Result<Self> {
+        if self.identity.links != 1 {
+            return Err("Configuration agent remplacée par un lien ou un dossier.".into());
+        }
+        Ok(self)
+    }
+
     pub fn read(self, limit: usize) -> Result<Vec<u8>> {
         if self.file.metadata()?.len() > u64::try_from(limit)? {
             return Err("Fichier trop volumineux.".into());
