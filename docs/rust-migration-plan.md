@@ -35,8 +35,8 @@ L'extensibilité conserve les capacités actuelles (tickets, dépôts, temps, di
 
 | Lot | Résultat attendu | Preuve de sortie | État |
 | --- | --- | --- | --- |
-| R00 | Périmètre corrigé, archive Git, suivi fonctionnel, CI adaptée | Instructions cohérentes, aucun effacement de données, derniers échecs explicités | En cours |
-| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | À faire ; briques existantes réutilisables |
+| R00 | Périmètre corrigé, archive Git, suivi fonctionnel, CI adaptée | Instructions cohérentes, aucun effacement de données, derniers échecs explicités | Validé à `28629e4` |
+| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | En cours : tableau et filtres candidats |
 | R02 | Espace de travail : Git/worktrees, contexte, fichiers/diffs et serveurs Front/Back | Dépôts synthétiques, confirmation des suppressions, sorties de dossier refusées, processus nettoyés | À faire ; scanner/ports/processus Windows candidats |
 | R03 | Profils, diagnostics, exécution et interactions Codex/Claude/commandes personnalisées | Faux agents compilés, flux importants, arrêt, erreur, reprise, secrets masqués ; aucun appel payant | À faire |
 | R04 | Tickets, dépôts, PR, synchronisation et connecteurs intégrés/extensibles | Serveurs HTTP de test, pagination, authentification, erreurs, délais et contrats d'extension | À faire |
@@ -78,4 +78,4 @@ La reconstruction reste en cours tant que cette checklist n'est pas satisfaite.
 
 ## Journal R00
 
-Le point archivé `7326122` est entièrement vert en CI Windows, journaux relus : la correction des chemins synthétiques passe, ainsi que les nouveaux scénarios de processus. Les instructions, le README et les références d'architecture distinguent désormais le produit cible du code Node historique. Le workflow Rust conserve Clippy, les tests Rust, les preuves natives Windows et le parcours WASM ; il ne reconstruit plus les paquets Node ni les comparateurs historiques à chaque push. Les outils de référence restent disponibles. La nouvelle configuration attend sa propre exécution distante.
+Le point archivé `7326122` est entièrement vert en CI Windows, journaux relus : la correction des chemins synthétiques passe, ainsi que les nouveaux scénarios de processus. Les instructions, le README et les références d'architecture distinguent désormais le produit cible du code Node historique. Le workflow Rust conserve Clippy, les tests Rust, les preuves natives Windows et le parcours WASM ; il ne reconstruit plus les paquets Node ni les comparateurs historiques à chaque push. Les outils de référence restent disponibles. La [CI de `28629e4`](https://github.com/FluryWaana/atelier/actions/runs/40121046698) confirme les deux jobs Windows : journaux natif et Edge relus, Clippy natif/WASM et tests Rust sans échec, isolation DPAPI entre comptes vérifiée, création/redémarrage/persistance/rotation de session dans le navigateur réussis. R00 est validé ; aucune qualification produit ni POSIX n'en découle.

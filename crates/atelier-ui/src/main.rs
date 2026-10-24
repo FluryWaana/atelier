@@ -68,7 +68,7 @@ fn session() -> Result<String, String> {
     Ok(token)
 }
 
-async fn load(token: &str) -> Result<Vec<Card>, String> {
+async fn load(token: &str) -> Result<Board, String> {
     let response = Request::get("/api/state")
         .header("Authorization", &format!("Bearer {token}"))
         .send()
@@ -80,13 +80,17 @@ async fn load(token: &str) -> Result<Vec<Card>, String> {
     response
         .json::<Board>()
         .await
-        .map(|board| board.cards)
         .map_err(|_| "Réponse du serveur invalide.".into())
 }
 
 #[component]
 fn App() -> impl IntoView {
     let cards = RwSignal::new(Vec::<Card>::new());
+    let projects = RwSignal::new(Vec::<atelier_core::document::Document>::new());
+    let search = RwSignal::new(String::new());
+    let repository = RwSignal::new(String::new());
+    let archives = RwSignal::new(false);
+    let loading = RwSignal::new(true);
     let title = RwSignal::new(String::new());
     let error = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
@@ -96,47 +100,98 @@ fn App() -> impl IntoView {
             let token = token.clone();
             spawn_local(async move {
                 match load(&token).await {
-                    Ok(value) => cards.set(value),
+                    Ok(value) => {
+                        cards.set(value.cards);
+                        projects.set(value.projects);
+                    }
                     Err(message) => error.set(message),
                 }
+                loading.set(false);
             });
         }
-        Err(message) => error.set(message.clone()),
+        Err(message) => {
+            error.set(message.clone());
+            loading.set(false);
+        }
     }
+    let visible = move || {
+        let query = search.get().trim().to_lowercase();
+        let repo = repository.get();
+        cards
+            .get()
+            .into_iter()
+            .filter(|card| {
+                card.fields.truthy("archived").unwrap_or(false) == archives.get()
+                    && (repo.is_empty() || field(&card.fields, "repo") == repo)
+                    && (query.is_empty()
+                        || format!(
+                            "{} {}",
+                            String::from_utf16_lossy(&card.title.0),
+                            field(&card.fields, "description")
+                        )
+                        .to_lowercase()
+                        .contains(&query))
+            })
+            .collect::<Vec<_>>()
+    };
     view! {
         <main id="main-content" class="main-content">
-            <header><p class="eyebrow">"ATELIER KANBAN"</p><h1>"Prototype Rust"</h1><p>"Données de test uniquement · création et lecture après redémarrage"</p></header>
-            <form on:submit=move |event| {
+            <header class="app-header"><div><p class="eyebrow">"ATELIER KANBAN"</p><h1>"Votre espace de travail"</h1><p class="subtitle">"Des idées aux tâches terminées, une étape à la fois."</p></div><span class="development">"En développement"</span></header>
+            <div class="toolbar" aria-label="Filtres du tableau">
+                <div><label for="board-search">"Rechercher"</label><input id="board-search" type="search" placeholder="Titre ou description…" prop:value=move || search.get() on:input=move |event| search.set(event_target_value(&event)) /></div>
+                <div><label for="board-project">"Projet"</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">"Tous les projets"</option><For each=move || projects.get() key=|project| field(project, "id") children=|project| view! { <option value=field(&project, "repo")>{field(&project, "name")}</option> } /></select></div>
+                <label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />"Archives"</label>
+                <span class="task-count" role="status">{move || format!("{} tâche(s)", visible().len())}</span>
+            </div>
+            <form class="quick-create" on:submit=move |event| {
                 event.prevent_default();
                 if pending.get_untracked() { return; }
                 let Ok(token) = token.clone() else { return; };
                 let entered = title.get_untracked();
+                let repo = repository.get_untracked();
                 pending.set(true); error.set(String::new());
                 spawn_local(async move {
                     let operation = async {
+                        let mut body = serde_json::json!({"title":entered});
+                        if !repo.is_empty() { body["repo"] = serde_json::json!(repo); }
                         let response = Request::post("/api/cards").header("Authorization", &format!("Bearer {token}")).header("X-Local-Request", "1")
-                            .json(&serde_json::json!({"title":entered})).map_err(|_| "Requête invalide.".to_owned())?.send().await.map_err(|_| "Connexion interrompue.".to_owned())?;
+                            .json(&body).map_err(|_| "Requête invalide.".to_owned())?.send().await.map_err(|_| "Connexion interrompue.".to_owned())?;
                         if !response.ok() {
                             let body: serde_json::Value = response.json().await.map_err(|_| "Réponse invalide.".to_owned())?;
                             return Err(body.get("error").and_then(|value| value.as_str()).unwrap_or("Création refusée.").to_owned());
                         }
                         let values = load(&token).await?;
-                        cards.set(values); title.set(String::new()); Ok(())
+                        cards.set(values.cards); projects.set(values.projects); title.set(String::new()); archives.set(false); Ok(())
                     }.await;
                     if let Err(message) = operation { error.set(message); }
                     pending.set(false);
                 });
             }>
-                <label for="task-title">"Titre"</label>
-                <input id="task-title" name="title" required maxlength="300" prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) />
-                <button id="create-task" class="primary" type="submit" disabled=move || pending.get()>"Créer la tâche"</button>
+                <div><label for="task-title">"Nouvelle tâche"</label><input id="task-title" name="title" required maxlength="300" placeholder="Que voulez-vous accomplir ?" prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
+                <button id="create-task" class="primary" type="submit" disabled=move || pending.get() || loading.get()>{move || if pending.get() { "Création…" } else { "Créer la tâche" }}</button>
             </form>
             <p role="alert" id="error">{move || error.get()}</p>
-            <section aria-label="Tâches" id="prototype-board">
-                <For each=move || cards.get() key=|card| card.id.clone() children=|card| view! { <article class="card" data-id=card.id><CardTitle title=card.title /></article> } />
+            <p class="loading" role="status" hidden=move || !loading.get()>"Chargement du tableau…"</p>
+            <section aria-label="Tableau des tâches" id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
+                <For each=|| vec![("todo", "À faire"), ("doing", "En cours"), ("review", "À vérifier"), ("done", "Terminé"), ("standby", "En attente")] key=|(status, _)| *status children=move |(status, label)| {
+                    let column = move || visible().into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
+                    view! { <section class="kanban-column" data-status=status aria-label=label><header class="column-heading"><h2>{label}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=|card| {
+                        let description = field(&card.fields, "description");
+                        view! { <article class="card" data-id=card.id><CardTitle title=card.title /><p class="card-description">{description}</p></article> }
+                    } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>"Aucune tâche"</p></div></section> }
+                } />
             </section>
         </main>
     }
+}
+
+fn field(document: &atelier_core::document::Document, key: &str) -> String {
+    document
+        .get::<atelier_core::document::JsonString>(key)
+        .ok()
+        .flatten()
+        .map(|value| String::from_utf16_lossy(&value.0))
+        .unwrap_or_default()
 }
 
 fn main() {

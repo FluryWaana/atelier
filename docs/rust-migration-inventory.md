@@ -100,6 +100,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [examples/connectors/demo/index.mjs](../examples/connectors/demo/index.mjs) | Source / configuration | [test/connectors-api.test.mjs](../test/connectors-api.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
 | [launcher.mjs](../launcher.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [lib/agent-account.mjs](../lib/agent-account.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-account.test.mjs](../test/agent-account.test.mjs) |
@@ -3579,4 +3580,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 405 fichiers ; 97 fichiers de tests Node.
+Total : 406 fichiers ; 97 fichiers de tests Node.

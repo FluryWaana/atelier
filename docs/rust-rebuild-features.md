@@ -7,7 +7,7 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 | Fonction à conserver | Référence existante | Briques Rust / travail restant | Lot |
 | --- | --- | --- | --- |
 | Projets multiples, configuration, héritage, dépôts Front/Back et projets liés | `lib/application/projects.mjs`, vues projets/réglages | CRUD et transactions présents ; contrat typé et écrans complets à livrer | R01/R02 |
-| Tableau, colonnes, filtres, recherche, navigation vers une tâche, archives | `public/views/board.mjs`, `task-workspace.mjs`, `lib/application/tasks.mjs` | API de tâches partielle ; vrai tableau WASM et navigation à construire | R01 |
+| Tableau, colonnes, filtres, recherche, navigation vers une tâche, archives | `public/views/board.mjs`, `task-workspace.mjs`, `lib/application/tasks.mjs` | Tableau WASM à cinq colonnes, recherche titre/description, filtres projet/archives et CSS autonome candidats ; navigation et parcours complets à livrer | R01 |
 | Création/édition/duplication/suppression des cartes, critères, dépendances/blocages et modèles | `lib/domain/`, `lib/application/tasks.mjs`, éditeur de tâche | Nombreux cas d'usage/tests réutilisables ; parcours complet et nouveaux contrats à qualifier | R01 |
 | Paramètres, modèles/efforts, profils et choix d'agent par projet/tâche | réglages, `agent-providers`, `default-agent` | Stockage chiffré et CRUD présents ; écran cohérent et diagnostics à livrer | R01/R03 |
 | Brainstorms, discussion, propositions et conversion en tâches | `brainstorm`, vues brainstorm | Création/session partielle ; conversation et conversion complètes à livrer | R05 |

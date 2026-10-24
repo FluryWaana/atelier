@@ -212,6 +212,42 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     let address = format!("http://127.0.0.1:{port}");
     let assets = root().join(".artifacts/rust-ui");
     let (mut server, token) = start_server(data.path(), port, &assets).await?;
+    let repo = data.path().join("repositories/board-fixture");
+    std::fs::create_dir_all(&repo)?;
+    let project: serde_json::Value = http
+        .post(format!("{address}/api/projects"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Projet synthétique", "repo":repo}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let queued: serde_json::Value = http.post(format!("{address}/api/cards"))
+        .bearer_auth(&token).header("x-local-request", "1")
+        .json(&json!({"title":"Attente projet", "description":"Une description à retrouver", "status":"standby", "repo":repo}))
+        .send().await?.error_for_status()?.json().await?;
+    let archived: serde_json::Value = http
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Archive synthétique", "repo":repo}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    http.post(format!(
+        "{address}/api/cards/{}/archive",
+        archived["id"].as_str().ok_or("Carte sans id")?
+    ))
+    .bearer_auth(&token)
+    .header("x-local-request", "1")
+    .json(&json!({"archived":true}))
+    .send()
+    .await?
+    .error_for_status()?;
     client
         .goto(&format!("{address}/#session={token}"))
         .await
@@ -235,6 +271,34 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .click()
         .await?;
+    wait_title(client, title).await?;
+    wait_dom(client, "return document.querySelectorAll('.kanban-column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=standby] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
+    client
+        .find(Locator::Css("#board-search"))
+        .await?
+        .send_keys("DESCRIPTION À RETROUVER")
+        .await?;
+    wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
+    client
+        .find(Locator::Css("#board-search"))
+        .await?
+        .clear()
+        .await?;
+    // WebDriver clear does not consistently emit the input event across browsers.
+    client.execute("document.querySelector('#board-search').dispatchEvent(new Event('input', {bubbles:true})); const select=document.querySelector('#board-project'); select.value=arguments[0]; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![project["repo"].clone()]).await?;
+    wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
+    client
+        .find(Locator::Css("#show-archives"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![archived["id"].clone()]).await?;
+    client
+        .find(Locator::Css("#show-archives"))
+        .await?
+        .click()
+        .await?;
+    client.execute("const select=document.querySelector('#board-project'); select.value=''; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![]).await?;
     wait_title(client, title).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-created.png"),
