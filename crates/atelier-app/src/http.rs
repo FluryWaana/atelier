@@ -134,7 +134,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         let exclusive = path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
-            || path.ends_with("/services/stop");
+            || path.ends_with("/services/stop")
+            || path.ends_with("/services/restart");
         let changed = state.changed.clone();
         #[cfg(windows)]
         let services = state.services.clone();
@@ -361,6 +362,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let app = app
         .route("/api/cards/{id}/services", get(services::get))
         .route("/api/cards/{id}/services/start", post(services::start))
+        .route("/api/cards/{id}/services/restart", post(services::restart))
         .route("/api/cards/{id}/services/stop", post(services::stop));
     let app = app
         .route("/api/health", get(health))

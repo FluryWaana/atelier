@@ -95,6 +95,57 @@ pub(super) async fn stop(
     respond(result)
 }
 
+pub(super) async fn restart(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let result = async {
+        let service = body
+            .get::<String>("serviceId")?
+            .filter(|value| !value.is_empty())
+            .ok_or("Service introuvable.")?;
+        let standalone = state
+            .services
+            .snapshot(&id)
+            .ok_or("Lance d’abord la pile depuis cette tâche.")?
+            .project_ids
+            .len()
+            == 1;
+        let mut plan = state
+            .database
+            .call(move |store| {
+                let card = store
+                    .document::<Card>(Documents::Cards, &id)?
+                    .ok_or(CardFailure::Missing)?;
+                services::plan(
+                    &card,
+                    &store.documents::<Document>(Documents::Projects)?,
+                    standalone,
+                    cfg!(windows),
+                )
+            })
+            .await?;
+        plan.services.retain(|launch| launch.id == service);
+        if plan.services.len() != 1 {
+            return Err(
+                "Ce service n’est plus configuré. Relance la pile avec les nouveaux réglages."
+                    .into(),
+            );
+        }
+        let prepared =
+            service_launch::prepare(&state.prototype_directory, &state.prototype_paths, plan)
+                .await?;
+        state.services.restart(prepared).await
+    }
+    .await;
+    respond(result)
+}
+
 fn respond(result: Result<atelier_core::contracts::ServiceSession>) -> Response {
     match result {
         Ok(session) => Json(session).into_response(),

@@ -111,7 +111,7 @@ pub fn Services(
             }
         })
     });
-    let act = move |stop: bool| {
+    let act = move |action: &'static str, service: Option<String>| {
         if pending.get_untracked() {
             return;
         }
@@ -128,20 +128,20 @@ pub fn Services(
         let card = id.get_value();
         let alive = alive.clone();
         let revision = revision.clone();
-        let body = if stop {
-            serde_json::json!({})
-        } else {
+        let mut body = if action == "start" {
             serde_json::json!({"standalone":standalone.get_untracked()})
+        } else {
+            serde_json::json!({})
         };
+        if let Some(service) = service {
+            body["serviceId"] = serde_json::json!(service);
+        }
         spawn_local(async move {
             let result = async {
                 write(
                     &credential,
                     Method::POST,
-                    &format!(
-                        "/api/cards/{card}/services/{}",
-                        if stop { "stop" } else { "start" }
-                    ),
+                    &format!("/api/cards/{card}/services/{action}"),
                     &body,
                 )
                 .await?
@@ -166,13 +166,13 @@ pub fn Services(
             <h3 id="services-heading">{move || i18n.text("Services Front/Back")}</h3>
             <p class="field-help">{move || i18n.text("Lance les commandes enregistrées dans les réglages du projet. Les services du projet lié utilisent son dépôt principal ; les services de cette tâche utilisent ses worktrees.")}</p>
             <label class="check-filter"><input id="services-standalone" type="checkbox" disabled=move || pending.get() || running.get() prop:checked=move || standalone.get() on:change=move |event| standalone.set(event_target_checked(&event)) />{move || i18n.text("Lancer seulement ce projet")}</label>
-            <div class="editor-actions"><button id="start-services" type="button" disabled=move || pending.get() || blocked.get() || running.get() || !ready.get() on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Lancer les services")}</button><button id="stop-services" type="button" disabled=move || pending.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter les services")}</button></div>
+            <div class="editor-actions"><button id="start-services" type="button" disabled=move || pending.get() || blocked.get() || running.get() || !ready.get() on:click=move |_| act.with_value(|act| act("start",None))>{move || i18n.text("Lancer les services")}</button><button id="stop-services" type="button" disabled=move || pending.get() || !running.get() on:click=move |_| act.with_value(|act| act("stop",None))>{move || i18n.text("Arrêter les services")}</button></div>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie les worktrees avant de lancer les services.")}</p>
             <p id="services-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <For each={move || session.get().map(|session| session.services).unwrap_or_default()} key=|service| service.id.clone() children=move |initial| {
                 let service_id = StoredValue::new(initial.id);
                 let current = move || session.get().and_then(|session| session.services.into_iter().find(|service| service.id == service_id.get_value()));
-                view! { <article class="service-state"><h4>{move || current().map(|service| service.name).unwrap_or_default()}</h4><p class="service-status" role="status">{move || current().map(|service| i18n.text(match service.status { ServiceStatus::Starting=>"Démarrage…",ServiceStatus::Running=>"Processus actif",ServiceStatus::Stopping=>"Arrêt…",ServiceStatus::Stopped=>"Arrêté",ServiceStatus::Failed=>"Échec du service" })).unwrap_or_default()}</p><p class="workspace-path">{move || current().map(|service| service.directory).unwrap_or_default()}</p><p>{move || current().and_then(|service| service.port).map(|port| format!("{} {port}", i18n.text("Port attribué :"))).unwrap_or_default()}</p><p class="error">{move || current().map(|service| i18n.text(&service.error)).unwrap_or_default()}</p><details><summary>{move || i18n.text("Journaux du service")}</summary><pre class="service-log"><code>{move || current().map(|service| service.log).unwrap_or_default()}</code></pre></details></article> }
+                view! { <article class="service-state"><h4>{move || current().map(|service| service.name).unwrap_or_default()}</h4><p class="service-status" role="status">{move || current().map(|service| i18n.text(match service.status { ServiceStatus::Starting=>"Démarrage…",ServiceStatus::Running=>"Processus actif",ServiceStatus::Stopping=>"Arrêt…",ServiceStatus::Stopped=>"Arrêté",ServiceStatus::Failed=>"Échec du service" })).unwrap_or_default()}</p><p class="workspace-path">{move || current().map(|service| service.directory).unwrap_or_default()}</p><p>{move || current().and_then(|service| service.port).map(|port| format!("{} {port}", i18n.text("Port attribué :"))).unwrap_or_default()}</p><p class="error">{move || current().map(|service| i18n.text(&service.error)).unwrap_or_default()}</p><details><summary>{move || i18n.text("Journaux du service")}</summary><pre class="service-log"><code>{move || current().map(|service| service.log).unwrap_or_default()}</code></pre></details><div class="editor-actions"><button class="restart-service" type="button" disabled=move || pending.get() || blocked.get() || !ready.get() on:click=move |_| act.with_value(|act| act("restart",Some(service_id.get_value())))>{move || i18n.text("Relancer ce service")}</button><button class="stop-service" type="button" disabled=move || pending.get() || current().is_none_or(|service| service.pid.is_none() && !matches!(service.status,ServiceStatus::Starting|ServiceStatus::Running|ServiceStatus::Stopping)) on:click=move |_| act.with_value(|act| act("stop",Some(service_id.get_value())))>{move || i18n.text("Arrêter ce service")}</button></div></article> }
             } />
             <p class="field-help">{move || i18n.text("Les journaux conservent les derniers 64 Kio par service. Un processus actif ne garantit pas encore que son serveur répond.")}</p>
         </section>

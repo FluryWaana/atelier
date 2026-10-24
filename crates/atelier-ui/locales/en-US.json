@@ -1,4 +1,8 @@
 {
+  "Relancer ce service": "Restart this service",
+  "Arrêter ce service": "Stop this service",
+  "Ce service n’est plus configuré. Relance la pile avec les nouveaux réglages.": "This service is no longer configured. Start the stack with the new settings.",
+  "Lance d’abord la pile depuis cette tâche.": "Start the stack from this task first.",
   "Services Front/Back": "Front/Back services",
   "Lance les commandes enregistrées dans les réglages du projet. Les services du projet lié utilisent son dépôt principal ; les services de cette tâche utilisent ses worktrees.": "Run the commands saved in project settings. Linked project services use its main repository; this task's services use its worktrees.",
   "Lancer seulement ce projet": "Run only this project",

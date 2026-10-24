@@ -1250,6 +1250,33 @@ async fn files_scenario(
     wait_dom(client, "return Array.from(document.querySelectorAll('.service-worktree')).filter(element=>!element.hidden).length === 2 && Array.from(document.querySelectorAll('.service-worktree [role=status]')).every(element=>element.textContent === 'Worktree prêt.');", vec![]).await?;
     click(client, "#start-services").await?;
     wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif') && Array.from(document.querySelectorAll('.service-log')).every(element=>element.textContent.includes('synthetic-service-ready'));", vec![]).await?;
+    let before: atelier_core::contracts::ServiceSession = http
+        .get(format!("{address}/api/cards/{}/services", card.id))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    click(client, ".restart-service").await?;
+    wait_dom(client,"return document.querySelector('.restart-service')?.disabled === false && document.querySelector('#services-error')?.textContent === '' && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif');",vec![]).await?;
+    let restarted: atelier_core::contracts::ServiceSession = http
+        .get(format!("{address}/api/cards/{}/services", card.id))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if before.services[0].pid == restarted.services[0].pid
+        || before.services[1].pid != restarted.services[1].pid
+    {
+        return Err(
+            "La relance individuelle a conservé son processus ou interrompu son voisin.".into(),
+        );
+    }
+    click(client, ".stop-service").await?;
+    wait_dom(client,"return document.querySelector('.service-status')?.textContent === 'Arrêté' && document.querySelectorAll('.service-status')[1]?.textContent === 'Processus actif';",vec![]).await?;
     for path in [
         format!("{address}/api/cards/{}/worktree/remove", card.id),
         format!("{address}/api/backups"),

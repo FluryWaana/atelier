@@ -32,6 +32,14 @@ struct Session {
     plan: LaunchPlan,
     services: Vec<Running>,
 }
+
+struct PendingService {
+    command: String,
+    directory: WorkingDirectory,
+    lease: Option<PortLease>,
+    cancel: watch::Receiver<bool>,
+    done: watch::Sender<bool>,
+}
 impl Session {
     fn active(&self) -> bool {
         self.services.iter().any(|service| !*service.done.borrow())
@@ -223,85 +231,21 @@ impl DevServers {
                 let _ = done.send(true);
                 continue;
             }
-            let port = lease.as_ref().map(|lease| lease.port);
-            let command = port
-                .map(|port| launch.command.replace("{port}", &port.to_string()))
-                .unwrap_or(launch.command);
-            // shortcut: release immediately before spawn; the child must fail if another application wins the port race.
-            drop(lease);
-            match spawn(&command, &directory, port).await {
-                Ok(mut child) => {
-                    let streams = child.child.stdout.take().zip(child.child.stderr.take());
-                    let Some((stdout, stderr)) = streams else {
-                        let pid = child.child.id();
-                        let terminated = child.stop().await.is_ok();
-                        self.update(&card, index, true, |state| {
-                            state.status = ServiceStatus::Failed;
-                            state.pid = if terminated { None } else { pid };
-                            state.error = "Flux du service absents.".into();
-                        });
-                        let _ = done.send(terminated);
-                        failure = Some("Flux du service absents.".into());
-                        continue;
-                    };
-                    self.update(&card, index, true, |state| {
-                        state.status = ServiceStatus::Running;
-                        state.pid = child.child.id();
-                    });
-                    let manager = self.clone();
-                    let card = card.clone();
-                    tokio::spawn(async move {
-                        let _directory = directory;
-                        let mut cancel = cancel;
-                        let monitor = async {
-                            let result = tokio::select! {
-                                result = child.wait() => result,
-                                _ = cancel.changed() => child.stop().await,
-                            };
-                            if result.is_err() {
-                                let _ = child.stop().await;
-                            }
-                            result
-                        };
-                        let (exit, out, err) = tokio::join!(
-                            monitor,
-                            manager.read(&card, index, stdout),
-                            manager.read(&card, index, stderr)
-                        );
-                        let terminated = exit.is_ok();
-                        manager.update(&card, index, true, |state| {
-                            match exit {
-                                Ok(status) => {
-                                    state.pid = None;
-                                    state.exit_code = status.code();
-                                    state.status = if status.success() || *cancel.borrow() {
-                                        ServiceStatus::Stopped
-                                    } else {
-                                        ServiceStatus::Failed
-                                    };
-                                }
-                                Err(error) => {
-                                    state.status = ServiceStatus::Failed;
-                                    state.error = error.to_string();
-                                }
-                            }
-                            if out.is_err() || err.is_err() {
-                                state.error = "Lecture des journaux interrompue.".into();
-                            }
-                        });
-                        drop(_directory);
-                        let _ = done.send(terminated);
-                        let _ = manager.changed.send(());
-                    });
-                }
-                Err(error) => {
-                    self.update(&card, index, true, |state| {
-                        state.status = ServiceStatus::Failed;
-                        state.error = error.to_string();
-                    });
-                    let _ = done.send(true);
-                    failure = Some(error);
-                }
+            if let Err(error) = self
+                .launch(
+                    &card,
+                    index,
+                    PendingService {
+                        command: launch.command,
+                        directory,
+                        lease,
+                        cancel,
+                        done,
+                    },
+                )
+                .await
+            {
+                failure = Some(error);
             }
         }
         if let Some(error) = failure {
@@ -312,6 +256,210 @@ impl DevServers {
             .sessions
             .get(&card)
             .map(Session::snapshot)
+            .ok_or_else(|| "Session de services absente.".into())
+    }
+
+    async fn launch(
+        self: &Arc<Self>,
+        card: &str,
+        index: usize,
+        pending: PendingService,
+    ) -> Result<()> {
+        let PendingService {
+            command,
+            directory,
+            lease,
+            cancel,
+            done,
+        } = pending;
+        let port = lease.as_ref().map(|lease| lease.port);
+        let command = port
+            .map(|port| command.replace("{port}", &port.to_string()))
+            .unwrap_or(command);
+        // shortcut: release immediately before spawn; the child must fail if another application wins the port race.
+        drop(lease);
+        let mut child = match spawn(&command, &directory, port).await {
+            Ok(child) => child,
+            Err(error) => {
+                self.update(card, index, true, |state| {
+                    state.status = ServiceStatus::Failed;
+                    state.error = error.to_string();
+                });
+                let _ = done.send(true);
+                return Err(error);
+            }
+        };
+        let streams = child.child.stdout.take().zip(child.child.stderr.take());
+        let Some((stdout, stderr)) = streams else {
+            let pid = child.child.id();
+            let terminated = child.stop().await.is_ok();
+            self.update(card, index, true, |state| {
+                state.status = ServiceStatus::Failed;
+                state.pid = if terminated { None } else { pid };
+                state.error = "Flux du service absents.".into();
+            });
+            let _ = done.send(terminated);
+            return Err("Flux du service absents.".into());
+        };
+        self.update(card, index, true, |state| {
+            state.status = ServiceStatus::Running;
+            state.pid = child.child.id();
+        });
+        let manager = self.clone();
+        let card = card.to_owned();
+        tokio::spawn(async move {
+            let mut cancel = cancel;
+            let monitor = async {
+                let result = tokio::select! { result = child.wait() => result, _ = cancel.changed() => child.stop().await };
+                if result.is_err() {
+                    let _ = child.stop().await;
+                }
+                result
+            };
+            let (exit, out, err) = tokio::join!(
+                monitor,
+                manager.read(&card, index, stdout),
+                manager.read(&card, index, stderr)
+            );
+            let terminated = exit.is_ok();
+            manager.update(&card, index, true, |state| {
+                match exit {
+                    Ok(status) => {
+                        state.pid = None;
+                        state.exit_code = status.code();
+                        state.status = if status.success() || *cancel.borrow() {
+                            ServiceStatus::Stopped
+                        } else {
+                            ServiceStatus::Failed
+                        };
+                    }
+                    Err(error) => {
+                        state.status = ServiceStatus::Failed;
+                        state.error = error.to_string();
+                    }
+                }
+                if out.is_err() || err.is_err() {
+                    state.error = "Lecture des journaux interrompue.".into();
+                }
+            });
+            drop(directory);
+            let _ = done.send(terminated);
+            let _ = manager.changed.send(());
+        });
+        Ok(())
+    }
+
+    pub async fn restart(self: &Arc<Self>, mut prepared: PreparedLaunch) -> Result<ServiceSession> {
+        let _operation = self.operations.lock().await;
+        if prepared.plan.services.len() != 1 || prepared.directories.len() != 1 {
+            return Err("Sélectionne un seul service à relancer.".into());
+        }
+        let card = prepared.plan.card_id.clone();
+        let launch = prepared.plan.services.remove(0);
+        let directory = prepared.directories.remove(0);
+        let (index, previous_port) = {
+            let inner = self.inner();
+            let session = inner
+                .sessions
+                .get(&card)
+                .ok_or("Lance d’abord la pile depuis cette tâche.")?;
+            let index = session
+                .services
+                .iter()
+                .position(|service| service.state.id == launch.id)
+                .ok_or("Service introuvable.")?;
+            let mut prospective = session.plan.clone();
+            if let Some(previous) = prospective
+                .services
+                .iter_mut()
+                .find(|service| service.id == launch.id)
+            {
+                *previous = launch.clone();
+            }
+            prospective.isolated_ports = prospective
+                .services
+                .iter()
+                .all(|service| service.command.contains("{port}"));
+            if inner.sessions.values().any(|other| {
+                other.plan.card_id != card
+                    && other.active()
+                    && !compatible(&prospective, &other.plan)
+            }) {
+                return Err("Arrête la pile déjà lancée pour ces projets, ou utilise {port} pour chaque service.".into());
+            }
+            (index, session.services[index].state.port)
+        };
+        self.stop_inner(&card, Some(&launch.id)).await?;
+        let lease = if launch.command.contains("{port}") {
+            let requested = if launch.requested_port == 0 {
+                previous_port.unwrap_or(0)
+            } else {
+                launch.requested_port
+            };
+            if requested != 0
+                && self
+                    .inner()
+                    .sessions
+                    .values()
+                    .flat_map(|session| &session.services)
+                    .any(|service| !*service.done.borrow() && service.state.port == Some(requested))
+            {
+                return Err("Ce port est déjà attribué à un service Atelier.".into());
+            }
+            Some(PortLease::reserve(requested)?)
+        } else {
+            None
+        };
+        let (stop, cancel) = watch::channel(false);
+        let (done, completion) = watch::channel(false);
+        {
+            let mut inner = self.inner();
+            let session = inner
+                .sessions
+                .get_mut(&card)
+                .ok_or("Session de services absente.")?;
+            session.services[index] = Running {
+                state: ServiceState {
+                    id: launch.id.clone(),
+                    name: launch.name.clone(),
+                    directory: path_string(&directory.path).utf8()?,
+                    status: ServiceStatus::Starting,
+                    pid: None,
+                    port: lease.as_ref().map(|lease| lease.port),
+                    exit_code: None,
+                    log: String::new(),
+                    error: String::new(),
+                },
+                stop,
+                done: completion,
+            };
+            if let Some(previous) = session
+                .plan
+                .services
+                .iter_mut()
+                .find(|service| service.id == launch.id)
+            {
+                *previous = launch.clone();
+            }
+            session.plan.isolated_ports = session
+                .plan
+                .services
+                .iter()
+                .all(|service| service.command.contains("{port}"));
+        }
+        self.launch(
+            &card,
+            index,
+            PendingService {
+                command: launch.command,
+                directory,
+                lease,
+                cancel,
+                done,
+            },
+        )
+        .await?;
+        self.snapshot(&card)
             .ok_or_else(|| "Session de services absente.".into())
     }
 
@@ -560,6 +708,26 @@ mod tests {
         assert_eq!(partial.services[0].status, ServiceStatus::Stopped);
         assert_eq!(partial.services[1].pid, started.services[1].pid);
         assert_eq!(partial.services[1].status, ServiceStatus::Running);
+        let selected = || {
+            let mut launch = prepared();
+            launch.plan.services.retain(|service| service.id == "front");
+            launch.directories.truncate(1);
+            launch
+        };
+        let occupied = PortLease::reserve(started.services[0].port.unwrap()).unwrap();
+        assert!(manager.restart(selected()).await.is_err());
+        assert_eq!(
+            manager.snapshot("synthetic-card").unwrap().services[1].pid,
+            started.services[1].pid
+        );
+        drop(occupied);
+        let restarted = manager.restart(selected()).await.unwrap();
+        assert_ne!(restarted.services[0].pid, started.services[0].pid);
+        assert_eq!(restarted.services[0].port, started.services[0].port);
+        assert_eq!(restarted.services[1].pid, started.services[1].pid);
+        let again = manager.restart(selected()).await.unwrap();
+        assert_ne!(again.services[0].pid, restarted.services[0].pid);
+        assert_eq!(again.services[1].pid, started.services[1].pid);
         assert!(
             manager
                 .stop("synthetic-card", Some("unknown"))
