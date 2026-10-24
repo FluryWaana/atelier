@@ -1,11 +1,32 @@
 use super::{agent_options::agent_provider, tasks::STATUSES, text, truthy};
+use crate::document::JsonString;
 use serde_json::{Value, json};
 
 type Result<T> = std::result::Result<T, &'static str>;
 
 pub fn same_repository(a: &str, b: &str, windows: bool) -> bool {
+    same_repository_units(&JsonString::from(a), &JsonString::from(b), windows)
+}
+
+pub fn same_repository_units(a: &JsonString, b: &JsonString, windows: bool) -> bool {
     if windows {
-        a.replace('\\', "/").to_lowercase() == b.replace('\\', "/").to_lowercase()
+        fn key(value: &JsonString) -> Vec<u16> {
+            let mut result = Vec::new();
+            let mut segment = String::new();
+            for character in char::decode_utf16(value.0.iter().copied()) {
+                match character {
+                    Ok(character) => segment.push(if character == '\\' { '/' } else { character }),
+                    Err(surrogate) => {
+                        result.extend(segment.to_lowercase().encode_utf16());
+                        segment.clear();
+                        result.push(surrogate.unpaired_surrogate());
+                    }
+                }
+            }
+            result.extend(segment.to_lowercase().encode_utf16());
+            result
+        }
+        key(a) == key(b)
     } else {
         a == b
     }

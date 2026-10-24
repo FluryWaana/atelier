@@ -76,6 +76,18 @@ Contrôles Windows : 66 tests Rust réussis, Clippy natif/WASM et comparateurs h
 
 La [CI des modèles `1b9a9f7`](https://github.com/FluryWaana/atelier/actions/runs/40097251427) est entièrement réussie. Les journaux Windows, Linux x64/ARM64 et macOS Intel/ARM64 confirment le scénario HTTP concurrent avec redémarrage et la conservation SQLite des réglages/UTF-16. La CI du nouveau portage de création reste attendue.
 
+## Création HTTP et dépôts natifs — après `e027e70`
+
+POST `/api/cards` et `/api/brainstorms` utilisent désormais le cas d'usage complet dans une transaction du worker SQLite. La sélection de l'agent de projet précède la résolution du dépôt, comme Node ; les réglages ne sont pas convertis globalement en UTF-8 et leurs champs inconnus restent intacts. Les chemins explicites sont trimés, résolus et contrôlés comme dossiers ; Windows retire le préfixe technique de chemin étendu avant stockage. La comparaison de dépôts garde casse/séparateurs Windows et UTF-16 sans perte. Aucun agent n'est démarré par une création en colonne `doing`.
+
+L'ancien constructeur M01 limité au titre et son test de refus des autres champs sont retirés : leurs validations de titre figurent dans le comparateur complet et le scénario HTTP existant. Les 77 attentes précédentes sont inchangées ; sept scénarios issus de `settingsForProject` portent le corpus à 84 créations. Le test HTTP Node équivalent et le test Rust vérifient héritage, overrides, dossiers Unicode, refus d'un fichier/dossier absent/NUL, modèles absents et options invalides. Rust vérifie en plus deux créations concurrentes, une panne SQL injectée sans écriture partielle ni détail privé en réponse, et la relecture des critères UTF-16 après redémarrage.
+
+Contrôles Windows : 66 tests Rust réussis ; 305 contrats de domaine et 84 créations historiques vérifiés ; Clippy natif/WASM réussi. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 430 tests, 427 réussis, aucun échec, trois exclusions, 84,745 s. Parcours Edge réel réussi après rebuild WASM : CSP, création, redémarrage du processus, relecture et rotation de session.
+
+Limites : les messages des erreurs système de chemins proviennent de Rust/OS, sans qualification à l'octet des diagnostics Node `lstat` ; les statuts de refus et l'absence d'écriture sont testés. Les pannes de stockage répondent 500 avec message public générique. L'édition, les réglages/projets HTTP et l'interface de création complète restent ouverts. Les protections SQLite M02 déjà signalées restent ouvertes ; le prototype n'est pas qualifié pour des données réelles.
+
+Journaux `e027e70` Windows, Linux x64/ARM64 et macOS ARM64 relus : comparateur de 77 créations et test Rust correspondants réussis. macOS Intel et la nouvelle CI du branchement HTTP restent attendus.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

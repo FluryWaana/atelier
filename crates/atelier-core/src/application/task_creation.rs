@@ -10,7 +10,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + S
 
 pub trait CreationContext {
     fn settings(&self) -> Result<Document>;
-    fn agent_for(&self, repo: Option<&RawValue>) -> Result<JsonString>;
+    fn agent_for(&self, body: &Document) -> Result<JsonString>;
     fn repository(&self, value: &RawValue) -> Result<JsonString>;
     fn new_id(&self) -> String;
     fn timestamp(&self) -> Result<String>;
@@ -25,6 +25,61 @@ fn text(value: Option<&RawValue>, limit: usize) -> Result<JsonString> {
 
 fn present(value: Option<&RawValue>) -> Option<&RawValue> {
     value.filter(|value| value.get() != "null")
+}
+
+pub fn default_agent(
+    settings: &Document,
+    projects: &[Document],
+    body: &Document,
+    windows: bool,
+) -> Result<JsonString> {
+    let empty = RawValue::from_string("\"\"".into())?;
+    let repo = if body.truthy("repo")? {
+        body.raw("repo")
+    } else if settings.truthy("repo")? {
+        settings.raw("repo")
+    } else {
+        None
+    }
+    .unwrap_or(&empty);
+    for project in projects {
+        let path = if project.truthy("repo")? {
+            project.raw("repo")
+        } else {
+            None
+        }
+        .unwrap_or(&empty);
+        let matches = if windows || (path.get().starts_with('"') && repo.get().starts_with('"')) {
+            let invalid = "(value || \"\").replaceAll is not a function";
+            let path = serde_json::from_str::<JsonString>(path.get()).map_err(|_| invalid)?;
+            let repo = serde_json::from_str::<JsonString>(repo.get()).map_err(|_| invalid)?;
+            crate::domain::projects::same_repository_units(&path, &repo, windows)
+        } else if [path, repo]
+            .iter()
+            .any(|raw| raw.get().starts_with(['{', '[', '"']))
+        {
+            false
+        } else {
+            serde_json::from_str::<Value>(path.get())? == serde_json::from_str::<Value>(repo.get())?
+        };
+        if matches {
+            if project.truthy("agent")? {
+                return Ok(project
+                    .get::<JsonString>("agent")
+                    .map_err(|_| CardFailure::Invalid("Agent invalide."))?
+                    .ok_or(CardFailure::Invalid("Agent invalide."))?);
+            }
+            break;
+        }
+    }
+    if settings.truthy("agent")? {
+        Ok(settings
+            .get::<JsonString>("agent")
+            .map_err(|_| CardFailure::Invalid("Agent invalide."))?
+            .ok_or(CardFailure::Invalid("Agent invalide."))?)
+    } else {
+        Ok(JsonString::from("codex"))
+    }
 }
 
 fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
@@ -79,7 +134,7 @@ pub fn create(
             .map_err(|_| CardFailure::Invalid("Agent invalide."))?
             .ok_or(CardFailure::Invalid("Agent invalide."))?
     } else {
-        context.agent_for(body.raw("repo"))?
+        context.agent_for(body)?
     };
     let template = template.unwrap_or_default();
     let mode = if brainstorming {

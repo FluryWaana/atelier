@@ -32,8 +32,11 @@ impl CreationContext for Context {
         }
         Ok(settings)
     }
-    fn agent_for(&self, repo: Option<&RawValue>) -> Result<JsonString> {
-        self.event(&("agentFor", repo));
+    fn agent_for(&self, body: &Document) -> Result<JsonString> {
+        self.event(&("agentFor", body.raw("repo")));
+        if let Some(projects) = self.scenario.get::<Vec<Document>>("projects")? {
+            return task_creation::default_agent(&self.settings()?, &projects, body, cfg!(windows));
+        }
         Ok(JsonString::from("claude"))
     }
     fn repository(&self, value: &RawValue) -> Result<JsonString> {

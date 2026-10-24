@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createTasks } from '../../lib/application/tasks.mjs';
 import { text } from '../../lib/domain/validation.mjs';
 import { checklistText } from '../../lib/domain/checklist.mjs';
+import { settingsForProject } from '../../lib/project-settings.mjs';
 
 const cases = [];
 const add = (body, options = {}) => cases.push({ body, ...options });
@@ -31,13 +32,20 @@ add({ title: 'Task', agent: 'work' }, { settings: { agentProviders: [{ id: 'work
 add({ title: 'Task', agent: 'work', model: '\ud800', effort: '\ud800' }, { settings: { agentProviders: [{ id: 'work', type: 'bad' }] } });
 add({ title: 'Task', model: false, effort: '\ud800' });
 add({ title: 'Task', agent: '\ud800' }, { settings: { agentProviders: [{ id: '\ud800', type: 'codex' }] } });
+add({ title: 'Task' }, { projects: [] });
+add({ title: 'Task' }, { projects: [], settings: { agent: 'claude' } });
+add({ title: 'Task' }, { projects: [{ repo: 'default', agent: 'claude' }], settings: { repo: 'default', agent: 'codex' } });
+add({ title: 'Task', repo: 'project' }, { projects: [{ repo: 'project', agent: 'codex' }], settings: { agent: 'claude' } });
+add({ title: 'Task', repo: '\ud800' }, { projects: [{ repo: '\ud800', agent: 'claude' }], settings: { agent: 'codex' } });
+add({ title: 'Task', repo: 'project', agent: 'codex' }, { projects: [{ repo: 'project', agent: 'claude' }] });
+add({ title: 'Task', repo: 'project' }, { projects: [{ repo: 'project', agent: '' }, { repo: 'project', agent: 'claude' }], settings: { agent: 'codex' } });
 for (const scenario of cases) {
   const events = [];
   let card, clock = 0;
   const tasks = createTasks({
     store: { settings: () => scenario.settings || {}, putCard: value => { card = structuredClone(value); } },
     config: () => ({ repo: '', ...scenario.settings }),
-    configFor: ({ repo }) => { events.push(['agentFor', repo ?? null]); return { agent: 'claude' }; },
+    configFor: ({ repo }) => { events.push(['agentFor', repo ?? null]); return scenario.projects ? settingsForProject({ repo: '', ...scenario.settings }, scenario.projects, repo) : { agent: 'claude' }; },
     repository: value => {
       events.push(['repository', value]);
       const path = text(value, 2000);

@@ -3,7 +3,7 @@ use crate::{
     infrastructure::{database::Database, prototype::PrototypeDirectory, session},
 };
 use atelier_core::{
-    application::{create_card, duplicate_card},
+    application::duplicate_card,
     contracts::{Board, Card},
     document::Document,
 };
@@ -24,6 +24,7 @@ use tower_http::services::ServeFile;
 
 mod card_lifecycle;
 mod events;
+mod task_creation;
 mod task_templates;
 mod time_tracking;
 
@@ -189,28 +190,6 @@ fn timestamp() -> Result<String> {
     )
 }
 
-async fn create(State(state): State<Shared>, request: Request) -> Response {
-    let body = match object(request.into_body()).await {
-        Ok(body) => body,
-        Err((status, message)) => return failure(status, message),
-    };
-    let timestamp = match timestamp() {
-        Ok(value) => value,
-        Err(_) => return failure(StatusCode::INTERNAL_SERVER_ERROR, "Horloge indisponible."),
-    };
-    let card = match create_card(&body, uuid::Uuid::new_v4().to_string(), timestamp) {
-        Ok(card) => card,
-        Err(message) => return failure(StatusCode::BAD_REQUEST, message),
-    };
-    match state.database.put_card(card).await {
-        Ok(card) => Json(card).into_response(),
-        Err(_) => failure(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Écriture du stockage impossible.",
-        ),
-    }
-}
-
 async fn duplicate(
     State(state): State<Shared>,
     Path(id): Path<String>,
@@ -306,7 +285,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}", any(time_tracking::entry))
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
-        .route("/api/cards", post(create))
+        .route("/api/cards", post(task_creation::create))
+        .route("/api/brainstorms", post(task_creation::create))
         .route("/api/templates", post(task_templates::create))
         .route(
             "/api/templates/{id}",

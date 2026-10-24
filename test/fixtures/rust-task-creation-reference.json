@@ -2104,5 +2104,298 @@
         "timestamp"
       ]
     }
+  },
+  {
+    "body": {
+      "title": "Task"
+    },
+    "projects": [],
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "",
+        "agent": "codex",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          null
+        ],
+        "id",
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task"
+    },
+    "projects": [],
+    "settings": {
+      "agent": "claude"
+    },
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "",
+        "agent": "claude",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          null
+        ],
+        "id",
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task"
+    },
+    "projects": [
+      {
+        "repo": "default",
+        "agent": "claude"
+      }
+    ],
+    "settings": {
+      "repo": "default",
+      "agent": "codex"
+    },
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "default",
+        "agent": "claude",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          null
+        ],
+        "id",
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task",
+      "repo": "project"
+    },
+    "projects": [
+      {
+        "repo": "project",
+        "agent": "codex"
+      }
+    ],
+    "settings": {
+      "agent": "claude"
+    },
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "checked:project",
+        "agent": "codex",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          "project"
+        ],
+        "id",
+        [
+          "repository",
+          "project"
+        ],
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task",
+      "repo": "\ud800"
+    },
+    "projects": [
+      {
+        "repo": "\ud800",
+        "agent": "claude"
+      }
+    ],
+    "settings": {
+      "agent": "codex"
+    },
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "checked:\ud800",
+        "agent": "claude",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          "\ud800"
+        ],
+        "id",
+        [
+          "repository",
+          "\ud800"
+        ],
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task",
+      "repo": "project",
+      "agent": "codex"
+    },
+    "projects": [
+      {
+        "repo": "project",
+        "agent": "claude"
+      }
+    ],
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "checked:project",
+        "agent": "codex",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        "id",
+        [
+          "repository",
+          "project"
+        ],
+        "timestamp",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Task",
+      "repo": "project"
+    },
+    "projects": [
+      {
+        "repo": "project",
+        "agent": ""
+      },
+      {
+        "repo": "project",
+        "agent": "claude"
+      }
+    ],
+    "settings": {
+      "agent": "codex"
+    },
+    "expected": {
+      "value": {
+        "id": "created",
+        "title": "Task",
+        "description": "",
+        "instructions": "",
+        "repo": "checked:project",
+        "agent": "codex",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [],
+        "status": "todo",
+        "createdAt": "2026-10-24T00:00:00.000Z",
+        "updatedAt": "2026-10-24T00:00:00.001Z"
+      },
+      "prompt": "",
+      "events": [
+        [
+          "agentFor",
+          "project"
+        ],
+        "id",
+        [
+          "repository",
+          "project"
+        ],
+        "timestamp",
+        "timestamp"
+      ]
+    }
   }
 ]

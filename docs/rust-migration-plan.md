@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication/archivage/suppression/modèles HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — création complète, duplication/archivage/suppression/modèles HTTP et chronomètres locaux ; édition, autres API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -627,6 +627,13 @@ Prochaine action concrète :
 - **Vérification :** 77 créations capturées de Node et ordre des appels comparés ; 305 contrats précédents inchangés, 66 tests Rust et Clippy natif/WASM réussis. Suite Node complète consignée dans M03.
 - **CI recueillie :** modèles `1b9a9f7` réussis sur les cinq cibles natives ; journaux de concurrence/reprise et conservation des réglages relus.
 - **Suite :** brancher la création complète avec héritage de projet et résolution native du dépôt, puis édition/projets/réglages. M02/M03 restent en cours.
+
+### Incrément M03 — création HTTP complète et dépôts natifs
+
+- **Livré :** tâches/brainstorms via le cas d'usage complet, héritage projet/modèle, résolution native des dossiers et écriture transactionnelle. Ancien constructeur limité au titre retiré.
+- **Vérification :** 66 tests Rust, 84 créations historiques (77 précédentes inchangées), 305 contrats de domaine, Clippy natif/WASM et parcours réel Edge réussis. Node complet : 430 tests, 427 réussis, zéro échec, trois exclusions, 84,745 s.
+- **Limites :** diagnostics système de chemins non qualifiés à l'octet contre Node ; erreurs de stockage masquées en 500. Création UI complète et édition/réglages/projets encore ouvertes ; protections M02 non closes.
+- **CI :** `e027e70` vérifié dans les journaux Windows, Linux x64/ARM64 et macOS ARM64 ; macOS Intel encore attendu. Nouvelle preuve native du branchement HTTP à recueillir.
 
 ## 12. Définition finale de terminé
 
