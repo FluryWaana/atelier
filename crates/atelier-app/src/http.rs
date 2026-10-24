@@ -178,6 +178,7 @@ async fn board(State(state): State<Shared>) -> Response {
                 projects: store.documents(Documents::Projects)?,
                 runs: store.documents(Documents::Runs)?,
                 times: store.documents(Documents::Times)?,
+                revision: store.revision(),
             })
         })
         .await

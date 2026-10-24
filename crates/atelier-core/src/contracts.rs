@@ -44,6 +44,9 @@ impl<'de> Deserialize<'de> for Card {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Board {
+    /// Monotonic within one server session; a new local session starts a new sequence.
+    #[serde(default)]
+    pub revision: u64,
     #[serde(default)]
     pub settings: Document,
     pub cards: Vec<Card>,

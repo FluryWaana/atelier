@@ -1,5 +1,5 @@
-use crate::{field, load, write};
-use atelier_core::{contracts::Card, document::Document};
+use crate::{field, live::BoardState, write};
+use atelier_core::document::Document;
 use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -26,12 +26,12 @@ impl Draft {
 
 #[component]
 pub fn Projects(
-    projects: RwSignal<Vec<Document>>,
-    cards: RwSignal<Vec<Card>>,
+    board: BoardState,
     repository: RwSignal<String>,
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
+    let projects = board.projects;
     let original = RwSignal::new(Draft::default());
     let draft = RwSignal::new(Draft::default());
     let dirty = Memo::new(move |_| original.get() != draft.get());
@@ -131,11 +131,9 @@ pub fn Projects(
                     select(saved);
                 }
                 // A failed refresh must not turn an already committed creation into a retry.
-                let board = load(&token).await.map_err(|message| {
+                board.refresh(&token).await.map_err(|message| {
                     format!("Projet enregistré. Actualisation impossible : {message}")
                 })?;
-                cards.set(board.cards);
-                projects.set(board.projects);
                 Ok::<(), String>(())
             }
             .await;

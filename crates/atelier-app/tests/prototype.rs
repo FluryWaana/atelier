@@ -63,6 +63,15 @@ async fn guarded_task_edits_reject_lost_updates_and_merge_independent_fields() {
     std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
     let (address, token, task) = start(data.path(), assets.path()).await;
     let client = reqwest::Client::new();
+    let initial: atelier_core::contracts::Board = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
     let card: Card = client
         .post(format!("{address}/api/cards"))
         .bearer_auth(&token)
@@ -111,6 +120,16 @@ async fn guarded_task_edits_reject_lost_updates_and_merge_independent_fields() {
     ] {
         assert_eq!(edit().json(&body).send().await.unwrap().status(), 400);
     }
+    let updated: atelier_core::contracts::Board = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(updated.revision > initial.revision);
     stop(&address, &token, task).await;
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
     let cards = database.cards().await.unwrap();
@@ -2414,6 +2433,15 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .json()
         .await
         .unwrap();
+    let mut board = board;
+    assert!(
+        board
+            .as_object_mut()
+            .unwrap()
+            .remove("revision")
+            .unwrap()
+            .is_u64()
+    );
     assert_eq!(
         board,
         json!({"cards":[card], "brainstorms":[], "projects":[], "runs":[], "times":[], "settings": atelier_core::application::settings::public_config(&Default::default(), &Default::default(), atelier_app::infrastructure::settings::platform()).unwrap()})

@@ -159,6 +159,10 @@ impl<'a> Store<'a> {
         Self { connection }
     }
 
+    pub fn revision(&self) -> u64 {
+        self.connection.total_changes()
+    }
+
     pub fn documents<T: DeserializeOwned>(&self, table: Documents) -> Result<Vec<T>> {
         let mut statement = self.connection.prepare(&format!(
             "SELECT data FROM {} ORDER BY rowid DESC",

@@ -266,6 +266,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#live-status')?.dataset.connected === 'true';",
+        vec![],
+    )
+    .await?;
     let title = "Tâche synthétique é 🔧 <script>";
     client
         .find(Locator::Css("#task-title"))
@@ -412,6 +418,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .bearer_auth(&token).header("x-local-request", "1")
         .json(&json!({"description":"Modification externe", "expected":{"description":"Description enregistrée"}}))
         .send().await?.error_for_status()?;
+    wait_dom(client, "return document.querySelector('[data-status=doing] .card-description')?.textContent === 'Modification externe' && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;
     click(client, "#save-task").await?;
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('changé ailleurs') && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;
     click(client, "#close-editor").await?;
@@ -539,12 +546,45 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "#remove-template").await?;
     click(client, "#confirm-remove-template").await?;
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
+    live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
+    Ok(())
+}
+
+async fn live_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    let card: atelier_core::contracts::Card = http
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Ajout depuis une autre fenêtre"}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    wait_title(client, "Ajout depuis une autre fenêtre").await?;
+    http.patch(format!("{address}/api/cards/{}", card.id)).bearer_auth(token).header("x-local-request", "1")
+        .json(&json!({"title":"Modification depuis une autre fenêtre", "status":"standby", "expected":{"title":"Ajout depuis une autre fenêtre", "status":"todo"}}))
+        .send().await?.error_for_status()?;
+    wait_dom(client, "return Array.from(document.querySelectorAll('[data-status=standby] article.card')).some(card => card.dataset.id === arguments[0] && card.querySelector('.card-title').textContent === 'Modification depuis une autre fenêtre');", vec![json!(card.id)]).await?;
+    http.delete(format!("{address}/api/cards/{}", card.id))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await?
+        .error_for_status()?;
+    wait_dom(client, "return !Array.from(document.querySelectorAll('article.card')).some(card => card.dataset.id === arguments[0]);", vec![json!(card.id)]).await?;
     Ok(())
 }
 

@@ -36,7 +36,7 @@ L'extensibilité conserve les capacités actuelles (tickets, dépôts, temps, di
 | Lot | Résultat attendu | Preuve de sortie | État |
 | --- | --- | --- | --- |
 | R00 | Périmètre corrigé, archive Git, suivi fonctionnel, CI adaptée | Instructions cohérentes, aucun effacement de données, derniers échecs explicités | Validé à `28629e4` |
-| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | En cours : base Rust qualifiée sous Windows, parcours cartes/projets/modèles Edge à `4c70a26` ; réglages, navigation et traductions restent à compléter |
+| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | En cours : base Rust qualifiée sous Windows, parcours cartes/projets/modèles/navigation Edge à `7bed439` ; réglages, actualisation et traductions restent à compléter |
 | R02 | Espace de travail : Git/worktrees, contexte, fichiers/diffs et serveurs Front/Back | Dépôts synthétiques, confirmation des suppressions, sorties de dossier refusées, processus nettoyés | À faire ; scanner/ports/processus Windows candidats |
 | R03 | Profils, diagnostics, exécution et interactions Codex/Claude/commandes personnalisées | Faux agents compilés, flux importants, arrêt, erreur, reprise, secrets masqués ; aucun appel payant | À faire |
 | R04 | Tickets, dépôts, PR, synchronisation et connecteurs intégrés/extensibles | Serveurs HTTP de test, pagination, authentification, erreurs, délais et contrats d'extension | À faire |

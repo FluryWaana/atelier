@@ -1,4 +1,4 @@
-use crate::{STATUSES, field, load, replace_card, write};
+use crate::{STATUSES, field, live::BoardState, replace_card, write};
 use atelier_core::contracts::Card;
 use atelier_core::document::Document;
 use atelier_core::domain::checklist::Criterion;
@@ -49,11 +49,12 @@ enum Action {
 #[component]
 pub fn TaskEditor(
     card: Card,
-    cards: RwSignal<Vec<Card>>,
-    templates: RwSignal<Vec<Document>>,
+    board: BoardState,
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
+    let cards = board.cards;
+    let templates = board.templates;
     let archived = card.fields.truthy("archived").unwrap_or(false);
     let ticket = card.fields.truthy("ticket").unwrap_or(false);
     let original = StoredValue::new(Draft {
@@ -168,7 +169,14 @@ pub fn TaskEditor(
                         .json()
                         .await
                         .map_err(|_| "Réponse du serveur invalide.")?;
-                    templates.update(|templates| templates.push(template));
+                    templates.update(|templates| {
+                        if !templates
+                            .iter()
+                            .any(|item| field(item, "id") == field(&template, "id"))
+                        {
+                            templates.push(template);
+                        }
+                    });
                 } else {
                     let card: Card = response
                         .json()
@@ -181,6 +189,7 @@ pub fn TaskEditor(
             .await;
             match result {
                 Ok(()) => {
+                    let _ = board.refresh(&token).await;
                     pending.set(false);
                     if matches!(action, Action::Template) {
                         template_name.set(String::new());
@@ -191,9 +200,7 @@ pub fn TaskEditor(
                     }
                 }
                 Err(message) => {
-                    if let Ok(board) = load(&token).await {
-                        cards.set(board.cards);
-                    }
+                    let _ = board.refresh(&token).await;
                     error.set(message);
                     pending.set(false);
                 }

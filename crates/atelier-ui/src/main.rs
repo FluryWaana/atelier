@@ -3,8 +3,10 @@ use gloo_net::http::{Method, Request, RequestBuilder, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+mod live;
 mod projects;
 mod task_editor;
+use live::BoardState;
 use projects::Projects;
 use task_editor::TaskEditor;
 
@@ -162,9 +164,10 @@ async fn load(token: &str) -> Result<Board, String> {
 
 #[component]
 fn App() -> impl IntoView {
-    let cards = RwSignal::new(Vec::<Card>::new());
-    let projects = RwSignal::new(Vec::<atelier_core::document::Document>::new());
-    let templates = RwSignal::new(Vec::<atelier_core::document::Document>::new());
+    let board = BoardState::default();
+    let cards = board.cards;
+    let projects = board.projects;
+    let templates = board.templates;
     let template = RwSignal::new(String::new());
     let remove_template = RwSignal::new(false);
     let template_pending = RwSignal::new(false);
@@ -180,29 +183,25 @@ fn App() -> impl IntoView {
     let token = StoredValue::new(session());
     match token.get_value() {
         Ok(token) => {
+            if let Err(message) = board.listen(token.clone()) {
+                board.sync_error.set(message);
+            }
             let token = token.clone();
             spawn_local(async move {
                 match load(&token).await {
                     Ok(value) => {
+                        board.apply(value);
                         let requested = requested_task();
-                        let active = requested
-                            .as_ref()
-                            .and_then(|id| value.cards.iter().find(|card| &card.id == id).cloned());
+                        let active = requested.as_ref().and_then(|id| {
+                            cards.with_untracked(|cards| {
+                                cards.iter().find(|card| &card.id == id).cloned()
+                            })
+                        });
                         if requested.is_some() && active.is_none() {
                             error.set(
                                 "Cette tâche est introuvable. Le tableau reste disponible.".into(),
                             );
                         }
-                        cards.set(value.cards);
-                        projects.set(value.projects);
-                        templates.set(
-                            value
-                                .settings
-                                .get("taskTemplates")
-                                .ok()
-                                .flatten()
-                                .unwrap_or_default(),
-                        );
                         selected.set(active);
                     }
                     Err(message) => error.set(message),
@@ -264,7 +263,7 @@ fn App() -> impl IntoView {
                         if !selected_template.is_empty() { body["templateId"] = serde_json::json!(selected_template); }
                         let response = write(&token, Method::POST, "/api/cards", &body).await?;
                         let card: Card = response.json().await.map_err(|_| "Réponse du serveur invalide.".to_owned())?;
-                        replace_card(cards, card); title.set(String::new()); archives.set(false); Ok::<(), String>(())
+                        replace_card(cards, card); title.set(String::new()); archives.set(false); let _ = board.refresh(&token).await; Ok::<(), String>(())
                     }.await;
                     if let Err(message) = operation { error.set(message); }
                     pending.set(false);
@@ -280,13 +279,14 @@ fn App() -> impl IntoView {
                 let id = template.get_untracked(); template_pending.set(true); error.set(String::new());
                 spawn_local(async move {
                     match write(&token, Method::DELETE, &format!("/api/templates/{id}"), &serde_json::json!({})).await {
-                        Ok(_) => { templates.update(|items| items.retain(|item| field(item,"id") != id)); template.set(String::new()); remove_template.set(false); },
+                        Ok(_) => { templates.update(|items| items.retain(|item| field(item,"id") != id)); template.set(String::new()); remove_template.set(false); let _ = board.refresh(&token).await; },
                         Err(message) => error.set(message),
                     }
                     template_pending.set(false);
                 });
             }>"Retirer le modèle"</button><button type="button" disabled=move || template_pending.get() on:click=move |_| remove_template.set(false)>"Annuler"</button></div>
             <p role="alert" id="error">{move || error.get()}</p>
+            <p id="live-status" class="field-help" role="status" hidden=move || token.get_value().is_err() data-connected=move || board.connected.get().to_string()>{move || if !board.sync_error.get().is_empty() { board.sync_error.get() } else if board.connected.get() { "Tableau à jour".into() } else { "Actualisation interrompue. Reconnexion automatique…".into() }}</p>
             <p class="loading" role="status" hidden=move || !loading.get()>"Chargement du tableau…"</p>
             <section aria-label="Tableau des tâches" id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
                 <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
@@ -298,8 +298,8 @@ fn App() -> impl IntoView {
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>"Aucune tâche"</p></div></section> }
                 } />
             </section>
-            {move || selected.get().map(|card| view! { <TaskEditor card cards templates token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
-            <Show when=move || show_projects.get()><Projects projects cards repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
+            {move || selected.get().map(|card| view! { <TaskEditor card board token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
+            <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
         </main>
     }
 }
