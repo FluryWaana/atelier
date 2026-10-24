@@ -31,6 +31,8 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 
 ## Points de contrôle
 
+- [`5be6ea9`, parcours Edge réussi](https://github.com/FluryWaana/atelier/actions/runs/40122863049), journal relu et capture du tableau inspectée : création/édition/déplacement sans agent, filtrage, confirmation de fermeture, erreur sans perte du brouillon, duplication/archives/restauration/suppression, redémarrage/session et gestion des projets jusqu'au retrait avec conservation des fichiers passent. L'échec natif restant concerne la préparation JSON du nouveau test de renommage (`from_value` incompatible avec le document brut) ; les tests renommage et statut utilisent désormais le même décodage texte que HTTP. Les critères/dépendances et le nouveau format SQLite sont postérieurs à cette preuve.
+
 - Critères/dépendances candidats : maximum 20 critères de 500 unités, validation humaine, sélection des prérequis avec contrôle des cycles côté serveur. Parcours Edge étendu : conservation après redémarrage, critères non cochés dans la copie, dépendances non recopiées et refus de supprimer une tâche référencée. Résultats à recueillir.
 
 - Format Rust candidat : identité SQLite `ATKR`, version `1`, initialisation transactionnelle uniquement sur fichier vide. Ouverture, restauration et transfert refusent les anciens formats, les identités étrangères et les versions futures. Tests synthétiques ajoutés pour la conservation octet pour octet des bases refusées, la réouverture, l'absence de restauration et de destination publiée. Les anciens comparateurs de stockage Node nécessitent désormais le checkout archivé ; ils ne constituent plus une commande de qualification de cette branche.

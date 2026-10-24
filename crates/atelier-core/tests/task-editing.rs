@@ -129,7 +129,8 @@ fn manual_status_changes_save_without_launching_an_agent() {
     for status in ["todo", "doing", "review", "done", "standby"] {
         context.events.borrow_mut().clear();
         let body =
-            serde_json::from_value::<Document>(serde_json::json!({"status":status})).unwrap();
+            serde_json::from_str::<Document>(&serde_json::json!({"status":status}).to_string())
+                .unwrap();
         let edit = task_editing::prepare(&context, &card, &body, false).unwrap();
         assert!(edit.card.fields.string_equals("status", status).unwrap());
         assert!(edit.card.fields.string_equals("updatedAt", "now").unwrap());

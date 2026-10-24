@@ -552,6 +552,10 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .click()
         .await?;
     wait_dom(client, "return document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === true && document.querySelectorAll('[data-dependency]:checked').length === 1;", vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-editor.png"),
+        client.screenshot().await?,
+    )?;
     client
         .find(Locator::Css("#close-editor"))
         .await?
@@ -632,6 +636,10 @@ async fn projects_scenario(
         .click()
         .await?;
     wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-project-editor.png"),
+        client.screenshot().await?,
+    )?;
     client
         .find(Locator::Css("#new-project"))
         .await?

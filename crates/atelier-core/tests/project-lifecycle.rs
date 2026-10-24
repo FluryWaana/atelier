@@ -230,7 +230,8 @@ fn project_rename_validates_without_moving_cards_or_changing_settings() {
         cards: RefCell::new(vec![]), events: RefCell::default(),
     };
     for name in ["After", "  Nouveau projet é 🔧  "] {
-        let body = serde_json::from_value::<Document>(serde_json::json!({"name":name})).unwrap();
+        let body = serde_json::from_str::<Document>(&serde_json::json!({"name":name}).to_string())
+            .unwrap();
         let edit = projects::prepare_update(
             &context,
             "project",
@@ -252,7 +253,8 @@ fn project_rename_validates_without_moving_cards_or_changing_settings() {
         assert!(context.events.borrow().is_empty());
     }
     for name in ["", " ", &"x".repeat(101)] {
-        let body = serde_json::from_value::<Document>(serde_json::json!({"name":name})).unwrap();
+        let body = serde_json::from_str::<Document>(&serde_json::json!({"name":name}).to_string())
+            .unwrap();
         assert!(
             projects::prepare_update(
                 &context,
