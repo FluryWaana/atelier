@@ -55,9 +55,9 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 ## Exécution et vérification
 
 - Aucun build, test, Clippy ou navigateur sur le PC du propriétaire. Édition, Git, formatage et inventaire légers autorisés.
-- GitHub Windows exécute formatage, Clippy natif/WASM, tests Rust et parcours navigateur. Linux/macOS sont préparés mais exécutés seulement à la qualification finale, conformément à la préférence conservée.
+- Décision explicite du propriétaire : aucun lancement ni relancement de tests GitHub pendant les implémentations ; une seule vérification à la fin. Le workflow Rust ne se déclenche plus sur push/PR et reste disponible manuellement. La vérification finale regroupe les contrôles natifs, WASM et navigateur ; Linux/macOS restent différés jusqu'à ce point.
 - Données synthétiques uniquement ; aucun compte réel, appel payant, tag ou publication de release.
-- Commits Conventional Commits en anglais et push des incréments autorisés. Un candidat poussé n'est vérifié qu'après lecture des journaux.
+- Commits Conventional Commits en anglais et push des incréments autorisés, sans déclenchement de CI. Les nouveaux incréments restent non vérifiés jusqu'à la campagne finale ; les anciens journaux peuvent être consultés sans relancer de tests.
 - Le code Node et les anciens outils sont retirés de la branche active lorsque leur fonction est couverte dans la reconstruction, ou archivés comme référence. Leur runtime n'entre jamais dans les paquets Rust.
 
 ## Checklist finale

@@ -1,8 +1,6 @@
 name: Rust rebuild
 on:
-  push:
-    branches: [main, 'codex/rust-migration-*']
-  pull_request:
+  # Owner decision: one manual verification at the end of the rebuild.
   workflow_dispatch:
     inputs:
       full_matrix:
