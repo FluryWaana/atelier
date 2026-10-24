@@ -54,6 +54,10 @@ Use ES modules: `.mjs` for backend modules and tests, with browser code under `p
 
 ## Testing Guidelines
 
+### Developer workstation resource budget
+
+Run only one heavy local command at a time; do not overlap compilation, full test suites or browser builds. Set `CARGO_BUILD_JOBS=1` and `RUST_TEST_THREADS=1`, and run Node suites with `--test-concurrency=1`. On this Windows workstation, use BelowNormal process priority and at most two available logical processors for the command shell and its children. The local `.artifacts/rust-tools/low-impact.ps1` helper applies these process limits. These limits concern the developer workstation; remote CI concurrency is unchanged.
+
 Use `node:test` and `node:assert/strict`; name tests `test/<feature>.test.mjs`. Existing tests cover Jira authentication and token storage. Add behavioral regression tests for changes, mock external services, and avoid live credentials or paid agent calls. Run the full suite before review. No coverage threshold is configured.
 
 ## Commit & Pull Request Guidelines
