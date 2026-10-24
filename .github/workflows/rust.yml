@@ -55,6 +55,11 @@ jobs:
       - name: Native macOS keyring with a unique synthetic service
         if: runner.os == 'macOS'
         run: cargo xtask test-keyring
+      - name: Native macOS locked disposable keychain
+        if: runner.os == 'macOS'
+        run: cargo xtask test-keyring-lock
+        env:
+          ATELIER_TEST_DISPOSABLE_KEYRING: '1'
       - name: Native Linux tray in an isolated XFCE panel
         if: runner.os == 'Linux'
         shell: bash

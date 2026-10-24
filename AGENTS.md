@@ -34,7 +34,7 @@ Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full
 
 `cargo xtask test-domain-parity` rechecks the captured Node domain vectors and runs their Rust equivalents. Ordinary core tests read the committed synthetic JSON and require no Node runtime. Regenerate a reference only after reviewing an intentional contract change; never update expected results to hide a Rust mismatch.
 
-`cargo xtask test-keyring-lock` locks the Linux session's default collection and requires `ATELIER_TEST_DISPOSABLE_KEYRING=1`. Run only inside the isolated D-Bus/XDG session configured in Rust CI, with the synthetic CI password, never on a personal desktop session. It verifies refusal while locked and preservation of the original key after unlocking.
+`cargo xtask test-keyring-lock` requires `ATELIER_TEST_DISPOSABLE_KEYRING=1` on disposable Linux/macOS accounts. Linux locks the session's default collection: run only inside the isolated D-Bus/XDG session configured in Rust CI, with its synthetic password, never on a personal desktop session. macOS creates and deletes a separate temporary keychain, including its search-list entry, and never locks the default keychain. Both verify refusal while locked and preservation of the original key after unlocking.
 
 ### JavaScript conventions
 

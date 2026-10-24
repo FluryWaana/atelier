@@ -57,6 +57,10 @@ C07, incrément après `aa9bf62` : duplication pure et HTTP portée, copie Node/
 
 C04, incrément après `3aef62d` : `cargo xtask test-keyring-lock` contrôle le verrouillage Linux réel, le refus des deux opérations et la conservation de la clé/collection après déverrouillage. Exécution uniquement dans la session D-Bus/XDG jetable de CI, avec activation explicite ; preuves Linux x64/ARM64 encore attendues. macOS verrouillé, autre compte et intégration des réglages restent ouverts.
 
+C04, incrément après `098cbb8` : le probe verrouillé couvre aussi macOS avec un trousseau temporaire explicitement ciblé, chemins avec espaces/Unicode, secrets sur stdin et nettoyage de l'entrée de recherche. Le test exige refus pendant le verrouillage et relecture du chiffré original après déverrouillage. Les deux exécutions natives macOS restent attendues ; aucun changement de compte n'est revendiqué.
+
+Le premier probe Linux échoue à son déverrouillage : la commande démarrait un autre démon. L'assertion reste en place et la fixture cible désormais sa collection par D-Bus interne GNOME. Revalidation native attendue ; voir le relevé M02 pour la cause, les sources et les contrôles locaux.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

@@ -1055,7 +1055,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
 | [xtask/src/keyring.rs:2](../xtask/src/keyring.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/keyring.rs:7](../xtask/src/keyring.rs#L7) | <code>pub async fn test(locked: bool) -&gt; Result&lt;()&gt; {</code> |
-| [xtask/src/keyring.rs:93](../xtask/src/keyring.rs#L93) | <code>use zbus::{proxy::CacheProperties, zvariant::OwnedObjectPath};</code> |
+| [xtask/src/keyring.rs:183](../xtask/src/keyring.rs#L183) | <code>mod tests {</code> |
+| [xtask/src/keyring.rs:184](../xtask/src/keyring.rs#L184) | <code>use super::*;</code> |
+| [xtask/src/keyring.rs:186](../xtask/src/keyring.rs#L186) | <code>#[test]</code> |
+| [xtask/src/keyring.rs:205](../xtask/src/keyring.rs#L205) | <code>use zbus::{</code> |
 | [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
 | [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
 | [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod keyring;</code> |
@@ -1529,9 +1532,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:98](../.github/workflows/rust.yml#L98) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:113](../.github/workflows/rust.yml#L113) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:114](../.github/workflows/rust.yml#L114) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:103](../.github/workflows/rust.yml#L103) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:118](../.github/workflows/rust.yml#L118) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:119](../.github/workflows/rust.yml#L119) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1709,10 +1712,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
 | [xtask/src/bin/native-fixture.rs:25](../xtask/src/bin/native-fixture.rs#L25) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/bin/native-fixture.rs:26](../xtask/src/bin/native-fixture.rs#L26) | <code>match args</code> |
-| [xtask/src/keyring.rs:24](../xtask/src/keyring.rs#L24) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
-| [xtask/src/keyring.rs:25](../xtask/src/keyring.rs#L25) | <code>let args: Vec&lt;String&gt; = args</code> |
-| [xtask/src/keyring.rs:35](../xtask/src/keyring.rs#L35) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
-| [xtask/src/keyring.rs:38](../xtask/src/keyring.rs#L38) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
+| [xtask/src/keyring.rs:26](../xtask/src/keyring.rs#L26) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
+| [xtask/src/keyring.rs:27](../xtask/src/keyring.rs#L27) | <code>execute_fixture(&amp;service, None, command, args, input).await</code> |
+| [xtask/src/keyring.rs:90](../xtask/src/keyring.rs#L90) | <code>args: &amp;[&amp;str],</code> |
+| [xtask/src/keyring.rs:94](../xtask/src/keyring.rs#L94) | <code>let mut args: Vec&lt;String&gt; = args</code> |
+| [xtask/src/keyring.rs:110](../xtask/src/keyring.rs#L110) | <code>args.push(keychain.into());</code> |
+| [xtask/src/keyring.rs:113](../xtask/src/keyring.rs#L113) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
+| [xtask/src/keyring.rs:114](../xtask/src/keyring.rs#L114) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
+| [xtask/src/keyring.rs:125](../xtask/src/keyring.rs#L125) | <code>let mut execute = async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| {</code> |
+| [xtask/src/keyring.rs:126](../xtask/src/keyring.rs#L126) | <code>execute_fixture(service, Some(keychain), command, args, input).await</code> |
 | [xtask/src/main.rs:79](../xtask/src/main.rs#L79) | <code>run(command("trunk").args([</code> |
 | [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |

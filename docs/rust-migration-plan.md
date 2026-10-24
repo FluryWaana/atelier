@@ -505,6 +505,13 @@ Prochaine action concrète :
 - **CI précédente :** [aa9bf62](https://github.com/FluryWaana/atelier/actions/runs/40041776924) entièrement réussi, cinq cibles et navigateurs. `3aef62d` passe les deux jobs navigateur et quatre cibles natives ; macOS Intel encore en cours au relevé.
 - **Suite :** recueillir le résultat natif Linux, compléter macOS verrouillé et comptes différents, puis protections de chemins et cas d'usage métier. M02/M03 restent en cours.
 
+### 24 octobre 2026 / base `098cbb8` / M02, macOS verrouillé et reprise Linux
+
+- **Livré :** scénario macOS sur trousseau temporaire dédié, refus verrouillé et relecture de la clé initiale après déverrouillage ; chemins avec espaces/Unicode et secrets uniquement sur stdin.
+- **Correction :** le probe Linux révèle que `gnome-keyring-daemon --unlock` démarre un autre démon. Déverrouillage désormais adressé au démon du scénario via l'interface interne GNOME, réservée à cette fixture ; assertion de conservation maintenue. Les nouveaux résultats POSIX restent attendus.
+- **Vérification :** 43 tests Rust réussis, Clippy natif et contrôle de types D-Bus Linux propres ; suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,03 s. La [CI de duplication `3aef62d`](https://github.com/FluryWaana/atelier/actions/runs/40042339237) est entièrement réussie.
+- **Suite :** recueillir les quatre résultats natifs de coffre verrouillé ; comptes différents, courses de chemins et intégration aux cas d'usage restent ouverts. Aucune qualification globale M02.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.
