@@ -1,0 +1,62 @@
+use crate::{field, i18n::I18n, write};
+use atelier_core::{
+    contracts::{AgentAuthentication, AgentDiagnostic},
+    document::Document,
+};
+use gloo_net::http::Method;
+use leptos::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+
+#[component]
+pub fn AgentDiagnostics(
+    profile: RwSignal<Option<Document>>,
+    token: StoredValue<Result<String, String>>,
+    pending: RwSignal<bool>,
+    blocked: Memo<bool>,
+) -> impl IntoView {
+    let i18n = expect_context::<I18n>();
+    let result = RwSignal::new(None::<AgentDiagnostic>);
+    let checking = RwSignal::new(false);
+    let error = RwSignal::new(String::new());
+    Effect::new(move |_| {
+        let _ = profile.get();
+        result.set(None);
+        error.set(String::new());
+    });
+    view! {
+        <section class="task-files" hidden=move || profile.get().is_none() aria-labelledby="agent-diagnostic-heading">
+            <h3 id="agent-diagnostic-heading">{move || i18n.text("Installation et connexion")}</h3>
+            <p class="field-help">{move || i18n.text("Contrôle explicite du profil enregistré : version et état de connexion du CLI. Aucun prompt envoyé et aucune requête payante de validation de clé.")}</p>
+            <button id="diagnose-profile" type="button" disabled=move || pending.get() || blocked.get() || profile.get().is_none() on:click=move |_| {
+                if pending.get_untracked() || blocked.get_untracked() { return; }
+                let Some(profile) = profile.get_untracked() else { return; };
+                let token = match token.get_value() { Ok(token)=>token, Err(message)=>{error.set(message);return;} };
+                pending.set(true); checking.set(true); result.set(None); error.set(String::new());
+                spawn_local(async move {
+                    let response = async { write(&token, Method::POST, &format!("/api/agent-providers/{}/diagnose", field(&profile,"id")), &serde_json::json!({"expected":profile})).await?.json::<AgentDiagnostic>().await.map_err(|_| "Réponse du serveur invalide.".to_owned()) }.await;
+                    if pending.try_get_untracked().is_none() { return; }
+                    match response { Ok(diagnostic)=>result.set(Some(diagnostic)), Err(message)=>error.set(message) }
+                    pending.set(false); checking.set(false);
+                });
+            }>{move || i18n.text(if checking.get() { "Vérification…" } else { "Vérifier l’installation et la connexion" })}</button>
+            <p class="field-help" hidden=move || !blocked.get()>{move || i18n.text("Enregistre ou recharge le profil avant de le vérifier.")}</p>
+            <p id="agent-diagnostic-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
+            <div id="agent-diagnostic-result" role="status">{move || result.get().map(|diagnostic| view! {
+                <p class="field-help">{move || i18n.text("Résultat du dernier contrôle")}</p>
+                <p><strong>{move || i18n.text("Exécutable")}</strong>" : "<span id="agent-diagnostic-executable">{diagnostic.executable}</span></p>
+                <p><strong>{move || i18n.text("Version")}</strong>" : "<span id="agent-diagnostic-version">{diagnostic.version.unwrap_or_else(|| i18n.text("Indisponible"))}</span></p>
+                <p class="error">{diagnostic.version_error.map(|message| i18n.text(&message))}</p>
+                <p id="agent-diagnostic-auth">{i18n.text(match diagnostic.authentication {
+                    AgentAuthentication::Present=>"Connexion CLI présente, accès au service non vérifié.",
+                    AgentAuthentication::Absent=>"Aucune connexion CLI.",
+                    AgentAuthentication::Configured=>"Clé présente, validité non vérifiée.",
+                    AgentAuthentication::MissingKey=>"Aucune clé API enregistrée.",
+                    AgentAuthentication::Unavailable=>"Connexion non vérifiée.",
+                })}</p>
+                <p class="error">{diagnostic.authentication_error.map(|message| i18n.text(&message))}</p>
+                {diagnostic.account.map(|account| view! { <p><strong>{move || i18n.text("Compte")}</strong>" : "{account}</p> })}
+                {diagnostic.auth_method.map(|method| view! { <p><strong>{move || i18n.text("Authentification")}</strong>" : "{method}</p> })}
+            })}</div>
+        </section>
+    }
+}

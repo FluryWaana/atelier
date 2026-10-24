@@ -181,6 +181,19 @@ pub fn describe(stored: &Document, tokens: &Document) -> Result<Vec<Document>> {
     Ok(profiles)
 }
 
+pub fn diagnostic_profile(
+    stored: &Document,
+    tokens: &Document,
+    body: &Document,
+    id: &str,
+) -> Result<Document> {
+    check_expected(stored, tokens, body, id)?;
+    describe(stored, tokens)?
+        .into_iter()
+        .find(|profile| profile.string_equals("id", id).unwrap_or(false))
+        .ok_or_else(|| ProviderFailure::Missing.into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,6 +219,7 @@ mod tests {
         body.set("apiKey", &"synthetic-two").unwrap();
         let second = prepare_save(&first.settings, &first.tokens, &body, false).unwrap();
         assert!(prepare_save(&second.settings, &second.tokens, &body, false).is_err());
+        assert!(diagnostic_profile(&second.settings, &second.tokens, &body, "api").is_err());
         assert!(
             prepare_remove(
                 &second.settings,

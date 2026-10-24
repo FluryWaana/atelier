@@ -4,6 +4,7 @@ use gloo_net::http::{Method, Request, RequestBuilder, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+mod agent_diagnostics;
 mod agent_profiles;
 mod backups;
 mod files;

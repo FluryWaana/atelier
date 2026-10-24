@@ -1,4 +1,6 @@
 mod agent_context;
+#[cfg(windows)]
+pub mod agent_diagnostics;
 pub mod agent_providers;
 pub mod backups;
 pub mod checked_file;

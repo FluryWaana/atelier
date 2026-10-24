@@ -560,7 +560,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     backups_scenario(client, http, &address, &next_token).await?;
     language_scenario(client).await?;
     files_scenario(client, http, &address, &next_token, data.path()).await?;
-    profiles_scenario(client, http, &address, &next_token).await?;
+    profiles_scenario(client, http, &address, &next_token, data.path()).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
@@ -574,7 +574,13 @@ async fn profiles_scenario(
     http: &reqwest::Client,
     address: &str,
     token: &str,
+    data: &Path,
 ) -> Result<()> {
+    let fixture = root()
+        .join("target/debug")
+        .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    let config = data.join("agents-ui-config");
+    std::fs::create_dir_all(&config)?;
     let request = |method, path: &str| {
         http.request(method, format!("{address}{path}"))
             .bearer_auth(token)
@@ -595,6 +601,16 @@ async fn profiles_scenario(
             .send_keys(text)
             .await?;
     }
+    client
+        .find(Locator::Css("#profile-command"))
+        .await?
+        .send_keys(&fixture.to_string_lossy())
+        .await?;
+    client
+        .find(Locator::Css("#profile-configDir"))
+        .await?
+        .send_keys(&config.to_string_lossy())
+        .await?;
     client.execute("const select=document.querySelector('#profile-auth'); select.value='api'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     client
         .find(Locator::Css("#profile-key"))
@@ -615,6 +631,8 @@ async fn profiles_scenario(
         .await?;
     click(client, "#save-profile").await?;
     wait_dom(client, "return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key')?.value === '' && document.querySelector('#profile-key-state')?.textContent.includes('Secret enregistré') && document.querySelector('[data-profile=ui-api]')?.textContent.includes('<b>é😀</b>') && !document.querySelector('[data-profile=ui-api] b');", vec![]).await?;
+    click(client, "#diagnose-profile").await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-version')?.textContent === '0.0.7' && document.querySelector('#agent-diagnostic-auth')?.textContent === 'Clé présente, validité non vérifiée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     let catalog = request(reqwest::Method::GET, "/api/agent-providers")
         .send()
         .await?
@@ -664,6 +682,13 @@ async fn profiles_scenario(
     click(client, "#profile-clear-key").await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key-state')?.textContent === 'Aucun secret enregistré.';",vec![]).await?;
+    click(client, "#diagnose-profile").await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Aucune clé API enregistrée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    client.execute("const select=document.querySelector('#profile-auth'); select.value='cli'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    click(client, "#diagnose-profile").await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && !document.querySelector('#agents-dialog')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     let board: atelier_core::contracts::Board = request(reqwest::Method::GET, "/api/state")
         .send()
         .await?
@@ -697,7 +722,6 @@ async fn profiles_scenario(
     for (selector, text) in [
         ("#profile-id", "ui-command"),
         ("#profile-name", "Commande synthétique"),
-        ("#profile-command", "synthetic-agent-never-run"),
         ("#profile-analyzeArgs", "invalid-json"),
     ] {
         client.find(Locator::Css(selector)).await?.clear().await?;
@@ -707,6 +731,21 @@ async fn profiles_scenario(
             .send_keys(text)
             .await?;
     }
+    client
+        .find(Locator::Css("#profile-command"))
+        .await?
+        .send_keys(&fixture.to_string_lossy())
+        .await?;
+    client
+        .find(Locator::Css("#profile-statusArgs"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#profile-statusArgs"))
+        .await?
+        .send_keys(r#"["agent-status","present"]"#)
+        .await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('liste JSON') && document.querySelector('#profile-analyzeArgs')?.value === 'invalid-json';",vec![]).await?;
     client
@@ -733,6 +772,36 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('[data-profile=ui-command]') && document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "[data-profile=ui-command]").await?;
     wait_dom(client,"return document.querySelector('#profile-analyzeArgs')?.value === '[\"--analyze\",\"{model}\"]' && document.querySelector('#profile-versionArgs')?.value === '[\"--version\"]';",vec![]).await?;
+    click(client, "#diagnose-profile").await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && document.querySelector('#agent-diagnostic-result')?.textContent.includes('synthetic@example.invalid') && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
+    for (selector, arguments, expected) in [
+        (
+            "#profile-statusArgs",
+            r#"["agent-status","absent"]"#,
+            "Aucune connexion CLI.",
+        ),
+        (
+            "#profile-statusArgs",
+            r#"["agent-status","invalid"]"#,
+            "Diagnostic de connexion indisponible.",
+        ),
+        (
+            "#profile-versionArgs",
+            r#"["agent-version","flood"]"#,
+            "Lecture de version impossible ou interrompue.",
+        ),
+    ] {
+        client.find(Locator::Css(selector)).await?.clear().await?;
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(arguments)
+            .await?;
+        click(client, "#save-profile").await?;
+        wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+        click(client, "#diagnose-profile").await?;
+        wait_dom(client,"return document.querySelector('#agent-diagnostic-result')?.textContent.includes(arguments[0]) && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned') && document.querySelector('#diagnose-profile')?.disabled === false;",vec![json!(expected)]).await?;
+    }
     std::fs::write(
         root().join(".artifacts/rust-ui-agent-profiles.png"),
         client.screenshot().await?,

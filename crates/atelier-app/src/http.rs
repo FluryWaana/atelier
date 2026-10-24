@@ -135,7 +135,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
             || path.ends_with("/services/stop")
-            || path.ends_with("/services/restart");
+            || path.ends_with("/services/restart")
+            || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
         let changed = state.changed.clone();
         #[cfg(windows)]
         let services = state.services.clone();
@@ -380,6 +381,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route(
             "/api/agent-providers/{id}",
             axum::routing::delete(agent_providers::remove),
+        )
+        .route(
+            "/api/agent-providers/{id}/diagnose",
+            post(agent_providers::diagnose),
         )
         .route("/api/settings", axum::routing::put(settings::update))
         .route(

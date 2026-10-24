@@ -33,6 +33,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        ["--version"] => {
+            for key in ["CODEX_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "JIRA_TOKEN", "NODE_OPTIONS"] {
+                if std::env::var_os(key).is_some() { return Err("Unexpected secret or injection in synthetic version environment".into()); }
+            }
+            ready("synthetic-agent 0.0.7")?;
+            Ok(())
+        }
+        ["login", "status"] => {
+            if std::env::var("CODEX_HOME")?.ends_with("agents-ui-config") {
+                eprintln!("Logged in using synthetic ChatGPT; private-output-must-not-be-returned");
+                Ok(())
+            } else { Err("Missing synthetic Codex configuration".into()) }
+        }
+        ["auth", "status"] | ["agent-status", "present"] => {
+            ready(r#"{"loggedIn":true,"email":"synthetic@example.invalid","authMethod":"cli","accessToken":"private-output-must-not-be-returned"}"#)?;
+            Ok(())
+        }
+        ["agent-status", "absent"] => { ready(r#"{"loggedIn":false}"#)?; Ok(()) }
+        ["agent-status", "invalid"] => { ready("private-output-must-not-be-returned")?; Ok(()) }
+        ["agent-version", "flood"] => { io::stdout().write_all(&vec![b'x';65_537])?; Ok(()) }
         ["service-listener", port] => {
             use std::{io::Read, net::{Ipv4Addr, TcpListener}};
             let port = port.parse::<u16>()?;

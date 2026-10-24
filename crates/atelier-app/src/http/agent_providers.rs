@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-fn response(result: crate::Result<Vec<atelier_core::document::Document>>) -> Response {
+fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
     match result {
         Ok(providers) => Json(providers).into_response(),
         Err(error) => {
@@ -28,6 +28,45 @@ fn response(result: crate::Result<Vec<atelier_core::document::Document>>) -> Res
             }
         }
     }
+}
+
+#[cfg(windows)]
+pub(super) async fn diagnose(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    if body.raw("expected").is_none() {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "Recharge les profils avant de les modifier.",
+        );
+    }
+    let vault = state.vault.clone();
+    let profile = state
+        .database
+        .call(move |store| {
+            agent_providers::diagnostic_profile(store, &body, &id, &mut |value, decrypt| {
+                vault.protect(value, decrypt)
+            })
+        })
+        .await;
+    response(match profile {
+        Ok(profile) => crate::infrastructure::agent_diagnostics::diagnose(profile).await,
+        Err(error) => Err(error),
+    })
+}
+
+#[cfg(not(windows))]
+pub(super) async fn diagnose() -> Response {
+    failure(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "Le diagnostic natif des agents attend sa qualification sur ce système.",
+    )
 }
 
 pub(super) async fn describe(State(state): State<Shared>) -> Response {

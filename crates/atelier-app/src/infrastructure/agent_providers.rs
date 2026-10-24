@@ -12,6 +12,20 @@ pub fn describe(
     agent_providers::describe(&store.settings()?, &settings::load(store, protect)?)
 }
 
+pub fn diagnostic_profile(
+    store: &Store<'_>,
+    body: &Document,
+    id: &str,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<Document> {
+    agent_providers::diagnostic_profile(
+        &store.settings()?,
+        &settings::load(store, protect)?,
+        body,
+        id,
+    )
+}
+
 pub fn save(
     store: &Store<'_>,
     body: &Document,

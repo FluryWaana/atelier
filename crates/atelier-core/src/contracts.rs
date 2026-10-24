@@ -3,6 +3,28 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub enum AgentAuthentication {
+    Unavailable,
+    Present,
+    Absent,
+    Configured,
+    MissingKey,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentDiagnostic {
+    pub executable: String,
+    pub version: Option<String>,
+    pub version_error: Option<String>,
+    pub authentication: AgentAuthentication,
+    pub authentication_error: Option<String>,
+    pub account: Option<String>,
+    pub auth_method: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ServiceStatus {
     Starting,
     Running,
