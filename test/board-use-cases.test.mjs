@@ -76,6 +76,31 @@ test('task deletion retains cards with worktrees, dependencies, queued work or t
   store.putCard(card); assert.deepEqual(tasks.remove(card.id), { ok: true }); assert.equal(store.card(card.id), null);
 });
 
+test('archive and deletion preserve historical guards, UTF-16 and strict card links', () => {
+  const { tasks, store, active, setTimes } = fixture();
+  const card = tasks.create({ title: '\ud800' });
+  store.putCard({ ...card, unknown: { future: '\udc00' } });
+  active.add(card.id);
+  assert.throws(() => tasks.archive(card.id, { archived: 'true' }), { message: 'État d’archive invalide.', code: 'invalid' });
+  assert.throws(() => tasks.archive(card.id, { archived: true }), { code: 'conflict' });
+  active.clear();
+  for (const entry of [{ cardId: card.id, runningSince: 'now' }, { cardId: card.id, exportState: 'sending' }]) {
+    setTimes([entry]); assert.throws(() => tasks.archive(card.id, { archived: true }), { code: 'conflict' });
+  }
+  setTimes([{ cardId: card.id, exportState: 'uncertain' }]);
+  const archived = tasks.archive(card.id, { archived: true });
+  assert.equal(archived.title, '\ud800'); assert.equal(archived.unknown.future, '\udc00');
+  assert.equal(tasks.archive(card.id, { archived: false }).archived, false);
+  assert.throws(() => tasks.remove(card.id), { code: 'conflict' });
+  setTimes([{ cardId: true }]);
+  store.putCard({ id: 'other', blockedBy: 'prefix-' + card.id + '-suffix' });
+  assert.throws(() => tasks.remove(card.id), { code: 'conflict' });
+  store.putCard({ id: 'other', blockedBy: {} });
+  assert.throws(() => tasks.remove(card.id), { message: 'c.blockedBy?.includes is not a function' });
+  store.deleteCard('other');
+  assert.deepEqual(tasks.remove(card.id), { ok: true });
+});
+
 test('project relocation backs up before writes and rolls back cards when an operation fails', () => {
   const { projects, store, events, projectOptions } = fixture();
   const project = projects.create({ name: 'Projet', repo: 'C:/old' });

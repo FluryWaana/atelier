@@ -110,6 +110,28 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
     assert_eq!(refused.status(), 400);
     let created: Value = created.json().await.unwrap();
     assert_eq!(created["seconds"], 0);
+    let card_id = card["id"].as_str().unwrap();
+    assert_eq!(
+        request(
+            reqwest::Method::POST,
+            &format!("/api/cards/{card_id}/archive")
+        )
+        .json(&json!({"archived":true}))
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        409
+    );
+    assert_eq!(
+        request(reqwest::Method::DELETE, &format!("/api/cards/{card_id}"))
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
     let id = created["id"].as_str().unwrap();
     assert_eq!(
         request(reqwest::Method::DELETE, &format!("/api/time/{id}"))
@@ -143,6 +165,51 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
     assert_eq!(modified["seconds"], 90);
     assert_eq!(modified["description"], "Modified");
     assert_eq!(modified["interrupted"], false);
+    assert_eq!(
+        request(
+            reqwest::Method::POST,
+            &format!("/api/cards/{card_id}/archive")
+        )
+        .json(&json!({"archived":"true"}))
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        400
+    );
+    let archived: Value = request(
+        reqwest::Method::POST,
+        &format!("/api/cards/{card_id}/archive"),
+    )
+    .json(&json!({"archived":true}))
+    .send()
+    .await
+    .unwrap()
+    .json()
+    .await
+    .unwrap();
+    assert_eq!(archived["archived"], true);
+    assert_eq!(
+        request(reqwest::Method::POST, "/api/time")
+            .json(&fields)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    assert_eq!(
+        request(
+            reqwest::Method::POST,
+            &format!("/api/cards/{card_id}/archive")
+        )
+        .json(&json!({"archived":false}))
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        200
+    );
     let mut events = request(reqwest::Method::GET, "/api/events")
         .send()
         .await
@@ -209,6 +276,18 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
     assert_eq!(board["times"][1]["description"], "Modified");
     assert_eq!(
         client
+            .delete(format!("{address}/api/cards/{card_id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    assert_eq!(
+        client
             .delete(format!("{address}/api/time/{id}"))
             .bearer_auth(&token)
             .header("x-local-request", "1")
@@ -218,6 +297,43 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
             .unwrap()
             .status(),
         200
+    );
+    let other = board["times"][0]["id"].as_str().unwrap();
+    assert_eq!(
+        client
+            .delete(format!("{address}/api/time/{other}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        200
+    );
+    let removed: Value = client
+        .delete(format!("{address}/api/cards/{card_id}"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(removed, json!({"ok":true}));
+    assert_eq!(
+        client
+            .post(format!("{address}/api/cards/{card_id}/archive"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"archived":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
     );
     stop(&address, &token, task).await;
 }

@@ -44,6 +44,18 @@ Contrôles Windows : 60 tests Rust réussis ; Clippy natif et WASM ; 305 contrat
 
 Le [job Windows de `6529ea2`](https://github.com/FluryWaana/atelier/actions/runs/40051922174/job/120746252539) passe les tests Rust, puis échoue au comparateur Node : assertion textuelle CRLF contre LF après checkout Git. Le comparateur vérifie désormais les valeurs JSON des deux côtés, en conservant les chaînes et tableaux ; les attentes métier n'ont pas été régénérées. Contrôles locaux : les 46 transitions passent avec le fichier réellement converti temporairement en CRLF, puis avec ses octets originaux restaurés ; aucun diff du JSON de référence. Revalidation Windows en CI attendue.
 
+## Archivage et suppression — après `e281b44`
+
+`application/card_lifecycle` conserve l'ordre des gardes historiques : booléen d'archivage, activité/chronomètres/envoi, ticket incertain, file, dépendances, activité, historique de temps et worktrees. Les liens de cartes gardent l'égalité stricte de Node ; les anciens `blockedBy` chaînes gardent aussi leur comportement `includes`. Le nouveau scénario Node confirme ces cas et les erreurs avant de vérifier leurs équivalents Rust. Archivage/restauration préservent titre, champs inconnus et unités UTF-16.
+
+`POST /api/cards/{id}/archive` et `DELETE /api/cards/{id}` lisent et écrivent dans une transaction unique du worker. Les erreurs métier gardent 400/404/409 ; une erreur de document/stockage ne divulgue pas son contenu. Le parcours HTTP vérifie refus pendant un chrono, archive puis refus de nouveau temps, restauration, conservation de l'historique après redémarrage, suppression seulement après retrait des temps et 404 après suppression. Notifications après commit par le middleware SSE.
+
+Les gardes d'activité et de file sont testées dans core ; leur branchement aux producteurs M04/M06 reste explicitement requis lorsque le prototype permettra ces opérations. L'édition complète des cartes, modèles et autres cas d'usage M03 restent ouverts. Aucun agent n'est simulé comme actif ou terminé dans l'API.
+
+Contrôles Windows : 63 tests Rust réussis, Clippy natif/WASM. Suite Node complète avec contrôle release : 428 tests, 425 réussis, aucun échec, trois exclusions, 83,291 s. Nouvelle CI de cet incrément attendue.
+
+Preuves précédentes : journal macOS Intel `6529ea2` relu, transitions de temps et scénario HTTP réussis ; Windows attend la correction CRLF `e281b44`. Les journaux Linux ARM64/macOS ARM64 `07691c8` confirment le dossier privé, le contrôle de marqueur et la préparation après remplacement du chemin.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

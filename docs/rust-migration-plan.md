@@ -160,7 +160,7 @@ Les lots sont découpables en petites PR. Les dépendances désignent les critè
 | M00 | — | Référence fonctionnelle et matrice de parité | Validé — référence Windows et exclusions dans le relevé M00 |
 | M01 | M00 | Socle Rust et faisabilité des cinq cibles | Validé — preuves natives et quatre navigateurs, vraie réouverture corrigée et requalifiée |
 | M02 | M01 | Données, secrets et session compatibles | En cours — UTF-16, coffres verrouillés/entre comptes et SSE prouvés ; ouverture SQLite et intégrations restantes ouvertes |
-| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
+| M03 | M02 | Domaine et API métier équivalents | En cours — règles pures, duplication/archivage/suppression HTTP et chronomètres locaux ; autres cas d'usage/API et prérequis M02 non clos |
 | M04 | M03 | Git, processus et agents équivalents | À faire |
 | M05 | M03, M04 | Connecteurs et protocole d'extensions | À faire |
 | M06 | M03, M04, M05 | Automatisation et reprise cohérentes | À faire |
@@ -606,6 +606,13 @@ Prochaine action concrète :
 
 - Le job Windows `6529ea2` passe Rust mais échoue au comparateur textuel CRLF/LF. Comparaison des valeurs JSON à la place du texte ; attentes métier inchangées.
 - Les 46 transitions sont vérifiées localement en CRLF et LF, octets originaux restaurés sans diff. Nouvelle preuve Windows attendue ; l'incrément d'archivage/suppression en travail n'est pas inclus dans cette correction.
+
+### Incrément M03 — archivage et suppression des cartes
+
+- **Livré :** gardes historiques dans core, routes transactionnelles avec 400/404/409, conservation UTF-16 et notification après commit. Branchement aux activités/files futures M04/M06 encore requis.
+- **Vérification :** 63 tests Rust, Clippy natif/WASM ; scénario Node équivalent ajouté et parcours HTTP complet avec temps/reprise. Suite Node complète avec contrôle release : 428 tests, 425 réussis, aucun échec, trois exclusions, 83,291 s.
+- **Preuves recueillies :** chronomètres macOS Intel `6529ea2` ; préparation privée de racine Linux/macOS ARM64 `07691c8`, journaux relus. Revalidation Windows CRLF et nouvelles cibles toujours attendues.
+- **Suite :** création/édition complètes, modèles, projets/réglages et autres cas d'usage M03 ; protections/intégrations M02 restantes. Aucun lot globalement qualifié par cet incrément.
 
 ## 12. Définition finale de terminé
 

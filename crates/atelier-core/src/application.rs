@@ -5,6 +5,7 @@ use crate::{
 };
 use serde_json::json;
 
+pub mod card_lifecycle;
 pub mod time_tracking;
 
 pub fn create_card(body: &Document, id: String, timestamp: String) -> Result<Card, &'static str> {

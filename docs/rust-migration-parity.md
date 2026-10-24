@@ -169,6 +169,8 @@ C20, après `3b4302e` : cas d'usage et routes de saisies/chronomètres locaux po
 
 C02/C05, après `6529ea2` : dossier du prototype préparé relativement à son descripteur, marqueur régulier vide requis, refus d'une base liée/non régulière, modes 0700/0600 et propriétaire courant sous POSIX. 61 tests Windows et parité stockage réussis ; nouveaux scénarios POSIX attendus. Les journaux Linux x64/ARM64 et macOS ARM64 des chronomètres `6529ea2` sont relus et réussis.
 
+C07, après `e281b44` : archivage/restauration et suppression HTTP transactionnels, gardes d'historique/chronomètres/dépendances/worktrees et messages/statuts historiques. Scénarios Node/Rust et parcours HTTP avec reprise réussis ; activité/file restent à brancher lors de M04/M06. 63 tests Rust Windows, Clippy natif/WASM et 428 tests Node (425 réussis, trois exclusions). Création complète/édition/modèles et preuve native du nouvel incrément restent ouverts.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

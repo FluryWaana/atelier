@@ -22,6 +22,7 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
 use tower_http::services::ServeFile;
 
+mod card_lifecycle;
 mod events;
 mod time_tracking;
 
@@ -305,6 +306,11 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
         .route("/api/cards", post(create))
+        .route(
+            "/api/cards/{id}",
+            axum::routing::delete(card_lifecycle::remove),
+        )
+        .route("/api/cards/{id}/archive", post(card_lifecycle::archive))
         .route("/api/cards/{id}/duplicate", post(duplicate))
         .route("/api/prototype/stop", post(stop))
         .layer(middleware::from_fn_with_state(state.clone(), security))
