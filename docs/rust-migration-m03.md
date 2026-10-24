@@ -130,6 +130,12 @@ Contrôles locaux : 71 tests Rust réussis, Clippy natif/WASM et comparateur des
 
 La [CI `1c49fb4`](https://github.com/FluryWaana/atelier/actions/runs/40100250745) est entièrement réussie. Les cinq journaux natifs confirment les scénarios HTTP d'édition atomique et de création avec séparation des brainstorms, ainsi que les 63 modifications historiques. Les CI `0ac6993` et `d86c57c` sont également terminées avec succès. La nouvelle preuve native du cycle de vie des projets reste attendue.
 
+## Report des contrôles Linux/macOS — après `5442e2c`
+
+À la demande de l'utilisateur, les nouveaux essais Linux/macOS sont réservés à la qualification finale. La CI `40102490207` a été annulée : les jobs POSIX avaient terminé avant la prise en compte de l'annulation, le job Windows a été interrompu. Cette interruption n'est pas un échec fonctionnel ni une preuve de réussite. Les journaux déjà lus pour Linux x64/ARM64 et macOS ARM64 confirment les 39 opérations de projets, le parcours HTTP transactionnel et les chemins vides résolus dans un dossier synthétique. Les résultats non recueillis et les futurs changements devront être revérifiés en fin de migration.
+
+La CI Rust des prochains pushes ne lance que Windows. Les cinq cibles natives et les navigateurs Linux/macOS restent disponibles via `workflow_dispatch` avec `full_matrix: true`, à utiliser lors de la qualification finale. Aucun scénario ni critère final n'est supprimé.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

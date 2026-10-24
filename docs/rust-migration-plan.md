@@ -4,6 +4,8 @@ Date : 23 octobre 2026. Référence examinée : commit `843d3ea`, version applic
 
 Statut : **M00 validé comme référence locale Windows avec exclusions documentées ; M01 validé pour la faisabilité, vraie réouverture requalifiée dans les quatre navigateurs ; M02 en cours pour les données et protections ; M03 en cours, règles pures, duplication et chronomètres locaux portés**. La [matrice de parité](rust-migration-parity.md) et les relevés [M00](rust-migration-baseline.md), [M01](rust-migration-m01.md), [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md) consignent les preuves et leurs limites. Relever à nouveau le commit, l'état de travail et les versions au début de chaque incrément.
 
+À la demande de l'utilisateur le 24 octobre, les nouveaux contrôles Linux/macOS (natifs et navigateurs) sont reportés à la qualification finale. Les contrôles courants restent Windows, avec le budget local de ressources. La CI Rust utilise Windows par défaut ; son entrée manuelle `full_matrix` conserve la matrice complète pour la fin. Les preuves déjà recueillies sont conservées ; aucune vérification reportée ne vaut validation.
+
 ## 1. Résultat attendu et périmètre
 
 Migrer tout le code applicatif maintenu par Atelier vers Rust : serveur, domaine, cas d'usage, stockage, intégrations, interface, lanceur, icônes système, worker de mise à jour, outils de fabrication et tests applicatifs. Conserver les fonctionnalités, les données, le français et l'anglais, ainsi que les cinq cibles natives actuellement livrées.

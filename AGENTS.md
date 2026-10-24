@@ -60,6 +60,8 @@ Use ES modules: `.mjs` for backend modules and tests, with browser code under `p
 
 Run only one heavy local command at a time; do not overlap compilation, full test suites or browser builds. Set `CARGO_BUILD_JOBS=1` and `RUST_TEST_THREADS=1`, and run Node suites with `--test-concurrency=1`. On this Windows workstation, use BelowNormal process priority and at most two available logical processors for the command shell and its children. The local `.artifacts/rust-tools/low-impact.ps1` helper applies these process limits. These limits concern the developer workstation; remote CI concurrency is unchanged.
 
+During migration, run only Windows checks. The user deferred Linux/macOS native and browser tests until final qualification. Rust CI defaults to Windows only; use its manual `full_matrix` input only at that final stage. Keep the other platform scenarios and previously collected evidence, and do not treat deferred checks as passing. The production Node release workflow remains unchanged.
+
 Use `node:test` and `node:assert/strict`; name tests `test/<feature>.test.mjs`. Existing tests cover Jira authentication and token storage. Add behavioral regression tests for changes, mock external services, and avoid live credentials or paid agent calls. Run the full suite before review. No coverage threshold is configured.
 
 ## Commit & Pull Request Guidelines
