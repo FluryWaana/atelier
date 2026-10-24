@@ -38,6 +38,23 @@ pub struct ProjectEdit {
     pub moved: bool,
 }
 
+pub const EDITABLE_FIELDS: [&str; 14] = [
+    "name",
+    "repo",
+    "baseBranch",
+    "projectRules",
+    "agent",
+    "frontRepo",
+    "frontDirectory",
+    "frontCommand",
+    "frontPort",
+    "backRepo",
+    "backDirectory",
+    "backCommand",
+    "backPort",
+    "linkedProjectId",
+];
+
 pub fn detect(
     project: Option<&Document>,
     body: &Document,
@@ -137,7 +154,7 @@ pub fn prepare_update(
         let invalid = || ProjectFailure::Invalid("Condition de modification invalide.");
         let expected: std::collections::BTreeMap<String, String> =
             serde_json::from_str(raw.get()).map_err(|_| invalid())?;
-        let fields = ["name", "repo", "baseBranch", "projectRules", "agent"];
+        let fields = EDITABLE_FIELDS;
         if expected
             .keys()
             .any(|key| !fields.contains(&key.as_str()) || body.raw(key).is_none())
@@ -148,7 +165,12 @@ pub fn prepare_update(
             return Err(invalid().into());
         }
         for (key, value) in expected {
-            if project.get::<String>(&key)?.unwrap_or_default() != value {
+            let current = if matches!(key.as_str(), "frontPort" | "backPort") {
+                project.get::<u16>(&key)?.unwrap_or(0).to_string()
+            } else {
+                project.get::<String>(&key)?.unwrap_or_default()
+            };
+            if current != value {
                 return Err(ProjectFailure::Conflict("Ce projet a changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les projets pour charger la dernière version.").into());
             }
         }
@@ -377,6 +399,16 @@ pub fn remove(
         }
     }
     let project = found.ok_or(ProjectFailure::Missing)?;
+    if repository.projects()?.iter().any(|project| {
+        project
+            .string_equals("linkedProjectId", id)
+            .unwrap_or(false)
+    }) {
+        return Err(ProjectFailure::Conflict(
+            "Détache ce projet des projets qui l’utilisent pour les tests avant de le retirer.",
+        )
+        .into());
+    }
     let repo = project.get::<JsonString>("repo")?.unwrap_or_default();
     for card in repository.cards()? {
         if same_repo(&card, &repo, windows)?

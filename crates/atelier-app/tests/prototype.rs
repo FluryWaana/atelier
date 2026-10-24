@@ -327,6 +327,115 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
 }
 
 #[tokio::test]
+async fn service_settings_guard_concurrent_edits_and_preserve_linked_projects() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let mut projects = Vec::<Value>::new();
+    for name in ["service-main", "service-linked"] {
+        let repo = data.path().join("repositories").join(name);
+        std::fs::create_dir_all(&repo).unwrap();
+        projects.push(
+            client
+                .post(format!("{address}/api/projects"))
+                .bearer_auth(&token)
+                .header("x-local-request", "1")
+                .json(&json!({"name":name,"repo":repo}))
+                .send()
+                .await
+                .unwrap()
+                .error_for_status()
+                .unwrap()
+                .json()
+                .await
+                .unwrap(),
+        );
+    }
+    let id = projects[0]["id"].as_str().unwrap();
+    let linked = projects[1]["id"].as_str().unwrap();
+    let edit = || {
+        client
+            .patch(format!("{address}/api/projects/{id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let saved: Value = edit().json(&json!({
+        "frontCommand":"synthetic-front --port {port}", "frontDirectory":"client", "frontPort":"4300",
+        "backRepo":projects[1]["repo"], "backCommand":"synthetic-back --port {port}", "backPort":"0", "linkedProjectId":linked,
+        "expected":{"frontCommand":"","frontDirectory":"","frontPort":"0","backRepo":"","backCommand":"","backPort":"0","linkedProjectId":""}
+    })).send().await.unwrap().error_for_status().unwrap().json().await.unwrap();
+    assert_eq!(saved["frontPort"], 4300);
+    assert_eq!(saved["backPort"], 0);
+    assert_eq!(saved["backRepo"], projects[1]["repo"]);
+    assert_eq!(
+        edit()
+            .json(&json!({"frontPort":"4301","expected":{"frontPort":"0"}}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    for invalid in [
+        json!({"frontCommand":"overwrite","expected":{}}),
+        json!({"backDirectory":"../outside","expected":{"backDirectory":""}}),
+        json!({"frontCommand":"no placeholder","expected":{"frontCommand":"synthetic-front --port {port}"}}),
+        json!({"backPort":"65536","expected":{"backPort":"0"}}),
+        json!({"linkedProjectId":id,"expected":{"linkedProjectId":linked}}),
+        json!({"linkedProjectId":"missing","expected":{"linkedProjectId":linked}}),
+    ] {
+        assert_eq!(edit().json(&invalid).send().await.unwrap().status(), 400);
+    }
+    assert_eq!(
+        client
+            .delete(format!("{address}/api/projects/{linked}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"archiveTasks":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
+    let renamed: Value = edit()
+        .json(&json!({"name":"independent rename","expected":{"name":"service-main"}}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(renamed["frontCommand"], saved["frontCommand"]);
+    assert_eq!(renamed["linkedProjectId"], saved["linkedProjectId"]);
+    let id = id.to_owned();
+    stop(&address, &token, task).await;
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        board["projects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|project| project["id"] == id)
+            .unwrap(),
+        &renamed
+    );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn project_field_guards_reject_stale_relocations_before_creating_backups() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

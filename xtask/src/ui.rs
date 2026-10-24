@@ -600,7 +600,11 @@ async fn projects_scenario(
     data: &Path,
 ) -> Result<()> {
     let repo = data.join("repositories/project-ui");
-    std::fs::create_dir_all(&repo)?;
+    std::fs::create_dir_all(repo.join("client"))?;
+    std::fs::write(
+        repo.join("client/package.json"),
+        r#"{"scripts":{"dev":"vite","predev":"never execute during detection"},"devDependencies":{"vite":"synthetic"}}"#,
+    )?;
     click(client, "#manage-projects").await?;
     client
         .find(Locator::Css("#project-name"))
@@ -636,6 +640,26 @@ async fn projects_scenario(
         .send_keys("main")
         .await?;
     client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    click(client, "#detect-front").await?;
+    wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#projects-dialog fieldset')?.disabled === false;", vec![]).await?;
+    click(client, ".launch-candidate[data-role=front]").await?;
+    wait_dom(client, "return document.querySelector('#project-front-directory')?.value === 'client' && document.querySelector('#project-front-command')?.value.includes('--port {port}');", vec![]).await?;
+    client
+        .find(Locator::Css("#project-front-port"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#project-front-port"))
+        .await?
+        .send_keys("4300")
+        .await?;
+    client
+        .find(Locator::Css("#project-back-command"))
+        .await?
+        .send_keys("synthetic-back --port {port}")
+        .await?;
+    client.execute("const select=document.querySelector('#project-linked'); select.value=Array.from(select.options).find(option=>option.value).value; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
     std::fs::write(
@@ -683,6 +707,13 @@ async fn projects_scenario(
     if !project.string_equals("name", "Projet renommé")?
         || !project.string_equals("projectRules", "Consignes synthétiques")?
         || !project.string_equals("baseBranch", "main")?
+        || !project.string_equals("frontDirectory", "client")?
+        || project.get::<u16>("frontPort")? != Some(4300)
+        || !project.string_equals("backCommand", "synthetic-back --port {port}")?
+        || project
+            .get::<String>("linkedProjectId")?
+            .unwrap_or_default()
+            .is_empty()
     {
         return Err("Réglages du projet non enregistrés.".into());
     }
