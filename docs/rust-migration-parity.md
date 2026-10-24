@@ -113,6 +113,10 @@ C20, incrément après `de8083a` : validation pure des saisies de temps portée 
 
 La CI native de `492fa78` a réussi sur les cinq cibles. Les journaux Linux x64/ARM64 et macOS x64/ARM64 prouvent le refus des coffres verrouillés et la conservation de la clé après déverrouillage. Le nouveau probe DPAPI vérifie les SID natifs, les contrôles positifs et le refus entre deux comptes dans les deux directions ; son exécution entre comptes reste attendue en CI. Son test local refuse explicitement deux exécutions sous le même compte. Aucun de ces résultats ne ferme les courses de chemins ou les intégrations restantes ; voir [le relevé M02](rust-migration-m02.md).
 
+La copie des pièces jointes de l'import utilise désormais des dossiers ancrés : refus de liens et contrôle du fichier ouvert sans réouverture par chemin. Les tests Windows couvrent le refus des renommages et des jonctions ; le remplacement hostile des chemins sous POSIX attend sa preuve native. Cette protection ne qualifie pas encore l'ouverture SQLite ou la publication finale de l'import.
+
+La preuve Windows entre comptes est acquise dans le [job natif `2d7f86a`](https://github.com/FluryWaana/atelier/actions/runs/40046135735/job/120728179302), journal relu : contrôles positifs, identités distinctes et refus réciproque réussis. La même preuve POSIX reste ouverte.
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

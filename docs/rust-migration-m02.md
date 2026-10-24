@@ -14,6 +14,18 @@ Décision conforme au périmètre utilisateur de [CryptProtectData](https://lear
 
 Contrôles locaux de cet incrément : 45 tests Rust réussis, Clippy natif tous targets, syntaxe du script PowerShell vérifiée sans exécution du provisionnement ; suite Node avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, aucun échec, trois exclusions documentées, 79,673 s. Les journaux restent dans `.artifacts/rust-m02-account-*`, ignorés.
 
+**Résultat natif DPAPI acquis :** le [job Windows de `2d7f86a`](https://github.com/FluryWaana/atelier/actions/runs/40046135735/job/120728179302) réussit. Journal relu : `DPAPI: distinct native accounts, positive controls and reciprocal refusal verified.` Les deux SID sont distincts, les contrôles positifs passent et les deux déchiffrements croisés sont refusés. Les comptes POSIX restent à tester.
+
+### Pièces jointes ancrées — après `2d7f86a`
+
+La copie récursive ouvre les dossiers source et destination et travaille ensuite relativement à ces descripteurs. Chaque sous-dossier est ouvert sans suivre de lien ; chaque fichier est ouvert sans lien et sans blocage, puis contrôlé et copié via le même descripteur. Les fichiers de destination restent créés exclusivement, avec 0600/0700 sous POSIX. `CheckedFile` réutilise ses contrôles existants sur un descripteur déjà ouvert, sans rouvrir son chemin.
+
+Les nouvelles dépendances natives `cap-std` et `cap-fs-ext` 4.0.3 fournissent ces opérations sur Windows et POSIX : [dossiers ancrés](https://docs.rs/cap-std/4.0.3/cap_std/fs/struct.Dir.html) et [refus des liens](https://docs.rs/cap-fs-ext/4.0.3/cap_fs_ext/trait.OpenOptionsFollowExt.html). Ce besoin de confinement remplace une implémentation spécifique `openat`/handles Windows ; aucune nouvelle couche applicative. Les versions sont épinglées, onze paquets transitifs nouveaux sont verrouillés ; licences directes MIT/Apache-2.0 (option LLVM-exception), audit transitif final toujours requis avant livraison.
+
+Tests Windows : renommage source/destination refusé tant que leurs handles sont détenus, contenu original copié, jonction vers un dossier extérieur refusée sans copie ni modification extérieure. Le même test POSIX remplace les deux chemins par des liens après ouverture et exige la copie depuis/vers les dossiers originaux ; résultat natif attendu en CI. Les contrôles portent sur les pièces jointes. L'acquisition initiale des racines, l'ouverture SQLite et la publication finale restent à qualifier contre les courses d'ancêtres ; M02 n'est pas clos.
+
+Vérification locale : 47 tests Rust réussis, Clippy natif tous targets sans diagnostic de code ; comparateur de stockage/import/restauration Node/Rust réussi (810 documents, 10 002 logs, WAL et UTF-16). Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 80,633 s. Inventaire régénéré et vérifié. Preuves POSIX de cet incrément attendues en CI.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

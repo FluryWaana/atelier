@@ -46,14 +46,28 @@ impl CheckedFile {
         options.read(true);
         #[cfg(windows)]
         {
-            use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
+            use std::os::windows::fs::OpenOptionsExt;
             use windows_sys::Win32::Storage::FileSystem::{
-                BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_REPARSE_POINT,
                 FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
-                GetFileInformationByHandle,
             };
             options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS);
-            let file = options.open(path)?;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+        }
+        Self::from_file(options.open(path)?)
+    }
+
+    pub(super) fn from_file(file: File) -> Result<Self> {
+        #[cfg(windows)]
+        {
+            use std::os::windows::io::AsRawHandle;
+            use windows_sys::Win32::Storage::FileSystem::{
+                BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_REPARSE_POINT,
+                GetFileInformationByHandle,
+            };
             let mut info = BY_HANDLE_FILE_INFORMATION::default();
             // The owned file handle and output buffer remain valid for this synchronous call.
             if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
@@ -75,9 +89,7 @@ impl CheckedFile {
         }
         #[cfg(unix)]
         {
-            use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-            options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
-            let file = options.open(path)?;
+            use std::os::unix::fs::MetadataExt;
             let metadata = file.metadata()?;
             if !metadata.is_file() {
                 return Err("Fichier régulier sans lien requis.".into());

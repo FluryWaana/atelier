@@ -526,6 +526,13 @@ Prochaine action concrète :
 - **Vérification locale :** 45 tests Rust réussis ; Clippy natif tous targets ; syntaxe PowerShell du scénario vérifiée sans provisionnement local ; suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions documentées, 79,673 s.
 - **Attendu :** exécution Windows entre comptes en CI. Les preuves POSIX entre comptes, courses de chemins et intégrations M02 restent ouvertes.
 
+### Incrément M02 — copie ancrée des pièces jointes
+
+- **Preuve DPAPI recueillie :** le job Windows de `2d7f86a` passe, journal vérifié ; deux comptes natifs distincts, contrôles positifs et refus réciproque.
+- **Livré :** copie récursive relative à des dossiers ouverts, sans suivre les liens, avec validation et lecture sur le même descripteur ; dépendances natives `cap-std`/`cap-fs-ext` 4.0.3 justifiées dans le relevé M02.
+- **Vérification :** 47 tests Rust réussis, Clippy natif tous targets ; parité stockage/import/restauration Node/Rust réussie. Suite Node avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,633 s ; inventaire vérifié.
+- **Suite :** preuve POSIX du remplacement d'ancêtres en CI, isolation des coffres POSIX entre comptes, acquisition des racines/ouverture SQLite/publication finale et autres protections M02. Le prototype reste interdit aux données réelles.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

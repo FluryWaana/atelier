@@ -3,11 +3,10 @@ use super::{
     store::Store,
 };
 use crate::Result;
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+use cap_std::{ambient_authority, fs::Dir};
 use rusqlite::{Connection, OpenFlags};
-use std::{
-    fs::{self, OpenOptions},
-    path::Path,
-};
+use std::{fs, path::Path};
 
 fn create_directory(path: &Path) -> Result<()> {
     let mut builder = fs::DirBuilder::new();
@@ -21,8 +20,26 @@ fn create_directory(path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn copy_tree(source: &Path, destination: &Path, root: bool) -> Result<()> {
-    for entry in fs::read_dir(source)? {
+fn require_plain(metadata: &cap_std::fs::Metadata) -> Result<()> {
+    #[cfg(windows)]
+    let linked = {
+        use cap_std::fs::MetadataExt;
+        metadata.file_attributes()
+            & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+            != 0
+    };
+    #[cfg(unix)]
+    let linked = metadata.file_type().is_symlink();
+    if linked {
+        return Err("Les liens sont interdits dans les données importées.".into());
+    }
+    Ok(())
+}
+
+fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
+    require_plain(&source.dir_metadata()?)?;
+    require_plain(&destination.dir_metadata()?)?;
+    for entry in source.entries()? {
         let entry = entry?;
         let name = entry.file_name();
         if root && name.to_str().is_some_and(super::data_lock::is_lock_file) {
@@ -31,8 +48,8 @@ fn copy_tree(source: &Path, destination: &Path, root: bool) -> Result<()> {
         if root && matches!(name.to_str(), Some("local-session" | "local-browser.html")) {
             continue;
         }
-        let source = entry.path();
-        let metadata = plain_metadata(&source)?;
+        let metadata = source.symlink_metadata(&name)?;
+        require_plain(&metadata)?;
         if root
             && matches!(
                 name.to_str(),
@@ -41,21 +58,31 @@ fn copy_tree(source: &Path, destination: &Path, root: bool) -> Result<()> {
         {
             continue;
         }
-        let destination = destination.join(name);
         if metadata.is_dir() {
-            create_directory(&destination)?;
-            copy_tree(&source, &destination, false)?;
+            let child = source.open_dir_nofollow(&name)?;
+            let builder = cap_std::fs::DirBuilder::new();
+            #[cfg(unix)]
+            let builder = {
+                use cap_std::fs::DirBuilderExt;
+                let mut builder = builder;
+                builder.mode(0o700);
+                builder
+            };
+            destination.create_dir_with(&name, &builder)?;
+            copy_tree(&child, &destination.open_dir_nofollow(&name)?, false)?;
         } else if metadata.is_file() {
-            let identity = Identity::inspect(&source)?;
-            let mut options = OpenOptions::new();
+            let mut input = cap_std::fs::OpenOptions::new();
+            input.read(true).follow(FollowSymlinks::No).nonblock(true);
+            let checked = CheckedFile::from_file(source.open_with(&name, &input)?.into_std())?;
+            let mut options = cap_std::fs::OpenOptions::new();
             options.write(true).create_new(true);
             #[cfg(unix)]
             {
-                use std::os::unix::fs::OpenOptionsExt;
+                use cap_std::fs::OpenOptionsExt;
                 options.mode(0o600);
             }
-            let mut output = options.open(&destination)?;
-            CheckedFile::open(&source, &identity)?.copy_to(&mut output)?;
+            let mut output = destination.open_with(&name, &options)?;
+            checked.copy_to(&mut output)?;
             output.sync_all()?;
         } else {
             return Err("Fichier spécial interdit dans les données importées.".into());
@@ -128,7 +155,16 @@ pub fn import(source: &Path, destination: &Path) -> Result<()> {
         builder.permissions(fs::Permissions::from_mode(0o700));
     }
     let stage = builder.tempdir_in(&parent)?;
-    copy_tree(&source, stage.path(), true)?;
+    let source_directory = Dir::open_ambient_dir(
+        source.parent().ok_or("Dossier source invalide.")?,
+        ambient_authority(),
+    )?
+    .open_dir_nofollow(source.file_name().ok_or("Dossier source invalide.")?)?;
+    {
+        let stage_directory = Dir::open_ambient_dir(stage.path(), ambient_authority())?;
+        copy_tree(&source_directory, &stage_directory, true)?;
+    }
+    // shortcut: SQLite and final publication still use paths; qualify their ancestor races in M02 before real-data use.
     let identity = Identity::inspect(&database)?;
     let connection = Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let _checked = CheckedFile::open(&database, &identity)?;
@@ -177,6 +213,73 @@ mod tests {
     use super::*;
     use crate::infrastructure::store::{self, Documents};
     use serde_json::json;
+
+    #[test]
+    fn opened_directories_cannot_be_redirected_during_attachment_copy() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("target");
+        let outside = root.path().join("outside");
+        for path in [&source, &target, &outside] {
+            fs::create_dir(path).unwrap();
+        }
+        fs::create_dir(source.join("nested é")).unwrap();
+        fs::write(source.join("nested é/attachment"), "original").unwrap();
+        fs::write(outside.join("private"), "must not copy").unwrap();
+        let input = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        let output = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
+        #[cfg(unix)]
+        let actual_target = {
+            use std::os::unix::fs::symlink;
+            let moved = root.path().join("moved-target");
+            fs::rename(&source, root.path().join("moved-source")).unwrap();
+            symlink(&outside, &source).unwrap();
+            fs::rename(&target, &moved).unwrap();
+            symlink(&outside, &target).unwrap();
+            moved
+        };
+        #[cfg(windows)]
+        let actual_target = {
+            assert!(fs::rename(&source, root.path().join("moved-source")).is_err());
+            assert!(fs::rename(&target, root.path().join("moved-target")).is_err());
+            target
+        };
+        copy_tree(&input, &output, true).unwrap();
+        assert_eq!(
+            fs::read(actual_target.join("nested é/attachment")).unwrap(),
+            b"original"
+        );
+        assert!(!actual_target.join("private").exists());
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 1);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn attachment_copy_refuses_windows_junctions() {
+        use std::{os::windows::process::CommandExt, process::Command};
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("target");
+        let outside = root.path().join("outside");
+        for path in [&source, &target, &outside] {
+            fs::create_dir(path).unwrap();
+        }
+        fs::write(outside.join("private"), "must not copy").unwrap();
+        let result = Command::new(std::env::var_os("ComSpec").unwrap_or_else(|| "cmd.exe".into()))
+            .args(["/D", "/C"])
+            .raw_arg("mklink /J \"%ATELIER_TEST_JUNCTION%\" \"%ATELIER_TEST_TARGET%\"")
+            .env("ATELIER_TEST_JUNCTION", source.join("escape"))
+            .env("ATELIER_TEST_TARGET", &outside)
+            .creation_flags(0x08000000)
+            .output()
+            .unwrap();
+        assert!(result.status.success());
+        let input = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        let output = Dir::open_ambient_dir(&target, ambient_authority()).unwrap();
+        assert!(copy_tree(&input, &output, true).is_err());
+        assert_eq!(fs::read_dir(&target).unwrap().count(), 0);
+        assert_eq!(fs::read(outside.join("private")).unwrap(), b"must not copy");
+    }
 
     #[test]
     fn import_includes_wal_and_attachments_without_sessions_or_overwriting_data() {
