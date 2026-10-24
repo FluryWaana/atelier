@@ -1,7 +1,7 @@
 use crate::{i18n::I18n, live::BoardState, read, write};
 use atelier_core::contracts::{
-    JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssueDetail, JiraMode,
-    JiraSearch,
+    JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraImport, JiraImported,
+    JiraIssueDetail, JiraMode, JiraSearch,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -31,6 +31,7 @@ pub fn JiraSettings(
     let page = RwSignal::new(0usize);
     let detail = RwSignal::new(None::<JiraIssueDetail>);
     let inspecting = RwSignal::new(false);
+    let import_project = RwSignal::new(String::new());
     let alive = Rc::new(Cell::new(true));
     let own_dirty =
         Memo::new(move |_| original.get() != draft.get() || !key.get().is_empty() || clear.get());
@@ -146,6 +147,7 @@ pub fn JiraSettings(
                 return;
             }
         };
+        replace.set(false);
         searching.set(true);
         error.set(String::new());
         notice.set(String::new());
@@ -188,6 +190,7 @@ pub fn JiraSettings(
             }
         };
         let revision = original.get_untracked().revision;
+        replace.set(false);
         inspecting.set(true);
         detail.set(None);
         error.set(String::new());
@@ -215,6 +218,57 @@ pub fn JiraSettings(
             }
         });
     });
+    let importing_alive = alive.clone();
+    let import = move |_| {
+        let Some(value) = detail.get_untracked() else {
+            return;
+        };
+        if pending.get_untracked() || inspecting.get_untracked() {
+            return;
+        }
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(message) => {
+                error.set(message);
+                return;
+            }
+        };
+        let body = serde_json::to_value(JiraImport {
+            revision: value.connection_revision,
+            issue_id: value.issue.id,
+            project_id: import_project.get_untracked(),
+        })
+        .expect("Jira import serialization");
+        pending.set(true);
+        error.set(String::new());
+        notice.set(String::new());
+        let alive = importing_alive.clone();
+        spawn_local(async move {
+            let result = async {
+                write(&credential, Method::POST, "/api/jira/import", &body)
+                    .await?
+                    .json::<JiraImported>()
+                    .await
+                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+            }
+            .await;
+            if alive.get() {
+                pending.set(false);
+                match result {
+                    Ok(result) => notice.set(
+                        if result.created {
+                            "Ticket importé dans une nouvelle carte."
+                        } else {
+                            "Ce ticket est déjà lié à une carte. Aucune modification effectuée."
+                        }
+                        .into(),
+                    ),
+                    Err(message) => error.set(message),
+                }
+            }
+            let _ = board.refresh(&credential).await;
+        });
+    };
     view! {
         <section class="task-files" aria-labelledby="jira-heading" aria-busy=move || (loading.get() || pending.get() || searching.get() || inspecting.get()).to_string()>
             <h3 id="jira-heading">"Jira"</h3><p class="field-help">{move || i18n.text("Configure la connexion, puis lance une recherche explicite. Les résultats sont en lecture seule ; aucun ticket distant n’est modifié.")}</p>
@@ -235,6 +289,7 @@ pub fn JiraSettings(
             <p hidden=move || !results.with(|results| results.as_ref().is_some_and(|results| results.issues.is_empty()))>{move || i18n.text("Aucun ticket trouvé.")}</p>
             <p role="status" hidden=move || !inspecting.get()>{move || i18n.text("Chargement du ticket Jira…")}</p>
             {move || detail.get().map(|value| view!{<section aria-label=move || i18n.text("Détail du ticket Jira")><h4>{value.issue.key}" · "{value.issue.title}</h4><pre>{value.description}</pre><button type="button" on:click=move |_|detail.set(None)>{move || i18n.text("Fermer le détail")}</button></section>})}
+            <div hidden=move || detail.with(|detail|detail.is_none())><label for="jira-import-project">{move || i18n.text("Importer dans le projet")}</label><select id="jira-import-project" disabled=move || pending.get() prop:value=move || import_project.get() on:change=move |event|import_project.set(event_target_value(&event))><option value="">{move || i18n.text("Choisir un projet")}</option><For each=move || board.projects.get() key=|project|project.get::<String>("id").ok().flatten().unwrap_or_default() children=move |project|view!{<option value=project.get::<String>("id").ok().flatten().unwrap_or_default()>{project.get::<String>("name").ok().flatten().unwrap_or_default()}</option>} /></select><button id="import-jira" type="button" disabled=move || pending.get() || inspecting.get() || own_dirty.get() || import_project.get().is_empty() on:click=import>{move || i18n.text("Importer ce ticket en carte")}</button><p class="field-help">{move || i18n.text("Le ticket sera relu avant l’import. Une carte déjà liée sera conservée sans modification.")}</p></div>
             <ul class="service-endpoints"><For each=move || results.with(|results| results.as_ref().map(|results| results.issues.iter().skip(page.get()*200).take(200).cloned().collect::<Vec<_>>()).unwrap_or_default()) key=|issue| issue.id.clone() children=move |issue| {let id=issue.id.clone(); view!{<li class="jira-issue"><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}" · "{issue.title}</a>" · "{issue.status}<button type="button" disabled=move || inspecting.get() || searching.get() || loading.get() || pending.get() || own_dirty.get() on:click=move |_|inspect.with_value(|inspect|inspect(id.clone()))>{move || i18n.text("Afficher le détail")}</button></li>}} /></ul>
             <div class="editor-actions" hidden=move || results.with(|results| results.as_ref().is_none_or(|results| results.issues.len()<=200))><button type="button" disabled=move || page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move || i18n.text("Précédent")}</button><button type="button" disabled=move || results.with(|results| results.as_ref().is_none_or(|results| (page.get()+1)*200>=results.issues.len())) on:click=move |_|page.update(|page|*page+=1)>{move || i18n.text("Suivant")}</button></div>
         </section>

@@ -285,3 +285,16 @@ pub enum WorktreeState {
     Ready,
     Removing,
 }
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraImport {
+    pub revision: u64,
+    pub issue_id: String,
+    pub project_id: String,
+}
+#[derive(Clone, Deserialize, Serialize)]
+pub struct JiraImported {
+    pub card: Card,
+    pub created: bool,
+}

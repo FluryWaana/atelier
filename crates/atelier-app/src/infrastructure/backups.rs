@@ -6,7 +6,7 @@ use crate::Result;
 use atelier_core::{application::backups::BackupFailure, document::Document};
 use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
-use rusqlite::{Connection, OpenFlags, params};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use serde::Serialize;
 use serde_json::Value;
 use std::{
@@ -200,6 +200,18 @@ fn restore_checked(
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
         return Err(BackupFailure::Invalid("Sauvegarde endommagée.").into());
+    }
+    let source_settings: Option<String> = source
+        .query_row("SELECT data FROM settings WHERE id=1", [], |row| row.get(0))
+        .optional()?;
+    if let Some(settings) = source_settings {
+        let settings: Document = serde_json::from_str(&settings)?;
+        if settings.raw("jiraImportReservation").is_some() {
+            return Err(BackupFailure::Invalid(
+                "Cette sauvegarde contient un import Jira inachevé.",
+            )
+            .into());
+        }
     }
     let projects = documents(&source, Documents::Projects)?;
     let cards = documents(&source, Documents::Cards)?;

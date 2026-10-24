@@ -614,5 +614,20 @@
   "Contenu Jira invalide.": "Invalid Jira content.",
   "Lecture du ticket Jira trop longue.": "Reading the Jira issue took too long.",
   "Identifiant du ticket Jira incohérent.": "Inconsistent Jira issue ID.",
-  "Description Jira absente.": "Missing Jira description."
+  "Description Jira absente.": "Missing Jira description.",
+  "Importer dans le projet": "Import into project",
+  "Choisir un projet": "Choose a project",
+  "Importer ce ticket en carte": "Import this issue as a card",
+  "Le ticket sera relu avant l’import. Une carte déjà liée sera conservée sans modification.": "The issue will be read again before importing. An already linked card will be preserved without changes.",
+  "Ticket importé dans une nouvelle carte.": "Issue imported into a new card.",
+  "Ce ticket est déjà lié à une carte. Aucune modification effectuée.": "This issue is already linked to a card. No changes made.",
+  "Ticket ou projet Jira invalide.": "Invalid Jira issue or project.",
+  "Plusieurs cartes sont liées au même ticket Jira.": "Multiple cards are linked to the same Jira issue.",
+  "Dépôt du projet absent.": "Missing project repository.",
+  "Un import Jira est en cours.": "A Jira import is in progress.",
+  "Cette sauvegarde contient un import Jira inachevé.": "This backup contains an unfinished Jira import.",
+  "Import Jira interrompu. Redémarre Atelier avant de réessayer.": "Jira import interrupted. Restart Atelier before trying again.",
+  "Ticket Jira invalide.": "Invalid Jira issue.",
+  "Adresse du ticket Jira incohérente.": "Inconsistent Jira issue address.",
+  "Renseigne l’adresse Jira avant la lecture.": "Enter the Jira address before reading."
 }

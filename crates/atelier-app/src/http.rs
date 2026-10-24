@@ -137,7 +137,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         }
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
-        let exclusive = path.ends_with("/worktree")
+        let exclusive = path == "/api/jira/import"
+            || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
             || path.ends_with("/services/stop")
@@ -357,6 +358,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .call(|store| {
             let now = time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?;
+            crate::infrastructure::jira_import::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)
         })
         .await?;
@@ -402,6 +404,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/state", get(board))
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/jira/search", get(jira::search))
+        .route("/api/jira/import", post(jira::import))
         .route("/api/jira/issues/{id}", get(jira::detail))
         .route("/api/backups", get(backups::list).post(backups::create))
         .route("/api/backups/restore", post(backups::restore))

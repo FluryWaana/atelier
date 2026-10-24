@@ -135,3 +135,78 @@ async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Respo
         _=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt."),
     }
 }
+
+pub(super) async fn import(State(state): State<Shared>, request: Request) -> Response {
+    use crate::infrastructure::jira_import;
+    use atelier_core::contracts::JiraImport;
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let input: JiraImport = match serde_json::to_string(&body)
+        .ok()
+        .and_then(|body| serde_json::from_str(&body).ok())
+    {
+        Some(input) => input,
+        None => return failure(StatusCode::BAD_REQUEST, "Ticket ou projet Jira invalide."),
+    };
+    let mut stopped = state.shutdown.subscribe();
+    let Ok(_permit) = state.integration_reads.try_acquire() else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+        );
+    };
+    let id = uuid::Uuid::new_v4().to_string();
+    let reserved = id.clone();
+    let revision = input.revision;
+    let issue = input.issue_id.clone();
+    if let Err(error) = state
+        .database
+        .call(move |store| jira_import::reserve(store, input, reserved))
+        .await
+    {
+        return response::<serde_json::Value>(Err(error));
+    }
+    let vault = state.vault.clone();
+    let reading = async {
+        let (configuration, token) = state
+            .database
+            .call(move |store| {
+                jira::credentials(store, revision, &mut |value, decrypt| {
+                    vault.protect(value, decrypt)
+                })
+            })
+            .await?;
+        jira::Jira::new(configuration, token)?.detail(&issue).await
+    };
+    let stopping = *stopped.borrow();
+    let fetched = if stopping {
+        Err("Atelier est en cours d’arrêt.".into())
+    } else {
+        tokio::select! { result=reading=>result,_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into()) }
+    };
+    let result = match fetched {
+        Ok(detail) => {
+            let operation = id.clone();
+            state
+                .database
+                .call(move |store| jira_import::finish(store, &operation, detail))
+                .await
+        }
+        Err(error) => Err(error),
+    };
+    if result.is_err()
+        && state
+            .database
+            .call(move |store| jira_import::release(store, &id))
+            .await
+            .is_err()
+    {
+        return failure(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Import Jira interrompu. Redémarre Atelier avant de réessayer.",
+        );
+    }
+    response(result)
+}
