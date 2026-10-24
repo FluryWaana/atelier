@@ -1064,10 +1064,11 @@ async fn files_scenario(
         return Err("L’explorateur a accepté une lecture sans session.".into());
     }
     for path in ["ignored.txt", ".git/config", "../outside"] {
+        let mut url = reqwest::Url::parse(&endpoint)?;
+        url.query_pairs_mut().append_pair("path", path);
         if http
-            .get(&endpoint)
+            .get(url)
             .bearer_auth(token)
-            .query(&[("path", path)])
             .send()
             .await?
             .status()
