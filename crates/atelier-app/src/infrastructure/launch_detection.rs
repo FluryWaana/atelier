@@ -73,7 +73,7 @@ fn object(value: &str) -> Result<Document> {
     if raw.get() == "null" {
         return Err("Manifeste nul.".into());
     }
-    Ok(Document::spread(Some(&raw))?)
+    Ok(Document::spread(&raw)?)
 }
 
 fn default_locale() -> String {
@@ -314,9 +314,19 @@ impl Scan {
                 _ => {}
             }
         }
-        let scripts = Document::spread(manifest.raw("scripts"))?;
-        let mut dependencies = Document::spread(manifest.raw("dependencies"))?;
-        dependencies.overlay(&Document::spread(manifest.raw("devDependencies"))?);
+        let scripts = manifest
+            .raw("scripts")
+            .map(Document::spread)
+            .transpose()?
+            .unwrap_or_default();
+        let mut dependencies = manifest
+            .raw("dependencies")
+            .map(Document::spread)
+            .transpose()?
+            .unwrap_or_default();
+        if let Some(value) = manifest.raw("devDependencies") {
+            dependencies.overlay(&Document::spread(value)?);
+        }
         let Some(script) = ["dev", "start:dev", "serve", "start"]
             .into_iter()
             .find(|name| {
@@ -472,7 +482,11 @@ fn candidate(relative: &Path, file: &Path) -> Result<Document> {
 fn profiles(opened: &Dir) -> Result<Vec<Document>> {
     let properties = opened.open_dir_nofollow("Properties")?;
     let settings = object(&read(&properties, Path::new("launchSettings.json"))?)?;
-    let profiles = Document::spread(settings.raw("profiles"))?;
+    let profiles = settings
+        .raw("profiles")
+        .map(Document::spread)
+        .transpose()?
+        .unwrap_or_default();
     let mut keys: Vec<_> = profiles.keys().collect();
     // Object.entries lists canonical array-index keys before insertion-ordered string keys.
     keys.sort_by_key(|name| {
@@ -491,7 +505,7 @@ fn profiles(opened: &Dir) -> Result<Vec<Document>> {
         if !raw.get().starts_with(['{', '[']) {
             continue;
         }
-        let profile = Document::spread(Some(raw))?;
+        let profile = Document::spread(raw)?;
         let supported = profile.string_equals("commandName", "Project")?
             && name.utf8().is_ok_and(|name| PROFILE.is_match(&name));
         let command_name = match profile

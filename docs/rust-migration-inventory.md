@@ -941,12 +941,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:133](../crates/atelier-app/src/infrastructure/launch_detection.rs#L133) | <code>pub fn detect(repo: &amp;Path) -&gt; Result&lt;Document&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:157](../crates/atelier-app/src/infrastructure/launch_detection.rs#L157) | <code>pub fn detect_synthetic(root: &amp;Dir, root_path: &amp;Path, repo: &amp;JsonString) -&gt; Result&lt;Document&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:163](../crates/atelier-app/src/infrastructure/launch_detection.rs#L163) | <code>pub fn synthetic_repository(</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:529](../crates/atelier-app/src/infrastructure/launch_detection.rs#L529) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:530](../crates/atelier-app/src/infrastructure/launch_detection.rs#L530) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:531](../crates/atelier-app/src/infrastructure/launch_detection.rs#L531) | <code>use std::fs;</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:533](../crates/atelier-app/src/infrastructure/launch_detection.rs#L533) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:592](../crates/atelier-app/src/infrastructure/launch_detection.rs#L592) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:621](../crates/atelier-app/src/infrastructure/launch_detection.rs#L621) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:543](../crates/atelier-app/src/infrastructure/launch_detection.rs#L543) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:544](../crates/atelier-app/src/infrastructure/launch_detection.rs#L544) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:545](../crates/atelier-app/src/infrastructure/launch_detection.rs#L545) | <code>use std::fs;</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:547](../crates/atelier-app/src/infrastructure/launch_detection.rs#L547) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:606](../crates/atelier-app/src/infrastructure/launch_detection.rs#L606) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:635](../crates/atelier-app/src/infrastructure/launch_detection.rs#L635) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
@@ -2106,7 +2106,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:480](../crates/atelier-app/src/infrastructure/checked_file.rs#L480) | <code>.args(["/D", "/C"])</code> |
-| [crates/atelier-app/src/infrastructure/launch_detection.rs:596](../crates/atelier-app/src/infrastructure/launch_detection.rs#L596) | <code>.args(["/D", "/C"])</code> |
+| [crates/atelier-app/src/infrastructure/launch_detection.rs:610](../crates/atelier-app/src/infrastructure/launch_detection.rs#L610) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:397](../crates/atelier-app/src/infrastructure/portable_import.rs#L397) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:728](../crates/atelier-app/src/infrastructure/portable_import.rs#L728) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:240](../crates/atelier-app/src/infrastructure/token_vault.rs#L240) | <code>args: &amp;[&amp;str],</code> |
