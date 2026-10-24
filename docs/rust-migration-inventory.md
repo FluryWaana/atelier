@@ -1240,44 +1240,45 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/prototype.rs:6](../crates/atelier-app/tests/prototype.rs#L6) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/tests/prototype.rs:7](../crates/atelier-app/tests/prototype.rs#L7) | <code>use std::{path::Path, time::Duration};</code> |
 | [crates/atelier-app/tests/prototype.rs:39](../crates/atelier-app/tests/prototype.rs#L39) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:121](../crates/atelier-app/tests/prototype.rs#L121) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:215](../crates/atelier-app/tests/prototype.rs#L215) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:285](../crates/atelier-app/tests/prototype.rs#L285) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:287](../crates/atelier-app/tests/prototype.rs#L287) | <code>use atelier_app::infrastructure::token_vault;</code> |
-| [crates/atelier-app/tests/prototype.rs:480](../crates/atelier-app/tests/prototype.rs#L480) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:482](../crates/atelier-app/tests/prototype.rs#L482) | <code>use atelier_app::infrastructure::token_vault;</code> |
-| [crates/atelier-app/tests/prototype.rs:483](../crates/atelier-app/tests/prototype.rs#L483) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-app/tests/prototype.rs:649](../crates/atelier-app/tests/prototype.rs#L649) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:651](../crates/atelier-app/tests/prototype.rs#L651) | <code>use atelier_app::infrastructure::{settings, token_vault};</code> |
-| [crates/atelier-app/tests/prototype.rs:652](../crates/atelier-app/tests/prototype.rs#L652) | <code>use atelier_core::document::{Document, JsonString};</code> |
-| [crates/atelier-app/tests/prototype.rs:859](../crates/atelier-app/tests/prototype.rs#L859) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:921](../crates/atelier-app/tests/prototype.rs#L921) | <code>use std::os::windows::process::CommandExt;</code> |
-| [crates/atelier-app/tests/prototype.rs:948](../crates/atelier-app/tests/prototype.rs#L948) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:1216](../crates/atelier-app/tests/prototype.rs#L1216) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:1218](../crates/atelier-app/tests/prototype.rs#L1218) | <code>use atelier_app::infrastructure::{backups::BackupDirectory, store::Documents};</code> |
-| [crates/atelier-app/tests/prototype.rs:1219](../crates/atelier-app/tests/prototype.rs#L1219) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/tests/prototype.rs:1226](../crates/atelier-app/tests/prototype.rs#L1226) | <code>use std::os::windows::process::CommandExt;</code> |
-| [crates/atelier-app/tests/prototype.rs:1482](../crates/atelier-app/tests/prototype.rs#L1482) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:1615](../crates/atelier-app/tests/prototype.rs#L1615) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:1617](../crates/atelier-app/tests/prototype.rs#L1617) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/tests/prototype.rs:1812](../crates/atelier-app/tests/prototype.rs#L1812) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:1814](../crates/atelier-app/tests/prototype.rs#L1814) | <code>use atelier_app::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/tests/prototype.rs:1815](../crates/atelier-app/tests/prototype.rs#L1815) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/tests/prototype.rs:2030](../crates/atelier-app/tests/prototype.rs#L2030) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2032](../crates/atelier-app/tests/prototype.rs#L2032) | <code>use atelier_app::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/tests/prototype.rs:2033](../crates/atelier-app/tests/prototype.rs#L2033) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/tests/prototype.rs:2160](../crates/atelier-app/tests/prototype.rs#L2160) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2243](../crates/atelier-app/tests/prototype.rs#L2243) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2348](../crates/atelier-app/tests/prototype.rs#L2348) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2520](../crates/atelier-app/tests/prototype.rs#L2520) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2522](../crates/atelier-app/tests/prototype.rs#L2522) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/tests/prototype.rs:2612](../crates/atelier-app/tests/prototype.rs#L2612) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2634](../crates/atelier-app/tests/prototype.rs#L2634) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2650](../crates/atelier-app/tests/prototype.rs#L2650) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2680](../crates/atelier-app/tests/prototype.rs#L2680) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2704](../crates/atelier-app/tests/prototype.rs#L2704) | <code>#[test]</code> |
-| [crates/atelier-app/tests/prototype.rs:2706](../crates/atelier-app/tests/prototype.rs#L2706) | <code>use std::os::windows::process::CommandExt;</code> |
-| [crates/atelier-app/tests/prototype.rs:2707](../crates/atelier-app/tests/prototype.rs#L2707) | <code>use std::{</code> |
+| [crates/atelier-app/tests/prototype.rs:101](../crates/atelier-app/tests/prototype.rs#L101) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:203](../crates/atelier-app/tests/prototype.rs#L203) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:297](../crates/atelier-app/tests/prototype.rs#L297) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:367](../crates/atelier-app/tests/prototype.rs#L367) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:369](../crates/atelier-app/tests/prototype.rs#L369) | <code>use atelier_app::infrastructure::token_vault;</code> |
+| [crates/atelier-app/tests/prototype.rs:562](../crates/atelier-app/tests/prototype.rs#L562) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:564](../crates/atelier-app/tests/prototype.rs#L564) | <code>use atelier_app::infrastructure::token_vault;</code> |
+| [crates/atelier-app/tests/prototype.rs:565](../crates/atelier-app/tests/prototype.rs#L565) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-app/tests/prototype.rs:731](../crates/atelier-app/tests/prototype.rs#L731) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:733](../crates/atelier-app/tests/prototype.rs#L733) | <code>use atelier_app::infrastructure::{settings, token_vault};</code> |
+| [crates/atelier-app/tests/prototype.rs:734](../crates/atelier-app/tests/prototype.rs#L734) | <code>use atelier_core::document::{Document, JsonString};</code> |
+| [crates/atelier-app/tests/prototype.rs:941](../crates/atelier-app/tests/prototype.rs#L941) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1003](../crates/atelier-app/tests/prototype.rs#L1003) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/tests/prototype.rs:1030](../crates/atelier-app/tests/prototype.rs#L1030) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1298](../crates/atelier-app/tests/prototype.rs#L1298) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1300](../crates/atelier-app/tests/prototype.rs#L1300) | <code>use atelier_app::infrastructure::{backups::BackupDirectory, store::Documents};</code> |
+| [crates/atelier-app/tests/prototype.rs:1301](../crates/atelier-app/tests/prototype.rs#L1301) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/prototype.rs:1308](../crates/atelier-app/tests/prototype.rs#L1308) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/tests/prototype.rs:1564](../crates/atelier-app/tests/prototype.rs#L1564) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1697](../crates/atelier-app/tests/prototype.rs#L1697) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1699](../crates/atelier-app/tests/prototype.rs#L1699) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/prototype.rs:1894](../crates/atelier-app/tests/prototype.rs#L1894) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:1896](../crates/atelier-app/tests/prototype.rs#L1896) | <code>use atelier_app::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/tests/prototype.rs:1897](../crates/atelier-app/tests/prototype.rs#L1897) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/prototype.rs:2112](../crates/atelier-app/tests/prototype.rs#L2112) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2114](../crates/atelier-app/tests/prototype.rs#L2114) | <code>use atelier_app::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/tests/prototype.rs:2115](../crates/atelier-app/tests/prototype.rs#L2115) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/prototype.rs:2242](../crates/atelier-app/tests/prototype.rs#L2242) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2325](../crates/atelier-app/tests/prototype.rs#L2325) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2430](../crates/atelier-app/tests/prototype.rs#L2430) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2602](../crates/atelier-app/tests/prototype.rs#L2602) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2604](../crates/atelier-app/tests/prototype.rs#L2604) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/prototype.rs:2694](../crates/atelier-app/tests/prototype.rs#L2694) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2716](../crates/atelier-app/tests/prototype.rs#L2716) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2732](../crates/atelier-app/tests/prototype.rs#L2732) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2762](../crates/atelier-app/tests/prototype.rs#L2762) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2786](../crates/atelier-app/tests/prototype.rs#L2786) | <code>#[test]</code> |
+| [crates/atelier-app/tests/prototype.rs:2788](../crates/atelier-app/tests/prototype.rs#L2788) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/tests/prototype.rs:2789](../crates/atelier-app/tests/prototype.rs#L2789) | <code>use std::{</code> |
 | [crates/atelier-app/tests/settings.rs:1](../crates/atelier-app/tests/settings.rs#L1) | <code>use atelier_app::infrastructure::settings::jira_base;</code> |
 | [crates/atelier-app/tests/settings.rs:2](../crates/atelier-app/tests/settings.rs#L2) | <code>use atelier_core::document::{Document, JsonString};</code> |
 | [crates/atelier-app/tests/settings.rs:4](../crates/atelier-app/tests/settings.rs#L4) | <code>#[test]</code> |
@@ -1355,9 +1356,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/projects.rs:38](../crates/atelier-core/src/application/projects.rs#L38) | <code>pub moved: bool,</code> |
 | [crates/atelier-core/src/application/projects.rs:41](../crates/atelier-core/src/application/projects.rs#L41) | <code>pub fn detect(</code> |
 | [crates/atelier-core/src/application/projects.rs:122](../crates/atelier-core/src/application/projects.rs#L122) | <code>pub fn prepare_update(</code> |
-| [crates/atelier-core/src/application/projects.rs:261](../crates/atelier-core/src/application/projects.rs#L261) | <code>pub fn create(</code> |
-| [crates/atelier-core/src/application/projects.rs:331](../crates/atelier-core/src/application/projects.rs#L331) | <code>pub fn archive_tasks(</code> |
-| [crates/atelier-core/src/application/projects.rs:344](../crates/atelier-core/src/application/projects.rs#L344) | <code>pub fn remove(</code> |
+| [crates/atelier-core/src/application/projects.rs:281](../crates/atelier-core/src/application/projects.rs#L281) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/projects.rs:351](../crates/atelier-core/src/application/projects.rs#L351) | <code>pub fn archive_tasks(</code> |
+| [crates/atelier-core/src/application/projects.rs:364](../crates/atelier-core/src/application/projects.rs#L364) | <code>pub fn remove(</code> |
 | [crates/atelier-core/src/application/settings.rs:1](../crates/atelier-core/src/application/settings.rs#L1) | <code>use super::task_creation::{Result, options, present, provider, text};</code> |
 | [crates/atelier-core/src/application/settings.rs:2](../crates/atelier-core/src/application/settings.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/settings.rs:6](../crates/atelier-core/src/application/settings.rs#L6) | <code>use serde_json::value::RawValue;</code> |
@@ -1605,10 +1606,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>use task_editor::TaskEditor;</code> |
 | [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::{field, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use gloo_net::http::Method;</code> |
-| [crates/atelier-ui/src/projects.rs:4](../crates/atelier-ui/src/projects.rs#L4) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/projects.rs:5](../crates/atelier-ui/src/projects.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/projects.rs:28](../crates/atelier-ui/src/projects.rs#L28) | <code>pub fn Projects(</code> |
+| [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use atelier_core::domain::agent_options::providers;</code> |
+| [crates/atelier-ui/src/projects.rs:4](../crates/atelier-ui/src/projects.rs#L4) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/projects.rs:5](../crates/atelier-ui/src/projects.rs#L5) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/projects.rs:6](../crates/atelier-ui/src/projects.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/projects.rs:44](../crates/atelier-ui/src/projects.rs#L44) | <code>pub fn Projects(</code> |
 | [crates/atelier-ui/src/settings.rs:1](../crates/atelier-ui/src/settings.rs#L1) | <code>use crate::{field, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/settings.rs:2](../crates/atelier-ui/src/settings.rs#L2) | <code>use atelier_core::{document::Document, domain::agent_options::providers};</code> |
 | [crates/atelier-ui/src/settings.rs:3](../crates/atelier-ui/src/settings.rs#L3) | <code>use gloo_net::http::Method;</code> |
@@ -2217,9 +2219,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:12](../crates/atelier-app/src/main.rs#L12) | <code>let value = args.next().ok_or("Valeur d’argument absente.")?;</code> |
-| [crates/atelier-app/tests/prototype.rs:912](../crates/atelier-app/tests/prototype.rs#L912) | <code>.args([</code> |
-| [crates/atelier-app/tests/prototype.rs:1231](../crates/atelier-app/tests/prototype.rs#L1231) | <code>.args(if denied {</code> |
-| [crates/atelier-app/tests/prototype.rs:2723](../crates/atelier-app/tests/prototype.rs#L2723) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
+| [crates/atelier-app/tests/prototype.rs:994](../crates/atelier-app/tests/prototype.rs#L994) | <code>.args([</code> |
+| [crates/atelier-app/tests/prototype.rs:1313](../crates/atelier-app/tests/prototype.rs#L1313) | <code>.args(if denied {</code> |
+| [crates/atelier-app/tests/prototype.rs:2805](../crates/atelier-app/tests/prototype.rs#L2805) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:12](../crates/atelier-core/tests/domain-contracts.rs#L12) | <code>let args = &amp;case["args"];</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:14](../crates/atelier-core/tests/domain-contracts.rs#L14) | <code>"text" =&gt; args[0]</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:17](../crates/atelier-core/tests/domain-contracts.rs#L17) | <code>.and_then(\|value\| text(value, args[1].as_u64().unwrap() as usize))</code> |
@@ -3492,52 +3494,53 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:306](../crates/atelier-app/src/infrastructure/token_vault.rs#L306) | <code>store.connection.execute_batch("CREATE TABLE IF NOT EXISTS token_vault (id INTEGER PRIMARY KEY CHECK(id=1), encrypted TEXT NOT NULL)")?;</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:313](../crates/atelier-app/src/infrastructure/token_vault.rs#L313) | <code>store.connection.execute("INSERT INTO token_vault VALUES (1,?) ON CONFLICT(id) DO UPDATE SET encrypted=excluded.encrypted", [encrypted])?;</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:315](../crates/atelier-app/src/infrastructure/token_vault.rs#L315) | <code>store.connection.execute("DELETE FROM token_vault", [])?;</code> |
-| [crates/atelier-app/tests/prototype.rs:196](../crates/atelier-app/tests/prototype.rs#L196) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:237](../crates/atelier-app/tests/prototype.rs#L237) | <code>"local-session.mjs",</code> |
-| [crates/atelier-app/tests/prototype.rs:253](../crates/atelier-app/tests/prototype.rs#L253) | <code>for path in ["/private.txt", "/lib/store.mjs", "/data/local-session"] {</code> |
-| [crates/atelier-app/tests/prototype.rs:287](../crates/atelier-app/tests/prototype.rs#L287) | <code>use atelier_app::infrastructure::token_vault;</code> |
-| [crates/atelier-app/tests/prototype.rs:292](../crates/atelier-app/tests/prototype.rs#L292) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:305](../crates/atelier-app/tests/prototype.rs#L305) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_queue BEFORE UPDATE ON settings WHEN json_extract(NEW.data,'$.taskQueue.message')='File en pause ; la tâche active peut se terminer.' BEGIN SELECT RAISE(ABORT, 'private synthetic queue failure'); END;").unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:353](../crates/atelier-app/tests/prototype.rs#L353) | <code>json!({"name":"../kanban.sqlite","confirmed":true}),</code> |
-| [crates/atelier-app/tests/prototype.rs:465](../crates/atelier-app/tests/prototype.rs#L465) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:466](../crates/atelier-app/tests/prototype.rs#L466) | <code>let encrypted = database.call(token_vault::read_encrypted).await.unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:482](../crates/atelier-app/tests/prototype.rs#L482) | <code>use atelier_app::infrastructure::token_vault;</code> |
-| [crates/atelier-app/tests/prototype.rs:488](../crates/atelier-app/tests/prototype.rs#L488) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:497](../crates/atelier-app/tests/prototype.rs#L497) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_profiles BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:519](../crates/atelier-app/tests/prototype.rs#L519) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:522](../crates/atelier-app/tests/prototype.rs#L522) | <code>.call(token_vault::read_encrypted)</code> |
-| [crates/atelier-app/tests/prototype.rs:630](../crates/atelier-app/tests/prototype.rs#L630) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:633](../crates/atelier-app/tests/prototype.rs#L633) | <code>.call(token_vault::read_encrypted)</code> |
-| [crates/atelier-app/tests/prototype.rs:651](../crates/atelier-app/tests/prototype.rs#L651) | <code>use atelier_app::infrastructure::{settings, token_vault};</code> |
-| [crates/atelier-app/tests/prototype.rs:658](../crates/atelier-app/tests/prototype.rs#L658) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:666](../crates/atelier-app/tests/prototype.rs#L666) | <code>token_vault::save(&amp;database, &amp;old).await.unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:668](../crates/atelier-app/tests/prototype.rs#L668) | <code>.call(token_vault::read_encrypted)</code> |
-| [crates/atelier-app/tests/prototype.rs:676](../crates/atelier-app/tests/prototype.rs#L676) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_settings BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:730](../crates/atelier-app/tests/prototype.rs#L730) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:733](../crates/atelier-app/tests/prototype.rs#L733) | <code>.call(token_vault::read_encrypted)</code> |
-| [crates/atelier-app/tests/prototype.rs:795](../crates/atelier-app/tests/prototype.rs#L795) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:796](../crates/atelier-app/tests/prototype.rs#L796) | <code>let tokens = token_vault::load(&amp;database).await.unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:849](../crates/atelier-app/tests/prototype.rs#L849) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:850](../crates/atelier-app/tests/prototype.rs#L850) | <code>let tokens = token_vault::load(&amp;database).await.unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:940](../crates/atelier-app/tests/prototype.rs#L940) | <code>let chunk = response.chunk().await.unwrap().expect("event stream ended");</code> |
-| [crates/atelier-app/tests/prototype.rs:1271](../crates/atelier-app/tests/prototype.rs#L1271) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:1293](../crates/atelier-app/tests/prototype.rs#L1293) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch(</code> |
-| [crates/atelier-app/tests/prototype.rs:1444](../crates/atelier-app/tests/prototype.rs#L1444) | <code>for run in read(&amp;data.path().join("kanban.sqlite"), "runs") {</code> |
-| [crates/atelier-app/tests/prototype.rs:1724](../crates/atelier-app/tests/prototype.rs#L1724) | <code>let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:1762](../crates/atelier-app/tests/prototype.rs#L1762) | <code>let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:1823](../crates/atelier-app/tests/prototype.rs#L1823) | <code>let database = Database::open(&amp;root.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:1842](../crates/atelier-app/tests/prototype.rs#L1842) | <code>let injection = rusqlite::Connection::open(root.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:1956](../crates/atelier-app/tests/prototype.rs#L1956) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2046](../crates/atelier-app/tests/prototype.rs#L2046) | <code>let database = Database::open(&amp;root.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2056](../crates/atelier-app/tests/prototype.rs#L2056) | <code>let injection = rusqlite::Connection::open(root.path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2272](../crates/atelier-app/tests/prototype.rs#L2272) | <code>assert_eq!(response.headers()["content-type"], "text/event-stream");</code> |
-| [crates/atelier-app/tests/prototype.rs:2357](../crates/atelier-app/tests/prototype.rs#L2357) | <code>std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2411](../crates/atelier-app/tests/prototype.rs#L2411) | <code>"/local-session",</code> |
-| [crates/atelier-app/tests/prototype.rs:2412](../crates/atelier-app/tests/prototype.rs#L2412) | <code>"/data/local-session",</code> |
-| [crates/atelier-app/tests/prototype.rs:2550](../crates/atelier-app/tests/prototype.rs#L2550) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2604](../crates/atelier-app/tests/prototype.rs#L2604) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2637](../crates/atelier-app/tests/prototype.rs#L2637) | <code>std::fs::write(directory.path().join("kanban.sqlite"), "untouched").unwrap();</code> |
-| [crates/atelier-app/tests/prototype.rs:2640](../crates/atelier-app/tests/prototype.rs#L2640) | <code>std::fs::read_to_string(directory.path().join("kanban.sqlite")).unwrap(),</code> |
+| [crates/atelier-app/tests/prototype.rs:171](../crates/atelier-app/tests/prototype.rs#L171) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:278](../crates/atelier-app/tests/prototype.rs#L278) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:319](../crates/atelier-app/tests/prototype.rs#L319) | <code>"local-session.mjs",</code> |
+| [crates/atelier-app/tests/prototype.rs:335](../crates/atelier-app/tests/prototype.rs#L335) | <code>for path in ["/private.txt", "/lib/store.mjs", "/data/local-session"] {</code> |
+| [crates/atelier-app/tests/prototype.rs:369](../crates/atelier-app/tests/prototype.rs#L369) | <code>use atelier_app::infrastructure::token_vault;</code> |
+| [crates/atelier-app/tests/prototype.rs:374](../crates/atelier-app/tests/prototype.rs#L374) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:387](../crates/atelier-app/tests/prototype.rs#L387) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_queue BEFORE UPDATE ON settings WHEN json_extract(NEW.data,'$.taskQueue.message')='File en pause ; la tâche active peut se terminer.' BEGIN SELECT RAISE(ABORT, 'private synthetic queue failure'); END;").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:435](../crates/atelier-app/tests/prototype.rs#L435) | <code>json!({"name":"../kanban.sqlite","confirmed":true}),</code> |
+| [crates/atelier-app/tests/prototype.rs:547](../crates/atelier-app/tests/prototype.rs#L547) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:548](../crates/atelier-app/tests/prototype.rs#L548) | <code>let encrypted = database.call(token_vault::read_encrypted).await.unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:564](../crates/atelier-app/tests/prototype.rs#L564) | <code>use atelier_app::infrastructure::token_vault;</code> |
+| [crates/atelier-app/tests/prototype.rs:570](../crates/atelier-app/tests/prototype.rs#L570) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:579](../crates/atelier-app/tests/prototype.rs#L579) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_profiles BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:601](../crates/atelier-app/tests/prototype.rs#L601) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:604](../crates/atelier-app/tests/prototype.rs#L604) | <code>.call(token_vault::read_encrypted)</code> |
+| [crates/atelier-app/tests/prototype.rs:712](../crates/atelier-app/tests/prototype.rs#L712) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:715](../crates/atelier-app/tests/prototype.rs#L715) | <code>.call(token_vault::read_encrypted)</code> |
+| [crates/atelier-app/tests/prototype.rs:733](../crates/atelier-app/tests/prototype.rs#L733) | <code>use atelier_app::infrastructure::{settings, token_vault};</code> |
+| [crates/atelier-app/tests/prototype.rs:740](../crates/atelier-app/tests/prototype.rs#L740) | <code>let database = Database::open(&amp;directory.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:748](../crates/atelier-app/tests/prototype.rs#L748) | <code>token_vault::save(&amp;database, &amp;old).await.unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:750](../crates/atelier-app/tests/prototype.rs#L750) | <code>.call(token_vault::read_encrypted)</code> |
+| [crates/atelier-app/tests/prototype.rs:758](../crates/atelier-app/tests/prototype.rs#L758) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_settings BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:812](../crates/atelier-app/tests/prototype.rs#L812) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:815](../crates/atelier-app/tests/prototype.rs#L815) | <code>.call(token_vault::read_encrypted)</code> |
+| [crates/atelier-app/tests/prototype.rs:877](../crates/atelier-app/tests/prototype.rs#L877) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:878](../crates/atelier-app/tests/prototype.rs#L878) | <code>let tokens = token_vault::load(&amp;database).await.unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:931](../crates/atelier-app/tests/prototype.rs#L931) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:932](../crates/atelier-app/tests/prototype.rs#L932) | <code>let tokens = token_vault::load(&amp;database).await.unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:1022](../crates/atelier-app/tests/prototype.rs#L1022) | <code>let chunk = response.chunk().await.unwrap().expect("event stream ended");</code> |
+| [crates/atelier-app/tests/prototype.rs:1353](../crates/atelier-app/tests/prototype.rs#L1353) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:1375](../crates/atelier-app/tests/prototype.rs#L1375) | <code>rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch(</code> |
+| [crates/atelier-app/tests/prototype.rs:1526](../crates/atelier-app/tests/prototype.rs#L1526) | <code>for run in read(&amp;data.path().join("kanban.sqlite"), "runs") {</code> |
+| [crates/atelier-app/tests/prototype.rs:1806](../crates/atelier-app/tests/prototype.rs#L1806) | <code>let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:1844](../crates/atelier-app/tests/prototype.rs#L1844) | <code>let injection = rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:1905](../crates/atelier-app/tests/prototype.rs#L1905) | <code>let database = Database::open(&amp;root.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:1924](../crates/atelier-app/tests/prototype.rs#L1924) | <code>let injection = rusqlite::Connection::open(root.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2038](../crates/atelier-app/tests/prototype.rs#L2038) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2128](../crates/atelier-app/tests/prototype.rs#L2128) | <code>let database = Database::open(&amp;root.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2138](../crates/atelier-app/tests/prototype.rs#L2138) | <code>let injection = rusqlite::Connection::open(root.path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2354](../crates/atelier-app/tests/prototype.rs#L2354) | <code>assert_eq!(response.headers()["content-type"], "text/event-stream");</code> |
+| [crates/atelier-app/tests/prototype.rs:2439](../crates/atelier-app/tests/prototype.rs#L2439) | <code>std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2493](../crates/atelier-app/tests/prototype.rs#L2493) | <code>"/local-session",</code> |
+| [crates/atelier-app/tests/prototype.rs:2494](../crates/atelier-app/tests/prototype.rs#L2494) | <code>"/data/local-session",</code> |
+| [crates/atelier-app/tests/prototype.rs:2632](../crates/atelier-app/tests/prototype.rs#L2632) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2686](../crates/atelier-app/tests/prototype.rs#L2686) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2719](../crates/atelier-app/tests/prototype.rs#L2719) | <code>std::fs::write(directory.path().join("kanban.sqlite"), "untouched").unwrap();</code> |
+| [crates/atelier-app/tests/prototype.rs:2722](../crates/atelier-app/tests/prototype.rs#L2722) | <code>std::fs::read_to_string(directory.path().join("kanban.sqlite")).unwrap(),</code> |
 | [launcher.mjs:11](../launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
 | [launcher.mjs:33](../launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |
 | [launcher.mjs:54](../launcher.mjs#L54) | <code>const out = openSync(join(dataDir, 'server.stdout.log'), 'a');</code> |

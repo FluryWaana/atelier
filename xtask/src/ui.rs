@@ -632,6 +632,7 @@ async fn projects_scenario(
         .await?
         .send_keys("main")
         .await?;
+    client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
     std::fs::write(
@@ -690,6 +691,9 @@ async fn projects_scenario(
     if card.fields.get::<String>("repo")? != project.get::<String>("repo")? {
         return Err("La tâche n’est pas associée au projet sélectionné.".into());
     }
+    if !card.fields.string_equals("agent", "claude")? {
+        return Err("La tâche n’hérite pas de l’agent du projet.".into());
+    }
     let card_id = card.id.clone();
     click(client, "#manage-projects").await?;
     click(
@@ -698,6 +702,40 @@ async fn projects_scenario(
             "[data-project-id='{}']",
             id.as_str().ok_or("Projet sans id")?
         ),
+    )
+    .await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .send_keys(" brouillon")
+        .await?;
+    http.patch(format!(
+        "{address}/api/projects/{}",
+        id.as_str().ok_or("Projet sans id")?
+    ))
+    .bearer_auth(token)
+    .header("x-local-request", "1")
+    .json(&json!({"name":"Nom externe", "expected":{"name":"Projet renommé"}}))
+    .send()
+    .await?
+    .error_for_status()?;
+    click(client, "#save-project").await?;
+    wait_dom(client,"return document.querySelector('#project-error')?.textContent.includes('changé ailleurs') && document.querySelector('#project-name')?.value === 'Projet renommé brouillon';",vec![]).await?;
+    click(client, "#close-projects").await?;
+    click(client, "#confirm-project").await?;
+    click(client, "#manage-projects").await?;
+    click(
+        client,
+        &format!(
+            "[data-project-id='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        ),
+    )
+    .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-name')?.value === 'Nom externe';",
+        vec![],
     )
     .await?;
     click(client, "#remove-project").await?;

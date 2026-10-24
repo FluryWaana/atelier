@@ -1,5 +1,6 @@
 use crate::{field, live::BoardState, write};
 use atelier_core::document::Document;
+use atelier_core::domain::agent_options::providers;
 use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -11,6 +12,7 @@ struct Draft {
     repo: String,
     rules: String,
     branch: String,
+    agent: String,
 }
 impl Draft {
     fn from_document(project: &Document) -> Self {
@@ -20,7 +22,21 @@ impl Draft {
             repo: field(project, "repo"),
             rules: field(project, "projectRules"),
             branch: field(project, "baseBranch"),
+            agent: field(project, "agent"),
         }
+    }
+
+    fn patch(&self, previous: &Self) -> serde_json::Value {
+        let fields = |value: &Self| serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent});
+        let (next, previous) = (fields(self), fields(previous));
+        let mut patch = serde_json::json!({"expected":{}});
+        for field in ["name", "repo", "baseBranch", "projectRules", "agent"] {
+            if next[field] != previous[field] {
+                patch[field] = next[field].clone();
+                patch["expected"][field] = previous[field].clone();
+            }
+        }
+        patch
     }
 }
 
@@ -95,8 +111,10 @@ pub fn Projects(
         };
         let body = if remove {
             serde_json::json!({"archiveTasks":archive.get_untracked()})
+        } else if !value.id.is_empty() {
+            value.patch(&previous)
         } else {
-            serde_json::json!({"name":value.name, "repo":value.repo, "projectRules":value.rules, "baseBranch":value.branch})
+            serde_json::json!({"name":value.name, "repo":value.repo})
         };
         pending.set(true);
         error.set(String::new());
@@ -137,10 +155,11 @@ pub fn Projects(
                 Ok::<(), String>(())
             }
             .await;
-            pending.set(false);
             if let Err(message) = result {
+                let _ = board.refresh(&token).await;
                 error.set(message);
             }
+            pending.set(false);
         });
     };
     view! {
@@ -158,7 +177,8 @@ pub fn Projects(
                     <label for="project-repo">"Dossier du dépôt"</label><input id="project-repo" required maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|draft| draft.repo = event_target_value(&event)) />
                     <p class="field-help">"Chemin complet d’un dossier existant. Changer ce chemin réassocie les tâches ; les fichiers ne sont pas déplacés."</p>
                     <div hidden=move || draft.get().id.is_empty()><label for="project-branch">"Branche de base"</label><input id="project-branch" maxlength="180" placeholder="Valeur par défaut" prop:value=move || draft.get().branch on:input=move |event| draft.update(|draft| draft.branch = event_target_value(&event)) />
-                    <label for="project-rules">"Consignes du projet"</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea></div>
+                    <label for="project-rules">"Consignes du projet"</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
+                    <label for="project-agent">"Agent préféré"</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">"Hériter du réglage global"</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select></div>
                 </fieldset>
                 <p id="project-error" class="error" role="alert">{move || error.get()}</p>
                 <div class="editor-actions"><button id="save-project" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || if pending.get() { "Enregistrement…" } else if draft.get().id.is_empty() { "Créer le projet" } else { "Enregistrer" }}</button><button id="reset-project" type="button" disabled=move || pending.get() || !dirty.get() on:click=move |_| confirmation.set("reset")>"Annuler les modifications…"</button></div>

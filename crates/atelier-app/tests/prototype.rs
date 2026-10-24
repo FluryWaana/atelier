@@ -98,6 +98,88 @@ async fn general_settings_reject_stale_fields_and_preserve_independent_edits_aft
     stop(&address, &token, task).await;
 }
 
+#[tokio::test]
+async fn project_field_guards_reject_stale_relocations_before_creating_backups() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let repo = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let project: Value = client
+        .post(format!("{address}/api/projects"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Original", "repo":repo.path()}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let id = project["id"].as_str().unwrap().to_owned();
+    let edit = || {
+        client
+            .patch(format!("{address}/api/projects/{id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let a = edit()
+        .json(&json!({"name":"First", "expected":{"name":"Original"}}))
+        .send();
+    let b = edit()
+        .json(&json!({"name":"Second", "expected":{"name":"Original"}}))
+        .send();
+    let (a, b) = tokio::join!(a, b);
+    let mut statuses = [a.unwrap().status().as_u16(), b.unwrap().status().as_u16()];
+    statuses.sort();
+    assert_eq!(statuses, [200, 409]);
+    let response: Value = edit()
+        .json(&json!({"agent":"claude", "expected":{"agent":""}}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(response["agent"], "claude");
+    assert!(matches!(
+        response["name"].as_str(),
+        Some("First" | "Second")
+    ));
+    let replacement = tempfile::tempdir().unwrap();
+    let refused = edit().json(&json!({"repo":replacement.path(),"name":"Overwrite", "expected":{"repo":project["repo"],"name":"Original"}})).send().await.unwrap();
+    assert_eq!(refused.status(), 409);
+    for body in [
+        json!({"name":"Lost","expected":{}}),
+        json!({"expected":{"name":"Original"}}),
+        json!({"agent":"codex","expected":null}),
+    ] {
+        assert_eq!(edit().json(&body).send().await.unwrap().status(), 400);
+    }
+    stop(&address, &token, task).await;
+    assert!(
+        atelier_app::infrastructure::backups::BackupDirectory::open(data.path())
+            .unwrap()
+            .list()
+            .unwrap()
+            .is_empty()
+    );
+    let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
+    let saved: Value = database
+        .call(move |store| {
+            store.document(atelier_app::infrastructure::store::Documents::Projects, &id)
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved, response);
+    database.close().await.unwrap();
+}
+
 async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_app::Result<()>>) {
     assert!(
         reqwest::Client::new()

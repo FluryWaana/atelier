@@ -133,6 +133,26 @@ pub fn prepare_update(
         .iter()
         .find(|project| project.string_equals("id", id).unwrap_or(false))
         .ok_or(ProjectFailure::Missing)?;
+    if let Some(raw) = body.raw("expected") {
+        let invalid = || ProjectFailure::Invalid("Condition de modification invalide.");
+        let expected: std::collections::BTreeMap<String, String> =
+            serde_json::from_str(raw.get()).map_err(|_| invalid())?;
+        let fields = ["name", "repo", "baseBranch", "projectRules", "agent"];
+        if expected
+            .keys()
+            .any(|key| !fields.contains(&key.as_str()) || body.raw(key).is_none())
+            || fields
+                .iter()
+                .any(|key| body.raw(key).is_some() && !expected.contains_key(*key))
+        {
+            return Err(invalid().into());
+        }
+        for (key, value) in expected {
+            if project.get::<String>(&key)?.unwrap_or_default() != value {
+                return Err(ProjectFailure::Conflict("Ce projet a changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les projets pour charger la dernière version.").into());
+            }
+        }
+    }
     let previous_repo = project.get::<JsonString>("repo")?.unwrap_or_default();
     let mut cards = Vec::new();
     for card in repository.cards()? {
