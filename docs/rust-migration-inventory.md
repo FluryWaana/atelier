@@ -1882,14 +1882,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:69](../.github/workflows/rust.yml#L69) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
-| [.github/workflows/rust.yml:83](../.github/workflows/rust.yml#L83) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
-| [.github/workflows/rust.yml:87](../.github/workflows/rust.yml#L87) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
-| [.github/workflows/rust.yml:88](../.github/workflows/rust.yml#L88) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
-| [.github/workflows/rust.yml:94](../.github/workflows/rust.yml#L94) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:180](../.github/workflows/rust.yml#L180) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:195](../.github/workflows/rust.yml#L195) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:196](../.github/workflows/rust.yml#L196) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:72](../.github/workflows/rust.yml#L72) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
+| [.github/workflows/rust.yml:86](../.github/workflows/rust.yml#L86) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
+| [.github/workflows/rust.yml:90](../.github/workflows/rust.yml#L90) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
+| [.github/workflows/rust.yml:91](../.github/workflows/rust.yml#L91) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
+| [.github/workflows/rust.yml:97](../.github/workflows/rust.yml#L97) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
+| [.github/workflows/rust.yml:203](../.github/workflows/rust.yml#L203) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:207](../.github/workflows/rust.yml#L207) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
+| [.github/workflows/rust.yml:213](../.github/workflows/rust.yml#L213) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
+| [.github/workflows/rust.yml:214](../.github/workflows/rust.yml#L214) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
+| [.github/workflows/rust.yml:215](../.github/workflows/rust.yml#L215) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
+| [.github/workflows/rust.yml:216](../.github/workflows/rust.yml#L216) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
+| [.github/workflows/rust.yml:231](../.github/workflows/rust.yml#L231) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:232](../.github/workflows/rust.yml#L232) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |

@@ -58,7 +58,9 @@ Use ES modules: `.mjs` for backend modules and tests, with browser code under `p
 
 ### Developer workstation resource budget
 
-Run only one heavy local command at a time; do not overlap compilation, full test suites or browser builds. Set `CARGO_BUILD_JOBS=1` and `RUST_TEST_THREADS=1`, and run Node suites with `--test-concurrency=1`. On this Windows workstation, use BelowNormal process priority and at most two available logical processors for the command shell and its children. The local `.artifacts/rust-tools/low-impact.ps1` helper applies these process limits. These limits concern the developer workstation; remote CI concurrency is unchanged.
+The user requires builds and tests to run on hosted GitHub Windows runners, not this workstation. Do not launch local Cargo builds/tests, Node tests or browser tests. Editing, Git operations and lightweight inventory generation remain local. Commit and push candidate increments for remote verification, then inspect CI logs before marking them verified; pending or cancelled jobs are not proof.
+
+Only if the user explicitly requests a local diagnostic later, run one heavy command at a time with `CARGO_BUILD_JOBS=1`, `RUST_TEST_THREADS=1`, Node `--test-concurrency=1`, BelowNormal priority and at most two logical processors. The local `.artifacts/rust-tools/low-impact.ps1` helper applies those process limits.
 
 During migration, run only Windows checks. The user deferred Linux/macOS native and browser tests until final qualification. Rust CI defaults to Windows only; use its manual `full_matrix` input only at that final stage. Keep the other platform scenarios and previously collected evidence, and do not treat deferred checks as passing. The production Node release workflow remains unchanged.
 

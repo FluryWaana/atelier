@@ -11,6 +11,9 @@ on:
         default: false
 permissions:
   contents: read
+concurrency:
+  group: rust-migration-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   native:
     strategy:
@@ -155,14 +158,34 @@ jobs:
       - name: Native macOS tray on the main AppKit loop
         if: runner.os == 'macOS'
         run: cargo xtask test-tray
+  node:
+    name: Node contracts (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - run: npm run check:release
+      - run: node scripts/rust-migration-inventory.mjs --check
+      - name: Build a temporary portable package for rollback tests
+        run: npm run package
+        env:
+          NODE_LICENSE: runtime/LICENSE
+      - name: Run the full historical Node suite including packaged rollback
+        run: node --test --test-concurrency=1 test/*.test.mjs
+        env:
+          ATELIER_REQUIRE_RELEASE: '1'
   browser:
-    if: ${{ inputs.full_matrix }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","macos-15"]' || '["windows-latest"]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -178,7 +201,20 @@ jobs:
       - run: cargo install --locked wasm-bindgen-cli --version 0.2.129 --root "${{ runner.temp }}/atelier-tools"
         if: steps.wasm-tools.outputs.cache-hit != 'true'
       - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
+        if: runner.os != 'Windows'
+      - name: Add WASM tools to Windows PATH
+        if: runner.os == 'Windows'
+        run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'
       - run: cargo fetch --locked
+      - name: Edge WASM and restart scenario
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'
+          $env:ATELIER_TEST_BROWSER = 'edge'
+          & $env:ATELIER_WEBDRIVER --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo xtask test-ui
       - name: Record browser and driver versions
         if: runner.os == 'Linux'
         run: |
