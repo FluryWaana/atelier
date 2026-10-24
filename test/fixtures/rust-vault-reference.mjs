@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { openTokenVault, systemProtect, windowsProtect } from '../../lib/token-vault.mjs';
 
 const [mode, database, reference] = process.argv.slice(2);
-const tokens = { jira: 'synthetic-jira-é-🔑', azure: '', tempo: 'synthetic-tempo', extra: null };
+const tokens = { jira: 'synthetic-jira-é-🔑-\ud800', azure: '', tempo: 'synthetic-tempo-\udc00', extra: null, 'connector:\ud800:token': 'synthetic-\udc00', legacy: { '\ud800': '\udc00' } };
 const execute = (_command, _args, options) => {
   assert.equal(options.input, undefined, 'The fixed synthetic key must already exist.');
   return { status: 0, stdout: '11'.repeat(32) };

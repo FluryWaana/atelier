@@ -119,7 +119,11 @@ impl Document {
     }
 
     pub fn truthy(&self, key: &str) -> serde_json::Result<bool> {
-        let Some(raw) = self.raw(key) else {
+        self.truthy_key(&JsonString::from(key))
+    }
+
+    pub fn truthy_key(&self, key: &JsonString) -> serde_json::Result<bool> {
+        let Some(raw) = self.raw_key(key) else {
             return Ok(false);
         };
         match raw.get().as_bytes().first() {

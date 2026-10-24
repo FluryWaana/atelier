@@ -304,7 +304,12 @@ pub async fn test() -> Result<()> {
     let path = directory.path().join("vault.sqlite");
     let reference = directory.path().join("vault.json");
     fixture("rust-vault-reference.mjs", "seed", &path, &reference)?;
-    let mut expected: Value = serde_json::from_slice(&std::fs::read(&reference)?)?;
+    let mut expected: Document = serde_json::from_slice(&std::fs::read(&reference)?)?;
+    let tokens: Document = expected
+        .get("tokens")?
+        .ok_or("Jetons synthétiques absents.")?;
+    let encoded_tokens = serde_json::to_string(&tokens)?;
+    let mut envelopes: Document = expected.get("envelopes")?.ok_or("Enveloppes absentes.")?;
     for (name, platform) in [
         ("linux", KeyringPlatform::Linux),
         ("darwin", KeyringPlatform::Macos),
@@ -315,25 +320,26 @@ pub async fn test() -> Result<()> {
             }
             Ok((0, "11".repeat(32)))
         };
-        let envelope = expected["envelopes"][name]
-            .as_str()
-            .ok_or("Enveloppe absente.")?;
-        let decoded = token_vault::keyring_protect(platform, envelope, true, &mut key).await?;
-        if serde_json::from_str::<Value>(&decoded)? != expected["tokens"] {
+        let envelope = envelopes.get::<String>(name)?.ok_or("Enveloppe absente.")?;
+        let decoded = token_vault::keyring_protect(platform, &envelope, true, &mut key).await?;
+        if serde_json::to_string(&serde_json::from_str::<Document>(&decoded)?)? != encoded_tokens {
             return Err("Coffre Node illisible par Rust.".into());
         }
-        expected["envelopes"][name] =
-            json!(token_vault::keyring_protect(platform, &decoded, false, &mut key).await?);
+        envelopes.set(
+            name,
+            &token_vault::keyring_protect(platform, &decoded, false, &mut key).await?,
+        )?;
     }
     #[cfg(windows)]
     {
         let database = Database::open(&path)?;
-        if token_vault::load(&database).await? != expected["tokens"] {
+        if serde_json::to_string(&token_vault::load(&database).await?)? != encoded_tokens {
             return Err("Coffre DPAPI Node illisible par Rust.".into());
         }
-        token_vault::save(&database, &expected["tokens"]).await?;
+        token_vault::save(&database, &tokens).await?;
         database.close().await?;
     }
+    expected.set("envelopes", &envelopes)?;
     std::fs::write(&reference, serde_json::to_vec(&expected)?)?;
     fixture("rust-vault-reference.mjs", "verify", &path, &reference)?;
     println!(

@@ -1,5 +1,13 @@
 # M02 — données et protections locales
 
+## Coffre UTF-16 — candidat après `38ceb6c`
+
+La préparation des réglages globaux a révélé que le coffre décodait encore les jetons en `serde_json::Value`, qui refuse les substituts UTF-16 isolés. Chargement, préparation du chiffrement et sauvegarde utilisent maintenant `Document`, y compris pour les clés inconnues. La suppression d'un coffre entièrement vide garde les conditions de vérité Node ; tableaux/objets vides restent des valeurs vraies.
+
+Le scénario historique de coffre inclut maintenant des clés et valeurs UTF-16 synthétiques, puis demande à Node de relire le résultat Rust. Le nouveau test ordinaire vérifie aussi une sauvegarde DPAPI Windows et une réouverture sans Node. Les quatre tests ciblés du module coffre ont réussi sur Windows avant la demande d'arrêter les tests locaux. Comparateur historique complet, suite Rust complète, Clippy et suite Node restent à valider en CI ; cet incrément est candidat et n'est pas qualifié. Aucun secret utilisateur ni trousseau personnel n'est lu.
+
+À compter de cette demande, les compilations et tests seront exécutés sur les runners GitHub Windows, sans charge de test sur le poste. Linux/macOS restent reportés à la qualification finale.
+
 Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est validé après requalification de la vraie réouverture navigateur. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
 
 ## Stockage porté

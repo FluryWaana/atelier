@@ -1022,11 +1022,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/time_tracking.rs:27](../crates/atelier-app/src/infrastructure/time_tracking.rs#L27) | <code>pub struct Clock;</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:1](../crates/atelier-app/src/infrastructure/token_vault.rs#L1) | <code>use super::{database::Database, session, store::Store};</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:2](../crates/atelier-app/src/infrastructure/token_vault.rs#L2) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:3](../crates/atelier-app/src/infrastructure/token_vault.rs#L3) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:4](../crates/atelier-app/src/infrastructure/token_vault.rs#L4) | <code>use ring::aead::{AES_256_GCM, Aad, LessSafeKey, Nonce, UnboundKey};</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:5](../crates/atelier-app/src/infrastructure/token_vault.rs#L5) | <code>use rusqlite::OptionalExtension;</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:6](../crates/atelier-app/src/infrastructure/token_vault.rs#L6) | <code>use serde::{Deserialize, Serialize};</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:7](../crates/atelier-app/src/infrastructure/token_vault.rs#L7) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:3](../crates/atelier-app/src/infrastructure/token_vault.rs#L3) | <code>use atelier_core::document::Document;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:4](../crates/atelier-app/src/infrastructure/token_vault.rs#L4) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:5](../crates/atelier-app/src/infrastructure/token_vault.rs#L5) | <code>use ring::aead::{AES_256_GCM, Aad, LessSafeKey, Nonce, UnboundKey};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:6](../crates/atelier-app/src/infrastructure/token_vault.rs#L6) | <code>use rusqlite::OptionalExtension;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:7](../crates/atelier-app/src/infrastructure/token_vault.rs#L7) | <code>use serde::{Deserialize, Serialize};</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:8](../crates/atelier-app/src/infrastructure/token_vault.rs#L8) | <code>use std::{process::Stdio, time::Duration};</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:9](../crates/atelier-app/src/infrastructure/token_vault.rs#L9) | <code>use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:12](../crates/atelier-app/src/infrastructure/token_vault.rs#L12) | <code>pub enum KeyringPlatform {</code> |
@@ -1035,14 +1035,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:208](../crates/atelier-app/src/infrastructure/token_vault.rs#L208) | <code>pub async fn protect(value: &amp;str, decrypt: bool) -&gt; Result&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:227](../crates/atelier-app/src/infrastructure/token_vault.rs#L227) | <code>pub fn read_encrypted(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:242](../crates/atelier-app/src/infrastructure/token_vault.rs#L242) | <code>pub fn save_encrypted(store: &amp;Store&lt;'_&gt;, encrypted: Option&lt;&amp;str&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:252](../crates/atelier-app/src/infrastructure/token_vault.rs#L252) | <code>pub async fn load(database: &amp;Database) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:252](../crates/atelier-app/src/infrastructure/token_vault.rs#L252) | <code>pub async fn load(database: &amp;Database) -&gt; Result&lt;Document&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:259](../crates/atelier-app/src/infrastructure/token_vault.rs#L259) | <code>pub async fn encrypt_tokens(</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:276](../crates/atelier-app/src/infrastructure/token_vault.rs#L276) | <code>pub async fn save(database: &amp;Database, tokens: &amp;Value) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:276](../crates/atelier-app/src/infrastructure/token_vault.rs#L276) | <code>pub async fn save(database: &amp;Database, tokens: &amp;Document) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:284](../crates/atelier-app/src/infrastructure/token_vault.rs#L284) | <code>mod tests {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:285](../crates/atelier-app/src/infrastructure/token_vault.rs#L285) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:287](../crates/atelier-app/src/infrastructure/token_vault.rs#L287) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:401](../crates/atelier-app/src/infrastructure/token_vault.rs#L401) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:453](../crates/atelier-app/src/infrastructure/token_vault.rs#L453) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:286](../crates/atelier-app/src/infrastructure/token_vault.rs#L286) | <code>use atelier_core::document::JsonString;</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:287](../crates/atelier-app/src/infrastructure/token_vault.rs#L287) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:289](../crates/atelier-app/src/infrastructure/token_vault.rs#L289) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:336](../crates/atelier-app/src/infrastructure/token_vault.rs#L336) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:450](../crates/atelier-app/src/infrastructure/token_vault.rs#L450) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:511](../crates/atelier-app/src/infrastructure/token_vault.rs#L511) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/windows_registration.rs:1](../crates/atelier-app/src/infrastructure/windows_registration.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/windows_registration.rs:2](../crates/atelier-app/src/infrastructure/windows_registration.rs#L2) | <code>use std::{</code> |
 | [crates/atelier-app/src/infrastructure/windows_registration.rs:7](../crates/atelier-app/src/infrastructure/windows_registration.rs#L7) | <code>use windows_sys::Win32::{</code> |
@@ -1214,15 +1217,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/document.rs:110](../crates/atelier-core/src/document.rs#L110) | <code>pub fn raw(&amp;self, key: &amp;str) -&gt; Option&lt;&amp;RawValue&gt; {</code> |
 | [crates/atelier-core/src/document.rs:114](../crates/atelier-core/src/document.rs#L114) | <code>pub fn raw_key(&amp;self, key: &amp;JsonString) -&gt; Option&lt;&amp;RawValue&gt; {</code> |
 | [crates/atelier-core/src/document.rs:121](../crates/atelier-core/src/document.rs#L121) | <code>pub fn truthy(&amp;self, key: &amp;str) -&gt; serde_json::Result&lt;bool&gt; {</code> |
-| [crates/atelier-core/src/document.rs:132](../crates/atelier-core/src/document.rs#L132) | <code>pub fn string_equals(&amp;self, key: &amp;str, expected: &amp;str) -&gt; serde_json::Result&lt;bool&gt; {</code> |
-| [crates/atelier-core/src/document.rs:139](../crates/atelier-core/src/document.rs#L139) | <code>pub fn get&lt;T: de::DeserializeOwned&gt;(&amp;self, key: &amp;str) -&gt; serde_json::Result&lt;Option&lt;T&gt;&gt; {</code> |
-| [crates/atelier-core/src/document.rs:148](../crates/atelier-core/src/document.rs#L148) | <code>pub fn set(&amp;mut self, key: &amp;str, value: &amp;impl Serialize) -&gt; serde_json::Result&lt;()&gt; {</code> |
-| [crates/atelier-core/src/document.rs:162](../crates/atelier-core/src/document.rs#L162) | <code>pub fn overlay(&amp;mut self, other: &amp;Self) {</code> |
-| [crates/atelier-core/src/document.rs:168](../crates/atelier-core/src/document.rs#L168) | <code>pub fn remove(&amp;mut self, key: &amp;str) {</code> |
-| [crates/atelier-core/src/document.rs:213](../crates/atelier-core/src/document.rs#L213) | <code>mod tests {</code> |
-| [crates/atelier-core/src/document.rs:214](../crates/atelier-core/src/document.rs#L214) | <code>use super::*;</code> |
-| [crates/atelier-core/src/document.rs:216](../crates/atelier-core/src/document.rs#L216) | <code>#[test]</code> |
-| [crates/atelier-core/src/document.rs:230](../crates/atelier-core/src/document.rs#L230) | <code>#[test]</code> |
+| [crates/atelier-core/src/document.rs:125](../crates/atelier-core/src/document.rs#L125) | <code>pub fn truthy_key(&amp;self, key: &amp;JsonString) -&gt; serde_json::Result&lt;bool&gt; {</code> |
+| [crates/atelier-core/src/document.rs:136](../crates/atelier-core/src/document.rs#L136) | <code>pub fn string_equals(&amp;self, key: &amp;str, expected: &amp;str) -&gt; serde_json::Result&lt;bool&gt; {</code> |
+| [crates/atelier-core/src/document.rs:143](../crates/atelier-core/src/document.rs#L143) | <code>pub fn get&lt;T: de::DeserializeOwned&gt;(&amp;self, key: &amp;str) -&gt; serde_json::Result&lt;Option&lt;T&gt;&gt; {</code> |
+| [crates/atelier-core/src/document.rs:152](../crates/atelier-core/src/document.rs#L152) | <code>pub fn set(&amp;mut self, key: &amp;str, value: &amp;impl Serialize) -&gt; serde_json::Result&lt;()&gt; {</code> |
+| [crates/atelier-core/src/document.rs:166](../crates/atelier-core/src/document.rs#L166) | <code>pub fn overlay(&amp;mut self, other: &amp;Self) {</code> |
+| [crates/atelier-core/src/document.rs:172](../crates/atelier-core/src/document.rs#L172) | <code>pub fn remove(&amp;mut self, key: &amp;str) {</code> |
+| [crates/atelier-core/src/document.rs:217](../crates/atelier-core/src/document.rs#L217) | <code>mod tests {</code> |
+| [crates/atelier-core/src/document.rs:218](../crates/atelier-core/src/document.rs#L218) | <code>use super::*;</code> |
+| [crates/atelier-core/src/document.rs:220](../crates/atelier-core/src/document.rs#L220) | <code>#[test]</code> |
+| [crates/atelier-core/src/document.rs:234](../crates/atelier-core/src/document.rs#L234) | <code>#[test]</code> |
 | [crates/atelier-core/src/domain.rs:1](../crates/atelier-core/src/domain.rs#L1) | <code>pub mod agent_options;</code> |
 | [crates/atelier-core/src/domain.rs:2](../crates/atelier-core/src/domain.rs#L2) | <code>pub mod checklist;</code> |
 | [crates/atelier-core/src/domain.rs:3](../crates/atelier-core/src/domain.rs#L3) | <code>pub mod projects;</code> |
@@ -1896,9 +1900,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:446](../crates/atelier-app/src/infrastructure/portable_import.rs#L446) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:172](../crates/atelier-app/src/infrastructure/token_vault.rs#L172) | <code>args: &amp;[&amp;str],</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:177](../crates/atelier-app/src/infrastructure/token_vault.rs#L177) | <code>.args(args)</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:292](../crates/atelier-app/src/infrastructure/token_vault.rs#L292) | <code>args: &amp;[&amp;str],</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:304](../crates/atelier-app/src/infrastructure/token_vault.rs#L304) | <code>stored = if args == ["-i"] {</code> |
-| [crates/atelier-app/src/infrastructure/token_vault.rs:309](../crates/atelier-app/src/infrastructure/token_vault.rs#L309) | <code>assert!(!args.join(" ").contains(&amp;stored));</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:341](../crates/atelier-app/src/infrastructure/token_vault.rs#L341) | <code>args: &amp;[&amp;str],</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:353](../crates/atelier-app/src/infrastructure/token_vault.rs#L353) | <code>stored = if args == ["-i"] {</code> |
+| [crates/atelier-app/src/infrastructure/token_vault.rs:358](../crates/atelier-app/src/infrastructure/token_vault.rs#L358) | <code>assert!(!args.join(" ").contains(&amp;stored));</code> |
 | [crates/atelier-app/src/main.rs:6](../crates/atelier-app/src/main.rs#L6) | <code>let mut args = std::env::args().skip(1);</code> |
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
@@ -3227,10 +3231,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>token_vault::{self, KeyringPlatform},</code> |
 | [xtask/src/storage.rs:18](../xtask/src/storage.rs#L18) | <code>let page = store.logs("run-0", cursor)?;</code> |
 | [xtask/src/storage.rs:247](../xtask/src/storage.rs#L247) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
-| [xtask/src/storage.rs:321](../xtask/src/storage.rs#L321) | <code>let decoded = token_vault::keyring_protect(platform, envelope, true, &amp;mut key).await?;</code> |
-| [xtask/src/storage.rs:326](../xtask/src/storage.rs#L326) | <code>json!(token_vault::keyring_protect(platform, &amp;decoded, false, &amp;mut key).await?);</code> |
-| [xtask/src/storage.rs:331](../xtask/src/storage.rs#L331) | <code>if token_vault::load(&amp;database).await? != expected["tokens"] {</code> |
-| [xtask/src/storage.rs:334](../xtask/src/storage.rs#L334) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
+| [xtask/src/storage.rs:324](../xtask/src/storage.rs#L324) | <code>let decoded = token_vault::keyring_protect(platform, &amp;envelope, true, &amp;mut key).await?;</code> |
+| [xtask/src/storage.rs:330](../xtask/src/storage.rs#L330) | <code>&amp;token_vault::keyring_protect(platform, &amp;decoded, false, &amp;mut key).await?,</code> |
+| [xtask/src/storage.rs:336](../xtask/src/storage.rs#L336) | <code>if serde_json::to_string(&amp;token_vault::load(&amp;database).await?)? != encoded_tokens {</code> |
+| [xtask/src/storage.rs:339](../xtask/src/storage.rs#L339) | <code>token_vault::save(&amp;database, &amp;tokens).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
 Total : 377 fichiers ; 95 fichiers de tests Node.

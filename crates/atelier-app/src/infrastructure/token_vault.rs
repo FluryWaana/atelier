@@ -1,10 +1,10 @@
 use super::{database::Database, session, store::Store};
 use crate::Result;
+use atelier_core::document::Document;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use ring::aead::{AES_256_GCM, Aad, LessSafeKey, Nonce, UnboundKey};
 use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use std::{process::Stdio, time::Duration};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
@@ -249,31 +249,31 @@ pub fn save_encrypted(store: &Store<'_>, encrypted: Option<&str>) -> Result<()> 
     Ok(())
 }
 
-pub async fn load(database: &Database) -> Result<Value> {
+pub async fn load(database: &Database) -> Result<Document> {
     match database.call(read_encrypted).await? {
-        None => Ok(json!({})),
+        None => Ok(Document::default()),
         Some(encrypted) => Ok(serde_json::from_str(&protect(&encrypted, true).await?)?),
     }
 }
 
 pub async fn encrypt_tokens(
-    tokens: &Value,
+    tokens: &Document,
     protect: &mut impl AsyncFnMut(&str, bool) -> Result<String>,
 ) -> Result<Option<String>> {
-    let values = tokens.as_object().ok_or("Jetons invalides.")?;
-    if values.values().all(|value| match value {
-        Value::Null => true,
-        Value::Bool(value) => !value,
-        Value::Number(value) => value.as_f64() == Some(0.0),
-        Value::String(value) => value.is_empty(),
-        _ => false,
-    }) {
+    let mut empty = true;
+    for key in tokens.keys() {
+        if tokens.truthy_key(key)? {
+            empty = false;
+            break;
+        }
+    }
+    if empty {
         return Ok(None);
     }
     Ok(Some(protect(&serde_json::to_string(tokens)?, false).await?))
 }
 
-pub async fn save(database: &Database, tokens: &Value) -> Result<()> {
+pub async fn save(database: &Database, tokens: &Document) -> Result<()> {
     let encrypted = encrypt_tokens(tokens, &mut protect).await?;
     database
         .call(move |store| save_encrypted(store, encrypted.as_deref()))
@@ -283,6 +283,55 @@ pub async fn save(database: &Database, tokens: &Value) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use atelier_core::document::JsonString;
+    use serde_json::{Value, json};
+
+    #[tokio::test]
+    async fn token_documents_preserve_utf16_keys_values_and_empty_containers() {
+        let tokens: Document = serde_json::from_str(r#"{"jira":"synthetic-\ud800","connector:\udc00:token":"\ud800","legacy":{"\ud800":"\udc00"}}"#).unwrap();
+        let mut capture = async |plain: &str, decrypt: bool| -> Result<String> {
+            assert!(!decrypt);
+            Ok(plain.to_owned())
+        };
+        let plain = encrypt_tokens(&tokens, &mut capture)
+            .await
+            .unwrap()
+            .unwrap();
+        let decoded: Document = serde_json::from_str(&plain).unwrap();
+        let mut key = JsonString::from("connector:");
+        key.0.push(0xdc00);
+        key.0.extend(":token".encode_utf16());
+        assert_eq!(
+            serde_json::from_str::<JsonString>(decoded.raw_key(&key).unwrap().get()).unwrap(),
+            JsonString(vec![0xd800])
+        );
+        assert!(decoded.truthy_key(&key).unwrap());
+        for input in [r#"{"legacy":{}}"#, r#"{"legacy":[]}"#] {
+            let tokens = serde_json::from_str(input).unwrap();
+            assert!(
+                encrypt_tokens(&tokens, &mut capture)
+                    .await
+                    .unwrap()
+                    .is_some()
+            );
+        }
+        #[cfg(windows)]
+        {
+            let root = tempfile::tempdir().unwrap();
+            let path = root.path().join("synthetic-vault.sqlite");
+            let database = Database::open(&path).unwrap();
+            save(&database, &tokens).await.unwrap();
+            let encrypted = database.call(read_encrypted).await.unwrap().unwrap();
+            assert!(!encrypted.contains("synthetic-"));
+            database.close().await.unwrap();
+            let database = Database::open(&path).unwrap();
+            assert_eq!(
+                serde_json::to_string(&load(&database).await.unwrap()).unwrap(),
+                plain
+            );
+            database.close().await.unwrap();
+        }
+    }
 
     #[tokio::test]
     async fn keyring_formats_authenticate_and_never_pass_keys_on_the_command_line() {
@@ -402,7 +451,7 @@ mod tests {
     async fn encryption_failure_and_transaction_failure_preserve_previous_secrets() {
         let root = tempfile::tempdir().unwrap();
         let database = Database::open(&root.path().join("vault.sqlite")).unwrap();
-        assert_eq!(load(&database).await.unwrap(), json!({}));
+        assert_eq!(load(&database).await.unwrap().keys().count(), 0);
         database
             .call(|store| save_encrypted(store, Some("synthetic-previous")))
             .await
@@ -410,9 +459,12 @@ mod tests {
         let mut unavailable =
             async |_: &str, _: bool| -> Result<String> { Err("unavailable".into()) };
         assert!(
-            encrypt_tokens(&json!({"jira":"synthetic-replacement"}), &mut unavailable)
-                .await
-                .is_err()
+            encrypt_tokens(
+                &serde_json::from_str(r#"{"jira":"synthetic-replacement"}"#).unwrap(),
+                &mut unavailable
+            )
+            .await
+            .is_err()
         );
         assert_eq!(
             database.call(read_encrypted).await.unwrap().as_deref(),
@@ -440,13 +492,19 @@ mod tests {
             json!({})
         );
         assert!(
-            encrypt_tokens(&json!({"jira":"","tempo":null}), &mut unavailable)
-                .await
-                .unwrap()
-                .is_none()
+            encrypt_tokens(
+                &serde_json::from_str(
+                    r#"{"jira":"","tempo":null,"\ud800":"","disabled":false,"zero":0}"#
+                )
+                .unwrap(),
+                &mut unavailable
+            )
+            .await
+            .unwrap()
+            .is_none()
         );
-        save(&database, &json!({})).await.unwrap();
-        assert_eq!(load(&database).await.unwrap(), json!({}));
+        save(&database, &Document::default()).await.unwrap();
+        assert_eq!(load(&database).await.unwrap().keys().count(), 0);
         database.close().await.unwrap();
     }
 
