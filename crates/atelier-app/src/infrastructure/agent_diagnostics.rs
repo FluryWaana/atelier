@@ -275,6 +275,31 @@ pub(crate) async fn command(profile: &Document) -> Result<tokio::process::Comman
     Ok(command)
 }
 
+pub(crate) async fn agent_command(
+    profile: &Document,
+    api_key: &str,
+) -> Result<(tokio::process::Command, Vec<String>)> {
+    let (binary, inherited) = resolve(profile).await?;
+    let api = profile.string_equals("auth", "api")?;
+    let mut selected = environment(profile, &inherited, !api)?;
+    if api {
+        for key in ["CODEX_API_KEY", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN"] {
+            selected.remove(key);
+        }
+    }
+    let mut secrets = selected
+        .iter()
+        .filter(|(key, _)| key.contains("KEY") || key.contains("TOKEN"))
+        .filter_map(|(_, value)| value.to_str().map(str::to_owned))
+        .collect::<Vec<_>>();
+    if !api_key.is_empty() {
+        secrets.push(api_key.into());
+    }
+    let mut command = tokio::process::Command::new(binary);
+    command.env_clear().envs(selected);
+    Ok((command, secrets))
+}
+
 pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
     let (binary, inherited) = resolve(&profile).await?;
     let kind = profile.get::<String>("type")?.ok_or("Agent invalide.")?;

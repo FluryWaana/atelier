@@ -1,6 +1,8 @@
 use super::{database::Database, files::Repository, process_tree::ContainedChild, runs};
 use crate::Result;
-use atelier_core::document::Document;
+use atelier_core::{
+    application::agent_protocol::Protocol, contracts::AgentAnswer, document::Document,
+};
 use std::{
     collections::BTreeMap,
     process::Stdio,
@@ -10,13 +12,24 @@ use std::{
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     process::Command,
-    sync::{broadcast, mpsc, watch},
+    sync::{broadcast, mpsc, oneshot, watch},
 };
 
 struct Entry {
     card: String,
     stop: watch::Sender<bool>,
     done: watch::Receiver<bool>,
+    replies: Option<mpsc::Sender<Reply>>,
+}
+
+pub enum RunInput {
+    Command(String),
+    Agent(Box<Protocol>),
+}
+
+pub(super) struct Reply {
+    pub answer: AgentAnswer,
+    pub result: oneshot::Sender<std::result::Result<(), &'static str>>,
 }
 
 pub struct CommandRuns {
@@ -52,7 +65,7 @@ impl CommandRuns {
         database: Arc<Database>,
         record: Document,
         mut command: Command,
-        prompt: String,
+        input: RunInput,
         directory: Repository,
     ) -> Result<Document> {
         let id = record
@@ -61,6 +74,8 @@ impl CommandRuns {
         let card = record.get::<String>("cardId")?.ok_or("Carte absente.")?;
         let (stop, cancel) = watch::channel(false);
         let (finished, done) = watch::channel(false);
+        let (replies, responses) = mpsc::channel(8);
+        let interactive = matches!(&input, RunInput::Agent(_));
         {
             let mut entries = self.entries();
             entries.retain(|_, entry| !*entry.done.borrow());
@@ -73,7 +88,15 @@ impl CommandRuns {
             if entries.values().any(|entry| entry.card == card) {
                 return Err("Cette tâche a déjà une exécution active.".into());
             }
-            entries.insert(id.clone(), Entry { card, stop, done });
+            entries.insert(
+                id.clone(),
+                Entry {
+                    card,
+                    stop,
+                    done,
+                    replies: interactive.then_some(replies),
+                },
+            );
         }
         let initial = record.clone();
         if let Err(error) = database
@@ -95,8 +118,9 @@ impl CommandRuns {
                 &database,
                 &id,
                 &mut command,
-                prompt,
+                input,
                 cancel,
+                responses,
                 &manager.changed,
             )
             .await;
@@ -113,6 +137,28 @@ impl CommandRuns {
             let _ = manager.changed.send(());
         });
         Ok(record)
+    }
+    pub async fn reply(&self, id: &str, answer: AgentAnswer) -> Result<()> {
+        let sender = {
+            let entries = self.entries();
+            let entry = entries
+                .get(id)
+                .filter(|entry| !*entry.done.borrow() && !*entry.stop.borrow())
+                .ok_or("Exécution terminée ou arrêtée.")?;
+            entry
+                .replies
+                .clone()
+                .ok_or("Cette commande ne reçoit pas de réponse interactive.")?
+        };
+        let (result, received) = oneshot::channel();
+        sender
+            .try_send(Reply { answer, result })
+            .map_err(|_| "Le canal de réponse est occupé ou fermé.")?;
+        tokio::time::timeout(Duration::from_secs(10), received)
+            .await
+            .map_err(|_| "La transmission de la réponse n’est pas confirmée.")?
+            .map_err(|_| "Le canal de réponse est fermé.")?
+            .map_err(Into::into)
     }
     pub async fn stop(&self, id: &str) -> Result<()> {
         let mut done = {
@@ -147,7 +193,7 @@ impl CommandRuns {
     }
 }
 
-async fn lines(
+pub(super) async fn lines(
     reader: impl AsyncRead + Unpin,
     stream: &'static str,
     sender: mpsc::Sender<(&'static str, String)>,
@@ -176,8 +222,9 @@ async fn supervise(
     database: &Database,
     id: &str,
     command: &mut Command,
-    prompt: String,
+    input: RunInput,
     mut cancel: watch::Receiver<bool>,
+    replies: mpsc::Receiver<Reply>,
     changed: &broadcast::Sender<()>,
 ) -> Result<()> {
     let spawned = ContainedChild::spawn(command).await;
@@ -211,6 +258,24 @@ async fn supervise(
         return Err(error);
     }
     let _ = changed.send(());
+    if let RunInput::Agent(protocol) = input {
+        return super::interactive_runs::drive(super::interactive_runs::Session {
+            database,
+            id,
+            child,
+            stdin,
+            stdout,
+            stderr,
+            protocol: *protocol,
+            cancel,
+            replies,
+            changed,
+        })
+        .await;
+    }
+    let RunInput::Command(prompt) = input else {
+        unreachable!()
+    };
     let (sender, mut receiver) = mpsc::channel(16);
     let output = async {
         tokio::try_join!(

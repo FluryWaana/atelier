@@ -94,6 +94,9 @@ pub fn transition(
         if !active(&run)? {
             run.set("endedAt", &timestamp)?;
             run.set("exitCode", &code)?;
+            run.remove("interactions");
+            run.set("waiting", &false)?;
+            run.remove("liveText");
         }
         store.put(Documents::Runs, &run)?;
         Ok(run)
@@ -169,6 +172,8 @@ fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
         run.set("endedAt", &timestamp)?;
         run.remove("interactions");
         run.remove("pid");
+        run.remove("liveText");
+        run.set("waiting", &false)?;
         store.log(&id, "system", "Atelier a été interrompu pendant cette exécution. Vérifie le dépôt avant de relancer explicitement.")?;
         store.put(Documents::Runs, &run)?;
         recovered += 1;

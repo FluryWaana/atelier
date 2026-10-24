@@ -12,6 +12,37 @@ pub fn describe(
     agent_providers::describe(&store.settings()?, &settings::load(store, protect)?)
 }
 
+pub fn execution_profile(
+    store: &Store<'_>,
+    id: &str,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<(Document, String)> {
+    let tokens = settings::load(store, protect)?;
+    let profile = agent_providers::describe(&store.settings()?, &tokens)?
+        .into_iter()
+        .find(|profile| profile.string_equals("id", id).unwrap_or(false))
+        .ok_or("Agent invalide.")?;
+    let key = if profile.string_equals("auth", "api")? {
+        let name = format!("agent:{id}:key");
+        let alias = format!("connector:{name}:token");
+        let selected = if tokens
+            .raw(&alias)
+            .is_some_and(|value| value.get() != "null")
+        {
+            alias
+        } else {
+            name
+        };
+        tokens
+            .get::<String>(&selected)?
+            .filter(|key| !key.is_empty())
+            .ok_or("Renseigne la clé API de ce profil avant de lancer un agent.")?
+    } else {
+        String::new()
+    };
+    Ok((profile, key))
+}
+
 pub fn diagnostic_profile(
     store: &Store<'_>,
     body: &Document,

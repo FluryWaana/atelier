@@ -84,6 +84,7 @@ pub fn TaskEditor(
     let dirty = Memo::new(move |_| draft.get() != original.get_value());
     let pending = RwSignal::new(false);
     let workspace_dirty = RwSignal::new(false);
+    let reply_drafts = RwSignal::new(std::collections::BTreeSet::<String>::new());
     let show_files = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let confirmation = RwSignal::new("");
@@ -117,6 +118,7 @@ pub fn TaskEditor(
         }
         if dirty.get_untracked()
             || workspace_dirty.get_untracked()
+            || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
             || !template_name.get_untracked().is_empty()
         {
             confirmation.set("discard");
@@ -127,6 +129,7 @@ pub fn TaskEditor(
     let unload = window_event_listener(leptos::ev::beforeunload, move |event| {
         if dirty.get_untracked()
             || workspace_dirty.get_untracked()
+            || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
             || pending.get_untracked()
             || !template_name.get_untracked().is_empty()
         {
@@ -248,7 +251,7 @@ pub fn TaskEditor(
             </form>
             <Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) />
             <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
-            <crate::runs::Runs card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
+            <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
             <section class="task-files"><button id="browse-task-files" type="button" disabled=move || pending.get() aria-expanded=move || show_files.get().to_string() on:click=move |_| show_files.update(|shown| *shown = !*shown)>{move || i18n.text("Fichiers du projet")}</button><Show when=move || show_files.get()><Files card_id=id.get_value() token /></Show></section>
             <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("Dupliquer")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "Restaurer" } else { "Archiver" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("Supprimer…")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("Créer un modèle")}</button></div>
             <form class="template-form" hidden=move || !show_template.get() on:submit=move |event| { event.prevent_default(); perform(Action::Template); }><label for="template-name">{move || i18n.text("Nom du modèle")}</label><input id="template-name" required maxlength="100" disabled=move || pending.get() prop:value=move || template_name.get() on:input=move |event| template_name.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text("Le modèle reprend la description, les instructions et les critères à vérifier.")}</p><button id="save-template" class="primary" type="submit" disabled=move || pending.get()>{move || i18n.text("Enregistrer le modèle")}</button><button type="button" disabled=move || pending.get() on:click=move |_| { template_name.set(String::new()); show_template.set(false); }>{move || i18n.text("Annuler le modèle")}</button></form>

@@ -384,6 +384,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
         .route("/api/runs/{id}/stop", post(runs::stop))
+        .route("/api/runs/{id}/reply", post(runs::reply))
         .route("/api/runs/{id}/logs", get(runs::logs))
         .route("/api/cards/{id}/services", get(services::get))
         .route("/api/cards/{id}/services/start", post(services::start))

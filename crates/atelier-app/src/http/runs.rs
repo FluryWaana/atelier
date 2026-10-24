@@ -1,12 +1,18 @@
 use super::{Shared, failure, object};
 use crate::{
     Result,
-    infrastructure::{agent_diagnostics, command_runs::CommandRuns, store::Documents, worktrees},
+    infrastructure::{
+        agent_diagnostics, agent_providers,
+        command_runs::{CommandRuns, RunInput},
+        store::Documents,
+        worktrees,
+    },
 };
 use atelier_core::{
-    contracts::{Card, Worktree, WorktreeState},
+    application::agent_protocol::{Kind, Protocol, ProtocolConfig},
+    contracts::{AgentAnswer, Card, Worktree, WorktreeState},
     document::Document,
-    domain::{agent_options::providers, projects::same_repository},
+    domain::projects::same_repository,
 };
 use axum::{
     Json,
@@ -47,25 +53,26 @@ pub(super) async fn start(
             return Err("Mode invalide.".into());
         }
         let agent = body.get::<String>("agent")?.ok_or("Profil requis.")?;
-        let (card, profile, rules) = state
+        let vault=state.vault.clone();
+        let requested=body.clone();
+        let (card, profile, api_key, rules) = state
             .database
             .call(move |store| {
                 let card = store
                     .document::<Card>(Documents::Cards, &id)?
                     .ok_or("Carte introuvable.")?;
-                let profile = providers(&store.settings()?)?
-                    .into_iter()
-                    .find(|profile| profile.string_equals("id", &agent).unwrap_or(false))
-                    .ok_or("Agent invalide.")?;
-                if !profile.string_equals("type", "command")? {
-                    return Err("L’exécution interactive Codex/Claude reste à raccorder.".into());
-                }
+                let (mut profile,api_key)=agent_providers::execution_profile(store,&agent,&mut |value,decrypt| vault.protect(value,decrypt))?;
+                let settings:serde_json::Value=serde_json::from_str(&serde_json::to_string(&store.settings::<Document>()?)?)?;
+                let card_value:serde_json::Value=serde_json::from_str(&serde_json::to_string(&card)?)?;
+                let requested:serde_json::Value=serde_json::from_str(&serde_json::to_string(&requested)?)?;
+                let options=atelier_core::domain::agent_options::resolve_agent_options(&settings,&card_value,&requested)?;
+                profile.set("model",&options["model"])?; profile.set("effort",&options["effort"])?;
                 if card.fields.truthy("archived")? {
                     return Err("Restaure cette tâche avant de lancer un agent.".into());
                 }
                 let project = card.fields.get::<String>("projectId")?.map(|id| store.document::<Document>(Documents::Projects, &id)).transpose()?.flatten();
                 let rules = project.map(|project| project.get::<String>("projectRules")).transpose()?.flatten().unwrap_or_default();
-                Ok((card, profile, rules))
+                Ok((card, profile, api_key, rules))
             })
             .await?;
         let worktree = card
@@ -85,19 +92,22 @@ pub(super) async fn start(
             &worktree,
         )
         .await?;
-        let mut command = agent_diagnostics::command(&profile).await?;
-        let args = profile
-            .get::<Vec<String>>(&format!("{mode}Args"))?
-            .ok_or("Arguments de commande absents.")?;
-        if args.len() > 128
-            || args
-                .iter()
-                .any(|arg| arg.len() > 16 * 1024 || arg.contains('\0'))
-        {
-            return Err("Arguments de commande invalides.".into());
-        }
+        let kind=profile.get::<String>("type")?.ok_or("Agent invalide.")?;
+        let (mut command,secrets)=if kind=="command" { (agent_diagnostics::command(&profile).await?,Vec::new()) } else { agent_diagnostics::agent_command(&profile,&api_key).await? };
         let model = profile.get::<String>("model")?.unwrap_or_default();
         let effort = profile.get::<String>("effort")?.unwrap_or_default();
+        let args=match kind.as_str() {
+            "command"=>profile.get::<Vec<String>>(&format!("{mode}Args"))?.ok_or("Arguments de commande absents.")?,
+            "codex"=> { let mut args=vec!["app-server".to_owned()]; if !api_key.is_empty() { args.extend(["-c".into(),"cli_auth_credentials_store=\"ephemeral\"".into()]); } args },
+            "claude"=> {
+                let mut args=vec!["-p".into(),"--output-format".into(),"stream-json".into(),"--input-format".into(),"stream-json".into(),"--verbose".into(),"--include-partial-messages".into(),"--permission-mode".into(),if mode=="edit"{"default".into()}else{"plan".into()}];
+                if !model.is_empty() { args.extend(["--model".into(),model.clone()]); }
+                if !effort.is_empty() { args.extend(["--effort".into(),effort.clone()]); }
+                args
+            },
+            _=>return Err("Agent invalide.".into()),
+        };
+        if args.len()>128 || args.iter().any(|arg| arg.len()>16*1024 || arg.contains('\0')) { return Err("Arguments de commande invalides.".into()); }
         command
             .args(
                 args.iter()
@@ -124,8 +134,10 @@ pub(super) async fn start(
         run.set("id", &uuid::Uuid::new_v4().to_string())?;
         run.set("cardId", &card.id)?;
         run.set("agent", &profile.get::<String>("id")?)?;
-        run.set("agentType", &"command")?;
+        run.set("agentType", &kind)?;
         run.set("mode", &mode)?;
+        run.set("model", &model)?;
+        run.set("effort", &effort)?;
         run.set("repo", &worktree.path)?;
         run.set("branch", &worktree.branch)?;
         run.set("status", &"starting")?;
@@ -134,15 +146,36 @@ pub(super) async fn start(
             &time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?,
         )?;
+        let input=if kind=="command" { RunInput::Command(prompt) } else { RunInput::Agent(Box::new(Protocol::new(ProtocolConfig { kind:if kind=="codex"{Kind::Codex}else{Kind::Claude},edit:mode=="edit",repo:worktree.path,prompt,model,effort,api_key,secrets }))) };
         state
             .runs
-            .start(state.database.clone(), run, command, prompt, directory)
+            .start(state.database.clone(), run, command, input, directory)
             .await
     }
     .await;
     match result {
         Ok(run) => Json(run).into_response(),
         Err(error) => failure(StatusCode::BAD_REQUEST, &error.to_string()),
+    }
+}
+
+pub(super) async fn reply(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let answer: AgentAnswer =
+        match serde_json::from_str(&serde_json::to_string(&body).unwrap_or_default()) {
+            Ok(answer) => answer,
+            Err(_) => return failure(StatusCode::BAD_REQUEST, "Réponse interactive invalide."),
+        };
+    match state.runs.reply(&id, answer).await {
+        Ok(()) => Json(serde_json::json!({"ok":true})).into_response(),
+        Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
     }
 }
 

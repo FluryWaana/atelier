@@ -4,6 +4,9 @@ use std::{
     time::Duration,
 };
 
+#[path = "../fake_agent.rs"]
+mod fake_agent;
+
 #[cfg(windows)]
 #[path = "../../tests/support/windows.rs"]
 mod windows;
@@ -91,6 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::thread::sleep(Duration::from_secs(60));
             Ok(())
         }
+        ["app-server", ..] => fake_agent::run(true),
+        ["-p", ..] => fake_agent::run(false),
         ["run-command", mode @ ("success" | "hang")] => {
             if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
             let mut prompt = String::new();

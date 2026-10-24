@@ -50,7 +50,13 @@ async fn explicit_commands_persist_failure_and_stop_descendants_before_releasing
             .arg(&repository)
             .current_dir(&repository);
         manager
-            .start(database.clone(), record, command, String::new(), selected)
+            .start(
+                database.clone(),
+                record,
+                command,
+                atelier_app::infrastructure::command_runs::RunInput::Command(String::new()),
+                selected,
+            )
             .await
             .unwrap();
         let deadline = tokio::time::Instant::now() + Duration::from_secs(15);

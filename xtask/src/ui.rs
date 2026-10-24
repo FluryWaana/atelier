@@ -1657,6 +1657,44 @@ async fn files_scenario(
     click(client, "#stop-run").await?;
     wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution arrêtée') && document.querySelectorAll('.service-status')[1]?.textContent === 'Processus actif';",vec![]).await?;
     std::fs::remove_file(run_marker)?;
+    let agent_marker = Path::new(&worktree.path).join(".agent-run-fixture");
+    std::fs::write(&agent_marker, "atelier-r03-synthetic-only")?;
+    for kind in ["codex", "claude"] {
+        let agent_id = format!("ui-session-{kind}");
+        let fixture = root()
+            .join("target/debug")
+            .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+        let mut body = json!({"id":agent_id,"name":format!("Session synthétique {kind}"),"type":kind,"auth":"cli","command":fixture,"expected":null});
+        if kind == "codex" {
+            body["auth"] = json!("api");
+            body["apiKey"] = json!("synthetic-run-key");
+        }
+        http.post(format!("{address}/api/agent-providers"))
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?;
+        wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options || []).some(option=>option.value === arguments[0]);",vec![json!(agent_id)]).await?;
+        client.execute("const select=document.querySelector('#run-agent'); select.value=arguments[0]; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(agent_id)]).await?;
+        click(client, "#start-run").await?;
+        wait_dom(client,"return document.querySelector('.agent-interaction')?.textContent.includes('echo synthetic') && document.querySelector('.approve-interaction')?.disabled === false;",vec![]).await?;
+        click(client, ".approve-interaction").await?;
+        wait_dom(client,"return document.querySelector('.agent-question')?.type === 'password' && document.querySelector('.approve-interaction')?.disabled === false;",vec![]).await?;
+        client
+            .find(Locator::Css(".agent-question"))
+            .await?
+            .send_keys("synthetic-private-answer")
+            .await?;
+        click(client, "#close-editor").await?;
+        wait_dom(client,"return document.querySelector('#confirm-editor')?.textContent.includes('Abandonner') && document.querySelector('#confirm-editor')?.offsetParent !== null;",vec![]).await?;
+        click(client, "#cancel-confirmation").await?;
+        wait_dom(client,"return document.querySelector('.agent-question')?.value === 'synthetic-private-answer';",vec![]).await?;
+        click(client, ".approve-interaction").await?;
+        wait_dom(client,"const panel=document.querySelector('#runs-heading')?.parentElement; return panel?.textContent.includes('Exécution terminée') && panel.textContent.includes('Public synthetic') && !panel.textContent.includes('synthetic-run-key') && !panel.textContent.includes('synthetic-private-answer') && !panel.textContent.includes('private-synthetic-reasoning') && !document.querySelector('.agent-interaction');",vec![]).await?;
+    }
+    std::fs::remove_file(agent_marker)?;
     click(client, "#stop-services").await?;
     wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Arrêté') && document.querySelector('#start-services')?.disabled === false;", vec![]).await?;
     if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?

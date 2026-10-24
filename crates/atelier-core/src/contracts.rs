@@ -8,6 +8,35 @@ pub struct RunLog {
     pub text: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentQuestion {
+    pub id: String,
+    pub question: String,
+    pub options: Vec<String>,
+    pub multi_select: bool,
+    pub is_secret: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInteraction {
+    pub id: String,
+    pub title: String,
+    pub detail: String,
+    pub can_allow: bool,
+    pub questions: Vec<AgentQuestion>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AgentAnswer {
+    pub request_id: String,
+    pub decision: String,
+    #[serde(default)]
+    pub answers: std::collections::BTreeMap<String, Vec<String>>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AgentAuthentication {

@@ -14,6 +14,8 @@ pub mod dev_servers;
 mod directory_link;
 pub mod files;
 pub mod installation;
+#[cfg(windows)]
+mod interactive_runs;
 pub mod launch_detection;
 pub mod launch_ports;
 pub mod local_http;
