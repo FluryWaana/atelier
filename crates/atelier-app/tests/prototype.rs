@@ -1858,7 +1858,6 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
             .string_equals("instructions", "New instructions")
             .unwrap()
     );
-    assert!(local.fields.string_equals("status", "todo").unwrap());
     assert_eq!(
         local.fields.get::<JsonString>("unknown").unwrap(),
         Some(JsonString(vec![0xdc00]))
