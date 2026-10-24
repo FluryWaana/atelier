@@ -16,9 +16,10 @@ fn historical_node_domain_results_and_errors_match() {
                 .ok_or("Texte invalide ou trop long.")
                 .and_then(|value| text(value, args[1].as_u64().unwrap() as usize))
                 .map(|value| json!(value)),
-            "checklist" => checklist(&args[0]).map(|value| json!(value)),
+            "checklist" => checklist(&serde_json::value::to_raw_value(&args[0]).unwrap())
+                .map(|value| json!(value)),
             "checklistText" => Ok(json!(checklist_text(
-                &serde_json::from_value::<Vec<Criterion>>(args[0].clone()).unwrap()
+                &serde_json::from_str::<Vec<Criterion>>(&args[0].to_string()).unwrap()
             ))),
             "reviewRequirements" => Ok(review_requirements(&args[0])),
             "blockers" => Ok(json!(blockers(&args[0], args[1].as_array().unwrap()))),

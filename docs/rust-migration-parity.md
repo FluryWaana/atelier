@@ -173,6 +173,8 @@ C07, après `e281b44` : archivage/restauration et suppression HTTP transactionne
 
 C07, après `ec85b26` : création/retrait de modèles portés avec conservation des réglages/UTF-16, limite de 50 sous concurrence et reprise HTTP. 65 tests Rust locaux et Clippy natif/WASM réussis ; application des modèles à la création complète et UI ouvertes. La CI `ec85b26` est réussie ; journaux des cinq cibles relus pour C20 et le cycle de vie C07, des quatre POSIX pour la préparation privée C02/C05. Le comparateur Windows passe désormais après correction CRLF. Les preuves natives des modèles restent attendues.
 
+C07, après `1b9a9f7` : contrat de création complet préparé dans core, 77 cas Node comparés et critères/prompt conservés en UTF-16. Les ports de configuration/dépôt/horloge sont synthétiques dans ce corpus ; création HTTP complète et chemins natifs restent ouverts. 66 tests Rust locaux réussis. Les journaux des modèles `1b9a9f7` prouvent concurrence/reprise et conservation des réglages sur les cinq cibles natives.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

@@ -66,6 +66,16 @@ Contrôles locaux : 65 tests Rust réussis, Clippy natif/WASM réussi (avertisse
 
 La [CI `ec85b26`](https://github.com/FluryWaana/atelier/actions/runs/40053199326) est entièrement réussie. Journaux des cinq jobs natifs relus : les 46 transitions de temps, le parcours HTTP et les deux gardes de cycle de vie passent ; les quatre cibles POSIX passent la préparation privée après remplacement du chemin. Le journal Windows confirme la correction du comparateur CRLF. Les cinq journaux confirment aussi le refus entre comptes des coffres, avec relecture finale du second secret sur macOS. Ces preuves ne qualifient pas les fonctionnalités encore absentes.
 
+## Création de tâches et brainstorms dans core — après `1b9a9f7`
+
+`application/task_creation` porte les champs complets, l'héritage et les remplacements explicites des modèles, le choix de fournisseur/modèle/effort, les colonnes initiales et les particularités des brainstorms. Le port explicite fournit configuration, agent de projet, résolution du dépôt, identifiant et horloge ; core ne lit aucun fichier et ne démarre aucun agent. La priorité des validations et même l'ordre des appels identifiant/dépôt/horloge sont comparés à Node. Le branchement HTTP et les adaptateurs réels sont l'incrément suivant ; la route de création du prototype reste pour l'instant limitée au titre.
+
+Les critères et leur rendu de prompt utilisent désormais `JsonString` plutôt que `String`, pour conserver les substituts UTF-16 isolés acceptés par Node. Les validations existantes restent partagées, notamment les options d'agent. Les 305 contrats historiques restent inchangés et passent. Le nouveau corpus `rust-task-creation-reference` capture 77 créations depuis `createTasks` : succès, erreurs, champs ignorés, modèles absents, limites, priorité des erreurs, textes/critères UTF-16 et échec synthétique de résolution du dépôt. Les réponses et le prompt sont comparés sans conversion UTF-8 avec perte. `cargo xtask test-task-creation-parity` est ajouté aux cinq runners natifs ; les tests core ordinaires n'utilisent pas Node.
+
+Contrôles Windows : 66 tests Rust réussis, Clippy natif/WASM et comparateurs historiques réussis. Suite Node complète avec contrôle release : 429 tests, 426 réussis, aucun échec, trois exclusions, 85,141 s. Le résolveur de dépôt de ce corpus est synthétique ; il ne prouve ni les accès natifs ni la sélection réelle du projet.
+
+La [CI des modèles `1b9a9f7`](https://github.com/FluryWaana/atelier/actions/runs/40097251427) est entièrement réussie. Les journaux Windows, Linux x64/ARM64 et macOS Intel/ARM64 confirment le scénario HTTP concurrent avec redémarrage et la conservation SQLite des réglages/UTF-16. La CI du nouveau portage de création reste attendue.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

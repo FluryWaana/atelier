@@ -621,6 +621,13 @@ Prochaine action concrète :
 - **CI recueillie :** `ec85b26` entièrement réussie ; journaux des cinq cibles natifs relus pour les chronomètres et l'archivage/suppression, quatre POSIX pour le dossier privé. Correction CRLF Windows confirmée. Aucun nouveau lot globalement clos.
 - **Suite :** création/édition complètes, projets/réglages ; protections/intégrations M02 restantes.
 
+### Incrément M03 — contrat de création complet dans core
+
+- **Livré :** création de tâches/brainstorms et héritage de modèles dans core, avec ports explicites ; critères et prompt sans perte UTF-16. Le branchement HTTP et les accès natifs restent à porter.
+- **Vérification :** 77 créations capturées de Node et ordre des appels comparés ; 305 contrats précédents inchangés, 66 tests Rust et Clippy natif/WASM réussis. Suite Node complète consignée dans M03.
+- **CI recueillie :** modèles `1b9a9f7` réussis sur les cinq cibles natives ; journaux de concurrence/reprise et conservation des réglages relus.
+- **Suite :** brancher la création complète avec héritage de projet et résolution native du dépôt, puis édition/projets/réglages. M02/M03 restent en cours.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

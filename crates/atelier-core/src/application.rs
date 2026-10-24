@@ -6,6 +6,7 @@ use crate::{
 use serde_json::json;
 
 pub mod card_lifecycle;
+pub mod task_creation;
 pub mod task_templates;
 pub mod time_tracking;
 
