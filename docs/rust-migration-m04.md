@@ -1,5 +1,13 @@
 # M04 — Git, fichiers, processus et agents
 
+## Arbres de processus Windows — candidat après `41e7742`
+
+`process_tree::ContainedChild` prépare un Job Object non héritable avec fermeture destructrice, crée le programme suspendu et sans fenêtre, l'affecte au job, puis reprend son unique thread initial. Aucun protocole de coopération du programme n'est nécessaire, contrairement à la fixture M01. L'énumération est limitée au PID du processus encore détenu ; le handle de thread est revalidé avant reprise. Un état inattendu (plusieurs threads, affectation impossible) refuse le lancement et arrête le processus suspendu. Les API stables de Rust ne donnent pas encore directement le handle du thread initial ; cette stratégie utilise les API Microsoft [CREATE_SUSPENDED](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags) et [ToolHelp](https://learn.microsoft.com/en-us/windows/win32/toolhelp/traversing-the-thread-list), sans dépendance ni API Rust nightly.
+
+La fin naturelle arrête aussi les descendants restants. L'arrêt explicite termine le job, attend le parent et vérifie le compteur natif de processus actifs avec délai borné. L'abandon ferme le job et déclenche la terminaison OS. Aucun arrêt par PID réutilisable. Les scénarios Windows ajoutés lancent immédiatement un descendant, une variante détachée, un parent laissant un orphelin, un abandon du propriétaire et une tentative `CREATE_BREAKAWAY_FROM_JOB` qui doit recevoir `ERROR_ACCESS_DENIED`. Un processus témoin indépendant doit survivre à tous ces essais.
+
+Preuves attendues sur Windows distant. Cette tranche ne porte pas encore les groupes POSIX, la lecture bornée simultanée des flux, l'annulation des cas d'usage ou l'arrêt gracieux des protocoles d'agents. L'arrêt natif décrit ici est forcé, comme celui des serveurs Node actuels ; aucune qualification complète de M04 revendiquée.
+
 ## Réservation des ports — candidat après `4be03dc`
 
 `launch_ports::PortLease` garde un socket IPv4 lié à `127.0.0.1`, avec choix automatique ou port validé explicite. La libération consomme la réservation ; son abandon ferme aussi le socket. Le refus conserve le message de `lib/launch-ports.mjs`. Windows utilise `SO_EXCLUSIVEADDRUSE` avant `bind`, conformément à la [documentation Microsoft](https://learn.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse), pour refuser aussi la réutilisation forcée depuis le même compte. Tokio et windows-sys sont déjà présents ; aucune nouvelle dépendance.

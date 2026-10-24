@@ -1,5 +1,7 @@
 # M03 — Règles et API métier
 
+La [CI Windows `c819fd0`](https://github.com/FluryWaana/atelier/actions/runs/40118164288) est entièrement réussie, journaux relus : 24 contrats de sélection des sources et leurs équivalents Rust, comparateurs existants, Clippy natif/WASM, DPAPI entre comptes et les deux parcours Edge. Node : 441 tests, 437 réussis, aucun échec, quatre exclusions inchangées. Le scanner natif et les nouvelles routes HTTP appartiennent aux incréments suivants, encore en vérification.
+
 ## Détection HTTP avec scanner natif — candidat après `c819fd0`
 
 GET/POST `/api/projects/{id}/detect-launch` appellent le cas d'usage pur et le scanner [M04](rust-migration-m04.md). Le projet est lu par le worker SQLite, puis le scan se déroule hors du worker, sans verrou de transaction. Le brouillon n'est jamais sauvegardé. Les scénarios HTTP Node/Rust couvrent manifestes Node/.NET, sélection Front dédiée, rôle ignoré, projet absent prioritaire, refus d'authentification et conservation du projet. Le test Rust ajoute Origin et la garde du périmètre synthétique. Résultats distants attendus.

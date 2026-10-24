@@ -125,6 +125,79 @@ fn job_close_stops_parent_and_descendant_without_touching_another_process() {
     assert!(unrelated.child.try_wait().unwrap().is_none());
 }
 
+#[tokio::test]
+async fn suspended_launch_contains_immediate_detached_and_orphaned_children() {
+    use atelier_app::infrastructure::process_tree::ContainedChild;
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    let executable = Path::new(env!("CARGO_BIN_EXE_native-fixture"));
+    let mut unrelated = Fixture::spawn(executable, &["idle"]);
+    assert_eq!(unrelated.line(), "ready");
+    for mode in ["normal", "detached", "orphan", "drop"] {
+        let mut command = tokio::process::Command::new(executable);
+        command
+            .args([
+                "family-immediate",
+                if mode == "drop" { "normal" } else { mode },
+            ])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut parent = ContainedChild::spawn(&mut command).await.unwrap();
+        let mut lines = BufReader::new(parent.child.stdout.take().unwrap()).lines();
+        let pid = tokio::time::timeout(Duration::from_secs(10), lines.next_line())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let descendant = windows::open_process(pid.parse().unwrap()).unwrap();
+        assert_eq!(windows::wait(&descendant, 0), WAIT_TIMEOUT);
+        match mode {
+            "orphan" => assert!(
+                tokio::time::timeout(Duration::from_secs(10), parent.wait())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .success()
+            ),
+            "drop" => drop(parent),
+            _ => assert!(!parent.stop().await.unwrap().success()),
+        }
+        assert_eq!(windows::wait(&descendant, 5000), WAIT_OBJECT_0, "{mode}");
+        assert!(unrelated.child.try_wait().unwrap().is_none());
+    }
+    let mut command = tokio::process::Command::new(executable);
+    command
+        .args(["family-immediate", "breakaway"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped());
+    let mut parent = ContainedChild::spawn(&mut command).await.unwrap();
+    let mut lines = BufReader::new(parent.child.stdout.take().unwrap()).lines();
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(10), lines.next_line())
+            .await
+            .unwrap()
+            .unwrap()
+            .as_deref(),
+        Some("breakaway-refused")
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), parent.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    let fixture = tempfile::tempdir().unwrap();
+    assert!(
+        ContainedChild::spawn(&mut tokio::process::Command::new(
+            fixture.path().join("missing.exe")
+        ))
+        .await
+        .is_err()
+    );
+    assert!(unrelated.child.try_wait().unwrap().is_none());
+}
+
 #[test]
 fn staged_worker_verifies_identity_waits_and_replaces_a_real_executable() {
     use std::fs;

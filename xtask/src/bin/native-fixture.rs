@@ -74,6 +74,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             child.wait()?;
             Ok(())
         }
+        #[cfg(windows)]
+        ["family-immediate", mode @ ("normal" | "detached" | "orphan" | "breakaway")] => {
+            use std::os::windows::process::CommandExt;
+            let flags = match *mode {
+                "detached" => 0x00000008,
+                "breakaway" => 0x01000000 | 0x08000000,
+                _ => 0x08000000,
+            };
+            let spawned = Command::new(std::env::current_exe()?).arg("idle")
+                .creation_flags(flags).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+            if *mode == "breakaway" {
+                return match spawned {
+                    Err(error) if error.raw_os_error() == Some(5) => ready("breakaway-refused").map_err(Into::into),
+                    Err(error) => Err(error.into()),
+                    Ok(mut child) => { let _ = child.kill(); let _ = child.wait(); Err("The child escaped its job".into()) }
+                };
+            }
+            let mut child = spawned?;
+            ready(child.id())?;
+            if *mode != "orphan" { child.wait()?; }
+            Ok(())
+        }
         #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
         ["tray"] => tray::probe(),
         #[cfg(windows)]
