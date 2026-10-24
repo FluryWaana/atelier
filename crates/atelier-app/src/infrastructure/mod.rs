@@ -16,6 +16,7 @@ pub mod files;
 pub mod installation;
 #[cfg(windows)]
 mod interactive_runs;
+pub mod jira;
 pub mod launch_detection;
 pub mod launch_ports;
 pub mod local_http;

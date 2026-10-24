@@ -39,6 +39,72 @@ pub struct AgentAnswer {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub enum JiraMode {
+    Cloud,
+    DataCenter,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraConfiguration {
+    pub mode: JiraMode,
+    pub url: String,
+    pub email: String,
+    pub query: String,
+    pub revision: u64,
+}
+
+impl Default for JiraConfiguration {
+    fn default() -> Self {
+        Self {
+            mode: JiraMode::Cloud,
+            url: String::new(),
+            email: String::new(),
+            query: "assignee = currentUser() AND sprint in openSprints() ORDER BY updated DESC"
+                .into(),
+            revision: 0,
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraConnection {
+    pub configuration: JiraConfiguration,
+    pub token_set: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraConfigurationUpdate {
+    pub expected_revision: u64,
+    pub mode: JiraMode,
+    pub url: String,
+    pub email: String,
+    pub query: String,
+    pub token: Option<String>,
+    #[serde(default)]
+    pub clear_token: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct JiraIssue {
+    pub id: String,
+    pub key: String,
+    pub title: String,
+    pub status: String,
+    pub url: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraSearch {
+    pub connection_revision: u64,
+    pub issues: Vec<JiraIssue>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum AgentAuthentication {
     Unavailable,
     Present,

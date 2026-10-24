@@ -1151,6 +1151,60 @@ async fn settings_scenario(
     .await?;
     click(client, "#manage-settings").await?;
     wait_dom(client,"return document.querySelector('#settings-branch')?.value === 'remote' && document.querySelector('#settings-agent')?.value === 'claude' && !document.querySelector('#settings-repo')?.value.includes('missing-synthetic-directory');",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#jira-query')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    for (selector, value) in [
+        ("#jira-url", "https://synthetic-one.example.test"),
+        ("#jira-email", "synthetic@example.test"),
+        ("#jira-token", "synthetic-jira-one"),
+        ("#jira-query", "project = SYN"),
+    ] {
+        client.find(Locator::Css(selector)).await?.clear().await?;
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(value)
+            .await?;
+    }
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    wait_dom(client,"return document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
+    click(client, "#save-jira").await?;
+    wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
+    let saved: serde_json::Value = http
+        .get(format!("{address}/api/jira/config"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if serde_json::to_string(&saved)?.contains("synthetic-jira-one") {
+        return Err("Le jeton Jira apparaît dans la réponse publique.".into());
+    }
+    client
+        .find(Locator::Css("#jira-query"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#jira-query"))
+        .await?
+        .send_keys("project = LOCAL")
+        .await?;
+    http.put(format!("{address}/api/jira/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":saved["configuration"]["revision"],"mode":"cloud","url":"https://synthetic-one.example.test","email":"synthetic@example.test","query":"project = REMOTE","token":"synthetic-jira-rotated"})).send().await?.error_for_status()?;
+    click(client, "#save-jira").await?;
+    wait_dom(client,"return document.querySelector('#jira-error')?.textContent.includes('a changé') && document.querySelector('#jira-query')?.value === 'project = LOCAL';",vec![]).await?;
+    click(client, "#reload-jira").await?;
+    click(client, "#confirm-reload-jira").await?;
+    wait_dom(client,"return document.querySelector('#jira-query')?.value === 'project = REMOTE' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
+    click(client, "#jira-clear-token").await?;
+    click(client, "#save-jira").await?;
+    wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#search-jira')?.disabled === true && document.querySelector('#save-jira')?.disabled === true;",vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-settings.png"),
         client.screenshot().await?,

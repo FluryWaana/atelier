@@ -28,6 +28,7 @@ mod backups;
 mod card_lifecycle;
 mod events;
 mod files;
+mod jira;
 mod mutations;
 mod projects;
 #[cfg(windows)]
@@ -54,6 +55,7 @@ struct AppState {
     shutdown: watch::Sender<bool>,
     changed: tokio::sync::broadcast::Sender<()>,
     file_reads: tokio::sync::Semaphore,
+    integration_reads: tokio::sync::Semaphore,
     mutations: Arc<tokio::sync::RwLock<()>>,
     #[cfg(windows)]
     services: Arc<crate::infrastructure::dev_servers::DevServers>,
@@ -378,6 +380,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         runs: crate::infrastructure::command_runs::CommandRuns::new(changed.clone()),
         changed,
         file_reads: tokio::sync::Semaphore::new(2),
+        integration_reads: tokio::sync::Semaphore::new(4),
         mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
     #[cfg(windows)]
@@ -397,6 +400,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}", any(time_tracking::entry))
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
+        .route("/api/jira/config", get(jira::get).put(jira::save))
+        .route("/api/jira/search", get(jira::search))
         .route("/api/backups", get(backups::list).post(backups::create))
         .route("/api/backups/restore", post(backups::restore))
         .route(

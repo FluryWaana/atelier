@@ -264,6 +264,10 @@ fn restore_checked(
             Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
+    let jira_revision = store
+        .settings::<Document>()?
+        .get::<atelier_core::contracts::JiraConfiguration>("jiraConnection")?
+        .map(|configuration| configuration.revision);
     rescue()?;
     store.transaction(|store| {
         for (kind, rows) in [(Documents::Projects, projects), (Documents::Cards, cards), (Documents::Runs, runs), (Documents::Times, entries)] {
@@ -278,6 +282,7 @@ fn restore_checked(
         let vault: bool = store.connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='token_vault')", [], |row| row.get(0))?;
         if vault { store.connection.execute("DELETE FROM token_vault", [])?; }
         let mut settings = store.settings::<Document>()?;
+        super::jira::invalidate_configuration(&mut settings,jira_revision)?;
         settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
         for mut run in store.documents::<Document>(Documents::Runs)? {

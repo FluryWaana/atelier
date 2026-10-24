@@ -9,6 +9,7 @@ mod agent_profiles;
 mod backups;
 mod files;
 mod i18n;
+mod jira;
 mod live;
 mod projects;
 mod runs;

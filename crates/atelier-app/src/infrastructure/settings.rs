@@ -76,13 +76,18 @@ pub fn update(
 ) -> Result<Document> {
     let stored = store.settings()?;
     let tokens = load(store, protect)?;
-    let next = settings::prepare_update(
+    let mut next = settings::prepare_update(
         &stored,
         &tokens,
         body,
         |raw| store.repository(raw),
         jira_base,
     )?;
+    if stored.raw("jiraConnection").is_some()
+        && tokens.get::<JsonString>("jira")? != next.tokens.get::<JsonString>("jira")?
+    {
+        super::jira::invalidate_configuration(&mut next.settings, None)?;
+    }
     let response = settings::public_config(&next.settings, &next.tokens, platform())?;
     persist(store, &next, protect)?;
     Ok(response)
@@ -109,8 +114,16 @@ pub fn remove_token(
     settings::remove_token(&Document::default(), service)?;
     let next = settings::remove_token(&load(store, protect)?, service)?;
     let encrypted = encrypt(&next, protect)?;
-    let response = settings::public_config(&store.settings()?, &next, platform())?;
-    store.transaction(|store| token_vault::save_encrypted(store, encrypted.as_deref()))?;
+    let mut stored = store.settings::<Document>()?;
+    let changed = service == "jira" && super::jira::invalidate_configuration(&mut stored, None)?;
+    let response = settings::public_config(&stored, &next, platform())?;
+    store.transaction(|store| {
+        token_vault::save_encrypted(store, encrypted.as_deref())?;
+        if changed {
+            store.save_settings(&stored)?;
+        }
+        Ok(())
+    })?;
     Ok(response)
 }
 
