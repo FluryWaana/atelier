@@ -1,6 +1,7 @@
 use crate::{i18n::I18n, live::BoardState, read, write};
 use atelier_core::contracts::{
-    JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraMode, JiraSearch,
+    JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssueDetail, JiraMode,
+    JiraSearch,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -28,6 +29,8 @@ pub fn JiraSettings(
     let notice = RwSignal::new(String::new());
     let results = RwSignal::new(None::<JiraSearch>);
     let page = RwSignal::new(0usize);
+    let detail = RwSignal::new(None::<JiraIssueDetail>);
+    let inspecting = RwSignal::new(false);
     let alive = Rc::new(Cell::new(true));
     let own_dirty =
         Memo::new(move |_| original.get() != draft.get() || !key.get().is_empty() || clear.get());
@@ -51,6 +54,7 @@ pub fn JiraSettings(
             error.set(String::new());
             replace.set(false);
             results.set(None);
+            detail.set(None);
             let alive = alive.clone();
             spawn_local(async move {
                 let result = async {
@@ -105,6 +109,7 @@ pub fn JiraSettings(
         error.set(String::new());
         notice.set(String::new());
         results.set(None);
+        detail.set(None);
         let alive = saving.clone();
         spawn_local(async move {
             let result = async {
@@ -145,6 +150,7 @@ pub fn JiraSettings(
         error.set(String::new());
         notice.set(String::new());
         results.set(None);
+        detail.set(None);
         page.set(0);
         let revision = original.get_untracked().revision;
         let alive = querying.clone();
@@ -169,11 +175,51 @@ pub fn JiraSettings(
             }
         });
     };
+    let inspecting_alive = alive.clone();
+    let inspect = StoredValue::new_local(move |id: String| {
+        if inspecting.get_untracked() {
+            return;
+        }
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(message) => {
+                error.set(message);
+                return;
+            }
+        };
+        let revision = original.get_untracked().revision;
+        inspecting.set(true);
+        detail.set(None);
+        error.set(String::new());
+        let alive = inspecting_alive.clone();
+        spawn_local(async move {
+            let result = async {
+                read(
+                    &credential,
+                    &format!("/api/jira/issues/{id}?revision={revision}"),
+                )
+                .await?
+                .json::<JiraIssueDetail>()
+                .await
+                .map_err(|_| "Réponse du serveur invalide.".to_owned())
+            }
+            .await;
+            if alive.get() {
+                inspecting.set(false);
+                if original.get_untracked().revision == revision {
+                    match result {
+                        Ok(value) => detail.set(Some(value)),
+                        Err(message) => error.set(message),
+                    }
+                }
+            }
+        });
+    });
     view! {
-        <section class="task-files" aria-labelledby="jira-heading" aria-busy=move || (loading.get() || pending.get() || searching.get()).to_string()>
+        <section class="task-files" aria-labelledby="jira-heading" aria-busy=move || (loading.get() || pending.get() || searching.get() || inspecting.get()).to_string()>
             <h3 id="jira-heading">"Jira"</h3><p class="field-help">{move || i18n.text("Configure la connexion, puis lance une recherche explicite. Les résultats sont en lecture seule ; aucun ticket distant n’est modifié.")}</p>
             <p role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement de la connexion Jira…")}</p>
-            <form on:submit=save><fieldset disabled=move || !loaded.get() || loading.get() || pending.get() || searching.get()>
+            <form on:submit=save><fieldset disabled=move || !loaded.get() || loading.get() || pending.get() || searching.get() || inspecting.get()>
                 <label for="jira-mode">{move || i18n.text("Version de Jira")}</label><select id="jira-mode" prop:value=move || if draft.get().mode==JiraMode::Cloud{"cloud"}else{"dataCenter"} on:change=move |event| draft.update(|draft| draft.mode=if event_target_value(&event)=="cloud"{JiraMode::Cloud}else{JiraMode::DataCenter})><option value="cloud">"Jira Cloud"</option><option value="dataCenter">"Jira Data Center"</option></select>
                 <label for="jira-url">{move || i18n.text("Adresse de Jira")}</label><input id="jira-url" type="url" maxlength="2000" placeholder="https://tickets.example.test" prop:value=move || draft.get().url on:input=move |event| draft.update(|draft| draft.url=event_target_value(&event)) />
                 <label for="jira-email">{move || i18n.text("E-mail (Cloud)")}</label><input id="jira-email" type="email" maxlength="300" prop:value=move || draft.get().email on:input=move |event| draft.update(|draft| draft.email=event_target_value(&event)) />
@@ -181,13 +227,15 @@ pub fn JiraSettings(
                 <label><input id="jira-clear-token" type="checkbox" prop:checked=move || clear.get() on:change=move |event| {clear.set(event_target_checked(&event));if clear.get_untracked(){key.set(String::new());}} />{move || i18n.text("Retirer le jeton enregistré")}</label>
                 <p class="field-help">{move || i18n.text("Changer l’adresse, le compte ou la version de Jira retire le jeton précédent si tu n’en fournis pas un nouveau.")}</p>
                 <label for="jira-query">{move || i18n.text("Tickets à rechercher (JQL)")}</label><textarea id="jira-query" maxlength="4000" prop:value=move || draft.get().query on:input=move |event| draft.update(|draft| draft.query=event_target_value(&event)) />
-            </fieldset><button id="save-jira" type="submit" disabled=move || !loaded.get() || pending.get() || loading.get() || searching.get() || !own_dirty.get()>{move || i18n.text("Enregistrer la connexion Jira")}</button></form>
-            <div class="editor-actions"><button id="reload-jira" type="button" disabled=move || pending.get() || loading.get() || searching.get() on:click=move |_| {if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}}>{move || i18n.text("Recharger la connexion Jira")}</button><button id="search-jira" type="button" disabled=move || !loaded.get() || own_dirty.get() || pending.get() || loading.get() || searching.get() || !token_set.get() || original.get().url.is_empty() on:click=search>{move || i18n.text("Rechercher les tickets Jira")}</button></div>
+            </fieldset><button id="save-jira" type="submit" disabled=move || !loaded.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !own_dirty.get()>{move || i18n.text("Enregistrer la connexion Jira")}</button></form>
+            <div class="editor-actions"><button id="reload-jira" type="button" disabled=move || pending.get() || loading.get() || searching.get() || inspecting.get() on:click=move |_| {if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}}>{move || i18n.text("Recharger la connexion Jira")}</button><button id="search-jira" type="button" disabled=move || !loaded.get() || own_dirty.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !token_set.get() || original.get().url.is_empty() on:click=search>{move || i18n.text("Rechercher les tickets Jira")}</button></div>
             <div class="confirmation" role="alert" hidden=move || !replace.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="confirm-reload-jira" type="button" on:click=move |_| load.with_value(|load|load())>{move || i18n.text("Abandonner")}</button><button type="button" on:click=move |_|replace.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
             <p id="jira-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="jira-notice" role="status">{move || i18n.text(&notice.get())}</p>
             <p role="status" hidden=move || !searching.get()>{move || i18n.text("Recherche Jira en cours…")}</p>
             <p hidden=move || !results.with(|results| results.as_ref().is_some_and(|results| results.issues.is_empty()))>{move || i18n.text("Aucun ticket trouvé.")}</p>
-            <ul class="service-endpoints"><For each=move || results.with(|results| results.as_ref().map(|results| results.issues.iter().skip(page.get()*200).take(200).cloned().collect::<Vec<_>>()).unwrap_or_default()) key=|issue| issue.id.clone() children=move |issue| view!{<li class="jira-issue"><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}" · "{issue.title}</a>" · "{issue.status}</li>} /></ul>
+            <p role="status" hidden=move || !inspecting.get()>{move || i18n.text("Chargement du ticket Jira…")}</p>
+            {move || detail.get().map(|value| view!{<section aria-label=move || i18n.text("Détail du ticket Jira")><h4>{value.issue.key}" · "{value.issue.title}</h4><pre>{value.description}</pre><button type="button" on:click=move |_|detail.set(None)>{move || i18n.text("Fermer le détail")}</button></section>})}
+            <ul class="service-endpoints"><For each=move || results.with(|results| results.as_ref().map(|results| results.issues.iter().skip(page.get()*200).take(200).cloned().collect::<Vec<_>>()).unwrap_or_default()) key=|issue| issue.id.clone() children=move |issue| {let id=issue.id.clone(); view!{<li class="jira-issue"><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}" · "{issue.title}</a>" · "{issue.status}<button type="button" disabled=move || inspecting.get() || searching.get() || loading.get() || pending.get() || own_dirty.get() on:click=move |_|inspect.with_value(|inspect|inspect(id.clone()))>{move || i18n.text("Afficher le détail")}</button></li>}} /></ul>
             <div class="editor-actions" hidden=move || results.with(|results| results.as_ref().is_none_or(|results| results.issues.len()<=200))><button type="button" disabled=move || page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move || i18n.text("Précédent")}</button><button type="button" disabled=move || results.with(|results| results.as_ref().is_none_or(|results| (page.get()+1)*200>=results.issues.len())) on:click=move |_|page.update(|page|*page+=1)>{move || i18n.text("Suivant")}</button></div>
         </section>
     }

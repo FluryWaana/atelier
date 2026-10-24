@@ -57,3 +57,26 @@ fn credential_scope_and_key_rotations_protect_stale_jira_forms() {
         assert!(!issue_identity(id, key));
     }
 }
+
+#[test]
+fn descriptions_preserve_order_unicode_and_plain_text_without_rendering_markup() {
+    use atelier_core::application::jira::description;
+    use serde_json::json;
+    assert_eq!(description(&json!(null)).unwrap(), "");
+    assert_eq!(
+        description(&json!("<script>é😀</script>")).unwrap(),
+        "<script>é😀</script>"
+    );
+    let doc = json!({"type":"doc","version":1,"content":[{"type":"heading","content":[{"type":"text","text":"Title"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"é😀"},{"type":"hardBreak"},{"type":"mention","attrs":{"text":"@Synthetic"}},{"type":"emoji","attrs":{"shortName":":ok:"}}]}]}]}]});
+    assert_eq!(description(&doc).unwrap(), "Title\né😀\n@Synthetic:ok:");
+    for invalid in [
+        json!(true),
+        json!({"type":"doc","version":2,"content":[]}),
+        json!({"type":"doc","version":1,"content":[{"type":"text"}]}),
+        json!("😀".repeat(10001)),
+        json!("a\0b"),
+        json!({"type":"doc","version":1,"content":vec![json!({"type":"paragraph"});4096]}),
+    ] {
+        assert!(description(&invalid).is_err());
+    }
+}

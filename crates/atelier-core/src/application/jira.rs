@@ -97,3 +97,81 @@ pub fn issue_identity(id: &str, key: &str) -> bool {
         && number.len() <= 20
         && number.bytes().all(|byte| byte.is_ascii_digit())
 }
+
+/// Text projection; rich formatting and attachments remain on the Jira site.
+pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
+    fn append(out: &mut String, text: &str) -> Result<(), JiraFailure> {
+        if text.contains('\0') || out.encode_utf16().count() + text.encode_utf16().count() > 20_000
+        {
+            return Err("Description Jira invalide ou trop longue.".into());
+        }
+        out.push_str(text);
+        Ok(())
+    }
+    if value.is_null() {
+        return Ok(String::new());
+    }
+    if let Some(text) = value.as_str() {
+        let mut out = String::new();
+        append(&mut out, text)?;
+        return Ok(out);
+    }
+    if value["type"] != "doc" || value["version"] != 1 || !value["content"].is_array() {
+        return Err("Document Jira invalide.".into());
+    }
+    let mut out = String::new();
+    let mut stack = vec![(value, false)];
+    let mut nodes = 0usize;
+    while let Some((node, closing)) = stack.pop() {
+        if closing {
+            if !out.ends_with('\n') {
+                append(&mut out, "\n")?;
+            }
+            continue;
+        }
+        nodes += 1;
+        if nodes > 4096 {
+            return Err("Document Jira trop complexe.".into());
+        }
+        let kind = node
+            .get("type")
+            .and_then(serde_json::Value::as_str)
+            .ok_or("Nœud Jira invalide.")?;
+        match kind {
+            "text" => append(
+                &mut out,
+                node["text"].as_str().ok_or("Texte Jira invalide.")?,
+            )?,
+            "hardBreak" => append(&mut out, "\n")?,
+            "mention" | "emoji" | "inlineCard" | "status" => {
+                let attr = if kind == "inlineCard" { "url" } else { "text" };
+                let text = node["attrs"][attr]
+                    .as_str()
+                    .or_else(|| {
+                        if kind == "emoji" {
+                            node["attrs"]["shortName"].as_str()
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or("Attribut Jira invalide.")?;
+                append(&mut out, text)?;
+            }
+            _ => {}
+        }
+        if matches!(
+            kind,
+            "paragraph" | "heading" | "listItem" | "codeBlock" | "tableRow" | "blockquote"
+        ) {
+            stack.push((node, true));
+        }
+        if let Some(content) = node.get("content") {
+            let children = content.as_array().ok_or("Contenu Jira invalide.")?;
+            if nodes + stack.len() + children.len() > 8192 {
+                return Err("Document Jira trop complexe.".into());
+            }
+            stack.extend(children.iter().rev().map(|child| (child, false)));
+        }
+    }
+    Ok(out.trim_end_matches('\n').into())
+}

@@ -98,6 +98,14 @@ pub struct JiraIssue {
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct JiraIssueDetail {
+    pub connection_revision: u64,
+    pub issue: JiraIssue,
+    pub description: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JiraSearch {
     pub connection_revision: u64,
     pub issues: Vec<JiraIssue>,

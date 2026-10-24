@@ -3,7 +3,8 @@ use crate::Result;
 use atelier_core::{
     application::jira,
     contracts::{
-        JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssue, JiraMode, JiraSearch,
+        JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssue, JiraIssueDetail,
+        JiraMode, JiraSearch,
     },
     document::Document,
 };
@@ -99,8 +100,8 @@ pub fn credentials(
     if configuration.revision != expected {
         return Err(jira::JiraFailure::Conflict.into());
     }
-    if configuration.url.is_empty() || configuration.query.trim().is_empty() {
-        return Err("Renseigne l’adresse Jira et une requête JQL avant la recherche.".into());
+    if configuration.url.is_empty() {
+        return Err("Renseigne l’adresse Jira avant la lecture.".into());
     }
     let token = settings::load(store, protect)?
         .get::<String>("jira")?
@@ -222,12 +223,15 @@ impl Jira {
         }
         Ok(url)
     }
-    async fn post(&self, url: Url, body: &Value) -> Result<reqwest::Response> {
-        self.client
-            .post(url)
+    async fn send(&self, url: Url, body: Option<&Value>) -> Result<reqwest::Response> {
+        let request = if let Some(body) = body {
+            self.client.post(url).json(body)
+        } else {
+            self.client.get(url)
+        };
+        request
             .header(AUTHORIZATION, self.authorization.clone())
             .header(ACCEPT, "application/json")
-            .json(body)
             .send()
             .await
             .map_err(|error| {
@@ -239,13 +243,13 @@ impl Jira {
             })
             .map_err(Into::into)
     }
-    async fn request(&self, url: Url, body: &Value) -> Result<Value> {
+    async fn request(&self, url: Url, body: Option<&Value>) -> Result<Value> {
         let target = if let Some(gateway) = self.gateway.get() {
             gateway_request(gateway, &url)?
         } else {
             url.clone()
         };
-        let mut response = self.post(target, body).await?;
+        let mut response = self.send(target, body).await?;
         if response.status() == reqwest::StatusCode::UNAUTHORIZED
             && self.configuration.mode == JiraMode::Cloud
             && self.gateway.get().is_none()
@@ -266,9 +270,78 @@ impl Jira {
                 .ok_or("Identifiant du site Jira invalide.")?;
             let gateway = gateway_base(id)?;
             let _ = self.gateway.set(gateway.clone());
-            response = self.post(gateway_request(&gateway, &url)?, body).await?;
+            response = self.send(gateway_request(&gateway, &url)?, body).await?;
         }
         read_json(response, 4 * 1024 * 1024).await
+    }
+    fn issue(&self, row: &Value) -> Result<JiraIssue> {
+        let id = row["id"].as_str().ok_or("Identifiant Jira invalide.")?;
+        let key = row["key"].as_str().ok_or("Clé Jira invalide.")?;
+        if !jira::issue_identity(id, key) {
+            return Err("La pagination Jira est incohérente. Réessaie la recherche.".into());
+        }
+        let title = row["fields"]["summary"]
+            .as_str()
+            .filter(|title| {
+                !title.trim().is_empty()
+                    && title.len() <= 1200
+                    && !title.chars().any(char::is_control)
+            })
+            .ok_or("Titre Jira invalide.")?;
+        let status = row["fields"]["status"]["name"]
+            .as_str()
+            .filter(|status| status.len() <= 400 && !status.chars().any(char::is_control))
+            .ok_or("Statut Jira invalide.")?;
+        if [id, key, title, status]
+            .iter()
+            .any(|value| value.contains(&self.token))
+        {
+            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+        }
+        let issue = JiraIssue {
+            id: id.into(),
+            key: key.into(),
+            title: title.into(),
+            status: status.into(),
+            url: self.endpoint(&["browse", key])?.to_string(),
+        };
+        if issue.url.contains(&self.token) {
+            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+        }
+        Ok(issue)
+    }
+    pub async fn detail(&self, id: &str) -> Result<JiraIssueDetail> {
+        if id.is_empty() || id.len() > 32 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err("Identifiant Jira invalide.".into());
+        }
+        let version = if self.configuration.mode == JiraMode::Cloud {
+            "3"
+        } else {
+            "2"
+        };
+        let mut url = self.endpoint(&["rest", "api", version, "issue", id])?;
+        url.query_pairs_mut()
+            .append_pair("fields", "summary,status,description");
+        let row = tokio::time::timeout(Duration::from_secs(60), self.request(url, None))
+            .await
+            .map_err(|_| "Lecture du ticket Jira trop longue.")??;
+        let issue = self.issue(&row)?;
+        if issue.id != id {
+            return Err("Identifiant du ticket Jira incohérent.".into());
+        }
+        let description = jira::description(
+            row["fields"]
+                .get("description")
+                .ok_or("Description Jira absente.")?,
+        )?;
+        if description.contains(&self.token) {
+            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+        }
+        Ok(JiraIssueDetail {
+            connection_revision: self.configuration.revision,
+            issue,
+            description,
+        })
     }
     pub async fn search(&self) -> Result<JiraSearch> {
         if self.configuration.query.trim().is_empty()
@@ -389,7 +462,7 @@ impl Jira {
             } else {
                 body["startAt"] = json!(issues.len());
             }
-            let page = self.request(url.clone(), &body).await?;
+            let page = self.request(url.clone(), Some(&body)).await?;
             let rows = page["issues"]
                 .as_array()
                 .filter(|rows| rows.len() <= 100)
@@ -398,42 +471,9 @@ impl Jira {
                 return Err("Recherche Jira trop large. Réduis la requête JQL.".into());
             }
             for row in rows {
-                let id = row["id"].as_str().ok_or("Identifiant Jira invalide.")?;
-                let key = row["key"].as_str().ok_or("Clé Jira invalide.")?;
-                if !jira::issue_identity(id, key) || !ids.insert(id.to_owned()) {
+                let issue = self.issue(row)?;
+                if !ids.insert(issue.id.clone()) {
                     return Err("La pagination Jira est incohérente. Réessaie la recherche.".into());
-                }
-                let title = row["fields"]["summary"]
-                    .as_str()
-                    .filter(|title| {
-                        !title.trim().is_empty()
-                            && title.len() <= 1200
-                            && !title.chars().any(char::is_control)
-                    })
-                    .ok_or("Titre Jira invalide.")?;
-                let status = row["fields"]["status"]["name"]
-                    .as_str()
-                    .filter(|status| status.len() <= 400 && !status.chars().any(char::is_control))
-                    .ok_or("Statut Jira invalide.")?;
-                if [id, key, title, status]
-                    .iter()
-                    .any(|value| value.contains(&self.token))
-                {
-                    return Err(
-                        "La réponse Jira contient des données confidentielles inattendues.".into(),
-                    );
-                }
-                let issue = JiraIssue {
-                    id: id.into(),
-                    key: key.into(),
-                    title: title.into(),
-                    status: status.into(),
-                    url: self.endpoint(&["browse", key])?.to_string(),
-                };
-                if issue.url.contains(&self.token) {
-                    return Err(
-                        "La réponse Jira contient des données confidentielles inattendues.".into(),
-                    );
                 }
                 size += serde_json::to_vec(&issue)?.len() + 1;
                 if size > 8 * 1024 * 1024 || issues.len() >= 10_000 {

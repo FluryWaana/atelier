@@ -193,3 +193,78 @@ async fn local_doubles_cover_authentication_pagination_redirects_limits_and_secr
         let _ = server.await;
     }
 }
+
+#[tokio::test]
+async fn issue_details_are_explicit_bounded_and_reject_mismatched_ids_and_reflected_secrets() {
+    use axum::extract::{Path, Query};
+    use std::collections::BTreeMap;
+    async fn detail(
+        Path(version): Path<String>,
+        Query(query): Query<BTreeMap<String, String>>,
+        headers: HeaderMap,
+        State(mode): State<&'static str>,
+    ) -> Json<Value> {
+        assert_eq!(
+            query.get("fields").map(String::as_str),
+            Some("summary,status,description")
+        );
+        if version == "2" {
+            assert_eq!(headers[header::AUTHORIZATION], "Bearer synthetic-token");
+        } else {
+            assert_eq!(
+                headers[header::AUTHORIZATION],
+                "Basic c3ludGhldGljQGV4YW1wbGUudGVzdDpzeW50aGV0aWMtdG9rZW4="
+            );
+        }
+        Json(
+            json!({"id":if mode=="mismatch"{"2"}else{"1"},"key":"SYN-1","fields":{"summary":"Synthetic","status":{"name":"Open"},"description":if mode=="secret"{json!("synthetic-token")}else if mode=="large"{json!("x".repeat(20001))}else if version=="2"{json!("Plain é😀")}else{json!({"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":"Plain é😀"}]}]})}}}),
+        )
+    }
+    for mode in ["cloud", "data-center", "mismatch", "secret", "large"] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let app = Router::new()
+            .route(
+                "/jira/rest/api/{version}/issue/1",
+                axum::routing::get(detail),
+            )
+            .with_state(mode);
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = Jira::synthetic(
+            JiraConfiguration {
+                mode: if mode == "data-center" {
+                    JiraMode::DataCenter
+                } else {
+                    JiraMode::Cloud
+                },
+                url: format!("http://{address}/jira"),
+                email: "synthetic@example.test".into(),
+                query: String::new(),
+                revision: 9,
+            },
+            "synthetic-token".into(),
+        )
+        .unwrap();
+        assert!(client.detail("../1").await.is_err());
+        let result = client.detail("1").await;
+        if ["cloud", "data-center"].contains(&mode) {
+            let result = result.unwrap();
+            assert_eq!(result.description, "Plain é😀");
+            assert_eq!(result.connection_revision, 9);
+            assert_eq!(
+                result.issue.url,
+                format!("http://{address}/jira/browse/SYN-1")
+            );
+        } else {
+            assert!(
+                !result
+                    .err()
+                    .unwrap()
+                    .to_string()
+                    .contains("synthetic-token")
+            );
+        }
+        server.abort();
+        let _ = server.await;
+    }
+}

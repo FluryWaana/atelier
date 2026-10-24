@@ -402,6 +402,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/state", get(board))
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/jira/search", get(jira::search))
+        .route("/api/jira/issues/{id}", get(jira::detail))
         .route("/api/backups", get(backups::list).post(backups::create))
         .route("/api/backups/restore", post(backups::restore))
         .route(

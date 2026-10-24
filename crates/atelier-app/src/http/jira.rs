@@ -3,7 +3,7 @@ use crate::infrastructure::{jira, settings::VaultFailure};
 use atelier_core::{application::jira::JiraFailure, contracts::JiraConfigurationUpdate};
 use axum::{
     Json,
-    extract::{Query, Request, State},
+    extract::{Path, Query, Request, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -78,6 +78,16 @@ pub(super) struct Revision {
     revision: u64,
 }
 pub(super) async fn search(State(state): State<Shared>, Query(query): Query<Revision>) -> Response {
+    read_issue(state, query, None).await
+}
+pub(super) async fn detail(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    Query(query): Query<Revision>,
+) -> Response {
+    read_issue(state, query, Some(id)).await
+}
+async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Response {
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
         return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
@@ -98,8 +108,13 @@ pub(super) async fn search(State(state): State<Shared>, Query(query): Query<Revi
                 })
             })
             .await?;
-        let result = jira::Jira::new(configuration, token)?.search().await?;
-        let revision = result.connection_revision;
+        let client = jira::Jira::new(configuration, token)?;
+        let revision = query.revision;
+        let result = if let Some(id) = id {
+            serde_json::to_value(client.detail(&id).await?)?
+        } else {
+            serde_json::to_value(client.search().await?)?
+        };
         state
             .database
             .call(move |store| {

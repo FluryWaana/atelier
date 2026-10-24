@@ -600,5 +600,19 @@
   "VOS DONNÉES": "YOUR DATA",
   "Vos projets": "Your projects",
   "Votre espace de travail": "Your workspace",
-  "Worktree": "Worktree"
+  "Worktree": "Worktree",
+  "Afficher le détail": "Show details",
+  "Chargement du ticket Jira…": "Loading Jira issue…",
+  "Détail du ticket Jira": "Jira issue details",
+  "Fermer le détail": "Close details",
+  "Description Jira invalide ou trop longue.": "Invalid or oversized Jira description.",
+  "Document Jira invalide.": "Invalid Jira document.",
+  "Document Jira trop complexe.": "Jira document is too complex.",
+  "Nœud Jira invalide.": "Invalid Jira node.",
+  "Texte Jira invalide.": "Invalid Jira text.",
+  "Attribut Jira invalide.": "Invalid Jira attribute.",
+  "Contenu Jira invalide.": "Invalid Jira content.",
+  "Lecture du ticket Jira trop longue.": "Reading the Jira issue took too long.",
+  "Identifiant du ticket Jira incohérent.": "Inconsistent Jira issue ID.",
+  "Description Jira absente.": "Missing Jira description."
 }
