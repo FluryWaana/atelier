@@ -167,6 +167,8 @@ Après `43ba63a`, C05 dispose du flux SSE authentifié, des notifications après
 
 C20, après `3b4302e` : cas d'usage et routes de saisies/chronomètres locaux portés, transactions sérialisées, réveil/SSE et fermeture/reprise. 46 transitions historiques comparées sur SQLite ; concurrence de deux démarrages, rollback de tick et parcours HTTP réussis. Export/reconcile restent explicitement indisponibles jusqu'à M05 ; interface en M07. 60 tests Rust locaux, 305 contrats de domaine et comparaison stockage inchangés ; preuves natives de cet incrément attendues. Voir [M03](rust-migration-m03.md).
 
+C02/C05, après `6529ea2` : dossier du prototype préparé relativement à son descripteur, marqueur régulier vide requis, refus d'une base liée/non régulière, modes 0700/0600 et propriétaire courant sous POSIX. 61 tests Windows et parité stockage réussis ; nouveaux scénarios POSIX attendus. Les journaux Linux x64/ARM64 et macOS ARM64 des chronomètres `6529ea2` sont relus et réussis.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

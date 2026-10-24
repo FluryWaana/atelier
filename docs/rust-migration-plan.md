@@ -595,6 +595,13 @@ Prochaine action concrète :
 - **Preuves M02 recueillies :** CI `43ba63a` et `3b4302e` entièrement réussies ; journaux des refus source et de SSE relus sur les quatre cibles POSIX. Les limites d'ouverture SQLite restent documentées, sans qualification atomique revendiquée.
 - **Suite :** CI de ce nouvel incrément ; autres cas d'usage/API M03 et protections/intégrations M02 restantes. La migration n'est pas qualifiée globalement.
 
+### Incrément M02 — préparation privée du dossier prototype
+
+- **Livré :** préparation relative au dossier ouvert, contrôle du marqueur et du type de base ; propriétaire et permissions privées POSIX avant ouverture SQLite.
+- **Vérification :** 61 tests Rust Windows, Clippy natif, comparaison stockage/import/restauration. Suite Node complète avec contrôle release : 427 tests, 424 réussis, aucun échec, trois exclusions, 80,072 s.
+- **Preuves recueillies :** chronomètres `6529ea2` sur Linux x64/ARM64 et macOS ARM64, journaux des 46 transitions et scénarios HTTP/rollback relus.
+- **Suite :** nouvelles branches POSIX en CI, résultats Windows/macOS Intel des chronomètres, autres protections/intégrations M02 et cas d'usage M03. L'ouverture SQLite par chemin reste une limite explicite.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

@@ -864,12 +864,22 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:518](../crates/atelier-app/src/infrastructure/portable_import.rs#L518) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:535](../crates/atelier-app/src/infrastructure/portable_import.rs#L535) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:537](../crates/atelier-app/src/infrastructure/portable_import.rs#L537) | <code>use std::os::unix::fs::symlink;</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use super::data_lock::DataLock;</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:2](../crates/atelier-app/src/infrastructure/prototype.rs#L2) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:3](../crates/atelier-app/src/infrastructure/prototype.rs#L3) | <code>use std::{</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:8](../crates/atelier-app/src/infrastructure/prototype.rs#L8) | <code>pub struct PrototypeDirectory {</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:9](../crates/atelier-app/src/infrastructure/prototype.rs#L9) | <code>pub path: PathBuf,</code> |
-| [crates/atelier-app/src/infrastructure/prototype.rs:14](../crates/atelier-app/src/infrastructure/prototype.rs#L14) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use super::{</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:5](../crates/atelier-app/src/infrastructure/prototype.rs#L5) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:6](../crates/atelier-app/src/infrastructure/prototype.rs#L6) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:7](../crates/atelier-app/src/infrastructure/prototype.rs#L7) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:12](../crates/atelier-app/src/infrastructure/prototype.rs#L12) | <code>pub struct PrototypeDirectory {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:13](../crates/atelier-app/src/infrastructure/prototype.rs#L13) | <code>pub path: PathBuf,</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:19](../crates/atelier-app/src/infrastructure/prototype.rs#L19) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:24](../crates/atelier-app/src/infrastructure/prototype.rs#L24) | <code>use std::os::unix::fs::DirBuilderExt;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:43](../crates/atelier-app/src/infrastructure/prototype.rs#L43) | <code>use cap_std::fs::MetadataExt;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:59](../crates/atelier-app/src/infrastructure/prototype.rs#L59) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:81](../crates/atelier-app/src/infrastructure/prototype.rs#L81) | <code>use cap_std::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:88](../crates/atelier-app/src/infrastructure/prototype.rs#L88) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:89](../crates/atelier-app/src/infrastructure/prototype.rs#L89) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:91](../crates/atelier-app/src/infrastructure/prototype.rs#L91) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:117](../crates/atelier-app/src/infrastructure/prototype.rs#L117) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:119](../crates/atelier-app/src/infrastructure/prototype.rs#L119) | <code>use std::os::unix::fs::{PermissionsExt, symlink};</code> |
 | [crates/atelier-app/src/infrastructure/publish.rs:1](../crates/atelier-app/src/infrastructure/publish.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/publish.rs:2](../crates/atelier-app/src/infrastructure/publish.rs#L2) | <code>use cap_std::fs::Dir;</code> |
 | [crates/atelier-app/src/infrastructure/publish.rs:3](../crates/atelier-app/src/infrastructure/publish.rs#L3) | <code>use std::path::{Component, Path};</code> |
@@ -2864,6 +2874,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:528](../crates/atelier-app/src/infrastructure/portable_import.rs#L528) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:529](../crates/atelier-app/src/infrastructure/portable_import.rs#L529) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:541](../crates/atelier-app/src/infrastructure/portable_import.rs#L541) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:69](../crates/atelier-app/src/infrastructure/prototype.rs#L69) | <code>if let Some(metadata) = match directory.symlink_metadata("kanban.sqlite") {</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:102](../crates/atelier-app/src/infrastructure/prototype.rs#L102) | <code>assert!(!root.path().join("kanban.sqlite").exists());</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:112](../crates/atelier-app/src/infrastructure/prototype.rs#L112) | <code>fs::create_dir(root.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/prototype.rs:155](../crates/atelier-app/src/infrastructure/prototype.rs#L155) | <code>symlink(outside.join("untouched"), moved.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:111](../crates/atelier-app/src/infrastructure/session.rs#L111) | <code>write_private(&amp;directory.join("local-session"), &amp;stored)</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:155](../crates/atelier-app/src/infrastructure/session.rs#L155) | <code>match directory.symlink_metadata("local-session") {</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:179](../crates/atelier-app/src/infrastructure/session.rs#L179) | <code>let path = directory.join("local-browser.html");</code> |

@@ -98,6 +98,14 @@ Vérification Windows : 57 tests Rust réussis, Clippy natif tous targets ; suit
 
 CI suivantes entièrement réussies : [source `43ba63a`](https://github.com/FluryWaana/atelier/actions/runs/40050402339), [notifications `3b4302e`](https://github.com/FluryWaana/atelier/actions/runs/40050788365). Les journaux des quatre cibles POSIX ont été relus pour les refus de source étrangère/alias, `events_authenticate_notify_commits_reconnect_and_end_on_shutdown` et `slow_or_closing_subscribers_end_and_release_their_subscription`. Ces résultats valident ces scénarios précis, sans supprimer la limite d'ouverture SQLite par chemin.
 
+### Dossier du prototype privé — après `6529ea2`
+
+L'ouverture du prototype crée ses nouveaux dossiers en 0700 sous POSIX, exige le propriétaire courant et resserre les permissions du dossier reconnu avant SQLite. Le contrôle et la création du marqueur utilisent le dossier ouvert : fichier régulier vide uniquement, nouveau marqueur 0600 ; lien, dossier ou contenu inattendu refusés. Une base existante liée/non régulière est refusée avant le verrou de stockage. Un dossier non marqué et non vide reste refusé sans toucher à son contenu. Le descripteur du dossier reste détenu jusqu'à la fermeture du prototype, avec les garanties Windows de refus de renommage déjà testées pour `Dir`.
+
+Tests Windows : 61 tests Rust réussis, Clippy natif et comparaison stockage/import/restauration réussis. Suite Node complète avec contrôle release : 427 tests, 424 réussis, aucun échec, trois exclusions, 80,072 s. Les branches POSIX supplémentaires vérifient propriétaire/modes, préparation après remplacement du chemin et refus des liens de marqueur/base ; preuve native attendue. Ce contrôle du dossier ne rend pas atomiques les ouvertures SQLite restantes par chemin.
+
+Journaux de `6529ea2` recueillis sur Linux x64/ARM64 et macOS ARM64 : 46 transitions historiques, concurrence HTTP des chronomètres, réveil/SSE et rollback après faute SQL réussis. Windows et macOS Intel restent attendus à ce relevé.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.
