@@ -22,7 +22,7 @@ fn free_port() -> Result<u16> {
         .port())
 }
 
-async fn start_server(data: &Path, port: u16) -> Result<(Process, String)> {
+async fn start_server(data: &Path, port: u16, assets: &Path) -> Result<(Process, String)> {
     let executable = root()
         .join("target/debug")
         .join(format!("atelier{}", std::env::consts::EXE_SUFFIX));
@@ -32,7 +32,7 @@ async fn start_server(data: &Path, port: u16) -> Result<(Process, String)> {
             .arg("--data-dir")
             .arg(data)
             .arg("--assets")
-            .arg(root().join(".artifacts/rust-ui"))
+            .arg(assets)
             .arg("--port")
             .arg(port.to_string())
             .stdout(Stdio::null())
@@ -106,7 +106,7 @@ async fn wait_title(client: &Client, title: &str) -> Result<()> {
     Err("La tâche n’apparaît pas dans le navigateur.".into())
 }
 
-pub async fn test() -> Result<()> {
+pub async fn test(legacy: bool) -> Result<()> {
     run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
     let browser = std::env::var("ATELIER_TEST_BROWSER")
         .unwrap_or(if cfg!(windows) { "edge" } else { "chrome" }.into());
@@ -174,13 +174,35 @@ pub async fn test() -> Result<()> {
         .capabilities(capabilities)
         .connect(&endpoint)
         .await?;
-    let result = scenario(&client, &http).await;
+    let result = if legacy {
+        legacy_scenario(&client, &http).await
+    } else {
+        scenario(&client, &http).await
+    };
+    if result.is_err()
+        && let Ok(screenshot) = client.screenshot().await
+    {
+        let _ = std::fs::write(
+            root().join(if legacy {
+                ".artifacts/rust-legacy-ui-failed.png"
+            } else {
+                ".artifacts/rust-ui-failed.png"
+            }),
+            screenshot,
+        );
+    }
     let closed = client.close().await;
     result?;
     closed?;
-    println!(
-        "Parcours {browser} réussi : WASM sous CSP, création, redémarrage du processus, relecture et rotation de session."
-    );
+    if legacy {
+        println!(
+            "Interface historique sur Rust, {browser} : création/édition, sauvegarde/restauration, refus explicite des fonctions non portées et redémarrage réussis."
+        );
+    } else {
+        println!(
+            "Parcours {browser} réussi : WASM sous CSP, création, redémarrage du processus, relecture et rotation de session."
+        );
+    }
     Ok(())
 }
 
@@ -188,7 +210,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     let data = tempfile::tempdir()?;
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    let (mut server, token) = start_server(data.path(), port).await?;
+    let assets = root().join(".artifacts/rust-ui");
+    let (mut server, token) = start_server(data.path(), port, &assets).await?;
     client
         .goto(&format!("{address}/#session={token}"))
         .await
@@ -233,7 +256,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .get::<String>("id")?
         .ok_or("Identifiant UTF-16 absent.")?;
     stop_server(&mut server, port, &token).await?;
-    let (mut restarted, next_token) = start_server(data.path(), port).await?;
+    let (mut restarted, next_token) = start_server(data.path(), port, &assets).await?;
     if session::same_secret(&token, &next_token) {
         return Err("Session non renouvelée.".into());
     }
@@ -271,6 +294,194 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-reopened.png"),
         client.screenshot().await?,
     )?;
+    stop_server(&mut restarted, port, &next_token).await?;
+    Ok(())
+}
+
+async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Value>) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while Instant::now() < deadline {
+        if client.execute(script, arguments.clone()).await? == json!(true) {
+            return Ok(());
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    Err(format!("État DOM attendu non atteint : {script}").into())
+}
+
+async fn legacy_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+    let data = tempfile::tempdir()?;
+    let assets = root().join(".artifacts/rust-legacy-ui");
+    let port = free_port()?;
+    let address = format!("http://127.0.0.1:{port}");
+    let (mut server, token) = start_server(data.path(), port, &assets).await?;
+    for name in atelier_app::http::LEGACY_ASSETS {
+        let path = if *name == "index.html" { "" } else { name };
+        let response = http.get(format!("{address}/{path}")).send().await?;
+        if response.status() != 200 || !response.headers().contains_key("content-security-policy") {
+            return Err(format!("Asset historique indisponible sous CSP : {name}").into());
+        }
+    }
+    for path in ["/api/agents", "/api/connectors", "/api/updates/check"] {
+        let response = http
+            .get(format!("{address}{path}"))
+            .bearer_auth(&token)
+            .send()
+            .await?;
+        if response.status() != 503
+            || !response.json::<serde_json::Value>().await?["error"]
+                .as_str()
+                .is_some_and(|message| message.contains("prototype Rust"))
+        {
+            return Err("Une fonction non portée doit annoncer son indisponibilité.".into());
+        }
+    }
+    client
+        .goto(&format!("{address}/#session={token}&view=board"))
+        .await?;
+    wait_dom(client, "return document.querySelector('#live-connection')?.classList.contains('connected') === true;", vec![]).await?;
+    if client
+        .current_url()
+        .await?
+        .fragment()
+        .is_some_and(|fragment| fragment.contains("session="))
+    {
+        return Err("Session historique restée dans l’URL.".into());
+    }
+    client
+        .find(Locator::Css("#create-button"))
+        .await?
+        .click()
+        .await?;
+    client
+        .wait()
+        .at_most(Duration::from_secs(15))
+        .for_element(Locator::Css("#new-dialog[open]"))
+        .await?;
+    let title = "Tâche historique é 🔧 <img src=x>";
+    client
+        .find(Locator::Css("#new-form [name=title]"))
+        .await?
+        .send_keys(title)
+        .await?;
+    client
+        .find(Locator::Css("#new-form button.primary"))
+        .await?
+        .click()
+        .await?;
+    let title_matches = "return document.querySelector('#task-title')?.textContent === arguments[0] && !document.querySelector('#task-title img');";
+    wait_dom(client, title_matches, vec![json!(title)]).await?;
+    let task_fragment = client
+        .current_url()
+        .await?
+        .fragment()
+        .ok_or("Adresse de tâche absente.")?
+        .to_owned();
+    std::fs::write(
+        root().join(".artifacts/rust-legacy-ui-created.png"),
+        client.screenshot().await?,
+    )?;
+    client
+        .find(Locator::Css("#backups-button"))
+        .await?
+        .click()
+        .await?;
+    client
+        .wait()
+        .at_most(Duration::from_secs(15))
+        .for_element(Locator::Css("#backups-dialog[open]"))
+        .await?;
+    client
+        .find(Locator::Css("#create-backup"))
+        .await?
+        .click()
+        .await?;
+    client
+        .wait()
+        .at_most(Duration::from_secs(15))
+        .for_element(Locator::Css("[data-restore-backup]"))
+        .await?;
+    let name = client
+        .execute(
+            "return document.querySelector('[data-restore-backup]').dataset.restoreBackup;",
+            vec![],
+        )
+        .await?;
+    let name = name.as_str().ok_or("Nom de sauvegarde absent du DOM.")?;
+    client
+        .find(Locator::Css("#backups-dialog [data-close]"))
+        .await?
+        .click()
+        .await?;
+    let field = client.find(Locator::Css("#card-form [name=title]")).await?;
+    field.clear().await?;
+    field.send_keys("Modification synthétique").await?;
+    client
+        .find(Locator::Css("#card-form button[type=submit]"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        title_matches,
+        vec![json!("Modification synthétique")],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#backups-button"))
+        .await?
+        .click()
+        .await?;
+    client
+        .wait()
+        .at_most(Duration::from_secs(15))
+        .for_element(Locator::Css("#backups-dialog[open]"))
+        .await?;
+    client
+        .find(Locator::Css(&format!("[data-restore-backup='{name}']")))
+        .await?
+        .click()
+        .await?;
+    client
+        .wait()
+        .at_most(Duration::from_secs(15))
+        .for_element(Locator::Css("#confirm-dialog[open]"))
+        .await?;
+    client
+        .find(Locator::Css("#confirm-action"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelectorAll('[data-restore-backup]').length === 2;",
+        vec![],
+    )
+    .await?;
+    client.refresh().await?;
+    wait_dom(client, title_matches, vec![json!(title)]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-legacy-ui-restored.png"),
+        client.screenshot().await?,
+    )?;
+    stop_server(&mut server, port, &token).await?;
+    let (mut restarted, next_token) = start_server(data.path(), port, &assets).await?;
+    if session::same_secret(&token, &next_token)
+        || http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await?
+            .status()
+            != 401
+    {
+        return Err("La session historique doit être renouvelée au redémarrage.".into());
+    }
+    client.goto("about:blank").await?;
+    client
+        .goto(&format!("{address}/#session={next_token}&{task_fragment}"))
+        .await?;
+    wait_dom(client, title_matches, vec![json!(title)]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
     Ok(())
 }

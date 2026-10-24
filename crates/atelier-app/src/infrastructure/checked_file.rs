@@ -57,7 +57,7 @@ impl Identity {
 }
 
 impl CheckedFile {
-    pub(super) fn open_in(directory: &cap_std::fs::Dir, name: &Path) -> Result<Self> {
+    pub(crate) fn open_in(directory: &cap_std::fs::Dir, name: &Path) -> Result<Self> {
         use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
         let mut options = cap_std::fs::OpenOptions::new();
         options.read(true).follow(FollowSymlinks::No).nonblock(true);

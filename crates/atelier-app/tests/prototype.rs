@@ -56,6 +56,75 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
         .unwrap();
 }
 
+#[tokio::test]
+async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_paths() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    for name in http::LEGACY_ASSETS {
+        let path = assets.path().join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, format!("synthetic {name}")).unwrap();
+    }
+    std::fs::write(assets.path().join("private.txt"), "private synthetic bytes").unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    std::fs::write(assets.path().join("index.html"), "replaced synthetic bytes").unwrap();
+    let response = client.get(&address).send().await.unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(
+        response.headers()["content-type"],
+        "text/html; charset=utf-8"
+    );
+    assert_eq!(response.text().await.unwrap(), "synthetic index.html");
+    for name in [
+        "app.js",
+        "local-session.mjs",
+        "views/card.mjs",
+        "lib/domain/tasks.mjs",
+    ] {
+        let response = client
+            .get(format!("{address}/{name}"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            response.headers()["content-type"],
+            "text/javascript; charset=utf-8"
+        );
+        assert_eq!(response.text().await.unwrap(), format!("synthetic {name}"));
+    }
+    for path in ["/private.txt", "/lib/store.mjs", "/data/local-session"] {
+        assert_eq!(
+            client
+                .get(format!("{address}{path}"))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            404
+        );
+    }
+    assert_eq!(
+        client
+            .get(format!("{address}/api/agents"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    let response = client
+        .get(format!("{address}/api/agents"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 503);
+    assert!(response.text().await.unwrap().contains("prototype Rust"));
+    stop(&address, &token, task).await;
+}
+
 #[cfg(windows)]
 #[tokio::test]
 async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transaction() {
@@ -2129,7 +2198,7 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
         .unwrap();
     assert_eq!(
         board,
-        json!({"cards":[card], "brainstorms":[], "projects":[], "times":[], "settings": atelier_core::application::settings::public_config(&Default::default(), &Default::default(), atelier_app::infrastructure::settings::platform()).unwrap()})
+        json!({"cards":[card], "brainstorms":[], "projects":[], "runs":[], "times":[], "settings": atelier_core::application::settings::public_config(&Default::default(), &Default::default(), atelier_app::infrastructure::settings::platform()).unwrap()})
     );
     stop(&address, &next_token, task).await;
 }

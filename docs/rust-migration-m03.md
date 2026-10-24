@@ -1,6 +1,18 @@
 # M03 — Règles et API métier
 
+## Interface actuelle sur le serveur Rust — candidat après `46338b8`
+
+`cargo xtask build-legacy-ui` copie les seuls assets publics exposés par Node dans `.artifacts/rust-legacy-ui`. Le même `serve-prototype --data-dir <dossier synthétique vide> --assets .artifacts/rust-legacy-ui --port 4318` peut alors afficher l'interface actuelle. Aucun Node lancé par ce serveur, aucune préférence produit ajoutée, aucun changement des paquets. `state.runs` lit désormais les vrais documents stockés, nécessaires à ces vues. Les fonctions non portées renvoient un JSON 503 après authentification, au lieu d'une page 404 sans explication.
+
+Les assets natifs et historiques sont lus une fois au démarrage à travers `CheckedFile` dans le répertoire ouvert, avec une limite de 64 Mio par fichier ; leurs octets sont partagés entre réponses sans réouverture par chemin. Une liste explicite inclut les seuls modules de domaine utilisés par le navigateur ; aucune route générique vers `lib/` ou `data/`. Un test HTTP vérifie MIME, liste autorisée, refus des fichiers privés et conservation du contenu si le chemin est remplacé ensuite.
+
+Le nouveau parcours WebDriver `test-legacy-ui` manipule l'interface réelle : session retirée du fragment, SSE, titre hostile échappé, création/édition, sauvegarde/restauration avec confirmation et redémarrage. Des captures synthétiques sont conservées par la CI Windows. Ce scénario reste candidat tant que le journal et les captures ne sont pas recueillis. Aucun navigateur lancé sur le poste ; étapes Linux/macOS inchangées, extension du nouveau parcours réservée à la qualification finale.
+
+Cette tranche ne qualifie pas encore toute l'interface métier : catalogue des connecteurs, diagnostics d'agents, files actives, suggestion de branche et autres effets M04–M06 restent ouverts. L'interface WASM minimale et son parcours M01 restent vérifiés séparément ; M07 n'est pas réalisé par cette passerelle.
+
 ## API de sauvegarde — candidat après `fbfac16`
+
+La [CI Windows du correctif `46338b8`](https://github.com/FluryWaana/atelier/actions/runs/40111589208) réussit intégralement, journaux relus : 87 tests Rust, dont garde des sauvegardes et restauration HTTP avec panne finale/rollback, Clippy natif/WASM et comparateurs historiques ; suite Node 440 tests, 436 réussis, aucun échec, quatre exclusions documentées ; parcours Edge M01 réussi. Le parcours de l'interface historique ci-dessus n'appartient pas encore à cette preuve.
 
 Le premier [essai CI `589bdba`](https://github.com/FluryWaana/atelier/actions/runs/40111051509) échoue dans les deux nouveaux scénarios avant leurs assertions de restauration : leur chrono synthétique fournit `seconds: 0`, refusé par la validation historique même avec `start: true`. La fixture utilise désormais 60 secondes ; les validations produit restent inchangées. Nouvelle exécution complète attendue.
 

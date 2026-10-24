@@ -8,21 +8,22 @@ use atelier_core::{
     document::Document,
 };
 use axum::{
-    Json, Router,
+    Json,
     body::{Body, to_bytes},
     extract::{Path, Query, Request, State},
     http::{Method, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{any, get, get_service, post},
+    routing::{any, get, post},
 };
 use serde::Deserialize;
 use serde_json::json;
 use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
-use tower_http::services::ServeFile;
 
 mod agent_providers;
+mod assets;
+pub use assets::LEGACY_ASSETS;
 mod backups;
 mod card_lifecycle;
 mod events;
@@ -173,6 +174,7 @@ async fn board(State(state): State<Shared>) -> Response {
                 cards,
                 brainstorms,
                 projects: store.documents(Documents::Projects)?,
+                runs: store.documents(Documents::Runs)?,
                 times: store.documents(Documents::Times)?,
             })
         })
@@ -259,33 +261,22 @@ async fn events(State(state): State<Shared>) -> Response {
     events::response(state.changed.subscribe(), state.shutdown.subscribe())
 }
 
+async fn unavailable(request: Request) -> Response {
+    if request.uri().path().starts_with("/api/") {
+        failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Cette fonction n’est pas encore disponible dans le prototype Rust.",
+        )
+    } else {
+        failure(StatusCode::NOT_FOUND, "Route introuvable.")
+    }
+}
+
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
     }
-    let mut app = Router::new();
-    for entry in std::fs::read_dir(&assets)? {
-        let entry = entry?;
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        let allowed = name == "index.html"
-            || name == "atelier-loader.js"
-            || (name.starts_with("atelier-ui-")
-                && (name.ends_with(".js") || name.ends_with(".wasm")))
-            || (name.starts_with("style-") && name.ends_with(".css"));
-        if !allowed {
-            continue;
-        }
-        if !entry.file_type()?.is_file() {
-            return Err("Asset non régulier interdit.".into());
-        }
-        let path = if name == "index.html" {
-            "/".to_owned()
-        } else {
-            format!("/{name}")
-        };
-        app = app.route(&path, get_service(ServeFile::new(entry.path())));
-    }
+    let app = assets::router(&assets)?;
     let directory = PrototypeDirectory::open(&directory)?;
     let vault =
         crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;
@@ -351,6 +342,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/cards/{id}/archive", post(card_lifecycle::archive))
         .route("/api/cards/{id}/duplicate", post(duplicate))
         .route("/api/prototype/stop", post(stop))
+        .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());
     let stop_events = state.shutdown.clone();

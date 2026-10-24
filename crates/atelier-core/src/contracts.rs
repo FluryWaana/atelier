@@ -52,5 +52,7 @@ pub struct Board {
     #[serde(default)]
     pub projects: Vec<Document>,
     #[serde(default)]
+    pub runs: Vec<Document>,
+    #[serde(default)]
     pub times: Vec<Document>,
 }

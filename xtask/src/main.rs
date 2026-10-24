@@ -93,11 +93,27 @@ fn build_ui() -> Result<()> {
     Ok(())
 }
 
+fn build_legacy_ui() -> Result<()> {
+    let output = root().join(".artifacts/rust-legacy-ui");
+    for name in atelier_app::http::LEGACY_ASSETS {
+        let source = if name.starts_with("lib/") {
+            root().join(name)
+        } else {
+            root().join("public").join(name)
+        };
+        let destination = output.join(name);
+        std::fs::create_dir_all(destination.parent().ok_or("Asset sans dossier.")?)?;
+        std::fs::copy(source, destination)?;
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["build-ui"] => build_ui(),
+        ["build-legacy-ui"] => build_legacy_ui(),
         ["test-storage-parity"] => storage::test().await,
         ["test-domain-parity"] => {
             run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
@@ -128,8 +144,9 @@ async fn main() -> Result<()> {
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
-        ["test-ui"] => { build_ui()?; ui::test().await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
+        ["test-ui"] => { build_ui()?; ui::test(false).await },
+        ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
+        _ => Err("Usage : cargo xtask build-ui | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
     }
 }
 

@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let directory = directory.ok_or("Dossier de test obligatoire.")?;
     let assets = assets.ok_or("Dossier des assets obligatoire.")?;
     if !assets.join("index.html").is_file() {
-        return Err("Construis l’interface avec cargo xtask build-ui.".into());
+        return Err("Construis l’interface avec cargo xtask build-ui ou build-legacy-ui.".into());
     }
     let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;
     println!(

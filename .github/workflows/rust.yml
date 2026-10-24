@@ -215,6 +215,15 @@ jobs:
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo xtask test-ui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo xtask test-legacy-ui
+      - name: Preserve synthetic Windows UI screenshots
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-ui-Windows-${{ runner.arch }}
+          path: .artifacts/rust-*.png
+          if-no-files-found: ignore
       - name: Record browser and driver versions
         if: runner.os == 'Linux'
         run: |
