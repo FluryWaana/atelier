@@ -233,6 +233,13 @@ pub fn prepare_update(
         }
     }
     let mut updated = project.clone();
+    if body.raw("name").is_some() {
+        let name = text(body.raw("name"), 100)?;
+        if name.0.is_empty() {
+            return Err(ProjectFailure::Invalid("Un nom de projet est nécessaire.").into());
+        }
+        updated.set("name", &name)?;
+    }
     updated.overlay(&serde_json::from_str(&serde_json::to_string(&options)?)?);
     updated.set("repo", &repo)?;
     Ok(ProjectEdit {

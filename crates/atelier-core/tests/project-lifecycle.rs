@@ -113,6 +113,11 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         let previous_projects = context.projects.borrow().clone();
         let previous_cards = context.cards.borrow().clone();
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
+        // Renaming is now supported; the former ignored-name contract is retired below.
+        if context.scenario.string_equals("action", "update").unwrap() && body.raw("name").is_some()
+        {
+            continue;
+        }
         let active: Vec<String> = context.scenario.get("active").unwrap().unwrap_or_default();
         let busy = |id: &str| active.iter().any(|active| active == id);
         let windows = context.scenario.truthy("windows").unwrap();
@@ -213,6 +218,52 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         assert!(
             json::equivalent(&actual, expected),
             "case {index}\nactual: {actual}\nexpected: {expected}"
+        );
+    }
+}
+
+#[test]
+fn project_rename_validates_without_moving_cards_or_changing_settings() {
+    let context = Context {
+        scenario: Document::default(),
+        projects: RefCell::new(vec![serde_json::from_str(r#"{"id":"project","name":"Before","repo":"checked:repo","projectRules":"Keep rules"}"#).unwrap()]),
+        cards: RefCell::new(vec![]), events: RefCell::default(),
+    };
+    for name in ["After", "  Nouveau projet é 🔧  "] {
+        let body = serde_json::from_value::<Document>(serde_json::json!({"name":name})).unwrap();
+        let edit = projects::prepare_update(
+            &context,
+            "project",
+            &body,
+            false,
+            |_| false,
+            |_| false,
+            false,
+        )
+        .unwrap();
+        assert!(edit.project.string_equals("name", name.trim()).unwrap());
+        assert!(edit.project.string_equals("repo", "checked:repo").unwrap());
+        assert!(
+            edit.project
+                .string_equals("projectRules", "Keep rules")
+                .unwrap()
+        );
+        assert!(!edit.moved);
+        assert!(context.events.borrow().is_empty());
+    }
+    for name in ["", " ", &"x".repeat(101)] {
+        let body = serde_json::from_value::<Document>(serde_json::json!({"name":name})).unwrap();
+        assert!(
+            projects::prepare_update(
+                &context,
+                "project",
+                &body,
+                false,
+                |_| false,
+                |_| false,
+                false
+            )
+            .is_err()
         );
     }
 }

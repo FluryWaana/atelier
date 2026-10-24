@@ -260,6 +260,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     if client.current_url().await?.fragment().is_some() {
         return Err("Le jeton n’a pas été retiré de l’adresse.".into());
     }
+    wait_dom(
+        client,
+        "return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
     let title = "Tâche synthétique é 🔧 <script>";
     client
         .find(Locator::Css("#task-title"))
@@ -508,7 +514,202 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-reopened.png"),
         client.screenshot().await?,
     )?;
+    projects_scenario(client, http, &address, &next_token, data.path()).await?;
     stop_server(&mut restarted, port, &next_token).await?;
+    Ok(())
+}
+
+async fn projects_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    data: &Path,
+) -> Result<()> {
+    let repo = data.join("repositories/project-ui");
+    std::fs::create_dir_all(&repo)?;
+    client
+        .find(Locator::Css("#manage-projects"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .send_keys("Projet depuis l’interface")
+        .await?;
+    client
+        .find(Locator::Css("#project-repo"))
+        .await?
+        .send_keys(&repo.to_string_lossy())
+        .await?;
+    client
+        .find(Locator::Css("#save-project"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelectorAll('.project-choice').length === 2 && document.querySelector('#new-project')?.disabled === false && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
+    let id = client.execute("return document.querySelector('.project-choice[aria-pressed=true]').dataset.projectId;", vec![]).await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .send_keys("Projet renommé")
+        .await?;
+    client
+        .find(Locator::Css("#project-rules"))
+        .await?
+        .send_keys("Consignes synthétiques")
+        .await?;
+    client
+        .find(Locator::Css("#project-branch"))
+        .await?
+        .send_keys("main")
+        .await?;
+    client
+        .find(Locator::Css("#save-project"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
+    client
+        .find(Locator::Css("#new-project"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .send_keys("Doublon refusé")
+        .await?;
+    client
+        .find(Locator::Css("#project-repo"))
+        .await?
+        .send_keys(&repo.to_string_lossy())
+        .await?;
+    client
+        .find(Locator::Css("#save-project"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-error')?.textContent.includes('déjà') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
+    client
+        .find(Locator::Css("#reset-project"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-project"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-name')?.value === '' && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
+    client
+        .find(Locator::Css("#close-projects"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#projects-dialog') && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
+    client
+        .find(Locator::Css("#task-title"))
+        .await?
+        .send_keys("Tâche du nouveau projet")
+        .await?;
+    client
+        .find(Locator::Css("#create-task"))
+        .await?
+        .click()
+        .await?;
+    wait_title(client, "Tâche du nouveau projet").await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let project = board
+        .projects
+        .iter()
+        .find(|project| project.get::<String>("id").ok().flatten().as_deref() == id.as_str())
+        .ok_or("Projet créé absent")?;
+    if !project.string_equals("name", "Projet renommé")?
+        || !project.string_equals("projectRules", "Consignes synthétiques")?
+        || !project.string_equals("baseBranch", "main")?
+    {
+        return Err("Réglages du projet non enregistrés.".into());
+    }
+    let card = board
+        .cards
+        .iter()
+        .find(|card| card.title == "Tâche du nouveau projet".into())
+        .ok_or("Tâche du projet absente")?;
+    if card.fields.get::<String>("repo")? != project.get::<String>("repo")? {
+        return Err("La tâche n’est pas associée au projet sélectionné.".into());
+    }
+    let card_id = card.id.clone();
+    client
+        .find(Locator::Css("#manage-projects"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css(&format!(
+            "[data-project-id='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        )))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#remove-project"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#cancel-project-confirmation"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#remove-project"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#archive-project-tasks"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-project"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelectorAll('.project-choice').length === 1 && document.querySelector('#project-name')?.value === '' && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
+    client
+        .find(Locator::Css("#close-projects"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#show-archives"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return Array.from(document.querySelectorAll('article.card')).some(card => card.dataset.id === arguments[0]);", vec![json!(card_id)]).await?;
+    if !repo.is_dir() {
+        return Err("Le retrait du projet a supprimé son dossier.".into());
+    }
+    std::fs::write(
+        root().join(".artifacts/rust-ui-projects.png"),
+        client.screenshot().await?,
+    )?;
     Ok(())
 }
 

@@ -100,6 +100,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/projects.rs](../crates/atelier-ui/src/projects.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/task_editor.rs](../crates/atelier-ui/src/task_editor.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [examples/connectors/demo/index.mjs](../examples/connectors/demo/index.mjs) | Source / configuration | [test/connectors-api.test.mjs](../test/connectors-api.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
@@ -1345,9 +1346,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/projects.rs:38](../crates/atelier-core/src/application/projects.rs#L38) | <code>pub moved: bool,</code> |
 | [crates/atelier-core/src/application/projects.rs:41](../crates/atelier-core/src/application/projects.rs#L41) | <code>pub fn detect(</code> |
 | [crates/atelier-core/src/application/projects.rs:122](../crates/atelier-core/src/application/projects.rs#L122) | <code>pub fn prepare_update(</code> |
-| [crates/atelier-core/src/application/projects.rs:254](../crates/atelier-core/src/application/projects.rs#L254) | <code>pub fn create(</code> |
-| [crates/atelier-core/src/application/projects.rs:324](../crates/atelier-core/src/application/projects.rs#L324) | <code>pub fn archive_tasks(</code> |
-| [crates/atelier-core/src/application/projects.rs:337](../crates/atelier-core/src/application/projects.rs#L337) | <code>pub fn remove(</code> |
+| [crates/atelier-core/src/application/projects.rs:261](../crates/atelier-core/src/application/projects.rs#L261) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/projects.rs:331](../crates/atelier-core/src/application/projects.rs#L331) | <code>pub fn archive_tasks(</code> |
+| [crates/atelier-core/src/application/projects.rs:344](../crates/atelier-core/src/application/projects.rs#L344) | <code>pub fn remove(</code> |
 | [crates/atelier-core/src/application/settings.rs:1](../crates/atelier-core/src/application/settings.rs#L1) | <code>use super::task_creation::{Result, options, present, provider, text};</code> |
 | [crates/atelier-core/src/application/settings.rs:2](../crates/atelier-core/src/application/settings.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/settings.rs:6](../crates/atelier-core/src/application/settings.rs#L6) | <code>use serde_json::value::RawValue;</code> |
@@ -1529,6 +1530,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/project-lifecycle.rs:10](../crates/atelier-core/tests/project-lifecycle.rs#L10) | <code>use std::cell::RefCell;</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:12](../crates/atelier-core/tests/project-lifecycle.rs#L12) | <code>mod json;</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:99](../crates/atelier-core/tests/project-lifecycle.rs#L99) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:225](../crates/atelier-core/tests/project-lifecycle.rs#L225) | <code>#[test]</code> |
 | [crates/atelier-core/tests/project-settings.rs:1](../crates/atelier-core/tests/project-settings.rs#L1) | <code>use atelier_core::{document::Document, domain::projects::project_settings};</code> |
 | [crates/atelier-core/tests/project-settings.rs:3](../crates/atelier-core/tests/project-settings.rs#L3) | <code>mod json;</code> |
 | [crates/atelier-core/tests/project-settings.rs:5](../crates/atelier-core/tests/project-settings.rs#L5) | <code>#[test]</code> |
@@ -1564,11 +1566,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
 | [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent"] }</code> |
 | [crates/atelier-ui/src/main.rs:1](../crates/atelier-ui/src/main.rs#L1) | <code>use atelier_core::contracts::{Board, Card};</code> |
-| [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::{Method, Request, Response};</code> |
+| [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::{Method, Request, RequestBuilder, Response};</code> |
 | [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/main.rs:4](../crates/atelier-ui/src/main.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/main.rs:6](../crates/atelier-ui/src/main.rs#L6) | <code>mod task_editor;</code> |
-| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/main.rs:6](../crates/atelier-ui/src/main.rs#L6) | <code>mod projects;</code> |
+| [crates/atelier-ui/src/main.rs:7](../crates/atelier-ui/src/main.rs#L7) | <code>mod task_editor;</code> |
+| [crates/atelier-ui/src/main.rs:8](../crates/atelier-ui/src/main.rs#L8) | <code>use projects::Projects;</code> |
+| [crates/atelier-ui/src/main.rs:9](../crates/atelier-ui/src/main.rs#L9) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::{field, load, write};</code> |
+| [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use atelier_core::{contracts::Card, document::Document};</code> |
+| [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/projects.rs:4](../crates/atelier-ui/src/projects.rs#L4) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/projects.rs:5](../crates/atelier-ui/src/projects.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/projects.rs:28](../crates/atelier-ui/src/projects.rs#L28) | <code>pub fn Projects(</code> |
 | [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::{STATUSES, field, replace_card, write};</code> |
 | [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use atelier_core::contracts::Card;</code> |
 | [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use gloo_net::http::Method;</code> |
@@ -3589,4 +3599,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 407 fichiers ; 97 fichiers de tests Node.
+Total : 408 fichiers ; 97 fichiers de tests Node.

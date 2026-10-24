@@ -3,7 +3,9 @@ use gloo_net::http::{Method, Request, RequestBuilder, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+mod projects;
 mod task_editor;
+use projects::Projects;
 use task_editor::TaskEditor;
 
 const STATUSES: [(&str, &str); 5] = [
@@ -132,6 +134,7 @@ fn App() -> impl IntoView {
     let error = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
     let selected = RwSignal::new(None::<Card>);
+    let show_projects = RwSignal::new(false);
     let token = StoredValue::new(session());
     match token.get_value() {
         Ok(token) => {
@@ -177,8 +180,13 @@ fn App() -> impl IntoView {
             <header class="app-header"><div><p class="eyebrow">"ATELIER KANBAN"</p><h1>"Votre espace de travail"</h1><p class="subtitle">"Des idées aux tâches terminées, une étape à la fois."</p></div><span class="development">"En développement"</span></header>
             <div class="toolbar" aria-label="Filtres du tableau">
                 <div><label for="board-search">"Rechercher"</label><input id="board-search" type="search" placeholder="Titre ou description…" prop:value=move || search.get() on:input=move |event| search.set(event_target_value(&event)) /></div>
-                <div><label for="board-project">"Projet"</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">"Tous les projets"</option><For each=move || projects.get() key=|project| field(project, "id") children=|project| view! { <option value=field(&project, "repo")>{field(&project, "name")}</option> } /></select></div>
+                <div><label for="board-project">"Projet"</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">"Tous les projets"</option><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
+                    let id = StoredValue::new(field(&project, "id"));
+                    let current = move || projects.with(|projects| projects.iter().find(|project| field(project, "id") == id.get_value()).cloned());
+                    view! { <option value=move || current().map(|project| field(&project, "repo")).unwrap_or_default()>{move || current().map(|project| field(&project, "name")).unwrap_or_default()}</option> }
+                } /></select></div>
                 <label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />"Archives"</label>
+                <button id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)>"Gérer les projets"</button>
                 <span class="task-count" role="status">{move || format!("{} tâche(s)", visible().len())}</span>
             </div>
             <form class="quick-create" on:submit=move |event| {
@@ -216,6 +224,7 @@ fn App() -> impl IntoView {
                 } />
             </section>
             {move || selected.get().map(|card| view! { <TaskEditor card cards token on_close=Callback::new(move |()| selected.set(None)) /> })}
+            <Show when=move || show_projects.get()><Projects projects cards repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
         </main>
     }
 }
