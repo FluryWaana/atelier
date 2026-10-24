@@ -800,7 +800,12 @@ mod tests {
         let main_only = root.path().join("main-only.sqlite");
         fs::copy(source.join("kanban.sqlite"), &main_only).unwrap();
         let incomplete = Connection::open(&main_only).unwrap();
-        assert!(incomplete.prepare("SELECT * FROM cards").is_err());
+        assert!(
+            Store::new(&incomplete)
+                .document::<serde_json::Value>(Documents::Cards, "preserved")
+                .unwrap()
+                .is_none()
+        );
         incomplete.close().unwrap();
         import(&source, &destination).unwrap();
         for (name, bytes) in originals {
