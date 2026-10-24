@@ -8,6 +8,8 @@ Le scénario historique de coffre inclut maintenant des clés et valeurs UTF-16 
 
 À compter de cette demande, les compilations et tests seront exécutés sur les runners GitHub Windows, sans charge de test sur le poste. Linux/macOS restent reportés à la qualification finale.
 
+Preuve distante recueillie : le [job natif Windows `9a6721d`](https://github.com/FluryWaana/atelier/actions/runs/40106480434/job/120909135524) réussit. Journal relu : test du coffre UTF-16, suite Rust complète (74 tests), Clippy natif/WASM, comparateur stockage/coffre dans les deux directions et isolation DPAPI entre comptes réussis. Les enveloppes POSIX restent simulées dans ce comparateur ; aucun nouveau test Linux/macOS lancé. La suite Node distante compte 434 tests, 430 réussis, aucun échec, quatre exclusions : installateur, trays Linux/macOS et scénario RedirectionGuard non applicable au compte du runner. Edge reste en cours à cette collecte. M02 reste ouvert pour l'accès SQLite et les intégrations restantes.
+
 Incrément initial du 24 octobre 2026, base `371a1a9`. **En cours** ; M01 est validé après requalification de la vraie réouverture navigateur. Les essais utilisent uniquement des dossiers synthétiques ; le serveur prototype continue de refuser les dossiers Node existants.
 
 ## Stockage porté

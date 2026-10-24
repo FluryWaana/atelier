@@ -150,8 +150,12 @@ impl Document {
     }
 
     pub fn set(&mut self, key: &str, value: &impl Serialize) -> serde_json::Result<()> {
+        self.set_key(JsonString::from(key), value)
+    }
+
+    pub fn set_key(&mut self, key: JsonString, value: &impl Serialize) -> serde_json::Result<()> {
         let raw = serde_json::value::to_raw_value(value)?;
-        self.insert(JsonString::from(key), raw);
+        self.insert(key, raw);
         Ok(())
     }
 

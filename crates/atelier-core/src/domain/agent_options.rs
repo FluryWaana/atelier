@@ -8,20 +8,36 @@ pub(crate) fn find_provider(
     settings: &Document,
     agent: &JsonString,
 ) -> serde_json::Result<Option<Document>> {
+    Ok(providers(settings)?
+        .into_iter()
+        .find(|provider| provider.get::<JsonString>("id").ok().flatten().as_ref() == Some(agent)))
+}
+
+pub fn providers(settings: &Document) -> serde_json::Result<Vec<Document>> {
     if let Some(providers) = settings
         .raw("agentProviders")
         .filter(|raw| raw.get() != "null")
     {
-        let providers: Vec<Document> = serde_json::from_str(providers.get())?;
-        Ok(providers.into_iter().find(|provider| {
-            provider.get::<JsonString>("id").ok().flatten().as_ref() == Some(agent)
-        }))
-    } else if [JsonString::from("codex"), JsonString::from("claude")].contains(agent) {
-        let mut provider = Document::default();
-        provider.set("type", agent)?;
-        Ok(Some(provider))
+        serde_json::from_str(providers.get())
     } else {
-        Ok(None)
+        let mut providers = Vec::new();
+        for (id, name) in [("codex", "Codex"), ("claude", "Claude Code")] {
+            let mut provider = Document::default();
+            provider.set("id", &id)?;
+            provider.set("name", &name)?;
+            provider.set("type", &id)?;
+            provider.set("auth", &"cli")?;
+            for (key, suffix) in [("model", "Model"), ("effort", "Effort")] {
+                let field = format!("{id}{suffix}");
+                if settings.truthy(&field)? {
+                    provider.set(key, &settings.raw(&field))?;
+                } else {
+                    provider.set(key, &"")?;
+                }
+            }
+            providers.push(provider);
+        }
+        Ok(providers)
     }
 }
 

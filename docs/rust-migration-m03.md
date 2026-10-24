@@ -160,6 +160,14 @@ La CI Windows `38ceb6c` a ensuite détecté une fixture qui enregistrait les che
 
 ## Preuves reproductibles
 
+### Réglages globaux — candidat après `9a6721d`
+
+`application/settings.rs` prépare les paramètres et les jetons sans accès système ni écriture : défauts, héritage des profils, limites UTF-16, priorité des erreurs, mapping Jira, changement d'identité et oubli explicite. Les modèles, la file et les champs inconnus déjà stockés sont préservés ; leur remplacement depuis ce formulaire reste ignoré comme dans Node. Les profils et noms de champs historiques peuvent conserver des unités UTF-16 isolées. La recherche de profil réutilise maintenant la même construction des défauts complets.
+
+Un corpus de 42 scénarios à attentes explicites est confronté à `lib/application/settings.mjs` par `rust-settings-reference.mjs`, puis au préparateur Rust. Il ne qualifie ni les chemins réels ni les URL : les deux résolveurs de ce corpus sont synthétiques. Le test Rust courant n'a pas besoin de Node. Un second test couvre les indicateurs publics et le retrait d'un jeton sans copier sa valeur dans la réponse. Ces nouveaux tests restent à exécuter sur GitHub ; aucun résultat local revendiqué. Branchement HTTP, coffre transactionnel, concurrence et véritable normalisation d'URL à réaliser dans l'incrément suivant.
+
+Le [job natif `9a6721d`](https://github.com/FluryWaana/atelier/actions/runs/40106480434/job/120909135524) est réussi et son journal relu : test HTTP de déplacement/rollback des projets, 70 opérations de projet, 84 créations, 63 éditions, 46 transitions de temps et 305 + 51 contrats de domaine. La correction des chemins temporaires est donc vérifiée sur le runner Windows. La suite Node distante réussit également (434/430/0/4 ; exclusions détaillées dans M02). Edge reste en cours à cette collecte.
+
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.
 
 Les vecteurs couvrent notamment champs absents/null, Unicode, bornes des critères, cycles, profils disparus, héritage carte/fournisseur, changement d'agent, authentification CLI/API, chaînes hostiles et priorité des validations. Le test de chaîne longue complète les vecteurs. Clippy natif et WASM passent ; 37 tests Rust réussis. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 84,51 s.

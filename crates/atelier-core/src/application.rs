@@ -5,6 +5,7 @@ use crate::{
 
 pub mod card_lifecycle;
 pub mod projects;
+pub mod settings;
 pub mod task_creation;
 pub mod task_editing;
 pub mod task_templates;

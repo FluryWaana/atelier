@@ -29,6 +29,8 @@ Les contrats des tableaux ne deviennent pas validés par ces seules preuves. Dé
 
 ## Contrats serveur et système
 
+C09, candidat après `9a6721d` : préparation pure des réglages globaux et invalidation des jetons, représentation UTF-16 et 42 scénarios Node/Rust à attentes explicites. Validation distante attendue ; intégration HTTP/coffre et concurrence restent ouvertes. Les tests natifs Windows du coffre UTF-16 et du déplacement transactionnel de projets de `9a6721d` sont réussis, journaux relus ; Edge encore en cours. Voir les relevés M02/M03.
+
 M02 préparatoire (bases `371a1a9`, puis `52dcb43`) : C02 dispose du schéma complet, transactions, pagination/UTF-16 et de `cargo xtask test-storage-parity` (810 documents, 10 002 logs, snapshot WAL, Node → Rust → Node → Rust). C03 ajoute une restauration transactionnelle comparée à Node, secours inclus, refus des envois incertains/opérations inachevées et rollback après faute SQL. Catalogue/imports et exposition restent ouverts. C05/C06 disposent d'une lecture de session par descripteur avec identité, taille et refus des liens finaux ; test natif de jonction Windows réussi, contrôle POSIX à exécuter en CI. Les racines et ancêtres restent à contrôler. Voir [preuves M02](rust-migration-m02.md). Aucun de ces contrats n'est déclaré complètement qualifié.
 
 CI M01 : les cinq cibles natives et Chrome Linux passent sur `371a1a9` et `52dcb43` (liens dans le relevé M01). Firefox/Safari et trays/trousseaux POSIX restent ouverts.
