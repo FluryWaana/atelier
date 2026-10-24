@@ -88,6 +88,16 @@ Limites : les messages des erreurs système de chemins proviennent de Rust/OS, s
 
 Journaux `e027e70` Windows, Linux x64/ARM64 et macOS ARM64 relus : comparateur de 77 créations et test Rust correspondants réussis. macOS Intel et la nouvelle CI du branchement HTTP restent attendus.
 
+## Préparation des éditions dans core — après `567a529`
+
+`application/task_editing` prépare une carte éditée et distingue sauvegarde locale, lancement et synchronisation. Les gardes archive/activité/worktree conservent leur priorité ; le ticket garde autorité sur titre/description, le changement d'agent remet les options à leur valeur historique et marque le choix explicite. Les dépendances utilisent le parcours de graphe existant. Les champs inconnus et textes UTF-16 restent préservés. Une modification des coches seules ne périme pas une review ; titre, description, instructions ou texte des critères le font.
+
+Les validations de texte/fournisseur/options sont partagées avec la création. Le corpus `rust-task-editing-reference` capture 63 modifications par la vraie fonction Node, puis compare en Rust valeurs, état sauvegardé et ordre des effets : résolution, horodatage, écriture/lancement, invalidation et synchronisation. Les erreurs de dépôt et de lancement synthétiques ne publient pas de carte modifiée. Les gardes manquante/archivée/occupée, les changements de branches sous worktree, Jira, les cycles et les valeurs null/absentes sont couverts. L'aide de comparaison JSON UTF-16 est partagée par les deux suites core.
+
+Ce corpus ne lance aucun agent et ne synchronise aucun ticket distant. Le branchement HTTP/SQLite et l'invalidation réelle des reviews restent l'incrément suivant ; M04/M05 devront réserver les opérations, revalider après I/O et comparer les exigences après le lancement réel. `cargo xtask test-task-editing-parity` est ajouté aux cinq cibles CI ; les tests core ordinaires lisent seulement le JSON commis.
+
+Contrôles locaux : 67 tests Rust réussis, Clippy natif/WASM et comparateur historique d'édition réussis. Suite Node complète avec contrôle release : 430 tests, 427 réussis, aucun échec, trois exclusions, 86,634 s. Les 305 contrats de domaine et 84 créations précédents restent couverts par les tests Rust. La CI `e027e70` est entièrement réussie, journal macOS Intel relu pour les 77 créations. Les journaux Windows, Linux x64/ARM64 et macOS ARM64 de `567a529` confirment 84 créations et le scénario HTTP avec chemins natifs/panne SQL/reprise ; macOS Intel encore attendu.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

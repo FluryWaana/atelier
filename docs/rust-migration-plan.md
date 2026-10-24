@@ -635,6 +635,13 @@ Prochaine action concrète :
 - **Limites :** diagnostics système de chemins non qualifiés à l'octet contre Node ; erreurs de stockage masquées en 500. Création UI complète et édition/réglages/projets encore ouvertes ; protections M02 non closes.
 - **CI :** `e027e70` vérifié dans les journaux Windows, Linux x64/ARM64 et macOS ARM64 ; macOS Intel encore attendu. Nouvelle preuve native du branchement HTTP à recueillir.
 
+### Incrément M03 — préparation des éditions dans core
+
+- **Livré :** validations et préparation d'édition, gardes archive/activité/worktree/Jira, options d'agent, dépendances et détection des changements périmant les reviews. Branchement HTTP/SQLite en étape suivante.
+- **Référence :** 63 modifications exécutées par Node et comparées à Rust, avec valeurs, état sauvegardé, erreurs et ordre des effets. Lancements et synchronisations synthétiques, aucune qualification M04/M05 revendiquée.
+- **CI recueillie :** `e027e70` entièrement réussi, journal Intel relu. Création HTTP `567a529` vérifiée dans les journaux Windows, Linux x64/ARM64 et macOS ARM64 ; Intel attendu.
+- **Suite :** édition locale transactionnelle et invalidation des reviews, refus explicite des effets non portés, puis projets/réglages et intégrations M02 restantes.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

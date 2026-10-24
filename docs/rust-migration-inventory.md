@@ -57,6 +57,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application.rs](../crates/atelier-core/src/application.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/application/card_lifecycle.rs](../crates/atelier-core/src/application/card_lifecycle.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/application/task_creation.rs](../crates/atelier-core/src/application/task_creation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/src/application/task_editing.rs](../crates/atelier-core/src/application/task_editing.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/application/task_templates.rs](../crates/atelier-core/src/application/task_templates.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/application/time_tracking.rs](../crates/atelier-core/src/application/time_tracking.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/contracts.rs](../crates/atelier-core/src/contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -69,7 +70,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/domain/time.rs](../crates/atelier-core/src/domain/time.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/src/lib.rs](../crates/atelier-core/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/domain-contracts.rs](../crates/atelier-core/tests/domain-contracts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/tests/support/json.rs](../crates/atelier-core/tests/support/json.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-core/tests/task-creation.rs](../crates/atelier-core/tests/task-creation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-core/tests/task-editing.rs](../crates/atelier-core/tests/task-editing.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -93,7 +96,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/application/projects.mjs](../lib/application/projects.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs) |
 | [lib/application/runs.mjs](../lib/application/runs.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs), [test/agent-updates.test.mjs](../test/agent-updates.test.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs), [test/run-preparation.test.mjs](../test/run-preparation.test.mjs) |
 | [lib/application/settings.mjs](../lib/application/settings.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs) |
-| [lib/application/tasks.mjs](../lib/application/tasks.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs) |
+| [lib/application/tasks.mjs](../lib/application/tasks.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs), [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs) |
 | [lib/application/time-tracking.mjs](../lib/application/time-tracking.mjs) | Source / configuration | [lib/time-tracking.mjs](../lib/time-tracking.mjs), [test/fixtures/rust-time-reference.mjs](../test/fixtures/rust-time-reference.mjs) |
 | [lib/application/updates.mjs](../lib/application/updates.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
 | [lib/automation.mjs](../lib/automation.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/automation.test.mjs](../test/automation.test.mjs) |
@@ -119,7 +122,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/domain/tasks.mjs](../lib/domain/tasks.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [public/workflow.mjs](../public/workflow.mjs), [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/tickets.mjs](../lib/domain/tickets.mjs) | Source / configuration | [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
 | [lib/domain/time.mjs](../lib/domain/time.mjs) | Source / configuration | [lib/application/time-tracking.mjs](../lib/application/time-tracking.mjs), [lib/tempo-export.mjs](../lib/tempo-export.mjs), [lib/time-tracking.mjs](../lib/time-tracking.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
-| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs) |
+| [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs) |
 | [lib/folders.mjs](../lib/folders.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs) |
 | [lib/forge-repositories.mjs](../lib/forge-repositories.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [lib/connectors/gitlab.mjs](../lib/connectors/gitlab.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
 | [lib/forges/github.mjs](../lib/forges/github.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
@@ -296,6 +299,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [test/fixtures/rust-storage-reference.mjs](../test/fixtures/rust-storage-reference.mjs) | Test / support | [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs), [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs), [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs) |
 | [test/fixtures/rust-task-creation-reference.json](../test/fixtures/rust-task-creation-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-task-editing-reference.json](../test/fixtures/rust-task-editing-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-time-reference.json](../test/fixtures/rust-time-reference.json) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-time-reference.mjs](../test/fixtures/rust-time-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs) | Test / support | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -1075,14 +1080,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application.rs:1](../crates/atelier-core/src/application.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application.rs:6](../crates/atelier-core/src/application.rs#L6) | <code>pub mod card_lifecycle;</code> |
 | [crates/atelier-core/src/application.rs:7](../crates/atelier-core/src/application.rs#L7) | <code>pub mod task_creation;</code> |
-| [crates/atelier-core/src/application.rs:8](../crates/atelier-core/src/application.rs#L8) | <code>pub mod task_templates;</code> |
-| [crates/atelier-core/src/application.rs:9](../crates/atelier-core/src/application.rs#L9) | <code>pub mod time_tracking;</code> |
-| [crates/atelier-core/src/application.rs:11](../crates/atelier-core/src/application.rs#L11) | <code>pub fn duplicate_card(card: &amp;Card, id: String, timestamp: String) -&gt; serde_json::Result&lt;Card&gt; {</code> |
-| [crates/atelier-core/src/application.rs:62](../crates/atelier-core/src/application.rs#L62) | <code>mod tests {</code> |
-| [crates/atelier-core/src/application.rs:63](../crates/atelier-core/src/application.rs#L63) | <code>use super::*;</code> |
-| [crates/atelier-core/src/application.rs:64](../crates/atelier-core/src/application.rs#L64) | <code>use serde_json::json;</code> |
-| [crates/atelier-core/src/application.rs:66](../crates/atelier-core/src/application.rs#L66) | <code>#[test]</code> |
-| [crates/atelier-core/src/application.rs:74](../crates/atelier-core/src/application.rs#L74) | <code>#[test]</code> |
+| [crates/atelier-core/src/application.rs:8](../crates/atelier-core/src/application.rs#L8) | <code>pub mod task_editing;</code> |
+| [crates/atelier-core/src/application.rs:9](../crates/atelier-core/src/application.rs#L9) | <code>pub mod task_templates;</code> |
+| [crates/atelier-core/src/application.rs:10](../crates/atelier-core/src/application.rs#L10) | <code>pub mod time_tracking;</code> |
+| [crates/atelier-core/src/application.rs:12](../crates/atelier-core/src/application.rs#L12) | <code>pub fn duplicate_card(card: &amp;Card, id: String, timestamp: String) -&gt; serde_json::Result&lt;Card&gt; {</code> |
+| [crates/atelier-core/src/application.rs:63](../crates/atelier-core/src/application.rs#L63) | <code>mod tests {</code> |
+| [crates/atelier-core/src/application.rs:64](../crates/atelier-core/src/application.rs#L64) | <code>use super::*;</code> |
+| [crates/atelier-core/src/application.rs:65](../crates/atelier-core/src/application.rs#L65) | <code>use serde_json::json;</code> |
+| [crates/atelier-core/src/application.rs:67](../crates/atelier-core/src/application.rs#L67) | <code>#[test]</code> |
+| [crates/atelier-core/src/application.rs:75](../crates/atelier-core/src/application.rs#L75) | <code>#[test]</code> |
 | [crates/atelier-core/src/application/card_lifecycle.rs:1](../crates/atelier-core/src/application/card_lifecycle.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/card_lifecycle.rs:5](../crates/atelier-core/src/application/card_lifecycle.rs#L5) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/src/application/card_lifecycle.rs:8](../crates/atelier-core/src/application/card_lifecycle.rs#L8) | <code>pub enum CardFailure {</code> |
@@ -1099,7 +1105,18 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/task_creation.rs:9](../crates/atelier-core/src/application/task_creation.rs#L9) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Box&lt;dyn std::error::Error + Send + Sync&gt;&gt;;</code> |
 | [crates/atelier-core/src/application/task_creation.rs:11](../crates/atelier-core/src/application/task_creation.rs#L11) | <code>pub trait CreationContext {</code> |
 | [crates/atelier-core/src/application/task_creation.rs:30](../crates/atelier-core/src/application/task_creation.rs#L30) | <code>pub fn default_agent(</code> |
-| [crates/atelier-core/src/application/task_creation.rs:101](../crates/atelier-core/src/application/task_creation.rs#L101) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/task_creation.rs:120](../crates/atelier-core/src/application/task_creation.rs#L120) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/task_editing.rs:1](../crates/atelier-core/src/application/task_editing.rs#L1) | <code>use super::{</code> |
+| [crates/atelier-core/src/application/task_editing.rs:5](../crates/atelier-core/src/application/task_editing.rs#L5) | <code>use crate::{</code> |
+| [crates/atelier-core/src/application/task_editing.rs:13](../crates/atelier-core/src/application/task_editing.rs#L13) | <code>use serde_json::{Value, value::RawValue};</code> |
+| [crates/atelier-core/src/application/task_editing.rs:15](../crates/atelier-core/src/application/task_editing.rs#L15) | <code>pub trait EditingContext: CreationContext {</code> |
+| [crates/atelier-core/src/application/task_editing.rs:19](../crates/atelier-core/src/application/task_editing.rs#L19) | <code>pub struct Edit {</code> |
+| [crates/atelier-core/src/application/task_editing.rs:20](../crates/atelier-core/src/application/task_editing.rs#L20) | <code>pub card: Card,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:21](../crates/atelier-core/src/application/task_editing.rs#L21) | <code>pub auto_start: bool,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:22](../crates/atelier-core/src/application/task_editing.rs#L22) | <code>pub sync_status: bool,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:23](../crates/atelier-core/src/application/task_editing.rs#L23) | <code>pub requirements_changed: bool,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:43](../crates/atelier-core/src/application/task_editing.rs#L43) | <code>pub fn requirements_changed(before: &amp;Card, after: &amp;Card) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-core/src/application/task_editing.rs:88](../crates/atelier-core/src/application/task_editing.rs#L88) | <code>pub fn prepare(</code> |
 | [crates/atelier-core/src/application/task_templates.rs:1](../crates/atelier-core/src/application/task_templates.rs#L1) | <code>use super::card_lifecycle::CardFailure;</code> |
 | [crates/atelier-core/src/application/task_templates.rs:2](../crates/atelier-core/src/application/task_templates.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/task_templates.rs:6](../crates/atelier-core/src/application/task_templates.rs#L6) | <code>use serde_json::value::RawValue;</code> |
@@ -1205,10 +1222,20 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/domain-contracts.rs:2](../crates/atelier-core/tests/domain-contracts.rs#L2) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:4](../crates/atelier-core/tests/domain-contracts.rs#L4) | <code>#[test]</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:67](../crates/atelier-core/tests/domain-contracts.rs#L67) | <code>#[test]</code> |
+| [crates/atelier-core/tests/support/json.rs:1](../crates/atelier-core/tests/support/json.rs#L1) | <code>use atelier_core::document::{Document, JsonString};</code> |
+| [crates/atelier-core/tests/support/json.rs:2](../crates/atelier-core/tests/support/json.rs#L2) | <code>use serde_json::{Value, value::RawValue};</code> |
+| [crates/atelier-core/tests/support/json.rs:4](../crates/atelier-core/tests/support/json.rs#L4) | <code>pub fn equivalent(actual: &amp;RawValue, expected: &amp;RawValue) -&gt; bool {</code> |
 | [crates/atelier-core/tests/task-creation.rs:1](../crates/atelier-core/tests/task-creation.rs#L1) | <code>use atelier_core::{</code> |
-| [crates/atelier-core/tests/task-creation.rs:9](../crates/atelier-core/tests/task-creation.rs#L9) | <code>use serde_json::{Value, value::RawValue};</code> |
+| [crates/atelier-core/tests/task-creation.rs:9](../crates/atelier-core/tests/task-creation.rs#L9) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/tests/task-creation.rs:10](../crates/atelier-core/tests/task-creation.rs#L10) | <code>use std::cell::{Cell, RefCell};</code> |
-| [crates/atelier-core/tests/task-creation.rs:99](../crates/atelier-core/tests/task-creation.rs#L99) | <code>#[test]</code> |
+| [crates/atelier-core/tests/task-creation.rs:12](../crates/atelier-core/tests/task-creation.rs#L12) | <code>mod json;</code> |
+| [crates/atelier-core/tests/task-creation.rs:13](../crates/atelier-core/tests/task-creation.rs#L13) | <code>use json::equivalent;</code> |
+| [crates/atelier-core/tests/task-creation.rs:69](../crates/atelier-core/tests/task-creation.rs#L69) | <code>#[test]</code> |
+| [crates/atelier-core/tests/task-editing.rs:1](../crates/atelier-core/tests/task-editing.rs#L1) | <code>use atelier_core::{</code> |
+| [crates/atelier-core/tests/task-editing.rs:11](../crates/atelier-core/tests/task-editing.rs#L11) | <code>use serde_json::value::RawValue;</code> |
+| [crates/atelier-core/tests/task-editing.rs:12](../crates/atelier-core/tests/task-editing.rs#L12) | <code>use std::cell::RefCell;</code> |
+| [crates/atelier-core/tests/task-editing.rs:14](../crates/atelier-core/tests/task-editing.rs#L14) | <code>mod json;</code> |
+| [crates/atelier-core/tests/task-editing.rs:67](../crates/atelier-core/tests/task-editing.rs#L67) | <code>#[test]</code> |
 | [crates/atelier-ui/Cargo.toml:3](../crates/atelier-ui/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:4](../crates/atelier-ui/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:5](../crates/atelier-ui/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -1274,10 +1301,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod storage;</code> |
 | [xtask/src/main.rs:9](../xtask/src/main.rs#L9) | <code>mod ui;</code> |
 | [xtask/src/main.rs:23](../xtask/src/main.rs#L23) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:124](../xtask/src/main.rs#L124) | <code>mod tests {</code> |
-| [xtask/src/main.rs:125](../xtask/src/main.rs#L125) | <code>use super::*;</code> |
-| [xtask/src/main.rs:126](../xtask/src/main.rs#L126) | <code>#[test]</code> |
-| [xtask/src/main.rs:163](../xtask/src/main.rs#L163) | <code>#[test]</code> |
+| [xtask/src/main.rs:128](../xtask/src/main.rs#L128) | <code>mod tests {</code> |
+| [xtask/src/main.rs:129](../xtask/src/main.rs#L129) | <code>use super::*;</code> |
+| [xtask/src/main.rs:130](../xtask/src/main.rs#L130) | <code>#[test]</code> |
+| [xtask/src/main.rs:167](../xtask/src/main.rs#L167) | <code>#[test]</code> |
 | [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, node_executable, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use atelier_core::document::{Document, JsonString};</code> |
@@ -1754,14 +1781,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:56](../.github/workflows/rust.yml#L56) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
-| [.github/workflows/rust.yml:70](../.github/workflows/rust.yml#L70) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
-| [.github/workflows/rust.yml:74](../.github/workflows/rust.yml#L74) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
-| [.github/workflows/rust.yml:75](../.github/workflows/rust.yml#L75) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
-| [.github/workflows/rust.yml:81](../.github/workflows/rust.yml#L81) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:166](../.github/workflows/rust.yml#L166) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:181](../.github/workflows/rust.yml#L181) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:182](../.github/workflows/rust.yml#L182) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:60](../.github/workflows/rust.yml#L60) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
+| [.github/workflows/rust.yml:74](../.github/workflows/rust.yml#L74) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
+| [.github/workflows/rust.yml:78](../.github/workflows/rust.yml#L78) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
+| [.github/workflows/rust.yml:79](../.github/workflows/rust.yml#L79) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
+| [.github/workflows/rust.yml:85](../.github/workflows/rust.yml#L85) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
+| [.github/workflows/rust.yml:170](../.github/workflows/rust.yml#L170) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:185](../.github/workflows/rust.yml#L185) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:186](../.github/workflows/rust.yml#L186) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1973,8 +2000,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:108](../xtask/src/main.rs#L108) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))</code> |
 | [xtask/src/main.rs:111](../xtask/src/main.rs#L111) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;</code> |
 | [xtask/src/main.rs:112](../xtask/src/main.rs#L112) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))</code> |
-| [xtask/src/main.rs:117](../xtask/src/main.rs#L117) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:129](../xtask/src/main.rs#L129) | <code>.args([</code> |
+| [xtask/src/main.rs:115](../xtask/src/main.rs#L115) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:116](../xtask/src/main.rs#L116) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
+| [xtask/src/main.rs:121](../xtask/src/main.rs#L121) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:133](../xtask/src/main.rs#L133) | <code>.args([</code> |
 | [xtask/src/storage.rs:44](../xtask/src/storage.rs#L44) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
 | [xtask/src/storage.rs:69](../xtask/src/storage.rs#L69) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
 | [xtask/src/storage.rs:95](../xtask/src/storage.rs#L95) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
@@ -3093,4 +3122,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:334](../xtask/src/storage.rs#L334) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 360 fichiers ; 94 fichiers de tests Node.
+Total : 365 fichiers ; 94 fichiers de tests Node.

@@ -45,6 +45,10 @@ jobs:
         run: cargo xtask test-task-creation-parity
         env:
           ATELIER_NODE: node
+      - name: Compare historical Node task editing
+        run: cargo xtask test-task-editing-parity
+        env:
+          ATELIER_NODE: node
       - name: Native DPAPI isolation between disposable Windows accounts
         if: runner.os == 'Windows'
         shell: pwsh

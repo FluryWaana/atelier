@@ -5,6 +5,7 @@ use crate::{
 
 pub mod card_lifecycle;
 pub mod task_creation;
+pub mod task_editing;
 pub mod task_templates;
 pub mod time_tracking;
 

@@ -1,0 +1,5189 @@
+[
+  {
+    "body": {},
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": ""
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Titre requis.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "title": " "
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Titre requis.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "title": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "title": 42
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "title": "New \ud800"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "New \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "New \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "New \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "invalidate"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Title \ud800"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "status": "todo"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "status": "doing"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "launch",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "old",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          },
+          {
+            "agent": "codex",
+            "mode": "edit",
+            "instructions": ""
+          }
+        ],
+        "sync"
+      ]
+    }
+  },
+  {
+    "body": {
+      "status": "review"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "review",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "review",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "review",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "sync"
+      ]
+    }
+  },
+  {
+    "body": {
+      "status": "done"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "done",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "done",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "done",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "sync"
+      ]
+    }
+  },
+  {
+    "body": {
+      "status": "standby"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "standby",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "standby",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "standby",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "sync"
+      ]
+    }
+  },
+  {
+    "body": {
+      "status": "invalid"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Statut invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "status": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Statut invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "status": "doing"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "doing",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "doing",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Changed",
+      "status": "doing"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Changed",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Changed",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "doing",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "launch",
+          {
+            "id": "card",
+            "title": "Changed",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "old",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          },
+          {
+            "agent": "codex",
+            "mode": "edit",
+            "instructions": ""
+          }
+        ],
+        "invalidate",
+        "sync"
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Changed",
+      "status": "doing"
+    },
+    "launchError": true,
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Synthetic launch failure",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "launch",
+          {
+            "id": "card",
+            "title": "Changed",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "old",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          },
+          {
+            "agent": "codex",
+            "mode": "edit",
+            "instructions": ""
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": null,
+      "description": false
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "ticket": {
+        "key": "TEST-1"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "ticket": {
+          "key": "TEST-1"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "ticket": {
+          "key": "TEST-1"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "ticket": {
+              "key": "TEST-1"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": "Ignore",
+      "description": "Ignore",
+      "instructions": "Keep"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "ticket": {
+        "key": "TEST-1"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "Keep",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "ticket": {
+          "key": "TEST-1"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "Keep",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "ticket": {
+          "key": "TEST-1"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "Keep",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "ticket": {
+              "key": "TEST-1"
+            }
+          }
+        ],
+        "invalidate"
+      ]
+    }
+  },
+  {
+    "body": {
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": true
+        }
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": true
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": true
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": true
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "checklist": [
+        {
+          "text": "Changed",
+          "done": false
+        }
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "Changed",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "Changed",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "Changed",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "invalidate"
+      ]
+    }
+  },
+  {
+    "body": {
+      "checklist": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Maximum 20 critères de réussite.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "instructions": " Instruction \ud800 "
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "Instruction \ud800",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "Instruction \ud800",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "Instruction \ud800",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ],
+        "invalidate"
+      ]
+    }
+  },
+  {
+    "body": {
+      "description": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "mode": "bad"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Mode invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "mode": "analyze"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "analyze",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "analyze",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "analyze",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "agent": "claude"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "claude",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "agentExplicit": true
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "claude",
+        "model": "",
+        "effort": "",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "agentExplicit": true
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "claude",
+            "model": "",
+            "effort": "",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "agentExplicit": true
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "agent": "codex"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "agent": "missing"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Agent invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "agent": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Agent invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "model": null,
+      "effort": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "model": false,
+      "effort": "\ud800"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Modèle invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "agent": "claude",
+      "model": "opus",
+      "effort": "max"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "claude",
+        "model": "opus",
+        "effort": "max",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "agentExplicit": true
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "claude",
+        "model": "opus",
+        "effort": "max",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "agentExplicit": true
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "claude",
+            "model": "opus",
+            "effort": "max",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "agentExplicit": true
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {},
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": null,
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Modèle invalide.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": null,
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {},
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "model": "",
+        "effort": ""
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "model": "",
+        "effort": ""
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "model": "",
+            "effort": ""
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "repo": "new"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "repo": ""
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "repo": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "branch": "next"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "baseBranch": ""
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        },
+        "baseBranch": ""
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        },
+        "baseBranch": ""
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "worktree": {
+              "path": "protected"
+            },
+            "baseBranch": ""
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "baseBranch": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "baseBranch": "main"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "worktree": {
+        "path": "protected"
+      }
+    },
+    "expected": {
+      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "worktree": {
+          "path": "protected"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "repo": "old"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "checked:old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "checked:old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "repository",
+          "old"
+        ],
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "checked:old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "repo": ""
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "repo": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "repo": " new "
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "checked:new",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "checked:new",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "repository",
+          " new "
+        ],
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "checked:new",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            }
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "repo": true
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "repository",
+          true
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "branch": " branch ",
+      "baseBranch": " base "
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "branch": "branch",
+        "baseBranch": "base"
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "branch": "branch",
+        "baseBranch": "base"
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "branch": "branch",
+            "baseBranch": "base"
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "branch": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Texte invalide ou trop long.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "repo": "new",
+      "agent": "missing"
+    },
+    "repositoryError": true,
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Synthetic repository failure",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": [
+        [
+          "repository",
+          "new"
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "title": null
+    },
+    "busy": true,
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Arrête l’agent avant de modifier cette carte.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "title": null
+    },
+    "busy": true,
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      },
+      "archived": true
+    },
+    "expected": {
+      "error": "Restaure cette tâche avant de reprendre le travail.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "archived": true
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {},
+    "missing": true,
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Carte introuvable.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": []
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": []
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": []
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "blockedBy": []
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "other"
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": [
+          "other"
+        ]
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": [
+          "other"
+        ]
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "blockedBy": [
+              "other"
+            ]
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "missing"
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "card"
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "other",
+        "other"
+      ]
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": null
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": "other"
+    },
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "other"
+      ]
+    },
+    "others": [
+      {
+        "id": "other",
+        "blockedBy": [
+          "card"
+        ]
+      }
+    ],
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "error": "Cette dépendance créerait un cycle.",
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "old",
+        "unknown": {
+          "keep": "\ud800"
+        }
+      },
+      "events": []
+    }
+  },
+  {
+    "body": {
+      "blockedBy": [
+        "other"
+      ]
+    },
+    "others": [
+      {
+        "id": "other",
+        "status": "todo",
+        "archived": true
+      }
+    ],
+    "card": {
+      "id": "card",
+      "title": "Title \ud800",
+      "description": "Description",
+      "instructions": "",
+      "repo": "old",
+      "agent": "codex",
+      "model": "model",
+      "effort": "high",
+      "mode": "edit",
+      "checklist": [
+        {
+          "text": "\udc00",
+          "done": false
+        }
+      ],
+      "status": "todo",
+      "createdAt": "created",
+      "updatedAt": "old",
+      "unknown": {
+        "keep": "\ud800"
+      }
+    },
+    "expected": {
+      "value": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": [
+          "other"
+        ]
+      },
+      "saved": {
+        "id": "card",
+        "title": "Title \ud800",
+        "description": "Description",
+        "instructions": "",
+        "repo": "old",
+        "agent": "codex",
+        "model": "model",
+        "effort": "high",
+        "mode": "edit",
+        "checklist": [
+          {
+            "text": "\udc00",
+            "done": false
+          }
+        ],
+        "status": "todo",
+        "createdAt": "created",
+        "updatedAt": "now",
+        "unknown": {
+          "keep": "\ud800"
+        },
+        "blockedBy": [
+          "other"
+        ]
+      },
+      "events": [
+        "timestamp",
+        [
+          "put",
+          {
+            "id": "card",
+            "title": "Title \ud800",
+            "description": "Description",
+            "instructions": "",
+            "repo": "old",
+            "agent": "codex",
+            "model": "model",
+            "effort": "high",
+            "mode": "edit",
+            "checklist": [
+              {
+                "text": "\udc00",
+                "done": false
+              }
+            ],
+            "status": "todo",
+            "createdAt": "created",
+            "updatedAt": "now",
+            "unknown": {
+              "keep": "\ud800"
+            },
+            "blockedBy": [
+              "other"
+            ]
+          }
+        ]
+      ]
+    }
+  }
+]

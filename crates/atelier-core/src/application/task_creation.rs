@@ -16,14 +16,14 @@ pub trait CreationContext {
     fn timestamp(&self) -> Result<String>;
 }
 
-fn text(value: Option<&RawValue>, limit: usize) -> Result<JsonString> {
+pub(super) fn text(value: Option<&RawValue>, limit: usize) -> Result<JsonString> {
     let invalid = || CardFailure::Invalid("Texte invalide ou trop long.");
     let value = value.ok_or_else(invalid)?;
     let value = serde_json::from_str::<JsonString>(value.get()).map_err(|_| invalid())?;
     Ok(text_units(&value, limit).map_err(CardFailure::Invalid)?)
 }
 
-fn present(value: Option<&RawValue>) -> Option<&RawValue> {
+pub(super) fn present(value: Option<&RawValue>) -> Option<&RawValue> {
     value.filter(|value| value.get() != "null")
 }
 
@@ -82,7 +82,7 @@ pub fn default_agent(
     }
 }
 
-fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
+pub(super) fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
     if let Some(providers) = present(settings.raw("agentProviders")) {
         let providers: Vec<Document> = serde_json::from_str(providers.get())?;
         for provider in providers {
@@ -96,6 +96,25 @@ fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
         return Ok(provider);
     }
     Err(CardFailure::Invalid("Agent invalide.").into())
+}
+
+pub(super) fn options(agent: &JsonString, body: &Document, settings: &Document) -> Result<Value> {
+    let provider = provider(settings, agent)?;
+    let kind = provider
+        .get::<String>("type")
+        .map_err(|_| CardFailure::Invalid("Agent invalide."))?
+        .ok_or(CardFailure::Invalid("Agent invalide."))?;
+    let mut options = serde_json::Map::new();
+    for key in ["model", "effort"] {
+        if let Some(raw) = body.raw(key) {
+            // These ASCII-only options reject lone surrogates; keep the validator's error order.
+            options.insert(
+                key.into(),
+                serde_json::from_str(raw.get()).unwrap_or(Value::Null),
+            );
+        }
+    }
+    Ok(agent_options(&kind, &Value::Object(options), None).map_err(CardFailure::Invalid)?)
 }
 
 pub fn create(
@@ -198,23 +217,7 @@ pub fn create(
         fields.set("repo", &repo)?;
     }
     fields.set("agent", &agent)?;
-    let provider = provider(&context.settings()?, &agent)?;
-    let kind = provider
-        .get::<String>("type")
-        .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-        .ok_or(CardFailure::Invalid("Agent invalide."))?;
-    let mut options = serde_json::Map::new();
-    for key in ["model", "effort"] {
-        if let Some(raw) = body.raw(key) {
-            // These ASCII-only options reject lone surrogates; keep the validator's error order.
-            options.insert(
-                key.into(),
-                serde_json::from_str(raw.get()).unwrap_or(Value::Null),
-            );
-        }
-    }
-    let options =
-        agent_options(&kind, &Value::Object(options), None).map_err(CardFailure::Invalid)?;
+    let options = options(&agent, body, &context.settings()?)?;
     for key in ["model", "effort"] {
         fields.set(key, &options[key])?;
     }

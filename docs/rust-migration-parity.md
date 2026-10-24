@@ -177,6 +177,8 @@ C07, après `1b9a9f7` : contrat de création complet préparé dans core, 77 cas
 
 C07, après `e027e70` : création complète HTTP tâches/brainstorms, héritage de projet et résolution native de dossiers, écritures transactionnelles. 84 créations comparées, 66 tests Rust et Edge réel réussis ; Node complet 430 tests (427 réussis, trois exclusions). Les diagnostics système de chemins ne sont pas qualifiés à l'octet contre Node ; erreurs SQL masquées en 500. Édition et UI complète ouvertes. Le constructeur M01 limité au titre est remplacé par le contrat complet ; son ancien test est remplacé par les cas de validation du corpus.
 
+C07, après `567a529` : préparation d'édition portée dans core et 63 modifications historiques comparées (gardes, champs, erreurs, invalidation et ordre des effets). HTTP/SQLite restent à brancher ; lancement/synchronisation simulés ne qualifient pas M04/M05. Les 84 créations et leur scénario HTTP natif passent dans les journaux `567a529` Windows, Linux x64/ARM64 et macOS ARM64 ; Intel encore attendu.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.
