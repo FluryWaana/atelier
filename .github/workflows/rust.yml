@@ -28,6 +28,14 @@ jobs:
           persist-credentials: false
       - name: Install pinned toolchain
         run: rustup show
+      - name: Cache Windows Rust builds
+        if: runner.os == 'Windows'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: rustc -vV
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
@@ -143,6 +151,14 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup show
+      - name: Cache Windows Rust builds
+        if: runner.os == 'Windows'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         id: wasm-tools
         with:
