@@ -146,7 +146,7 @@ pub fn Projects(
         });
     };
     view! {
-        <dialog id="projects-dialog" class="editor" node_ref=dialog aria-labelledby="projects-heading" on:cancel=move |event| { event.prevent_default(); request_close(); }>
+        <dialog id="projects-dialog" class="editor" node_ref=dialog aria-labelledby="projects-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">"ESPACE DE TRAVAIL"</p><h2 id="projects-heading">"Vos projets"</h2></div><button id="close-projects" type="button" disabled=move || pending.get() on:click=move |_| request_close()>"Fermer"</button></header>
             <div class="project-list" aria-label="Projets enregistrés"><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
                 let id = StoredValue::new(field(&project, "id"));

@@ -121,7 +121,7 @@ pub fn TaskEditor(
         });
     };
     view! {
-        <dialog id="task-editor" class="editor" node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event| { event.prevent_default(); request_close(); }>
+        <dialog id="task-editor" class="editor" node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{if archived { "ARCHIVE" } else { "TÂCHE" }}</p><h2 id="editor-heading">"Détails de la tâche"</h2></div><button id="close-editor" type="button" disabled=move || pending.get() on:click=move |_| request_close()>"Fermer"</button></header>
             <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
                 <fieldset disabled=move || pending.get() || archived>
