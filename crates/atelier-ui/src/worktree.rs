@@ -120,6 +120,7 @@ pub fn Workspace(
             <h3 id="workspace-heading">{move || i18n.text("Espace de travail Git")}</h3>
             <p class="field-help">{move || i18n.text("Un worktree isole les fichiers de cette tâche dans un dossier et une branche dédiés.")}</p>
             <p class="field-help">{move || i18n.text("La préparation et la vérification actualisent le contexte local des agents. Les fichiers suivis par Git et tes modifications dans le worktree sont conservés ; les copies locales restent exclues des nouveaux fichiers Git.")}</p>
+            <p class="field-help">{move || i18n.text("Les dépendances ignorées node_modules et les paquets NuGet sont partagés avec le dépôt source. Leur contenu est commun aux deux dossiers ; retirer le worktree conserve les dépendances sources.")}</p>
             <p class="field-help" hidden=move || !blocked.get()>{move || i18n.text("Enregistre ou abandonne les modifications de la tâche avant de gérer son worktree.")}</p>
             <form hidden=move || current.get().is_some() on:submit=move |event| { event.prevent_default(); act(false); }>
                 <fieldset disabled=move || pending.get() || blocked.get()>

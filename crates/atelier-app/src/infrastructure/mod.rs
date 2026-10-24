@@ -4,6 +4,8 @@ pub mod backups;
 pub mod checked_file;
 pub mod data_lock;
 pub mod database;
+mod dependencies;
+mod directory_link;
 pub mod files;
 pub mod installation;
 pub mod launch_detection;

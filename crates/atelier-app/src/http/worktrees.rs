@@ -82,6 +82,7 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
     };
     if worktree.state == WorktreeState::Removing {
         worktrees::inspect(root, roots, &worktree).await?;
+        worktrees::create(root, roots, &worktree).await?;
     } else {
         worktrees::create(root, roots, &worktree).await?;
     }

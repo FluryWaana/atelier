@@ -40,7 +40,7 @@ fn digest(bytes: &[u8]) -> String {
     super::session::hexadecimal(&Sha256::digest(bytes))
 }
 
-fn parent(root: &Dir, name: &str, create: bool) -> Result<Option<(Dir, PathBuf)>> {
+pub(super) fn parent(root: &Dir, name: &str, create: bool) -> Result<Option<(Dir, PathBuf)>> {
     let mut directory = root.try_clone()?;
     let mut parts = name.split('/').peekable();
     while let Some(part) = parts.next() {
@@ -116,7 +116,7 @@ fn save(metadata: &Dir, manifest: &Manifest) -> Result<()> {
     )
 }
 
-fn exclude(source: &Dir, names: impl Iterator<Item = String>) -> Result<()> {
+pub(super) fn exclude(source: &Dir, names: impl Iterator<Item = String>) -> Result<()> {
     let git = source.open_dir_nofollow(".git")?;
     match git.create_dir("info") {
         Ok(()) => {}

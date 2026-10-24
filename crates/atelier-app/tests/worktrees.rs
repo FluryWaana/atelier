@@ -43,6 +43,113 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn shared_dependencies_resume_and_survive_worktree_removal_and_refusal() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+    let repo = root_path.join("repositories/dependencies");
+    std::fs::create_dir_all(repo.join("client")).unwrap();
+    git(&repo, &["init", "-b", "main"]).await;
+    git(&repo, &["config", "core.autocrlf", "false"]).await;
+    for (file, contents) in [
+        (".gitignore", "node_modules/\npackages/\n"),
+        ("client/package.json", "{}"),
+        ("project.csproj", "<Project/>"),
+        ("packages/tracked.txt", "tracked source"),
+    ] {
+        std::fs::create_dir_all(repo.join(file).parent().unwrap()).unwrap();
+        std::fs::write(repo.join(file), contents).unwrap();
+        git(&repo, &["add", "-f", "--", file]).await;
+    }
+    git(&repo, &["commit", "-qm", "Synthetic dependencies baseline"]).await;
+    let shared = [
+        ("node_modules/keep.txt", "root dependency"),
+        ("client/node_modules/keep.txt", "client dependency"),
+        (
+            "client/packages/library/library.nupkg",
+            "synthetic NuGet archive",
+        ),
+    ];
+    for (name, contents) in shared {
+        std::fs::create_dir_all(repo.join(name).parent().unwrap()).unwrap();
+        std::fs::write(repo.join(name), contents).unwrap();
+    }
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path.clone()];
+    let plan = worktrees::prepare(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "feature/dependencies".into(),
+        "main".into(),
+    )
+    .await
+    .unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    let target = Path::new(&plan.path);
+    for (name, contents) in shared {
+        assert_eq!(
+            std::fs::read_to_string(target.join(name)).unwrap(),
+            contents
+        );
+    }
+    assert!(std::fs::read_link(target.join("packages")).is_err());
+    assert!(git(target, &["status", "--porcelain"]).await.is_empty());
+    let gitdir = std::fs::read_to_string(target.join(".git")).unwrap();
+    let metadata = Path::new(gitdir.trim().strip_prefix("gitdir: ").unwrap());
+    let inventory = std::fs::read(metadata.join("atelier-dependencies.json")).unwrap();
+    // An interrupted detach is recoverable from the intent retained in Git metadata.
+    std::fs::remove_dir(target.join("client/node_modules")).unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    assert_eq!(
+        std::fs::read(metadata.join("atelier-dependencies.json")).unwrap(),
+        inventory
+    );
+    std::fs::write(target.join("project.csproj"), "local edit").unwrap();
+    assert!(
+        worktrees::remove(&root, &roots, &plan, false)
+            .await
+            .is_err()
+    );
+    for (name, contents) in shared {
+        assert_eq!(
+            std::fs::read_to_string(target.join(name)).unwrap(),
+            contents
+        );
+    }
+    // Replacing an owned link with a real directory refuses even a forced removal.
+    std::fs::remove_dir(target.join("node_modules")).unwrap();
+    std::fs::create_dir(target.join("node_modules")).unwrap();
+    std::fs::write(target.join("node_modules/personal.txt"), "preserve").unwrap();
+    assert!(worktrees::remove(&root, &roots, &plan, true).await.is_err());
+    assert_eq!(
+        std::fs::read_to_string(target.join("node_modules/personal.txt")).unwrap(),
+        "preserve"
+    );
+    std::fs::remove_file(target.join("node_modules/personal.txt")).unwrap();
+    std::fs::remove_dir(target.join("node_modules")).unwrap();
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    worktrees::remove(&root, &roots, &plan, true).await.unwrap();
+    assert!(!target.exists());
+    for (name, contents) in shared {
+        assert_eq!(std::fs::read_to_string(repo.join(name)).unwrap(), contents);
+    }
+    let clean = worktrees::prepare(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "feature/dependencies-clean".into(),
+        "main".into(),
+    )
+    .await
+    .unwrap();
+    worktrees::create(&root, &roots, &clean).await.unwrap();
+    worktrees::remove(&root, &roots, &clean, false)
+        .await
+        .unwrap();
+    assert!(repo.join("node_modules/keep.txt").is_file());
+}
+
+#[tokio::test]
 async fn local_agent_context_refreshes_owned_files_preserves_task_edits_and_rejects_links() {
     let fixture = tempfile::tempdir().unwrap();
     let root_path = std::fs::canonicalize(fixture.path()).unwrap();

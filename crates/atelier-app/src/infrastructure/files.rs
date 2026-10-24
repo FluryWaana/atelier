@@ -308,8 +308,18 @@ impl Repository {
         Ok(preview)
     }
 
-    #[cfg(windows)]
     pub(super) async fn git(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+        self.git_optional(arguments, false)
+            .await?
+            .ok_or_else(|| "Git n’a produit aucun résultat.".into())
+    }
+
+    #[cfg(windows)]
+    pub(super) async fn git_optional(
+        &self,
+        arguments: &[&str],
+        allow_no_match: bool,
+    ) -> Result<Option<Vec<u8>>> {
         let mut command = tokio::process::Command::new("git");
         for (key, _) in std::env::vars_os() {
             if key
@@ -347,16 +357,23 @@ impl Repository {
             4 * 1024 * 1024,
         )
         .await?;
+        if allow_no_match && output.status.code() == Some(1) {
+            return Ok(None);
+        }
         if !output.status.success() {
             return Err(
                 "Lecture Git impossible. Vérifie le dépôt et l’installation de Git.".into(),
             );
         }
-        Ok(output.stdout)
+        Ok(Some(output.stdout))
     }
 
     #[cfg(not(windows))]
-    pub(super) async fn git(&self, _arguments: &[&str]) -> Result<Vec<u8>> {
+    pub(super) async fn git_optional(
+        &self,
+        _arguments: &[&str],
+        _allow_no_match: bool,
+    ) -> Result<Option<Vec<u8>>> {
         Err("L’explorateur Git natif attend sa qualification sur ce système.".into())
     }
 }

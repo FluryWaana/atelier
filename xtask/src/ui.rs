@@ -1026,7 +1026,12 @@ async fn files_scenario(
         .env("GIT_CONFIG_GLOBAL", "NUL")
         .env("GIT_CONFIG_SYSTEM", "NUL")
         .args(["init", "-b", "main"]))?;
-    std::fs::write(repo.join(".gitignore"), "ignored.txt\n")?;
+    std::fs::write(repo.join(".gitignore"), "ignored.txt\nnode_modules/\n")?;
+    std::fs::create_dir_all(repo.join("node_modules"))?;
+    std::fs::write(
+        repo.join("node_modules/keep.txt"),
+        "synthetic shared dependency",
+    )?;
     std::fs::write(repo.join("src/tracked.txt"), "tracked synthetic file\n")?;
     run(command("git")
         .current_dir(&repo)
@@ -1181,6 +1186,11 @@ async fn files_scenario(
         .fields
         .get::<atelier_core::contracts::Worktree>("worktree")?
         .ok_or("Worktree synthétique absent.")?;
+    if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?
+        != "synthetic shared dependency"
+    {
+        return Err("Les dépendances sources ne sont pas partagées.".into());
+    }
     std::fs::write(
         Path::new(&worktree.path).join("src/tracked.txt"),
         "worktree synthetic modification\n",
@@ -1200,11 +1210,21 @@ async fn files_scenario(
     if !Path::new(&worktree.path).join("src/tracked.txt").exists() {
         return Err("Le retrait non confirmé a perdu les modifications.".into());
     }
+    if !Path::new(&worktree.path)
+        .join("node_modules/keep.txt")
+        .is_file()
+    {
+        return Err("Le retrait refusé n’a pas restauré les liens de dépendances.".into());
+    }
     click(client, "#discard-worktree-files").await?;
     click(client, "#confirm-remove-worktree").await?;
     wait_dom(client,"return document.querySelector('#worktree-notice')?.textContent === 'Worktree retiré. La branche Git est conservée.' && document.querySelector('#create-worktree')?.disabled === false;",vec![]).await?;
     if Path::new(&worktree.path).exists() {
         return Err("Le retrait du worktree n’a pas terminé.".into());
+    }
+    if std::fs::read_to_string(repo.join("node_modules/keep.txt"))? != "synthetic shared dependency"
+    {
+        return Err("Le retrait du worktree a modifié les dépendances sources.".into());
     }
     click(client, "#close-editor").await?;
     Ok(())

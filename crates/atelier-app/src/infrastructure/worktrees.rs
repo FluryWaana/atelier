@@ -208,7 +208,8 @@ pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resul
         .iter()
         .any(|entry| same(&entry.path, &worktree.path))
     {
-        return super::agent_context::sync(root, roots, worktree).await;
+        super::agent_context::sync(root, roots, worktree).await?;
+        return super::dependencies::sync(root, roots, worktree).await;
     }
     if registered
         .iter()
@@ -250,7 +251,8 @@ pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resul
         },
     ]);
     source.without_programs(&args).await?;
-    super::agent_context::sync(root, roots, worktree).await
+    super::agent_context::sync(root, roots, worktree).await?;
+    super::dependencies::sync(root, roots, worktree).await
 }
 
 pub async fn remove(
@@ -290,6 +292,19 @@ pub async fn remove(
                 .into(),
         );
     }
+    let detached = if !missing {
+        let target = inspect(root, roots, worktree).await?;
+        let metadata = metadata(&source, &target)?;
+        let directory = source.directory.try_clone()?;
+        let path = source.path.clone();
+        tokio::task::spawn_blocking(move || {
+            super::dependencies::detach(&directory, &path, &target.directory, &metadata)
+        })
+        .await??
+    } else {
+        std::collections::BTreeSet::new()
+    };
+    let result = async {
     if !missing {
         let target = inspect(root, roots, worktree).await?;
         if !discard {
@@ -329,5 +344,30 @@ pub async fn remove(
     }
     args.extend(["--", &worktree.path]);
     source.without_programs(&args).await?;
+    Ok::<_, crate::Error>(())
+    }.await;
+    if let Err(error) = result {
+        if !detached.is_empty() {
+            let restored = async {
+                let target = inspect(root, roots, worktree).await?;
+                tokio::task::spawn_blocking(move || {
+                    super::dependencies::restore(
+                        &source.directory,
+                        &source.path,
+                        &target.directory,
+                        &detached,
+                    )
+                })
+                .await?
+            }
+            .await;
+            if let Err(restore) = restored {
+                return Err(
+                    format!("{error} Restauration des liens impossible : {restore}").into(),
+                );
+            }
+        }
+        return Err(error);
+    }
     Ok(())
 }
