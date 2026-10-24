@@ -64,6 +64,38 @@ test('private API, event stream and shutdown reject anonymous or foreign request
   assert.equal(sameSecret('é'.repeat(64), 'a'.repeat(64)), false);
 });
 
+test('event streams authenticate by query, announce commits and reconnect without replay', { timeout: 5000 }, async t => {
+  const { app, request } = await fixture(t);
+  const connect = () => new Promise((resolve, reject) => {
+    const req = httpRequest({ hostname: '127.0.0.1', port: app.server.address().port, path: '/api/events?session=' + app.authToken }, resolve);
+    req.on('error', reject); req.end();
+  });
+  let stream = await connect();
+  t.after(() => stream.destroy());
+  assert.equal(stream.statusCode, 200);
+  assert.equal(stream.headers['content-type'], 'text/event-stream');
+  assert.equal(stream.headers['x-accel-buffering'], 'no');
+  let chunks = stream[Symbol.asyncIterator]();
+  let buffered = '';
+  const next = async () => {
+    while (!buffered.includes('\n\n')) {
+      const chunk = await chunks.next(); assert.equal(chunk.done, false);
+      buffered += chunk.value.toString('utf8');
+    }
+    const end = buffered.indexOf('\n\n') + 2;
+    const event = buffered.slice(0, end); buffered = buffered.slice(end); return event;
+  };
+  assert.equal(await next(), 'retry: 1000\ndata: connected\n\n');
+  const created = await request('/api/cards', 'POST', { title: 'Synthetic event' });
+  assert.equal(created.status, 200);
+  assert.equal(await next(), 'data: changed\n\n');
+  const state = await request('/api/state');
+  assert.equal(state.body.cards[0].id, created.body.id);
+  stream.destroy();
+  stream = await connect(); chunks = stream[Symbol.asyncIterator](); buffered = '';
+  assert.equal(await next(), 'retry: 1000\ndata: connected\n\n');
+});
+
 test('server identity is proved before disclosing credentials and sessions rotate on restart', async t => {
   const context = await fixture(t);
   const url = 'http://127.0.0.1:' + context.app.server.address().port;

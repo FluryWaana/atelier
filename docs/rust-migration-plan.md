@@ -580,6 +580,13 @@ Prochaine action concrète :
 - **Preuves recueillies :** CI `5332203` entièrement réussie, journal macOS Intel des sauvegardes et coffres entre comptes relu ; publication d'import `a457449` validée dans le journal macOS ARM64.
 - **Suite :** nouvelles branches POSIX en CI, ouverture SQLite encore non atomiquement ancrée et intégrations HTTP M02, notamment notifications SSE. M02 demeure en cours.
 
+### Incrément M02 — notifications HTTP authentifiées
+
+- **Livré :** SSE historique, notifications après mutations réussies, heartbeat, canal borné, reconnexion et fermeture des abonnés lors de l'arrêt.
+- **Vérification :** 57 tests Rust et Clippy natif tous targets ; contrat SSE Node ajouté. Suite Node complète avec contrôle release : 427 tests, 424 réussis, aucun échec, trois exclusions, 80,166 s.
+- **Preuves recueillies :** CI `a457449` entièrement réussie ; journaux des scénarios d'import ancré relus sur les quatre cibles POSIX.
+- **Suite :** CI des refus source et de SSE, producteurs internes futurs, ouverture SQLite et intégrations restantes ; aucune qualification globale M02.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

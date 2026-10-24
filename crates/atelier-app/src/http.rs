@@ -22,6 +22,8 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
 use tower_http::services::ServeFile;
 
+mod events;
+
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 struct AppState {
@@ -29,6 +31,7 @@ struct AppState {
     token: String,
     port: u16,
     shutdown: watch::Sender<bool>,
+    changed: tokio::sync::broadcast::Sender<()>,
 }
 type Shared = Arc<AppState>;
 
@@ -44,7 +47,11 @@ fn header_value<'a>(request: &'a Request, name: &str) -> Option<&'a str> {
 }
 
 async fn security(State(state): State<Shared>, request: Request, next: Next) -> Response {
+    let mutating = request.method() != Method::GET;
     let mut response = authorize(&state, request, next).await;
+    if mutating && response.status().is_success() {
+        let _ = state.changed.send(());
+    }
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_SECURITY_POLICY,
@@ -79,8 +86,14 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         && path == "/api/health"
         && challenge.as_deref().is_some_and(valid_token);
     if path.starts_with("/api/") && !public_proof {
+        let event_session = (path == "/api/events")
+            .then(|| Query::<events::Credentials>::try_from_uri(request.uri()).ok())
+            .flatten()
+            .and_then(|query| query.0.session);
         let token = header_value(&request, "authorization")
-            .and_then(|value| value.strip_prefix("Bearer "))
+            .map(|value| value.strip_prefix("Bearer ").unwrap_or(value))
+            .filter(|value| !value.is_empty())
+            .or(event_session.as_deref())
             .unwrap_or("");
         if !session::same_secret(token, &state.token) {
             return failure(
@@ -227,6 +240,10 @@ async fn stop(State(state): State<Shared>, request: Request) -> Response {
     Json(json!({"ok":true})).into_response()
 }
 
+async fn events(State(state): State<Shared>) -> Response {
+    events::response(state.changed.subscribe(), state.shutdown.subscribe())
+}
+
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
@@ -264,18 +281,22 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         token,
         port: listener.local_addr()?.port(),
         shutdown,
+        changed: tokio::sync::broadcast::channel(16).0,
     });
     let app = app
         .route("/api/health", get(health))
+        .route("/api/events", get(events))
         .route("/api/state", get(board))
         .route("/api/cards", post(create))
         .route("/api/cards/{id}/duplicate", post(duplicate))
         .route("/api/prototype/stop", post(stop))
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());
+    let stop_events = state.shutdown.clone();
     let result = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             tokio::select! { _ = stopped.changed() => {}, _ = tokio::signal::ctrl_c() => {} }
+            let _ = stop_events.send(true);
         })
         .await;
     state.database.close().await?;

@@ -56,6 +56,125 @@ async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_
         .unwrap();
 }
 
+async fn next_event(response: &mut reqwest::Response, buffered: &mut String) -> String {
+    tokio::time::timeout(Duration::from_secs(17), async {
+        loop {
+            if let Some(end) = buffered.find("\n\n") {
+                return buffered.drain(..end + 2).collect();
+            }
+            let chunk = response.chunk().await.unwrap().expect("event stream ended");
+            buffered.push_str(std::str::from_utf8(&chunk).unwrap());
+        }
+    })
+    .await
+    .expect("event did not arrive")
+}
+
+#[tokio::test]
+async fn events_authenticate_notify_commits_reconnect_and_end_on_shutdown() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let url = format!("{address}/api/events?session={token}");
+    assert_eq!(
+        client
+            .get(&url)
+            .bearer_auth("wrong")
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    assert_eq!(
+        client
+            .get(&url)
+            .header("origin", "https://foreign.example")
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        403
+    );
+    let mut response = client.get(&url).send().await.unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.headers()["content-type"], "text/event-stream");
+    assert_eq!(response.headers()["x-accel-buffering"], "no");
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let mut buffered = String::new();
+    let connected = next_event(&mut response, &mut buffered).await;
+    assert!(connected.contains("retry: 1000\n"));
+    assert!(connected.contains("data: connected\n"));
+    assert_eq!(
+        next_event(&mut response, &mut buffered).await,
+        ": heartbeat\n\n"
+    );
+    assert_eq!(
+        client
+            .post(format!("{address}/api/cards"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"title":""}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), response.chunk())
+            .await
+            .is_err()
+    );
+    let created: Value = client
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"synthetic event"}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        next_event(&mut response, &mut buffered).await,
+        "data: changed\n\n"
+    );
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["cards"][0]["id"], created["id"]);
+    drop(response);
+    let mut response = client
+        .get(format!("{address}/api/events"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    buffered.clear();
+    assert!(
+        next_event(&mut response, &mut buffered)
+            .await
+            .contains("data: connected\n")
+    );
+    stop(&address, &token, task).await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(2), response.chunk())
+            .await
+            .unwrap()
+            .unwrap()
+            .is_none()
+    );
+}
+
 #[tokio::test]
 async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
     let data = tempfile::tempdir().unwrap();

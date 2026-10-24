@@ -195,6 +195,7 @@ dependencies = [
  "base64 0.22.1",
  "cap-fs-ext",
  "cap-std",
+ "futures-util",
  "getrandom 0.4.3",
  "hmac",
  "hyper",
