@@ -32,12 +32,14 @@ pub fn save(
 pub fn remove(
     store: &Store<'_>,
     id: &str,
+    body: &Document,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<Vec<Document>> {
     let next = agent_providers::prepare_remove(
         &store.settings()?,
         &settings::load(store, protect)?,
         id,
+        body,
         &store.documents(Documents::Cards)?,
         &store.documents(Documents::Projects)?,
         false,

@@ -50,6 +50,12 @@ pub(super) async fn save(State(state): State<Shared>, request: Request) -> Respo
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
     };
+    if body.raw("expected").is_none() {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "Recharge les profils avant de les modifier.",
+        );
+    }
     response(
         state
             .database
@@ -68,14 +74,21 @@ pub(super) async fn remove(
     request: Request,
 ) -> Response {
     let vault = state.vault.clone();
-    if let Err((status, message)) = object(request.into_body()).await {
-        return failure(status, message);
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    if body.raw("expected").is_none() {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "Recharge les profils avant de les modifier.",
+        );
     }
     response(
         state
             .database
             .call(move |store| {
-                agent_providers::remove(store, &id, &mut |value, decrypt| {
+                agent_providers::remove(store, &id, &body, &mut |value, decrypt| {
                     vault.protect(value, decrypt)
                 })
             })

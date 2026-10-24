@@ -4,6 +4,7 @@ use gloo_net::http::{Method, Request, RequestBuilder, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
+mod agent_profiles;
 mod backups;
 mod files;
 mod i18n;
@@ -13,6 +14,7 @@ mod services;
 mod settings;
 mod task_editor;
 mod worktree;
+use agent_profiles::AgentProfiles;
 use backups::Backups;
 use live::BoardState;
 use projects::Projects;
@@ -183,6 +185,7 @@ fn App() -> impl IntoView {
     provide_context(i18n);
     let board = BoardState::default();
     let show_settings = RwSignal::new(false);
+    let show_agents = RwSignal::new(false);
     let show_backups = RwSignal::new(false);
     let cards = board.cards;
     let projects = board.projects;
@@ -266,6 +269,7 @@ fn App() -> impl IntoView {
                 <label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />{move || i18n.text("Archives")}</label>
                 <button id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)>{move || i18n.text("Gérer les projets")}</button>
                 <button id="manage-settings" type="button" disabled=move || loading.get() on:click=move |_| show_settings.set(true)>{move || i18n.text("Paramètres")}</button>
+                <button id="manage-agents" type="button" disabled=move || loading.get() on:click=move |_| show_agents.set(true)>{move || i18n.text("Agents")}</button>
                 <button id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true)>{move || i18n.text("Sauvegardes")}</button>
                 <span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible().len().to_string())}</span>
             </div>
@@ -322,6 +326,7 @@ fn App() -> impl IntoView {
             {move || selected.get().map(|card| view! { <TaskEditor card board token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>
+            <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
             <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>
         </main>
     }

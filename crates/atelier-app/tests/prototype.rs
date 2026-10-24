@@ -1001,7 +1001,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
                 .bearer_auth(&token)
                 .header("x-local-request", "1")
         };
-        let response = request(reqwest::Method::POST, "/api/agent-providers").header("content-type", "application/json").body(r#"{"id":"api","name":"\ud800","type":"codex","auth":"api","apiKey":"synthetic-key","model":"custom/model"}"#).send().await.unwrap();
+        let response = request(reqwest::Method::POST, "/api/agent-providers").header("content-type", "application/json").body(r#"{"id":"api","name":"Synthetic API","type":"codex","auth":"api","apiKey":"synthetic-key","model":"custom/model","expected":null}"#).send().await.unwrap();
         if fault {
             assert_eq!(response.status(), 500);
             let catalog: Value = request(reqwest::Method::GET, "/api/agent-providers")
@@ -1034,9 +1034,44 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
         assert_eq!(response.status(), 200);
         let response = response.text().await.unwrap();
         assert!(!response.contains("synthetic-key"));
-        let catalog: Vec<Document> = serde_json::from_str(&response).unwrap();
+        let mut catalog: Vec<Document> = serde_json::from_str(&response).unwrap();
         assert_eq!(catalog.len(), 3);
         assert_eq!(catalog[2].get::<bool>("apiKeySet").unwrap(), Some(true));
+        let update = json!({"id":"api","name":"Renamed synthetic API","type":"codex","auth":"api","model":"custom/model","expected":catalog[2]});
+        let saved = request(reqwest::Method::POST, "/api/agent-providers")
+            .json(&update)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(saved.status(), 200);
+        catalog = saved.json().await.unwrap();
+        assert_eq!(
+            request(reqwest::Method::POST, "/api/agent-providers")
+                .json(&update)
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            409
+        );
+        assert_eq!(
+            request(reqwest::Method::DELETE, "/api/agent-providers/api")
+                .json(&json!({"expected":update["expected"]}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            409
+        );
+        assert_eq!(
+            request(reqwest::Method::DELETE, "/api/agent-providers/api")
+                .json(&json!({}))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            400
+        );
         assert_eq!(
             request(reqwest::Method::PUT, "/api/settings")
                 .json(&json!({"agent":"api"}))
@@ -1048,7 +1083,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
         );
         assert_eq!(
             request(reqwest::Method::DELETE, "/api/agent-providers/api")
-                .json(&json!({}))
+                .json(&json!({"expected":catalog[2]}))
                 .send()
                 .await
                 .unwrap()
@@ -1075,7 +1110,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
         );
         assert_eq!(
             request(reqwest::Method::DELETE, "/api/agent-providers/api")
-                .json(&json!({}))
+                .json(&json!({"expected":catalog[2]}))
                 .send()
                 .await
                 .unwrap()
@@ -1093,7 +1128,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
         assert_eq!(changed.status(), 200);
         assert_eq!(
             request(reqwest::Method::POST, "/api/agent-providers")
-                .json(&json!({"id":"api","name":"API","type":"claude"}))
+                .json(&json!({"id":"api","name":"API","type":"claude","expected":catalog[2]}))
                 .send()
                 .await
                 .unwrap()
@@ -1118,7 +1153,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
             .delete(format!("{address}/api/agent-providers/api"))
             .bearer_auth(&token)
             .header("x-local-request", "1")
-            .json(&json!({}))
+            .json(&json!({"expected":catalog[2]}))
             .send()
             .await
             .unwrap();

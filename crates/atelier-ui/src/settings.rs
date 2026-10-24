@@ -107,7 +107,7 @@ pub fn Settings(
                     <label for="settings-agent">{move || i18n.text("Agent par défaut")}</label><select id="settings-agent" autofocus prop:value=move || draft.get().agent on:change=move |event| draft.update(|value| value.agent = event_target_value(&event))>
                         <For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } />
                     </select>
-                    <p class="field-help">{move || i18n.text("Cette préférence ne lance aucun agent. Les connexions et profils seront disponibles dans un prochain écran.")}</p>
+                    <p class="field-help">{move || i18n.text("Cette préférence ne lance aucun agent. Gère les profils depuis le bouton Agents du tableau.")}</p>
                     <label for="settings-repo">{move || i18n.text("Dépôt Git source par défaut")}</label><input id="settings-repo" maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|value| value.repo = event_target_value(&event)) />
                     <p class="field-help">{move || i18n.text("Chemin complet d’un dossier existant. Laisser vide pour choisir le projet à chaque création.")}</p>
                     <label for="settings-branch">{move || i18n.text("Référence Git de départ par défaut")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />

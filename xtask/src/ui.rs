@@ -560,11 +560,197 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     backups_scenario(client, http, &address, &next_token).await?;
     language_scenario(client).await?;
     files_scenario(client, http, &address, &next_token, data.path()).await?;
+    profiles_scenario(client, http, &address, &next_token).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
+    Ok(())
+}
+
+async fn profiles_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    let request = |method, path: &str| {
+        http.request(method, format!("{address}{path}"))
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+    };
+    click(client, "#manage-agents").await?;
+    wait_dom(client, "return document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('[data-profile]').length >= 2;", vec![]).await?;
+    click(client, "#new-profile").await?;
+    for (selector, text) in [
+        ("#profile-id", "ui-api"),
+        ("#profile-name", "Profil synthétique <b>é😀</b>"),
+        ("#profile-model", "synthetic/model"),
+        ("#profile-effort", "invalid"),
+    ] {
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(text)
+            .await?;
+    }
+    client.execute("const select=document.querySelector('#profile-auth'); select.value='api'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    client
+        .find(Locator::Css("#profile-key"))
+        .await?
+        .send_keys("synthetic-ui-key")
+        .await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client, "return document.querySelector('#profiles-error')?.textContent.includes('Niveau de réflexion invalide') && document.querySelector('#profile-key')?.value === 'synthetic-ui-key';", vec![]).await?;
+    client
+        .find(Locator::Css("#profile-effort"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#profile-effort"))
+        .await?
+        .send_keys("high")
+        .await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client, "return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key')?.value === '' && document.querySelector('#profile-key-state')?.textContent.includes('Secret enregistré') && document.querySelector('[data-profile=ui-api]')?.textContent.includes('<b>é😀</b>') && !document.querySelector('[data-profile=ui-api] b');", vec![]).await?;
+    let catalog = request(reqwest::Method::GET, "/api/agent-providers")
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+    if catalog.contains("synthetic-ui-key") {
+        return Err("La clé synthétique a été exposée dans le catalogue.".into());
+    }
+    let profiles: Vec<serde_json::Value> = serde_json::from_str(&catalog)?;
+    let original = profiles
+        .iter()
+        .find(|profile| profile["id"] == "ui-api")
+        .ok_or("Profil absent.")?
+        .clone();
+    let mut external = original.clone();
+    external["expected"] = original;
+    external["name"] = json!("Nom modifié ailleurs");
+    request(reqwest::Method::POST, "/api/agent-providers")
+        .json(&external)
+        .send()
+        .await?
+        .error_for_status()?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .send_keys("Brouillon local conservé")
+        .await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client, "return document.querySelector('#profiles-error')?.textContent.includes('changé ailleurs') && document.querySelector('#profile-name')?.value === 'Brouillon local conservé';",vec![]).await?;
+    click(client, "#reload-profile").await?;
+    click(client, "#cancel-profile-action").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#profile-name')?.value === 'Brouillon local conservé';",
+        vec![],
+    )
+    .await?;
+    click(client, "#reload-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return document.querySelector('#profile-name')?.value === 'Nom modifié ailleurs' && document.querySelector('#profiles-error')?.textContent === '' && document.querySelector('#profile-key')?.value === '';",vec![]).await?;
+    click(client, "#profile-clear-key").await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key-state')?.textContent === 'Aucun secret enregistré.';",vec![]).await?;
+    let board: atelier_core::contracts::Board = request(reqwest::Method::GET, "/api/state")
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let previous = board
+        .settings
+        .get::<String>("agent")?
+        .ok_or("Agent par défaut absent.")?;
+    request(reqwest::Method::PUT, "/api/settings")
+        .json(&json!({"agent":"ui-api","expected":{"agent":previous}}))
+        .send()
+        .await?
+        .error_for_status()?;
+    click(client, "#remove-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('fournisseur est utilisé') && document.querySelector('[data-profile=ui-api]');",vec![]).await?;
+    request(reqwest::Method::PUT, "/api/settings")
+        .json(&json!({"agent":previous,"expected":{"agent":"ui-api"}}))
+        .send()
+        .await?
+        .error_for_status()?;
+    click(client, "#remove-profile").await?;
+    click(client, "#cancel-profile-action").await?;
+    click(client, "#remove-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.' && !document.querySelector('[data-profile=ui-api]');",vec![]).await?;
+    click(client, "#new-profile").await?;
+    client.execute("const select=document.querySelector('#profile-type'); select.value='command'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    for (selector, text) in [
+        ("#profile-id", "ui-command"),
+        ("#profile-name", "Commande synthétique"),
+        ("#profile-command", "synthetic-agent-never-run"),
+        ("#profile-analyzeArgs", "invalid-json"),
+    ] {
+        client.find(Locator::Css(selector)).await?.clear().await?;
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(text)
+            .await?;
+    }
+    click(client, "#save-profile").await?;
+    wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('liste JSON') && document.querySelector('#profile-analyzeArgs')?.value === 'invalid-json';",vec![]).await?;
+    client
+        .find(Locator::Css("#profile-analyzeArgs"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#profile-analyzeArgs"))
+        .await?
+        .send_keys(r#"["--analyze","{model}"]"#)
+        .await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('[data-profile=ui-command]');",vec![]).await?;
+    click(client, "#close-agents").await?;
+    client.refresh().await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    click(client, "#manage-agents").await?;
+    wait_dom(client,"return document.querySelector('[data-profile=ui-command]') && document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "[data-profile=ui-command]").await?;
+    wait_dom(client,"return document.querySelector('#profile-analyzeArgs')?.value === '[\"--analyze\",\"{model}\"]' && document.querySelector('#profile-versionArgs')?.value === '[\"--version\"]';",vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-agent-profiles.png"),
+        client.screenshot().await?,
+    )?;
+    click(client, "#remove-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return !document.querySelector('[data-profile=ui-command]') && document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",vec![]).await?;
+    click(client, "#new-profile").await?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .send_keys("Brouillon à abandonner")
+        .await?;
+    click(client, "#close-agents").await?;
+    click(client, "#cancel-profile-action").await?;
+    click(client, "#close-agents").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return !document.querySelector('#agents-dialog') && document.activeElement?.id === 'manage-agents';",vec![]).await?;
     Ok(())
 }
 
