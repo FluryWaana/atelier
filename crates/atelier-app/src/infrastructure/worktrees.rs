@@ -143,6 +143,118 @@ async fn source(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<Re
     Ok(source)
 }
 
+pub async fn prepare_from_origin(
+    root: &Dir,
+    roots: &[PathBuf],
+    repo: &str,
+    branch: String,
+    base: String,
+) -> Result<Worktree> {
+    reference(&base)?;
+    // Validate the destination before downloading; existing task branches are never moved.
+    let mut plan = prepare(root, roots, repo, branch, "HEAD".into()).await?;
+    let source = source(root, roots, &plan).await?;
+    let remote_base = base
+        .strip_prefix("refs/remotes/origin/")
+        .or_else(|| base.strip_prefix("origin/"))
+        .or_else(|| base.strip_prefix("refs/heads/"))
+        .unwrap_or(&base);
+    let remote_ref = if remote_base == "HEAD" {
+        "HEAD".to_owned()
+    } else {
+        if remote_base.starts_with("refs/") {
+            return Err("Choisis une branche d’origin, pas une autre référence Git.".into());
+        }
+        let name = format!("refs/heads/{remote_base}");
+        source.git(&["check-ref-format", &name]).await?;
+        name
+    };
+    let config = source
+        .git(&[
+            "config",
+            "--local",
+            "--no-includes",
+            "--null",
+            "--name-only",
+            "--list",
+        ])
+        .await?;
+    for key in String::from_utf8(config)?.split('\0') {
+        let key = key.to_ascii_lowercase();
+        if key.starts_with("url.")
+            || key.starts_with("include.")
+            || key.starts_with("includeif.")
+            || key == "extensions.worktreeconfig"
+        {
+            return Err("Le téléchargement synthétique refuse les réécritures d’URL et inclusions de configuration Git.".into());
+        }
+    }
+    let origin = String::from_utf8(
+        source
+            .git(&[
+                "config",
+                "--local",
+                "--no-includes",
+                "--get",
+                "remote.origin.url",
+            ])
+            .await?,
+    )?;
+    let origin = origin.trim_end_matches(['\r', '\n']);
+    // shortcut: remote transports and their credentials are enabled with the R04 connectors.
+    let remote = Repository::synthetic(root, roots, &JsonString::from(origin))
+        .map_err(|_| "Origin doit désigner un dépôt Git dans le dossier repositories du prototype. Les connexions distantes attendent les connecteurs.")?;
+    remote.verify_root().await?;
+    let remote_path = path_string(&remote.path).utf8()?;
+    let private_ref = format!("refs/atelier-fetch/{}", uuid::Uuid::new_v4());
+    let fetched = async {
+        source
+            .without_programs(&[
+                "-c",
+                "protocol.allow=never",
+                "-c",
+                "protocol.file.allow=always",
+                "fetch",
+                "--no-tags",
+                "--no-write-fetch-head",
+                "--no-recurse-submodules",
+                "--no-auto-maintenance",
+                "--no-prune",
+                "--",
+                &remote_path,
+                &format!("{remote_ref}:{private_ref}"),
+            ])
+            .await?;
+        let commit = String::from_utf8(
+            source
+                .git(&[
+                    "rev-parse",
+                    "--verify",
+                    "--end-of-options",
+                    &format!("{private_ref}^{{commit}}"),
+                ])
+                .await?,
+        )?
+        .trim()
+        .to_owned();
+        if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Err("Commit téléchargé invalide.".into());
+        }
+        Ok::<_, crate::Error>(commit)
+    }
+    .await;
+    let cleanup = source
+        .without_programs(&["update-ref", "-d", &private_ref])
+        .await;
+    if cleanup.is_err() {
+        return Err("Nettoyage de la référence temporaire impossible. Le dépôt source et ses branches sont conservés ; vérifie les références refs/atelier-fetch avant de reprendre.".into());
+    }
+    plan.base_commit = fetched?;
+    plan.base = base;
+    Ok(plan)
+}
+
 pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<Repository> {
     let source = source(root, roots, worktree).await?;
     let entries = entries(&source).await?;

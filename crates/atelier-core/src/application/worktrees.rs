@@ -92,6 +92,7 @@ pub struct CreateOptions {
     pub repo: String,
     pub branch: String,
     pub base: String,
+    pub fetch_origin: bool,
 }
 
 pub fn validate_reference(value: &str) -> Result<()> {
@@ -138,7 +139,13 @@ pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Resu
         .unwrap_or_else(|| "HEAD".into());
     validate_reference(&branch)?;
     validate_reference(&base)?;
-    Ok(CreateOptions { repo, branch, base })
+    let fetch_origin = body.get::<bool>("fetchOrigin")?.unwrap_or(false);
+    Ok(CreateOptions {
+        repo,
+        branch,
+        base,
+        fetch_origin,
+    })
 }
 
 pub fn removal(body: &Document) -> Result<bool> {
@@ -308,6 +315,24 @@ mod tests {
         )
         .unwrap();
         let options = create_options(&card, &Document::default(), &Document::default()).unwrap();
+        assert!(!options.fetch_origin);
+        assert!(
+            create_options(
+                &card,
+                &Document::default(),
+                &serde_json::from_str(r#"{"fetchOrigin":true}"#).unwrap()
+            )
+            .unwrap()
+            .fetch_origin
+        );
+        assert!(
+            create_options(
+                &card,
+                &Document::default(),
+                &serde_json::from_str(r#"{"fetchOrigin":"true"}"#).unwrap()
+            )
+            .is_err()
+        );
         assert_eq!(
             (options.branch.as_str(), options.base.as_str()),
             ("atelier/task", "HEAD")

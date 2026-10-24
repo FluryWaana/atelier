@@ -47,6 +47,7 @@ pub fn Workspace(
     let initial = defaults();
     let branch = RwSignal::new(initial.0);
     let base = RwSignal::new(initial.1);
+    let fetch_origin = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let confirming = RwSignal::new(false);
@@ -70,7 +71,7 @@ pub fn Workspace(
         let body = if remove {
             serde_json::json!({"confirmed":true,"discardChanges":discard.get_untracked()})
         } else {
-            serde_json::json!({"branch":branch.get_untracked(),"base":base.get_untracked()})
+            serde_json::json!({"branch":branch.get_untracked(),"base":base.get_untracked(),"fetchOrigin":fetch_origin.get_untracked()})
         };
         pending.set(true);
         error.set(String::new());
@@ -127,8 +128,10 @@ pub fn Workspace(
                 <fieldset disabled=move || pending.get() || blocked.get()>
                     <label for="worktree-branch">{move || i18n.text("Branche de la tâche")}</label><input id="worktree-branch" required maxlength="180" prop:value=move || branch.get() on:input=move |event| { branch.set(event_target_value(&event)); dirty.set(true); } />
                     <label for="worktree-base">{move || i18n.text("Référence de départ")}</label><input id="worktree-base" required maxlength="180" prop:value=move || base.get() on:input=move |event| { base.set(event_target_value(&event)); dirty.set(true); } />
-                    <p class="field-help">{move || i18n.text("Utilise une référence disponible localement, par exemple main ou origin/main. La préparation ne télécharge pas le dépôt distant.")}</p>
-                    <div class="editor-actions"><button id="create-worktree" type="submit">{move || i18n.text("Préparer le worktree")}</button><button type="button" hidden=move || !dirty.get() on:click=move |_| { let initial = defaults(); branch.set(initial.0); base.set(initial.1); dirty.set(false); }>{move || i18n.text("Réinitialiser")}</button></div>
+                    <label class="check-filter"><input id="worktree-fetch" type="checkbox" prop:checked=move || fetch_origin.get() on:change=move |event| { fetch_origin.set(event_target_checked(&event)); dirty.set(true); } />{move || i18n.text("Actualiser la référence depuis origin")}</label>
+                    <p class="field-help">{move || i18n.text("Sans actualisation, la référence doit exister localement. L’actualisation récupère une branche précise, sans déplacer la branche du dépôt source. Une reprise conserve le commit choisi.")}</p>
+                    <p class="field-help" hidden=move || !fetch_origin.get()>{move || i18n.text("Origin doit désigner un dépôt synthétique local. Les connexions distantes seront raccordées avec les connecteurs.")}</p>
+                    <div class="editor-actions"><button id="create-worktree" type="submit">{move || i18n.text("Préparer le worktree")}</button><button type="button" hidden=move || !dirty.get() on:click=move |_| { let initial = defaults(); branch.set(initial.0); base.set(initial.1); fetch_origin.set(false); dirty.set(false); }>{move || i18n.text("Réinitialiser")}</button></div>
                 </fieldset>
             </form>
             <div hidden=move || current.get().is_none()>

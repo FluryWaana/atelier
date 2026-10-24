@@ -214,9 +214,18 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
     let worktree = match original {
         Some(worktree) => worktree,
         None => {
-            let worktree =
-                worktrees::prepare(root, roots, &options.repo, options.branch, options.base)
-                    .await?;
+            let worktree = if options.fetch_origin {
+                worktrees::prepare_from_origin(
+                    root,
+                    roots,
+                    &options.repo,
+                    options.branch,
+                    options.base,
+                )
+                .await?
+            } else {
+                worktrees::prepare(root, roots, &options.repo, options.branch, options.base).await?
+            };
             save(state, id.clone(), None, Some(worktree.clone())).await?;
             worktree
         }

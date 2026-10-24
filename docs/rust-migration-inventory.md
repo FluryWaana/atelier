@@ -1379,9 +1379,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/worktrees.rs:14](../crates/atelier-app/src/infrastructure/worktrees.rs#L14) | <code>use cap_std::fs::Dir;</code> |
 | [crates/atelier-app/src/infrastructure/worktrees.rs:15](../crates/atelier-app/src/infrastructure/worktrees.rs#L15) | <code>use std::path::{Path, PathBuf};</code> |
 | [crates/atelier-app/src/infrastructure/worktrees.rs:87](../crates/atelier-app/src/infrastructure/worktrees.rs#L87) | <code>pub async fn prepare(</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:146](../crates/atelier-app/src/infrastructure/worktrees.rs#L146) | <code>pub async fn inspect(root: &amp;Dir, roots: &amp;[PathBuf], worktree: &amp;Worktree) -&gt; Result&lt;Repository&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:203](../crates/atelier-app/src/infrastructure/worktrees.rs#L203) | <code>pub async fn create(root: &amp;Dir, roots: &amp;[PathBuf], worktree: &amp;Worktree) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:258](../crates/atelier-app/src/infrastructure/worktrees.rs#L258) | <code>pub async fn remove(</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:146](../crates/atelier-app/src/infrastructure/worktrees.rs#L146) | <code>pub async fn prepare_from_origin(</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:258](../crates/atelier-app/src/infrastructure/worktrees.rs#L258) | <code>pub async fn inspect(root: &amp;Dir, roots: &amp;[PathBuf], worktree: &amp;Worktree) -&gt; Result&lt;Repository&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:315](../crates/atelier-app/src/infrastructure/worktrees.rs#L315) | <code>pub async fn create(root: &amp;Dir, roots: &amp;[PathBuf], worktree: &amp;Worktree) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:370](../crates/atelier-app/src/infrastructure/worktrees.rs#L370) | <code>pub async fn remove(</code> |
 | [crates/atelier-app/src/lib.rs:1](../crates/atelier-app/src/lib.rs#L1) | <code>pub mod http;</code> |
 | [crates/atelier-app/src/lib.rs:2](../crates/atelier-app/src/lib.rs#L2) | <code>pub mod infrastructure;</code> |
 | [crates/atelier-app/src/lib.rs:4](../crates/atelier-app/src/lib.rs#L4) | <code>pub type Error = Box&lt;dyn std::error::Error + Send + Sync&gt;;</code> |
@@ -1473,8 +1474,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/worktrees.rs:4](../crates/atelier-app/tests/worktrees.rs#L4) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/tests/worktrees.rs:5](../crates/atelier-app/tests/worktrees.rs#L5) | <code>use std::{path::Path, time::Duration};</code> |
 | [crates/atelier-app/tests/worktrees.rs:45](../crates/atelier-app/tests/worktrees.rs#L45) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:152](../crates/atelier-app/tests/worktrees.rs#L152) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:308](../crates/atelier-app/tests/worktrees.rs#L308) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:215](../crates/atelier-app/tests/worktrees.rs#L215) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:322](../crates/atelier-app/tests/worktrees.rs#L322) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:478](../crates/atelier-app/tests/worktrees.rs#L478) | <code>#[tokio::test]</code> |
 | [crates/atelier-core/Cargo.toml:3](../crates/atelier-core/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:4](../crates/atelier-core/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:5](../crates/atelier-core/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -1629,16 +1631,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/worktrees.rs:92](../crates/atelier-core/src/application/worktrees.rs#L92) | <code>pub repo: String,</code> |
 | [crates/atelier-core/src/application/worktrees.rs:93](../crates/atelier-core/src/application/worktrees.rs#L93) | <code>pub branch: String,</code> |
 | [crates/atelier-core/src/application/worktrees.rs:94](../crates/atelier-core/src/application/worktrees.rs#L94) | <code>pub base: String,</code> |
-| [crates/atelier-core/src/application/worktrees.rs:97](../crates/atelier-core/src/application/worktrees.rs#L97) | <code>pub fn validate_reference(value: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-core/src/application/worktrees.rs:109](../crates/atelier-core/src/application/worktrees.rs#L109) | <code>pub fn create_options(card: &amp;Card, settings: &amp;Document, body: &amp;Document) -&gt; Result&lt;CreateOptions&gt; {</code> |
-| [crates/atelier-core/src/application/worktrees.rs:144](../crates/atelier-core/src/application/worktrees.rs#L144) | <code>pub fn removal(body: &amp;Document) -&gt; Result&lt;bool&gt; {</code> |
-| [crates/atelier-core/src/application/worktrees.rs:154](../crates/atelier-core/src/application/worktrees.rs#L154) | <code>pub fn associate(</code> |
-| [crates/atelier-core/src/application/worktrees.rs:200](../crates/atelier-core/src/application/worktrees.rs#L200) | <code>mod tests {</code> |
-| [crates/atelier-core/src/application/worktrees.rs:201](../crates/atelier-core/src/application/worktrees.rs#L201) | <code>use super::*;</code> |
-| [crates/atelier-core/src/application/worktrees.rs:202](../crates/atelier-core/src/application/worktrees.rs#L202) | <code>use crate::contracts::WorktreeState;</code> |
-| [crates/atelier-core/src/application/worktrees.rs:203](../crates/atelier-core/src/application/worktrees.rs#L203) | <code>use serde_json::json;</code> |
-| [crates/atelier-core/src/application/worktrees.rs:205](../crates/atelier-core/src/application/worktrees.rs#L205) | <code>#[test]</code> |
-| [crates/atelier-core/src/application/worktrees.rs:294](../crates/atelier-core/src/application/worktrees.rs#L294) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/worktrees.rs:95](../crates/atelier-core/src/application/worktrees.rs#L95) | <code>pub fetch_origin: bool,</code> |
+| [crates/atelier-core/src/application/worktrees.rs:98](../crates/atelier-core/src/application/worktrees.rs#L98) | <code>pub fn validate_reference(value: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-core/src/application/worktrees.rs:110](../crates/atelier-core/src/application/worktrees.rs#L110) | <code>pub fn create_options(card: &amp;Card, settings: &amp;Document, body: &amp;Document) -&gt; Result&lt;CreateOptions&gt; {</code> |
+| [crates/atelier-core/src/application/worktrees.rs:151](../crates/atelier-core/src/application/worktrees.rs#L151) | <code>pub fn removal(body: &amp;Document) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-core/src/application/worktrees.rs:161](../crates/atelier-core/src/application/worktrees.rs#L161) | <code>pub fn associate(</code> |
+| [crates/atelier-core/src/application/worktrees.rs:207](../crates/atelier-core/src/application/worktrees.rs#L207) | <code>mod tests {</code> |
+| [crates/atelier-core/src/application/worktrees.rs:208](../crates/atelier-core/src/application/worktrees.rs#L208) | <code>use super::*;</code> |
+| [crates/atelier-core/src/application/worktrees.rs:209](../crates/atelier-core/src/application/worktrees.rs#L209) | <code>use crate::contracts::WorktreeState;</code> |
+| [crates/atelier-core/src/application/worktrees.rs:210](../crates/atelier-core/src/application/worktrees.rs#L210) | <code>use serde_json::json;</code> |
+| [crates/atelier-core/src/application/worktrees.rs:212](../crates/atelier-core/src/application/worktrees.rs#L212) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/worktrees.rs:301](../crates/atelier-core/src/application/worktrees.rs#L301) | <code>#[test]</code> |
 | [crates/atelier-core/src/contracts.rs:1](../crates/atelier-core/src/contracts.rs#L1) | <code>use crate::document::{Document, JsonString};</code> |
 | [crates/atelier-core/src/contracts.rs:2](../crates/atelier-core/src/contracts.rs#L2) | <code>use serde::{Deserialize, Deserializer, Serialize, Serializer};</code> |
 | [crates/atelier-core/src/contracts.rs:6](../crates/atelier-core/src/contracts.rs#L6) | <code>pub enum ServiceStatus {</code> |
@@ -2569,14 +2572,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:495](../crates/atelier-app/src/infrastructure/token_vault.rs#L495) | <code>args: &amp;[&amp;str],</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:507](../crates/atelier-app/src/infrastructure/token_vault.rs#L507) | <code>stored = if args == ["-i"] {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:512](../crates/atelier-app/src/infrastructure/token_vault.rs#L512) | <code>assert!(!args.join(" ").contains(&amp;stored));</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:240](../crates/atelier-app/src/infrastructure/worktrees.rs#L240) | <code>let mut args = vec!["worktree", "add"];</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:242](../crates/atelier-app/src/infrastructure/worktrees.rs#L242) | <code>args.extend(["-b", &amp;worktree.branch]);</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:244](../crates/atelier-app/src/infrastructure/worktrees.rs#L244) | <code>args.extend([</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:253](../crates/atelier-app/src/infrastructure/worktrees.rs#L253) | <code>source.without_programs(&amp;args).await?;</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:341](../crates/atelier-app/src/infrastructure/worktrees.rs#L341) | <code>let mut args = vec!["worktree", "remove"];</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:343](../crates/atelier-app/src/infrastructure/worktrees.rs#L343) | <code>args.push("--force");</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:345](../crates/atelier-app/src/infrastructure/worktrees.rs#L345) | <code>args.extend(["--", &amp;worktree.path]);</code> |
-| [crates/atelier-app/src/infrastructure/worktrees.rs:346](../crates/atelier-app/src/infrastructure/worktrees.rs#L346) | <code>source.without_programs(&amp;args).await?;</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:352](../crates/atelier-app/src/infrastructure/worktrees.rs#L352) | <code>let mut args = vec!["worktree", "add"];</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:354](../crates/atelier-app/src/infrastructure/worktrees.rs#L354) | <code>args.extend(["-b", &amp;worktree.branch]);</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:356](../crates/atelier-app/src/infrastructure/worktrees.rs#L356) | <code>args.extend([</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:365](../crates/atelier-app/src/infrastructure/worktrees.rs#L365) | <code>source.without_programs(&amp;args).await?;</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:453](../crates/atelier-app/src/infrastructure/worktrees.rs#L453) | <code>let mut args = vec!["worktree", "remove"];</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:455](../crates/atelier-app/src/infrastructure/worktrees.rs#L455) | <code>args.push("--force");</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:457](../crates/atelier-app/src/infrastructure/worktrees.rs#L457) | <code>args.extend(["--", &amp;worktree.path]);</code> |
+| [crates/atelier-app/src/infrastructure/worktrees.rs:458](../crates/atelier-app/src/infrastructure/worktrees.rs#L458) | <code>source.without_programs(&amp;args).await?;</code> |
 | [crates/atelier-app/src/main.rs:6](../crates/atelier-app/src/main.rs#L6) | <code>let mut args = std::env::args().skip(1);</code> |
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
@@ -2815,6 +2818,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:1079](../xtask/src/ui.rs#L1079) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
 | [xtask/src/ui.rs:1084](../xtask/src/ui.rs#L1084) | <code>.args([</code> |
 | [xtask/src/ui.rs:1099](../xtask/src/ui.rs#L1099) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:1105](../xtask/src/ui.rs#L1105) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
 | [xtask/tests/windows-native.rs:31](../xtask/tests/windows-native.rs#L31) | <code>fn spawn(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Self {</code> |
 | [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
 | [xtask/tests/windows-native.rs:138](../xtask/tests/windows-native.rs#L138) | <code>.args([</code> |

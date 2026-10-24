@@ -1099,6 +1099,11 @@ async fn files_scenario(
         .args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])
         .arg(&repo)
         .arg(&service_repo))?;
+    run(command("git")
+        .arg("-C")
+        .arg(&repo)
+        .args(["config", "--local", "remote.origin.url"])
+        .arg(&service_repo))?;
     let project: serde_json::Value = http
         .post(format!("{address}/api/projects"))
         .bearer_auth(token)
@@ -1233,6 +1238,7 @@ async fn files_scenario(
         .await?
         .send_keys("main")
         .await?;
+    click(client, "#worktree-fetch").await?;
     click(client, "#create-worktree").await?;
     wait_dom(client,"return document.querySelector('#worktree-state')?.textContent === 'Worktree prêt.' && document.querySelector('#worktree-error')?.textContent === '' && document.querySelector('#verify-worktree')?.disabled === false;",vec![]).await?;
     let board: atelier_core::contracts::Board = http

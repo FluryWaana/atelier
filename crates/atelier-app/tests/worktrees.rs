@@ -43,6 +43,176 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+    let remote = root_path.join("repositories/origin");
+    let repo = root_path.join("repositories/source");
+    std::fs::create_dir_all(&remote).unwrap();
+    git(&remote, &["init", "-b", "main"]).await;
+    std::fs::write(remote.join("version.txt"), "one").unwrap();
+    git(&remote, &["add", "."]).await;
+    git(&remote, &["commit", "-qm", "Synthetic initial version"]).await;
+    git(
+        &root_path,
+        &[
+            "clone",
+            "--no-hardlinks",
+            "--",
+            remote.to_str().unwrap(),
+            repo.to_str().unwrap(),
+        ],
+    )
+    .await;
+    let local_head = git(&repo, &["rev-parse", "HEAD"]).await;
+    let tracking = git(&repo, &["rev-parse", "refs/remotes/origin/main"]).await;
+    let index = std::fs::read(repo.join(".git/index")).unwrap();
+    let config = std::fs::read(repo.join(".git/config")).unwrap();
+    std::fs::write(repo.join(".git/FETCH_HEAD"), "preserve synthetic fetch\n").unwrap();
+    std::fs::write(remote.join("version.txt"), "two").unwrap();
+    git(&remote, &["commit", "-am", "Synthetic new version"]).await;
+    let expected = String::from_utf8(git(&remote, &["rev-parse", "HEAD"]).await)
+        .unwrap()
+        .trim()
+        .to_owned();
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path.clone()];
+    let mut plans = Vec::new();
+    for (index, base) in [
+        "main",
+        "origin/main",
+        "refs/remotes/origin/main",
+        "refs/heads/main",
+        "HEAD",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let plan = worktrees::prepare_from_origin(
+            &root,
+            &roots,
+            repo.to_str().unwrap(),
+            format!("task/{index}"),
+            base.into(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(plan.base_commit, expected);
+        assert_eq!(plan.base, base);
+        plans.push(plan);
+    }
+    assert_eq!(git(&repo, &["rev-parse", "HEAD"]).await, local_head);
+    assert_eq!(
+        git(&repo, &["rev-parse", "refs/remotes/origin/main"]).await,
+        tracking
+    );
+    assert_eq!(std::fs::read(repo.join(".git/index")).unwrap(), index);
+    assert_eq!(std::fs::read(repo.join(".git/config")).unwrap(), config);
+    assert_eq!(
+        std::fs::read_to_string(repo.join(".git/FETCH_HEAD")).unwrap(),
+        "preserve synthetic fetch\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(repo.join("version.txt")).unwrap(),
+        "one"
+    );
+    for base in [
+        "missing",
+        "main:refs/heads/main",
+        "refs/tags/main",
+        "*",
+        "--all",
+    ] {
+        assert!(
+            worktrees::prepare_from_origin(
+                &root,
+                &roots,
+                repo.to_str().unwrap(),
+                "task/invalid".into(),
+                base.into()
+            )
+            .await
+            .is_err()
+        );
+    }
+    assert!(
+        git(
+            &repo,
+            &["for-each-ref", "--format=%(refname)", "refs/atelier-fetch/"]
+        )
+        .await
+        .is_empty()
+    );
+    // Simulate restart after persisting the plan, while origin advances again.
+    let plan: atelier_core::contracts::Worktree =
+        serde_json::from_slice(&serde_json::to_vec(&plans[0]).unwrap()).unwrap();
+    std::fs::write(remote.join("version.txt"), "three").unwrap();
+    git(&remote, &["commit", "-am", "Synthetic later version"]).await;
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(Path::new(&plan.path).join("version.txt")).unwrap(),
+        "two"
+    );
+    worktrees::create(&root, &roots, &plan).await.unwrap();
+    assert_eq!(
+        git(Path::new(&plan.path), &["rev-parse", "HEAD"]).await,
+        format!("{expected}\n").as_bytes()
+    );
+    worktrees::remove(&root, &roots, &plan, false)
+        .await
+        .unwrap();
+    git(
+        &repo,
+        &[
+            "config",
+            "url.https://example.invalid/.insteadOf",
+            remote.to_str().unwrap(),
+        ],
+    )
+    .await;
+    assert!(
+        worktrees::prepare_from_origin(
+            &root,
+            &roots,
+            repo.to_str().unwrap(),
+            "task/unsafe".into(),
+            "main".into()
+        )
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("réécritures")
+    );
+    git(
+        &repo,
+        &["config", "--remove-section", "url.https://example.invalid/"],
+    )
+    .await;
+    git(
+        &repo,
+        &[
+            "config",
+            "remote.origin.url",
+            "https://example.invalid/synthetic.git",
+        ],
+    )
+    .await;
+    assert!(
+        worktrees::prepare_from_origin(
+            &root,
+            &roots,
+            repo.to_str().unwrap(),
+            "task/network".into(),
+            "main".into()
+        )
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("repositories")
+    );
+}
+
+#[tokio::test]
 async fn shared_dependencies_resume_and_survive_worktree_removal_and_refusal() {
     let fixture = tempfile::tempdir().unwrap();
     let root_path = std::fs::canonicalize(fixture.path()).unwrap();
