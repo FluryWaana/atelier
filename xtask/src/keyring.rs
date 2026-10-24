@@ -1,4 +1,6 @@
 use crate::Result;
+#[path = "keyring/accounts.rs"]
+pub mod accounts;
 use atelier_app::infrastructure::{
     session,
     token_vault::{KeyringPlatform, execute_keyring, keyring_protect},

@@ -211,6 +211,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [scripts/linux-tray.py](../scripts/linux-tray.py) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/package-installers.mjs](../scripts/package-installers.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/package.mjs](../scripts/package.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [scripts/rust-keyring-accounts.sh](../scripts/rust-keyring-accounts.sh) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-migration-inventory.mjs](../scripts/rust-migration-inventory.mjs) | Source / configuration | [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
 | [scripts/sign-release.mjs](../scripts/sign-release.mjs) | Source / configuration | [test/release-pipeline.test.mjs](../test/release-pipeline.test.mjs) |
@@ -338,6 +339,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/bin/native-fixture.rs](../xtask/src/bin/native-fixture.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/keyring.rs](../xtask/src/keyring.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [xtask/src/keyring/accounts.rs](../xtask/src/keyring/accounts.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/main.rs](../xtask/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/storage.rs](../xtask/src/storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [xtask/src/ui.rs](../xtask/src/ui.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -1067,11 +1069,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/Cargo.toml:18](../xtask/Cargo.toml#L18) | <code>[target.'cfg(windows)'.dependencies]</code> |
 | [xtask/Cargo.toml:19](../xtask/Cargo.toml#L19) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }</code> |
 | [xtask/Cargo.toml:21](../xtask/Cargo.toml#L21) | <code>[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]</code> |
-| [xtask/Cargo.toml:22](../xtask/Cargo.toml#L22) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
-| [xtask/Cargo.toml:24](../xtask/Cargo.toml#L24) | <code>[target.'cfg(target_os = "linux")'.dependencies]</code> |
-| [xtask/Cargo.toml:27](../xtask/Cargo.toml#L27) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
-| [xtask/Cargo.toml:29](../xtask/Cargo.toml#L29) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSStatusItem", "NSStatusBarButton", "NSView", "NSWindow"] }</code> |
-| [xtask/Cargo.toml:30](../xtask/Cargo.toml#L30) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "block2", "NSDate", "NSRunLoop", "NSTimer"] }</code> |
+| [xtask/Cargo.toml:23](../xtask/Cargo.toml#L23) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
+| [xtask/Cargo.toml:25](../xtask/Cargo.toml#L25) | <code>[target.'cfg(target_os = "linux")'.dependencies]</code> |
+| [xtask/Cargo.toml:28](../xtask/Cargo.toml#L28) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
+| [xtask/Cargo.toml:30](../xtask/Cargo.toml#L30) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSStatusItem", "NSStatusBarButton", "NSView", "NSWindow"] }</code> |
+| [xtask/Cargo.toml:31](../xtask/Cargo.toml#L31) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "block2", "NSDate", "NSRunLoop", "NSTimer"] }</code> |
 | [xtask/src/bin/native-fixture.rs:1](../xtask/src/bin/native-fixture.rs#L1) | <code>use std::{</code> |
 | [xtask/src/bin/native-fixture.rs:9](../xtask/src/bin/native-fixture.rs#L9) | <code>mod windows;</code> |
 | [xtask/src/bin/native-fixture.rs:13](../xtask/src/bin/native-fixture.rs#L13) | <code>mod keyring_windows;</code> |
@@ -1080,22 +1082,33 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/bin/native-fixture.rs:64](../xtask/src/bin/native-fixture.rs#L64) | <code>use std::os::windows::process::CommandExt;</code> |
 | [xtask/src/bin/native-fixture.rs:81](../xtask/src/bin/native-fixture.rs#L81) | <code>use std::fs;</code> |
 | [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
-| [xtask/src/keyring.rs:2](../xtask/src/keyring.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
-| [xtask/src/keyring.rs:7](../xtask/src/keyring.rs#L7) | <code>pub async fn test(locked: bool) -&gt; Result&lt;()&gt; {</code> |
-| [xtask/src/keyring.rs:188](../xtask/src/keyring.rs#L188) | <code>use zbus::{</code> |
-| [xtask/src/keyring.rs:275](../xtask/src/keyring.rs#L275) | <code>mod tests {</code> |
-| [xtask/src/keyring.rs:276](../xtask/src/keyring.rs#L276) | <code>use super::*;</code> |
-| [xtask/src/keyring.rs:278](../xtask/src/keyring.rs#L278) | <code>#[test]</code> |
+| [xtask/src/keyring.rs:3](../xtask/src/keyring.rs#L3) | <code>pub mod accounts;</code> |
+| [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>use atelier_app::infrastructure::{</code> |
+| [xtask/src/keyring.rs:9](../xtask/src/keyring.rs#L9) | <code>pub async fn test(locked: bool) -&gt; Result&lt;()&gt; {</code> |
+| [xtask/src/keyring.rs:190](../xtask/src/keyring.rs#L190) | <code>use zbus::{</code> |
+| [xtask/src/keyring.rs:277](../xtask/src/keyring.rs#L277) | <code>mod tests {</code> |
+| [xtask/src/keyring.rs:278](../xtask/src/keyring.rs#L278) | <code>use super::*;</code> |
+| [xtask/src/keyring.rs:280](../xtask/src/keyring.rs#L280) | <code>#[test]</code> |
+| [xtask/src/keyring/accounts.rs:1](../xtask/src/keyring/accounts.rs#L1) | <code>use super::{KeyringPlatform, Result, execute_fixture, execute_keyring, keyring_protect, session};</code> |
+| [xtask/src/keyring/accounts.rs:2](../xtask/src/keyring/accounts.rs#L2) | <code>use serde_json::{Value, json};</code> |
+| [xtask/src/keyring/accounts.rs:3](../xtask/src/keyring/accounts.rs#L3) | <code>use std::{fs, path::Path};</code> |
+| [xtask/src/keyring/accounts.rs:38](../xtask/src/keyring/accounts.rs#L38) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [xtask/src/keyring/accounts.rs:45](../xtask/src/keyring/accounts.rs#L45) | <code>pub async fn probe(directory: &amp;Path, phase: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [xtask/src/keyring/accounts.rs:136](../xtask/src/keyring/accounts.rs#L136) | <code>mod tests {</code> |
+| [xtask/src/keyring/accounts.rs:137](../xtask/src/keyring/accounts.rs#L137) | <code>use super::*;</code> |
+| [xtask/src/keyring/accounts.rs:139](../xtask/src/keyring/accounts.rs#L139) | <code>#[test]</code> |
+| [xtask/src/keyring/accounts.rs:151](../xtask/src/keyring/accounts.rs#L151) | <code>#[test]</code> |
+| [xtask/src/keyring/accounts.rs:153](../xtask/src/keyring/accounts.rs#L153) | <code>use std::os::unix::fs::PermissionsExt;</code> |
 | [xtask/src/main.rs:1](../xtask/src/main.rs#L1) | <code>use atelier_app::Result;</code> |
 | [xtask/src/main.rs:2](../xtask/src/main.rs#L2) | <code>use std::{</code> |
 | [xtask/src/main.rs:7](../xtask/src/main.rs#L7) | <code>mod keyring;</code> |
 | [xtask/src/main.rs:8](../xtask/src/main.rs#L8) | <code>mod storage;</code> |
 | [xtask/src/main.rs:9](../xtask/src/main.rs#L9) | <code>mod ui;</code> |
 | [xtask/src/main.rs:23](../xtask/src/main.rs#L23) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:115](../xtask/src/main.rs#L115) | <code>mod tests {</code> |
-| [xtask/src/main.rs:116](../xtask/src/main.rs#L116) | <code>use super::*;</code> |
-| [xtask/src/main.rs:117](../xtask/src/main.rs#L117) | <code>#[test]</code> |
-| [xtask/src/main.rs:154](../xtask/src/main.rs#L154) | <code>#[test]</code> |
+| [xtask/src/main.rs:116](../xtask/src/main.rs#L116) | <code>mod tests {</code> |
+| [xtask/src/main.rs:117](../xtask/src/main.rs#L117) | <code>use super::*;</code> |
+| [xtask/src/main.rs:118](../xtask/src/main.rs#L118) | <code>#[test]</code> |
+| [xtask/src/main.rs:155](../xtask/src/main.rs#L155) | <code>#[test]</code> |
 | [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, node_executable, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use atelier_core::document::{Document, JsonString};</code> |
@@ -1573,9 +1586,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/rust.yml:66](../.github/workflows/rust.yml#L66) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
 | [.github/workflows/rust.yml:67](../.github/workflows/rust.yml#L67) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
 | [.github/workflows/rust.yml:73](../.github/workflows/rust.yml#L73) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:147](../.github/workflows/rust.yml#L147) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:162](../.github/workflows/rust.yml#L162) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:163](../.github/workflows/rust.yml#L163) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:152](../.github/workflows/rust.yml#L152) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:167](../.github/workflows/rust.yml#L167) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:168](../.github/workflows/rust.yml#L168) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -1740,6 +1753,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [scripts/package.mjs:16](../scripts/package.mjs#L16) | <code>const runtimeLicense = process.env.NODE_LICENSE \|\| join(dirname(process.execPath), 'LICENSE');</code> |
 | [scripts/package.mjs:27](../scripts/package.mjs#L27) | <code>const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');</code> |
 | [scripts/package.mjs:34](../scripts/package.mjs#L34) | <code>execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });</code> |
+| [scripts/rust-keyring-accounts.sh:5](../scripts/rust-keyring-accounts.sh#L5) | <code>[[ ${GITHUB_ACTIONS:-} == true &amp;&amp; ${ATELIER_TEST_DISPOSABLE_KEYRING:-} == 1 &amp;&amp; $(uname -s) == Linux ]] \|\| exit 2</code> |
+| [scripts/rust-keyring-accounts.sh:7](../scripts/rust-keyring-accounts.sh#L7) | <code>if [[ $# == 3 &amp;&amp; ($1 == first \|\| $1 == other) ]]; then</code> |
+| [scripts/rust-keyring-accounts.sh:8](../scripts/rust-keyring-accounts.sh#L8) | <code>phase=$1</code> |
+| [scripts/rust-keyring-accounts.sh:9](../scripts/rust-keyring-accounts.sh#L9) | <code>probe_root=$2</code> |
+| [scripts/rust-keyring-accounts.sh:10](../scripts/rust-keyring-accounts.sh#L10) | <code>probe_user=$3</code> |
+| [scripts/rust-keyring-accounts.sh:17](../scripts/rust-keyring-accounts.sh#L17) | <code>mkdir -p "$XDG_DATA_HOME" "$XDG_RUNTIME_DIR"</code> |
+| [scripts/rust-keyring-accounts.sh:51](../scripts/rust-keyring-accounts.sh#L51) | <code>[[ $# == 0 ]] \|\| exit 2</code> |
 | [scripts/rust-migration-baseline.mjs:124](../scripts/rust-migration-baseline.mjs#L124) | <code>const args = process.argv.slice(2);</code> |
 | [scripts/rust-migration-baseline.mjs:125](../scripts/rust-migration-baseline.mjs#L125) | <code>assert.ok(args.length === 0 \|\| args.length === 2 &amp;&amp; args[0] === '--browser', 'Usage : rust-migration-baseline.mjs [--browser chemin-exécutable]');</code> |
 | [scripts/rust-migration-baseline.mjs:135](../scripts/rust-migration-baseline.mjs#L135) | <code>child = fork(here, ['--serve'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: Object.fromEntries(Object.entries(process.env).filter(([key]) =&gt; /^(path\|systemroot\|windir\|temp\|tmp)$/i.test(key))) });</code> |
@@ -1755,22 +1775,24 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:489](../server.mjs#L489) | <code>app.server.listen(Number(process.env.PORT \|\| 4317), '127.0.0.1', () =&gt; {</code> |
 | [xtask/src/bin/native-fixture.rs:29](../xtask/src/bin/native-fixture.rs#L29) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/bin/native-fixture.rs:30](../xtask/src/bin/native-fixture.rs#L30) | <code>match args</code> |
-| [xtask/src/keyring.rs:26](../xtask/src/keyring.rs#L26) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
-| [xtask/src/keyring.rs:27](../xtask/src/keyring.rs#L27) | <code>execute_fixture(&amp;service, None, command, args, input).await</code> |
-| [xtask/src/keyring.rs:90](../xtask/src/keyring.rs#L90) | <code>args: &amp;[&amp;str],</code> |
-| [xtask/src/keyring.rs:94](../xtask/src/keyring.rs#L94) | <code>let mut args: Vec&lt;String&gt; = args</code> |
-| [xtask/src/keyring.rs:110](../xtask/src/keyring.rs#L110) | <code>args.push(keychain.into());</code> |
-| [xtask/src/keyring.rs:113](../xtask/src/keyring.rs#L113) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
-| [xtask/src/keyring.rs:114](../xtask/src/keyring.rs#L114) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
-| [xtask/src/keyring.rs:125](../xtask/src/keyring.rs#L125) | <code>let mut execute = async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| {</code> |
-| [xtask/src/keyring.rs:126](../xtask/src/keyring.rs#L126) | <code>execute_fixture(service, Some(keychain), command, args, input).await</code> |
+| [xtask/src/keyring.rs:28](../xtask/src/keyring.rs#L28) | <code>async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |
+| [xtask/src/keyring.rs:29](../xtask/src/keyring.rs#L29) | <code>execute_fixture(&amp;service, None, command, args, input).await</code> |
+| [xtask/src/keyring.rs:92](../xtask/src/keyring.rs#L92) | <code>args: &amp;[&amp;str],</code> |
+| [xtask/src/keyring.rs:96](../xtask/src/keyring.rs#L96) | <code>let mut args: Vec&lt;String&gt; = args</code> |
+| [xtask/src/keyring.rs:112](../xtask/src/keyring.rs#L112) | <code>args.push(keychain.into());</code> |
+| [xtask/src/keyring.rs:115](../xtask/src/keyring.rs#L115) | <code>let args: Vec&lt;&amp;str&gt; = args.iter().map(String::as_str).collect();</code> |
+| [xtask/src/keyring.rs:116](../xtask/src/keyring.rs#L116) | <code>execute_keyring(command, &amp;args, input.as_deref()).await</code> |
+| [xtask/src/keyring.rs:127](../xtask/src/keyring.rs#L127) | <code>let mut execute = async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| {</code> |
+| [xtask/src/keyring.rs:128](../xtask/src/keyring.rs#L128) | <code>execute_fixture(service, Some(keychain), command, args, input).await</code> |
+| [xtask/src/keyring/accounts.rs:79](../xtask/src/keyring/accounts.rs#L79) | <code>let mut execute = async \|command: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| {</code> |
+| [xtask/src/keyring/accounts.rs:80](../xtask/src/keyring/accounts.rs#L80) | <code>execute_fixture(&amp;service, None, command, args, input).await</code> |
 | [xtask/src/main.rs:79](../xtask/src/main.rs#L79) | <code>run(command("trunk").args([</code> |
 | [xtask/src/main.rs:98](../xtask/src/main.rs#L98) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/main.rs:99](../xtask/src/main.rs#L99) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
 | [xtask/src/main.rs:103](../xtask/src/main.rs#L103) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
 | [xtask/src/main.rs:104](../xtask/src/main.rs#L104) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))</code> |
-| [xtask/src/main.rs:108](../xtask/src/main.rs#L108) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:120](../xtask/src/main.rs#L120) | <code>.args([</code> |
+| [xtask/src/main.rs:109](../xtask/src/main.rs#L109) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:121](../xtask/src/main.rs#L121) | <code>.args([</code> |
 | [xtask/src/storage.rs:44](../xtask/src/storage.rs#L44) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
 | [xtask/src/storage.rs:69](../xtask/src/storage.rs#L69) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
 | [xtask/src/storage.rs:95](../xtask/src/storage.rs#L95) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
@@ -2842,7 +2864,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [server.mjs:385](../server.mjs#L385) | <code>return store.logs(logsMatch[1], after);</code> |
 | [server.mjs:407](../server.mjs#L407) | <code>assets['/local-session.mjs'] = ['local-session.mjs', 'text/javascript'];</code> |
 | [server.mjs:434](../server.mjs#L434) | <code>res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });</code> |
-| [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>token_vault::{KeyringPlatform, execute_keyring, keyring_protect},</code> |
+| [xtask/src/keyring.rs:6](../xtask/src/keyring.rs#L6) | <code>token_vault::{KeyringPlatform, execute_keyring, keyring_protect},</code> |
 | [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>token_vault::{self, KeyringPlatform},</code> |
 | [xtask/src/storage.rs:18](../xtask/src/storage.rs#L18) | <code>let page = store.logs("run-0", cursor)?;</code> |
 | [xtask/src/storage.rs:247](../xtask/src/storage.rs#L247) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
@@ -2852,4 +2874,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/storage.rs:334](../xtask/src/storage.rs#L334) | <code>token_vault::save(&amp;database, &amp;expected["tokens"]).await?;</code> |
 | [xtask/tests/keyring-execution.rs:1](../xtask/tests/keyring-execution.rs#L1) | <code>use atelier_app::infrastructure::token_vault::execute_keyring;</code> |
 
-Total : 337 fichiers ; 94 fichiers de tests Node.
+Total : 339 fichiers ; 94 fichiers de tests Node.

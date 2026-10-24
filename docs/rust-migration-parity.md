@@ -117,6 +117,8 @@ La copie des pièces jointes de l'import utilise désormais des dossiers ancrés
 
 La preuve Windows entre comptes est acquise dans le [job natif `2d7f86a`](https://github.com/FluryWaana/atelier/actions/runs/40046135735/job/120728179302), journal relu : contrôles positifs, identités distinctes et refus réciproque réussis. La même preuve POSIX reste ouverte.
 
+Les journaux natifs Linux x64/ARM64 de `7c729a0` confirment la résistance de la copie des pièces jointes au remplacement des chemins source/destination après ouverture. Un scénario distinct Linux entre comptes, à UID et bus D-Bus différents, est ajouté ; son résultat natif reste attendu. Le garde-fou local, les validations de métadonnées et le contrôle de types Linux ne valent pas preuve d'accès à deux coffres réels.
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

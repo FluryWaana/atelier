@@ -533,6 +533,13 @@ Prochaine action concrète :
 - **Vérification :** 47 tests Rust réussis, Clippy natif tous targets ; parité stockage/import/restauration Node/Rust réussie. Suite Node avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,633 s ; inventaire vérifié.
 - **Suite :** preuve POSIX du remplacement d'ancêtres en CI, isolation des coffres POSIX entre comptes, acquisition des racines/ouverture SQLite/publication finale et autres protections M02. Le prototype reste interdit aux données réelles.
 
+### Incrément M02 — scénario Linux entre comptes
+
+- **Livré :** probe à UID distincts, contrôles positifs et refus réciproque, deux bus/coffres privés sur comptes CI jetables ; nettoyage des seuls processus/comptes/fichiers créés et délai global.
+- **Vérification :** 48 tests Rust locaux réussis ; Clippy natif et contrôle de types/Clippy Linux tous targets réussis ; syntaxe Bash et refus hors CI vérifiés sous WSL sans provisionnement. Suite Node complète avec contrôle release : 426 tests, 423 réussis, aucun échec, trois exclusions, 80,955 s.
+- **Preuves recueillies :** copie ancrée `7c729a0` réussie sur Linux x64/ARM64, journaux des remplacements de chemins relus.
+- **Attendu :** scénario à deux comptes Linux en CI et preuve macOS correspondante ; autres protections M02 non closes.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

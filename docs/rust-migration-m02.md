@@ -26,6 +26,18 @@ Tests Windows : renommage source/destination refusé tant que leurs handles sont
 
 Vérification locale : 47 tests Rust réussis, Clippy natif tous targets sans diagnostic de code ; comparateur de stockage/import/restauration Node/Rust réussi (810 documents, 10 002 logs, WAL et UTF-16). Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 80,633 s. Inventaire régénéré et vérifié. Preuves POSIX de cet incrément attendues en CI.
 
+### Isolation Linux entre comptes — après `7c729a0`
+
+`cargo xtask test-keyring-account PHASE DIRECTORY` utilise les vrais UID (`geteuid`), un service synthétique aléatoire et les commandes de coffre de production. Chaque compte crée et relit sa clé ; le déchiffrement croisé doit échouer dans les deux directions et chaque chiffré original reste lisible par son propriétaire. L'identité est contrôlée avant tout accès au coffre : une deuxième exécution sous le même compte ne peut ni réussir ni effacer sa clé.
+
+Le script CI crée un seul compte temporaire, deux bus D-Bus et des dossiers XDG privés. Seuls chiffrés synthétiques, UID et nom du service sont partagés en lecture. Les daemons sont lancés au premier plan, leur PID est détenu et attendu au nettoyage ; le scénario entier est borné à 180 s, puis arrêt forcé après 5 s. Les secrets et le mot de passe ne sont pas passés en arguments. Le [mode premier plan GNOME](https://wiki.gnome.org/Projects/GnomeKeyring/RunningDaemon) permet de limiter le nettoyage aux processus créés par le test.
+
+Le script refuse tout contexte sans les deux marqueurs CI ; ce refus (code 2) et la syntaxe Bash ont été vérifiés sous WSL Ubuntu, sans création de compte ni lancement de coffre. Contrôle de types/Clippy ciblé Linux, y compris les tests, réussi avec le harnais isolé ; ce contrôle n'est pas une exécution native. Les tests Rust Windows de l'incrément passent (48 tests). Aucun nouveau paquet transitif : `libc`, déjà verrouillé, devient une dépendance explicite de `xtask` POSIX. Preuve native Linux x64/ARM64 encore attendue ; macOS entre comptes reste ouvert.
+
+La copie ancrée de `7c729a0` passe déjà les jobs Linux x64 et ARM64 : journaux relus pour `opened_directories_cannot_be_redirected_during_attachment_copy` et le refus des liens/résolutions internes. Ces résultats couvrent le remplacement des chemins source et destination après ouverture, sans étendre la preuve à SQLite ou à la publication finale.
+
+Suite Node de l'incrément Linux entre comptes, avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 80,955 s. Inventaire régénéré et vérifié.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

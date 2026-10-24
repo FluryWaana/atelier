@@ -96,6 +96,11 @@ jobs:
             cargo xtask test-keyring
             ATELIER_TEST_DISPOSABLE_KEYRING=1 cargo xtask test-keyring-lock
           '
+      - name: Native Linux keyring isolation between disposable accounts
+        if: runner.os == 'Linux'
+        run: bash scripts/rust-keyring-accounts.sh
+        env:
+          ATELIER_TEST_DISPOSABLE_KEYRING: '1'
       - name: Native macOS keyring with a unique synthetic service
         if: runner.os == 'macOS'
         run: cargo xtask test-keyring
