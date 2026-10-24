@@ -77,6 +77,6 @@ for (const scenario of cases) {
 }
 const path = new URL('./rust-time-reference.json', import.meta.url);
 const encoded = JSON.stringify(cases, null, 2) + '\n';
-if (process.argv.includes('--check')) assert.equal(readFileSync(path, 'utf8'), encoded);
+if (process.argv.includes('--check')) assert.deepEqual(JSON.parse(readFileSync(path, 'utf8')), JSON.parse(encoded), 'Les transitions de temps Node ont changé.');
 else writeFileSync(path, encoded);
 console.log(`${cases.reduce((sum, scenario) => sum + scenario.steps.length, 0)} transitions de temps historiques vérifiées.`);

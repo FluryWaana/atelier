@@ -40,6 +40,10 @@ Sources confrontées : `lib/application/time-tracking.mjs`, `lib/time-tracking.m
 
 Contrôles Windows : 60 tests Rust réussis ; Clippy natif et WASM ; 305 contrats de domaine, 46 transitions de temps et comparateur stockage/import/restauration réussis. Parcours Edge avec WASM/CSP, redémarrage du processus, relecture et rotation de session réussi. Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 427 tests, 424 réussis, zéro échec, trois exclusions, 81,145 s. Le test de réouverture historique a été adapté à l'ajout de `times: []`, sans supprimer ses vérifications de cartes. L'exécution native du nouvel incrément reste attendue en CI.
 
+### Correction de comparaison Windows — après `07691c8`
+
+Le [job Windows de `6529ea2`](https://github.com/FluryWaana/atelier/actions/runs/40051922174/job/120746252539) passe les tests Rust, puis échoue au comparateur Node : assertion textuelle CRLF contre LF après checkout Git. Le comparateur vérifie désormais les valeurs JSON des deux côtés, en conservant les chaînes et tableaux ; les attentes métier n'ont pas été régénérées. Contrôles locaux : les 46 transitions passent avec le fichier réellement converti temporairement en CRLF, puis avec ses octets originaux restaurés ; aucun diff du JSON de référence. Revalidation Windows en CI attendue.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

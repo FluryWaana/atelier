@@ -602,6 +602,11 @@ Prochaine action concrète :
 - **Preuves recueillies :** chronomètres `6529ea2` sur Linux x64/ARM64 et macOS ARM64, journaux des 46 transitions et scénarios HTTP/rollback relus.
 - **Suite :** nouvelles branches POSIX en CI, résultats Windows/macOS Intel des chronomètres, autres protections/intégrations M02 et cas d'usage M03. L'ouverture SQLite par chemin reste une limite explicite.
 
+### Correction CI — fins de ligne de la référence de temps
+
+- Le job Windows `6529ea2` passe Rust mais échoue au comparateur textuel CRLF/LF. Comparaison des valeurs JSON à la place du texte ; attentes métier inchangées.
+- Les 46 transitions sont vérifiées localement en CRLF et LF, octets originaux restaurés sans diff. Nouvelle preuve Windows attendue ; l'incrément d'archivage/suppression en travail n'est pas inclus dans cette correction.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.
