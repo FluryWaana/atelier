@@ -4,6 +4,8 @@
 
 # Atelier Kanban
 
+> **Rust rebuild in progress.** This branch is being rebuilt with the same capabilities and no backward compatibility requirement. No version is currently in production. Follow the [active plan](docs/rust-migration-plan.md) and [feature checklist](docs/rust-rebuild-features.md). The instructions below currently describe the Node reference application; they are not a claim that the Rust replacement is complete.
+
 [![Release](https://img.shields.io/github/v/release/FluryWaana/atelier?label=release)](https://github.com/FluryWaana/atelier/releases/latest)
 [![Build](https://github.com/FluryWaana/atelier/actions/workflows/release.yml/badge.svg?branch=main&event=push)](https://github.com/FluryWaana/atelier/actions/workflows/release.yml?query=branch%3Amain)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A5%2024-339933?logo=nodedotjs&logoColor=white)](package.json)

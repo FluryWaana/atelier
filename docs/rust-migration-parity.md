@@ -1,5 +1,7 @@
 # Matrice de parité de la migration Rust
 
+> **Historique depuis le 24 octobre 2026.** Le propriétaire a remplacé l'exigence de rétrocompatibilité par une reconstruction Rust aux mêmes fonctionnalités. Cette matrice conserve les preuves et contrats de l'ancien programme ; elle ne constitue plus la checklist de livraison. Suivre le [plan actif](rust-migration-plan.md) et la [couverture fonctionnelle](rust-rebuild-features.md).
+
 Référence : `843d3ea`, Atelier `0.1.9`, Node `24.22.1`, données version 2. Inventaire établi le 23 octobre 2026. Les ajouts M00 ne modifient pas le comportement applicatif. Le plan était non suivi au début de M00 ; aucune autre modification utilisateur n'était présente.
 
 ## Lecture et statut

@@ -1,4 +1,4 @@
-name: Rust migration
+name: Rust rebuild
 on:
   push:
     branches: [main, 'codex/rust-migration-*']
@@ -34,33 +34,6 @@ jobs:
       - run: cargo test --workspace --exclude atelier-ui --locked
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .node-version
-      - name: Compare historical Node data, vault and shared lock
-        run: cargo xtask test-storage-parity
-        env:
-          ATELIER_NODE: node
-      - name: Compare historical Node domain contracts
-        run: cargo xtask test-domain-parity
-        env:
-          ATELIER_NODE: node
-      - name: Compare historical Node timer transitions
-        run: cargo xtask test-time-parity
-        env:
-          ATELIER_NODE: node
-      - name: Compare historical Node task creation
-        run: cargo xtask test-task-creation-parity
-        env:
-          ATELIER_NODE: node
-      - name: Compare historical Node task editing
-        run: cargo xtask test-task-editing-parity
-        env:
-          ATELIER_NODE: node
-      - name: Compare historical Node project lifecycle
-        run: cargo xtask test-project-lifecycle-parity
-        env:
-          ATELIER_NODE: node
       - name: Native DPAPI isolation between disposable Windows accounts
         if: runner.os == 'Windows'
         shell: pwsh
@@ -158,27 +131,6 @@ jobs:
       - name: Native macOS tray on the main AppKit loop
         if: runner.os == 'macOS'
         run: cargo xtask test-tray
-  node:
-    name: Node contracts (Windows)
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .node-version
-      - run: npm run check:release
-      - run: node scripts/rust-migration-inventory.mjs --check
-      - name: Build a temporary portable package for rollback tests
-        run: npm run package
-        env:
-          NODE_LICENSE: runtime/LICENSE
-      - name: Run the full historical Node suite including packaged rollback
-        run: node --test --test-concurrency=1 test/*.test.mjs
-        env:
-          ATELIER_REQUIRE_RELEASE: '1'
   browser:
     strategy:
       fail-fast: false
@@ -215,8 +167,6 @@ jobs:
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo xtask test-ui
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo xtask test-legacy-ui
       - name: Preserve synthetic Windows UI screenshots
         if: always() && runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

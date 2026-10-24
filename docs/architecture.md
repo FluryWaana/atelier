@@ -1,5 +1,7 @@
 # Architecture et évolution
 
+> Cette page décrit l'implémentation Node de référence. Depuis la décision du 24 octobre 2026, l'architecture cible et les règles de la reconstruction sans rétrocompatibilité figurent dans le [plan Rust actif](rust-migration-plan.md). Les descriptions ci-dessous aident à conserver les fonctionnalités ; elles ne figent pas les formats ni les API du nouveau produit.
+
 Atelier reste un monolithe local : un processus Node.js, SQLite, une interface web et les CLI du poste. Tâches, projets, réglages, exécution d’agents, workflows, synchronisation des tickets, suivi du temps et mises à jour séparent leurs cas d’usage des adaptateurs, sans dépendance npm supplémentaire à l’exécution.
 
 Les connecteurs sont décrits par le contrat versionné de `domain/connectors.mjs`, orchestrés par `application/connectors.mjs` et chargés depuis `connectors/*/index.mjs` par l’adaptateur `infrastructure/connector-loader.mjs`. Les modules fournis résident dans `lib/connectors/`. `public/views/settings.mjs` affiche les champs et onglets déclarés sans exécuter de code de module dans le navigateur. Le [guide de contribution](connectors.md) décrit le contrat public et l’exemple installé sans modification du cœur.
