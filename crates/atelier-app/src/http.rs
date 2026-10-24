@@ -30,6 +30,8 @@ mod events;
 mod files;
 mod mutations;
 mod projects;
+#[cfg(windows)]
+mod services;
 mod settings;
 mod task_creation;
 mod task_editing;
@@ -51,6 +53,8 @@ struct AppState {
     changed: tokio::sync::broadcast::Sender<()>,
     file_reads: tokio::sync::Semaphore,
     mutations: Arc<tokio::sync::RwLock<()>>,
+    #[cfg(windows)]
+    services: Arc<crate::infrastructure::dev_servers::DevServers>,
 }
 type Shared = Arc<AppState>;
 
@@ -127,9 +131,18 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         }
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
-        let exclusive = path.ends_with("/worktree") || path.ends_with("/worktree/remove");
+        let exclusive = path.ends_with("/worktree")
+            || path.ends_with("/worktree/remove")
+            || path.ends_with("/services/start")
+            || path.ends_with("/services/stop");
         let changed = state.changed.clone();
+        #[cfg(windows)]
+        let services = state.services.clone();
         mutations::run(state.mutations.clone(), exclusive, async move {
+            #[cfg(windows)]
+            if let Some(response) = services::guard(&services, request.uri().path()) {
+                return response;
+            }
             let response = next.run(request).await;
             if response.status().is_success() {
                 let _ = changed.send(());
@@ -328,6 +341,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .call(|store| store.transaction(atelier_core::application::time_tracking::initialize))
         .await?;
     let (shutdown, mut stopped) = watch::channel(false);
+    let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
         database,
         prototype_paths: [directory.path.clone(), original_directory],
@@ -337,10 +351,17 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         token,
         port: listener.local_addr()?.port(),
         shutdown,
-        changed: tokio::sync::broadcast::channel(16).0,
+        #[cfg(windows)]
+        services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
+        changed,
         file_reads: tokio::sync::Semaphore::new(2),
         mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
+    #[cfg(windows)]
+    let app = app
+        .route("/api/cards/{id}/services", get(services::get))
+        .route("/api/cards/{id}/services/start", post(services::start))
+        .route("/api/cards/{id}/services/stop", post(services::stop));
     let app = app
         .route("/api/health", get(health))
         .route("/api/events", get(events))
@@ -407,6 +428,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let _ = state.shutdown.send(true);
     let clock_result = clock.await;
     let _mutations = state.mutations.write().await;
+    #[cfg(windows)]
+    let services_result = state.services.close().await;
     let timers = state
         .database
         .call(|store| {
@@ -420,6 +443,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .await;
     state.database.close().await?;
     drop(directory);
+    #[cfg(windows)]
+    services_result?;
     clock_result??;
     timers?;
     result?;

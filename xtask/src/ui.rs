@@ -1102,7 +1102,7 @@ async fn files_scenario(
         .json()
         .await?;
     let project_id = project["id"].as_str().ok_or("Projet synthétique absent.")?;
-    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":"synthetic-front","backCommand":"synthetic-back"})).send().await?.error_for_status()?;
+    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":"echo synthetic-service-ready && ping -n 120 127.0.0.1 >nul","backCommand":"echo synthetic-service-ready && ping -n 120 127.0.0.1 >nul"})).send().await?.error_for_status()?;
     std::fs::write(repo.join("src/tracked.txt"), "modified synthetic file\n")?;
     let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
     std::fs::write(repo.join("new file é.txt"), text)?;
@@ -1248,6 +1248,39 @@ async fn files_scenario(
         return Err("Les services d’un même dépôt doivent partager le worktree.".into());
     }
     wait_dom(client, "return Array.from(document.querySelectorAll('.service-worktree')).filter(element=>!element.hidden).length === 2 && Array.from(document.querySelectorAll('.service-worktree [role=status]')).every(element=>element.textContent === 'Worktree prêt.');", vec![]).await?;
+    click(client, "#start-services").await?;
+    wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif') && Array.from(document.querySelectorAll('.service-log')).every(element=>element.textContent.includes('synthetic-service-ready'));", vec![]).await?;
+    for path in [
+        format!("{address}/api/cards/{}/worktree/remove", card.id),
+        format!("{address}/api/backups"),
+    ] {
+        if http
+            .post(path)
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&json!({"confirmed":true,"discardChanges":true}))
+            .send()
+            .await?
+            .status()
+            != reqwest::StatusCode::CONFLICT
+        {
+            return Err("Une opération destructive a accepté des services actifs.".into());
+        }
+    }
+    if http
+        .delete(format!("{address}/api/projects/{project_id}"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await?
+        .status()
+        != reqwest::StatusCode::CONFLICT
+    {
+        return Err("Un projet actif peut être retiré.".into());
+    }
+    click(client, "#stop-services").await?;
+    wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Arrêté') && document.querySelector('#start-services')?.disabled === false;", vec![]).await?;
     if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?
         != "synthetic shared dependency"
     {

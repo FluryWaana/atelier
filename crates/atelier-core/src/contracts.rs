@@ -1,6 +1,38 @@
 use crate::document::{Document, JsonString};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ServiceStatus {
+    Starting,
+    Running,
+    Stopping,
+    Stopped,
+    Failed,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceState {
+    pub id: String,
+    pub name: String,
+    pub directory: String,
+    pub status: ServiceStatus,
+    pub pid: Option<u32>,
+    pub port: Option<u16>,
+    pub exit_code: Option<i32>,
+    pub log: String,
+    pub error: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceSession {
+    pub card_id: String,
+    pub project_ids: Vec<String>,
+    pub services: Vec<ServiceState>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Card {
     pub id: String,

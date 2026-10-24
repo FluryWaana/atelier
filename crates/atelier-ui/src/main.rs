@@ -9,6 +9,7 @@ mod files;
 mod i18n;
 mod live;
 mod projects;
+mod services;
 mod settings;
 mod task_editor;
 mod worktree;

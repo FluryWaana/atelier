@@ -5,6 +5,8 @@ pub mod checked_file;
 pub mod data_lock;
 pub mod database;
 mod dependencies;
+#[cfg(windows)]
+pub mod dev_servers;
 mod directory_link;
 pub mod files;
 pub mod installation;
@@ -17,6 +19,7 @@ pub mod process_tree;
 pub mod projects;
 pub mod prototype;
 mod publish;
+pub mod service_launch;
 pub mod session;
 pub mod settings;
 pub mod store;

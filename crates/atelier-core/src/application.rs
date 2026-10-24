@@ -7,6 +7,7 @@ pub mod agent_providers;
 pub mod backups;
 pub mod card_lifecycle;
 pub mod projects;
+pub mod services;
 pub mod settings;
 pub mod task_creation;
 pub mod task_editing;

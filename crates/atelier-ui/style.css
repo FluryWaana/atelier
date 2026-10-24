@@ -74,7 +74,7 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; margin: 0; 
 .file-pages button { font-size: .75rem; padding: .4rem; }
 .file-preview { min-width: 0; }
 .file-preview h3 { font-size: .9rem; overflow-wrap: anywhere; margin-top: 0; }
-.file-preview pre { max-height: 25rem; overflow: auto; font-size: .78rem; padding: .7rem; background: #f3f6f4; border: 1px solid #dce5e0; border-radius: .5rem; }
+.file-preview pre, .service-log { max-height: 25rem; overflow: auto; font-size: .78rem; padding: .7rem; background: #f3f6f4; border: 1px solid #dce5e0; border-radius: .5rem; }
 @media (max-width: 650px) { .file-browser { grid-template-columns: 1fr; } .file-list { max-height: 12rem; } }
 .project-choice { text-align: left; min-width: 0; }
 .project-choice[aria-pressed=true] { background: #e4f3ee; border-color: #087f70; }
