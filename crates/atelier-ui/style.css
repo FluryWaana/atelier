@@ -41,5 +41,22 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; margin: 0; 
 .card-description { font-size: .82rem; color: #65766e; line-height: 1.5; margin: .6rem 0 0; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .card-description:empty { display: none; }
 .empty-column { color: #75857d; font-size: .82rem; text-align: center; padding: 2rem .5rem; }
+.card-open { text-align: left; padding: 0; border: 0; border-radius: .2rem; background: transparent; font: inherit; color: inherit; width: 100%; white-space: pre-wrap; }
+.card-open:hover { color: #087f70; text-decoration: underline; }
+.editor { width: min(680px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.5rem; border: 1px solid #c7d5ce; border-radius: 1rem; color: inherit; background: #fff; box-shadow: 0 20px 80px #163b2830; }
+.editor::backdrop { background: #18372b80; }
+.editor-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+.editor-heading h2 { margin: 0; font-size: 1.3rem; }
+.editor fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.editor fieldset label:not(:first-child) { margin-top: 1rem; }
+.editor textarea { resize: vertical; line-height: 1.5; }
+.field-help, .editor-actions span { color: #62716d; font-size: .82rem; }
+.editor-actions, .editor-secondary { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+.editor-secondary { padding-top: 1rem; border-top: 1px solid #dce5e0; }
+.danger { color: #a12132; }
+.confirmation { border: 1px solid #c69d62; background: #fff7e9; border-radius: .6rem; padding: 1rem; margin-top: 1rem; }
+.confirmation p { margin-top: 0; }
+.error { color: #a12132; white-space: pre-wrap; }
+.error:empty { display: none; }
 [hidden] { display: none !important; }
 @media (max-width: 650px) { .main-content { padding: 1.3rem .8rem; } .app-header { flex-direction: column; margin-bottom: 1.5rem; } .quick-create { flex-direction: column; align-items: stretch; } .quick-create > div { flex: auto; } .kanban { grid-template-columns: repeat(5, 255px); } .toolbar > div:nth-child(2) { flex: 1 1 13rem; } }

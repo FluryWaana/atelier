@@ -18,7 +18,6 @@ pub trait EditingContext: CreationContext {
 
 pub struct Edit {
     pub card: Card,
-    pub auto_start: bool,
     pub sync_status: bool,
     pub requirements_changed: bool,
 }
@@ -142,8 +141,6 @@ pub fn prepare(
     if busy {
         return Err(CardFailure::Conflict("Arrête l’agent avant de modifier cette carte.").into());
     }
-    let auto_start =
-        body.string_equals("status", "doing")? && !card.fields.string_equals("status", "doing")?;
     // Validate stored requirements before edits, as Node does before touching the card.
     requirements_changed(&card, &card)?;
     if card.fields.truthy("worktree")? {
@@ -266,22 +263,12 @@ pub fn prepare(
         }
         card.fields.set("mode", &raw)?;
     }
-    let sync_status = auto_start
-        || (body.raw("status").is_some()
-            && !same_scalar(body.raw("status"), original.fields.raw("status"))?);
-    if auto_start {
-        if let Some(status) = original.fields.raw("status") {
-            card.fields.set("status", &status)?;
-        } else {
-            card.fields.remove("status");
-        }
-    } else {
-        card.fields.set("updatedAt", &context.timestamp()?)?;
-    }
+    let sync_status = body.raw("status").is_some()
+        && !same_scalar(body.raw("status"), original.fields.raw("status"))?;
+    card.fields.set("updatedAt", &context.timestamp()?)?;
     let requirements_changed = requirements_changed(original, &card)?;
     Ok(Edit {
         card,
-        auto_start,
         sync_status,
         requirements_changed,
     })

@@ -304,21 +304,174 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-created.png"),
         client.screenshot().await?,
     )?;
-    let response = http
-        .post(format!("{address}/api/cards"))
-        .bearer_auth(&token)
-        .header("x-local-request", "1")
-        .header("content-type", "application/json")
-        .body(r#"{"title":"\ud83d"}"#)
-        .send()
+    let original_id = client
+        .execute(
+            "return document.querySelector('[data-status=todo] article.card').dataset.id;",
+            vec![],
+        )
         .await?;
-    if !response.status().is_success() {
-        return Err("Création UTF-16 refusée.".into());
+    client
+        .find(Locator::Css("[data-status=todo] .card-open"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.activeElement?.id === 'edit-title';", vec![]).await?;
+    let title = "Tâche modifiée é 🔧 <script>";
+    client
+        .find(Locator::Css("#edit-title"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#edit-title"))
+        .await?
+        .send_keys(title)
+        .await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .send_keys("Description enregistrée")
+        .await?;
+    client
+        .find(Locator::Css("#close-editor"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#confirm-editor')?.textContent.includes('Abandonner');",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#cancel-confirmation"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#edit-title')?.value === arguments[0];",
+        vec![json!(title)],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#save-task"))
+        .await?
+        .click()
+        .await?;
+    wait_title(client, title).await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=todo] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
+    client
+        .find(Locator::Css("[data-status=todo] .card-open"))
+        .await?
+        .click()
+        .await?;
+    // Exercise a real HTTP validation error and retain the draft, without changing server fixtures.
+    client.execute("const select=document.querySelector('#edit-status'); select.add(new Option('Invalide', 'invalid')); select.value='invalid'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#save-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#editor-error')?.textContent === 'Statut invalide.' && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
+    client.execute("const select=document.querySelector('#edit-status'); select.value='doing'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#save-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0];", vec![original_id.clone()]).await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if !board.runs.is_empty() {
+        return Err("Un déplacement manuel a lancé un agent.".into());
     }
-    let atypical: atelier_core::document::Document = response.json().await?;
-    let atypical_id = atypical
-        .get::<String>("id")?
-        .ok_or("Identifiant UTF-16 absent.")?;
+    client
+        .find(Locator::Css("[data-status=doing] .card-open"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#duplicate-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
+    let copy_id = client
+        .execute(
+            "return document.querySelector('[data-status=todo] article.card').dataset.id;",
+            vec![],
+        )
+        .await?;
+    let copy_selector = format!(
+        "article.card[data-id='{}'] .card-open",
+        copy_id.as_str().ok_or("Copie sans id")?
+    );
+    client
+        .find(Locator::Css(&copy_selector))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#archive-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
+    client
+        .find(Locator::Css("#show-archives"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css(&copy_selector))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return document.querySelector('#edit-title')?.disabled === true || document.querySelector('#edit-title')?.matches(':disabled') === true;", vec![]).await?;
+    client
+        .find(Locator::Css("#archive-task"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 1;", vec![]).await?;
+    client
+        .find(Locator::Css("#show-archives"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css(&copy_selector))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#delete-task"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#cancel-confirmation"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#delete-task"))
+        .await?
+        .click()
+        .await?;
+    client
+        .find(Locator::Css("#confirm-editor"))
+        .await?
+        .click()
+        .await?;
+    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
     stop_server(&mut server, port, &token).await?;
     let (mut restarted, next_token) = start_server(data.path(), port, &assets).await?;
     if session::same_secret(&token, &next_token) {
@@ -341,10 +494,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await
         .map_err(|_| "Navigation après redémarrage refusée.")?;
     wait_title(client, title).await?;
-    let units = client.execute("const card = Array.from(document.querySelectorAll('article.card')).find(node => node.dataset.id === arguments[0]); const title = card?.querySelector('.card-title').textContent; return title ? Array.from({length:title.length}, (_, i) => title.charCodeAt(i)) : [];", vec![json!(atypical_id)]).await?;
-    if units != json!([0xd83d]) {
-        return Err(format!("Le DOM a altéré le titre UTF-16 après redémarrage : {units}").into());
-    }
+    wait_dom(client, "return document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0] && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée' && !document.querySelector('.card-title script');", vec![original_id]).await?;
     if !client
         .find(Locator::Css("#error"))
         .await?

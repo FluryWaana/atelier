@@ -1740,12 +1740,22 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
     );
     assert_eq!(description.unwrap().status(), 200);
     assert_eq!(instructions.unwrap().status(), 200);
+    let moved = edit("local")
+        .json(&json!({"status":"doing"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(moved.status(), 200);
+    assert!(
+        moved
+            .json::<Card>()
+            .await
+            .unwrap()
+            .fields
+            .string_equals("status", "doing")
+            .unwrap()
+    );
     for (id, body, status) in [
-        (
-            "local",
-            json!({"status":"doing", "title":"Must not persist"}),
-            503,
-        ),
         (
             "ticket",
             json!({"status":"review", "instructions":"Must not persist"}),
@@ -1835,6 +1845,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
         .unwrap();
     let local = board.cards.iter().find(|card| card.id == "local").unwrap();
     assert_eq!(local.title, JsonString::from("Renamed"));
+    assert!(local.fields.string_equals("status", "doing").unwrap());
     assert!(
         local
             .fields

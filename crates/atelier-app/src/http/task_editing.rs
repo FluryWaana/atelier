@@ -29,7 +29,6 @@ pub(super) async fn update(
         let original = store.document::<Card>(Documents::Cards, &id)?.ok_or(CardFailure::Missing)?;
         // shortcut: M04/M06 must supply live activity before enabling agents and automation.
         let edit = task_editing::prepare(store, &original, &body, false)?;
-        if edit.auto_start { return Ok(Outcome::Unavailable("Le lancement d’agent n’est pas encore disponible dans le prototype Rust.")); }
         if edit.sync_status && edit.card.fields.truthy("ticket")? { return Ok(Outcome::Unavailable("La synchronisation du ticket n’est pas encore disponible dans le prototype Rust.")); }
         let mut card = edit.card;
         store.put(Documents::Cards, &card)?;

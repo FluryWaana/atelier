@@ -65,7 +65,7 @@ impl EditingContext for Context {
 }
 
 #[test]
-fn historical_task_edits_preserve_guards_fields_review_invalidation_and_effect_order() {
+fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
         "../../../test/fixtures/rust-task-editing-reference.json"
     ))
@@ -78,29 +78,20 @@ fn historical_task_edits_preserve_guards_fields_review_invalidation_and_effect_o
         };
         let mut saved = context.scenario.get::<Card>("card").unwrap().unwrap();
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
+        // The rebuild deliberately separates manual status changes from agent execution.
+        if body.string_equals("status", "doing").unwrap()
+            && !saved.fields.string_equals("status", "doing").unwrap()
+        {
+            continue;
+        }
         let result = (|| -> Result<Card> {
             if context.scenario.truthy("missing")? {
                 return Err(CardFailure::Missing.into());
             }
             let edit =
                 task_editing::prepare(&context, &saved, &body, context.scenario.truthy("busy")?)?;
-            if edit.auto_start {
-                let mut options = Document::default();
-                for key in ["agent", "mode", "instructions"] {
-                    if let Some(raw) = edit.card.fields.raw(key) {
-                        options.set(key, &raw)?;
-                    }
-                }
-                context.event(&("launch", &edit.card, &options));
-                if context.scenario.truthy("launchError")? {
-                    return Err("Synthetic launch failure".into());
-                }
-                saved = edit.card;
-                saved.fields.set("status", &"doing")?;
-            } else {
-                context.event(&("put", &edit.card));
-                saved = edit.card;
-            }
+            context.event(&("put", &edit.card));
+            saved = edit.card;
             if edit.requirements_changed {
                 context.event(&"invalidate");
             }
@@ -122,5 +113,33 @@ fn historical_task_edits_preserve_guards_fields_review_invalidation_and_effect_o
             json::equivalent(&actual, expected),
             "case {index}\nactual: {actual}\nexpected: {expected}"
         );
+    }
+}
+
+#[test]
+fn manual_status_changes_save_without_launching_an_agent() {
+    let card: Card = serde_json::from_str(
+        r#"{"id":"manual","title":"Task","status":"todo","agent":"codex","updatedAt":"before"}"#,
+    )
+    .unwrap();
+    let context = Context {
+        scenario: Document::default(),
+        events: RefCell::default(),
+    };
+    for status in ["todo", "doing", "review", "done", "standby"] {
+        context.events.borrow_mut().clear();
+        let body =
+            serde_json::from_value::<Document>(serde_json::json!({"status":status})).unwrap();
+        let edit = task_editing::prepare(&context, &card, &body, false).unwrap();
+        assert!(edit.card.fields.string_equals("status", status).unwrap());
+        assert!(edit.card.fields.string_equals("updatedAt", "now").unwrap());
+        assert_eq!(edit.sync_status, status != "todo");
+        assert!(!edit.requirements_changed);
+        assert_eq!(context.events.borrow().len(), 1);
+        assert_eq!(context.events.borrow()[0].get(), "\"timestamp\"");
+        assert!(task_editing::prepare(&context, &card, &body, true).is_err());
+        let mut archived = card.clone();
+        archived.fields.set("archived", &true).unwrap();
+        assert!(task_editing::prepare(&context, &archived, &body, false).is_err());
     }
 }

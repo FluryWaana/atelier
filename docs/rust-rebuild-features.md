@@ -8,7 +8,7 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 | --- | --- | --- | --- |
 | Projets multiples, configuration, héritage, dépôts Front/Back et projets liés | `lib/application/projects.mjs`, vues projets/réglages | CRUD et transactions présents ; contrat typé et écrans complets à livrer | R01/R02 |
 | Tableau, colonnes, filtres, recherche, navigation vers une tâche, archives | `public/views/board.mjs`, `task-workspace.mjs`, `lib/application/tasks.mjs` | Tableau WASM à cinq colonnes, recherche titre/description, filtres projet/archives et CSS autonome candidats ; navigation et parcours complets à livrer | R01 |
-| Création/édition/duplication/suppression des cartes, critères, dépendances/blocages et modèles | `lib/domain/`, `lib/application/tasks.mjs`, éditeur de tâche | Nombreux cas d'usage/tests réutilisables ; parcours complet et nouveaux contrats à qualifier | R01 |
+| Création/édition/duplication/suppression des cartes, critères, dépendances/blocages et modèles | `lib/domain/`, `lib/application/tasks.mjs`, éditeur de tâche | Éditeur WASM candidat : titre/description/instructions/statut, duplication, archives/restauration, suppression confirmée, brouillon conservé sur erreur ; critères/dépendances/modèles et concurrence restent à livrer | R01 |
 | Paramètres, modèles/efforts, profils et choix d'agent par projet/tâche | réglages, `agent-providers`, `default-agent` | Stockage chiffré et CRUD présents ; écran cohérent et diagnostics à livrer | R01/R03 |
 | Brainstorms, discussion, propositions et conversion en tâches | `brainstorm`, vues brainstorm | Création/session partielle ; conversation et conversion complètes à livrer | R05 |
 | Branches et worktrees dédiés, bases distantes, dépôts de services | `lib/worktrees.mjs`, `application/card-worktrees.mjs` | À reconstruire ; concurrence, branches existantes et suppressions confirmées à tester | R02 |
@@ -30,6 +30,9 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 | Anglais US et français France, clavier, focus, brouillons, états d'erreur et navigation rechargeable | `public/`, locales et tests UI | À livrer dans chaque écran ; tests navigateur et revue visuelle | Tous |
 
 ## Points de contrôle
+
+- R01, changement de contrat intentionnel : déplacer manuellement une carte vers « En cours » enregistre son statut sans lancer d'agent. Le lancement aura une action explicite en R03. Les anciens vecteurs d'autolancement sont remplacés par un test de toutes les transitions manuelles, avec refus si tâche occupée/archivée, et un parcours HTTP/navigateur vérifiant l'absence d'exécution. Les autres vecteurs de validation restent actifs. Le parcours navigateur conserve Unicode valide, échappement HTML, persistance et rotation de session ; la conservation d'unités UTF-16 isolées n'est plus un contrat de l'interface reconstruite.
+- Candidat R01 : le parcours Edge couvre cinq colonnes, recherche dans les descriptions, filtre projet/archives, édition dans une colonne et changement de colonne, confirmation de fermeture du brouillon, erreur serveur sans perte de saisie, duplication, archivage/restauration et suppression avec annulation. Résultats distants à recueillir avant validation. Les brouillons affichent un avertissement à la fermeture/recharge ; ils ne survivent pas encore à une fermeture forcée du navigateur.
 
 - Toute fonction retrouvée dans les sources ou l'interface doit être rattachée à une ligne ; compléter ce tableau si nécessaire. L'absence dans ce premier regroupement n'autorise pas sa suppression.
 - Consigner pour chaque ligne achevée le commit, les scénarios exécutés, la CI et les limites restantes. Un test de domaine seul ne valide pas son écran ou son adaptateur natif.

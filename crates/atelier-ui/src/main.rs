@@ -1,19 +1,56 @@
 use atelier_core::contracts::{Board, Card};
-use gloo_net::http::Request;
+use gloo_net::http::{Method, Request, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
-#[component]
-fn CardTitle(title: atelier_core::document::JsonString) -> impl IntoView {
-    let heading = NodeRef::<leptos::html::H2>::new();
-    heading.on_load(move |node| {
-        // Keep UTF-16 intact at the DOM boundary; Rust String would replace isolated surrogates.
-        let text = js_sys::JsString::from_char_code(&title.0);
-        if !js_sys::Reflect::set(node.as_ref(), &"textContent".into(), &text).unwrap_or(false) {
-            node.set_text_content(Some("Titre illisible."));
+mod task_editor;
+use task_editor::TaskEditor;
+
+const STATUSES: [(&str, &str); 5] = [
+    ("todo", "À faire"),
+    ("doing", "En cours"),
+    ("review", "À vérifier"),
+    ("done", "Terminé"),
+    ("standby", "En attente"),
+];
+
+async fn write(
+    token: &str,
+    method: Method,
+    path: &str,
+    body: &serde_json::Value,
+) -> Result<Response, String> {
+    let response = Request::new(path)
+        .method(method)
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("X-Local-Request", "1")
+        .json(body)
+        .map_err(|_| "Requête invalide.")?
+        .send()
+        .await
+        .map_err(|_| "Connexion interrompue. Vérifie l’état avant de réessayer.")?;
+    if !response.ok() {
+        let body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|_| "Réponse du serveur invalide.")?;
+        return Err(body
+            .get("error")
+            .and_then(|value| value.as_str())
+            .unwrap_or("Opération refusée.")
+            .to_owned());
+    }
+    Ok(response)
+}
+
+fn replace_card(cards: RwSignal<Vec<Card>>, card: Card) {
+    cards.update(|cards| {
+        if let Some(existing) = cards.iter_mut().find(|existing| existing.id == card.id) {
+            *existing = card;
+        } else {
+            cards.push(card);
         }
     });
-    view! { <h2 class="card-title" node_ref=heading></h2> }
 }
 
 fn session() -> Result<String, String> {
@@ -94,8 +131,9 @@ fn App() -> impl IntoView {
     let title = RwSignal::new(String::new());
     let error = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
-    let token = session();
-    match &token {
+    let selected = RwSignal::new(None::<Card>);
+    let token = StoredValue::new(session());
+    match token.get_value() {
         Ok(token) => {
             let token = token.clone();
             spawn_local(async move {
@@ -146,7 +184,7 @@ fn App() -> impl IntoView {
             <form class="quick-create" on:submit=move |event| {
                 event.prevent_default();
                 if pending.get_untracked() { return; }
-                let Ok(token) = token.clone() else { return; };
+                let Ok(token) = token.get_value() else { return; };
                 let entered = title.get_untracked();
                 let repo = repository.get_untracked();
                 pending.set(true); error.set(String::new());
@@ -154,14 +192,9 @@ fn App() -> impl IntoView {
                     let operation = async {
                         let mut body = serde_json::json!({"title":entered});
                         if !repo.is_empty() { body["repo"] = serde_json::json!(repo); }
-                        let response = Request::post("/api/cards").header("Authorization", &format!("Bearer {token}")).header("X-Local-Request", "1")
-                            .json(&body).map_err(|_| "Requête invalide.".to_owned())?.send().await.map_err(|_| "Connexion interrompue.".to_owned())?;
-                        if !response.ok() {
-                            let body: serde_json::Value = response.json().await.map_err(|_| "Réponse invalide.".to_owned())?;
-                            return Err(body.get("error").and_then(|value| value.as_str()).unwrap_or("Création refusée.").to_owned());
-                        }
-                        let values = load(&token).await?;
-                        cards.set(values.cards); projects.set(values.projects); title.set(String::new()); archives.set(false); Ok(())
+                        let response = write(&token, Method::POST, "/api/cards", &body).await?;
+                        let card: Card = response.json().await.map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        replace_card(cards, card); title.set(String::new()); archives.set(false); Ok::<(), String>(())
                     }.await;
                     if let Err(message) = operation { error.set(message); }
                     pending.set(false);
@@ -173,14 +206,16 @@ fn App() -> impl IntoView {
             <p role="alert" id="error">{move || error.get()}</p>
             <p class="loading" role="status" hidden=move || !loading.get()>"Chargement du tableau…"</p>
             <section aria-label="Tableau des tâches" id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
-                <For each=|| vec![("todo", "À faire"), ("doing", "En cours"), ("review", "À vérifier"), ("done", "Terminé"), ("standby", "En attente")] key=|(status, _)| *status children=move |(status, label)| {
+                <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
                     let column = move || visible().into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
-                    view! { <section class="kanban-column" data-status=status aria-label=label><header class="column-heading"><h2>{label}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=|card| {
-                        let description = field(&card.fields, "description");
-                        view! { <article class="card" data-id=card.id><CardTitle title=card.title /><p class="card-description">{description}</p></article> }
+                    view! { <section class="kanban-column" data-status=status aria-label=label><header class="column-heading"><h2>{label}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=move |card| {
+                        let id = StoredValue::new(card.id);
+                        let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
+                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" on:click=move |_| selected.set(current())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>"Aucune tâche"</p></div></section> }
                 } />
             </section>
+            {move || selected.get().map(|card| view! { <TaskEditor card cards token on_close=Callback::new(move |()| selected.set(None)) /> })}
         </main>
     }
 }
