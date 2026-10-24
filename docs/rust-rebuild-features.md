@@ -31,6 +31,8 @@ Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et s
 
 ## Points de contrôle
 
+- [`4c70a26`, parcours Edge complet réussi](https://github.com/FluryWaana/atelier/actions/runs/40124371275), journal relu et captures tableau/éditeur/projets inspectées : critères et dépendances persistés, refus de supprimer un prérequis, conflit concurrent sans perte du brouillon puis relecture, modèles créés/utilisés/retirés, Échap et retour du focus, cartes/projets, redémarrage et session passent. Les formulaires longs défilent ; leur en-tête devient fixe dans l'incrément suivant afin de garder « Fermer » accessible. Cela ne qualifie ni les autres navigateurs, ni les OS différés, ni R01 dans son ensemble.
+
 - [`411ffb9`, contrôles natifs Windows réussis](https://github.com/FluryWaana/atelier/actions/runs/40123784385), journal relu : nouveau format/réouverture/refus sans écriture, refus de restauration et de transfert incompatibles, transfert WAL, renommage, statuts manuels et éditions HTTP concurrentes passent. Clippy natif/WASM et DPAPI entre comptes réussissent également. Le parcours Edge compile mais s'arrête sur un clic intercepté au bord du dialogue défilant ; le test centre désormais les contrôles avant un vrai clic WebDriver. Critères, modèles et conflits dans le navigateur attendent donc encore leur preuve de bout en bout.
 
 - Modèles candidats : création depuis une tâche enregistrée, utilisation à la création, retrait confirmé sans supprimer les tâches. Parcours navigateur préparé pour description/critères hérités, validation humaine remise à zéro et absence de dépendances copiées.

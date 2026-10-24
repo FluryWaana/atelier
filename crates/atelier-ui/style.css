@@ -1,6 +1,7 @@
 :root { color-scheme: light; font-family: Inter, "Segoe UI", system-ui, sans-serif; color: #20302f; background: #f4f6f5; font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; }
+body:has(dialog[open]) { overflow: hidden; }
 button, input, select, textarea { font: inherit; }
 button, input, select, textarea { border: 1px solid #b9c7c3; border-radius: .55rem; }
 button { cursor: pointer; padding: .7rem 1rem; font-weight: 600; background: #fff; color: inherit; }
@@ -43,9 +44,9 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; margin: 0; 
 .empty-column { color: #75857d; font-size: .82rem; text-align: center; padding: 2rem .5rem; }
 .card-open { text-align: left; padding: 0; border: 0; border-radius: .2rem; background: transparent; font: inherit; color: inherit; width: 100%; white-space: pre-wrap; }
 .card-open:hover { color: #087f70; text-decoration: underline; }
-.editor { width: min(680px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.5rem; border: 1px solid #c7d5ce; border-radius: 1rem; color: inherit; background: #fff; box-shadow: 0 20px 80px #163b2830; }
+.editor { width: min(680px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.5rem; border: 1px solid #c7d5ce; border-radius: 1rem; color: inherit; background: #fff; box-shadow: 0 20px 80px #163b2830; overscroll-behavior: contain; }
 .editor::backdrop { background: #18372b80; }
-.editor-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+.editor-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; position: sticky; top: -1.5rem; padding: .5rem 0 1rem; z-index: 1; background: #fff; }
 .editor-heading h2 { margin: 0; font-size: 1.3rem; }
 .editor fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .editor fieldset label:not(:first-child) { margin-top: 1rem; }

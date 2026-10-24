@@ -25,7 +25,7 @@ Restent requis : persistance fiable, sauvegarde/restauration de la nouvelle appl
 
 Le workspace, l'outillage verrouillé et les protections déjà présentes sont réutilisés. Pas de nouvelle couche générique sans appelant concret. Les modèles ouverts du prototype sont remplacés lorsqu'un parcours est reconstruit ; conserver tout son moteur de compatibilité n'est pas un objectif.
 
-La nouvelle base porte l'identité SQLite `0x41544b52` (`ATKR`) et la version de format `1`. L'application refuse une base ancienne/inconnue ou une version non prise en charge avec un diagnostic clair ; elle ne l'efface ni ne la migre implicitement. L'initialisation marque uniquement un fichier réellement vide, dans une transaction. Le même contrôle s'applique aux sauvegardes et transferts portables Rust. Cette implémentation reste candidate jusqu'à validation CI. Les développements utilisent exclusivement des répertoires synthétiques séparés de `data/`.
+La nouvelle base porte l'identité SQLite `0x41544b52` (`ATKR`) et la version de format `1`. L'application refuse une base ancienne/inconnue ou une version non prise en charge avec un diagnostic clair ; elle ne l'efface ni ne la migre implicitement. L'initialisation marque uniquement un fichier réellement vide, dans une transaction. Le même contrôle s'applique aux sauvegardes et transferts portables Rust. Ces contrôles passent sous Windows à `411ffb9`, journaux relus ; la qualification POSIX reste différée. Les développements utilisent exclusivement des répertoires synthétiques séparés de `data/`.
 
 SQLite garde une file d'accès bornée et des transactions courtes. Une opération externe réserve son état, libère la transaction, effectue l'I/O puis revalide avant commit. Les jetons ne sont jamais exposés dans les réponses ou journaux ; l'absence de coffre natif ne déclenche pas un stockage en clair. Les programmes enfants ont des flux et délais bornés et un propriétaire chargé de leur arrêt.
 
@@ -36,7 +36,7 @@ L'extensibilité conserve les capacités actuelles (tickets, dépôts, temps, di
 | Lot | Résultat attendu | Preuve de sortie | État |
 | --- | --- | --- | --- |
 | R00 | Périmètre corrigé, archive Git, suivi fonctionnel, CI adaptée | Instructions cohérentes, aucun effacement de données, derniers échecs explicités | Validé à `28629e4` |
-| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | En cours : tableau et filtres candidats |
+| R01 | Application autonome : nouvelle base, session, projets, tableau, cartes, modèles, paramètres et navigation | Parcours navigateur complets, redémarrage, concurrence et rollback, erreurs utilisables | En cours : base Rust qualifiée sous Windows, parcours cartes/projets/modèles Edge à `4c70a26` ; réglages, navigation et traductions restent à compléter |
 | R02 | Espace de travail : Git/worktrees, contexte, fichiers/diffs et serveurs Front/Back | Dépôts synthétiques, confirmation des suppressions, sorties de dossier refusées, processus nettoyés | À faire ; scanner/ports/processus Windows candidats |
 | R03 | Profils, diagnostics, exécution et interactions Codex/Claude/commandes personnalisées | Faux agents compilés, flux importants, arrêt, erreur, reprise, secrets masqués ; aucun appel payant | À faire |
 | R04 | Tickets, dépôts, PR, synchronisation et connecteurs intégrés/extensibles | Serveurs HTTP de test, pagination, authentification, erreurs, délais et contrats d'extension | À faire |
