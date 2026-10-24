@@ -80,6 +80,14 @@ Le nouveau scénario garde le parent ouvert, remplace son chemin sous POSIX (ren
 
 Preuves `5332203` recueillies : les journaux Linux x64/ARM64 et macOS ARM64 confirment publication sans écrasement et catalogue/création/restauration après remplacement d'ancêtre. Le [job macOS ARM64](https://github.com/FluryWaana/atelier/actions/runs/40049206403/job/120737819055) valide désormais aussi les UID distincts, les refus croisés de coffres et la relecture finale du second propriétaire avant suppression. macOS Intel reste attendu à ce relevé.
 
+### Vérification de la source SQLite — après `a457449`
+
+La base choisie est ouverte relativement au dossier source avant la copie. Le chemin transmis à SQLite doit encore désigner cette identité ; les descripteurs de contrôle restent ouverts jusqu'à la fermeture SQLite, y compris sur erreur. `SQLITE_OPEN_NOFOLLOW` refuse aussi les liens détectés par le VFS : [contrat SQLite](https://www.sqlite.org/c3ref/open.html), confronté à `unixFullPathname` de la source SQLite embarquée. Un scénario refuse une autre base, un ancêtre remplacé et un alias vers le bon inode, sans destination partielle. Ces vérifications ne constituent pas un ancrage atomique de l'ouverture SQLite : les courses restantes restent explicitement ouvertes.
+
+Vérification Windows : 55 tests Rust, Clippy natif tous targets et comparateur stockage/import/restauration réussis. Suite Node complète avec contrôle release : 426 tests, 423 réussis, aucun échec, trois exclusions, 80,031 s. Exécution des nouveaux refus POSIX attendue en CI.
+
+La CI `5332203` est entièrement réussie. Le [journal macOS Intel](https://github.com/FluryWaana/atelier/actions/runs/40049206403/job/120737819021) confirme sauvegardes/publication ancrées, UID distincts, refus croisés et relecture finale du second propriétaire. Les preuves entre comptes sont ainsi recueillies sur Windows et les quatre cibles POSIX. Le [job macOS ARM64 de `a457449`](https://github.com/FluryWaana/atelier/actions/runs/40049712636/job/120739447280) confirme aussi le staging/publication d'import après remplacement du parent ; les autres journaux de cet incrément restent à recueillir.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

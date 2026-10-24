@@ -161,6 +161,8 @@ Le relevé final des commandes, résultats et mesures est dans [rust-migration-b
 
 La collecte des sélecteurs/imports est une aide mécanique, vérifiée par test, mais pas un parseur JavaScript ni une preuve que chaque branche a été exercée. Les fichiers ajoutés ou modifiés font échouer `--check` lorsque l'inventaire change ; relire les contrats concernés avant de régénérer.
 
+Après `a457449`, C03 refuse un chemin SQLite ne désignant plus la base du dossier source ouvert et active `SQLITE_OPEN_NOFOLLOW`. 55 tests Rust et la parité stockage/import/restauration passent sous Windows ; nouvelles branches POSIX attendues. L'ouverture SQLite reste par chemin, sans qualification atomique revendiquée. C04 : preuve macOS Intel `5332203` recueillie, refus entre comptes et conservation finale du second secret confirmés ; les cinq cibles disposent désormais de leurs preuves natives entre comptes. Cela ne clôt pas les autres protections/intégrations M02.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

@@ -573,6 +573,13 @@ Prochaine action concrète :
 - **Preuves recueillies :** sauvegardes ancrées sur Linux x64/ARM64 et macOS ARM64 (`5332203`), journaux relus. Coffres macOS ARM64 entre comptes réussis, y compris conservation finale du second secret.
 - **Suite :** macOS Intel, nouveaux scénarios POSIX d'import ; ouverture SQLite de la source et acquisition des racines restent à qualifier.
 
+### Incrément M02 — identité de la source SQLite et preuves macOS Intel
+
+- **Livré :** contrôle de l'identité source ancrée avant SQLite, refus natif des liens et durée de vie des descripteurs préservée jusqu'à fermeture SQLite.
+- **Vérification :** 55 tests Rust, Clippy natif, parité stockage/import/restauration ; suite Node complète avec contrôle release : 426 tests, 423 réussis, aucun échec, trois exclusions, 80,031 s.
+- **Preuves recueillies :** CI `5332203` entièrement réussie, journal macOS Intel des sauvegardes et coffres entre comptes relu ; publication d'import `a457449` validée dans le journal macOS ARM64.
+- **Suite :** nouvelles branches POSIX en CI, ouverture SQLite encore non atomiquement ancrée et intégrations HTTP M02, notamment notifications SSE. M02 demeure en cours.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

@@ -136,6 +136,10 @@ impl CheckedFile {
         Ok(opened)
     }
 
+    pub(super) fn open_same(&self, path: &Path) -> Result<Self> {
+        Self::open(path, &self.identity)
+    }
+
     pub fn private(self) -> Result<Self> {
         #[cfg(unix)]
         {

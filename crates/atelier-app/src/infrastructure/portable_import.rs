@@ -1,5 +1,5 @@
 use super::{
-    checked_file::{CheckedFile, Identity, plain_metadata, require_plain},
+    checked_file::{CheckedFile, plain_metadata, require_plain},
     store::Store,
 };
 use crate::Result;
@@ -160,11 +160,15 @@ fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) 
     let stage_name = format!(".atelier-import-{}", uuid::Uuid::new_v4());
     let stage = private_directory(parent, Path::new(&stage_name))?;
     let prepared = (|| -> Result<()> {
+        let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;
         copy_tree(source, &stage, true)?;
         // shortcut: source SQLite still opens a path; qualify its ancestor races in M02 before real-data use.
-        let identity = Identity::inspect(database)?;
-        let connection = Connection::open_with_flags(database, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-        let _checked = CheckedFile::open(database, &identity)?;
+        // Keep both descriptors until SQLite closes: earlier POSIX closes can release its locks.
+        let _checked = selected.open_same(database)?;
+        let connection = Connection::open_with_flags(
+            database,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+        )?;
         let integrity: String = connection.query_row("PRAGMA quick_check", [], |row| row.get(0))?;
         if integrity != "ok" {
             return Err("La base portable est endommagée.".into());
@@ -244,9 +248,75 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn import_refuses_a_database_path_from_another_opened_source() {
+        let root = tempfile::tempdir().unwrap();
+        let root_path = fs::canonicalize(root.path()).unwrap();
+        let source = root_path.join("source");
+        let other = root_path.join("other");
+        for (path, id) in [(&source, "selected"), (&other, "unselected")] {
+            fs::create_dir(path).unwrap();
+            let connection = store::open(&path.join("kanban.sqlite")).unwrap();
+            Store::new(&connection)
+                .put(Documents::Cards, &json!({"id":id}))
+                .unwrap();
+        }
+        let selected = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        let parent = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+        assert!(
+            import_into(
+                &other.join("kanban.sqlite"),
+                &selected,
+                &parent,
+                Path::new("destination")
+            )
+            .is_err()
+        );
+        #[cfg(unix)]
+        {
+            fs::rename(&source, root_path.join("moved")).unwrap();
+            std::os::unix::fs::symlink(&other, &source).unwrap();
+            assert!(
+                import_into(
+                    &source.join("kanban.sqlite"),
+                    &selected,
+                    &parent,
+                    Path::new("destination")
+                )
+                .is_err()
+            );
+            // Even an alias to the selected inode must be refused by SQLite itself.
+            std::os::unix::fs::symlink(root_path.join("moved"), root_path.join("alias")).unwrap();
+            assert!(
+                import_into(
+                    &root_path.join("alias/kanban.sqlite"),
+                    &selected,
+                    &parent,
+                    Path::new("destination")
+                )
+                .is_err()
+            );
+        }
+        assert!(!root_path.join("destination").exists());
+        assert!(parent.entries().unwrap().all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".atelier-import-")
+        }));
+        let untouched = store::open(&other.join("kanban.sqlite")).unwrap();
+        assert_eq!(
+            Store::new(&untouched)
+                .document::<serde_json::Value>(Documents::Cards, "unselected")
+                .unwrap(),
+            Some(json!({"id":"unselected"}))
+        );
+    }
+
+    #[test]
     fn staging_snapshot_and_publication_stay_in_the_opened_destination_parent() {
         let root = tempfile::tempdir().unwrap();
-        let source = root.path().join("source");
+        let source = fs::canonicalize(root.path()).unwrap().join("source");
         let parent = root.path().join("parent");
         let outside = root.path().join("outside");
         for path in [&source, &parent, &outside] {
