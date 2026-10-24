@@ -28,7 +28,7 @@ impl PrototypeDirectory {
         let path = fs::canonicalize(path)?;
         let directory = Dir::open_ambient_dir(&path, ambient_authority())?;
         prepare(&directory)?;
-        let lock = DataLock::acquire(&path)?;
+        let lock = DataLock::acquire_in(&path, &directory)?;
         Ok(Self {
             path,
             _lock: lock,
@@ -38,6 +38,17 @@ impl PrototypeDirectory {
 
     pub fn backups(&self) -> Result<super::backups::BackupDirectory> {
         super::backups::BackupDirectory::open_in(&self.path, &self.directory)
+    }
+
+    pub fn database(&self) -> Result<super::database::Database> {
+        super::database::Database::open_in(
+            self.path.join("kanban.sqlite"),
+            self.directory.try_clone()?,
+        )
+    }
+
+    pub fn write_session(&self, token: &str) -> Result<()> {
+        super::session::write_in(&self.directory, token)
     }
 
     pub fn vault_service(&self) -> Result<String> {
@@ -129,6 +140,40 @@ fn prepare(directory: &Dir) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn session_and_database_share_the_selected_prototype_directory() {
+        let root = tempfile::tempdir().unwrap();
+        let data = root.path().join("data");
+        let outside = root.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        let foreign = outside.join("kanban.sqlite");
+        fs::write(&foreign, "outside must remain untouched").unwrap();
+        let directory = PrototypeDirectory::open(&data).unwrap();
+        let token = super::super::session::new_token().unwrap();
+        directory.write_session(&token).unwrap();
+        assert_eq!(super::super::session::read(&data).unwrap(), token);
+        let database = directory.database().unwrap();
+        database.close().await.unwrap();
+        drop(database);
+        #[cfg(unix)]
+        {
+            let moved = root.path().join("moved");
+            fs::rename(&data, &moved).unwrap();
+            std::os::unix::fs::symlink(&outside, &data).unwrap();
+            directory.write_session(&token).unwrap();
+            assert_eq!(super::super::session::read(&moved).unwrap(), token);
+            assert!(directory.database().is_err());
+            assert!(!outside.join("local-session").exists());
+        }
+        #[cfg(windows)]
+        assert!(fs::rename(&data, root.path().join("moved")).is_err());
+        assert_eq!(
+            fs::read(&foreign).unwrap(),
+            b"outside must remain untouched"
+        );
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 1);
+    }
 
     #[test]
     fn prototype_vault_identifiers_are_private_stable_distinct_and_validated() {

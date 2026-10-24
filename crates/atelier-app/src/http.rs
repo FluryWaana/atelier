@@ -304,8 +304,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let vault =
         crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;
     let token = session::new_token()?;
-    session::write(&directory.path, &token)?;
-    let database = Database::open(&directory.path.join("kanban.sqlite"))?;
+    directory.write_session(&token)?;
+    let database = directory.database()?;
     database
         .call(|store| store.transaction(atelier_core::application::time_tracking::initialize))
         .await?;

@@ -14,17 +14,38 @@ enum Command {
 pub struct Database {
     sender: Option<mpsc::Sender<Command>>,
     worker: Option<std::thread::JoinHandle<()>>,
+    _directory: Option<cap_std::fs::Dir>,
 }
 
 impl Database {
     pub fn open(path: &Path) -> Result<Self> {
-        let path = path.to_owned();
+        if path == Path::new(":memory:") {
+            return Self::start(|| store::open(Path::new(":memory:")));
+        }
+        let parent = std::fs::canonicalize(
+            path.parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or(Path::new(".")),
+        )?;
+        let path = parent.join(path.file_name().ok_or("Nom de base SQLite absent.")?);
+        let directory = cap_std::fs::Dir::open_ambient_dir(parent, cap_std::ambient_authority())?;
+        Self::open_in(path, directory)
+    }
+
+    pub(super) fn open_in(path: std::path::PathBuf, directory: cap_std::fs::Dir) -> Result<Self> {
+        let retained = directory.try_clone()?;
+        let mut database = Self::start(move || store::open_in(&path, &directory))?;
+        database._directory = Some(retained);
+        Ok(database)
+    }
+
+    fn start(open: impl FnOnce() -> Result<Connection> + Send + 'static) -> Result<Self> {
         let (sender, mut receiver) = mpsc::channel::<Command>(64);
         let (ready, initialized) = std::sync::mpsc::sync_channel(1);
         let worker = std::thread::Builder::new()
             .name("atelier-sqlite".into())
             .spawn(move || {
-                let opened = store::open(&path);
+                let opened = open();
                 match opened {
                     Ok(mut connection) => {
                         if ready.send(Ok(())).is_err() {
@@ -58,6 +79,7 @@ impl Database {
         Ok(Self {
             sender: Some(sender),
             worker: Some(worker),
+            _directory: None,
         })
     }
 

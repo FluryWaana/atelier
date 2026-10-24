@@ -187,7 +187,8 @@ fn snapshot_source(database: &Path, source: &Dir) -> Result<tempfile::TempDir> {
     #[cfg(windows)]
     let _checked = selected.open_same(database)?;
     #[cfg(unix)]
-    let selected = super::checked_file::Identity::sqlite_source(source)?;
+    let selected =
+        super::checked_file::Identity::sqlite_source(source, Path::new("kanban.sqlite"))?;
     // shortcut: POSIX exclusive locks need write access; qualify read-only media before M08.
     let connection = Connection::open_with_flags(
         database,

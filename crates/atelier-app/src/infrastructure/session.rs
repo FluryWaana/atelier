@@ -104,13 +104,21 @@ pub fn protect(value: &str, decrypt: bool) -> Result<String> {
 }
 
 pub fn write(directory: &Path, token: &str) -> Result<()> {
+    write_in(
+        &Dir::open_ambient_dir(directory, ambient_authority())?,
+        token,
+    )
+}
+
+pub(super) fn write_in(directory: &Dir, token: &str) -> Result<()> {
     #[cfg(windows)]
     let stored = protect(token, false)?;
     #[cfg(not(windows))]
     let stored = token.to_owned();
-    write_private(&directory.join("local-session"), &stored)
+    write_private_in(directory, Path::new("local-session"), &stored)
 }
 
+#[cfg(unix)]
 fn write_private(path: &Path, stored: &str) -> Result<()> {
     let directory = Dir::open_ambient_dir(
         path.parent().ok_or("Dossier de session absent.")?,

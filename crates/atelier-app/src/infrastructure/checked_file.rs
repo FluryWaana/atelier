@@ -52,14 +52,24 @@ pub struct CheckedFile {
 
 impl Identity {
     #[cfg(unix)]
-    pub(super) fn sqlite_source(directory: &cap_std::fs::Dir) -> Result<Self> {
+    pub(super) fn sqlite_source(directory: &cap_std::fs::Dir, name: &Path) -> Result<Self> {
         use std::os::fd::AsRawFd;
+        use std::os::unix::ffi::OsStrExt;
+        if name.components().count() != 1
+            || !matches!(
+                name.components().next(),
+                Some(std::path::Component::Normal(_))
+            )
+        {
+            return Err("Nom SQLite relatif simple requis.".into());
+        }
+        let name = std::ffi::CString::new(name.as_os_str().as_bytes())?;
         let mut metadata = std::mem::MaybeUninit::<libc::stat>::uninit();
         // statat never opens/closes the database inode, preserving other POSIX SQLite locks.
         let metadata = unsafe {
             if libc::fstatat(
                 directory.as_raw_fd(),
-                c"kanban.sqlite".as_ptr(),
+                name.as_ptr(),
                 metadata.as_mut_ptr(),
                 libc::AT_SYMLINK_NOFOLLOW,
             ) != 0

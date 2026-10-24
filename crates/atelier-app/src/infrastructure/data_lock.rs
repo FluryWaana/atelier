@@ -1,8 +1,8 @@
-use super::checked_file::plain_metadata;
 use crate::Result;
-use rusqlite::{Connection, OpenFlags};
+use cap_std::{ambient_authority, fs::Dir};
+use rusqlite::Connection;
 use std::{
-    fs::{self, OpenOptions},
+    fs,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -12,6 +12,7 @@ pub const LOCK_NAME: &str = ".atelier-data-lock.sqlite";
 pub struct DataLock {
     pub directory: PathBuf,
     _connection: Connection,
+    _directory: Dir,
 }
 
 impl DataLock {
@@ -25,34 +26,20 @@ impl DataLock {
         }
         builder.create(directory)?;
         let directory = fs::canonicalize(directory)?;
-        let path = directory.join(LOCK_NAME);
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        match options.open(&path) {
-            Ok(file) => drop(file),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
-            Err(error) => return Err(error.into()),
-        }
-        if !plain_metadata(&path)?.is_file() {
-            return Err("Verrou de données invalide.".into());
-        }
-        // Never open/close this inode outside SQLite while held: POSIX closes can release process locks.
-        let connection = Connection::open_with_flags(
-            &path,
-            OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
-        )?;
+        let handle = Dir::open_ambient_dir(&directory, ambient_authority())?;
+        Self::acquire_in(&directory, &handle)
+    }
+
+    pub(super) fn acquire_in(directory: &Path, handle: &Dir) -> Result<Self> {
+        let connection = super::store::open_checked(&directory.join(LOCK_NAME), handle)?;
         connection.busy_timeout(Duration::ZERO)?;
         connection
             .execute_batch("BEGIN EXCLUSIVE")
             .map_err(|_| "Ce dossier est déjà ouvert ou son verrou de données est invalide.")?;
         Ok(Self {
-            directory,
+            directory: directory.to_owned(),
             _connection: connection,
+            _directory: handle.try_clone()?,
         })
     }
 }

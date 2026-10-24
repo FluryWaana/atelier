@@ -61,6 +61,39 @@ pub(super) fn open(path: &Path) -> Result<Connection> {
     Ok(connection)
 }
 
+pub(super) fn open_checked(path: &Path, directory: &cap_std::fs::Dir) -> Result<Connection> {
+    let name = Path::new(path.file_name().ok_or("Nom de base SQLite absent.")?);
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use cap_std::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    match directory.open_with(name, &options) {
+        Ok(file) => drop(file),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(error) => return Err(error.into()),
+    }
+    #[cfg(windows)]
+    let selected = super::checked_file::CheckedFile::open_in(directory, name)?;
+    #[cfg(unix)]
+    let selected = super::checked_file::Identity::sqlite_source(directory, name)?;
+    // Creation is anchored above: SQLite may only open the selected existing main file.
+    let connection = Connection::open_with_flags(
+        path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )?;
+    selected.verify_sqlite(&connection)?;
+    Ok(connection)
+}
+
+pub(super) fn open_in(path: &Path, directory: &cap_std::fs::Dir) -> Result<Connection> {
+    let connection = open_checked(path, directory)?;
+    connection.execute_batch(SCHEMA)?;
+    Ok(connection)
+}
+
 impl<'a> Store<'a> {
     pub(super) fn new(connection: &'a Connection) -> Self {
         Self { connection }
@@ -247,6 +280,40 @@ impl<'a> Store<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn checked_database_rejects_another_root_before_schema_or_journal_writes() {
+        use cap_std::{ambient_authority, fs::Dir};
+        let root = tempfile::tempdir().unwrap();
+        let selected = root.path().join("selected");
+        let outside = root.path().join("outside");
+        std::fs::create_dir(&selected).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let foreign = outside.join("kanban.sqlite");
+        let connection = Connection::open(&foreign).unwrap();
+        connection
+            .execute_batch("CREATE TABLE untouched(value); INSERT INTO untouched VALUES(42)")
+            .unwrap();
+        connection.close().unwrap();
+        let before = std::fs::read(&foreign).unwrap();
+        let directory = Dir::open_ambient_dir(&selected, ambient_authority()).unwrap();
+        assert!(open_in(&foreign, &directory).is_err());
+        assert_eq!(std::fs::read(&foreign).unwrap(), before);
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 1);
+        open_in(&selected.join("kanban.sqlite"), &directory)
+            .unwrap()
+            .close()
+            .unwrap();
+        #[cfg(unix)]
+        {
+            std::fs::rename(&selected, root.path().join("moved")).unwrap();
+            std::os::unix::fs::symlink(&outside, &selected).unwrap();
+            assert!(open_in(&selected.join("kanban.sqlite"), &directory).is_err());
+            assert_eq!(std::fs::read(&foreign).unwrap(), before);
+        }
+        #[cfg(windows)]
+        assert!(std::fs::rename(&selected, root.path().join("moved")).is_err());
+    }
 
     #[test]
     fn temporary_sqlite_sidecars_stay_inside_a_private_directory() {

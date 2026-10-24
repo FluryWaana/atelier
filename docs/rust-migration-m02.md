@@ -1,5 +1,13 @@
 # M02 — données et protections locales
 
+## Dossier commun au verrou, à la session et à SQLite — candidat après `e8005d5`
+
+Le démarrage ne rouvre plus indépendamment le chemin du prototype pour publier sa session ou sélectionner la base. Session, coffre, sauvegardes et worker SQLite utilisent le dossier déjà ouvert. Le verrou commun et la base sont créés relativement à ce handle, avec mode 0600 sur POSIX, puis ouverts par SQLite sans création ni suivi de liens ; l'identité réelle du fichier principal est confrontée à celle du dossier sélectionné avant toute requête SQL. La sélection POSIX reste un `fstatat` sans ouverture/fermeture d'un descripteur de la base. Les ouvertures génériques de `Database` suivent le même contrôle, sauf le stockage `:memory:` sans fichiers.
+
+Le worker conserve le handle du dossier avec sa connexion. Les tests candidats vérifient le démarrage normal, la session et la persistance, ainsi que le refus d'une base appartenant à un autre dossier sans modifier son schéma ou créer ses journaux. Sous POSIX, remplacement du parent et publication de session sont préparés pour la qualification finale ; Windows doit refuser le déplacement du dossier tenu. Le comparateur de verrou Node/Rust doit conserver notamment le refus dans le même processus sans libérer le premier verrou.
+
+Ce contrôle qualifie la sélection initiale du fichier principal, pas toute mutation hostile ultérieure du chemin des auxiliaires d'une connexion durable sur POSIX. Ces courses, les racines initiales et les restrictions d'import restent à qualifier avant données réelles. Aucun lot globalement clos ; contrôles Windows attendus à cet incrément.
+
 ## Répertoire privé pour tous les temporaires SQLite — candidat après `d2804cf`
 
 La revue de tous les appelants `NamedTempFile` a trouvé un écart : sauvegarde et restauration protégeaient le fichier temporaire lui-même, mais le plaçaient directement dans le dossier temporaire partagé. Les noms adjacents utilisés par SQLite (WAL/journal/SHM) pouvaient alors être préparés par un autre compte disposant de l'accès au dossier parent. Les trois opérations réutilisent désormais le même créateur de sous-dossier temporaire privé, mode 0700 dès création sur POSIX ; les fichiers SQLite temporaires restent 0600. Le dossier reste vivant jusqu'à fermeture des connexions et des handles.
@@ -7,6 +15,8 @@ La revue de tous les appelants `NamedTempFile` a trouvé un écart : sauvegarde 
 Un scénario ouvre réellement SQLite en WAL dans ce sous-dossier, vérifie les permissions POSIX du dossier, de la base et du WAL, puis le nettoyage. Windows vérifie le cycle natif et le nettoyage ; les assertions POSIX restent à exécuter lors de la qualification finale. Les tests existants de sauvegarde/restauration/import et leurs comparateurs restent exigés en CI Windows. Aucun test ou navigateur local.
 
 ## Import isolé sous verrou natif — candidat après `a8e9d79`
+
+La [CI Windows `d2804cf`](https://github.com/FluryWaana/atelier/actions/runs/40115013765) réussit entièrement, journaux relus. Les dix scénarios d'import passent, notamment WAL non checkpointé et source inchangée, refus d'une base active, faute de copie/libération, second processus confirmant la conservation du verrou et journal rollback refusé. Parité d'import Node/Rust, Clippy natif/WASM, comparateurs et DPAPI entre comptes réussissent ; Node 440/436/0/4 et les deux parcours Edge réussissent. Cela ne constitue pas une preuve POSIX du remplacement effectif d'ancêtre.
 
 L'import n'exécute plus de SQL sur le chemin source. Après vérification du fichier principal effectivement ouvert, il obtient un verrou EXCLUSIVE par les méthodes publiques du [VFS SQLite](https://www.sqlite.org/c3ref/io_methods.html). Les [connexions WAL conservent un verrou SHARED sur le fichier principal](https://www.sqlite.org/walformat.html#locking_matrix) : ce verrou exclusif interdit leur présence pendant la copie. L'appel passe par le VFS pour conserver aussi sa comptabilité des connexions du même processus. Un garde libère tout verrou partiel avant la fermeture, y compris après erreur.
 
