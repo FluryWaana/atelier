@@ -184,6 +184,14 @@ pub fn prepare(
     busy: bool,
 ) -> Result<Edit> {
     let mut card = original.clone();
+    if card.fields.truthy("ticket")?
+        && (body.raw("title").is_some() || body.raw("description").is_some())
+    {
+        return Err(CardFailure::Conflict(
+            "Cette carte est liée à un ticket. Recharge la tâche avant de modifier son contenu.",
+        )
+        .into());
+    }
     if card.fields.truthy("archived")? {
         return Err(
             CardFailure::Conflict("Restaure cette tâche avant de reprendre le travail.").into(),
@@ -222,13 +230,13 @@ pub fn prepare(
         }
         card.fields.set("status", &raw)?;
     }
-    if body.raw("title").is_some() && !card.fields.truthy("ticket")? {
+    if body.raw("title").is_some() {
         card.title = text(body.raw("title"), 300)?;
         if card.title.0.is_empty() {
             return Err(CardFailure::Invalid("Titre requis.").into());
         }
     }
-    if body.raw("description").is_some() && !card.fields.truthy("ticket")? {
+    if body.raw("description").is_some() {
         card.fields
             .set("description", &text(body.raw("description"), 20_000)?)?;
     }

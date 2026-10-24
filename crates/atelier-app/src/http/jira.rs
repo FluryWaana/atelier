@@ -15,7 +15,7 @@ fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
         Err(error) => {
             let status = if matches!(
                 error.downcast_ref::<JiraFailure>(),
-                Some(JiraFailure::Conflict)
+                Some(JiraFailure::Conflict | JiraFailure::OperationConflict(_))
             ) {
                 StatusCode::CONFLICT
             } else if error.is::<VaultFailure>() {

@@ -12,6 +12,7 @@ fn input() -> JiraImport {
         revision: 1,
         issue_id: "1".into(),
         project_id: "project".into(),
+        attach_to: None,
     }
 }
 #[tokio::test]
@@ -163,5 +164,41 @@ async fn restart_discards_read_only_reservations_without_creating_a_partial_card
         })
         .await
         .unwrap();
+    database.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn attachment_preserves_local_content_and_refuses_stale_cards_duplicates_and_active_runs() {
+    use atelier_core::contracts::{JiraIssue, JiraIssueDetail};
+    let temporary = tempfile::tempdir().unwrap();
+    let repo = temporary.path().to_string_lossy().into_owned();
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database.call(move |store| {
+        store.save_settings(&document(json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}})))?;
+        store.put(Documents::Projects,&document(json!({"id":"project","repo":repo})))?;
+        let card:Card=serde_json::from_str(&json!({"id":"local","title":"Local title","description":"Local description","repo":repo,"status":"todo","checklist":[]}).to_string())?;
+        store.put(Documents::Cards,&card)?;
+        let detail=JiraIssueDetail {connection_revision:1,description:"Remote description".into(),issue:JiraIssue {id:"1".into(),key:"SYN-1".into(),title:"Remote title".into(),status:"Open".into(),url:"https://synthetic.example.test/browse/SYN-1".into()}};
+        let mut attach=input();attach.attach_to=Some(card.clone());
+        jira_import::reserve(store,attach.clone(),"stale".into())?;
+        let mut changed=card.clone();changed.fields.set("instructions",&"New instructions")?;store.put(Documents::Cards,&changed)?;
+        assert!(jira_import::finish(store,"stale",detail.clone()).is_err());jira_import::release(store,"stale")?;
+        assert!(jira_import::reserve(store,attach.clone(),"old".into()).is_err());
+        store.put(Documents::Cards,&card)?;
+        store.put(Documents::Runs,&document(json!({"id":"run","cardId":"local","status":"running"})))?;
+        assert!(jira_import::reserve(store,attach.clone(),"busy".into()).is_err());store.delete(Documents::Runs,"run")?;
+        jira_import::reserve(store,attach.clone(),"attach".into())?;
+        let result=jira_import::finish(store,"attach",detail.clone())?;
+        assert!(result.attached);assert!(!result.created);assert_eq!(result.card.title,card.title);
+        assert_eq!(result.card.fields.get::<String>("description")?.as_deref(),Some("Local description"));
+        assert!(atelier_core::application::task_editing::prepare(store,&result.card,&document(json!({"title":"Unaccepted draft"})),false).is_err());
+        jira_import::reserve(store,attach.clone(),"repeat".into())?;
+        let repeated=jira_import::finish(store,"repeat",detail.clone())?;assert!(!repeated.attached);assert!(!repeated.created);
+        let mut other=card.clone();other.id="other".into();store.put(Documents::Cards,&other)?;
+        attach.attach_to=Some(other);jira_import::reserve(store,attach,"duplicate".into())?;
+        assert!(jira_import::finish(store,"duplicate",detail).is_err());jira_import::release(store,"duplicate")?;
+        assert_eq!(store.documents::<Card>(Documents::Cards)?.len(),2);
+        Ok(())
+    }).await.unwrap();
     database.close().await.unwrap();
 }

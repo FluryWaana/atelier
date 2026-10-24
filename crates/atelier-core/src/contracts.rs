@@ -292,9 +292,12 @@ pub struct JiraImport {
     pub revision: u64,
     pub issue_id: String,
     pub project_id: String,
+    #[serde(default)]
+    pub attach_to: Option<Card>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 pub struct JiraImported {
     pub card: Card,
     pub created: bool,
+    pub attached: bool,
 }

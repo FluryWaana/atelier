@@ -629,5 +629,17 @@
   "Import Jira interrompu. Redémarre Atelier avant de réessayer.": "Jira import interrupted. Restart Atelier before trying again.",
   "Ticket Jira invalide.": "Invalid Jira issue.",
   "Adresse du ticket Jira incohérente.": "Inconsistent Jira issue address.",
-  "Renseigne l’adresse Jira avant la lecture.": "Enter the Jira address before reading."
+  "Renseigne l’adresse Jira avant la lecture.": "Enter the Jira address before reading.",
+  "Carte à associer": "Card to link",
+  "Créer une nouvelle carte": "Create a new card",
+  "Associer ce ticket à la carte": "Link this issue to the card",
+  "Ticket associé à la carte. Son contenu local est conservé.": "Issue linked to the card. Its local content is preserved.",
+  "Ticket associé": "Linked issue",
+  "Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.": "The title and description of this card are preserved locally. No automatic synchronization is active.",
+  "La carte ne fait pas partie du projet choisi.": "The card does not belong to the selected project.",
+  "Arrête l’exécution avant de lier ce ticket.": "Stop the run before linking this issue.",
+  "Ce ticket est déjà lié à une autre carte.": "This issue is already linked to another card.",
+  "Cette carte est déjà liée à un autre ticket.": "This card is already linked to another issue.",
+  "Les données de cet import ont changé. Recharge les réglages et sélectionne à nouveau la carte ou le projet.": "The data for this import has changed. Reload the settings and select the card or project again.",
+  "Cette carte est liée à un ticket. Recharge la tâche avant de modifier son contenu.": "This card is linked to an issue. Reload the task before editing its content."
 }

@@ -2462,8 +2462,14 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
     ] {
         assert_eq!(edit(id).json(&body).send().await.unwrap().status(), status);
     }
+    let rejected_ticket = edit("ticket")
+        .json(&json!({"title":null,"description":false,"instructions":"Must not persist"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(rejected_ticket.status(), 409);
     let ticket = edit("ticket")
-        .json(&json!({"title":null,"description":false,"instructions":"Local note"}))
+        .json(&json!({"instructions":"Local note"}))
         .send()
         .await
         .unwrap();
@@ -2473,6 +2479,14 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
     assert_eq!(
         ticket.fields.get::<JsonString>("description").unwrap(),
         Some(JsonString(vec![0xd800]))
+    );
+    assert_eq!(
+        ticket
+            .fields
+            .get::<String>("instructions")
+            .unwrap()
+            .as_deref(),
+        Some("Local note")
     );
     let rejected = edit("rollback")
         .json(&json!({"title":"Must roll back"}))

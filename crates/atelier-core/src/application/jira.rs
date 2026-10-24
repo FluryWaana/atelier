@@ -3,6 +3,7 @@ use crate::contracts::{JiraConfiguration, JiraConfigurationUpdate, JiraMode};
 #[derive(Debug)]
 pub enum JiraFailure {
     Conflict,
+    OperationConflict(&'static str),
     Invalid(&'static str),
 }
 impl From<&'static str> for JiraFailure {
@@ -16,7 +17,7 @@ impl std::fmt::Display for JiraFailure {
             Self::Conflict => {
                 "La connexion Jira a changé. Recharge les réglages avant de réessayer."
             }
-            Self::Invalid(message) => message,
+            Self::Invalid(message) | Self::OperationConflict(message) => message,
         })
     }
 }
