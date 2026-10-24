@@ -2,6 +2,7 @@ pub mod agent_options;
 pub mod checklist;
 pub mod projects;
 pub mod tasks;
+pub mod time;
 
 pub(crate) fn truthy(value: &serde_json::Value) -> bool {
     use serde_json::Value;

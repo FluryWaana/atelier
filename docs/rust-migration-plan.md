@@ -512,6 +512,13 @@ Prochaine action concrète :
 - **Vérification :** 43 tests Rust réussis, Clippy natif et contrôle de types D-Bus Linux propres ; suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 83,03 s. La [CI de duplication `3aef62d`](https://github.com/FluryWaana/atelier/actions/runs/40042339237) est entièrement réussie.
 - **Suite :** recueillir les quatre résultats natifs de coffre verrouillé ; comptes différents, courses de chemins et intégration aux cas d'usage restent ouverts. Aucune qualification globale M02.
 
+### 24 octobre 2026 / base `de8083a` / M03, saisies de temps
+
+- **Livré :** validation pure des saisies de temps, conversions de durée compatibles, dates/heures et erreurs historiques, descriptions UTF-16 sans perte. Aucune dépendance supplémentaire ni envoi Tempo.
+- **Vérification :** 44 tests Rust réussis, 305 contrats Node/Rust comparés (246 précédents inchangés), Clippy natif/WASM propre ; suite Node complète : 426 tests, 423 réussis, zéro échec, trois exclusions, 82,01 s ; inventaire vérifié.
+- **CI coffres :** macOS ARM64 réussit le scénario verrouillé. Linux signale `items_after_test_module` avant le probe ; déplacement du module et contrôle croisé `--all-targets` corrigent cet écart, sans désactivation de Clippy. Reprise Linux et macOS Intel encore attendues au relevé.
+- **Suite :** cas d'usage/chronomètres/routes de temps, autres opérations métier et preuves M02 restantes. La validation pure ne qualifie pas leurs transactions ou concurrence.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

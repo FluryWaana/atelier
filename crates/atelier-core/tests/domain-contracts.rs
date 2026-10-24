@@ -34,6 +34,10 @@ fn historical_node_domain_results_and_errors_match() {
             "resolveAgentOptions" => resolve_agent_options(&args[0], &args[1], &args[2]),
             "providerSettings" => provider_settings(&args[0]),
             "projectSettings" => project_settings(&args[0], args.get(1).unwrap_or(&json!({}))),
+            "timeFields" => atelier_core::domain::time::time_fields(
+                &serde_json::from_str(&args[0].to_string()).unwrap(),
+            )
+            .map(|value| serde_json::to_value(value).unwrap()),
             "settingsForProject" => Ok(settings_for_project(
                 &args[0],
                 args[1].as_array().unwrap(),

@@ -5082,5 +5082,940 @@
     "expected": {
       "value": true
     }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 1,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 1,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 86400,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 86400,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 0,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": -1,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 86401,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 1.5,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": null,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": true,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 1,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": false,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": " ",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": " 60 ",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "1e2",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 100,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "0x10",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 16,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "0b11",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 3,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "0o10",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 8,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "+1",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 1,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "+0x10",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": "Infinity",
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          60
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          [
+            "60"
+          ]
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          true
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          null
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          1,
+          2
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": {},
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": {
+          "toString": null
+        },
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Cannot convert object to primitive value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": [
+          {
+            "toString": 1
+          }
+        ],
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Cannot convert object to primitive value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {}
+    ],
+    "expected": {
+      "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "0000-02-29",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "0000-02-29",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "1900-02-29",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Date invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2000-02-29",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2000-02-29",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2024-02-29",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2024-02-29",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-02-29",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Date invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-04-31",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Date invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-00-01",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Invalid time value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-13-01",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Invalid time value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-01-00",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Invalid time value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-01-32",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Invalid time value"
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "9999-12-31",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "9999-12-31",
+        "startTime": "09:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-1-01",
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Date invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": null,
+        "startTime": "09:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Date invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": ""
+      }
+    ],
+    "expected": {
+      "error": "Une description de 1 à 4 000 caractères est nécessaire."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": " ﻿  "
+      }
+    ],
+    "expected": {
+      "error": "Une description de 1 à 4 000 caractères est nécessaire."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": ""
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": ""
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": null
+      }
+    ],
+    "expected": {
+      "error": "Une description de 1 à 4 000 caractères est nécessaire."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": true
+      }
+    ],
+    "expected": {
+      "error": "Une description de 1 à 4 000 caractères est nécessaire."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00",
+        "description": "🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧🔧"
+      }
+    ],
+    "expected": {
+      "error": "Une description de 1 à 4 000 caractères est nécessaire."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "00:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "00:00:00",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "23:59:59",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "value": {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "23:59:59",
+        "description": "Travail 🔧"
+      }
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "24:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "12:60:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "12:00:60",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "9:00:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": "09:00:00 ",
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": null,
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
+  },
+  {
+    "operation": "timeFields",
+    "args": [
+      {
+        "seconds": 60,
+        "date": "2026-10-24",
+        "startTime": 9,
+        "description": " Travail 🔧 "
+      }
+    ],
+    "expected": {
+      "error": "Heure invalide."
+    }
   }
 ]

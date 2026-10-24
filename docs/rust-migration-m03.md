@@ -1,5 +1,15 @@
 # M03 — Règles et API métier
 
+## Validation des saisies de temps — base `de8083a`
+
+`domain/time.rs` porte `lib/domain/time.mjs` sans dépendance supplémentaire. Les durées gardent les conversions JSON observables de `Number` (chaînes décimales/exponentielles/radix, booléens et tableaux), la borne 1–86 400 et l'ordre des erreurs. Les dates grégoriennes incluent l'année zéro et les siècles bissextiles ; une date hors plage conserve même l'erreur historique `Invalid time value`. Les heures restent au format strict `HH:mm:ss`.
+
+Les descriptions passent directement par `Document`/`JsonString` : limite de 4 000 unités UTF-16 avant trim ECMAScript, conservation d'un substitut isolé prouvée par test et sérialisation. Aucun réglage, chronomètre ou envoi Tempo n'est modifié par ces fonctions pures.
+
+Le corpus historique compte désormais 305 cas : les 246 précédents ont été comparés à HEAD et sont inchangés ; 59 nouvelles entrées proviennent de la fonction Node réelle. Bornes, conversions, priorités, dates impossibles, textes vides/longs et heures invalides sont comparés. Les commandes de chronomètre, persistance, concurrence et routes restent à porter.
+
+Vérification : 44 tests Rust réussis, comparaison `test-domain-parity` réussie, formatage et Clippy natif/WASM propres ; suite Node complète avec paquets : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 82,01 s. Inventaire régénéré et contrôlé avant commit.
+
 ## Duplication de cartes — base `aa9bf62`
 
 `application::duplicate_card` reprend uniquement les champs éditables prévus par Node, remet les critères à non validés et le statut à `todo`, sans ticket, PR, dépendances, worktrees, archivage, automatisation ni champ arbitraire. Le titre `Copie — …` est limité à 300 unités UTF-16, y compris lorsqu'une paire est coupée. Les textes et critères atypiques restent sans perte.

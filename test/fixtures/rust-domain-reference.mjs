@@ -7,8 +7,9 @@ import { blockers, dependencies, reviewRequirements } from '../../lib/domain/tas
 import { agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings } from '../../lib/domain/agent-options.mjs';
 import { projectSettings, settingsForProject } from '../../lib/project-settings.mjs';
 import { sameRepository } from '../../lib/domain/paths.mjs';
+import { timeFields } from '../../lib/domain/time.mjs';
 
-const functions = { text, checklist, checklistText, blockers, dependencies, reviewRequirements, agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings, projectSettings, settingsForProject, sameRepository };
+const functions = { text, checklist, checklistText, blockers, dependencies, reviewRequirements, agentProviders, agentProvider, agentOptions, resolveAgentOptions, providerSettings, projectSettings, settingsForProject, sameRepository, timeFields };
 const cases = [];
 function add(operation, ...args) {
   let expected;
@@ -70,6 +71,13 @@ for (const platform of ['win32', 'linux', 'darwin']) {
   add('sameRepository', '/repo/', '/repo', platform);
   add('sameRepository', '', '', platform);
 }
+
+const time = { seconds: 60, date: '2026-10-24', startTime: '09:00:00', description: ' Travail 🔧 ' };
+for (const seconds of [1, 86400, 0, -1, 86401, 1.5, null, true, false, '', ' ', ' 60 ', '1e2', '0x10', '0b11', '0o10', '+1', '+0x10', 'Infinity', [], [60], [['60']], [true], [null], [1, 2], {}, { toString: null }, [{ toString: 1 }]]) add('timeFields', { ...time, seconds });
+add('timeFields', {});
+for (const date of ['0000-02-29', '1900-02-29', '2000-02-29', '2024-02-29', '2026-02-29', '2026-04-31', '2026-00-01', '2026-13-01', '2026-01-00', '2026-01-32', '9999-12-31', '2026-1-01', null]) add('timeFields', { ...time, date });
+for (const description of ['', ' \ufeff\u00a0 ', '\u0085', null, true, '🔧'.repeat(2000), '🔧'.repeat(2001)]) add('timeFields', { ...time, description });
+for (const startTime of ['00:00:00', '23:59:59', '24:00:00', '12:60:00', '12:00:60', '9:00:00', '09:00', '09:00:00 ', null, 9]) add('timeFields', { ...time, startTime });
 
 const destination = fileURLToPath(new URL('./rust-domain-reference.json', import.meta.url));
 const content = JSON.stringify(cases, null, 2) + '\n';

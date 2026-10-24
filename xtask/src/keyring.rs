@@ -179,23 +179,6 @@ async fn test_locked_macos(service: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn interactive_security_arguments_quote_paths_without_creating_commands() {
-        assert_eq!(
-            security_argument("/tmp/clé avec espaces").unwrap(),
-            "\"/tmp/clé avec espaces\""
-        );
-        assert_eq!(security_argument("a\\b\"c").unwrap(), "\"a\\\\b\\\"c\"");
-        for value in ["a\nb", "a\rb", "a\0b"] {
-            assert!(security_argument(value).is_err());
-        }
-    }
-}
-
 #[cfg(target_os = "linux")]
 async fn test_locked(
     encrypted: &str,
@@ -286,4 +269,21 @@ async fn test_locked(
     }
     println!("Trousseau verrouillé : refus du chiffrement/déchiffrement et clé préservée.");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn interactive_security_arguments_quote_paths_without_creating_commands() {
+        assert_eq!(
+            security_argument("/tmp/clé avec espaces").unwrap(),
+            "\"/tmp/clé avec espaces\""
+        );
+        assert_eq!(security_argument("a\\b\"c").unwrap(), "\"a\\\\b\\\"c\"");
+        for value in ["a\nb", "a\rb", "a\0b"] {
+            assert!(security_argument(value).is_err());
+        }
+    }
 }
