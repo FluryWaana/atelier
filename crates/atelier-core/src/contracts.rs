@@ -11,6 +11,14 @@ pub enum ServiceStatus {
     Failed,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ServiceEndpoint {
+    pub pid: u32,
+    pub address: String,
+    pub port: u16,
+    pub url: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceState {
@@ -23,6 +31,9 @@ pub struct ServiceState {
     pub exit_code: Option<i32>,
     pub log: String,
     pub error: String,
+    pub process_ids: Vec<u32>,
+    pub endpoints: Vec<ServiceEndpoint>,
+    pub inspection_error: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

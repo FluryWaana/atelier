@@ -108,6 +108,14 @@ async fn wait_title(client: &Client, title: &str) -> Result<()> {
 
 pub async fn test(legacy: bool) -> Result<()> {
     run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
+    run(command("cargo").args([
+        "build",
+        "--locked",
+        "-p",
+        "xtask",
+        "--bin",
+        "native-fixture",
+    ]))?;
     let browser = std::env::var("ATELIER_TEST_BROWSER")
         .unwrap_or(if cfg!(windows) { "edge" } else { "chrome" }.into());
     let default_driver = match browser.as_str() {
@@ -1102,7 +1110,14 @@ async fn files_scenario(
         .json()
         .await?;
     let project_id = project["id"].as_str().ok_or("Projet synthétique absent.")?;
-    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":"echo synthetic-service-ready && ping -n 120 127.0.0.1 >nul","backCommand":"echo synthetic-service-ready && ping -n 120 127.0.0.1 >nul"})).send().await?.error_for_status()?;
+    let fixture_command = format!(
+        "\"{}\" service-listener {{port}}",
+        root()
+            .join("target/debug")
+            .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX))
+            .display()
+    );
+    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":fixture_command,"backCommand":fixture_command})).send().await?.error_for_status()?;
     std::fs::write(repo.join("src/tracked.txt"), "modified synthetic file\n")?;
     let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
     std::fs::write(repo.join("new file é.txt"), text)?;
@@ -1250,6 +1265,7 @@ async fn files_scenario(
     wait_dom(client, "return Array.from(document.querySelectorAll('.service-worktree')).filter(element=>!element.hidden).length === 2 && Array.from(document.querySelectorAll('.service-worktree [role=status]')).every(element=>element.textContent === 'Worktree prêt.');", vec![]).await?;
     click(client, "#start-services").await?;
     wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif') && Array.from(document.querySelectorAll('.service-log')).every(element=>element.textContent.includes('synthetic-service-ready'));", vec![]).await?;
+    wait_dom(client,"return document.querySelectorAll('.service-endpoints a').length === 2 && Array.from(document.querySelectorAll('.service-endpoints a')).every(link=>link.href.startsWith('http://127.0.0.1:'));",vec![]).await?;
     let before: atelier_core::contracts::ServiceSession = http
         .get(format!("{address}/api/cards/{}/services", card.id))
         .bearer_auth(token)
@@ -1258,6 +1274,28 @@ async fn files_scenario(
         .error_for_status()?
         .json()
         .await?;
+    for service in &before.services {
+        let endpoint = service
+            .endpoints
+            .iter()
+            .find(|endpoint| Some(endpoint.port) == service.port)
+            .ok_or("Port synthétique non détecté.")?;
+        let url = endpoint
+            .url
+            .as_ref()
+            .ok_or("Adresse synthétique absente.")?;
+        if http
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?
+            != "Atelier synthetic service é😀"
+        {
+            return Err("Le port détecté ne répond pas comme le service synthétique.".into());
+        }
+    }
     click(client, ".restart-service").await?;
     wait_dom(client,"return document.querySelector('.restart-service')?.disabled === false && document.querySelector('#services-error')?.textContent === '' && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif');",vec![]).await?;
     let restarted: atelier_core::contracts::ServiceSession = http

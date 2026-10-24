@@ -15,6 +15,8 @@ pub mod launch_ports;
 pub mod local_http;
 pub mod portable_import;
 #[cfg(windows)]
+mod process_inspection;
+#[cfg(windows)]
 pub mod process_tree;
 pub mod projects;
 pub mod prototype;

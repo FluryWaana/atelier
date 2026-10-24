@@ -63,6 +63,7 @@ struct Inner {
 pub struct DevServers {
     inner: Mutex<Inner>,
     operations: tokio::sync::Mutex<()>,
+    inspection: Arc<tokio::sync::Semaphore>,
     changed: broadcast::Sender<()>,
 }
 
@@ -73,6 +74,7 @@ impl DevServers {
                 sessions: BTreeMap::new(),
             }),
             operations: tokio::sync::Mutex::new(()),
+            inspection: Arc::new(tokio::sync::Semaphore::new(2)),
             changed,
         })
     }
@@ -197,6 +199,9 @@ impl DevServers {
                         exit_code: None,
                         log: String::new(),
                         error: String::new(),
+                        process_ids: Vec::new(),
+                        endpoints: Vec::new(),
+                        inspection_error: String::new(),
                     },
                     stop,
                     done,
@@ -310,7 +315,15 @@ impl DevServers {
         tokio::spawn(async move {
             let mut cancel = cancel;
             let monitor = async {
-                let result = tokio::select! { result = child.wait() => result, _ = cancel.changed() => child.stop().await };
+                let mut timer = tokio::time::interval(Duration::from_secs(2));
+                timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                let result = loop {
+                    tokio::select! {
+                        result = child.wait() => break result,
+                        _ = cancel.changed() => break child.stop().await,
+                        _ = timer.tick() => manager.inspect(&card,index,&mut child).await,
+                    }
+                };
                 if result.is_err() {
                     let _ = child.stop().await;
                 }
@@ -326,6 +339,9 @@ impl DevServers {
                 match exit {
                     Ok(status) => {
                         state.pid = None;
+                        state.process_ids.clear();
+                        state.endpoints.clear();
+                        state.inspection_error.clear();
                         state.exit_code = status.code();
                         state.status = if status.success() || *cancel.borrow() {
                             ServiceStatus::Stopped
@@ -429,6 +445,9 @@ impl DevServers {
                     exit_code: None,
                     log: String::new(),
                     error: String::new(),
+                    process_ids: Vec::new(),
+                    endpoints: Vec::new(),
+                    inspection_error: String::new(),
                 },
                 stop,
                 done: completion,
@@ -461,6 +480,40 @@ impl DevServers {
         .await?;
         self.snapshot(&card)
             .ok_or_else(|| "Session de services absente.".into())
+    }
+
+    async fn inspect(&self, card: &str, index: usize, child: &mut ContainedChild) {
+        let result = async {
+            let before = child
+                .process_ids()?
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>();
+            let permit = tokio::time::timeout(
+                Duration::from_secs(1),
+                self.inspection.clone().acquire_owned(),
+            )
+            .await
+            .map_err(|_| "Inspection des ports occupée.")??;
+            let query = tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                super::process_inspection::listeners(&before)
+            });
+            let queried = tokio::time::timeout(Duration::from_secs(2), query)
+                .await
+                .map_err(|_| "Inspection des ports trop lente.")?;
+            let mut endpoints = queried??;
+            let after = child.process_ids()?;
+            endpoints.retain(|endpoint| after.contains(&endpoint.pid));
+            Ok::<_, crate::Error>((after, endpoints))
+        }
+        .await;
+        self.update(card,index,false,|state| match result {
+            Ok((processes,mut endpoints)) => {
+                for endpoint in &mut endpoints { endpoint.url = super::process_inspection::local_url(&endpoint.address,endpoint.port,&state.log); }
+                state.process_ids = processes; state.endpoints = endpoints; state.inspection_error.clear();
+            }
+            Err(_) => { state.endpoints.clear(); state.process_ids.clear(); state.inspection_error = "Détection des ports indisponible. Les commandes de démarrage et d’arrêt restent disponibles.".into(); }
+        });
     }
 
     async fn read(
@@ -703,9 +756,30 @@ mod tests {
         })
         .await
         .unwrap();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !manager
+                .snapshot("synthetic-card")
+                .unwrap()
+                .services
+                .iter()
+                .all(|service| {
+                    service.endpoints.iter().any(|endpoint| {
+                        Some(endpoint.port) == service.port
+                            && Some(endpoint.pid) != service.pid
+                            && service.process_ids.contains(&endpoint.pid)
+                    })
+                })
+            {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .unwrap();
         manager.stop("synthetic-card", Some("front")).await.unwrap();
         let partial = manager.snapshot("synthetic-card").unwrap();
         assert_eq!(partial.services[0].status, ServiceStatus::Stopped);
+        assert!(partial.services[0].endpoints.is_empty());
+        assert!(partial.services[0].process_ids.is_empty());
         assert_eq!(partial.services[1].pid, started.services[1].pid);
         assert_eq!(partial.services[1].status, ServiceStatus::Running);
         let selected = || {

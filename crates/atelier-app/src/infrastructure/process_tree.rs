@@ -152,6 +152,49 @@ pub struct ContainedChild {
 }
 
 impl ContainedChild {
+    pub fn process_ids(&self) -> Result<Vec<u32>> {
+        use windows_sys::Win32::{
+            Foundation::ERROR_MORE_DATA,
+            System::JobObjects::{JOBOBJECT_BASIC_PROCESS_ID_LIST, JobObjectBasicProcessIdList},
+        };
+        for capacity in [16usize, 64, 256, 1024, 4096] {
+            let offset = std::mem::offset_of!(JOBOBJECT_BASIC_PROCESS_ID_LIST, ProcessIdList);
+            let size = offset + capacity * std::mem::size_of::<usize>();
+            let mut buffer = vec![0usize; size.div_ceil(std::mem::size_of::<usize>())];
+            let mut returned = 0;
+            // The usize buffer supplies the alignment and capacity required by the variable-length list.
+            let ok = unsafe {
+                QueryInformationJobObject(
+                    self.job.0.as_raw_handle(),
+                    JobObjectBasicProcessIdList,
+                    buffer.as_mut_ptr().cast(),
+                    size as u32,
+                    &mut returned,
+                )
+            };
+            if ok == 0 {
+                let error = io::Error::last_os_error();
+                if error.raw_os_error() == Some(ERROR_MORE_DATA as i32) {
+                    continue;
+                }
+                return Err(error.into());
+            }
+            // Windows initialized this header; validate its count before reading any array elements.
+            let header = unsafe { &*buffer.as_ptr().cast::<JOBOBJECT_BASIC_PROCESS_ID_LIST>() };
+            let count = header.NumberOfProcessIdsInList as usize;
+            if count > capacity || count < header.NumberOfAssignedProcesses as usize {
+                continue;
+            }
+            let pointer = unsafe { buffer.as_ptr().cast::<u8>().add(offset).cast::<usize>() };
+            let ids = unsafe { std::slice::from_raw_parts(pointer, count) };
+            return ids
+                .iter()
+                .map(|id| u32::try_from(*id).map_err(Into::into))
+                .collect();
+        }
+        Err("Trop de processus dans le service (4 096 maximum).".into())
+    }
+
     pub async fn spawn(command: &mut Command) -> Result<Self> {
         let job = Job::new()?;
         command

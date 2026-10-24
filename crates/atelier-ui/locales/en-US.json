@@ -1,4 +1,6 @@
 {
+  "Écoutes TCP détectées": "Detected TCP listeners",
+  "Détection des ports indisponible. Les commandes de démarrage et d’arrêt restent disponibles.": "Port detection is unavailable. Start and stop controls remain available.",
   "Relancer ce service": "Restart this service",
   "Arrêter ce service": "Stop this service",
   "Ce service n’est plus configuré. Relance la pile avec les nouveaux réglages.": "This service is no longer configured. Start the stack with the new settings.",

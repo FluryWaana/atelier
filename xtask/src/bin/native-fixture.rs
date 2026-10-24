@@ -33,6 +33,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        ["service-listener", port] => {
+            use std::{io::Read, net::{Ipv4Addr, TcpListener}};
+            let port = port.parse::<u16>()?;
+            if port == 0 { return Err("Synthetic service requires an assigned port".into()); }
+            let listener = TcpListener::bind((Ipv4Addr::LOCALHOST,port))?;
+            listener.set_nonblocking(true)?;
+            ready(format!("synthetic-service-ready http://127.0.0.1:{port}/"))?;
+            let deadline = std::time::Instant::now() + Duration::from_secs(120);
+            while std::time::Instant::now() < deadline {
+                match listener.accept() {
+                    Ok((mut stream,_)) => {
+                        stream.set_read_timeout(Some(Duration::from_secs(1)))?;
+                        stream.set_write_timeout(Some(Duration::from_secs(1)))?;
+                        let mut request = [0u8;1024];
+                        if stream.read(&mut request).is_ok() {
+                            let body = "Atelier synthetic service é😀";
+                            let response = format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
+                            let _ = stream.write_all(response.as_bytes());
+                        }
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::WouldBlock => std::thread::sleep(Duration::from_millis(20)),
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            Ok(())
+        }
         #[cfg(windows)]
         ["keyring-account", phase] => keyring_windows::probe(&std::env::current_dir()?, phase),
         ["keyring-echo"] => {
