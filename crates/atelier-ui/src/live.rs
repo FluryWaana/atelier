@@ -13,6 +13,7 @@ pub struct BoardState {
     pub cards: RwSignal<Vec<Card>>,
     pub projects: RwSignal<Vec<Document>>,
     pub templates: RwSignal<Vec<Document>>,
+    pub settings: RwSignal<Document>,
     pub connected: RwSignal<bool>,
     pub sync_error: RwSignal<String>,
     revision: RwSignal<u64>,
@@ -24,6 +25,7 @@ impl Default for BoardState {
             cards: RwSignal::new(Vec::new()),
             projects: RwSignal::new(Vec::new()),
             templates: RwSignal::new(Vec::new()),
+            settings: RwSignal::new(Document::default()),
             connected: RwSignal::new(false),
             sync_error: RwSignal::new(String::new()),
             revision: RwSignal::new(0),
@@ -50,6 +52,7 @@ impl BoardState {
                 .flatten()
                 .unwrap_or_default(),
         );
+        self.settings.set(board.settings);
         self.sync_error.set(String::new());
     }
 

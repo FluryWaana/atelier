@@ -5,9 +5,11 @@ use wasm_bindgen_futures::spawn_local;
 
 mod live;
 mod projects;
+mod settings;
 mod task_editor;
 use live::BoardState;
 use projects::Projects;
+use settings::Settings;
 use task_editor::TaskEditor;
 
 const STATUSES: [(&str, &str); 5] = [
@@ -165,6 +167,7 @@ async fn load(token: &str) -> Result<Board, String> {
 #[component]
 fn App() -> impl IntoView {
     let board = BoardState::default();
+    let show_settings = RwSignal::new(false);
     let cards = board.cards;
     let projects = board.projects;
     let templates = board.templates;
@@ -246,6 +249,7 @@ fn App() -> impl IntoView {
                 } /></select></div>
                 <label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />"Archives"</label>
                 <button id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)>"Gérer les projets"</button>
+                <button id="manage-settings" type="button" disabled=move || loading.get() on:click=move |_| show_settings.set(true)>"Paramètres"</button>
                 <span class="task-count" role="status">{move || format!("{} tâche(s)", visible().len())}</span>
             </div>
             <form class="quick-create" on:submit=move |event| {
@@ -300,6 +304,7 @@ fn App() -> impl IntoView {
             </section>
             {move || selected.get().map(|card| view! { <TaskEditor card board token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
+            <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>
         </main>
     }
 }

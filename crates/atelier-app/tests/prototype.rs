@@ -36,6 +36,68 @@ async fn start(
     panic!("Server did not become ready");
 }
 
+#[tokio::test]
+async fn general_settings_reject_stale_fields_and_preserve_independent_edits_after_restart() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let edit = || {
+        client
+            .put(format!("{address}/api/settings"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let first = edit()
+        .json(&json!({"baseBranch":"main", "expected":{"baseBranch":"HEAD"}}))
+        .send();
+    let second = edit()
+        .json(&json!({"baseBranch":"develop", "expected":{"baseBranch":"HEAD"}}))
+        .send();
+    let (first, second) = tokio::join!(first, second);
+    let mut statuses = [
+        first.unwrap().status().as_u16(),
+        second.unwrap().status().as_u16(),
+    ];
+    statuses.sort();
+    assert_eq!(statuses, [200, 409]);
+    let response = edit()
+        .json(&json!({"agent":"claude", "expected":{"agent":"codex"}}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let saved: Value = response.json().await.unwrap();
+    assert_eq!(saved["agent"], "claude");
+    assert!(matches!(
+        saved["baseBranch"].as_str(),
+        Some("main" | "develop")
+    ));
+    for body in [
+        json!({"baseBranch":"lost", "expected":{}}),
+        json!({"baseBranch":"lost", "expected":{"unknown":"HEAD"}}),
+        json!({"expected":{"agent":"claude"}}),
+        json!({"agent":"codex", "expected":{"agent":null}}),
+        json!({"agent":"codex", "expected":null}),
+    ] {
+        assert_eq!(edit().json(&body).send().await.unwrap().status(), 400);
+    }
+    stop(&address, &token, task).await;
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["settings"], saved);
+    stop(&address, &token, task).await;
+}
+
 async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_app::Result<()>>) {
     assert!(
         reqwest::Client::new()
@@ -1403,6 +1465,12 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
             .json()
             .await
             .unwrap();
+        assert_eq!(restored.revision, 0);
+        // The connection revision restarts; every persisted document must remain identical.
+        let restored = Board {
+            revision: board.revision,
+            ..restored
+        };
         assert_eq!(
             serde_json::to_string(&restored).unwrap(),
             serde_json::to_string(&board).unwrap()

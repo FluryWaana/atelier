@@ -548,6 +548,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
     live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
+    settings_scenario(client, http, &address, &next_token, data.path()).await?;
     client
         .goto(&format!("{address}/?task=missing-synthetic-task"))
         .await?;
@@ -715,6 +716,116 @@ async fn projects_scenario(
         root().join(".artifacts/rust-ui-projects.png"),
         client.screenshot().await?,
     )?;
+    Ok(())
+}
+
+async fn settings_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    data: &Path,
+) -> Result<()> {
+    let repo = data.join("repositories/settings-ui");
+    std::fs::create_dir_all(&repo)?;
+    click(client, "#manage-settings").await?;
+    client
+        .find(Locator::Css("#settings-repo"))
+        .await?
+        .send_keys(&repo.to_string_lossy())
+        .await?;
+    client
+        .find(Locator::Css("#settings-branch"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#settings-branch"))
+        .await?
+        .send_keys("main")
+        .await?;
+    client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    click(client, "#save-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    let card: atelier_core::contracts::Card = http
+        .post(format!("{address}/api/cards"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Héritage des paramètres généraux"}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if !card.fields.string_equals("agent", "claude")?
+        || std::fs::canonicalize(
+            card.fields
+                .get::<String>("repo")?
+                .ok_or("Dépôt hérité absent")?,
+        )? != std::fs::canonicalize(&repo)?
+    {
+        return Err("Les nouvelles tâches n’héritent pas des préférences enregistrées.".into());
+    }
+    http.delete(format!("{address}/api/cards/{}", card.id))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await?
+        .error_for_status()?;
+    client
+        .find(Locator::Css("#settings-branch"))
+        .await?
+        .send_keys("-local")
+        .await?;
+    http.put(format!("{address}/api/settings"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"baseBranch":"remote", "expected":{"baseBranch":"main"}}))
+        .send()
+        .await?
+        .error_for_status()?;
+    click(client, "#save-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.includes('changé ailleurs') && document.querySelector('#settings-branch')?.value === 'main-local';",vec![]).await?;
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    click(client, "#close-settings").await?;
+    click(client, "#discard-settings").await?;
+    click(client, "#manage-settings").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#settings-branch')?.value === 'remote';",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#settings-repo"))
+        .await?
+        .send_keys("/missing-synthetic-directory")
+        .await?;
+    click(client, "#save-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.length > 0 && document.querySelector('#settings-repo')?.value.endsWith('/missing-synthetic-directory') && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    click(client, "#close-settings").await?;
+    click(client, "#discard-settings").await?;
+    client.refresh().await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    click(client, "#manage-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-branch')?.value === 'remote' && document.querySelector('#settings-agent')?.value === 'claude' && !document.querySelector('#settings-repo')?.value.includes('missing-synthetic-directory');",vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-settings.png"),
+        client.screenshot().await?,
+    )?;
+    client
+        .find(Locator::Css("#settings-agent"))
+        .await?
+        .send_keys("\u{e00c}")
+        .await?;
+    wait_dom(client,"return !document.querySelector('#settings-dialog') && document.activeElement?.id === 'manage-settings';",vec![]).await?;
     Ok(())
 }
 

@@ -9,12 +9,14 @@ use serde_json::value::RawValue;
 pub enum SettingsFailure {
     UnknownService,
     Invalid(&'static str),
+    Conflict,
 }
 impl std::fmt::Display for SettingsFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
             Self::UnknownService => "Service inconnu.",
             Self::Invalid(message) => message,
+            Self::Conflict => "Ces réglages ont changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les paramètres pour charger la dernière version.",
         })
     }
 }
@@ -98,6 +100,26 @@ pub fn prepare_update(
     jira_base: impl Fn(&JsonString) -> Result<JsonString>,
 ) -> Result<SettingsUpdate> {
     let previous = config(stored)?;
+    if let Some(raw) = supplied.raw("expected") {
+        let invalid = || SettingsFailure::Invalid("Condition de modification invalide.");
+        let expected: std::collections::BTreeMap<String, String> =
+            serde_json::from_str(raw.get()).map_err(|_| invalid())?;
+        let fields = ["repo", "baseBranch", "agent"];
+        if expected
+            .keys()
+            .any(|key| !fields.contains(&key.as_str()) || supplied.raw(key).is_none())
+            || fields
+                .iter()
+                .any(|key| supplied.raw(key).is_some() && !expected.contains_key(*key))
+        {
+            return Err(invalid().into());
+        }
+        for (key, value) in expected {
+            if previous.get::<String>(&key)?.as_deref() != Some(value.as_str()) {
+                return Err(SettingsFailure::Conflict.into());
+            }
+        }
+    }
     let old_mapping = previous
         .get::<Document>("jiraStatusMap")
         .ok()

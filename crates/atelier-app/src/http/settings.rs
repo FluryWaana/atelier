@@ -33,6 +33,11 @@ async fn execute(state: Shared, service: Option<String>, request: Request) -> Re
                 Some(SettingsFailure::UnknownService)
             ) {
                 failure(StatusCode::NOT_FOUND, "Service inconnu.")
+            } else if matches!(
+                error.downcast_ref::<SettingsFailure>(),
+                Some(SettingsFailure::Conflict)
+            ) {
+                failure(StatusCode::CONFLICT, &error.to_string())
             } else if error.is::<settings::VaultFailure>() {
                 failure(StatusCode::SERVICE_UNAVAILABLE, &error.to_string())
             } else if error.is::<rusqlite::Error>()
