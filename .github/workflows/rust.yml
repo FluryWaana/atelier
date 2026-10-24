@@ -109,6 +109,12 @@ jobs:
         run: cargo xtask test-keyring-lock
         env:
           ATELIER_TEST_DISPOSABLE_KEYRING: '1'
+      - name: Native macOS keychain isolation between disposable accounts
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: bash scripts/rust-keyring-macos-accounts.sh
+        env:
+          ATELIER_TEST_DISPOSABLE_KEYRING: '1'
       - name: Native Linux tray in an isolated XFCE panel
         if: runner.os == 'Linux'
         shell: bash

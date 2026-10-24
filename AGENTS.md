@@ -40,6 +40,8 @@ The Windows CI account-isolation step creates and removes a temporary local acco
 
 `scripts/rust-keyring-accounts.sh` likewise provisions a temporary Linux account only in disposable GitHub CI with `ATELIER_TEST_DISPOSABLE_KEYRING=1`. Each account has a separate D-Bus session, private XDG directories and an owned foreground keyring daemon; only synthetic ciphertext and identity metadata are shared. Local checks may parse this script or verify its refusal with both CI variables absent, never enable its provisioning guard. The Rust `test-keyring-account` command verifies actual UIDs and reciprocal refusal, then removes its unique synthetic key.
 
+`scripts/rust-keyring-macos-accounts.sh` is also CI-only: it creates a temporary nonadministrator directory-service record and home, and targets a private synthetic keychain for each UID. No personal/default keychain is locked or read. Both accounts must retain their own key after direct attempts to open the other account's keychain; cleanup deletes the dedicated keychains before the account and fixture directory. Locally, only syntax checks and refusal with the CI variables absent are authorized for this script.
+
 ### JavaScript conventions
 
 Use ES modules: `.mjs` for backend modules and tests, with browser code under `public/`. Follow nearby indentation and existing semicolon and single-quote conventions. Use camelCase for functions and variables and descriptive lowercase, hyphenated module names such as `time-tracking.mjs`. Keep integration logic in its corresponding `lib/` module. No formatter or linter is configured. Preserve the French user-facing text.

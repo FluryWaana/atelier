@@ -1,4 +1,7 @@
-use super::{KeyringPlatform, Result, execute_fixture, execute_keyring, keyring_protect, session};
+use super::{
+    KeyringPlatform, Result, execute_fixture, execute_keyring, keyring_protect, security_argument,
+    session,
+};
 use serde_json::{Value, json};
 use std::{fs, path::Path};
 
@@ -42,15 +45,42 @@ fn write_shared(path: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn keychain_path(directory: &Path, uid: u32) -> std::path::PathBuf {
+    directory
+        .join(format!("keys-{uid}"))
+        .join("fixture.keychain-db")
+}
+
+async fn refuse_foreign_keychain(directory: &Path, record: &Value, service: &str) -> Result<()> {
+    let uid = u32::try_from(record["account"].as_u64().ok_or("Missing native account")?)?;
+    let path = keychain_path(directory, uid);
+    let keychain = path.to_str().ok_or("Invalid fixture path")?;
+    let mut foreign = async |command: &str, args: &[&str], input: Option<&str>| {
+        execute_fixture(service, Some(keychain), command, args, input).await
+    };
+    if keyring_protect(
+        KeyringPlatform::Macos,
+        record["encrypted"].as_str().ok_or("Missing ciphertext")?,
+        true,
+        &mut foreign,
+    )
+    .await
+    .is_ok()
+    {
+        return Err("Another account opened the owning account keychain".into());
+    }
+    Ok(())
+}
+
 pub async fn probe(directory: &Path, phase: &str) -> Result<()> {
-    if !cfg!(target_os = "linux")
+    if !cfg!(any(target_os = "linux", target_os = "macos"))
         || std::env::var("ATELIER_TEST_DISPOSABLE_KEYRING").as_deref() != Ok("1")
         || fs::read_to_string(directory.join(".keyring-fixture"))? != MARKER
     {
-        return Err("Account probe requires the disposable Linux CI fixture".into());
+        return Err("Account probe requires the disposable POSIX CI fixture".into());
     }
     let uid = account()?;
-    if !["prepare", "other", "verify", "cleanup"].contains(&phase) {
+    if !["prepare", "other", "verify", "finish-other", "cleanup"].contains(&phase) {
         return Err("Unknown account fixture phase".into());
     }
     let foreign = match phase {
@@ -76,11 +106,36 @@ pub async fn probe(directory: &Path, phase: &str) -> Result<()> {
     {
         return Err("Invalid synthetic service".into());
     }
-    let mut execute = async |command: &str, args: &[&str], input: Option<&str>| {
-        execute_fixture(&service, None, command, args, input).await
+    let path = keychain_path(directory, uid);
+    let keychain = if cfg!(target_os = "macos") {
+        Some(path.to_str().ok_or("Invalid fixture path")?)
+    } else {
+        None
     };
-    let platform = KeyringPlatform::Linux;
+    let mut execute = async |command: &str, args: &[&str], input: Option<&str>| {
+        execute_fixture(&service, keychain, command, args, input).await
+    };
+    let platform = if keychain.is_some() {
+        KeyringPlatform::Macos
+    } else {
+        KeyringPlatform::Linux
+    };
     let result: Result<()> = async {
+        if let Some(keychain) = keychain && matches!(phase, "prepare" | "other") {
+            let builder = fs::DirBuilder::new();
+            #[cfg(unix)]
+            let builder = {
+                use std::os::unix::fs::DirBuilderExt;
+                let mut builder = builder;
+                builder.mode(0o700);
+                builder
+            };
+            builder.create(path.parent().ok_or("Missing fixture parent")?)?;
+            let command = format!("create-keychain -p {} {}\n", session::new_token()?, security_argument(keychain)?);
+            if execute_keyring("security", &["-i"], Some(&command)).await?.0 != 0 {
+                return Err("Synthetic account keychain creation failed".into());
+            }
+        }
         match phase {
             "prepare" | "other" => {
                 let encrypted = keyring_protect(platform, PLAIN, false, &mut execute).await?;
@@ -88,6 +143,7 @@ pub async fn probe(directory: &Path, phase: &str) -> Result<()> {
                     return Err("Same-account positive control failed".into());
                 }
                 if let Some(record) = &foreign {
+                    if keychain.is_some() { refuse_foreign_keychain(directory, record, &service).await?; }
                     if keyring_protect(platform, different_account(record, uid)?, true, &mut execute).await.is_ok() {
                         return Err("Another account decrypted the synthetic secret".into());
                     }
@@ -100,6 +156,7 @@ pub async fn probe(directory: &Path, phase: &str) -> Result<()> {
             }
             "verify" => {
                 let foreign = read(directory, "other.json")?;
+                if keychain.is_some() { refuse_foreign_keychain(directory, &foreign, &service).await?; }
                 if keyring_protect(platform, different_account(&foreign, uid)?, true, &mut execute).await.is_ok() {
                     return Err("First account decrypted the other account secret".into());
                 }
@@ -107,20 +164,35 @@ pub async fn probe(directory: &Path, phase: &str) -> Result<()> {
                 if original["account"] != uid || keyring_protect(platform, original["encrypted"].as_str().ok_or("Missing original ciphertext")?, true, &mut execute).await? != PLAIN {
                     return Err("Original account lost its secret".into());
                 }
-                println!("Linux keyring: distinct native accounts, positive controls and reciprocal refusal verified.");
+                println!("POSIX keyring: distinct native accounts, positive controls and reciprocal refusal verified.");
+            }
+            "finish-other" => {
+                let original = read(directory, "other.json")?;
+                if original["account"] != uid || keyring_protect(platform, original["encrypted"].as_str().ok_or("Missing original ciphertext")?, true, &mut execute).await? != PLAIN {
+                    return Err("Second account lost its secret after reciprocal refusal".into());
+                }
+                println!("Second account key preserved after reciprocal refusal.");
             }
             "cleanup" => {}
             _ => return Err("Unknown account fixture phase".into()),
         }
         Ok(())
     }.await;
-    if phase != "prepare" || result.is_err() {
-        let cleanup = execute_keyring(
-            "secret-tool",
-            &["clear", "application", &service, "purpose", "token-key"],
-            None,
-        )
-        .await;
+    if (phase != "prepare" && !(keychain.is_some() && phase == "other")) || result.is_err() {
+        let cleanup = if let Some(keychain) = keychain {
+            if path.exists() {
+                execute_keyring("security", &["delete-keychain", keychain], None).await
+            } else {
+                Ok((0, String::new()))
+            }
+        } else {
+            execute_keyring(
+                "secret-tool",
+                &["clear", "application", &service, "purpose", "token-key"],
+                None,
+            )
+            .await
+        };
         result?;
         let status = cleanup?.0;
         if status != 0 && !(phase == "cleanup" && status == 1) {

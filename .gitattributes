@@ -5,5 +5,6 @@
 *.cmd text eol=crlf
 scripts/installers/*.sh text eol=lf
 scripts/rust-keyring-accounts.sh text eol=lf
+scripts/rust-keyring-macos-accounts.sh text eol=lf
 scripts/installers/atelier-kanban text eol=lf
 test/*.sh text eol=lf

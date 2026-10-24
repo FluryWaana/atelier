@@ -540,6 +540,13 @@ Prochaine action concrète :
 - **Preuves recueillies :** copie ancrée `7c729a0` réussie sur Linux x64/ARM64, journaux des remplacements de chemins relus.
 - **Attendu :** scénario à deux comptes Linux en CI et preuve macOS correspondante ; autres protections M02 non closes.
 
+### Incrément M02 — scénario macOS entre comptes
+
+- **Livré :** trousseaux privés par UID, tentatives croisées avec sa propre clé et ouverture explicite du trousseau de l'autre compte ; contrôles de conservation avant nettoyage. Provisionnement exclusivement CI, sans compte administrateur ni mot de passe de connexion.
+- **Vérification :** 48 tests Rust locaux réussis ; Clippy natif et contrôles de types/Clippy Linux/macOS ARM64 tous targets ; syntaxe Bash et refus local vérifiés. Suite Node avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 79,778 s ; inventaire vérifié.
+- **Preuves recueillies :** CI `7c729a0` entièrement réussie, journaux des courses de copie vérifiés sur les quatre cibles POSIX. Comptes Linux ARM64 `513f728` validés, journal relu.
+- **Attendu :** Linux x64 et macOS entre comptes ; autres courses de fichiers M02 et intégrations restantes.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

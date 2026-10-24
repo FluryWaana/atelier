@@ -38,6 +38,18 @@ La copie ancrée de `7c729a0` passe déjà les jobs Linux x64 et ARM64 : journau
 
 Suite Node de l'incrément Linux entre comptes, avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 80,955 s. Inventaire régénéré et vérifié.
 
+### Extension macOS entre comptes — après `513f728`
+
+Le probe POSIX est étendu à deux trousseaux macOS dédiés, placés dans des dossiers 0700 par UID. En plus du refus avec sa propre clé, chaque compte tente explicitement d'ouvrir le trousseau de l'autre. Le second trousseau reste présent jusqu'à la fin des tentatives croisées, puis son propriétaire relit son chiffré avant nettoyage : une suppression prématurée ne peut pas produire une fausse preuve de refus.
+
+`scripts/rust-keyring-macos-accounts.sh` crée exclusivement sur runner jetable un enregistrement local non administrateur, un UID libre vérifié et un home temporaire. La méthode suit les [commandes Directory Service documentées par Apple](https://developer.apple.com/library/archive/documentation/Porting/Conceptual/PortingUnix/additionalfeatures/additionalfeatures.html) ; aucun mot de passe de connexion ni groupe administrateur. Les mots de passe aléatoires des trousseaux passent sur stdin. Chaque commande `security` cible le trousseau synthétique explicite, jamais celui par défaut. Nettoyage des deux trousseaux et de leurs entrées de recherche, puis du compte et du dossier possédés ; étape CI bornée à cinq minutes.
+
+Contrôles locaux : syntaxe Bash et refus hors CI sous WSL, 48 tests Rust Windows réussis, Clippy natif et contrôle de types/Clippy Linux/macOS ARM64 tous targets réussis dans le harnais isolé. Ces contrôles ne prouvent pas l'accès natif macOS entre comptes, encore attendu sur les deux architectures.
+
+**Preuves supplémentaires recueillies :** la CI `7c729a0` est entièrement verte ; les journaux macOS Intel/ARM64 confirment eux aussi la copie ancrée après remplacement des chemins. Le [job Linux ARM64 de `513f728`](https://github.com/FluryWaana/atelier/actions/runs/40047240914/job/120731670559) confirme le refus sous le même UID, puis les contrôles positifs et refus réciproques entre UID distincts. Linux x64 reste attendu à ce relevé.
+
+Suite Node de l'extension macOS, avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, aucun échec, trois exclusions historiques, 79,778 s. Inventaire vérifié.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.
