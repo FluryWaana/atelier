@@ -1,5 +1,5 @@
 use atelier_core::contracts::{Board, Card};
-use gloo_net::http::{Method, Request, Response};
+use gloo_net::http::{Method, Request, RequestBuilder, Response};
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
@@ -20,7 +20,7 @@ async fn write(
     path: &str,
     body: &serde_json::Value,
 ) -> Result<Response, String> {
-    let response = Request::new(path)
+    let response = RequestBuilder::new(path)
         .method(method)
         .header("Authorization", &format!("Bearer {token}"))
         .header("X-Local-Request", "1")
