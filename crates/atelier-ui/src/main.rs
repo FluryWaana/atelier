@@ -55,6 +55,44 @@ fn replace_card(cards: RwSignal<Vec<Card>>, card: Card) {
     });
 }
 
+fn task_location(id: Option<&str>) -> Result<(), String> {
+    let window = web_sys::window().ok_or("Navigateur indisponible.")?;
+    let location = window.location();
+    let params = web_sys::UrlSearchParams::new_with_str(
+        &location.search().map_err(|_| "Adresse invalide.")?,
+    )
+    .map_err(|_| "Adresse invalide.")?;
+    match id {
+        Some(id) => params.set("task", id),
+        None => params.delete("task"),
+    }
+    let query = String::from(params.to_string());
+    let address = format!(
+        "{}{}{}",
+        location.pathname().map_err(|_| "Adresse invalide.")?,
+        if query.is_empty() {
+            String::new()
+        } else {
+            format!("?{query}")
+        },
+        location.hash().map_err(|_| "Adresse invalide.")?
+    );
+    // Editing is a modal state: keep one history entry and make its address reloadable.
+    window
+        .history()
+        .and_then(|history| {
+            history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&address))
+        })
+        .map_err(|_| "Adresse de tâche indisponible.".into())
+}
+
+fn requested_task() -> Option<String> {
+    let search = web_sys::window()?.location().search().ok()?;
+    web_sys::UrlSearchParams::new_with_str(&search)
+        .ok()?
+        .get("task")
+}
+
 fn session() -> Result<String, String> {
     let window = web_sys::window().ok_or("Navigateur indisponible.")?;
     let location = window.location();
@@ -146,6 +184,15 @@ fn App() -> impl IntoView {
             spawn_local(async move {
                 match load(&token).await {
                     Ok(value) => {
+                        let requested = requested_task();
+                        let active = requested
+                            .as_ref()
+                            .and_then(|id| value.cards.iter().find(|card| &card.id == id).cloned());
+                        if requested.is_some() && active.is_none() {
+                            error.set(
+                                "Cette tâche est introuvable. Le tableau reste disponible.".into(),
+                            );
+                        }
                         cards.set(value.cards);
                         projects.set(value.projects);
                         templates.set(
@@ -156,6 +203,7 @@ fn App() -> impl IntoView {
                                 .flatten()
                                 .unwrap_or_default(),
                         );
+                        selected.set(active);
                     }
                     Err(message) => error.set(message),
                 }
@@ -246,11 +294,11 @@ fn App() -> impl IntoView {
                     view! { <section class="kanban-column" data-status=status aria-label=label><header class="column-heading"><h2>{label}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=move |card| {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
-                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" on:click=move |_| selected.set(current())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
+                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_| { error.set(String::new()); if let Err(message) = task_location(Some(&id.get_value())) { error.set(message); } selected.set(current()); }>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>"Aucune tâche"</p></div></section> }
                 } />
             </section>
-            {move || selected.get().map(|card| view! { <TaskEditor card cards templates token on_close=Callback::new(move |()| selected.set(None)) /> })}
+            {move || selected.get().map(|card| view! { <TaskEditor card cards templates token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects projects cards repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
         </main>
     }

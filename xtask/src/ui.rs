@@ -306,12 +306,30 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?;
     click(client, "[data-status=todo] .card-open").await?;
     wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.activeElement?.id === 'edit-title';", vec![]).await?;
+    if !client
+        .current_url()
+        .await?
+        .query_pairs()
+        .any(|(key, value)| key == "task" && Some(value.as_ref()) == original_id.as_str())
+    {
+        return Err("Adresse de tâche absente.".into());
+    }
+    client.refresh().await?;
+    wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
     client
         .find(Locator::Css("#edit-title"))
         .await?
         .send_keys("\u{e00c}")
         .await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.activeElement?.classList.contains('card-open') === true;", vec![]).await?;
+    if client
+        .current_url()
+        .await?
+        .query_pairs()
+        .any(|(key, _)| key == "task")
+    {
+        return Err("Adresse de tâche conservée après fermeture.".into());
+    }
     click(client, "[data-status=todo] .card-open").await?;
     let title = "Tâche modifiée é 🔧 <script>";
     client
@@ -522,6 +540,10 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "#confirm-remove-template").await?;
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
+    client
+        .goto(&format!("{address}/?task=missing-synthetic-task"))
+        .await?;
+    wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
     Ok(())
 }

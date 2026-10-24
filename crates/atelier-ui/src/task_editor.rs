@@ -4,6 +4,7 @@ use atelier_core::document::Document;
 use atelier_core::domain::checklist::Criterion;
 use gloo_net::http::Method;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone, PartialEq)]
@@ -87,10 +88,21 @@ pub fn TaskEditor(
         let _ = node.show_modal();
     });
     let close = move || {
+        let target = format!("card-open-{}", id.get_value());
         if let Some(node) = dialog.get_untracked() {
             node.close();
         }
         on_close.run(());
+        request_animation_frame(move || {
+            if let Some(document) = web_sys::window().and_then(|window| window.document())
+                && let Some(element) = document
+                    .get_element_by_id(&target)
+                    .or_else(|| document.get_element_by_id("task-title"))
+                && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
+            {
+                let _ = element.focus();
+            }
+        });
     };
     let request_close = move || {
         if pending.get_untracked() {

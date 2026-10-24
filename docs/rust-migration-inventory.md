@@ -1569,7 +1569,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml:9](../crates/atelier-ui/Cargo.toml#L9) | <code>atelier-core.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
-| [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent"] }</code> |
+| [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Document", "HtmlElement", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent"] }</code> |
 | [crates/atelier-ui/src/main.rs:1](../crates/atelier-ui/src/main.rs#L1) | <code>use atelier_core::contracts::{Board, Card};</code> |
 | [crates/atelier-ui/src/main.rs:2](../crates/atelier-ui/src/main.rs#L2) | <code>use gloo_net::http::{Method, Request, RequestBuilder, Response};</code> |
 | [crates/atelier-ui/src/main.rs:3](../crates/atelier-ui/src/main.rs#L3) | <code>use leptos::prelude::*;</code> |
@@ -1590,8 +1590,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/task_editor.rs:4](../crates/atelier-ui/src/task_editor.rs#L4) | <code>use atelier_core::domain::checklist::Criterion;</code> |
 | [crates/atelier-ui/src/task_editor.rs:5](../crates/atelier-ui/src/task_editor.rs#L5) | <code>use gloo_net::http::Method;</code> |
 | [crates/atelier-ui/src/task_editor.rs:6](../crates/atelier-ui/src/task_editor.rs#L6) | <code>use leptos::prelude::*;</code> |
-| [crates/atelier-ui/src/task_editor.rs:7](../crates/atelier-ui/src/task_editor.rs#L7) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:49](../crates/atelier-ui/src/task_editor.rs#L49) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/task_editor.rs:7](../crates/atelier-ui/src/task_editor.rs#L7) | <code>use wasm_bindgen::JsCast;</code> |
+| [crates/atelier-ui/src/task_editor.rs:8](../crates/atelier-ui/src/task_editor.rs#L8) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/task_editor.rs:50](../crates/atelier-ui/src/task_editor.rs#L50) | <code>pub fn TaskEditor(</code> |
 | [xtask/Cargo.toml:4](../xtask/Cargo.toml#L4) | <code>version.workspace = true</code> |
 | [xtask/Cargo.toml:5](../xtask/Cargo.toml#L5) | <code>edition.workspace = true</code> |
 | [xtask/Cargo.toml:6](../xtask/Cargo.toml#L6) | <code>rust-version.workspace = true</code> |
@@ -2147,19 +2148,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:45](../.github/workflows/rust.yml#L45) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
-| [.github/workflows/rust.yml:59](../.github/workflows/rust.yml#L59) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
-| [.github/workflows/rust.yml:63](../.github/workflows/rust.yml#L63) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
-| [.github/workflows/rust.yml:64](../.github/workflows/rust.yml#L64) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
-| [.github/workflows/rust.yml:70](../.github/workflows/rust.yml#L70) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:155](../.github/workflows/rust.yml#L155) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:159](../.github/workflows/rust.yml#L159) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
-| [.github/workflows/rust.yml:165](../.github/workflows/rust.yml#L165) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
-| [.github/workflows/rust.yml:166](../.github/workflows/rust.yml#L166) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
-| [.github/workflows/rust.yml:167](../.github/workflows/rust.yml#L167) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
-| [.github/workflows/rust.yml:168](../.github/workflows/rust.yml#L168) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
-| [.github/workflows/rust.yml:191](../.github/workflows/rust.yml#L191) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:192](../.github/workflows/rust.yml#L192) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:53](../.github/workflows/rust.yml#L53) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
+| [.github/workflows/rust.yml:67](../.github/workflows/rust.yml#L67) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
+| [.github/workflows/rust.yml:71](../.github/workflows/rust.yml#L71) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
+| [.github/workflows/rust.yml:72](../.github/workflows/rust.yml#L72) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
+| [.github/workflows/rust.yml:78](../.github/workflows/rust.yml#L78) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
+| [.github/workflows/rust.yml:171](../.github/workflows/rust.yml#L171) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:175](../.github/workflows/rust.yml#L175) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
+| [.github/workflows/rust.yml:181](../.github/workflows/rust.yml#L181) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
+| [.github/workflows/rust.yml:182](../.github/workflows/rust.yml#L182) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
+| [.github/workflows/rust.yml:183](../.github/workflows/rust.yml#L183) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
+| [.github/workflows/rust.yml:184](../.github/workflows/rust.yml#L184) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
+| [.github/workflows/rust.yml:207](../.github/workflows/rust.yml#L207) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:208](../.github/workflows/rust.yml#L208) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
