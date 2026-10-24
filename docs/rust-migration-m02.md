@@ -1,5 +1,11 @@
 # M02 — données et protections locales
 
+## Identité du handle SQLite Windows — candidat après `8028632`
+
+L'import confronte maintenant le fichier réellement ouvert par SQLite au descripteur source sélectionné, avant toute requête de validation ou sauvegarde. L'[opcode public `SQLITE_FCNTL_WIN32_GET_HANDLE`](https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html) fournit le handle emprunté ; `GetFileInformationByHandle` compare le volume, l'identifiant entier du fichier et son nombre de liens. Aucun handle SQLite n'est fermé ni dupliqué par ce contrôle. Le contrôle de chemin préalable et `SQLITE_OPEN_NOFOLLOW` restent en place.
+
+Le nouveau test Windows vérifie le contrôle positif, le refus d'une autre base de contenu identique, le refus d'une base mémoire sans handle, l'usage des connexions après le contrôle et un remplacement réel du fichier après prévalidation du chemin. Exécution native attendue en CI. Ce correctif concerne le fichier principal Windows ; l'identité des fichiers annexes et les courses d'ancêtres POSIX restent à traiter. Il ne clôt pas M02 et n'autorise aucun accès aux données réelles.
+
 ## Coffres propres aux prototypes — candidat après `bcb158d`
 
 La [CI Windows de `fbfac16`](https://github.com/FluryWaana/atelier/actions/runs/40110505194) est réussie, trois journaux relus : 85 tests Rust, dont les deux nouveaux scénarios, Clippy natif/WASM, comparateurs historiques, suite Node 439/435/0/4 et parcours Edge avec redémarrage. Cette preuve couvre les doubles des commandes POSIX et le branchement Windows ; la preuve des trousseaux Linux/macOS réels reste reportée.

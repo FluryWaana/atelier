@@ -54,6 +54,27 @@ impl Identity {
     pub fn inspect(path: &Path) -> Result<Self> {
         Ok(CheckedFile::open_unchecked(path)?.identity)
     }
+
+    #[cfg(windows)]
+    fn from_windows_handle(handle: windows_sys::Win32::Foundation::HANDLE) -> Result<Self> {
+        use windows_sys::Win32::Storage::FileSystem::{
+            BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT,
+            GetFileInformationByHandle,
+        };
+        let mut info = BY_HANDLE_FILE_INFORMATION::default();
+        // The caller retains the file/connection; Windows writes only to this live output buffer.
+        if unsafe { GetFileInformationByHandle(handle, &mut info) } == 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        if info.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY) != 0 {
+            return Err("Fichier régulier sans lien requis.".into());
+        }
+        Ok(Self {
+            device: u64::from(info.dwVolumeSerialNumber),
+            inode: (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow),
+            links: u64::from(info.nNumberOfLinks),
+        })
+    }
 }
 
 impl CheckedFile {
@@ -87,28 +108,11 @@ impl CheckedFile {
         #[cfg(windows)]
         {
             use std::os::windows::io::AsRawHandle;
-            use windows_sys::Win32::Storage::FileSystem::{
-                BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_REPARSE_POINT,
-                GetFileInformationByHandle,
-            };
-            let mut info = BY_HANDLE_FILE_INFORMATION::default();
-            // The owned file handle and output buffer remain valid for this synchronous call.
-            if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
-                return Err(std::io::Error::last_os_error().into());
-            }
-            if info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
-                || !file.metadata()?.is_file()
-            {
+            if !file.metadata()?.is_file() {
                 return Err("Fichier régulier sans lien requis.".into());
             }
-            Ok(Self {
-                file,
-                identity: Identity {
-                    device: u64::from(info.dwVolumeSerialNumber),
-                    inode: (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow),
-                    links: u64::from(info.nNumberOfLinks),
-                },
-            })
+            let identity = Identity::from_windows_handle(file.as_raw_handle())?;
+            Ok(Self { file, identity })
         }
         #[cfg(unix)]
         {
@@ -138,6 +142,31 @@ impl CheckedFile {
 
     pub(super) fn open_same(&self, path: &Path) -> Result<Self> {
         Self::open(path, &self.identity)
+    }
+
+    #[cfg(windows)]
+    pub(super) fn verify_sqlite(&self, connection: &rusqlite::Connection) -> Result<()> {
+        use rusqlite::ffi;
+        use windows_sys::Win32::Foundation::HANDLE;
+        let mut handle: HANDLE = std::ptr::null_mut();
+        // The connection and output HANDLE stay alive; this control borrows, never closes, its file.
+        let code = unsafe {
+            ffi::sqlite3_file_control(
+                connection.handle(),
+                c"main".as_ptr(),
+                ffi::SQLITE_FCNTL_WIN32_GET_HANDLE,
+                (&mut handle as *mut HANDLE).cast(),
+            )
+        };
+        if code != ffi::SQLITE_OK || handle.is_null() {
+            return Err("Identité du fichier SQLite indisponible.".into());
+        }
+        if Identity::from_windows_handle(handle)? != self.identity {
+            return Err(
+                "La base SQLite ouverte ne correspond plus à la source sélectionnée.".into(),
+            );
+        }
+        Ok(())
     }
 
     pub fn private(self) -> Result<Self> {
@@ -188,6 +217,55 @@ impl CheckedFile {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[cfg(windows)]
+    #[test]
+    fn sqlite_handle_identity_accepts_only_the_selected_file_without_closing_its_handle() {
+        use rusqlite::{Connection, OpenFlags};
+        let root = tempfile::tempdir().unwrap();
+        let first = root.path().join("first.sqlite");
+        let other = root.path().join("other.sqlite");
+        for path in [&first, &other] {
+            Connection::open(path)
+                .unwrap()
+                .execute_batch("CREATE TABLE sample(value); INSERT INTO sample VALUES (42);")
+                .unwrap();
+        }
+        let selected = CheckedFile::open_unchecked(&first).unwrap();
+        let correct =
+            Connection::open_with_flags(&first, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let wrong = Connection::open_with_flags(&other, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        selected.verify_sqlite(&correct).unwrap();
+        assert!(selected.verify_sqlite(&wrong).is_err());
+        assert!(
+            selected
+                .verify_sqlite(&Connection::open_in_memory().unwrap())
+                .is_err()
+        );
+        for connection in [&correct, &wrong] {
+            assert_eq!(
+                connection
+                    .query_row::<i64, _, _>("SELECT value FROM sample", [], |row| row.get(0))
+                    .unwrap(),
+                42
+            );
+        }
+        correct.close().unwrap();
+        wrong.close().unwrap();
+        let _prechecked = selected.open_same(&first).unwrap();
+        fs::rename(&first, root.path().join("original.sqlite")).unwrap();
+        fs::copy(&other, &first).unwrap();
+        let replaced =
+            Connection::open_with_flags(&first, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        assert!(selected.verify_sqlite(&replaced).is_err());
+        assert_eq!(
+            replaced
+                .query_row::<i64, _, _>("SELECT value FROM sample", [], |row| row.get(0))
+                .unwrap(),
+            42
+        );
+        replaced.close().unwrap();
+    }
 
     #[test]
     fn anchored_reads_reject_links_directories_and_paths_outside_the_root() {
