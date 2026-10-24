@@ -49,9 +49,10 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
         state
             .database
             .call(move |store| {
-                let interrupted = store.documents::<atelier_core::contracts::Card>(Documents::Cards)?.iter().any(|card| {
-                    card.fields.get::<atelier_core::contracts::Worktree>("worktree").ok().flatten().is_some_and(|worktree| worktree.state != atelier_core::contracts::WorktreeState::Ready)
-                });
+                let mut interrupted = false;
+                for card in store.documents::<atelier_core::contracts::Card>(Documents::Cards)? {
+                    interrupted |= atelier_core::application::worktrees::interrupted(&card)?;
+                }
                 if interrupted { return Err(BackupFailure::Conflict("Termine ou vérifie les opérations de worktree avant une sauvegarde ou une restauration.").into()); }
                 // shortcut: add active agents, servers and connector reservations when R03–R05 enable them.
                 backups::require_idle(false, false, false, &store.documents(Documents::Times)?)?;

@@ -4,6 +4,89 @@ use crate::{
     document::{Document, JsonString},
     domain::projects::same_repository,
 };
+use std::collections::BTreeMap;
+
+pub type ServiceWorktrees = BTreeMap<String, Worktree>;
+
+pub fn service_repositories(
+    project: Option<&Document>,
+    primary: &Worktree,
+    windows: bool,
+) -> Result<BTreeMap<String, String>> {
+    let mut sources = BTreeMap::new();
+    if let Some(project) = project {
+        for role in ["front", "back"] {
+            let repo = project
+                .get::<String>(&format!("{role}Repo"))?
+                .unwrap_or_default();
+            let command = project
+                .get::<String>(&format!("{role}Command"))?
+                .unwrap_or_default();
+            if !command.is_empty()
+                && !repo.is_empty()
+                && !same_repository(&repo, &primary.source, windows)
+            {
+                sources.insert(role.into(), repo);
+            }
+        }
+    }
+    Ok(sources)
+}
+
+pub fn associate_services(
+    mut card: Card,
+    primary: &Worktree,
+    expected: &ServiceWorktrees,
+    next: &ServiceWorktrees,
+    timestamp: String,
+    windows: bool,
+) -> Result<Card> {
+    if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(primary)
+        || card
+            .fields
+            .get::<ServiceWorktrees>("serviceWorktrees")?
+            .unwrap_or_default()
+            != *expected
+    {
+        return Err(CardFailure::Conflict(
+            "L’association du worktree a changé. Actualise la tâche.",
+        )
+        .into());
+    }
+    for (role, worktree) in next {
+        if !matches!(role.as_str(), "front" | "back")
+            || worktree.branch != primary.branch
+            || same_repository(&worktree.source, &primary.source, windows)
+            || same_repository(&worktree.path, &primary.path, windows)
+            || next.values().any(|other| {
+                same_repository(&other.source, &worktree.source, windows) && other != worktree
+            })
+        {
+            return Err(
+                CardFailure::Invalid("Association des worktrees de service incohérente.").into(),
+            );
+        }
+    }
+    if next.is_empty() {
+        card.fields.remove("serviceWorktrees");
+    } else {
+        card.fields.set("serviceWorktrees", next)?;
+    }
+    card.fields.set("updatedAt", &timestamp)?;
+    Ok(card)
+}
+
+pub fn interrupted(card: &Card) -> Result<bool> {
+    let primary = card.fields.get::<Worktree>("worktree")?;
+    let services = card
+        .fields
+        .get::<ServiceWorktrees>("serviceWorktrees")?
+        .unwrap_or_default();
+    Ok(primary
+        .iter()
+        .chain(services.values())
+        .any(|worktree| worktree.state != crate::contracts::WorktreeState::Ready))
+}
 
 pub struct CreateOptions {
     pub repo: String,
@@ -96,6 +179,17 @@ pub fn associate(
         card.fields.set("branch", &worktree.branch)?;
         card.fields.set("worktree", worktree)?;
     } else {
+        if !card
+            .fields
+            .get::<ServiceWorktrees>("serviceWorktrees")?
+            .unwrap_or_default()
+            .is_empty()
+        {
+            return Err(CardFailure::Conflict(
+                "Retire les worktrees de service avant le worktree principal.",
+            )
+            .into());
+        }
         card.fields.remove("worktree");
     }
     card.fields.set("updatedAt", &timestamp)?;
@@ -109,6 +203,95 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn shared_service_associations_preserve_primary_and_refuse_divergent_aliases() {
+        let primary = Worktree {
+            path: "/work/main".into(),
+            source: "/repo".into(),
+            branch: "task".into(),
+            base: "HEAD".into(),
+            base_commit: "a".repeat(40),
+            state: WorktreeState::Ready,
+        };
+        let service = Worktree {
+            path: "/work/service".into(),
+            source: "/service".into(),
+            state: WorktreeState::Creating,
+            ..primary.clone()
+        };
+        let card: Card = serde_json::from_str(
+            &json!({"id":"task","title":"Synthetic","repo":"/repo","worktree":primary}).to_string(),
+        )
+        .unwrap();
+        let next = ServiceWorktrees::from([
+            ("front".into(), service.clone()),
+            ("back".into(), service.clone()),
+        ]);
+        let associated = associate_services(
+            card.clone(),
+            &primary,
+            &ServiceWorktrees::new(),
+            &next,
+            "now".into(),
+            false,
+        )
+        .unwrap();
+        assert!(interrupted(&associated).unwrap());
+        assert!(
+            associate(
+                associated.clone(),
+                Some(&primary),
+                None,
+                "now".into(),
+                false
+            )
+            .is_err()
+        );
+        assert!(
+            associate_services(
+                associated.clone(),
+                &primary,
+                &ServiceWorktrees::new(),
+                &next,
+                "now".into(),
+                false
+            )
+            .is_err()
+        );
+        let mut divergent = next.clone();
+        divergent.get_mut("front").unwrap().path = "/work/other".into();
+        assert!(
+            associate_services(
+                associated.clone(),
+                &primary,
+                &next,
+                &divergent,
+                "now".into(),
+                false
+            )
+            .is_err()
+        );
+        let cleared = associate_services(
+            associated,
+            &primary,
+            &next,
+            &ServiceWorktrees::new(),
+            "now".into(),
+            false,
+        )
+        .unwrap();
+        assert!(!interrupted(&cleared).unwrap());
+        assert_eq!(
+            cleared.fields.get::<Worktree>("worktree").unwrap(),
+            Some(primary.clone())
+        );
+        let project: Document = serde_json::from_str(&json!({"frontRepo":"/repo","frontCommand":"synthetic","backRepo":"/service","backCommand":"synthetic"}).to_string()).unwrap();
+        assert_eq!(
+            service_repositories(Some(&project), &primary, false).unwrap(),
+            BTreeMap::from([("back".into(), "/service".into())])
+        );
+    }
+
+    #[test]
     fn confirmations_are_explicit_and_stale_associations_cannot_overwrite_a_task() {
         for body in [
             json!({}),
@@ -116,11 +299,12 @@ mod tests {
             json!({"confirmed":"true"}),
             json!({"confirmed":true,"discardChanges":"true"}),
         ] {
-            assert!(removal(&serde_json::from_value(body).unwrap()).is_err());
+            assert!(removal(&serde_json::from_str(&body.to_string()).unwrap()).is_err());
         }
-        assert!(!removal(&serde_json::from_value(json!({"confirmed":true})).unwrap()).unwrap());
-        let card: Card = serde_json::from_value(
-            json!({"id":"task","title":"Synthetic","repo":"/repo","description":"keep"}),
+        assert!(!removal(&serde_json::from_str(r#"{"confirmed":true}"#).unwrap()).unwrap());
+        let card: Card = serde_json::from_str(
+            &json!({"id":"task","title":"Synthetic","repo":"/repo","description":"keep"})
+                .to_string(),
         )
         .unwrap();
         let options = create_options(&card, &Document::default(), &Document::default()).unwrap();

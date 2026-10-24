@@ -1,4 +1,5 @@
 use crate::{field, i18n::I18n, live::BoardState, write};
+use atelier_core::application::worktrees::ServiceWorktrees;
 use atelier_core::contracts::{Worktree, WorktreeState};
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -133,10 +134,14 @@ pub fn Workspace(
             <div hidden=move || current.get().is_none()>
                 <p class="workspace-path">{move || current.get().map(|worktree| format!("{} · {}", worktree.branch, worktree.path)).unwrap_or_default()}</p>
                 <p id="worktree-state" role="status">{move || i18n.text(match current.get().map(|worktree| worktree.state) { Some(WorktreeState::Ready) => "Worktree prêt.", Some(WorktreeState::Creating | WorktreeState::Removing) => "Opération à terminer ou à vérifier. Les fichiers sont conservés jusqu’au retrait confirmé.", None => "" })}</p>
+                {[("front", "Front"), ("back", "Back")].into_iter().map(move |(role, label)| {
+                    let service = move || board.cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).and_then(|card| card.fields.get::<ServiceWorktrees>("serviceWorktrees").ok().flatten()).and_then(|mut worktrees| worktrees.remove(role)));
+                    view! { <div class="service-worktree" data-role=role hidden=move || service().is_none()><strong>{label}</strong><p class="workspace-path">{move || service().map(|worktree| format!("{} · {}", worktree.branch, worktree.path)).unwrap_or_default()}</p><p role="status">{move || i18n.text(if service().is_some_and(|worktree| worktree.state == WorktreeState::Ready) { "Worktree prêt." } else { "Opération à terminer ou à vérifier. Les fichiers sont conservés jusqu’au retrait confirmé." })}</p></div> }
+                }).collect_view()}
                 <div class="editor-actions"><button id="verify-worktree" type="button" disabled=move || pending.get() || blocked.get() on:click=move |_| act(false)>{move || i18n.text("Vérifier et reprendre")}</button><button id="remove-worktree" type="button" class="danger" disabled=move || pending.get() || blocked.get() on:click=move |_| { discard.set(false); confirming.set(true); }>{move || i18n.text("Retirer le worktree…")}</button></div>
             </div>
             <div class="confirmation" hidden=move || !confirming.get()>
-                <p>{move || i18n.text("Retirer ce dossier de travail ? La branche et ses commits restent dans Git.")}</p>
+                <p>{move || i18n.text("Retirer le worktree principal et les worktrees Front/Back associés ? Les branches et leurs commits restent dans Git.")}</p>
                 <label class="check-filter"><input id="discard-worktree-files" type="checkbox" disabled=move || pending.get() prop:checked=move || discard.get() on:change=move |event| discard.set(event_target_checked(&event)) />{move || i18n.text("Abandonner aussi les fichiers modifiés, nouveaux et ignorés de ce worktree. Cette suppression est irréversible.")}</label>
                 <button id="confirm-remove-worktree" class="danger" type="button" disabled=move || pending.get() || blocked.get() on:click=move |_| act(true)>{move || i18n.text("Confirmer le retrait")}</button>
                 <button type="button" disabled=move || pending.get() on:click=move |_| confirming.set(false)>{move || i18n.text("Annuler")}</button>

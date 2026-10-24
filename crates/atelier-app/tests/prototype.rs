@@ -102,6 +102,7 @@ async fn general_settings_reject_stale_fields_and_preserve_independent_edits_aft
 #[tokio::test]
 async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_actions() {
     use atelier_app::infrastructure::{process_tree, store::Documents};
+    use atelier_core::application::worktrees::ServiceWorktrees;
     use atelier_core::contracts::{Worktree, WorktreeState};
     async fn git(repo: &Path, args: &[&str]) {
         let mut command = tokio::process::Command::new("git");
@@ -139,7 +140,30 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
     std::fs::write(repo.join(".gitignore"), "ignored.txt\n").unwrap();
     git(&repo, &["add", "."]).await;
     git(&repo, &["commit", "-qm", "Synthetic baseline"]).await;
+    let service_repo = repo.with_file_name("worktree-service-http");
+    std::fs::create_dir_all(&service_repo).unwrap();
+    git(&service_repo, &["init", "-b", "main"]).await;
+    std::fs::write(service_repo.join("source.txt"), "service source\n").unwrap();
+    git(&service_repo, &["add", "."]).await;
+    git(
+        &service_repo,
+        &["commit", "-qm", "Synthetic service baseline"],
+    )
+    .await;
     let client = reqwest::Client::new();
+    let project: Value = client
+        .post(format!("{address}/api/projects"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Synthetic services", "repo":repo}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let project_id = project["id"].as_str().unwrap();
+    client.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(&token).header("x-local-request","1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":"synthetic-front","backCommand":"synthetic-back"})).send().await.unwrap().error_for_status().unwrap();
     let card: Card = client
         .post(format!("{address}/api/cards"))
         .bearer_auth(&token)
@@ -174,6 +198,26 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
     .await
     .unwrap();
     let worktree = created.fields.get::<Worktree>("worktree").unwrap().unwrap();
+    let services = created
+        .fields
+        .get::<ServiceWorktrees>("serviceWorktrees")
+        .unwrap()
+        .unwrap();
+    assert_eq!(services["front"], services["back"]);
+    assert_eq!(services["front"].branch, worktree.branch);
+    assert_eq!(services["front"].state, WorktreeState::Ready);
+    assert_eq!(
+        client
+            .patch(format!("{address}/api/projects/{project_id}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"frontRepo":""}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        409
+    );
     assert_eq!(worktree.state, WorktreeState::Ready);
     assert_eq!(
         post("/worktree/remove", json!({}))
@@ -205,6 +249,14 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
             let mut intent = card.fields.get::<Worktree>("worktree")?.unwrap();
             intent.state = WorktreeState::Creating;
             card.fields.set("worktree", &intent)?;
+            let mut services = card
+                .fields
+                .get::<ServiceWorktrees>("serviceWorktrees")?
+                .unwrap();
+            for service in services.values_mut() {
+                service.state = WorktreeState::Creating;
+            }
+            card.fields.set("serviceWorktrees", &services)?;
             store.put(Documents::Cards, &card)
         })
         .await
@@ -252,6 +304,11 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
         .unwrap();
     let resumed = resumed.fields.get::<Worktree>("worktree").unwrap().unwrap();
     assert_eq!(resumed, worktree);
+    std::fs::write(
+        Path::new(&services["front"].path).join("source.txt"),
+        "service edit",
+    )
+    .unwrap();
     assert_eq!(
         client
             .get(format!("{address}/api/cards/{id}/files"))
@@ -276,6 +333,10 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
         400
     );
     assert!(Path::new(&worktree.path).join("ignored.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(Path::new(&services["front"].path).join("source.txt")).unwrap(),
+        "service edit"
+    );
     let restored: Card = post("/worktree", json!({}))
         .send()
         .await
@@ -314,6 +375,23 @@ async fn worktree_intents_survive_restart_and_block_destructive_card_and_backup_
             .is_none()
     );
     assert!(!Path::new(&worktree.path).exists());
+    assert!(!Path::new(&services["front"].path).exists());
+    assert!(
+        removed
+            .fields
+            .get::<ServiceWorktrees>("serviceWorktrees")
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        std::fs::read_to_string(service_repo.join("source.txt")).unwrap(),
+        "service source\n"
+    );
+    git(
+        &service_repo,
+        &["show-ref", "--verify", "refs/heads/feature/http-synthetic"],
+    )
+    .await;
     git(
         &repo,
         &["show-ref", "--verify", "refs/heads/feature/http-synthetic"],

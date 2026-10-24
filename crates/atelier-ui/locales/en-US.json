@@ -1,4 +1,8 @@
 {
+  "Retirer le worktree principal et les worktrees Front/Back associés ? Les branches et leurs commits restent dans Git.": "Remove the main worktree and its associated Front/Back worktrees? Branches and their commits remain in Git.",
+  "Association des worktrees de service incohérente.": "Inconsistent service worktree association.",
+  "Retire les worktrees de service avant le worktree principal.": "Remove the service worktrees before the main worktree.",
+  "Le dépôt du service a changé. Retire les worktrees associés avant de le remplacer.": "The service repository has changed. Remove the associated worktrees before replacing it.",
   "Projet lié pour les tests": "Linked project for testing",
   "Aucun projet lié": "No linked project",
   "Les commandes et le projet lié sont enregistrés pour les futurs lancements. Aucun service n’est démarré par cet écran.": "Commands and the linked project are saved for future launches. This screen does not start any service.",

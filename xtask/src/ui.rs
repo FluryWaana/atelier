@@ -1084,6 +1084,25 @@ async fn files_scenario(
             "-qm",
             "Synthetic file baseline",
         ]))?;
+    let service_repo = data.join("repositories/files-ui-service");
+    run(command("git")
+        .env("GIT_CONFIG_GLOBAL", "NUL")
+        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])
+        .arg(&repo)
+        .arg(&service_repo))?;
+    let project: serde_json::Value = http
+        .post(format!("{address}/api/projects"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Files and services fixture", "repo":repo}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let project_id = project["id"].as_str().ok_or("Projet synthétique absent.")?;
+    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":"synthetic-front","backCommand":"synthetic-back"})).send().await?.error_for_status()?;
     std::fs::write(repo.join("src/tracked.txt"), "modified synthetic file\n")?;
     let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
     std::fs::write(repo.join("new file é.txt"), text)?;
@@ -1217,6 +1236,18 @@ async fn files_scenario(
         .fields
         .get::<atelier_core::contracts::Worktree>("worktree")?
         .ok_or("Worktree synthétique absent.")?;
+    let services = board
+        .cards
+        .iter()
+        .find(|value| value.id == card.id)
+        .ok_or("Tâche synthétique absente.")?
+        .fields
+        .get::<atelier_core::application::worktrees::ServiceWorktrees>("serviceWorktrees")?
+        .ok_or("Worktrees de service absents.")?;
+    if services.get("front") != services.get("back") || services.len() != 2 {
+        return Err("Les services d’un même dépôt doivent partager le worktree.".into());
+    }
+    wait_dom(client, "return Array.from(document.querySelectorAll('.service-worktree')).filter(element=>!element.hidden).length === 2 && Array.from(document.querySelectorAll('.service-worktree [role=status]')).every(element=>element.textContent === 'Worktree prêt.');", vec![]).await?;
     if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?
         != "synthetic shared dependency"
     {
@@ -1252,6 +1283,16 @@ async fn files_scenario(
     wait_dom(client,"return document.querySelector('#worktree-notice')?.textContent === 'Worktree retiré. La branche Git est conservée.' && document.querySelector('#create-worktree')?.disabled === false;",vec![]).await?;
     if Path::new(&worktree.path).exists() {
         return Err("Le retrait du worktree n’a pas terminé.".into());
+    }
+    if services
+        .values()
+        .any(|worktree| Path::new(&worktree.path).exists())
+    {
+        return Err("Un worktree de service subsiste après le retrait.".into());
+    }
+    if std::fs::read_to_string(service_repo.join("src/tracked.txt"))? != "tracked synthetic file\n"
+    {
+        return Err("Le retrait a modifié le dépôt source du service.".into());
     }
     if std::fs::read_to_string(repo.join("node_modules/keep.txt"))? != "synthetic shared dependency"
     {
