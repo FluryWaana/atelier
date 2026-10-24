@@ -39,14 +39,7 @@ impl CreationContext for Store<'_> {
         if !path.metadata()?.is_dir() {
             return Err(CardFailure::Invalid("Le dépôt doit être un dossier.").into());
         }
-        let path = path.to_string_lossy();
-        #[cfg(windows)]
-        let path = if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
-            format!(r"\\{unc}")
-        } else {
-            path.strip_prefix(r"\\?\").unwrap_or(&path).to_owned()
-        };
-        Ok(JsonString::from(path.as_ref()))
+        Ok(path_string(&path))
     }
     fn new_id(&self) -> String {
         uuid::Uuid::new_v4().to_string()
@@ -54,4 +47,15 @@ impl CreationContext for Store<'_> {
     fn timestamp(&self) -> Result<String> {
         Clock.format(Clock.now())
     }
+}
+
+pub(super) fn path_string(path: &std::path::Path) -> JsonString {
+    let path = path.to_string_lossy();
+    #[cfg(windows)]
+    let path = if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        path.strip_prefix(r"\\?\").unwrap_or(&path).to_owned()
+    };
+    JsonString::from(path.as_ref())
 }

@@ -38,6 +38,8 @@ pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval';
 
 struct AppState {
     database: Database,
+    prototype_path: PathBuf,
+    prototype_directory: Arc<cap_std::fs::Dir>,
     vault: crate::infrastructure::token_vault::PrototypeVault,
     backups: Arc<crate::infrastructure::backups::BackupDirectory>,
     token: String,
@@ -312,6 +314,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     let (shutdown, mut stopped) = watch::channel(false);
     let state = Arc::new(AppState {
         database,
+        prototype_path: directory.path.clone(),
+        prototype_directory: Arc::new(directory.opened_directory()?),
         vault,
         backups: Arc::new(directory.backups()?),
         token,
@@ -349,7 +353,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         )
         .route(
             "/api/projects/{id}/detect-launch",
-            get(projects::unavailable).post(projects::unavailable),
+            get(projects::detect).post(projects::detect),
         )
         .route("/api/cards", post(task_creation::create))
         .route("/api/brainstorms", post(task_creation::create))

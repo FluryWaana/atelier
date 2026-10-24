@@ -4,6 +4,7 @@ pub mod checked_file;
 pub mod data_lock;
 pub mod database;
 pub mod installation;
+pub mod launch_detection;
 pub mod local_http;
 pub mod portable_import;
 pub mod projects;

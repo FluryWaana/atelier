@@ -51,6 +51,10 @@ impl PrototypeDirectory {
         super::session::write_in(&self.directory, token)
     }
 
+    pub fn opened_directory(&self) -> Result<Dir> {
+        Ok(self.directory.try_clone()?)
+    }
+
     pub fn vault_service(&self) -> Result<String> {
         use std::io::Write;
         let name = Path::new(".atelier-prototype-vault");

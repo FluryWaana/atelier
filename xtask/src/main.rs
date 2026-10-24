@@ -5,6 +5,7 @@ use std::{
 };
 
 mod keyring;
+mod launch_detection;
 mod storage;
 mod ui;
 
@@ -140,7 +141,8 @@ async fn main() -> Result<()> {
         ["test-project-lifecycle-parity"] => {
             run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;
             run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))
+            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;
+            launch_detection::test()
         }
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,

@@ -158,20 +158,48 @@ pub(super) async fn remove(
     mutate(state, Action::Remove(id), request).await
 }
 
-pub(super) async fn unavailable(State(state): State<Shared>, Path(id): Path<String>) -> Response {
-    match state
+pub(super) async fn detect(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let use_draft = request.method() == axum::http::Method::POST;
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let project = match state
         .database
         .call(move |store| store.document::<Document>(Documents::Projects, &id))
         .await
     {
-        Ok(Some(_)) => failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Cette opération de projet n’est pas encore disponible dans le prototype Rust.",
-        ),
-        Ok(None) => failure(StatusCode::NOT_FOUND, "Projet introuvable."),
+        Ok(project) => project,
+        Err(_) => {
+            return failure(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Lecture du projet impossible.",
+            );
+        }
+    };
+    let root = state.prototype_directory.clone();
+    let path = state.prototype_path.clone();
+    // Both callbacks enforce the synthetic repositories subtree before any manifest access.
+    let result = tokio::task::spawn_blocking(move || {
+        use crate::infrastructure::launch_detection;
+        projects::detect(
+            project.as_ref(),
+            &body,
+            use_draft,
+            |value| launch_detection::synthetic_repository(&root, &path, value),
+            |repo| launch_detection::detect_synthetic(&root, &path, repo),
+        )
+    })
+    .await;
+    match result {
+        Ok(result) => response(result),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Lecture du projet impossible.",
+            "Détection du projet impossible.",
         ),
     }
 }

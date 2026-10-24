@@ -1318,6 +1318,137 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
 }
 
 #[tokio::test]
+async fn project_detection_reads_only_synthetic_repositories_and_never_saves_drafts() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let repo = data.path().join("repositories/main");
+    let draft = data.path().join("repositories/draft");
+    std::fs::create_dir_all(repo.join("Properties")).unwrap();
+    std::fs::create_dir_all(&draft).unwrap();
+    std::fs::write(repo.join("package.json"), r#"{"scripts":{"dev":"vite"}}"#).unwrap();
+    std::fs::write(
+        repo.join("Api.csproj"),
+        r#"<Project Sdk="Microsoft.NET.Sdk.Web"/>"#,
+    )
+    .unwrap();
+    std::fs::write(repo.join("Properties/launchSettings.json"), r#"{"profiles":{"http":{"commandName":"Project","environmentVariables":{"SECRET":"synthetic-private-value"}}}}"#).unwrap();
+    std::fs::write(
+        draft.join("package.json"),
+        r#"{"scripts":{"start":"node server.mjs"},"dependencies":{"express":"*"}}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        outside.path().join("package.json"),
+        "outside synthetic sentinel",
+    )
+    .unwrap();
+    let client = reqwest::Client::new();
+    let request = |method, path: &str| {
+        client
+            .request(method, format!("{address}{path}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let response = request(reqwest::Method::POST, "/api/projects")
+        .json(&json!({"name":"Synthetic detection","repo":repo}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let project: Value = response.json().await.unwrap();
+    let path = format!(
+        "/api/projects/{}/detect-launch",
+        project["id"].as_str().unwrap()
+    );
+    let response = request(reqwest::Method::GET, &path).send().await.unwrap();
+    assert_eq!(response.status(), 200);
+    let detected: Value = response.json().await.unwrap();
+    assert_eq!(detected["candidates"].as_array().unwrap().len(), 2);
+    assert_eq!(detected["candidates"][0]["technology"], "Vite");
+    assert_eq!(detected["candidates"][1]["technology"], "ASP.NET Core");
+    for candidate in detected["candidates"].as_array().unwrap() {
+        assert_eq!(candidate["sourceRepo"], project["repo"]);
+    }
+    assert!(!detected.to_string().contains("synthetic-private-value"));
+    let response = request(reqwest::Method::POST, &path)
+        .json(&json!({"role":"front","frontRepo":draft,"backRepo":outside.path()}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let detected: Value = response.json().await.unwrap();
+    assert_eq!(detected["candidates"].as_array().unwrap().len(), 1);
+    assert_eq!(detected["candidates"][0]["role"], "front");
+    assert_eq!(detected["candidates"][0]["technology"], "Express");
+    assert_ne!(detected["candidates"][0]["sourceRepo"], project["repo"]);
+    let response = request(reqwest::Method::POST, &path)
+        .json(&json!({"repo":outside.path()}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 400);
+    assert!(
+        response
+            .text()
+            .await
+            .unwrap()
+            .contains("dépôts synthétiques")
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, &path)
+            .json(&json!({"role":"invalid"}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, "/api/projects/missing/detect-launch")
+            .json(&json!({"role":"invalid"}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
+    assert_eq!(
+        client
+            .get(format!("{address}{path}"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    assert_eq!(
+        request(reqwest::Method::POST, &path)
+            .header("origin", "https://example.invalid")
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        403
+    );
+    let state: Value = request(reqwest::Method::GET, "/api/state")
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(state["projects"][0], project);
+    assert_eq!(
+        std::fs::read(outside.path().join("package.json")).unwrap(),
+        b"outside synthetic sentinel"
+    );
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival_with_deletion() {
     use atelier_core::{
         contracts::Board,
@@ -1399,7 +1530,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
         (
             reqwest::Method::GET,
             format!("/api/projects/{id}/detect-launch"),
-            503,
+            400,
         ),
     ] {
         assert_eq!(

@@ -4,7 +4,7 @@ Référence : `843d3ea`, Atelier `0.1.9`, Node `24.22.1`, données version 2. In
 
 ## Lecture et statut
 
-Dernière preuve Windows recueillie : `0e7a252`, trois jobs réussis, journaux et captures Edge relus. L'interface historique sur Rust permet création/édition, sauvegarde/restauration et reprise ; ses autres fonctions restent partielles. L'identité du handle SQLite principal Windows est vérifiée jusque dans le scénario de remplacement. Diagnostic POSIX candidat après cette base, courses WAL/SHM et qualification finale des autres OS encore ouvertes. Voir [M02](rust-migration-m02.md) et [M03](rust-migration-m03.md).
+Dernière preuve Windows recueillie : `544b294`, trois jobs réussis et journaux relus. Session, base et verrou utilisent le dossier sélectionné ; sauvegarde/restauration/import utilisent des temporaires SQLite privés. Node : 440/436/0/4 (total/réussis/échecs/exclusions). Les deux parcours Edge passent ; captures déjà inspectées à `0e7a252`. Détection pure `c819fd0` en CI, scanner natif et route synthétique candidats. Courses POSIX, qualification des autres OS et fonctions M04–M11 restent ouvertes. Voir [M02](rust-migration-m02.md), [M03](rust-migration-m03.md) et [M04](rust-migration-m04.md).
 
 Cette matrice décrit les contrats à conserver et leurs erreurs, pas seulement une liste de fichiers à traduire. L'[inventaire généré](rust-migration-inventory.md) complète chaque ligne avec **tous** les fichiers applicatifs, ressources, exemples, tests/supports, imports/appelants statiques, exports de compatibilité, noms de scénarios et repères de contrats. Une entrée sans appelant statique n'est pas du code mort : routes, injection, scripts natifs, assets et chargements de connecteurs sont aussi des entrées.
 

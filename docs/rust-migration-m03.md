@@ -1,5 +1,11 @@
 # M03 — Règles et API métier
 
+## Détection HTTP avec scanner natif — candidat après `c819fd0`
+
+GET/POST `/api/projects/{id}/detect-launch` appellent le cas d'usage pur et le scanner [M04](rust-migration-m04.md). Le projet est lu par le worker SQLite, puis le scan se déroule hors du worker, sans verrou de transaction. Le brouillon n'est jamais sauvegardé. Les scénarios HTTP Node/Rust couvrent manifestes Node/.NET, sélection Front dédiée, rôle ignoré, projet absent prioritaire, refus d'authentification et conservation du projet. Le test Rust ajoute Origin et la garde du périmètre synthétique. Résultats distants attendus.
+
+Restriction volontaire du prototype : chaque dépôt analysé doit être un sous-dossier de `<data-dir>/repositories`, ouvert relativement au handle conservé du prototype. Chemins externes et traversées sont refusés avant lecture ; liens sortants et jonctions sont refusés par les ouvertures ancrées. Créer ces seuls dépôts synthétiques **après** le premier démarrage sur dossier vide. Cette garde ne prétend pas être une parité des chemins utilisateur ; elle sera revue seulement lors de la qualification des données réelles. Le contrôle automatique avait refusé le branchement libre ; le branchement restreint a été retenu.
+
 ## Sélection des sources de détection — candidat après `544b294`
 
 Le cas d'usage pur `projects::detect` porte la sélection de dépôts de `lib/application/projects.mjs` : projet absent prioritaire, rôle Front/Back strict, formulaire POST non sauvegardé, valeurs GET ignorées, effacement des dépôts dédiés, filtrage ou réaffectation des rôles, une analyse par chaîne de dépôt et déduplication ordonnée des avertissements. Résolution native des chemins et lecture des manifestes sont des ports explicites ; aucune I/O ni nouvelle dépendance dans core. Candidats, avertissements et chemins conservent leurs unités UTF-16.

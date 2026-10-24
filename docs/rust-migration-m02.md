@@ -1,5 +1,7 @@
 # M02 — données et protections locales
 
+Preuve Windows recueillie pour `544b294` (incluant `e8005d5`) : [les trois jobs](https://github.com/FluryWaana/atelier/actions/runs/40115772963) sont réussis, journaux relus. Les scénarios `checked_database_rejects_another_root_before_schema_or_journal_writes`, `session_and_database_share_the_selected_prototype_directory` et `temporary_sqlite_sidecars_stay_inside_a_private_directory` passent, ainsi que les comparateurs stockage/restauration/import/verrou, DPAPI entre comptes, Clippy natif/WASM et les deux parcours Edge. Node : 440 tests, 436 réussis, aucun échec, quatre exclusions inchangées. Cela valide ces incréments sous Windows ; les assertions POSIX et les limites ci-dessous restent ouvertes.
+
 ## Dossier commun au verrou, à la session et à SQLite — candidat après `e8005d5`
 
 Le démarrage ne rouvre plus indépendamment le chemin du prototype pour publier sa session ou sélectionner la base. Session, coffre, sauvegardes et worker SQLite utilisent le dossier déjà ouvert. Le verrou commun et la base sont créés relativement à ce handle, avec mode 0600 sur POSIX, puis ouverts par SQLite sans création ni suivi de liens ; l'identité réelle du fichier principal est confrontée à celle du dossier sélectionné avant toute requête SQL. La sélection POSIX reste un `fstatat` sans ouverture/fermeture d'un descripteur de la base. Les ouvertures génériques de `Database` suivent le même contrôle, sauf le stockage `:memory:` sans fichiers.
