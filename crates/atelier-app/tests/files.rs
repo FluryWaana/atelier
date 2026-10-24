@@ -5,7 +5,7 @@ use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
-async fn git(repo: &Path, args: &[&str]) {
+async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(repo)
@@ -21,6 +21,192 @@ async fn git(repo: &Path, args: &[&str]) {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    output.stdout
+}
+
+#[tokio::test]
+async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_programs() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+    let repo = root_path.join("repositories/diffs");
+    std::fs::create_dir_all(&repo).unwrap();
+    git(&repo, &["init", "-b", "main"]).await;
+    git(&repo, &["config", "user.name", "Synthetic"]).await;
+    git(
+        &repo,
+        &["config", "user.email", "synthetic@example.invalid"],
+    )
+    .await;
+    git(&repo, &["config", "core.autocrlf", "false"]).await;
+    for (name, content) in [
+        ("changed.txt", "before\n"),
+        ("deleted.txt", "deleted\n"),
+        ("replaced.txt", "original\n"),
+        (".gitignore", "ignored.txt\n"),
+    ] {
+        std::fs::write(repo.join(name), content).unwrap();
+    }
+    git(&repo, &["add", "."]).await;
+    git(
+        &repo,
+        &[
+            "-c",
+            "core.hooksPath=NUL",
+            "commit",
+            "-qm",
+            "Synthetic baseline",
+        ],
+    )
+    .await;
+    let base = String::from_utf8(git(&repo, &["rev-parse", "HEAD"]).await)
+        .unwrap()
+        .trim()
+        .to_owned();
+    std::fs::write(repo.join("committed.txt"), "committed\n").unwrap();
+    git(&repo, &["add", "."]).await;
+    git(
+        &repo,
+        &[
+            "-c",
+            "core.hooksPath=NUL",
+            "commit",
+            "-qm",
+            "Synthetic task commit",
+        ],
+    )
+    .await;
+    std::fs::write(repo.join("staged.txt"), "staged\n").unwrap();
+    git(&repo, &["add", "staged.txt"]).await;
+    git(&repo, &["rm", "replaced.txt"]).await;
+    std::fs::write(repo.join("replaced.txt"), "replacement\n").unwrap();
+    std::fs::write(repo.join("changed.txt"), "after\n").unwrap();
+    std::fs::remove_file(repo.join("deleted.txt")).unwrap();
+    std::fs::write(
+        repo.join("new é # [x].txt"),
+        "<script>synthetic</script>\nlast",
+    )
+    .unwrap();
+    std::fs::write(repo.join("ignored.txt"), "ignored synthetic content").unwrap();
+    std::fs::write(repo.join("binary.bin"), [0, 1]).unwrap();
+    std::fs::write(
+        repo.join(".gitattributes"),
+        "*.txt filter=review diff=review\n",
+    )
+    .unwrap();
+    let marker = repo.join("must-not-run");
+    for key in [
+        "filter.review.clean",
+        "filter.review.smudge",
+        "filter.review.process",
+        "diff.review.command",
+        "diff.review.textconv",
+        "core.fsmonitor",
+    ] {
+        git(&repo, &["config", key, "echo invoked > must-not-run; cat"]).await;
+    }
+    git(&repo, &["config", "filter.review.required", "true"]).await;
+    let index = std::fs::read(repo.join(".git/index")).unwrap();
+    let config = std::fs::read(repo.join(".git/config")).unwrap();
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path.clone()];
+    let value = JsonString::from(repo.to_str().unwrap());
+    let open = || Repository::synthetic(&root, &roots, &value).unwrap();
+    let changes = open().changes(Some(&base)).await.unwrap();
+    assert_eq!(changes.base, base);
+    for (path, status) in [
+        ("changed.txt", "M"),
+        ("committed.txt", "A"),
+        ("staged.txt", "A"),
+        ("deleted.txt", "D"),
+        ("new é # [x].txt", "A"),
+    ] {
+        assert!(
+            changes
+                .files
+                .iter()
+                .any(|entry| entry.path == path && entry.status == status),
+            "{path}"
+        );
+    }
+    assert!(
+        !changes
+            .files
+            .iter()
+            .any(|entry| entry.path == "ignored.txt")
+    );
+    let replacements = changes
+        .files
+        .iter()
+        .filter(|entry| entry.path == "replaced.txt")
+        .collect::<Vec<_>>();
+    assert_eq!(replacements.len(), 2);
+    assert!(
+        replacements
+            .iter()
+            .any(|entry| entry.untracked && entry.status == "A")
+    );
+    assert!(
+        replacements
+            .iter()
+            .any(|entry| !entry.untracked && entry.status == "D")
+    );
+    for (path, untracked, expected) in [
+        ("changed.txt", false, "-before\n+after"),
+        ("deleted.txt", false, "-deleted"),
+        ("replaced.txt", false, "-original"),
+        ("replaced.txt", true, "+replacement"),
+        (
+            "new é # [x].txt",
+            true,
+            "+<script>synthetic</script>\n+last\n\\ No newline",
+        ),
+    ] {
+        let patch = open()
+            .file_diff(path.into(), Some(&base), Some(untracked))
+            .await
+            .unwrap();
+        assert!(patch.patch.unwrap().contains(expected), "{path}");
+    }
+    assert!(
+        open()
+            .file_diff("binary.bin".into(), None, Some(true))
+            .await
+            .unwrap()
+            .unavailable
+            .unwrap()
+            .contains("binaire")
+    );
+    assert!(
+        open()
+            .file_diff(".git/config".into(), None, None)
+            .await
+            .is_err()
+    );
+    assert!(
+        open()
+            .file_diff("ignored.txt".into(), None, None)
+            .await
+            .is_err()
+    );
+    assert!(open().changes(Some("--help")).await.is_err());
+    assert!(
+        !open()
+            .changes(None)
+            .await
+            .unwrap()
+            .files
+            .iter()
+            .any(|entry| entry.path == "committed.txt")
+    );
+    assert_eq!(std::fs::read(repo.join(".git/index")).unwrap(), index);
+    assert_eq!(std::fs::read(repo.join(".git/config")).unwrap(), config);
+    assert!(!marker.exists());
+    // A linked directory cannot be traversed while computing a diff either.
+    let outside = root_path.join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(outside.join("secret.txt"), "synthetic outside").unwrap();
+    std::os::windows::fs::symlink_dir(&outside, repo.join("linked")).unwrap();
+    assert!(open().changes(None).await.is_err());
 }
 
 #[tokio::test]

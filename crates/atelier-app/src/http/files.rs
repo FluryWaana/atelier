@@ -12,9 +12,15 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub(super) struct Selection {
     path: String,
+    untracked: Option<bool>,
 }
 
-async fn inspect(state: Shared, id: String, path: Option<String>) -> Response {
+async fn inspect(
+    state: Shared,
+    id: String,
+    selection: Option<Selection>,
+    changes: bool,
+) -> Response {
     if !cfg!(windows) {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -61,9 +67,21 @@ async fn inspect(state: Shared, id: String, path: Option<String>) -> Response {
             Ok(repository) => repository,
             Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
         };
-    let result = if let Some(path) = path {
+    let result = if changes {
+        if let Some(selection) = selection {
+            repository
+                .file_diff(selection.path, None, selection.untracked)
+                .await
+                .and_then(|value| Ok(serde_json::to_value(value)?))
+        } else {
+            repository
+                .changes(None)
+                .await
+                .and_then(|value| Ok(serde_json::to_value(value)?))
+        }
+    } else if let Some(selection) = selection {
         repository
-            .preview(path)
+            .preview(selection.path)
             .await
             .and_then(|value| Ok(serde_json::to_value(value)?))
     } else {
@@ -83,7 +101,7 @@ async fn inspect(state: Shared, id: String, path: Option<String>) -> Response {
 }
 
 pub(super) async fn list(State(state): State<Shared>, Path(id): Path<String>) -> Response {
-    inspect(state, id, None).await
+    inspect(state, id, None, false).await
 }
 
 pub(super) async fn preview(
@@ -91,5 +109,17 @@ pub(super) async fn preview(
     Path(id): Path<String>,
     Query(selection): Query<Selection>,
 ) -> Response {
-    inspect(state, id, Some(selection.path)).await
+    inspect(state, id, Some(selection), false).await
+}
+
+pub(super) async fn changes(State(state): State<Shared>, Path(id): Path<String>) -> Response {
+    inspect(state, id, None, true).await
+}
+
+pub(super) async fn diff(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    Query(selection): Query<Selection>,
+) -> Response {
+    inspect(state, id, Some(selection), true).await
 }

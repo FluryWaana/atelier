@@ -71,3 +71,23 @@ pub struct FilePreview {
     pub content: Option<String>,
     pub unavailable: Option<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct FileChange {
+    pub path: String,
+    pub status: String,
+    pub untracked: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ChangeListing {
+    pub base: String,
+    pub files: Vec<FileChange>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FileDiff {
+    pub path: String,
+    pub patch: Option<String>,
+    pub unavailable: Option<String>,
+}

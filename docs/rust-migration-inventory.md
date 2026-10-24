@@ -945,8 +945,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/files.rs:14](../crates/atelier-app/src/infrastructure/files.rs#L14) | <code>use std::path::PathBuf;</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:16](../crates/atelier-app/src/infrastructure/files.rs#L16) | <code>pub struct Repository {</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:22](../crates/atelier-app/src/infrastructure/files.rs#L22) | <code>pub fn synthetic(root: &amp;Dir, roots: &amp;[PathBuf], repo: &amp;JsonString) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/files.rs:45](../crates/atelier-app/src/infrastructure/files.rs#L45) | <code>pub async fn list(&amp;self) -&gt; Result&lt;FileListing&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/files.rs:79](../crates/atelier-app/src/infrastructure/files.rs#L79) | <code>pub async fn preview(self, path: String) -&gt; Result&lt;FilePreview&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:58](../crates/atelier-app/src/infrastructure/files.rs#L58) | <code>pub async fn list(&amp;self) -&gt; Result&lt;FileListing&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:84](../crates/atelier-app/src/infrastructure/files.rs#L84) | <code>pub async fn changes(&amp;self, base_commit: Option&lt;&amp;str&gt;) -&gt; Result&lt;ChangeListing&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:140](../crates/atelier-app/src/infrastructure/files.rs#L140) | <code>pub async fn file_diff(</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:254](../crates/atelier-app/src/infrastructure/files.rs#L254) | <code>pub async fn preview(self, path: String) -&gt; Result&lt;FilePreview&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
@@ -1255,7 +1257,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/files.rs:4](../crates/atelier-app/tests/files.rs#L4) | <code>use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};</code> |
 | [crates/atelier-app/tests/files.rs:5](../crates/atelier-app/tests/files.rs#L5) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/tests/files.rs:6](../crates/atelier-app/tests/files.rs#L6) | <code>use std::{path::Path, time::Duration};</code> |
-| [crates/atelier-app/tests/files.rs:26](../crates/atelier-app/tests/files.rs#L26) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/files.rs:27](../crates/atelier-app/tests/files.rs#L27) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/files.rs:212](../crates/atelier-app/tests/files.rs#L212) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/local-http.rs:1](../crates/atelier-app/tests/local-http.rs#L1) | <code>use atelier_app::infrastructure::{local_http::LocalHttp, session};</code> |
 | [crates/atelier-app/tests/local-http.rs:2](../crates/atelier-app/tests/local-http.rs#L2) | <code>use axum::{</code> |
 | [crates/atelier-app/tests/local-http.rs:9](../crates/atelier-app/tests/local-http.rs#L9) | <code>use serde_json::json;</code> |
@@ -1459,6 +1462,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/contracts.rs:70](../crates/atelier-core/src/contracts.rs#L70) | <code>pub path: String,</code> |
 | [crates/atelier-core/src/contracts.rs:71](../crates/atelier-core/src/contracts.rs#L71) | <code>pub content: Option&lt;String&gt;,</code> |
 | [crates/atelier-core/src/contracts.rs:72](../crates/atelier-core/src/contracts.rs#L72) | <code>pub unavailable: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:76](../crates/atelier-core/src/contracts.rs#L76) | <code>pub struct FileChange {</code> |
+| [crates/atelier-core/src/contracts.rs:77](../crates/atelier-core/src/contracts.rs#L77) | <code>pub path: String,</code> |
+| [crates/atelier-core/src/contracts.rs:78](../crates/atelier-core/src/contracts.rs#L78) | <code>pub status: String,</code> |
+| [crates/atelier-core/src/contracts.rs:79](../crates/atelier-core/src/contracts.rs#L79) | <code>pub untracked: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:83](../crates/atelier-core/src/contracts.rs#L83) | <code>pub struct ChangeListing {</code> |
+| [crates/atelier-core/src/contracts.rs:84](../crates/atelier-core/src/contracts.rs#L84) | <code>pub base: String,</code> |
+| [crates/atelier-core/src/contracts.rs:85](../crates/atelier-core/src/contracts.rs#L85) | <code>pub files: Vec&lt;FileChange&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:89](../crates/atelier-core/src/contracts.rs#L89) | <code>pub struct FileDiff {</code> |
+| [crates/atelier-core/src/contracts.rs:90](../crates/atelier-core/src/contracts.rs#L90) | <code>pub path: String,</code> |
+| [crates/atelier-core/src/contracts.rs:91](../crates/atelier-core/src/contracts.rs#L91) | <code>pub patch: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:92](../crates/atelier-core/src/contracts.rs#L92) | <code>pub unavailable: Option&lt;String&gt;,</code> |
 | [crates/atelier-core/src/document.rs:1](../crates/atelier-core/src/document.rs#L1) | <code>use serde::{</code> |
 | [crates/atelier-core/src/document.rs:5](../crates/atelier-core/src/document.rs#L5) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/src/document.rs:6](../crates/atelier-core/src/document.rs#L6) | <code>use std::fmt;</code> |
@@ -1627,7 +1641,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/backups.rs:6](../crates/atelier-ui/src/backups.rs#L6) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/backups.rs:21](../crates/atelier-ui/src/backups.rs#L21) | <code>pub fn Backups(</code> |
 | [crates/atelier-ui/src/files.rs:1](../crates/atelier-ui/src/files.rs#L1) | <code>use crate::{i18n::I18n, read};</code> |
-| [crates/atelier-ui/src/files.rs:2](../crates/atelier-ui/src/files.rs#L2) | <code>use atelier_core::contracts::{FileListing, FilePreview};</code> |
+| [crates/atelier-ui/src/files.rs:2](../crates/atelier-ui/src/files.rs#L2) | <code>use atelier_core::contracts::{ChangeListing, FileChange, FileDiff, FileListing, FilePreview};</code> |
 | [crates/atelier-ui/src/files.rs:3](../crates/atelier-ui/src/files.rs#L3) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/files.rs:4](../crates/atelier-ui/src/files.rs#L4) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/files.rs:9](../crates/atelier-ui/src/files.rs#L9) | <code>pub fn Files(card_id: String, token: StoredValue&lt;Result&lt;String, String&gt;&gt;) -&gt; impl IntoView {</code> |
@@ -2254,19 +2268,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:158](../.github/workflows/release.yml#L158) | <code>gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes --title "Atelier Kanban $RELEASE_TAG"</code> |
 | [.github/workflows/release.yml:159](../.github/workflows/release.yml#L159) | <code>gh release upload "$RELEASE_TAG" dist/*</code> |
 | [.github/workflows/release.yml:160](../.github/workflows/release.yml#L160) | <code>gh release edit "$RELEASE_TAG" --draft=false</code> |
-| [.github/workflows/rust.yml:53](../.github/workflows/rust.yml#L53) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
-| [.github/workflows/rust.yml:67](../.github/workflows/rust.yml#L67) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
-| [.github/workflows/rust.yml:71](../.github/workflows/rust.yml#L71) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
-| [.github/workflows/rust.yml:72](../.github/workflows/rust.yml#L72) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
-| [.github/workflows/rust.yml:78](../.github/workflows/rust.yml#L78) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:171](../.github/workflows/rust.yml#L171) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:175](../.github/workflows/rust.yml#L175) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
-| [.github/workflows/rust.yml:181](../.github/workflows/rust.yml#L181) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
-| [.github/workflows/rust.yml:182](../.github/workflows/rust.yml#L182) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
-| [.github/workflows/rust.yml:183](../.github/workflows/rust.yml#L183) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
-| [.github/workflows/rust.yml:184](../.github/workflows/rust.yml#L184) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
-| [.github/workflows/rust.yml:207](../.github/workflows/rust.yml#L207) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:208](../.github/workflows/rust.yml#L208) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
+| [.github/workflows/rust.yml:51](../.github/workflows/rust.yml#L51) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
+| [.github/workflows/rust.yml:65](../.github/workflows/rust.yml#L65) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
+| [.github/workflows/rust.yml:69](../.github/workflows/rust.yml#L69) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
+| [.github/workflows/rust.yml:70](../.github/workflows/rust.yml#L70) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
+| [.github/workflows/rust.yml:76](../.github/workflows/rust.yml#L76) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
+| [.github/workflows/rust.yml:169](../.github/workflows/rust.yml#L169) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:173](../.github/workflows/rust.yml#L173) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
+| [.github/workflows/rust.yml:179](../.github/workflows/rust.yml#L179) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
+| [.github/workflows/rust.yml:180](../.github/workflows/rust.yml#L180) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
+| [.github/workflows/rust.yml:181](../.github/workflows/rust.yml#L181) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
+| [.github/workflows/rust.yml:182](../.github/workflows/rust.yml#L182) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
+| [.github/workflows/rust.yml:205](../.github/workflows/rust.yml#L205) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:206](../.github/workflows/rust.yml#L206) | <code>ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui</code> |
 | [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
 | [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
@@ -2274,8 +2288,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:480](../crates/atelier-app/src/infrastructure/checked_file.rs#L480) | <code>.args(["/D", "/C"])</code> |
-| [crates/atelier-app/src/infrastructure/files.rs:143](../crates/atelier-app/src/infrastructure/files.rs#L143) | <code>.args([</code> |
-| [crates/atelier-app/src/infrastructure/files.rs:154](../crates/atelier-app/src/infrastructure/files.rs#L154) | <code>.args(arguments);</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:240](../crates/atelier-app/src/infrastructure/files.rs#L240) | <code>let mut args = options.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;();</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:241](../crates/atelier-app/src/infrastructure/files.rs#L241) | <code>args.extend([</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:250](../crates/atelier-app/src/infrastructure/files.rs#L250) | <code>args.extend_from_slice(arguments);</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:251](../crates/atelier-app/src/infrastructure/files.rs#L251) | <code>self.git(&amp;args).await</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:318](../crates/atelier-app/src/infrastructure/files.rs#L318) | <code>.args([</code> |
+| [crates/atelier-app/src/infrastructure/files.rs:329](../crates/atelier-app/src/infrastructure/files.rs#L329) | <code>.args(arguments);</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:644](../crates/atelier-app/src/infrastructure/launch_detection.rs#L644) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:417](../crates/atelier-app/src/infrastructure/portable_import.rs#L417) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>.args(["/D", "/C"])</code> |
@@ -2294,7 +2312,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:7](../crates/atelier-app/src/main.rs#L7) | <code>if args.next().as_deref() != Some("serve-prototype") {</code> |
 | [crates/atelier-app/src/main.rs:11](../crates/atelier-app/src/main.rs#L11) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:12](../crates/atelier-app/src/main.rs#L12) | <code>let value = args.next().ok_or("Valeur d’argument absente.")?;</code> |
-| [crates/atelier-app/tests/files.rs:8](../crates/atelier-app/tests/files.rs#L8) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) {</code> |
+| [crates/atelier-app/tests/files.rs:8](../crates/atelier-app/tests/files.rs#L8) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
 | [crates/atelier-app/tests/files.rs:14](../crates/atelier-app/tests/files.rs#L14) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
 | [crates/atelier-app/tests/files.rs:15](../crates/atelier-app/tests/files.rs#L15) | <code>.args(args);</code> |
 | [crates/atelier-app/tests/prototype.rs:994](../crates/atelier-app/tests/prototype.rs#L994) | <code>.args([</code> |
@@ -2519,6 +2537,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:166](../xtask/src/ui.rs#L166) | <code>capabilities.insert("moz:firefoxOptions".into(), json!({"args":["-headless"]}));</code> |
 | [xtask/src/ui.rs:1028](../xtask/src/ui.rs#L1028) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:1035](../xtask/src/ui.rs#L1035) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:1040](../xtask/src/ui.rs#L1040) | <code>.args([</code> |
 | [xtask/tests/windows-native.rs:31](../xtask/tests/windows-native.rs#L31) | <code>fn spawn(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Self {</code> |
 | [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
 | [xtask/tests/windows-native.rs:138](../xtask/tests/windows-native.rs#L138) | <code>.args([</code> |
@@ -3574,7 +3593,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:306](../crates/atelier-app/src/infrastructure/token_vault.rs#L306) | <code>store.connection.execute_batch("CREATE TABLE IF NOT EXISTS token_vault (id INTEGER PRIMARY KEY CHECK(id=1), encrypted TEXT NOT NULL)")?;</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:313](../crates/atelier-app/src/infrastructure/token_vault.rs#L313) | <code>store.connection.execute("INSERT INTO token_vault VALUES (1,?) ON CONFLICT(id) DO UPDATE SET encrypted=excluded.encrypted", [encrypted])?;</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:315](../crates/atelier-app/src/infrastructure/token_vault.rs#L315) | <code>store.connection.execute("DELETE FROM token_vault", [])?;</code> |
-| [crates/atelier-app/tests/files.rs:88](../crates/atelier-app/tests/files.rs#L88) | <code>"src/tracked.txt:stream",</code> |
+| [crates/atelier-app/tests/files.rs:274](../crates/atelier-app/tests/files.rs#L274) | <code>"src/tracked.txt:stream",</code> |
 | [crates/atelier-app/tests/prototype.rs:171](../crates/atelier-app/tests/prototype.rs#L171) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/tests/prototype.rs:278](../crates/atelier-app/tests/prototype.rs#L278) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/tests/prototype.rs:319](../crates/atelier-app/tests/prototype.rs#L319) | <code>"local-session.mjs",</code> |

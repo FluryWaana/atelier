@@ -5,7 +5,7 @@ use super::{
 };
 use crate::Result;
 use atelier_core::{
-    contracts::{FileListing, FilePreview},
+    contracts::{ChangeListing, FileChange, FileDiff, FileListing, FilePreview},
     document::JsonString,
     domain::files::{PREVIEW_LIMIT, validate_path},
 };
@@ -42,7 +42,7 @@ impl Repository {
         Ok(Self { path, directory })
     }
 
-    pub async fn list(&self) -> Result<FileListing> {
+    async fn verify_root(&self) -> Result<()> {
         let top = self.git(&["rev-parse", "--show-toplevel"]).await?;
         let top = String::from_utf8(top)?;
         if !atelier_core::domain::projects::same_repository(
@@ -52,6 +52,11 @@ impl Repository {
         ) {
             return Err("Le dossier de travail ne correspond plus à la racine du dépôt.".into());
         }
+        Ok(())
+    }
+
+    pub async fn list(&self) -> Result<FileListing> {
+        self.verify_root().await?;
         let output = self
             .git(&[
                 "ls-files",
@@ -74,6 +79,176 @@ impl Repository {
             return Err("Le dépôt dépasse la limite de 50 000 fichiers de l’explorateur.".into());
         }
         Ok(FileListing { files })
+    }
+
+    pub async fn changes(&self, base_commit: Option<&str>) -> Result<ChangeListing> {
+        self.verify_root().await?;
+        let base = match base_commit {
+            Some(commit) => {
+                validate_commit(commit)?;
+                String::from_utf8(self.git(&["merge-base", commit, "HEAD"]).await?)?
+            }
+            None => String::from_utf8(
+                self.git(&["rev-parse", "--verify", "HEAD^{commit}"])
+                    .await?,
+            )?,
+        };
+        let base = base.trim().to_owned();
+        validate_commit(&base)?;
+        let tracked = self.diff(&["--name-status", "-z", &base, "--"]).await?;
+        let tracked = String::from_utf8(tracked)
+            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?;
+        let parts = tracked
+            .strip_suffix('\0')
+            .unwrap_or(&tracked)
+            .split('\0')
+            .collect::<Vec<_>>();
+        let mut files = Vec::new();
+        if !tracked.is_empty() {
+            if !parts.len().is_multiple_of(2) {
+                return Err("Réponse Git invalide pour les changements.".into());
+            }
+            for pair in parts.chunks_exact(2) {
+                files.push(FileChange {
+                    path: pair[1].into(),
+                    status: pair[0].into(),
+                    untracked: false,
+                });
+            }
+        }
+        let untracked = self
+            .git(&["ls-files", "--others", "--exclude-standard", "-z"])
+            .await?;
+        for path in String::from_utf8(untracked)
+            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?
+            .split('\0')
+            .filter(|path| !path.is_empty())
+        {
+            files.push(FileChange {
+                path: path.into(),
+                status: "A".into(),
+                untracked: true,
+            });
+        }
+        if files.len() > 50_000 {
+            return Err("Le dépôt dépasse la limite de 50 000 fichiers de l’explorateur.".into());
+        }
+        files.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(ChangeListing { base, files })
+    }
+
+    pub async fn file_diff(
+        self,
+        path: String,
+        base_commit: Option<&str>,
+        untracked: Option<bool>,
+    ) -> Result<FileDiff> {
+        validate_path(&path, cfg!(windows))?;
+        let changes = self.changes(base_commit).await?;
+        let entry = changes
+            .files
+            .iter()
+            .find(|entry| {
+                entry.path == path && untracked.is_none_or(|expected| expected == entry.untracked)
+            })
+            .ok_or("Ce fichier ne fait plus partie des changements. Actualise la liste.")?;
+        let mut result = FileDiff {
+            path: path.clone(),
+            patch: None,
+            unavailable: None,
+        };
+        if entry.untracked {
+            let preview = self.preview(path).await?;
+            result.unavailable = preview.unavailable;
+            if let Some(content) = preview.content {
+                let lines = content.split_inclusive('\n').collect::<Vec<_>>();
+                let mut patch = format!("@@ -0,0 +1,{} @@\n", lines.len());
+                for line in lines {
+                    patch.push('+');
+                    patch.push_str(line);
+                }
+                if !content.is_empty() && !content.ends_with('\n') {
+                    patch.push_str("\n\\ No newline at end of file\n");
+                }
+                if patch.len() > PREVIEW_LIMIT {
+                    result.unavailable =
+                        Some("Différence trop volumineuse pour l’aperçu (512 Kio maximum).".into());
+                } else {
+                    result.patch = Some(if content.is_empty() {
+                        String::new()
+                    } else {
+                        patch
+                    });
+                }
+            }
+        } else {
+            let patch = self
+                .diff(&["--no-color", "--unified=3", &changes.base, "--", &path])
+                .await?;
+            if patch.len() > PREVIEW_LIMIT {
+                result.unavailable =
+                    Some("Différence trop volumineuse pour l’aperçu (512 Kio maximum).".into());
+            } else {
+                match String::from_utf8(patch) {
+                    Ok(patch) => result.patch = Some(patch),
+                    Err(_) => {
+                        result.unavailable =
+                            Some("Encodage non UTF-8 : aperçu textuel indisponible.".into())
+                    }
+                }
+            }
+        }
+        Ok(result)
+    }
+
+    async fn diff(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+        let paths = self.list().await?.files;
+        let directory = self.directory.try_clone()?;
+        tokio::task::spawn_blocking(move || check_diff_paths(directory, paths)).await??;
+        // Git diff can invoke clean/process filters even when external diff/textconv are disabled.
+        let config = self
+            .git(&["config", "--includes", "--null", "--name-only", "--list"])
+            .await?;
+        let config = String::from_utf8(config)?;
+        let mut options = Vec::new();
+        for key in config
+            .split('\0')
+            .collect::<std::collections::BTreeSet<_>>()
+        {
+            let lower = key.to_ascii_lowercase();
+            if lower.starts_with("filter.")
+                && [".clean", ".smudge", ".process", ".required"]
+                    .iter()
+                    .any(|suffix| lower.ends_with(suffix))
+            {
+                if key.contains('=') {
+                    return Err(
+                        "Configuration de filtre Git incompatible avec l’aperçu sécurisé.".into(),
+                    );
+                }
+                options.push("-c".to_owned());
+                options.push(format!(
+                    "{key}={}",
+                    if lower.ends_with(".required") {
+                        "false"
+                    } else {
+                        ""
+                    }
+                ));
+            }
+        }
+        let mut args = options.iter().map(String::as_str).collect::<Vec<_>>();
+        args.extend([
+            "-c",
+            "diff.submodule=short",
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--ignore-submodules=dirty",
+        ]);
+        args.extend_from_slice(arguments);
+        self.git(&args).await
     }
 
     pub async fn preview(self, path: String) -> Result<FilePreview> {
@@ -171,4 +346,31 @@ impl Repository {
     async fn git(&self, _arguments: &[&str]) -> Result<Vec<u8>> {
         Err("L’explorateur Git natif attend sa qualification sur ce système.".into())
     }
+}
+
+fn validate_commit(commit: &str) -> Result<()> {
+    if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("Commit de départ invalide.".into());
+    }
+    Ok(())
+}
+
+fn check_diff_paths(root: Dir, paths: Vec<String>) -> Result<()> {
+    for path in paths {
+        validate_path(&path, cfg!(windows))?;
+        let mut directory = root.try_clone()?;
+        let mut parts = path.split('/').peekable();
+        while let Some(part) = parts.next() {
+            let metadata = match directory.symlink_metadata(part) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                Err(error) => return Err(error.into()),
+            };
+            require_plain(&metadata)?;
+            if parts.peek().is_some() {
+                directory = directory.open_dir_nofollow(part)?;
+            }
+        }
+    }
+    Ok(())
 }

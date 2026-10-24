@@ -1033,6 +1033,22 @@ async fn files_scenario(
         .env("GIT_CONFIG_GLOBAL", "NUL")
         .env("GIT_CONFIG_SYSTEM", "NUL")
         .args(["add", "--", ".gitignore", "src/tracked.txt"]))?;
+    run(command("git")
+        .current_dir(&repo)
+        .env("GIT_CONFIG_GLOBAL", "NUL")
+        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .args([
+            "-c",
+            "user.name=Synthetic",
+            "-c",
+            "user.email=synthetic@example.invalid",
+            "-c",
+            "core.hooksPath=NUL",
+            "commit",
+            "-qm",
+            "Synthetic file baseline",
+        ]))?;
+    std::fs::write(repo.join("src/tracked.txt"), "modified synthetic file\n")?;
     let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
     std::fs::write(repo.join("new file é.txt"), text)?;
     std::fs::write(
@@ -1066,14 +1082,7 @@ async fn files_scenario(
     for path in ["ignored.txt", ".git/config", "../outside"] {
         let mut url = reqwest::Url::parse(&endpoint)?;
         url.query_pairs_mut().append_pair("path", path);
-        if http
-            .get(url)
-            .bearer_auth(token)
-            .send()
-            .await?
-            .status()
-            != 400
-        {
+        if http.get(url).bearer_auth(token).send().await?.status() != 400 {
             return Err("L’explorateur a accepté un chemin interdit.".into());
         }
     }
@@ -1122,6 +1131,28 @@ async fn files_scenario(
         .await?;
     click(client, ".file-choice").await?;
     wait_dom(client,"return document.querySelector('#file-unavailable')?.textContent.includes('binaire') && document.querySelector('#file-content')?.hidden === true;",vec![]).await?;
+    click(client, "#show-changes").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    client
+        .find(Locator::Css("#file-search"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#file-search"))
+        .await?
+        .send_keys("tracked.txt")
+        .await?;
+    wait_dom(client,"return document.querySelectorAll('.file-choice').length === 1 && document.querySelector('.file-choice')?.textContent.startsWith('M · ');",vec![]).await?;
+    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('#file-content')?.textContent.includes('-tracked synthetic file') && document.querySelector('#file-content')?.textContent.includes('+modified synthetic file');",vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-diff.png"),
+        client.screenshot().await?,
+    )?;
+    std::fs::write(repo.join("src/tracked.txt"), "tracked synthetic file\n")?;
+    click(client, "#refresh-files").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 0 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
     click(client, "#close-editor").await?;
     Ok(())
 }

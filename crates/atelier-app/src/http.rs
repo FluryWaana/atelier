@@ -375,6 +375,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/cards/{id}/duplicate", post(duplicate))
         .route("/api/cards/{id}/files", get(files::list))
         .route("/api/cards/{id}/file", get(files::preview))
+        .route("/api/cards/{id}/changes", get(files::changes))
+        .route("/api/cards/{id}/file-diff", get(files::diff))
         .route("/api/prototype/stop", post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
