@@ -83,19 +83,8 @@ pub fn default_agent(
 }
 
 pub(super) fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
-    if let Some(providers) = present(settings.raw("agentProviders")) {
-        let providers: Vec<Document> = serde_json::from_str(providers.get())?;
-        for provider in providers {
-            if provider.get::<JsonString>("id").ok().flatten().as_ref() == Some(agent) {
-                return Ok(provider);
-            }
-        }
-    } else if [JsonString::from("codex"), JsonString::from("claude")].contains(agent) {
-        let mut provider = Document::default();
-        provider.set("type", agent)?;
-        return Ok(provider);
-    }
-    Err(CardFailure::Invalid("Agent invalide.").into())
+    crate::domain::agent_options::find_provider(settings, agent)?
+        .ok_or_else(|| CardFailure::Invalid("Agent invalide.").into())
 }
 
 pub(super) fn options(agent: &JsonString, body: &Document, settings: &Document) -> Result<Value> {

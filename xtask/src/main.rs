@@ -101,7 +101,8 @@ async fn main() -> Result<()> {
         ["test-storage-parity"] => storage::test().await,
         ["test-domain-parity"] => {
             run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))
+            run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;
+            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--locked"]))
         }
         ["test-time-parity"] => {
             run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;

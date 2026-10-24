@@ -32,7 +32,7 @@ Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full
 
 `cargo xtask test-storage-parity` compares storage, restoration and token envelopes against the historical Node runtime (`ATELIER_NODE` overrides its path). Ordinary Rust tests do not need Node. `cargo xtask test-keyring` requires a native Linux/macOS keyring and creates, reads and deletes only a unique synthetic service; it never uses the production token key. Run it on disposable CI/test accounts.
 
-`cargo xtask test-domain-parity` rechecks the captured Node domain vectors and runs their Rust equivalents. Ordinary core tests read the committed synthetic JSON and require no Node runtime. Regenerate a reference only after reviewing an intentional contract change; never update expected results to hide a Rust mismatch.
+`cargo xtask test-domain-parity` rechecks the captured Node domain vectors, including lossless UTF-16 project settings, and runs their Rust equivalents. Ordinary core tests read the committed synthetic JSON and require no Node runtime. Regenerate a reference only after reviewing an intentional contract change; never update expected results to hide a Rust mismatch.
 
 `cargo xtask test-time-parity` compares captured historical timer transitions with Rust use cases on synthetic SQLite databases, including restart, fractional seconds, export guards and rollback. The ordinary Rust test reads the committed fixture without Node. Export/reconcile remain unavailable until M05 supplies the actual connector and its reservation guard.
 

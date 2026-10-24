@@ -666,6 +666,13 @@ Prochaine action concrète :
 - **CI recueillie :** `1c49fb4` entièrement réussi, cinq journaux natifs relus pour l'édition atomique et la séparation des brainstorms ; projets en attente de leur CI.
 - **Suite :** réglages/déplacements de projets avec sauvegarde, paramètres/profils et protections/intégrations M02 restantes.
 
+### Incrément M03 — réglages de projet UTF-16
+
+- **Écart corrigé :** les réglages purs refusaient les substituts UTF-16 isolés acceptés par Node. Documents en entrée et textes sans perte en sortie, mêmes validations et priorités.
+- **Référence :** 51 cas Node supplémentaires ; 305 contrats précédents inchangés, créations/éditions revérifiées après partage de la recherche de fournisseur. Bilan dans M03.
+- **Validation :** Windows uniquement pendant la migration ; Linux/macOS reportés à la fin suivant la demande utilisateur.
+- **Suite :** brancher l'édition et le déplacement de projet avec sauvegarde, puis réglages/profils et intégrations M02 restantes.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

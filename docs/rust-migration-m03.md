@@ -136,6 +136,14 @@ La [CI `1c49fb4`](https://github.com/FluryWaana/atelier/actions/runs/40100250745
 
 La CI Rust des prochains pushes ne lance que Windows. Les cinq cibles natives et les navigateurs Linux/macOS restent disponibles via `workflow_dispatch` avec `full_matrix: true`, à utiliser lors de la qualification finale. Aucun scénario ni critère final n'est supprimé.
 
+## Réglages de projet sans perte UTF-16 — après `d2deabe`
+
+La préparation de l'édition des projets révèle que `domain/projects` utilisait encore `serde_json::Value` et `String` pour les textes. La validation prend désormais des `Document` et produit des réglages typés sérialisables dont les textes sont des `JsonString`. Règles, branches, commandes, chemins relatifs, mappings Jira et identifiants restent sans perte ; champs inconnus dans l'entrée écartés comme Node. La recherche d'un fournisseur est partagée avec création/édition de tâches, sans déplacement d'adaptateur dans core ni nouvelle dépendance.
+
+Le corpus `rust-project-settings-reference` ajoute 51 cas capturés par la vraie fonction `projectSettings` : substituts isolés, bornes UTF-16, trim, traversées, ports/placeholder, fournisseur et priorités entre erreurs. Les 305 vecteurs historiques sont inchangés ; les 84 créations et 63 éditions de tâches gardent leurs résultats. `cargo xtask test-domain-parity` vérifie aussi ce nouveau corpus. Les tests ordinaires lisent les JSON commis sans Node.
+
+Cet incrément porte la validation pure ; PATCH projet et déplacement avec sauvegarde restent à brancher. Contrôles Windows : 72 tests Rust réussis, Clippy natif/WASM et comparateur de 305 + 51 résultats réussis. Suite Node avec `ATELIER_REQUIRE_RELEASE=1`, en série : 433 tests, 430 réussis, aucun échec, trois exclusions, 139,306 s. Inventaire régénéré et vérifié. La CI est désormais limitée à Windows ; la vérification des changements sur Linux/macOS reste reportée à la fin, conformément à la demande de l'utilisateur.
+
 ## Preuves reproductibles
 
 `test/fixtures/rust-domain-reference.mjs` appelle les vraies fonctions historiques sur 175 entrées et capture leurs résultats ou messages d'erreur dans le JSON voisin. `cargo xtask test-domain-parity` vérifie que cette référence correspond toujours à Node puis exécute `atelier-core/tests/domain-contracts.rs`. Les tests Rust courants lisent le JSON et restent indépendants de Node ; le comparateur historique est aussi exécuté sur les cinq runners CI.

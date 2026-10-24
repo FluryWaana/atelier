@@ -34,7 +34,11 @@ fn historical_node_domain_results_and_errors_match() {
             "agentOptions" => agent_options(args[0].as_str().unwrap(), &args[1], args.get(2)),
             "resolveAgentOptions" => resolve_agent_options(&args[0], &args[1], &args[2]),
             "providerSettings" => provider_settings(&args[0]),
-            "projectSettings" => project_settings(&args[0], args.get(1).unwrap_or(&json!({}))),
+            "projectSettings" => project_settings(
+                &serde_json::from_str(&args[0].to_string()).unwrap(),
+                &serde_json::from_str(&args.get(1).unwrap_or(&json!({})).to_string()).unwrap(),
+            )
+            .map(|value| serde_json::to_value(value).unwrap()),
             "timeFields" => atelier_core::domain::time::time_fields(
                 &serde_json::from_str(&args[0].to_string()).unwrap(),
             )

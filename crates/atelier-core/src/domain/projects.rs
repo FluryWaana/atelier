@@ -1,5 +1,6 @@
-use super::{agent_options::agent_provider, tasks::STATUSES, text, truthy};
-use crate::document::JsonString;
+use super::{agent_options::find_provider, tasks::STATUSES, text_units, truthy};
+use crate::document::{Document, JsonString};
+use serde::Serialize;
 use serde_json::{Value, json};
 
 type Result<T> = std::result::Result<T, &'static str>;
@@ -32,27 +33,31 @@ pub fn same_repository_units(a: &JsonString, b: &JsonString, windows: bool) -> b
     }
 }
 
-fn setting(body: &Value, key: &str, limit: usize) -> Result<String> {
+fn setting(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
     let invalid = "Réglage de projet invalide.";
     let value = body
-        .get(key)
-        .filter(|value| !value.is_null())
-        .map_or(Some(""), Value::as_str)
-        .ok_or(invalid)?;
-    text(value, limit).map_err(|_| invalid)
+        .raw(key)
+        .filter(|value| value.get() != "null")
+        .map(|value| serde_json::from_str::<JsonString>(value.get()))
+        .transpose()
+        .map_err(|_| invalid)?
+        .unwrap_or_default();
+    text_units(&value, limit).map_err(|_| invalid)
 }
 
-fn directory(path: String) -> Result<String> {
+fn directory(path: JsonString) -> Result<JsonString> {
     let invalid = "Le dossier du service doit être relatif et rester dans le worktree.";
-    let bytes = path.as_bytes();
-    if path.starts_with(['/', '\\'])
+    // Replacing a surrogate cannot introduce ASCII traversal; keep the original units in the result.
+    let view = String::from_utf16_lossy(&path.0);
+    let bytes = view.as_bytes();
+    if view.starts_with(['/', '\\'])
         || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
     {
         return Err(invalid);
     }
     let mut depth = 0usize;
     // Apply the Windows traversal rules on every OS, as the historical validator does.
-    for part in path.split(['/', '\\']) {
+    for part in view.split(['/', '\\']) {
         match part {
             "" | "." => {}
             ".." => depth = depth.checked_sub(1).ok_or(invalid)?,
@@ -62,12 +67,13 @@ fn directory(path: String) -> Result<String> {
     Ok(path)
 }
 
-fn port(value: Option<&Value>) -> Result<u16> {
+fn port(body: &Document, key: &str) -> Result<u16> {
     let invalid =
         "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique.";
-    let Some(value) = value else {
+    let Some(value) = body.raw(key) else {
         return Ok(0);
     };
+    let value: Value = serde_json::from_str(value.get()).map_err(|_| invalid)?;
     if value == "" {
         return Ok(0);
     }
@@ -85,97 +91,146 @@ fn port(value: Option<&Value>) -> Result<u16> {
     Ok(number as u16)
 }
 
-pub fn project_settings(body: &Value, settings: &Value) -> Result<Value> {
-    let agent = body
-        .get("agent")
-        .filter(|value| truthy(value))
-        .cloned()
-        .unwrap_or(json!(""));
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectSettings {
+    pub project_rules: JsonString,
+    pub agent: JsonString,
+    pub base_branch: JsonString,
+    pub repository_connector: JsonString,
+    pub jira_mode: String,
+    pub jira_status_map: Document,
+    pub front_command: JsonString,
+    pub back_command: JsonString,
+    pub front_repo: JsonString,
+    pub back_repo: JsonString,
+    pub front_directory: JsonString,
+    pub back_directory: JsonString,
+    pub front_port: u16,
+    pub back_port: u16,
+    pub linked_project_id: JsonString,
+    pub automation_enabled: bool,
+    pub auto_fix: bool,
+    pub pr_target: JsonString,
+    pub test_command: JsonString,
+}
+
+pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectSettings> {
+    let invalid = "Réglage de projet invalide.";
     let base_branch = setting(body, "baseBranch", 180)?;
-    let jira_mode = body
-        .get("jiraMode")
-        .filter(|value| truthy(value))
-        .cloned()
-        .unwrap_or(json!("inherit"));
     let connector = setting(body, "repositoryConnector", 64)?;
-    if !connector.is_empty()
-        && (!connector.as_bytes()[0].is_ascii_lowercase()
-            || !connector
+    let connector_text = connector.utf8().map_err(|_| "Fournisseur Git invalide.")?;
+    if !connector.0.is_empty()
+        && (!connector_text.as_bytes()[0].is_ascii_lowercase()
+            || !connector_text
                 .bytes()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-'))
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-'))
     {
         return Err("Fournisseur Git invalide.");
     }
-    if truthy(&agent) {
-        agent_provider(settings, agent.as_str().ok_or("Agent invalide.")?)?;
+    let agent = if body.truthy("agent").map_err(|_| "Agent invalide.")? {
+        body.get::<JsonString>("agent")
+            .map_err(|_| "Agent invalide.")?
+            .unwrap_or_default()
+    } else {
+        JsonString::default()
+    };
+    if !agent.0.is_empty() {
+        find_provider(settings, &agent)
+            .map_err(|_| "Agent invalide.")?
+            .ok_or("Agent invalide.")?;
     }
-    if ![json!("inherit"), json!("off"), json!("custom")].contains(&jira_mode)
-        || base_branch.starts_with('-')
+    let jira_mode = if body.truthy("jiraMode").map_err(|_| invalid)? {
+        body.get::<String>("jiraMode")
+            .map_err(|_| invalid)?
+            .unwrap_or_default()
+    } else {
+        "inherit".into()
+    };
+    if !["inherit", "off", "custom"].contains(&jira_mode.as_str())
+        || base_branch.0.first() == Some(&u16::from(b'-'))
     {
         return Err("Réglage de projet invalide.");
     }
-    let empty = json!({});
     let mapping = body
-        .get("jiraStatusMap")
-        .filter(|value| !value.is_null())
-        .unwrap_or(&empty);
-    if !mapping.is_object()
-        || mapping
-            .as_object()
-            .is_some_and(|mapping| mapping.keys().any(|key| !STATUSES.contains(&key.as_str())))
-    {
+        .raw("jiraStatusMap")
+        .filter(|value| value.get() != "null")
+        .map(|value| serde_json::from_str::<Document>(value.get()))
+        .transpose()
+        .map_err(|_| "Correspondance Jira invalide.")?
+        .unwrap_or_default();
+    if mapping.keys().any(|key| {
+        !STATUSES
+            .iter()
+            .any(|status| key == &JsonString::from(*status))
+    }) {
         return Err("Correspondance Jira invalide.");
     }
-    let mut status_map = json!({});
+    let mut status_map = Document::default();
+    let mut has_status = false;
     for status in STATUSES {
-        status_map[status] = json!(setting(mapping, status, 100)?);
+        let value = setting(&mapping, status, 100)?;
+        has_status |= !value.0.is_empty();
+        status_map.set(status, &value).map_err(|_| invalid)?;
     }
-    if jira_mode == "custom" && !STATUSES.iter().any(|status| truthy(&status_map[status])) {
+    if jira_mode == "custom" && !has_status {
         return Err("Renseigne au moins un statut Jira.");
     }
     for key in ["automationEnabled", "autoFix"] {
-        if body.get(key).is_some_and(|value| !value.is_boolean()) {
+        if body.get::<bool>(key).is_err() {
             return Err("Option automatique invalide.");
         }
     }
     let pr_target = setting(body, "prTarget", 180)?;
     let test_command = setting(body, "testCommand", 2000)?;
+    let placeholder = JsonString::from("{port}");
     for role in ["front", "back"] {
-        if port(body.get(format!("{role}Port")))? != 0
-            && !setting(body, &format!("{role}Command"), 2000)?.contains("{port}")
+        if port(body, &format!("{role}Port"))? != 0
+            && !setting(body, &format!("{role}Command"), 2000)?
+                .0
+                .windows(placeholder.0.len())
+                .any(|units| units == placeholder.0)
         {
             return Err(
                 "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier.",
             );
         }
     }
-    if pr_target.starts_with('-')
-        || (truthy(&body["automationEnabled"]) && (pr_target.is_empty() || test_command.is_empty()))
+    let automation_enabled = body
+        .get::<bool>("automationEnabled")
+        .map_err(|_| "Option automatique invalide.")?
+        .unwrap_or(false);
+    if pr_target.0.first() == Some(&u16::from(b'-'))
+        || (automation_enabled && (pr_target.0.is_empty() || test_command.0.is_empty()))
     {
         return Err(
             "Renseigne la branche cible et la commande de vérification avant d’activer le mode automatique.",
         );
     }
-    let mut result = json!({"agent": agent, "baseBranch": base_branch, "repositoryConnector": connector, "jiraMode": jira_mode, "jiraStatusMap": status_map, "automationEnabled": body.get("automationEnabled").unwrap_or(&Value::Bool(false)), "autoFix": body.get("autoFix").unwrap_or(&Value::Bool(true)), "prTarget": pr_target, "testCommand": test_command});
-    for (key, limit) in [
-        ("projectRules", 12000),
-        ("frontCommand", 2000),
-        ("backCommand", 2000),
-        ("frontRepo", 2000),
-        ("backRepo", 2000),
-    ] {
-        result[key] = json!(setting(body, key, limit)?);
-    }
-    for role in ["front", "back"] {
-        let key = format!("{role}Directory");
-        result[&key] = json!(directory(setting(body, &key, 2000)?)?);
-    }
-    for role in ["front", "back"] {
-        let key = format!("{role}Port");
-        result[&key] = json!(port(body.get(&key))?);
-    }
-    result["linkedProjectId"] = json!(setting(body, "linkedProjectId", 100)?);
-    Ok(result)
+    Ok(ProjectSettings {
+        project_rules: setting(body, "projectRules", 12000)?,
+        agent,
+        base_branch,
+        repository_connector: connector,
+        jira_mode,
+        jira_status_map: status_map,
+        front_command: setting(body, "frontCommand", 2000)?,
+        back_command: setting(body, "backCommand", 2000)?,
+        front_repo: setting(body, "frontRepo", 2000)?,
+        back_repo: setting(body, "backRepo", 2000)?,
+        front_directory: directory(setting(body, "frontDirectory", 2000)?)?,
+        back_directory: directory(setting(body, "backDirectory", 2000)?)?,
+        front_port: port(body, "frontPort")?,
+        back_port: port(body, "backPort")?,
+        linked_project_id: setting(body, "linkedProjectId", 100)?,
+        automation_enabled,
+        auto_fix: body
+            .get::<bool>("autoFix")
+            .map_err(|_| "Option automatique invalide.")?
+            .unwrap_or(true),
+        pr_target,
+        test_command,
+    })
 }
 
 pub fn settings_for_project(

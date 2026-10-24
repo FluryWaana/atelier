@@ -185,6 +185,8 @@ C07, après `d86c57c` : correction de l'état public pour séparer `brainstorms`
 
 C08, après `df8b42c` : création/retrait/archivage de projets et état public portés ; 39 opérations historiques comparées, parcours HTTP doublons/timer/reprise et rollback de suppression. Réglages, déplacements, détection et gardes reliées aux producteurs M04/M06 restent ouverts. Les journaux `1c49fb4` des cinq cibles natives confirment les incréments C07 d'édition atomique et de séparation des brainstorms.
 
+C08, après `d2deabe` : validation des réglages passée aux documents/textes UTF-16 sans perte ; 51 cas Node supplémentaires, sans modifier les 305 vecteurs précédents. Fournisseur partagé avec création/édition. Branchement PATCH, sauvegarde et déplacement restent ouverts. Les futurs contrôles Linux/macOS sont reportés à la qualification finale ; Windows seul est exécuté en continu.
+
 ## Critères M00 et suite
 
 - [x] État Git, runtime, version applicative et format de données relevés ; contradiction documentaire corrigée.

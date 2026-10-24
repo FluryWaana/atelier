@@ -1,7 +1,29 @@
 use super::{text, truthy};
+use crate::document::{Document, JsonString};
 use serde_json::{Value, json};
 
 type Result<T> = std::result::Result<T, &'static str>;
+
+pub(crate) fn find_provider(
+    settings: &Document,
+    agent: &JsonString,
+) -> serde_json::Result<Option<Document>> {
+    if let Some(providers) = settings
+        .raw("agentProviders")
+        .filter(|raw| raw.get() != "null")
+    {
+        let providers: Vec<Document> = serde_json::from_str(providers.get())?;
+        Ok(providers.into_iter().find(|provider| {
+            provider.get::<JsonString>("id").ok().flatten().as_ref() == Some(agent)
+        }))
+    } else if [JsonString::from("codex"), JsonString::from("claude")].contains(agent) {
+        let mut provider = Document::default();
+        provider.set("type", agent)?;
+        Ok(Some(provider))
+    } else {
+        Ok(None)
+    }
+}
 
 pub fn agent_providers(settings: &Value) -> Result<Vec<Value>> {
     if let Some(providers) = settings
