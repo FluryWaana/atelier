@@ -50,6 +50,16 @@ Contrôles locaux : syntaxe Bash et refus hors CI sous WSL, 48 tests Rust Window
 
 Suite Node de l'extension macOS, avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, aucun échec, trois exclusions historiques, 79,778 s. Inventaire vérifié.
 
+### Lectures et publications de session ancrées — après `83ec5da`
+
+`CheckedFile::open_in` ouvre une seule fois un fichier relativement au dossier détenu, sans suivre de lien, sans blocage sur fichier spécial, puis réutilise les contrôles de type/permissions et les bornes de lecture existants. Session, marqueur `installation.json` et pièces jointes utilisent cette opération commune. Les écritures de session et du HTML de bootstrap POSIX créent leur temporaire privé et le renomment dans le même dossier ancré ; le nettoyage après échec utilise aussi ce dossier.
+
+Confrontation à `lib/infrastructure/local-session.mjs`, `installation.mjs`, tests `local-http`, `installation`, prototype et appelants UI/stockage : absence de fichier, formats DPAPI/0600, validation du jeton, noms persistants et rotation conservés. Trois scénarios nouveaux couvrent racine remplacée, refus des chemins hors racine/liens/dossiers et nettoyage d'une publication refusée sans toucher au fichier voisin. L'acquisition initiale de la racine reste une ouverture par chemin ; ce changement protège les opérations après acquisition et ne prétend pas fermer l'import SQLite ni les sauvegardes.
+
+Vérification : 51 tests Rust réussis, Clippy natif tous targets, parcours Edge réel réussi (WASM/CSP, création, redémarrage, relecture et rotation de session). Suite Node complète avec `ATELIER_REQUIRE_RELEASE=1` : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,419 s. Les scénarios POSIX nouveaux attendent la CI.
+
+La CI `513f728` est entièrement réussie. Le [journal Linux x64](https://github.com/FluryWaana/atelier/actions/runs/40047240914/job/120731670597), comme ARM64, confirme le refus sous UID identique puis les contrôles positifs/refus réciproques entre comptes natifs distincts. Le délai x64 venait de l'installation des prérequis, pas d'un échec du probe.
+
 ### Conservation UTF-16 — incrément après `038e794`
 
 `atelier-core/document.rs` réutilise `serde_json::RawValue` pour les valeurs inconnues et son désérialiseur d'octets WTF-8 pour les noms/chaînes UTF-16. Aucun parseur JSON ni remplacement silencieux de substitut ajouté. Les modifications ciblées conservent le JSON des champs non modifiés, y compris les clés atypiques, tableaux et objets imbriqués. Les lectures SQLite deviennent génériques ; les opérations qui doivent conserver ces documents utilisent `Document`. La restauration et ses mutations de paramètres/reviews/automatisation emploient ce chemin.

@@ -547,6 +547,13 @@ Prochaine action concrète :
 - **Preuves recueillies :** CI `7c729a0` entièrement réussie, journaux des courses de copie vérifiés sur les quatre cibles POSIX. Comptes Linux ARM64 `513f728` validés, journal relu.
 - **Attendu :** Linux x64 et macOS entre comptes ; autres courses de fichiers M02 et intégrations restantes.
 
+### Incrément M02 — session et marqueur d'installation ancrés
+
+- **Livré :** helper de lecture relative sans liens partagé par sessions, installation et pièces jointes ; publication/nettoyage de session dans le dossier ouvert.
+- **Vérification :** 51 tests Rust, Clippy natif tous targets, parcours Edge avec redémarrage/rotation réussis. Suite Node complète avec contrôle release : 426 tests, 423 réussis, zéro échec, trois exclusions, 80,419 s ; inventaire vérifié.
+- **Preuves recueillies :** CI `513f728` entièrement réussie ; isolation native Linux x64/ARM64 entre comptes confirmée dans les journaux.
+- **Attendu :** nouveaux tests de chemins POSIX et isolation macOS entre comptes. Acquisition initiale des racines, sauvegardes/import SQLite et intégrations M02 restent ouverts.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

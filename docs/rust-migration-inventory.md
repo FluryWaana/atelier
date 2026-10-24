@@ -719,25 +719,27 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/checked_file.rs:26](../crates/atelier-app/src/infrastructure/checked_file.rs#L26) | <code>pub struct Identity {</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:32](../crates/atelier-app/src/infrastructure/checked_file.rs#L32) | <code>pub struct CheckedFile {</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:38](../crates/atelier-app/src/infrastructure/checked_file.rs#L38) | <code>pub fn inspect(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:49](../crates/atelier-app/src/infrastructure/checked_file.rs#L49) | <code>use std::os::windows::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:50](../crates/atelier-app/src/infrastructure/checked_file.rs#L50) | <code>use windows_sys::Win32::Storage::FileSystem::{</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:57](../crates/atelier-app/src/infrastructure/checked_file.rs#L57) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:66](../crates/atelier-app/src/infrastructure/checked_file.rs#L66) | <code>use std::os::windows::io::AsRawHandle;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:67](../crates/atelier-app/src/infrastructure/checked_file.rs#L67) | <code>use windows_sys::Win32::Storage::FileSystem::{</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:92](../crates/atelier-app/src/infrastructure/checked_file.rs#L92) | <code>use std::os::unix::fs::MetadataExt;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:108](../crates/atelier-app/src/infrastructure/checked_file.rs#L108) | <code>pub fn open(path: &amp;Path, expected: &amp;Identity) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:116](../crates/atelier-app/src/infrastructure/checked_file.rs#L116) | <code>pub fn private(self) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:119](../crates/atelier-app/src/infrastructure/checked_file.rs#L119) | <code>use std::os::unix::fs::MetadataExt;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:129](../crates/atelier-app/src/infrastructure/checked_file.rs#L129) | <code>pub fn read(self, limit: usize) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:145](../crates/atelier-app/src/infrastructure/checked_file.rs#L145) | <code>pub fn copy_to(self, output: &amp;mut impl Write) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:161](../crates/atelier-app/src/infrastructure/checked_file.rs#L161) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:162](../crates/atelier-app/src/infrastructure/checked_file.rs#L162) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:163](../crates/atelier-app/src/infrastructure/checked_file.rs#L163) | <code>use std::fs;</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:165](../crates/atelier-app/src/infrastructure/checked_file.rs#L165) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:192](../crates/atelier-app/src/infrastructure/checked_file.rs#L192) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:194](../crates/atelier-app/src/infrastructure/checked_file.rs#L194) | <code>use std::os::unix::fs::{PermissionsExt, symlink};</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:220](../crates/atelier-app/src/infrastructure/checked_file.rs#L220) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:222](../crates/atelier-app/src/infrastructure/checked_file.rs#L222) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:45](../crates/atelier-app/src/infrastructure/checked_file.rs#L45) | <code>use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:56](../crates/atelier-app/src/infrastructure/checked_file.rs#L56) | <code>use std::os::windows::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:57](../crates/atelier-app/src/infrastructure/checked_file.rs#L57) | <code>use windows_sys::Win32::Storage::FileSystem::{</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:64](../crates/atelier-app/src/infrastructure/checked_file.rs#L64) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:73](../crates/atelier-app/src/infrastructure/checked_file.rs#L73) | <code>use std::os::windows::io::AsRawHandle;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:74](../crates/atelier-app/src/infrastructure/checked_file.rs#L74) | <code>use windows_sys::Win32::Storage::FileSystem::{</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:99](../crates/atelier-app/src/infrastructure/checked_file.rs#L99) | <code>use std::os::unix::fs::MetadataExt;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:115](../crates/atelier-app/src/infrastructure/checked_file.rs#L115) | <code>pub fn open(path: &amp;Path, expected: &amp;Identity) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:123](../crates/atelier-app/src/infrastructure/checked_file.rs#L123) | <code>pub fn private(self) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:126](../crates/atelier-app/src/infrastructure/checked_file.rs#L126) | <code>use std::os::unix::fs::MetadataExt;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:136](../crates/atelier-app/src/infrastructure/checked_file.rs#L136) | <code>pub fn read(self, limit: usize) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:152](../crates/atelier-app/src/infrastructure/checked_file.rs#L152) | <code>pub fn copy_to(self, output: &amp;mut impl Write) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:168](../crates/atelier-app/src/infrastructure/checked_file.rs#L168) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:169](../crates/atelier-app/src/infrastructure/checked_file.rs#L169) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:170](../crates/atelier-app/src/infrastructure/checked_file.rs#L170) | <code>use std::fs;</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:172](../crates/atelier-app/src/infrastructure/checked_file.rs#L172) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:202](../crates/atelier-app/src/infrastructure/checked_file.rs#L202) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:229](../crates/atelier-app/src/infrastructure/checked_file.rs#L229) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:231](../crates/atelier-app/src/infrastructure/checked_file.rs#L231) | <code>use std::os::unix::fs::{PermissionsExt, symlink};</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:257](../crates/atelier-app/src/infrastructure/checked_file.rs#L257) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:259](../crates/atelier-app/src/infrastructure/checked_file.rs#L259) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:1](../crates/atelier-app/src/infrastructure/data_lock.rs#L1) | <code>use super::checked_file::plain_metadata;</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:2](../crates/atelier-app/src/infrastructure/data_lock.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:3](../crates/atelier-app/src/infrastructure/data_lock.rs#L3) | <code>use rusqlite::{Connection, OpenFlags};</code> |
@@ -764,20 +766,21 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/database.rs:80](../crates/atelier-app/src/infrastructure/database.rs#L80) | <code>pub async fn cards(&amp;self) -&gt; Result&lt;Vec&lt;Card&gt;&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/database.rs:84](../crates/atelier-app/src/infrastructure/database.rs#L84) | <code>pub async fn put_card(&amp;self, card: Card) -&gt; Result&lt;Card&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/database.rs:92](../crates/atelier-app/src/infrastructure/database.rs#L92) | <code>pub async fn close(&amp;self) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::{CheckedFile, Identity};</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use serde_json::Value;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:4](../crates/atelier-app/src/infrastructure/installation.rs#L4) | <code>use std::path::{Path, PathBuf};</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:8](../crates/atelier-app/src/infrastructure/installation.rs#L8) | <code>mod windows_registration;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:10](../crates/atelier-app/src/infrastructure/installation.rs#L10) | <code>pub fn update_installed_version(root: &amp;Path, version: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:21](../crates/atelier-app/src/infrastructure/installation.rs#L21) | <code>pub enum InstallationMode {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:27](../crates/atelier-app/src/infrastructure/installation.rs#L27) | <code>pub enum Platform {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:33](../crates/atelier-app/src/infrastructure/installation.rs#L33) | <code>pub fn mode(root: &amp;Path) -&gt; Result&lt;InstallationMode&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:51](../crates/atelier-app/src/infrastructure/installation.rs#L51) | <code>pub fn data_directory(</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:77](../crates/atelier-app/src/infrastructure/installation.rs#L77) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:78](../crates/atelier-app/src/infrastructure/installation.rs#L78) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:79](../crates/atelier-app/src/infrastructure/installation.rs#L79) | <code>use std::fs;</code> |
-| [crates/atelier-app/src/infrastructure/installation.rs:81](../crates/atelier-app/src/infrastructure/installation.rs#L81) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:4](../crates/atelier-app/src/infrastructure/installation.rs#L4) | <code>use serde_json::Value;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:5](../crates/atelier-app/src/infrastructure/installation.rs#L5) | <code>use std::path::{Path, PathBuf};</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:9](../crates/atelier-app/src/infrastructure/installation.rs#L9) | <code>mod windows_registration;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:11](../crates/atelier-app/src/infrastructure/installation.rs#L11) | <code>pub fn update_installed_version(root: &amp;Path, version: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:22](../crates/atelier-app/src/infrastructure/installation.rs#L22) | <code>pub enum InstallationMode {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:28](../crates/atelier-app/src/infrastructure/installation.rs#L28) | <code>pub enum Platform {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:34](../crates/atelier-app/src/infrastructure/installation.rs#L34) | <code>pub fn mode(root: &amp;Path) -&gt; Result&lt;InstallationMode&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:59](../crates/atelier-app/src/infrastructure/installation.rs#L59) | <code>pub fn data_directory(</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:85](../crates/atelier-app/src/infrastructure/installation.rs#L85) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:86](../crates/atelier-app/src/infrastructure/installation.rs#L86) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:87](../crates/atelier-app/src/infrastructure/installation.rs#L87) | <code>use std::fs;</code> |
+| [crates/atelier-app/src/infrastructure/installation.rs:89](../crates/atelier-app/src/infrastructure/installation.rs#L89) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
@@ -804,40 +807,41 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:1](../crates/atelier-app/src/infrastructure/portable_import.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:5](../crates/atelier-app/src/infrastructure/portable_import.rs#L5) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use cap_fs_ext::DirExt;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:7](../crates/atelier-app/src/infrastructure/portable_import.rs#L7) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:8](../crates/atelier-app/src/infrastructure/portable_import.rs#L8) | <code>use rusqlite::{Connection, OpenFlags};</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:9](../crates/atelier-app/src/infrastructure/portable_import.rs#L9) | <code>use std::{fs, path::Path};</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:16](../crates/atelier-app/src/infrastructure/portable_import.rs#L16) | <code>use std::os::unix::fs::DirBuilderExt;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:26](../crates/atelier-app/src/infrastructure/portable_import.rs#L26) | <code>use cap_std::fs::MetadataExt;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:66](../crates/atelier-app/src/infrastructure/portable_import.rs#L66) | <code>use cap_std::fs::DirBuilderExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:81](../crates/atelier-app/src/infrastructure/portable_import.rs#L81) | <code>use cap_std::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:119](../crates/atelier-app/src/infrastructure/portable_import.rs#L119) | <code>pub fn import(source: &amp;Path, destination: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:154](../crates/atelier-app/src/infrastructure/portable_import.rs#L154) | <code>use std::os::unix::fs::PermissionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:212](../crates/atelier-app/src/infrastructure/portable_import.rs#L212) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:213](../crates/atelier-app/src/infrastructure/portable_import.rs#L213) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:214](../crates/atelier-app/src/infrastructure/portable_import.rs#L214) | <code>use crate::infrastructure::store::{self, Documents};</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:215](../crates/atelier-app/src/infrastructure/portable_import.rs#L215) | <code>use serde_json::json;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:217](../crates/atelier-app/src/infrastructure/portable_import.rs#L217) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:233](../crates/atelier-app/src/infrastructure/portable_import.rs#L233) | <code>use std::os::unix::fs::symlink;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:257](../crates/atelier-app/src/infrastructure/portable_import.rs#L257) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:259](../crates/atelier-app/src/infrastructure/portable_import.rs#L259) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:284](../crates/atelier-app/src/infrastructure/portable_import.rs#L284) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:333](../crates/atelier-app/src/infrastructure/portable_import.rs#L333) | <code>use std::os::unix::fs::PermissionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:341](../crates/atelier-app/src/infrastructure/portable_import.rs#L341) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:358](../crates/atelier-app/src/infrastructure/portable_import.rs#L358) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:360](../crates/atelier-app/src/infrastructure/portable_import.rs#L360) | <code>use std::os::unix::fs::symlink;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:79](../crates/atelier-app/src/infrastructure/portable_import.rs#L79) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:117](../crates/atelier-app/src/infrastructure/portable_import.rs#L117) | <code>pub fn import(source: &amp;Path, destination: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:152](../crates/atelier-app/src/infrastructure/portable_import.rs#L152) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:210](../crates/atelier-app/src/infrastructure/portable_import.rs#L210) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:211](../crates/atelier-app/src/infrastructure/portable_import.rs#L211) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:212](../crates/atelier-app/src/infrastructure/portable_import.rs#L212) | <code>use crate::infrastructure::store::{self, Documents};</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:213](../crates/atelier-app/src/infrastructure/portable_import.rs#L213) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:215](../crates/atelier-app/src/infrastructure/portable_import.rs#L215) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:231](../crates/atelier-app/src/infrastructure/portable_import.rs#L231) | <code>use std::os::unix::fs::symlink;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:255](../crates/atelier-app/src/infrastructure/portable_import.rs#L255) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:257](../crates/atelier-app/src/infrastructure/portable_import.rs#L257) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:282](../crates/atelier-app/src/infrastructure/portable_import.rs#L282) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:331](../crates/atelier-app/src/infrastructure/portable_import.rs#L331) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:339](../crates/atelier-app/src/infrastructure/portable_import.rs#L339) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:356](../crates/atelier-app/src/infrastructure/portable_import.rs#L356) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:358](../crates/atelier-app/src/infrastructure/portable_import.rs#L358) | <code>use std::os::unix::fs::symlink;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use super::data_lock::DataLock;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:2](../crates/atelier-app/src/infrastructure/prototype.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:3](../crates/atelier-app/src/infrastructure/prototype.rs#L3) | <code>use std::{</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:8](../crates/atelier-app/src/infrastructure/prototype.rs#L8) | <code>pub struct PrototypeDirectory {</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:9](../crates/atelier-app/src/infrastructure/prototype.rs#L9) | <code>pub path: PathBuf,</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:14](../crates/atelier-app/src/infrastructure/prototype.rs#L14) | <code>pub fn open(path: &amp;Path) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:1](../crates/atelier-app/src/infrastructure/session.rs#L1) | <code>use super::checked_file::{CheckedFile, Identity};</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:1](../crates/atelier-app/src/infrastructure/session.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:2](../crates/atelier-app/src/infrastructure/session.rs#L2) | <code>use crate::Result;</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:3](../crates/atelier-app/src/infrastructure/session.rs#L3) | <code>use hmac::{Hmac, KeyInit, Mac};</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:4](../crates/atelier-app/src/infrastructure/session.rs#L4) | <code>use sha2::Sha256;</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:5](../crates/atelier-app/src/infrastructure/session.rs#L5) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:3](../crates/atelier-app/src/infrastructure/session.rs#L3) | <code>use cap_std::{</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:7](../crates/atelier-app/src/infrastructure/session.rs#L7) | <code>use hmac::{Hmac, KeyInit, Mac};</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:8](../crates/atelier-app/src/infrastructure/session.rs#L8) | <code>use sha2::Sha256;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:9](../crates/atelier-app/src/infrastructure/session.rs#L9) | <code>use std::{io::Write, path::Path};</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:10](../crates/atelier-app/src/infrastructure/session.rs#L10) | <code>use subtle::ConstantTimeEq;</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:12](../crates/atelier-app/src/infrastructure/session.rs#L12) | <code>pub fn hexadecimal(bytes: &amp;[u8]) -&gt; String {</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:16](../crates/atelier-app/src/infrastructure/session.rs#L16) | <code>pub fn new_token() -&gt; Result&lt;String&gt; {</code> |
@@ -847,10 +851,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/session.rs:35](../crates/atelier-app/src/infrastructure/session.rs#L35) | <code>use std::ptr::{null, null_mut};</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:36](../crates/atelier-app/src/infrastructure/session.rs#L36) | <code>use windows_sys::Win32::{</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:106](../crates/atelier-app/src/infrastructure/session.rs#L106) | <code>pub fn write(directory: &amp;Path, token: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:120](../crates/atelier-app/src/infrastructure/session.rs#L120) | <code>use std::os::unix::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:137](../crates/atelier-app/src/infrastructure/session.rs#L137) | <code>pub fn read_optional(directory: &amp;Path) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:145](../crates/atelier-app/src/infrastructure/session.rs#L145) | <code>pub fn browser_address(directory: &amp;Path, address: &amp;str, token: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:175](../crates/atelier-app/src/infrastructure/session.rs#L175) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:132](../crates/atelier-app/src/infrastructure/session.rs#L132) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:149](../crates/atelier-app/src/infrastructure/session.rs#L149) | <code>pub fn read_optional(directory: &amp;Path) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:162](../crates/atelier-app/src/infrastructure/session.rs#L162) | <code>pub fn browser_address(directory: &amp;Path, address: &amp;str, token: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:192](../crates/atelier-app/src/infrastructure/session.rs#L192) | <code>pub fn read(directory: &amp;Path) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:217](../crates/atelier-app/src/infrastructure/session.rs#L217) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:218](../crates/atelier-app/src/infrastructure/session.rs#L218) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:219](../crates/atelier-app/src/infrastructure/session.rs#L219) | <code>use std::fs;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:221](../crates/atelier-app/src/infrastructure/session.rs#L221) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:255](../crates/atelier-app/src/infrastructure/session.rs#L255) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:267](../crates/atelier-app/src/infrastructure/session.rs#L267) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:1](../crates/atelier-app/src/infrastructure/store.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:2](../crates/atelier-app/src/infrastructure/store.rs#L2) | <code>use atelier_core::document::Document;</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:3](../crates/atelier-app/src/infrastructure/store.rs#L3) | <code>use rusqlite::{Connection, OptionalExtension, params};</code> |
@@ -1597,8 +1607,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Stop.cmd:2](../Stop.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" --stop</code> |
 | [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
 | [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
-| [crates/atelier-app/src/infrastructure/checked_file.rs:228](../crates/atelier-app/src/infrastructure/checked_file.rs#L228) | <code>.args(["/D", "/C"])</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:269](../crates/atelier-app/src/infrastructure/portable_import.rs#L269) | <code>.args(["/D", "/C"])</code> |
+| [crates/atelier-app/src/infrastructure/checked_file.rs:265](../crates/atelier-app/src/infrastructure/checked_file.rs#L265) | <code>.args(["/D", "/C"])</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:267](../crates/atelier-app/src/infrastructure/portable_import.rs#L267) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:172](../crates/atelier-app/src/infrastructure/token_vault.rs#L172) | <code>args: &amp;[&amp;str],</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:177](../crates/atelier-app/src/infrastructure/token_vault.rs#L177) | <code>.args(args)</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:292](../crates/atelier-app/src/infrastructure/token_vault.rs#L292) | <code>args: &amp;[&amp;str],</code> |
@@ -2742,23 +2752,31 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:48](../crates/atelier-app/src/infrastructure/portable_import.rs#L48) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:56](../crates/atelier-app/src/infrastructure/portable_import.rs#L56) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:133](../crates/atelier-app/src/infrastructure/portable_import.rs#L133) | <code>let database = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:179](../crates/atelier-app/src/infrastructure/portable_import.rs#L179) | <code>Store::new(&amp;connection).backup(&amp;stage.path().join("kanban.sqlite"))?;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:185](../crates/atelier-app/src/infrastructure/portable_import.rs#L185) | <code>stage.path().join("kanban.sqlite"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:290](../crates/atelier-app/src/infrastructure/portable_import.rs#L290) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:295](../crates/atelier-app/src/infrastructure/portable_import.rs#L295) | <code>fs::write(source.join("local-session"), "expired").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:296](../crates/atelier-app/src/infrastructure/portable_import.rs#L296) | <code>fs::write(source.join("local-browser.html"), "expired").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:305](../crates/atelier-app/src/infrastructure/portable_import.rs#L305) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:316](../crates/atelier-app/src/infrastructure/portable_import.rs#L316) | <code>assert!(!destination.join("local-session").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:317](../crates/atelier-app/src/infrastructure/portable_import.rs#L317) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:347](../crates/atelier-app/src/infrastructure/portable_import.rs#L347) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:351](../crates/atelier-app/src/infrastructure/portable_import.rs#L351) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:352](../crates/atelier-app/src/infrastructure/portable_import.rs#L352) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:364](../crates/atelier-app/src/infrastructure/portable_import.rs#L364) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:131](../crates/atelier-app/src/infrastructure/portable_import.rs#L131) | <code>let database = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:177](../crates/atelier-app/src/infrastructure/portable_import.rs#L177) | <code>Store::new(&amp;connection).backup(&amp;stage.path().join("kanban.sqlite"))?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:183](../crates/atelier-app/src/infrastructure/portable_import.rs#L183) | <code>stage.path().join("kanban.sqlite"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:288](../crates/atelier-app/src/infrastructure/portable_import.rs#L288) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:293](../crates/atelier-app/src/infrastructure/portable_import.rs#L293) | <code>fs::write(source.join("local-session"), "expired").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:294](../crates/atelier-app/src/infrastructure/portable_import.rs#L294) | <code>fs::write(source.join("local-browser.html"), "expired").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:303](../crates/atelier-app/src/infrastructure/portable_import.rs#L303) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:314](../crates/atelier-app/src/infrastructure/portable_import.rs#L314) | <code>assert!(!destination.join("local-session").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:315](../crates/atelier-app/src/infrastructure/portable_import.rs#L315) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:345](../crates/atelier-app/src/infrastructure/portable_import.rs#L345) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:349](../crates/atelier-app/src/infrastructure/portable_import.rs#L349) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:350](../crates/atelier-app/src/infrastructure/portable_import.rs#L350) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:362](../crates/atelier-app/src/infrastructure/portable_import.rs#L362) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/session.rs:111](../crates/atelier-app/src/infrastructure/session.rs#L111) | <code>write_private(&amp;directory.join("local-session"), &amp;stored)</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:138](../crates/atelier-app/src/infrastructure/session.rs#L138) | <code>match fs::symlink_metadata(directory.join("local-session")) {</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:162](../crates/atelier-app/src/infrastructure/session.rs#L162) | <code>let path = directory.join("local-browser.html");</code> |
-| [crates/atelier-app/src/infrastructure/session.rs:176](../crates/atelier-app/src/infrastructure/session.rs#L176) | <code>let path = directory.join("local-session");</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:155](../crates/atelier-app/src/infrastructure/session.rs#L155) | <code>match directory.symlink_metadata("local-session") {</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:179](../crates/atelier-app/src/infrastructure/session.rs#L179) | <code>let path = directory.join("local-browser.html");</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:198](../crates/atelier-app/src/infrastructure/session.rs#L198) | <code>CheckedFile::open_in(directory, Path::new("local-session"))?</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:230](../crates/atelier-app/src/infrastructure/session.rs#L230) | <code>let stored = fs::read_to_string(source.join("local-session")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:231](../crates/atelier-app/src/infrastructure/session.rs#L231) | <code>fs::write(outside.join("local-session"), "untouched").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:246](../crates/atelier-app/src/infrastructure/session.rs#L246) | <code>write_private_in(&amp;directory, Path::new("local-session"), &amp;stored).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:249](../crates/atelier-app/src/infrastructure/session.rs#L249) | <code>fs::read_to_string(outside.join("local-session")).unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:257](../crates/atelier-app/src/infrastructure/session.rs#L257) | <code>fs::metadata(actual.join("local-session"))</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:271](../crates/atelier-app/src/infrastructure/session.rs#L271) | <code>directory.create_dir("local-session").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:273](../crates/atelier-app/src/infrastructure/session.rs#L273) | <code>assert!(write_private_in(&amp;directory, Path::new("local-session"), "synthetic").is_err());</code> |
+| [crates/atelier-app/src/infrastructure/session.rs:274](../crates/atelier-app/src/infrastructure/session.rs#L274) | <code>assert!(directory.is_dir("local-session"));</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:8](../crates/atelier-app/src/infrastructure/store.rs#L8) | <code>CREATE TABLE IF NOT EXISTS time_entries (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:9](../crates/atelier-app/src/infrastructure/store.rs#L9) | <code>CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |
 | [crates/atelier-app/src/infrastructure/store.rs:10](../crates/atelier-app/src/infrastructure/store.rs#L10) | <code>CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);</code> |

@@ -3,7 +3,7 @@ use super::{
     store::Store,
 };
 use crate::Result;
-use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
 use rusqlite::{Connection, OpenFlags};
 use std::{fs, path::Path};
@@ -71,9 +71,7 @@ fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
             destination.create_dir_with(&name, &builder)?;
             copy_tree(&child, &destination.open_dir_nofollow(&name)?, false)?;
         } else if metadata.is_file() {
-            let mut input = cap_std::fs::OpenOptions::new();
-            input.read(true).follow(FollowSymlinks::No).nonblock(true);
-            let checked = CheckedFile::from_file(source.open_with(&name, &input)?.into_std())?;
+            let checked = CheckedFile::open_in(source, Path::new(&name))?;
             let mut options = cap_std::fs::OpenOptions::new();
             options.write(true).create_new(true);
             #[cfg(unix)]

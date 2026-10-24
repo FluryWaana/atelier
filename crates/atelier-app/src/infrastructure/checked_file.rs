@@ -41,6 +41,13 @@ impl Identity {
 }
 
 impl CheckedFile {
+    pub(super) fn open_in(directory: &cap_std::fs::Dir, name: &Path) -> Result<Self> {
+        use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.read(true).follow(FollowSymlinks::No).nonblock(true);
+        Self::from_file(directory.open_with(name, &options)?.into_std())
+    }
+
     fn open_unchecked(path: &Path) -> Result<Self> {
         let mut options = OpenOptions::new();
         options.read(true);
@@ -161,6 +168,36 @@ impl CheckedFile {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn anchored_reads_reject_links_directories_and_paths_outside_the_root() {
+        let root = tempfile::tempdir().unwrap();
+        let private = root.path().join("private");
+        fs::create_dir(&private).unwrap();
+        fs::write(private.join("file"), "synthetic").unwrap();
+        fs::write(root.path().join("outside"), "must not read").unwrap();
+        let directory =
+            cap_std::fs::Dir::open_ambient_dir(&private, cap_std::ambient_authority()).unwrap();
+        assert_eq!(
+            CheckedFile::open_in(&directory, Path::new("file"))
+                .unwrap()
+                .read(16)
+                .unwrap(),
+            b"synthetic"
+        );
+        for path in [
+            Path::new("."),
+            Path::new("../outside"),
+            &root.path().join("outside"),
+        ] {
+            assert!(CheckedFile::open_in(&directory, path).is_err());
+        }
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("file", private.join("link")).unwrap();
+            assert!(CheckedFile::open_in(&directory, Path::new("link")).is_err());
+        }
+    }
 
     #[test]
     fn rejects_replacement_new_hardlinks_and_oversized_files() {

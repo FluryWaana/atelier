@@ -121,6 +121,8 @@ Les journaux natifs Linux x64/ARM64 de `7c729a0` confirment la résistance de la
 
 La copie ancrée est maintenant prouvée sur les quatre cibles POSIX (`7c729a0`, journaux relus). Le scénario entre comptes Linux ARM64 (`513f728`) réussit avec refus du même UID, contrôles positifs et refus croisés. L'extension macOS teste aussi l'accès direct au trousseau privé de l'autre UID et conserve les deux trousseaux jusqu'aux vérifications ; son résultat natif reste attendu.
 
+Les coffres Linux entre comptes sont prouvés sur x64 et ARM64 (`513f728`, journaux relus). Sessions et marqueur d'installation emploient maintenant une lecture ancrée commune ; les publications privées et leur nettoyage restent dans le dossier ouvert. Tests Windows et parcours Edge validés ; nouveaux scénarios POSIX attendus en CI. Acquisition initiale des racines, sauvegardes et import SQLite restent des travaux M02 distincts.
+
 ## Contrats transversaux à ne pas perdre
 
 - **Routes/méthodes** : l'inventaire capture `server.mjs` et chaque module HTTP, notamment les tables calculées de `card-workflow-routes`. Conserver routes Jira historiques, `/api/brainstorms`, changements de fournisseur, réponses agents et query `after`/`untracked`. Codes usuels 400/401/403/404/405/409/413, JSON `{ error }`, limites de corps et formes invalides font partie de la comparaison. Les erreurs spécifiques sont définies dans chaque route/cas d'usage ; ne pas remplacer les tests par un simple inventaire d'URL.

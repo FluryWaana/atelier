@@ -1,5 +1,6 @@
-use super::checked_file::{CheckedFile, Identity};
+use super::checked_file::CheckedFile;
 use crate::Result;
+use cap_std::{ambient_authority, fs::Dir};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -31,16 +32,23 @@ pub enum Platform {
 }
 
 pub fn mode(root: &Path) -> Result<InstallationMode> {
-    let path = root.join("installation.json");
-    match std::fs::symlink_metadata(&path) {
+    let directory = match Dir::open_ambient_dir(root, ambient_authority()) {
+        Ok(directory) => directory,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(InstallationMode::Portable);
+        }
+        Err(error) => return Err(error.into()),
+    };
+    match directory.symlink_metadata("installation.json") {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(InstallationMode::Portable);
         }
         Err(error) => return Err(error.into()),
         Ok(_) => {}
     }
-    let identity = Identity::inspect(&path)?;
-    let value: Value = serde_json::from_slice(&CheckedFile::open(&path, &identity)?.read(65_536)?)?;
+    let value: Value = serde_json::from_slice(
+        &CheckedFile::open_in(&directory, Path::new("installation.json"))?.read(65_536)?,
+    )?;
     match value.get("mode").and_then(Value::as_str) {
         Some("user") => Ok(InstallationMode::User),
         Some("system") => Ok(InstallationMode::System),

@@ -1,12 +1,12 @@
-use super::checked_file::{CheckedFile, Identity};
+use super::checked_file::CheckedFile;
 use crate::Result;
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, OpenOptions},
+};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
-use std::{
-    fs::{self, OpenOptions},
-    io::Write,
-    path::Path,
-};
+use std::{io::Write, path::Path};
 use subtle::ConstantTimeEq;
 
 pub fn hexadecimal(bytes: &[u8]) -> String {
@@ -112,33 +112,50 @@ pub fn write(directory: &Path, token: &str) -> Result<()> {
 }
 
 fn write_private(path: &Path, stored: &str) -> Result<()> {
-    let temporary = path.with_extension(uuid::Uuid::new_v4().to_string());
+    let directory = Dir::open_ambient_dir(
+        path.parent().ok_or("Dossier de session absent.")?,
+        ambient_authority(),
+    )?;
+    write_private_in(
+        &directory,
+        Path::new(path.file_name().ok_or("Nom de session absent.")?),
+        stored,
+    )
+}
+
+fn write_private_in(directory: &Dir, name: &Path, stored: &str) -> Result<()> {
+    let temporary = name.with_extension(uuid::Uuid::new_v4().to_string());
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
     {
-        use std::os::unix::fs::OpenOptionsExt;
+        use cap_std::fs::OpenOptionsExt;
         options.mode(0o600);
     }
     let result = (|| -> Result<()> {
-        let mut file = options.open(&temporary)?;
+        let mut file = directory.open_with(&temporary, &options)?;
         file.write_all(stored.as_bytes())?;
         file.sync_all()?;
         drop(file);
-        fs::rename(&temporary, path)?;
+        directory.rename(&temporary, directory, name)?;
         Ok(())
     })();
     if result.is_err() {
-        let _ = fs::remove_file(&temporary);
+        let _ = directory.remove_file(&temporary);
     }
     result
 }
 
 pub fn read_optional(directory: &Path) -> Result<Option<String>> {
-    match fs::symlink_metadata(directory.join("local-session")) {
+    let directory = match Dir::open_ambient_dir(directory, ambient_authority()) {
+        Ok(directory) => directory,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    match directory.symlink_metadata("local-session") {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(error.into()),
-        Ok(_) => read(directory).map(Some),
+        Ok(_) => read_in(&directory).map(Some),
     }
 }
 
@@ -173,10 +190,12 @@ pub fn browser_address(directory: &Path, address: &str, token: &str) -> Result<S
 }
 
 pub fn read(directory: &Path) -> Result<String> {
-    let path = directory.join("local-session");
-    let expected = Identity::inspect(&path)?;
+    read_in(&Dir::open_ambient_dir(directory, ambient_authority())?)
+}
+
+fn read_in(directory: &Dir) -> Result<String> {
     let stored = String::from_utf8(
-        CheckedFile::open(&path, &expected)?
+        CheckedFile::open_in(directory, Path::new("local-session"))?
             .private()?
             .read(65_536)?,
     )?;
@@ -192,4 +211,68 @@ pub fn read(directory: &Path) -> Result<String> {
         return Err("Session locale invalide.".into());
     }
     Ok(token)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn session_reads_and_atomic_writes_stay_in_the_opened_directory() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("session é");
+        let outside = root.path().join("outside");
+        fs::create_dir(&source).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let token = "a".repeat(64);
+        write(&source, &token).unwrap();
+        let stored = fs::read_to_string(source.join("local-session")).unwrap();
+        fs::write(outside.join("local-session"), "untouched").unwrap();
+        let directory = Dir::open_ambient_dir(&source, ambient_authority()).unwrap();
+        #[cfg(unix)]
+        let actual = {
+            let actual = root.path().join("moved");
+            fs::rename(&source, &actual).unwrap();
+            std::os::unix::fs::symlink(&outside, &source).unwrap();
+            actual
+        };
+        #[cfg(windows)]
+        let actual = {
+            assert!(fs::rename(&source, root.path().join("moved")).is_err());
+            source
+        };
+        assert_eq!(read_in(&directory).unwrap(), token);
+        write_private_in(&directory, Path::new("local-session"), &stored).unwrap();
+        assert_eq!(read_in(&directory).unwrap(), token);
+        assert_eq!(
+            fs::read_to_string(outside.join("local-session")).unwrap(),
+            "untouched"
+        );
+        assert_eq!(fs::read_dir(&actual).unwrap().count(), 1);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(actual.join("local-session"))
+                    .unwrap()
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o600
+            );
+        }
+    }
+
+    #[test]
+    fn failed_publication_removes_only_its_private_temporary_file() {
+        let root = tempfile::tempdir().unwrap();
+        let directory = Dir::open_ambient_dir(root.path(), ambient_authority()).unwrap();
+        directory.create_dir("local-session").unwrap();
+        directory.write("unrelated", b"preserved").unwrap();
+        assert!(write_private_in(&directory, Path::new("local-session"), "synthetic").is_err());
+        assert!(directory.is_dir("local-session"));
+        assert_eq!(directory.read("unrelated").unwrap(), b"preserved");
+        assert_eq!(directory.entries().unwrap().count(), 2);
+    }
 }
