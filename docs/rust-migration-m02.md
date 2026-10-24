@@ -51,6 +51,14 @@ Le catalogue filtre les noms historiques et fichiers réguliers, conserve dates 
 
 La [CI du coffre `33d594a`](https://github.com/FluryWaana/atelier/actions/runs/40034806672) a réussi sur les cinq runners natifs, incluant le probe trousseau Linux x64/ARM64 et macOS x64/ARM64 : création, relecture, suppression, refus après suppression. Ces essais utilisent un service aléatoire synthétique, jamais la clé de production. Le verrouillage interactif et le changement de compte ne sont pas couverts par ce probe.
 
+### Refus d'un trousseau verrouillé — incrément après `3aef62d`
+
+`cargo xtask test-keyring-lock` ajoute une preuve native Linux : création/relecture d'un secret unique, verrouillage effectif de la collection par D-Bus, refus du chiffrement et du déchiffrement, puis déverrouillage et relecture du chiffré original. Le contrôle vérifie la propriété `Locked` sans cache et la conservation des entrées. Il réutilise le vrai `secret-tool` et le délai de production ; aucune clé simulée ni dépendance ajoutée. Référence : méthodes [ReadAlias/Lock de Secret Service](https://specifications.freedesktop.org/secret-service/latest/org.freedesktop.Secret.Service.html) et propriété [Collection.Locked](https://specifications.freedesktop.org/secret-service/latest/org.freedesktop.Secret.Collection.html).
+
+Le test refuse de fonctionner sans `ATELIER_TEST_DISPOSABLE_KEYRING=1` et hors Linux. La CI fournit un bus D-Bus propre, deux dossiers XDG temporaires privés, aucun affichage ni ancien socket de trousseau, et le seul mot de passe synthétique attendu. Ne jamais activer cette variable dans une session personnelle : le test verrouille la collection par défaut de sa session. Le déverrouillage et le nettoyage du secret sont tentés même après un échec de vérification.
+
+Vérification locale : 42 tests Rust réussis hors bac à sable, formatage et Clippy natif sans diagnostic de code. Suite Node complète avec paquets : 426 tests, 423 réussis, zéro échec, trois exclusions historiques, 81,45 s. Inventaire vérifié et refus du probe sous Windows exécuté. Les premiers essais confinés étaient refusés par Windows pour les fixtures natives ; ils ne sont pas comptés comme validations. Le nouveau scénario Linux attend son exécution sur les deux runners natifs ; le verrouillage macOS et les comptes différents restent ouverts. Les preuves natives précédentes de création/relecture/suppression restent acquises.
+
 ### Canal local — incrément après `f9f53cf`
 
 `LocalHttp` utilise exclusivement HTTP vers 127.0.0.1, sans proxy ni redirection, sans connexion persistante, avec délai et réponse bornée à 65 536 octets. La santé challenge/HMAC charge le fichier de session après la réponse et n'envoie Bearer qu'après validation de la preuve. Refus de connexion/socket fermé ne demandent pas de secret ; timeout, faux serveur et redirection restent des erreurs. Réutilisation de reqwest et du type d'erreur Hyper déjà verrouillés, sans comparer des chaînes de diagnostic.

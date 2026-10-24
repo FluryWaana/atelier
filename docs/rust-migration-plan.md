@@ -498,6 +498,13 @@ Prochaine action concrète :
 - **Preuves natives :** CI `93f8276` entièrement réussie, Windows corrigé compris. Les deux jobs navigateur de [aa9bf62](https://github.com/FluryWaana/atelier/actions/runs/40041776924) réussissent avec le scénario de vraie réouverture : Chrome, Firefox et Safari requalifiés ; Edge avait passé localement. M01 est de nouveau validé avec ces preuves corrigées.
 - **Suite :** compléter les refus natifs des coffres et protections de chemins M02, puis poursuivre les cas d'usage et routes M03. Aucun agent ou service externe réel sollicité.
 
+### 24 octobre 2026 / base `3aef62d` / M02, refus natif Linux préparé
+
+- **Livré :** scénario de verrouillage du trousseau Linux, refus du chiffrement/déchiffrement et conservation de la clé après déverrouillage ; bus et dossiers XDG jetables en CI. Aucune modification du coffre de production ni dépendance supplémentaire.
+- **Vérification locale :** 42 tests Rust réussis, formatage et Clippy natif vérifiés ; suite Node avec paquets : 426 tests, 423 réussis, zéro échec, trois exclusions, 81,45 s ; inventaire vérifié. Aucun essai sur le trousseau personnel. Le scénario Linux doit encore passer sur ses runners natifs, aucune validation anticipée.
+- **CI précédente :** [aa9bf62](https://github.com/FluryWaana/atelier/actions/runs/40041776924) entièrement réussi, cinq cibles et navigateurs. `3aef62d` passe les deux jobs navigateur et quatre cibles natives ; macOS Intel encore en cours au relevé.
+- **Suite :** recueillir le résultat natif Linux, compléter macOS verrouillé et comptes différents, puis protections de chemins et cas d'usage métier. M02/M03 restent en cours.
+
 ## 12. Définition finale de terminé
 
 - [ ] Chaque fonctionnalité et ancien test est couvert dans la matrice de parité.

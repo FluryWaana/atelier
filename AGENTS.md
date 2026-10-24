@@ -34,6 +34,8 @@ Run `cargo test --workspace --exclude atelier-ui --locked` and the existing full
 
 `cargo xtask test-domain-parity` rechecks the captured Node domain vectors and runs their Rust equivalents. Ordinary core tests read the committed synthetic JSON and require no Node runtime. Regenerate a reference only after reviewing an intentional contract change; never update expected results to hide a Rust mismatch.
 
+`cargo xtask test-keyring-lock` locks the Linux session's default collection and requires `ATELIER_TEST_DISPOSABLE_KEYRING=1`. Run only inside the isolated D-Bus/XDG session configured in Rust CI, with the synthetic CI password, never on a personal desktop session. It verifies refusal while locked and preservation of the original key after unlocking.
+
 ### JavaScript conventions
 
 Use ES modules: `.mjs` for backend modules and tests, with browser code under `public/`. Follow nearby indentation and existing semicolon and single-quote conventions. Use camelCase for functions and variables and descriptive lowercase, hyphenated module names such as `time-tracking.mjs`. Keep integration logic in its corresponding `lib/` module. No formatter or linter is configured. Preserve the French user-facing text.

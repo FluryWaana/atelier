@@ -55,6 +55,8 @@ C02/C05/UI, incrément après `93f8276` : contrats et titre HTTP/WASM sans perte
 
 C07, incrément après `aa9bf62` : duplication pure et HTTP portée, copie Node/Rust effectivement comparée dans le corpus UTF-16. Tests de contenu autorisé, critères décochés, absence de liens/états copiés, appels HTTP concurrents et 404. Les autres opérations de tâches restent ouvertes. Les parcours corrigés Chrome/Firefox/Safari passent dans les jobs navigateur `aa9bf62` ; M01 requalifié.
 
+C04, incrément après `3aef62d` : `cargo xtask test-keyring-lock` contrôle le verrouillage Linux réel, le refus des deux opérations et la conservation de la clé/collection après déverrouillage. Exécution uniquement dans la session D-Bus/XDG jetable de CI, avec activation explicite ; preuves Linux x64/ARM64 encore attendues. macOS verrouillé, autre compte et intégration des réglages restent ouverts.
+
 | ID / lot | Contrat et sources actuelles | Appelants / tests Node de référence | Erreurs et preuve attendue en Rust | Équivalent / statut Rust |
 | --- | --- | --- | --- | --- |
 | C01 · M01/M03 | Dépendances domaine → application → adaptateurs ; `domain/`, `application/`, `server.mjs` ; réexports `paths`, `checklist`, `reviews`, `automation`, `time-tracking`, `infrastructure/windows-updater` | Composition serveur et imports détaillés dans l'inventaire ; `architecture`, `ui-composition` | Aucun accès OS/HTTP/SQLite dans core ; contrôler aussi les modules d'une même crate, que Cargo seul n'isole pas ; compilation native et WASM | `atelier-core`, composition `atelier-app` ; à faire |

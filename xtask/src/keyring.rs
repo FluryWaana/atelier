@@ -4,7 +4,13 @@ use atelier_app::infrastructure::{
     token_vault::{KeyringPlatform, execute_keyring, keyring_protect},
 };
 
-pub async fn test() -> Result<()> {
+pub async fn test(locked: bool) -> Result<()> {
+    if locked
+        && (!cfg!(target_os = "linux")
+            || std::env::var("ATELIER_TEST_DISPOSABLE_KEYRING").as_deref() != Ok("1"))
+    {
+        return Err("Le contrôle verrouillé exige une session Linux jetable et ATELIER_TEST_DISPOSABLE_KEYRING=1.".into());
+    }
     let platform = if cfg!(target_os = "linux") {
         KeyringPlatform::Linux
     } else if cfg!(target_os = "macos") {
@@ -36,6 +42,10 @@ pub async fn test() -> Result<()> {
         let encrypted = keyring_protect(platform, plain, false, &mut execute).await?;
         if keyring_protect(platform, &encrypted, true, &mut execute).await? != plain {
             return Err::<String, atelier_app::Error>("Secret synthétique natif illisible.".into());
+        }
+        #[cfg(target_os = "linux")]
+        if locked {
+            test_locked(&encrypted, plain, &mut execute).await?;
         }
         Ok(encrypted)
     }
@@ -71,5 +81,81 @@ pub async fn test() -> Result<()> {
     println!(
         "Trousseau natif : création, relecture et suppression du seul secret synthétique réussies."
     );
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn test_locked(
+    encrypted: &str,
+    plain: &str,
+    execute: &mut impl AsyncFnMut(&str, &[&str], Option<&str>) -> Result<(i32, String)>,
+) -> Result<()> {
+    use zbus::{proxy::CacheProperties, zvariant::OwnedObjectPath};
+
+    let connection = zbus::Connection::session().await?;
+    let service = zbus::Proxy::new(
+        &connection,
+        "org.freedesktop.secrets",
+        "/org/freedesktop/secrets",
+        "org.freedesktop.Secret.Service",
+    )
+    .await?;
+    let path: OwnedObjectPath = service.call("ReadAlias", &("default",)).await?;
+    let collection = zbus::proxy::Builder::<zbus::Proxy<'_>>::new(&connection)
+        .destination("org.freedesktop.secrets")?
+        .path(path.clone())?
+        .interface("org.freedesktop.Secret.Collection")?
+        .cache_properties(CacheProperties::No)
+        .build()
+        .await?;
+    if collection.get_property::<bool>("Locked").await? {
+        return Err("Le trousseau synthétique doit être ouvert avant le contrôle.".into());
+    }
+    let items: Vec<OwnedObjectPath> = collection.get_property("Items").await?;
+    let result = async {
+        let (locked, prompt): (Vec<OwnedObjectPath>, OwnedObjectPath) =
+            service.call("Lock", &(vec![path.clone()],)).await?;
+        if !locked.contains(&path)
+            || prompt.as_str() != "/"
+            || !collection.get_property::<bool>("Locked").await?
+        {
+            return Err::<(), atelier_app::Error>(
+                "Le verrouillage natif n'est pas démontré.".into(),
+            );
+        }
+        for (value, decrypt) in [(encrypted, true), (plain, false)] {
+            if keyring_protect(KeyringPlatform::Linux, value, decrypt, execute)
+                .await
+                .is_ok()
+            {
+                return Err("Un trousseau verrouillé ne doit pas fournir de secret.".into());
+            }
+            if !collection.get_property::<bool>("Locked").await? {
+                return Err("Le trousseau a été déverrouillé pendant le refus attendu.".into());
+            }
+        }
+        Ok(())
+    }
+    .await;
+    // Always unlock our disposable CI collection before the caller removes its test item.
+    let (status, _) = execute_keyring(
+        "gnome-keyring-daemon",
+        &["--unlock", "--components=secrets"],
+        Some("synthetic-ci-password"),
+    )
+    .await?;
+    if status != 0 || collection.get_property::<bool>("Locked").await? {
+        return Err("Le déverrouillage du trousseau synthétique a échoué.".into());
+    }
+    result?;
+    if keyring_protect(KeyringPlatform::Linux, encrypted, true, execute).await? != plain
+        || collection
+            .get_property::<Vec<OwnedObjectPath>>("Items")
+            .await?
+            != items
+    {
+        return Err("Le refus a modifié la clé ou les entrées du trousseau.".into());
+    }
+    println!("Trousseau verrouillé : refus du chiffrement/déchiffrement et clé préservée.");
     Ok(())
 }

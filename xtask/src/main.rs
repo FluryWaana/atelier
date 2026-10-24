@@ -103,10 +103,11 @@ async fn main() -> Result<()> {
             run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
             run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--locked"]))
         }
-        ["test-keyring"] => keyring::test().await,
+        ["test-keyring"] => keyring::test(false).await,
+        ["test-keyring-lock"] => keyring::test(true).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test().await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-keyring | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
+        _ => Err("Usage : cargo xtask build-ui | test-ui | test-storage-parity | test-domain-parity | test-keyring | test-keyring-lock | test-tray. Les commandes de livraison seront portées en M09–M10.".into()),
     }
 }
 
