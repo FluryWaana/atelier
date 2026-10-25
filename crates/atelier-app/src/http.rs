@@ -29,6 +29,7 @@ mod card_lifecycle;
 mod events;
 mod files;
 mod jira;
+mod jira_transitions;
 mod mutations;
 mod projects;
 #[cfg(windows)]
@@ -137,7 +138,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         }
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
-        let exclusive = path == "/api/jira/import"
+        let exclusive = path.ends_with("/jira/transition")
+            || path.ends_with("/jira/reconcile")
+            || path == "/api/jira/import"
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -146,27 +149,57 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/runs/start")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
+        let cancellation = request.method() == Method::POST && mutations::is_cancellation(&path);
+        let gate = state.mutations.clone();
         let changed = state.changed.clone();
         #[cfg(windows)]
         let services = state.services.clone();
         #[cfg(windows)]
         let runs = state.runs.clone();
-        mutations::run(state.mutations.clone(), exclusive, async move {
-            #[cfg(windows)]
-            if let Some(response) = services::guard(&services, request.uri().path()) {
-                return response;
-            }
-            #[cfg(windows)]
-            if let Some(response) = runs::guard(&runs, request.uri().path()) {
-                return response;
+        let operation = async move {
+            if !cancellation {
+                #[cfg(windows)]
+                if let Some(response) = services::guard(&services, request.uri().path()) {
+                    return response;
+                }
+                #[cfg(windows)]
+                if let Some(response) = runs::guard(&runs, request.uri().path()) {
+                    return response;
+                }
+                let guarded_path = request.uri().path().to_owned();
+                match state
+                    .database
+                    .call(move |store| {
+                        crate::infrastructure::jira_transition::blocks(store, &guarded_path)
+                    })
+                    .await
+                {
+                    Ok(true) => {
+                        return failure(
+                            StatusCode::CONFLICT,
+                            "Vérifie l’envoi Jira incertain avant de modifier cette tâche, les projets ou les sauvegardes.",
+                        );
+                    }
+                    Err(_) => {
+                        return failure(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Lecture des opérations Jira impossible.",
+                        );
+                    }
+                    Ok(false) => {}
+                }
             }
             let response = next.run(request).await;
             if response.status().is_success() {
                 let _ = changed.send(());
             }
             response
-        })
-        .await
+        };
+        if cancellation {
+            mutations::detached(operation).await
+        } else {
+            mutations::run(gate, exclusive, operation).await
+        }
     } else {
         next.run(request).await
     }
@@ -359,6 +392,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             let now = time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?;
             crate::infrastructure::jira_import::recover(store)?;
+            crate::infrastructure::jira_transition::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)
         })
         .await?;
@@ -403,6 +437,18 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
         .route("/api/jira/config", get(jira::get).put(jira::save))
+        .route(
+            "/api/cards/{id}/jira/transitions",
+            get(jira_transitions::choices),
+        )
+        .route(
+            "/api/cards/{id}/jira/transition",
+            post(jira_transitions::send),
+        )
+        .route(
+            "/api/cards/{id}/jira/reconcile",
+            post(jira_transitions::reconcile),
+        )
         .route("/api/jira/search", get(jira::search))
         .route("/api/jira/import", post(jira::import))
         .route("/api/jira/issues/{id}", get(jira::detail))

@@ -61,7 +61,7 @@ pub fn TaskEditor(
     let templates = board.templates;
     let archived = card.fields.truthy("archived").unwrap_or(false);
     let ticket = card.fields.truthy("ticket").unwrap_or(false);
-    let ticket_info = card.fields.get::<Document>("ticket").ok().flatten();
+
     let original = StoredValue::new(Draft {
         title: String::from_utf16_lossy(&card.title.0),
         description: field(&card.fields, "description"),
@@ -81,6 +81,14 @@ pub fn TaskEditor(
             .unwrap_or_default(),
     });
     let id = StoredValue::new(card.id);
+    let ticket_info = Signal::derive(move || {
+        board.cards.with(|cards| {
+            cards
+                .iter()
+                .find(|card| card.id == id.get_value())
+                .and_then(|card| card.fields.get::<Document>("ticket").ok().flatten())
+        })
+    });
     let draft = RwSignal::new(original.get_value());
     let dirty = Memo::new(move |_| draft.get() != original.get_value());
     let pending = RwSignal::new(false);
@@ -224,7 +232,7 @@ pub fn TaskEditor(
     view! {
         <dialog id="task-editor" class="editor" class:workspace=move || show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text(if archived { "ARCHIVE" } else { "TÂCHE" })}</p><h2 id="editor-heading">{move || i18n.text("Détails de la tâche")}</h2></div><button id="close-editor" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
-            {ticket_info.map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("Ticket associé")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.")}</p></section>}})}
+            {move ||ticket_info.get().map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("Ticket associé")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.")}</p></section>}})}
             <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
                 <fieldset disabled=move || pending.get() || workspace_dirty.get() || archived || show_template.get()>
                     <label for="edit-title">{move || i18n.text("Titre")}</label><input id="edit-title" required maxlength="300" autofocus readonly=ticket prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
@@ -252,6 +260,7 @@ pub fn TaskEditor(
                 <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
             </form>
             <Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) />
+            <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || show_template.get()) />
             <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
             <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
             <section class="task-files"><button id="browse-task-files" type="button" disabled=move || pending.get() aria-expanded=move || show_files.get().to_string() on:click=move |_| show_files.update(|shown| *shown = !*shown)>{move || i18n.text("Fichiers du projet")}</button><Show when=move || show_files.get()><Files card_id=id.get_value() token /></Show></section>

@@ -46,6 +46,9 @@ fn target(
     {
         return Err(conflict());
     }
+    if atelier_core::application::jira::unresolved(&card.fields)? {
+        return Err("Vérifie l’envoi Jira incertain avant de lier ce ticket.".into());
+    }
     let repo = card.fields.get::<String>("repo")?.unwrap_or_default();
     let project_repo = project.get::<String>("repo")?.unwrap_or_default();
     if repo.is_empty()

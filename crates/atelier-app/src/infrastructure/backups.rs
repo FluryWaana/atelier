@@ -190,6 +190,14 @@ fn restore_checked(
     rescue: impl FnOnce() -> Result<()>,
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
+    for card in store.documents::<Document>(Documents::Cards)? {
+        if atelier_core::application::jira::unresolved(&card)? {
+            return Err(BackupFailure::Conflict(
+                "Vérifie les envois Jira incertains avant une restauration.",
+            )
+            .into());
+        }
+    }
     let private = super::store::temporary_directory()?;
     let mut snapshot = tempfile::NamedTempFile::new_in(private.path())?;
     checked.copy_to(snapshot.as_file_mut())?;
@@ -216,6 +224,30 @@ fn restore_checked(
     let projects = documents(&source, Documents::Projects)?;
     let cards = documents(&source, Documents::Cards)?;
     let runs = documents(&source, Documents::Runs)?;
+    for current in store.documents::<Document>(Documents::Cards)? {
+        if let Some(intent) =
+            current.get::<atelier_core::contracts::JiraTransitionIntent>("jiraTransition")?
+        {
+            use atelier_core::contracts::JiraTransitionState;
+            if matches!(
+                intent.state,
+                JiraTransitionState::Confirmed | JiraTransitionState::Dismissed
+            ) {
+                let id = current
+                    .get::<String>("id")?
+                    .ok_or("Identifiant de carte absent.")?;
+                let saved = cards
+                    .iter()
+                    .find(|saved| saved.id == id)
+                    .map(|saved| saved.value.get::<serde_json::Value>("jiraTransition"))
+                    .transpose()?
+                    .flatten();
+                if saved != Some(serde_json::to_value(&intent)?) {
+                    return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les derniers effets Jira. Choisis une sauvegarde récente.").into());
+                }
+            }
+        }
+    }
     let entries = documents(&source, Documents::Times)?;
     let times: HashMap<_, _> = entries
         .iter()
@@ -245,6 +277,9 @@ fn restore_checked(
         }
     }
     for card in &cards {
+        if atelier_core::application::jira::unresolved(&card.value)? {
+            return Err(BackupFailure::Invalid(unfinished).into());
+        }
         if let Some(raw) = card.value.raw("automation")
             && Document::spread(raw)?.string_equals("state", "running")?
         {

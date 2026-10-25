@@ -31,6 +31,7 @@ pub(super) fn guard(manager: &DevServers, path: &str) -> Option<Response> {
             cards.iter().any(|card| card == id)
                 && !action.starts_with("services")
                 && action != "runs/start"
+                && !action.starts_with("jira/")
         });
     blocked.then(|| failure(StatusCode::CONFLICT, "Arrête les services concernés avant de modifier la tâche, le projet ou les sauvegardes."))
 }

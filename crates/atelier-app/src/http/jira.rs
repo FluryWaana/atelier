@@ -9,7 +9,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
+pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
     match result {
         Ok(value) => Json(value).into_response(),
         Err(error) => {

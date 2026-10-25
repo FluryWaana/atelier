@@ -566,6 +566,82 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?;
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
+    jira_recovery_scenario(client, http).await?;
+    Ok(())
+}
+
+async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+    use atelier_app::infrastructure::{prototype::PrototypeDirectory, store::Documents};
+    use atelier_core::document::Document;
+    let data = tempfile::tempdir()?;
+    {
+        let root = PrototypeDirectory::open(data.path())?;
+        let database = root.database()?;
+        database.call(|store| {
+            store.save_settings(&json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic-recovery.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}}))?;
+            store.put(Documents::Cards,&json!({"id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"},"jiraTransition":{"id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"11","name":"Complete","target":{"id":"2","name":"Done"},"requiresFields":false},"startedAt":"2026-10-25T10:00:00Z","observed":null}}))?;Ok(())
+        }).await?;
+        database.close().await?;
+    }
+    let port = free_port()?;
+    let address = format!("http://127.0.0.1:{port}");
+    let (mut server, token) =
+        start_server(data.path(), port, &root().join(".artifacts/rust-ui")).await?;
+    client
+        .goto(&format!("{address}/?task=jira-recovery#session={token}"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#task-editor')?.open && document.querySelector('#load-jira-transitions')?.disabled === true && document.querySelector('#reconcile-jira-transition')?.disabled === false && document.querySelector('#dismiss-jira-transition')?.disabled === true;",vec![]).await?;
+    click(client, "#dismiss-jira-ack").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#dismiss-jira-transition')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#reconcile-jira-transition").await?;
+    // No credential is stored: the reconciliation must fail before any remote request.
+    wait_dom(client,"return document.querySelector('#jira-task-heading')?.parentElement.querySelector('.error')?.textContent.includes('Renseigne le jeton Jira') && document.querySelector('#dismiss-jira-transition')?.disabled === true;",vec![]).await?;
+    let response = http
+        .delete(format!("{address}/api/cards/jira-recovery"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"confirmed":true}))
+        .send()
+        .await?;
+    if response.status() != reqwest::StatusCode::CONFLICT {
+        return Err("La suppression a accepté une transition Jira incertaine.".into());
+    }
+    let response = http
+        .post(format!("{address}/api/backups"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await?;
+    if response.status() != reqwest::StatusCode::CONFLICT {
+        return Err("La sauvegarde a accepté une transition Jira incertaine.".into());
+    }
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let card = board
+        .cards
+        .iter()
+        .find(|card| card.id == "jira-recovery")
+        .ok_or("Carte Jira synthétique absente.")?;
+    let intent = card
+        .fields
+        .get::<Document>("jiraTransition")?
+        .ok_or("Intention Jira synthétique absente.")?;
+    if !intent.string_equals("state", "uncertain")? {
+        return Err("La vérification sans identifiant a perdu l’incertitude Jira.".into());
+    }
+    stop_server(&mut server, port, &token).await?;
     Ok(())
 }
 

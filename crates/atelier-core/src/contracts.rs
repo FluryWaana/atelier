@@ -301,3 +301,63 @@ pub struct JiraImported {
     pub created: bool,
     pub attached: bool,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct JiraStatus {
+    pub id: String,
+    pub name: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraTransition {
+    pub id: String,
+    pub name: String,
+    pub target: JiraStatus,
+    pub requires_fields: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraTransitions {
+    pub connection_revision: u64,
+    pub current: JiraStatus,
+    pub transitions: Vec<JiraTransition>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraTransitionRequest {
+    pub revision: u64,
+    pub expected: Card,
+    pub from: JiraStatus,
+    pub transition: JiraTransition,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraReconciliation {
+    pub revision: u64,
+    pub expected: Card,
+    #[serde(default)]
+    pub dismiss: bool,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum JiraTransitionState {
+    Preparing,
+    Sending,
+    Uncertain,
+    Confirmed,
+    Failed,
+    Dismissed,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraTransitionIntent {
+    pub id: String,
+    pub state: JiraTransitionState,
+    pub base: String,
+    pub issue_id: String,
+    pub revision: u64,
+    pub from: JiraStatus,
+    pub transition: JiraTransition,
+    pub started_at: String,
+    pub observed: Option<JiraStatus>,
+}

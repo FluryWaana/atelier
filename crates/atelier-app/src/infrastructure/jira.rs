@@ -4,7 +4,7 @@ use atelier_core::{
     application::jira,
     contracts::{
         JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssue, JiraIssueDetail,
-        JiraMode, JiraSearch,
+        JiraMode, JiraSearch, JiraStatus, JiraTransition, JiraTransitions,
     },
     document::Document,
 };
@@ -342,6 +342,130 @@ impl Jira {
             issue,
             description,
         })
+    }
+    fn issue_endpoint(&self, id: &str, suffix: Option<&str>) -> Result<Url> {
+        if id.is_empty() || id.len() > 32 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err("Identifiant Jira invalide.".into());
+        }
+        let version = if self.configuration.mode == JiraMode::Cloud {
+            "3"
+        } else {
+            "2"
+        };
+        let mut url = self.endpoint(&["rest", "api", version, "issue", id])?;
+        if let Some(suffix) = suffix {
+            url.path_segments_mut()
+                .map_err(|_| "Adresse Jira invalide.")?
+                .push(suffix);
+        }
+        Ok(url)
+    }
+    fn status_value(&self, value: &Value) -> Result<JiraStatus> {
+        let id = value["id"]
+            .as_str()
+            .filter(|id| {
+                !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_digit())
+            })
+            .ok_or("Identifiant de statut Jira invalide.")?;
+        let name = value["name"]
+            .as_str()
+            .filter(|name| {
+                !name.is_empty() && name.len() <= 400 && !name.chars().any(char::is_control)
+            })
+            .ok_or("Statut Jira invalide.")?;
+        if [id, name].iter().any(|value| value.contains(&self.token)) {
+            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+        }
+        Ok(JiraStatus {
+            id: id.into(),
+            name: name.into(),
+        })
+    }
+    pub async fn status(&self, id: &str) -> Result<JiraStatus> {
+        let mut url = self.issue_endpoint(id, None)?;
+        url.query_pairs_mut().append_pair("fields", "status");
+        let row = self.request(url, None).await?;
+        if row["id"].as_str() != Some(id) {
+            return Err("Identifiant du ticket Jira incohérent.".into());
+        }
+        self.status_value(&row["fields"]["status"])
+    }
+    pub async fn transitions(&self, id: &str) -> Result<JiraTransitions> {
+        let current = self.status(id).await?;
+        let mut url = self.issue_endpoint(id, Some("transitions"))?;
+        url.query_pairs_mut()
+            .append_pair("expand", "transitions.fields");
+        let value = self.request(url, None).await?;
+        let rows = value["transitions"]
+            .as_array()
+            .filter(|rows| rows.len() <= 100)
+            .ok_or("Liste de transitions Jira invalide.")?;
+        let mut transitions = Vec::new();
+        let mut ids = BTreeSet::new();
+        for row in rows {
+            let id = row["id"]
+                .as_str()
+                .filter(|id| {
+                    !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_digit())
+                })
+                .ok_or("Transition Jira invalide.")?;
+            let name = row["name"]
+                .as_str()
+                .filter(|name| {
+                    !name.is_empty() && name.len() <= 400 && !name.chars().any(char::is_control)
+                })
+                .ok_or("Transition Jira invalide.")?;
+            if !ids.insert(id) || [id, name].iter().any(|value| value.contains(&self.token)) {
+                return Err("Liste de transitions Jira invalide.".into());
+            }
+            let fields = row["fields"]
+                .as_object()
+                .filter(|fields| fields.len() <= 100)
+                .ok_or("Champs de transition Jira absents ou invalides.")?;
+            let mut requires_fields = false;
+            for field in fields.values() {
+                let required = field["required"]
+                    .as_bool()
+                    .ok_or("Champs de transition Jira invalides.")?;
+                requires_fields |= required && field["hasDefaultValue"].as_bool() != Some(true);
+            }
+            transitions.push(JiraTransition {
+                id: id.into(),
+                name: name.into(),
+                target: self.status_value(&row["to"])?,
+                requires_fields,
+            });
+        }
+        Ok(JiraTransitions {
+            connection_revision: self.configuration.revision,
+            current,
+            transitions,
+        })
+    }
+    /// No retry or gateway discovery after a write: a lost response may hide a committed effect.
+    pub async fn send_transition(&self, issue: &str, transition: &JiraTransition) -> Result<()> {
+        if transition.requires_fields
+            || transition.id.is_empty()
+            || transition.id.len() > 64
+            || !transition.id.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            return Err("Transition Jira invalide ou exigeant des champs supplémentaires.".into());
+        }
+        let url = self.issue_endpoint(issue, Some("transitions"))?;
+        let target = if let Some(gateway) = self.gateway.get() {
+            gateway_request(gateway, &url)?
+        } else {
+            url
+        };
+        let response = self
+            .send(target, Some(&json!({"transition":{"id":transition.id}})))
+            .await?;
+        if response.status() != reqwest::StatusCode::NO_CONTENT {
+            return Err(
+                "Envoi Jira non confirmé. Vérifie le ticket avant toute nouvelle tentative.".into(),
+            );
+        }
+        Ok(())
     }
     pub async fn search(&self) -> Result<JiraSearch> {
         if self.configuration.query.trim().is_empty()

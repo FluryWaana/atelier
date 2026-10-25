@@ -176,3 +176,46 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
     }
     Ok(out.trim_end_matches('\n').into())
 }
+
+pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
+    use crate::contracts::{JiraTransitionIntent, JiraTransitionState};
+    Ok(fields
+        .get::<JiraTransitionIntent>("jiraTransition")?
+        .is_some_and(|intent| {
+            matches!(
+                intent.state,
+                JiraTransitionState::Preparing
+                    | JiraTransitionState::Sending
+                    | JiraTransitionState::Uncertain
+            )
+        }))
+}
+pub fn linked_issue(card: &crate::contracts::Card, base: &str) -> Result<String, JiraFailure> {
+    let ticket = card
+        .fields
+        .get::<crate::document::Document>("ticket")
+        .map_err(|_| JiraFailure::Invalid("Liaison Jira invalide."))?
+        .ok_or("Cette carte n’est pas liée à Jira.")?;
+    let site = ticket
+        .get::<String>("instance")
+        .ok()
+        .flatten()
+        .or_else(|| ticket.get::<String>("base").ok().flatten());
+    let id = ticket
+        .get::<String>("id")
+        .ok()
+        .flatten()
+        .ok_or("Identifiant Jira invalide.")?;
+    let key = ticket
+        .get::<String>("key")
+        .ok()
+        .flatten()
+        .ok_or("Clé Jira invalide.")?;
+    if !ticket.string_equals("connector", "jira").unwrap_or(false)
+        || site.as_deref() != Some(base)
+        || !issue_identity(&id, &key)
+    {
+        return Err("Reconnecte le site Jira associé à cette carte.".into());
+    }
+    Ok(id)
+}
