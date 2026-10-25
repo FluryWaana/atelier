@@ -29,6 +29,10 @@ h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.035em; margin: 0; 
 #error:empty { display: none; }
 .loading { color: #5d706b; }
 .kanban { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 1rem; overflow-x: auto; padding-bottom: 1.5rem; }
+.table-scroll { overflow-x: auto; margin-block: 1rem; }
+.table-scroll table { width: 100%; border-collapse: collapse; }
+.table-scroll th, .table-scroll td { padding: .6rem; text-align: left; vertical-align: top; border-bottom: 1px solid #d7e0dc; }
+.table-scroll td { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kanban-column { min-width: 0; background: #eaf0ed; border: 1px solid #dce5e0; border-radius: .8rem; min-height: 380px; }
 .column-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: 1rem; }
 .column-heading h2 { margin: 0; font-size: .88rem; font-weight: 700; }

@@ -5,6 +5,7 @@ use crate::{
 
 pub mod agent_protocol;
 pub mod agent_providers;
+pub mod agent_usage;
 pub mod backups;
 pub mod brainstorm;
 pub mod card_lifecycle;

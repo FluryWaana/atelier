@@ -772,6 +772,6 @@ impl Protocol {
 
 fn usage(value: &Value, keys: &[&str; 3]) -> Option<Value> {
     Some(
-        json!({"inputTokens":value[keys[0]].as_u64()?,"cachedInputTokens":value[keys[1]].as_u64().unwrap_or(0),"outputTokens":value[keys[2]].as_u64()?}),
+        json!({"inputTokens":value[keys[0]].as_u64()?,"cachedInputTokens":value[keys[1]].as_u64(),"cacheCreationInputTokens":value["cache_creation_input_tokens"].as_u64(),"outputTokens":value[keys[2]].as_u64()?}),
     )
 }

@@ -153,7 +153,10 @@ fn claude_questions_retain_original_input_and_deny_cleared_or_invalid_requests()
     let effects=protocol.receive(json!({"type":"result","subtype":"success","is_error":false,"result":"synthetic-token","usage":{"input_tokens":3,"output_tokens":2}})).unwrap();
     assert_eq!(effects.complete, Some(true));
     assert_eq!(effects.summary.as_deref(), Some("[secret]"));
-    assert_eq!(effects.usage.unwrap()["inputTokens"], 3);
+    let usage = effects.usage.unwrap();
+    assert_eq!(usage["inputTokens"], 3);
+    assert!(usage["cachedInputTokens"].is_null());
+    assert!(usage["cacheCreationInputTokens"].is_null());
 }
 
 #[test]

@@ -609,6 +609,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
                 "Synthetic brainstorm baseline",
             ]))?;
         database.call(move |store| {
+            store.put(Documents::Runs,&json!({"id":"usage-fixture","cardId":"jira-refresh","agentType":"codex","agent":"synthetic-usage-profile","model":"synthetic-usage-model","status":"completed","startedAt":"2026-10-25T10:00:00Z","usage":{"inputTokens":11,"cachedInputTokens":null,"outputTokens":2}}))?;
             store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo}))?;
             store.put(Documents::Cards,&json!({"id":"brainstorm-session","title":"Synthetic brainstorm idea","description":"Keep original idea","instructions":"","mode":"analyze","agent":"codex","status":"todo","brainstormSession":true,"repo":brainstorm_repo}))?;
             store.put(Documents::Runs,&json!({"id":"brainstorm-result","cardId":"brainstorm-session","status":"completed","purpose":"brainstorm","startedAt":"2026-10-25T10:00:00Z","userMessage":"Découpe cette idée","brainstormAnswer":{"message":"Synthetic structured proposal","questions":[{"question":"Synthetic choice?","options":["Local only","Shared"]}],"tickets":[{"title":"Synthetic converted task","description":"Converted description","criteria":["Manual validation remains required"],"questions":["Keep open question"]}]}}))?;
@@ -1016,6 +1017,7 @@ async fn time_task_scenario(
     wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     client.execute("const source=document.querySelector('#report-source');source.value='agent';source.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.querySelectorAll('.time-report-row').length===0 && document.querySelector('#download-time-csv')?.disabled===true;",vec![]).await?;
+    wait_dom(client,"return Array.from(document.querySelectorAll('#agent-usage-report tbody tr')).some(row=>row.textContent.includes('synthetic-usage-model')&&row.cells[2].textContent.includes('11 (1/1)')&&row.cells[3].textContent==='Indisponible');",vec![]).await?;
     client.execute("const source=document.querySelector('#report-source');source.value='human';source.dispatchEvent(new Event('change',{bubbles:true}));window.syntheticCsvHref='';window.syntheticCsvBlob=null;window.syntheticCreateObjectURL=URL.createObjectURL;URL.createObjectURL=function(blob){window.syntheticCsvBlob=blob;return window.syntheticCreateObjectURL.call(this,blob);};window.syntheticAnchorClick=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(this.download==='atelier-time.csv'){window.syntheticCsvHref=this.href;return;}return window.syntheticAnchorClick.call(this);};",vec![]).await?;
     click(client, "#download-time-csv").await?;
     let csv=client.execute_async("const done=arguments[arguments.length-1];window.syntheticCsvBlob.text().then(text=>done(text)).catch(()=>done(null));",vec![]).await?;

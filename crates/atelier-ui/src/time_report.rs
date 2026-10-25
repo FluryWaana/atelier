@@ -35,6 +35,34 @@ pub fn TimeReport(
     let error = RwSignal::new(String::new());
     let invalid =
         Memo::new(move |_| !from.get().is_empty() && !to.get().is_empty() && from.get() > to.get());
+    let usage_runs = Signal::derive(move || {
+        if invalid.get() || source.get() == "human" {
+            return Vec::new();
+        }
+        let from = from.get();
+        let to = to.get();
+        let repo = repo.get();
+        let cards = board.cards.get();
+        let selected = cards
+            .iter()
+            .filter(|card| repo.is_empty() || field(&card.fields, "repo") == repo)
+            .map(|card| card.id.as_str())
+            .collect::<HashSet<_>>();
+        board.runs.with(|runs| {
+            runs.iter()
+                .filter(|run| {
+                    let start = field(run, "startedAt");
+                    let date = start.get(..10).unwrap_or_default();
+                    (repo.is_empty() || selected.contains(field(run, "cardId").as_str()))
+                        && ((from.is_empty() && to.is_empty())
+                            || (!date.is_empty()
+                                && (from.is_empty() || date >= from.as_str())
+                                && (to.is_empty() || date <= to.as_str())))
+                })
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+    });
     let rows = Memo::new(move |_| {
         if invalid.get() {
             return Vec::new();
@@ -253,6 +281,7 @@ pub fn TimeReport(
         <p role="alert" hidden=move||!invalid.get()>{move||i18n.text("La date de fin doit suivre la date de début.")}</p>
         <p id="report-human-total">{move||format!("{} : {}",i18n.text("Temps humain enregistré"),duration_text(rows.with(|rows|rows.iter().filter(|row|!row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add))))}</p>
         <p id="report-agent-total">{move||format!("{} : {}",i18n.text("Temps actif des agents mesuré"),duration_text(rows.with(|rows|rows.iter().filter(|row|row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add))))}</p>
+        <crate::agent_usage::AgentUsage runs=usage_runs />
         <details><summary>{move||i18n.text("Synthèse humaine par jour")}</summary><dl><For each=move||daily.get() key=|(day,_)|day.clone() children=move|(day,seconds)|view!{<dt>{day}</dt><dd>{duration_text(seconds)}</dd>} /></dl></details>
         <p class="field-help">{move||i18n.text("Les chronomètres et agents actifs peuvent encore augmenter. Le CSV contient uniquement les saisies humaines arrêtées.")}</p><button id="download-time-csv" type="button" disabled=move||loading.get()||!load_error.get().is_empty()||invalid.get()||!rows.with(|rows|rows.iter().any(|row|!row.agent&&!row.running)) on:click=download>{move||i18n.text("Exporter les saisies arrêtées (CSV)")}</button>
         <p hidden=move||loading.get()||!load_error.get().is_empty()||!rows.with(|rows|rows.is_empty())>{move||i18n.text("Aucun temps dans cette sélection.")}</p><ul><For each=move||rows.with(|rows|rows.iter().skip(page.get()*100).take(100).cloned().collect::<Vec<_>>()) key=|row|row.clone() children=move|row|{let card=row.card.clone();view!{<li class="time-report-row"><p hidden=!row.running>{move||i18n.text("En cours")}</p><strong>{row.date}" "{row.start}" · "{duration_text(row.seconds)}</strong><p>{move||i18n.text(if row.agent{"Temps actif des agents mesuré"}else{"Temps humain"})}</p><button type="button" on:click=move|_|{if let Some(node)=dialog.get_untracked(){node.close();}on_task.run(card.clone());}>{row.ticket}" · "{row.title}</button><details><summary>{move||i18n.text("Description")}</summary><pre class="service-log">{row.description}</pre></details></li>}} /></ul>
