@@ -178,19 +178,28 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
 }
 
 pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
-    use crate::contracts::{JiraTransitionIntent, JiraTransitionState};
+    use crate::contracts::{JiraTransitionIntent, JiraWriteState};
     let reading = fields
         .get::<crate::contracts::JiraRefreshPreview>("jiraRefresh")?
         .is_some_and(|preview| preview.state == crate::contracts::JiraRefreshState::Reading);
+    let creating = fields
+        .get::<crate::contracts::JiraCreationIntent>("jiraCreation")?
+        .is_some_and(|intent| {
+            matches!(
+                intent.state,
+                crate::contracts::JiraWriteState::Preparing
+                    | crate::contracts::JiraWriteState::Sending
+                    | crate::contracts::JiraWriteState::Uncertain
+            )
+        });
     Ok(reading
+        || creating
         || fields
             .get::<JiraTransitionIntent>("jiraTransition")?
             .is_some_and(|intent| {
                 matches!(
                     intent.state,
-                    JiraTransitionState::Preparing
-                        | JiraTransitionState::Sending
-                        | JiraTransitionState::Uncertain
+                    JiraWriteState::Preparing | JiraWriteState::Sending | JiraWriteState::Uncertain
                 )
             }))
 }
@@ -229,4 +238,88 @@ pub fn card_snapshot(card: &crate::contracts::Card) -> crate::contracts::Card {
     let mut card = card.clone();
     card.fields.remove("jiraRefresh");
     card
+}
+
+pub fn project_key(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.as_bytes()[0].is_ascii_uppercase()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+}
+pub fn creation_text(card: &crate::contracts::Card) -> Result<String, JiraFailure> {
+    let mut text = card
+        .fields
+        .get::<String>("description")
+        .map_err(|_| JiraFailure::Invalid("Description de carte invalide."))?
+        .unwrap_or_default();
+    let criteria = card
+        .fields
+        .get::<Vec<crate::domain::checklist::Criterion>>("checklist")
+        .map_err(|_| JiraFailure::Invalid("Critères de carte invalides."))?
+        .unwrap_or_default();
+    let checklist = crate::domain::checklist::checklist_text(&criteria)
+        .utf8()
+        .map_err(|_| JiraFailure::Invalid("Critères de carte invalides."))?;
+    text.push_str(&checklist);
+    let instructions = card
+        .fields
+        .get::<String>("instructions")
+        .map_err(|_| JiraFailure::Invalid("Instructions de carte invalides."))?
+        .unwrap_or_default();
+    if !instructions.is_empty() {
+        text.push_str("\n\nInstructions pour l’agent :\n");
+        text.push_str(&instructions);
+    }
+    if text.encode_utf16().count() > 60_000 || text.contains('\0') {
+        return Err("Contenu de carte trop volumineux ou invalide pour Jira.".into());
+    }
+    Ok(text)
+}
+
+pub fn validate_creation(
+    metadata: &crate::contracts::JiraCreationMetadata,
+    card: &crate::contracts::Card,
+) -> Result<(), JiraFailure> {
+    let title = card
+        .title
+        .utf8()
+        .map_err(|_| JiraFailure::Invalid("Titre de carte invalide."))?;
+    if title.trim().is_empty()
+        || title.encode_utf16().count() > 255
+        || title.chars().any(char::is_control)
+    {
+        return Err("Titre de carte invalide.".into());
+    }
+    let description = creation_text(card)?;
+    if metadata.issue_type.subtask
+        || !metadata
+            .fields
+            .iter()
+            .any(|field| field.id == "summary" && field.can_set)
+    {
+        return Err("Ce type de ticket ne peut pas être créé depuis Atelier.".into());
+    }
+    if !description.is_empty()
+        && !metadata
+            .fields
+            .iter()
+            .any(|field| field.id == "description" && field.can_set)
+    {
+        return Err("Le projet Jira n’autorise pas la description prévue. Crée le ticket dans Jira puis associe-le.".into());
+    }
+    for field in &metadata.fields {
+        if field.required
+            && !field.has_default
+            && ((!field.can_set && ["summary", "description"].contains(&field.id.as_str()))
+                || !["project", "issuetype", "summary", "description"].contains(&field.id.as_str()))
+        {
+            return Err("Ce projet exige des champs supplémentaires. Crée le ticket dans Jira puis associe-le.".into());
+        }
+        if field.required && field.id == "description" && description.trim().is_empty() {
+            return Err("Une description est obligatoire pour ce projet Jira.".into());
+        }
+    }
+    Ok(())
 }

@@ -7,7 +7,7 @@ use atelier_core::{
     application::jira::JiraFailure,
     contracts::{
         Card, JiraReconciliation, JiraTransitionIntent, JiraTransitionRequest,
-        JiraTransitionState as Phase,
+        JiraWriteState as Phase,
     },
 };
 use axum::{

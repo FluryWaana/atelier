@@ -210,3 +210,44 @@ pub(super) async fn import(State(state): State<Shared>, request: Request) -> Res
     }
     response(result)
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct MetadataQuery {
+    revision: u64,
+    project: String,
+    issue_type: Option<String>,
+}
+pub(super) async fn creation_metadata(
+    State(state): State<Shared>,
+    Query(query): Query<MetadataQuery>,
+) -> Response {
+    let mut stopped = state.shutdown.subscribe();
+    if *stopped.borrow() {
+        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+    }
+    let Ok(_permit) = state.integration_reads.try_acquire() else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+        );
+    };
+    let operation = async {
+        let client = super::jira_transitions::client(&state, query.revision).await?;
+        let result = if let Some(issue_type) = query.issue_type {
+            serde_json::to_value(
+                client
+                    .creation_metadata(&query.project, &issue_type)
+                    .await?,
+            )?
+        } else {
+            serde_json::json!({"revision":query.revision,"projectKey":query.project,"types":client.issue_types(&query.project).await?})
+        };
+        state
+            .database
+            .call(move |store| jira::require_revision(store, query.revision))
+            .await?;
+        Ok(result)
+    };
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(60),operation)=>response(result.unwrap_or_else(|_|Err("Lecture des métadonnées Jira trop longue.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+}

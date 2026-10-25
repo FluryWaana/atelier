@@ -579,6 +579,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         let database = root.database()?;
         database.call(|store| {
             store.save_settings(&json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic-recovery.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}}))?;
+            store.put(Documents::Cards,&json!({"id":"jira-creation","title":"Synthetic Jira creation","description":"Keep local creation content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"jiraCreation":{"id":"synthetic-creation-operation","state":"sending","base":"https://synthetic-recovery.example.test","projectKey":"SYN","issueType":{"id":"1","name":"Task","subtask":false},"revision":1,"startedAt":"2026-10-25T10:00:00Z","result":null}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"},"jiraTransition":{"id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"11","name":"Complete","target":{"id":"2","name":"Done"},"requiresFields":false},"startedAt":"2026-10-25T10:00:00Z","observed":null}}))?;
             let card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"jira-refresh","title":"Local refresh title","description":"Local refresh description","instructions":"Keep refresh instructions","agent":"codex","mode":"analyze","status":"todo","checklist":[{"text":"Keep refresh criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"2","key":"SYN-2","status":"Open"}}).to_string())?;
             store.put(Documents::Cards,&card)?;
@@ -646,6 +647,39 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     if !intent.string_equals("state", "uncertain")? {
         return Err("La vérification sans identifiant a perdu l’incertitude Jira.".into());
     }
+    client
+        .goto(&format!("{address}/?task=jira-creation"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#jira-create-heading')?.parentElement.textContent.includes('Création Jira incertaine') && document.querySelector('#close-jira-creation')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#jira-created-key"))
+        .await?
+        .send_keys("SYN-9")
+        .await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#jira-created-key')?.value === 'SYN-9';",
+        vec![],
+    )
+    .await?;
+    click(client, "#resolve-jira-creation").await?;
+    // The absent synthetic credential prevents all remote I/O, even during reconciliation.
+    wait_dom(client,"return document.querySelector('#jira-create-error')?.textContent.includes('Renseigne le jeton Jira') && document.querySelector('#jira-created-key')?.value === 'SYN-9' && document.querySelector('#resolve-jira-creation')?.disabled === false;",vec![]).await?;
+    click(client, "#close-jira-creation-ack").await?;
+    click(client, "#close-jira-creation").await?;
+    wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.disabled === false;",vec![]).await?;
+    client
+        .goto(&format!("{address}/?task=jira-creation"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#jira-create-heading')?.parentElement.textContent.includes('Incertitude Jira close') && document.querySelector('#edit-description')?.value === 'Keep local creation content';",vec![]).await?;
     client
         .goto(&format!("{address}/?task=jira-refresh"))
         .await?;

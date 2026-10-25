@@ -1,7 +1,7 @@
 use crate::{field, i18n::I18n, live::BoardState, read, write};
 use atelier_core::contracts::{
     Card, JiraConfiguration, JiraReconciliation, JiraTransitionIntent, JiraTransitionRequest,
-    JiraTransitionState as Phase, JiraTransitions,
+    JiraTransitions, JiraWriteState as Phase,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;

@@ -4,7 +4,7 @@ use atelier_app::infrastructure::{
 use atelier_core::{
     contracts::{
         Card, JiraConfiguration, JiraMode, JiraStatus, JiraTransition, JiraTransitionIntent,
-        JiraTransitionRequest, JiraTransitionState as Phase, JiraTransitions,
+        JiraTransitionRequest, JiraTransitions, JiraWriteState as Phase,
     },
     document::Document,
 };

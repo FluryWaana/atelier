@@ -4,7 +4,7 @@ use atelier_core::{
     application::jira::{self, JiraFailure},
     contracts::{
         Card, JiraConfiguration, JiraStatus, JiraTransitionIntent, JiraTransitionRequest,
-        JiraTransitionState as State, JiraTransitions,
+        JiraTransitions, JiraWriteState as State,
     },
     document::Document,
 };
@@ -219,7 +219,8 @@ pub fn blocks(store: &Store<'_>, path: &str) -> Result<bool> {
                 || path.starts_with("/api/projects")
                 || (affected.is_some()
                     && card.get::<String>("id")?.as_deref() == affected
-                    && !path.ends_with("/jira/reconcile")))
+                    && !path.ends_with("/jira/reconcile")
+                    && !path.ends_with("/jira/creation-reconcile")))
         {
             return Ok(true);
         }

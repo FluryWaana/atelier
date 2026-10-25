@@ -17,6 +17,7 @@ pub mod installation;
 #[cfg(windows)]
 mod interactive_runs;
 pub mod jira;
+pub mod jira_creation;
 pub mod jira_import;
 pub mod jira_refresh;
 pub mod jira_transition;

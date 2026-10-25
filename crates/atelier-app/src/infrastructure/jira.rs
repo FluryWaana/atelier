@@ -3,8 +3,9 @@ use crate::Result;
 use atelier_core::{
     application::jira,
     contracts::{
-        JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraIssue, JiraIssueDetail,
-        JiraMode, JiraSearch, JiraStatus, JiraTransition, JiraTransitions,
+        JiraConfiguration, JiraConfigurationUpdate, JiraConnection, JiraCreationField,
+        JiraCreationMetadata, JiraIssue, JiraIssueDetail, JiraIssueType, JiraMode, JiraSearch,
+        JiraStatus, JiraTransition, JiraTransitions,
     },
     document::Document,
 };
@@ -108,6 +109,19 @@ pub fn credentials(
         .filter(|token| !token.is_empty())
         .ok_or("Renseigne le jeton Jira avant la recherche.")?;
     Ok((configuration, token))
+}
+
+pub fn require_revision(store: &Store<'_>, expected: u64) -> Result<()> {
+    if store
+        .settings::<Document>()?
+        .get::<JiraConfiguration>("jiraConnection")?
+        .unwrap_or_default()
+        .revision
+        != expected
+    {
+        return Err(jira::JiraFailure::Conflict.into());
+    }
+    Ok(())
 }
 
 pub(super) fn invalidate_configuration(
@@ -467,6 +481,288 @@ impl Jira {
         }
         Ok(())
     }
+    fn creation_endpoint(&self, project: &str, issue_type: Option<&str>) -> Result<Url> {
+        if !jira::project_key(project) {
+            return Err("Clé de projet Jira invalide.".into());
+        }
+        let version = if self.configuration.mode == JiraMode::Cloud {
+            "3"
+        } else {
+            "2"
+        };
+        let mut url = self.endpoint(&[
+            "rest",
+            "api",
+            version,
+            "issue",
+            "createmeta",
+            project,
+            "issuetypes",
+        ])?;
+        if let Some(id) = issue_type {
+            if id.is_empty() || id.len() > 64 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+                return Err("Type de ticket Jira invalide.".into());
+            }
+            url.path_segments_mut()
+                .map_err(|_| "Adresse Jira invalide.")?
+                .push(id);
+        }
+        Ok(url)
+    }
+    fn public_metadata_text<'a>(&self, value: &'a Value, limit: usize) -> Result<&'a str> {
+        value
+            .as_str()
+            .filter(|value| {
+                !value.is_empty()
+                    && value.len() <= limit
+                    && !value.chars().any(char::is_control)
+                    && !value.contains(&self.token)
+            })
+            .ok_or_else(|| "Métadonnées Jira invalides ou confidentielles.".into())
+    }
+    async fn metadata_pages<T>(
+        &self,
+        url: Url,
+        row_key: &str,
+        id_key: &str,
+        limit: usize,
+        parse: impl Fn(&Value) -> Result<T>,
+    ) -> Result<Vec<T>> {
+        let mut result = Vec::new();
+        let mut ids = BTreeSet::new();
+        let mut total = None;
+        for _ in 0..100 {
+            let mut target = url.clone();
+            target
+                .query_pairs_mut()
+                .append_pair("startAt", &result.len().to_string())
+                .append_pair("maxResults", "100");
+            let page = self.request(target, None).await?;
+            let expected = page["total"]
+                .as_u64()
+                .filter(|total| *total <= limit as u64)
+                .ok_or("Métadonnées Jira trop volumineuses ou invalides.")?;
+            if total.is_some_and(|total| total != expected)
+                || page["startAt"].as_u64() != Some(result.len() as u64)
+            {
+                return Err("Pagination des métadonnées Jira incohérente.".into());
+            }
+            total = Some(expected);
+            let rows = page[row_key]
+                .as_array()
+                .filter(|rows| rows.len() <= 100)
+                .ok_or("Page de métadonnées Jira invalide.")?;
+            for row in rows {
+                let id = self.public_metadata_text(&row[id_key], 128)?;
+                if !ids.insert(id.to_owned()) || result.len() >= limit {
+                    return Err("Métadonnées Jira dupliquées ou trop volumineuses.".into());
+                }
+                result.push(parse(row)?);
+            }
+            if let Some(last) = page.get("isLast") {
+                if last.as_bool() != Some(result.len() as u64 == expected) {
+                    return Err("Pagination des métadonnées Jira incohérente.".into());
+                }
+            }
+            if result.len() as u64 == expected {
+                return Ok(result);
+            }
+            if result.len() as u64 > expected || rows.is_empty() {
+                return Err("Pagination des métadonnées Jira incohérente.".into());
+            }
+        }
+        Err("Métadonnées Jira trop volumineuses.".into())
+    }
+    pub async fn issue_types(&self, project: &str) -> Result<Vec<JiraIssueType>> {
+        tokio::time::timeout(Duration::from_secs(60), self.issue_types_pages(project))
+            .await
+            .map_err(|_| "Lecture des métadonnées Jira trop longue.")?
+    }
+    async fn issue_types_pages(&self, project: &str) -> Result<Vec<JiraIssueType>> {
+        let url = self.creation_endpoint(project, None)?;
+        let key = if self.configuration.mode == JiraMode::Cloud {
+            "issueTypes"
+        } else {
+            "values"
+        };
+        self.metadata_pages(url, key, "id", 1000, |row| {
+            let id = self.public_metadata_text(&row["id"], 64)?;
+            if !id.bytes().all(|byte| byte.is_ascii_digit()) {
+                return Err("Type de ticket Jira invalide.".into());
+            }
+            Ok(JiraIssueType {
+                id: id.into(),
+                name: self.public_metadata_text(&row["name"], 400)?.into(),
+                subtask: row["subtask"]
+                    .as_bool()
+                    .ok_or("Type de ticket Jira invalide.")?,
+            })
+        })
+        .await
+    }
+    pub async fn creation_metadata(
+        &self,
+        project: &str,
+        issue_type: &str,
+    ) -> Result<JiraCreationMetadata> {
+        tokio::time::timeout(
+            Duration::from_secs(60),
+            self.creation_metadata_pages(project, issue_type),
+        )
+        .await
+        .map_err(|_| "Lecture des métadonnées Jira trop longue.")?
+    }
+    async fn creation_metadata_pages(
+        &self,
+        project: &str,
+        issue_type: &str,
+    ) -> Result<JiraCreationMetadata> {
+        let selected = self
+            .issue_types(project)
+            .await?
+            .into_iter()
+            .find(|kind| kind.id == issue_type && !kind.subtask)
+            .ok_or("Type de ticket Jira indisponible ou sous-tâche non prise en charge.")?;
+        let url = self.creation_endpoint(project, Some(issue_type))?;
+        let key = if self.configuration.mode == JiraMode::Cloud {
+            "fields"
+        } else {
+            "values"
+        };
+        let fields = self
+            .metadata_pages(url, key, "fieldId", 2000, |row| {
+                let id = self.public_metadata_text(&row["fieldId"], 128)?;
+                if !id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+                {
+                    return Err("Champ de création Jira invalide.".into());
+                }
+                let operations = row["operations"]
+                    .as_array()
+                    .filter(|operations| {
+                        operations.len() <= 20
+                            && operations.iter().all(|operation| {
+                                operation
+                                    .as_str()
+                                    .is_some_and(|operation| operation.len() <= 50)
+                            })
+                    })
+                    .ok_or("Opérations de champ Jira invalides.")?;
+                let has_default = match row.get("hasDefaultValue") {
+                    None => false,
+                    Some(value) => value
+                        .as_bool()
+                        .ok_or("Valeur par défaut de champ Jira invalide.")?,
+                };
+                Ok(JiraCreationField {
+                    id: id.into(),
+                    name: self.public_metadata_text(&row["name"], 400)?.into(),
+                    required: row["required"]
+                        .as_bool()
+                        .ok_or("Champ de création Jira invalide.")?,
+                    has_default,
+                    can_set: operations
+                        .iter()
+                        .any(|operation| operation.as_str() == Some("set")),
+                })
+            })
+            .await?;
+        Ok(JiraCreationMetadata {
+            revision: self.configuration.revision,
+            project_key: project.into(),
+            issue_type: selected,
+            fields,
+        })
+    }
+    pub async fn create_issue(
+        &self,
+        metadata: &JiraCreationMetadata,
+        card: &atelier_core::contracts::Card,
+    ) -> Result<JiraIssue> {
+        if metadata.revision != self.configuration.revision
+            || !jira::project_key(&metadata.project_key)
+        {
+            return Err("Métadonnées de création Jira périmées.".into());
+        }
+        jira::validate_creation(metadata, card)?;
+        let description = jira::creation_text(card)?;
+        let title = card.title.utf8().map_err(|_| "Titre de carte invalide.")?;
+        let mut fields = json!({"project":{"key":metadata.project_key},"issuetype":{"id":metadata.issue_type.id},"summary":title});
+        if !description.is_empty() {
+            fields["description"] = if self.configuration.mode == JiraMode::Cloud {
+                json!({"type":"doc","version":1,"content":description.split('\n').map(|line|json!({"type":"paragraph","content":if line.is_empty(){vec![]}else{vec![json!({"type":"text","text":line})]}})).collect::<Vec<_>>()})
+            } else {
+                json!(description)
+            };
+        }
+        let version = if self.configuration.mode == JiraMode::Cloud {
+            "3"
+        } else {
+            "2"
+        };
+        let url = self.endpoint(&["rest", "api", version, "issue"])?;
+        let url = if let Some(gateway) = self.gateway.get() {
+            gateway_request(gateway, &url)?
+        } else {
+            url
+        };
+        let result = read_json_status(
+            self.send(url, Some(&json!({"fields":fields}))).await?,
+            4 * 1024 * 1024,
+            201,
+        )
+        .await?;
+        let id = self.public_metadata_text(&result["id"], 32)?;
+        let key = self.public_metadata_text(&result["key"], 100)?;
+        if !jira::issue_identity(id, key)
+            || key.rsplit_once('-').map(|(project, _)| project)
+                != Some(metadata.project_key.as_str())
+        {
+            return Err("Réponse de création Jira incertaine. Vérifie le ticket dans Jira.".into());
+        }
+        let browse = self.endpoint(&["browse", key])?.to_string();
+        if browse.contains(&self.token) {
+            return Err("Réponse de création Jira incertaine. Vérifie le ticket dans Jira.".into());
+        }
+        Ok(JiraIssue {
+            id: id.into(),
+            key: key.into(),
+            title,
+            status: String::new(),
+            url: browse,
+        })
+    }
+    pub async fn issue_by_id(&self, id: &str) -> Result<JiraIssue> {
+        let mut url = self.issue_endpoint(id, None)?;
+        url.query_pairs_mut()
+            .append_pair("fields", "summary,status");
+        let row = self.request(url, None).await?;
+        let issue = self.issue(&row)?;
+        if issue.id != id {
+            return Err("Identifiant du ticket Jira incohérent.".into());
+        }
+        Ok(issue)
+    }
+    pub async fn issue_by_key(&self, key: &str) -> Result<JiraIssue> {
+        if !jira::issue_identity("1", key) {
+            return Err("Clé Jira invalide.".into());
+        }
+        let version = if self.configuration.mode == JiraMode::Cloud {
+            "3"
+        } else {
+            "2"
+        };
+        let mut url = self.endpoint(&["rest", "api", version, "issue", key])?;
+        url.query_pairs_mut()
+            .append_pair("fields", "summary,status");
+        let row = self.request(url, None).await?;
+        let issue = self.issue(&row)?;
+        if issue.key != key {
+            return Err("La clé Jira a changé. Utilise la clé actuelle du ticket.".into());
+        }
+        Ok(issue)
+    }
     pub async fn search(&self) -> Result<JiraSearch> {
         if self.configuration.query.trim().is_empty()
             || self.configuration.query.len() > 16000
@@ -517,9 +813,16 @@ fn gateway_request(gateway: &Url, request: &Url) -> Result<Url> {
     target.set_query(request.query());
     Ok(target)
 }
-async fn read_json(mut response: reqwest::Response, limit: usize) -> Result<Value> {
+async fn read_json(response: reqwest::Response, limit: usize) -> Result<Value> {
+    read_json_status(response, limit, 200).await
+}
+async fn read_json_status(
+    mut response: reqwest::Response,
+    limit: usize,
+    success: u16,
+) -> Result<Value> {
     match response.status().as_u16() {
-        200 => {}
+        status if status == success => {}
         401 | 403 => {
             return Err("Jira refuse l’accès. Vérifie le compte, les droits et le jeton.".into());
         }

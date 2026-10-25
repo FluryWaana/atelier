@@ -82,7 +82,6 @@ pub fn TaskEditor(
     let cards = board.cards;
     let templates = board.templates;
     let archived = card.fields.truthy("archived").unwrap_or(false);
-    let ticket = card.fields.truthy("ticket").unwrap_or(false);
 
     let original = StoredValue::new(Draft::from_card(&card));
     let id = StoredValue::new(card.id);
@@ -94,11 +93,13 @@ pub fn TaskEditor(
                 .and_then(|card| card.fields.get::<Document>("ticket").ok().flatten())
         })
     });
+    let ticket = Memo::new(move |_| ticket_info.with(|ticket| ticket.is_some()));
     let draft = RwSignal::new(original.get_value());
     let dirty = Memo::new(move |_| draft.get() != original.get_value());
     let pending = RwSignal::new(false);
     let workspace_dirty = RwSignal::new(false);
     let time_dirty = RwSignal::new(false);
+    let creation_dirty = RwSignal::new(false);
     let reply_drafts = RwSignal::new(std::collections::BTreeSet::<String>::new());
     let show_files = RwSignal::new(false);
     let error = RwSignal::new(String::new());
@@ -139,6 +140,7 @@ pub fn TaskEditor(
         if dirty.get_untracked()
             || workspace_dirty.get_untracked()
             || time_dirty.get_untracked()
+            || creation_dirty.get_untracked()
             || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
             || !template_name.get_untracked().is_empty()
         {
@@ -156,6 +158,7 @@ pub fn TaskEditor(
         if dirty.get_untracked()
             || workspace_dirty.get_untracked()
             || time_dirty.get_untracked()
+            || creation_dirty.get_untracked()
             || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
             || !template_name.get_untracked().is_empty()
         {
@@ -168,6 +171,7 @@ pub fn TaskEditor(
         if dirty.get_untracked()
             || workspace_dirty.get_untracked()
             || time_dirty.get_untracked()
+            || creation_dirty.get_untracked()
             || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
             || pending.get_untracked()
             || !template_name.get_untracked().is_empty()
@@ -178,7 +182,7 @@ pub fn TaskEditor(
     });
     on_cleanup(move || unload.remove());
     let perform = move |action: Action| {
-        if pending.get_untracked() || time_dirty.get_untracked() {
+        if pending.get_untracked() || time_dirty.get_untracked() || creation_dirty.get_untracked() {
             return;
         }
         let token = match token.get_value() {
@@ -265,10 +269,10 @@ pub fn TaskEditor(
             {move ||ticket_info.get().map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("Ticket associé")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.")}</p></section>}})}
             <crate::time::TimerBanner board token nested=true on_task=navigate />
             <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
-                <fieldset disabled=move || pending.get() || workspace_dirty.get() || time_dirty.get() || archived || show_template.get()>
-                    <label for="edit-title">{move || i18n.text("Titre")}</label><input id="edit-title" required maxlength="300" autofocus readonly=ticket prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
+                <fieldset disabled=move || pending.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || archived || show_template.get()>
+                    <label for="edit-title">{move || i18n.text("Titre")}</label><input id="edit-title" required maxlength="300" autofocus readonly=move ||ticket.get() prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
                     <label for="edit-status">{move || i18n.text("Statut")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, label)| view! { <option value=status>{move || i18n.text(label)}</option> }).collect_view()}</select>
-                    <label for="edit-description">{move || i18n.text("Description")}</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=ticket prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
+                    <label for="edit-description">{move || i18n.text("Description")}</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=move ||ticket.get() prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
                     <label for="edit-instructions">{move || i18n.text("Instructions pour l’agent")}</label><textarea id="edit-instructions" rows="4" maxlength="20000" prop:value=move || draft.get().instructions on:input=move |event| draft.update(|draft| draft.instructions = event_target_value(&event))></textarea>
                     <p class="field-help">{move || i18n.text("Changer le statut ne lance pas d’agent.")}</p>
                     <section class="criteria" aria-labelledby="criteria-heading"><h3 id="criteria-heading">{move || i18n.text("Critères de réussite")}</h3><p class="field-help">{move || i18n.text("Cochez les critères après votre vérification. Maximum 20 critères.")}</p>
@@ -288,16 +292,17 @@ pub fn TaskEditor(
                     </section>
                 </fieldset>
                 <p id="editor-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-                <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || time_dirty.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
+                <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || time_dirty.get() || creation_dirty.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
             </form>
-            <crate::time::TimeTask card_id=id.get_value() board token pending dirty=time_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || show_template.get()) archived />
-            <Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || time_dirty.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) />
-            <crate::jira_refresh::JiraRefresh card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get() || archived) on_applied=Callback::new(move |card:Card|{if !dirty.get_untracked(){let next=Draft::from_card(&card);original.set_value(next.clone());draft.set(next);}}) />
-            <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get()) />
-            <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get()) />
-            <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get()) />
+            <crate::jira_creation::JiraCreation card_id=id.get_value() board token pending dirty=creation_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get()) archived />
+            <crate::time::TimeTask card_id=id.get_value() board token pending dirty=time_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || creation_dirty.get() || show_template.get()) archived />
+            <Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) />
+            <crate::jira_refresh::JiraRefresh card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get() || archived) on_applied=Callback::new(move |card:Card|{if !dirty.get_untracked(){let next=Draft::from_card(&card);original.set_value(next.clone());draft.set(next);}}) />
+            <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get()) />
+            <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get()) />
+            <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get()) />
             <section class="task-files"><button id="browse-task-files" type="button" disabled=move || pending.get() aria-expanded=move || show_files.get().to_string() on:click=move |_| show_files.update(|shown| *shown = !*shown)>{move || i18n.text("Fichiers du projet")}</button><Show when=move || show_files.get()><Files card_id=id.get_value() token /></Show></section>
-            <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("Dupliquer")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "Restaurer" } else { "Archiver" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("Supprimer…")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("Créer un modèle")}</button></div>
+            <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("Dupliquer")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "Restaurer" } else { "Archiver" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("Supprimer…")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("Créer un modèle")}</button></div>
             <form class="template-form" hidden=move || !show_template.get() on:submit=move |event| { event.prevent_default(); perform(Action::Template); }><label for="template-name">{move || i18n.text("Nom du modèle")}</label><input id="template-name" required maxlength="100" disabled=move || pending.get() prop:value=move || template_name.get() on:input=move |event| template_name.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text("Le modèle reprend la description, les instructions et les critères à vérifier.")}</p><button id="save-template" class="primary" type="submit" disabled=move || pending.get()>{move || i18n.text("Enregistrer le modèle")}</button><button type="button" disabled=move || pending.get() on:click=move |_| { template_name.set(String::new()); show_template.set(false); }>{move || i18n.text("Annuler le modèle")}</button></form>
             <p id="editor-notice" role="status">{move || i18n.text(&notice.get())}</p>
             <div class="confirmation" role="alert" hidden=move || confirmation.get().is_empty()>

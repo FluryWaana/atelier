@@ -340,7 +340,7 @@ pub struct JiraReconciliation {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum JiraTransitionState {
+pub enum JiraWriteState {
     Preparing,
     Sending,
     Uncertain,
@@ -352,7 +352,7 @@ pub enum JiraTransitionState {
 #[serde(rename_all = "camelCase")]
 pub struct JiraTransitionIntent {
     pub id: String,
-    pub state: JiraTransitionState,
+    pub state: JiraWriteState,
     pub base: String,
     pub issue_id: String,
     pub revision: u64,
@@ -393,4 +393,59 @@ pub struct JiraRefreshApply {
     pub revision: u64,
     pub expected: Card,
     pub preview_id: String,
+}
+
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct JiraIssueType {
+    pub id: String,
+    pub name: String,
+    pub subtask: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraCreationField {
+    pub id: String,
+    pub name: String,
+    pub required: bool,
+    pub has_default: bool,
+    pub can_set: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraCreationMetadata {
+    pub revision: u64,
+    pub project_key: String,
+    pub issue_type: JiraIssueType,
+    pub fields: Vec<JiraCreationField>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraCreateRequest {
+    pub revision: u64,
+    pub expected: Card,
+    pub project_key: String,
+    pub issue_type: JiraIssueType,
+    pub confirmed: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraCreationResolve {
+    pub revision: u64,
+    pub expected: Card,
+    pub existing_key: Option<String>,
+    #[serde(default)]
+    pub close_uncertainty: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraCreationIntent {
+    pub id: String,
+    pub state: JiraWriteState,
+    pub revision: u64,
+    pub base: String,
+    pub project_key: String,
+    pub issue_type: JiraIssueType,
+    pub started_at: String,
+    pub result: Option<JiraIssue>,
 }
