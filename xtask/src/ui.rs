@@ -759,6 +759,26 @@ async fn time_task_scenario(
     click(client, "[data-time-id] .delete-time").await?;
     click(client, "#confirm-delete-time").await?;
     wait_dom(client,"return document.querySelectorAll('[data-time-id]').length === 1 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#view-time-report").await?;
+    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
+    client.refresh().await?;
+    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
+    client.execute("const source=document.querySelector('#report-source');source.value='agent';source.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.querySelectorAll('.time-report-row').length===0 && document.querySelector('#download-time-csv')?.disabled===true;",vec![]).await?;
+    client.execute("const source=document.querySelector('#report-source');source.value='human';source.dispatchEvent(new Event('change',{bubbles:true}));window.syntheticCsvHref='';window.syntheticCsvBlob=null;window.syntheticCreateObjectURL=URL.createObjectURL;URL.createObjectURL=function(blob){window.syntheticCsvBlob=blob;return window.syntheticCreateObjectURL.call(this,blob);};window.syntheticAnchorClick=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(this.download==='atelier-time.csv'){window.syntheticCsvHref=this.href;return;}return window.syntheticAnchorClick.call(this);};",vec![]).await?;
+    click(client, "#download-time-csv").await?;
+    let csv=client.execute_async("const done=arguments[arguments.length-1];window.syntheticCsvBlob.text().then(text=>done(text)).catch(()=>done(null));",vec![]).await?;
+    client.execute("HTMLAnchorElement.prototype.click=window.syntheticAnchorClick;URL.createObjectURL=window.syntheticCreateObjectURL;delete window.syntheticAnchorClick;delete window.syntheticCreateObjectURL;delete window.syntheticCsvBlob;",vec![]).await?;
+    let csv = csv.as_str().ok_or("CSV synthétique absent.")?;
+    if !csv.contains("Concurrent synthetic note")
+        || !csv.contains("\"120\"")
+        || csv.contains("Synthetic timer")
+    {
+        return Err("Le CSV ne correspond pas à la sélection synthétique arrêtée.".into());
+    }
+    click(client, "#close-time-report").await?;
+    wait_dom(client,"return !document.querySelector('#time-report') && document.activeElement?.id==='view-time-report';",vec![]).await?;
     Ok(())
 }
 

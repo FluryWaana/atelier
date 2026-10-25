@@ -14,6 +14,7 @@ pub mod settings;
 pub mod task_creation;
 pub mod task_editing;
 pub mod task_templates;
+pub mod time_reports;
 pub mod time_tracking;
 pub mod worktrees;
 

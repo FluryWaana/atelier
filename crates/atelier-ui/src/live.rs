@@ -17,6 +17,7 @@ pub struct BoardState {
     pub runs: RwSignal<Vec<Document>>,
     pub times: RwSignal<Vec<Document>>,
     pub connected: RwSignal<bool>,
+    pub loaded: RwSignal<bool>,
     pub sync_error: RwSignal<String>,
     revision: RwSignal<u64>,
 }
@@ -31,6 +32,7 @@ impl Default for BoardState {
             runs: RwSignal::new(Vec::new()),
             times: RwSignal::new(Vec::new()),
             connected: RwSignal::new(false),
+            loaded: RwSignal::new(false),
             sync_error: RwSignal::new(String::new()),
             revision: RwSignal::new(0),
         }
@@ -46,6 +48,7 @@ impl BoardState {
             return;
         }
         self.revision.set(board.revision);
+        self.loaded.set(true);
         self.cards.set(board.cards);
         self.projects.set(board.projects);
         self.runs.set(board.runs);

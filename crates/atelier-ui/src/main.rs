@@ -19,6 +19,7 @@ mod services;
 mod settings;
 mod task_editor;
 mod time;
+mod time_report;
 mod worktree;
 use agent_profiles::AgentProfiles;
 use backups::Backups;
@@ -79,6 +80,10 @@ fn replace_card(cards: RwSignal<Vec<Card>>, card: Card) {
 }
 
 fn task_location(id: Option<&str>) -> Result<(), String> {
+    location_parameter("task", id)
+}
+
+fn location_parameter(key: &str, id: Option<&str>) -> Result<(), String> {
     let window = web_sys::window().ok_or("Navigateur indisponible.")?;
     let location = window.location();
     let params = web_sys::UrlSearchParams::new_with_str(
@@ -86,8 +91,8 @@ fn task_location(id: Option<&str>) -> Result<(), String> {
     )
     .map_err(|_| "Adresse invalide.")?;
     match id {
-        Some(id) => params.set("task", id),
-        None => params.delete("task"),
+        Some(id) => params.set(key, id),
+        None => params.delete(key),
     }
     let query = String::from(params.to_string());
     let address = format!(
@@ -106,14 +111,18 @@ fn task_location(id: Option<&str>) -> Result<(), String> {
         .and_then(|history| {
             history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&address))
         })
-        .map_err(|_| "Adresse de tâche indisponible.".into())
+        .map_err(|_| "Adresse de navigation indisponible.".into())
 }
 
 fn requested_task() -> Option<String> {
+    requested_parameter("task")
+}
+
+fn requested_parameter(key: &str) -> Option<String> {
     let search = web_sys::window()?.location().search().ok()?;
     web_sys::UrlSearchParams::new_with_str(&search)
         .ok()?
-        .get("task")
+        .get(key)
 }
 
 fn session() -> Result<String, String> {
@@ -191,6 +200,9 @@ fn App() -> impl IntoView {
     provide_context(i18n);
     let board = BoardState::default();
     let show_settings = RwSignal::new(false);
+    let show_time_report = RwSignal::new(
+        requested_task().is_none() && requested_parameter("view").as_deref() == Some("time"),
+    );
     let show_agents = RwSignal::new(false);
     let show_backups = RwSignal::new(false);
     let cards = board.cards;
@@ -277,6 +289,7 @@ fn App() -> impl IntoView {
                 <button id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)>{move || i18n.text("Gérer les projets")}</button>
                 <button id="manage-settings" type="button" disabled=move || loading.get() on:click=move |_| show_settings.set(true)>{move || i18n.text("Paramètres")}</button>
                 <button id="manage-agents" type="button" disabled=move || loading.get() on:click=move |_| show_agents.set(true)>{move || i18n.text("Agents")}</button>
+                <button id="view-time-report" type="button" disabled=move || loading.get() on:click=move |_|{if let Err(message)=location_parameter("view",Some("time")){error.set(message);}show_time_report.set(true);}>{move ||i18n.text("Temps")}</button>
                 <button id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true)>{move || i18n.text("Sauvegardes")}</button>
                 <span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible().len().to_string())}</span>
             </div>
@@ -334,6 +347,7 @@ fn App() -> impl IntoView {
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>
             <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
+            <Show when=move || show_time_report.get()><crate::time_report::TimeReport board loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move|()|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message);}}) on_task=Callback::new(move|id:String|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message); }if let Err(message)=task_location(Some(&id)){error.set(message);}selected.set(cards.with(|cards|cards.iter().find(|card|card.id==id).cloned()));}) /></Show>
             <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>
         </main>
     }
