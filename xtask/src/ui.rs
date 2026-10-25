@@ -1996,6 +1996,7 @@ async fn settings_scenario(
     .await?;
     click(client, "#manage-settings").await?;
     wait_dom(client,"return document.querySelector('#settings-branch')?.value === 'remote' && document.querySelector('#settings-agent')?.value === 'claude' && !document.querySelector('#settings-repo')?.value.includes('missing-synthetic-directory');",vec![]).await?;
+    click(client, "#settings-tab-jira").await?;
     wait_dom(
         client,
         "return document.querySelector('#jira-query')?.disabled === false;",
@@ -2018,6 +2019,18 @@ async fn settings_scenario(
     click(client, "#close-settings").await?;
     click(client, "#keep-settings").await?;
     wait_dom(client,"return document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
+    client
+        .find(Locator::Css("#settings-tab-jira"))
+        .await?
+        .send_keys("\u{e014}")
+        .await?;
+    wait_dom(client,"return document.activeElement?.id === 'settings-tab-forges' && document.querySelector('#settings-panel-jira')?.hidden === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#settings-tab-forges"))
+        .await?
+        .send_keys("\u{e012}")
+        .await?;
+    wait_dom(client,"return document.activeElement?.id === 'settings-tab-jira' && document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
     let saved: serde_json::Value = http
@@ -2050,6 +2063,7 @@ async fn settings_scenario(
     click(client, "#jira-clear-token").await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#search-jira')?.disabled === true && document.querySelector('#save-jira')?.disabled === true;",vec![]).await?;
+    click(client, "#settings-tab-forges").await?;
     wait_dom(
         client,
         "return document.querySelector('#forge-base')?.disabled === false;",
@@ -2121,6 +2135,7 @@ async fn settings_scenario(
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
     // Jira changed above: read the current scope before entering a new token.
+    click(client, "#settings-tab-tempo").await?;
     click(client, "#reload-tempo").await?;
     wait_dom(
         client,
@@ -2170,6 +2185,8 @@ async fn settings_scenario(
     click(client, "#tempo-clear-token").await?;
     click(client, "#save-tempo").await?;
     wait_dom(client,"return document.querySelector('#tempo-notice')?.textContent.includes('Aucun accès distant ni export vérifié') && document.querySelector('#tempo-clear-token')?.checked === false && document.querySelector('#save-tempo')?.disabled === true;",vec![]).await?;
+    connectors_scenario(client, http, address, token).await?;
+    click(client, "#settings-tab-general").await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-settings.png"),
         client.screenshot().await?,
@@ -2180,6 +2197,117 @@ async fn settings_scenario(
         .send_keys("\u{e00c}")
         .await?;
     wait_dom(client,"return !document.querySelector('#settings-dialog') && document.activeElement?.id === 'manage-settings';",vec![]).await?;
+    Ok(())
+}
+
+async fn connectors_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    use atelier_core::application::extensions::Registry;
+    click(client, "#settings-tab-connectors").await?;
+    wait_dom(client,"return document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    let fixture = root()
+        .join("target/debug")
+        .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    client
+        .find(Locator::Css("#connector-module"))
+        .await?
+        .send_keys("synthetic-extension")
+        .await?;
+    client
+        .find(Locator::Css("#connector-path"))
+        .await?
+        .send_keys(&fixture.to_string_lossy())
+        .await?;
+    click(client, "#connector-trusted").await?;
+    click(client, "#probe-connector").await?;
+    wait_dom(client,"return document.querySelector('#approve-connector')?.offsetParent !== null && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#approve-connector").await?;
+    client
+        .find(Locator::Css("#connector-module"))
+        .await?
+        .send_keys("-changed")
+        .await?;
+    wait_dom(client,"return document.querySelector('#approve-connector')?.checked === false && document.querySelector('#install-connector')?.disabled === true && document.querySelector('#connector-trusted')?.checked === false;",vec![]).await?;
+    client
+        .find(Locator::Css("#connector-module"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#connector-module"))
+        .await?
+        .send_keys("synthetic-extension")
+        .await?;
+    click(client, "#connector-trusted").await?;
+    click(client, "#probe-connector").await?;
+    wait_dom(client,"return document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#approve-connector')?.offsetParent !== null;",vec![]).await?;
+    click(client, "#approve-connector").await?;
+    click(client, "#install-connector").await?;
+    wait_dom(client,"return !!document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "[data-connector=synthetic-extension]").await?;
+    client
+        .find(Locator::Css("#connector-field-token"))
+        .await?
+        .send_keys("synthetic-extension-browser-token")
+        .await?;
+    click(client, "#settings-tab-general").await?;
+    click(client, "#settings-tab-connectors").await?;
+    wait_dom(client,"return document.querySelector('#connector-field-token')?.value === 'synthetic-extension-browser-token' && document.querySelector('#check-connector')?.disabled === true;",vec![]).await?;
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    click(client, "#save-connector").await?;
+    wait_dom(client,"return document.querySelector('#connector-field-token')?.value === '' && document.querySelector('#save-connector')?.disabled === true;",vec![]).await?;
+    let response = http
+        .get(format!("{address}/api/extensions"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+    if response.contains("synthetic-extension-browser-token") {
+        return Err("Un secret de connecteur a atteint la réponse publique.".into());
+    }
+    let registry: Registry = serde_json::from_str(&response)?;
+    let connection = registry
+        .modules
+        .iter()
+        .find(|connection| connection.installed.manifest.id == "synthetic-extension")
+        .ok_or("Connecteur synthétique absent")?;
+    if !connection.secret_fields.contains("token") {
+        return Err("Le secret synthétique n’a pas été enregistré.".into());
+    }
+    click(client, "#check-connector").await?;
+    wait_dom(client,"return document.querySelector('#connectors-settings')?.textContent.includes('Synthetic extension ready') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    client
+        .find(Locator::Css("#connector-field-token"))
+        .await?
+        .send_keys("synthetic-extension-browser-draft")
+        .await?;
+    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":connection.installed.revision,"values":{"fault":"success"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+    click(client, "#save-connector").await?;
+    wait_dom(client,"return document.querySelector('#connectors-error')?.textContent.length > 0 && document.querySelector('#connector-field-token')?.value === 'synthetic-extension-browser-draft' && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#reload-connectors").await?;
+    click(client, "#confirm-reload-connectors").await?;
+    wait_dom(client,"return document.querySelector('#connector-field-token')?.value === '' && document.querySelector('#connector-field-fault')?.value === 'success' && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#remove-connector").await?;
+    click(client, "#confirm-remove-connector").await?;
+    wait_dom(client,"return !document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    let registry: Registry = http
+        .get(format!("{address}/api/extensions"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if !registry.modules.is_empty() {
+        return Err("Le connecteur synthétique n’a pas été retiré.".into());
+    }
     Ok(())
 }
 

@@ -4,6 +4,8 @@ Ce document suit les fonctions du nouveau produit, sans imposer les formats ou A
 
 Une fonction est terminée lorsque son cas d'usage, son écran, ses erreurs et ses tests de parcours sont livrés. Les briques du prototype ci-dessous sont réutilisables ; aucune ligne n'est encore déclarée complètement qualifiée. Les sources citées sont des repères, complétés par l'inventaire des sources et le README historique.
 
+Point candidat connecteurs : paramètres en cinq onglets conservant leurs panneaux/brouillons, installation native approuvée en deux étapes, champs typés/coffre, contrôles/actions de lecture datés et retrait confirmé raccordés à l’interface bilingue. Scénarios navigateur synthétiques écrits pour invalidation d’approbation, secret non relu, brouillon inter-onglets, conflit conservé, rechargement et retrait ; couverture de traduction étendue à tous les fichiers Rust de l’interface. **Non compilé/non exécuté**, formatage seulement ; aucun nouveau résultat ni validation R04/R06/R07. Import de tickets des modules, écritures/reprise et POSIX restent ouverts ; détails dans [le contrat des connecteurs](rust-connectors.md).
+
 | Fonction à conserver | Référence existante | Briques Rust / travail restant | Lot |
 | --- | --- | --- | --- |
 | Projets multiples, configuration, héritage, dépôts Front/Back et projets liés | `lib/application/projects.mjs`, vues projets/réglages | Gestion WASM candidate : création, renommage, dossier, branche/consignes, retrait confirmé ; réglages Front/Back/projet lié et détection des commandes raccordés avec conflits par champ ; lancement des services et héritage complet restent à livrer | R01/R02 |

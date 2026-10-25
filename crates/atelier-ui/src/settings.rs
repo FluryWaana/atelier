@@ -3,7 +3,16 @@ use crate::{field, live::BoardState, write};
 use atelier_core::{document::Document, domain::agent_options::providers};
 use gloo_net::http::Method;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
+
+const TABS: [(&str, &str); 5] = [
+    ("general", "Général"),
+    ("jira", "Jira"),
+    ("forges", "Forges"),
+    ("tempo", "Tempo"),
+    ("connectors", "Connecteurs"),
+];
 
 #[derive(Clone, PartialEq)]
 struct Draft {
@@ -48,9 +57,11 @@ pub fn Settings(
     let draft = RwSignal::new(original.get_untracked());
     let dirty = Memo::new(move |_| original.get() != draft.get());
     let pending = RwSignal::new(false);
+    let tab = RwSignal::new(0usize);
     let jira_dirty = RwSignal::new(false);
     let forge_dirty = RwSignal::new(false);
     let tempo_dirty = RwSignal::new(false);
+    let connectors_dirty = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let discard = RwSignal::new(false);
@@ -72,6 +83,7 @@ pub fn Settings(
             || jira_dirty.get_untracked()
             || forge_dirty.get_untracked()
             || tempo_dirty.get_untracked()
+            || connectors_dirty.get_untracked()
         {
             discard.set(true);
         } else {
@@ -83,6 +95,7 @@ pub fn Settings(
             || jira_dirty.get_untracked()
             || forge_dirty.get_untracked()
             || tempo_dirty.get_untracked()
+            || connectors_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -94,6 +107,17 @@ pub fn Settings(
         <dialog id="settings-dialog" class="editor" node_ref=dialog aria-labelledby="settings-title" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("PRÉFÉRENCES")}</p><h2 id="settings-title">{move || i18n.text("Paramètres de l’application")}</h2></div><button id="close-settings" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
             <label for="interface-language">{move || i18n.text("Langue")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="field-help">{move || i18n.text("La langue est conservée dans ce navigateur.")}</p>
+            <div class="editor-actions" role="tablist" aria-label=move || i18n.text("Paramètres de l’application")>
+                {TABS.into_iter().enumerate().map(move |(index,(id,label))| view! {
+                    <button type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
+                        if pending.get_untracked() { return; }
+                        let next=match event.key().as_str() { "ArrowRight"=> (index+1)%TABS.len(), "ArrowLeft"=> (index+TABS.len()-1)%TABS.len(), "Home"=>0, "End"=>TABS.len()-1, _=>return };
+                        event.prevent_default(); tab.set(next);
+                        if let Some(element)=document().get_element_by_id(&format!("settings-tab-{}",TABS[next].0)).and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok()) { let _=element.focus(); }
+                    }>{move || i18n.text(label)}</button>
+                }).collect_view()}
+            </div>
+            <section id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" hidden=move || tab.get()!=0>
             <p class="field-help">{move || i18n.text("Ces valeurs s’appliquent aux nouvelles tâches. Les projets peuvent définir leurs propres préférences.")}</p>
             <form on:submit=move |event| {
                 event.prevent_default();
@@ -124,12 +148,15 @@ pub fn Settings(
                     <p class="field-help">{move || i18n.text("Chemin complet d’un dossier existant. Laisser vide pour choisir le projet à chaque création.")}</p>
                     <label for="settings-branch">{move || i18n.text("Référence Git de départ par défaut")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />
                 </fieldset>
-                <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
+                <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
                 <div class="editor-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button></div>
             </form>
-            <crate::forge::ForgeSettings token pending dirty=forge_dirty />
-            <crate::jira::JiraSettings board token pending dirty=jira_dirty />
-            <crate::tempo::TempoSettings token pending dirty=tempo_dirty />
+            </section>
+            <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
+            <section id="settings-panel-jira" role="tabpanel" aria-labelledby="settings-tab-jira" hidden=move || tab.get()!=1><crate::jira::JiraSettings board token pending dirty=jira_dirty /></section>
+            <section id="settings-panel-tempo" role="tabpanel" aria-labelledby="settings-tab-tempo" hidden=move || tab.get()!=3><crate::tempo::TempoSettings token pending dirty=tempo_dirty /></section>
+            <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors token pending dirty=connectors_dirty /></section>
+            <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| discard.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
         </dialog>
     }
