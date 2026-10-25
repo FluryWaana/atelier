@@ -653,7 +653,112 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#confirm-jira-refresh").await?;
     click(client, "#apply-jira-refresh").await?;
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
+    time_task_scenario(client, http, &address, &token).await?;
     stop_server(&mut server, port, &token).await?;
+    Ok(())
+}
+
+async fn time_task_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    for (selector, value) in [
+        ("#time-duration", "00:01:30"),
+        ("#time-description", "Synthetic human work"),
+    ] {
+        client.find(Locator::Css(selector)).await?.clear().await?;
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(value)
+            .await?;
+    }
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#time-description')?.value === 'Synthetic human work';",
+        vec![],
+    )
+    .await?;
+    click(client, "#save-time").await?;
+    wait_dom(client,"return document.querySelectorAll('[data-time-id]').length === 1 && document.querySelector('#time-description')?.value === '' && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
+    click(client, "[data-time-id] .edit-time").await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .send_keys("00:02:00")
+        .await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let entry = board.times.first().ok_or("Temps synthétique absent.")?;
+    let id = entry
+        .get::<String>("id")?
+        .ok_or("Identifiant temps absent.")?;
+    let mut update = serde_json::to_value(entry)?;
+    update["expected"] = serde_json::to_value(entry)?;
+    update["description"] = json!("Concurrent synthetic note");
+    http.patch(format!("{address}/api/time/{id}"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&update)
+        .send()
+        .await?
+        .error_for_status()?;
+    click(client, "#save-time").await?;
+    wait_dom(client,"return document.querySelector('#time-error')?.textContent.includes('a changé') && document.querySelector('#time-duration')?.value === '00:02:00';",vec![]).await?;
+    click(client, "#reset-time-draft").await?;
+    click(client, "#discard-time-draft").await?;
+    click(client, "[data-time-id] .edit-time").await?;
+    wait_dom(client,"return document.querySelector('#time-description')?.value === 'Concurrent synthetic note';",vec![]).await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .send_keys("00:02:00")
+        .await?;
+    click(client, "#save-time").await?;
+    wait_dom(client,"return document.querySelector('[data-time-id]')?.textContent.includes('00:02:00') && document.querySelector('#time-description')?.value === '';",vec![]).await?;
+    client
+        .find(Locator::Css("#time-description"))
+        .await?
+        .send_keys("Synthetic timer")
+        .await?;
+    click(client, "#start-human-timer").await?;
+    wait_dom(client,"return document.querySelector('#human-timer-in-task')?.hidden === false && document.querySelectorAll('[data-time-id]').length === 2 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
+    click(client, "#stop-human-timer-in-task").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#human-timer-in-task')?.hidden === true;",
+        vec![],
+    )
+    .await?;
+    click(client, "[data-time-id] .delete-time").await?;
+    click(client, "#confirm-delete-time").await?;
+    wait_dom(client,"return document.querySelectorAll('[data-time-id]').length === 1 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
     Ok(())
 }
 

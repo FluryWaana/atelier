@@ -1561,6 +1561,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
     let mut update = fields.clone();
     update["seconds"] = json!(90);
     update["description"] = json!(" Modified ");
+    update["expected"] = stopped.clone();
     let modified: Value = request(reqwest::Method::PATCH, &format!("/api/time/{id}"))
         .json(&update)
         .send()
@@ -1698,7 +1699,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
             .delete(format!("{address}/api/time/{id}"))
             .bearer_auth(&token)
             .header("x-local-request", "1")
-            .json(&json!({}))
+            .json(&json!({"expected":board["times"][1]}))
             .send()
             .await
             .unwrap()
@@ -1711,7 +1712,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
             .delete(format!("{address}/api/time/{other}"))
             .bearer_auth(&token)
             .header("x-local-request", "1")
-            .json(&json!({}))
+            .json(&json!({"expected":board["times"][0]}))
             .send()
             .await
             .unwrap()

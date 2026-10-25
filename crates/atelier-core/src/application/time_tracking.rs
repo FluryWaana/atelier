@@ -3,6 +3,15 @@ use serde_json::value::RawValue;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+#[derive(Debug)]
+pub struct TimeConflict;
+impl std::fmt::Display for TimeConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Cette saisie de temps a changé ailleurs. Recharge-la avant de réessayer.")
+    }
+}
+impl std::error::Error for TimeConflict {}
+
 pub trait TimeRepository {
     fn card(&self, id: Option<&RawValue>) -> Result<Option<Document>>;
     fn entry(&self, id: &str) -> Result<Option<Document>>;
@@ -133,6 +142,12 @@ pub fn execute(
         .ok_or("Identifiant de temps invalide.")?;
     if exporting(&entry_id) {
         return Err("Envoi en cours.".into());
+    }
+    if matches!(action, "update" | "remove")
+        && let Some(expected) = body.get::<serde_json::Value>("expected")?
+        && expected != serde_json::to_value(&entry)?
+    {
+        return Err(TimeConflict.into());
     }
     match action {
         "stop" => {

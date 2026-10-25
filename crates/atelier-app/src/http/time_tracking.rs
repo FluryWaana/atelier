@@ -30,8 +30,28 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
     if action == "method" {
         return failure(StatusCode::BAD_REQUEST, "Méthode non autorisée.");
     }
+    if matches!(action, "update" | "remove")
+        && body.get::<Document>("expected").ok().flatten().is_none()
+    {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "Relis la saisie de temps avant de la modifier.",
+        );
+    }
+    if matches!(action, "create" | "update")
+        && !body
+            .get::<u32>("seconds")
+            .ok()
+            .flatten()
+            .is_some_and(|seconds| (1..=86400).contains(&seconds))
+    {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "La durée doit être un entier entre 1 seconde et 24 heures.",
+        );
+    }
     let action = action.to_owned();
-    // shortcut: wire the export reservation guard when M05 enables export/reconcile; both reject above.
+    // shortcut: wire the export reservation guard when R05 enables export/reconcile; both reject above.
     match state
         .database
         .call(move |store| {
@@ -50,7 +70,14 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
         .await
     {
         Ok(entry) => Json(entry).into_response(),
-        Err(error) => failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => failure(
+            if error.is::<time_tracking::TimeConflict>() {
+                StatusCode::CONFLICT
+            } else {
+                StatusCode::BAD_REQUEST
+            },
+            &error.to_string(),
+        ),
     }
 }
 

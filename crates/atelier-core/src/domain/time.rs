@@ -182,3 +182,62 @@ mod tests {
         );
     }
 }
+
+/// Human duration input is explicit; no floating-point minutes or implicit coercion.
+pub fn parse_duration(value: &str) -> Option<u32> {
+    let parts = value.split(':').collect::<Vec<_>>();
+    let [hours, minutes, seconds] = parts.as_slice() else {
+        return None;
+    };
+    if parts
+        .iter()
+        .any(|part| part.len() != 2 || !part.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return None;
+    }
+    let hours = hours.parse::<u32>().ok()?;
+    let minutes = minutes.parse::<u32>().ok()?;
+    let seconds = seconds.parse::<u32>().ok()?;
+    if hours > 24 || minutes > 59 || seconds > 59 {
+        return None;
+    }
+    let total = hours * 3600 + minutes * 60 + seconds;
+    (1..=86400).contains(&total).then_some(total)
+}
+pub fn duration_text(seconds: u64) -> String {
+    format!(
+        "{:02}:{:02}:{:02}",
+        seconds / 3600,
+        seconds / 60 % 60,
+        seconds % 60
+    )
+}
+#[cfg(test)]
+mod duration_tests {
+    use super::*;
+    #[test]
+    fn durations_have_exact_seconds_and_explicit_day_bounds() {
+        for (text, seconds) in [
+            ("00:00:01", 1),
+            ("00:30:00", 1800),
+            ("23:59:59", 86399),
+            ("24:00:00", 86400),
+        ] {
+            assert_eq!(parse_duration(text), Some(seconds));
+            assert_eq!(duration_text(u64::from(seconds)), text);
+        }
+        for text in [
+            "00:00:00",
+            "24:00:01",
+            "01:60:00",
+            "1:00:00",
+            "-1:00:00",
+            "00:00:1.5",
+            "30",
+            "00:00:01:00",
+            "００:００:０１",
+        ] {
+            assert!(parse_duration(text).is_none());
+        }
+    }
+}

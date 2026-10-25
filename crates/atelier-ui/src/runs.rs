@@ -77,7 +77,11 @@ pub fn Runs(
     });
     let alive = Rc::new(Cell::new(true));
     let acting = alive.clone();
+    let cancelling = RwSignal::new(false);
     let act = move |stop: bool| {
+        if cancelling.get_untracked() || (!stop && pending.get_untracked()) {
+            return;
+        }
         let credential = match token.get_value() {
             Ok(value) => value,
             Err(message) => {
@@ -98,7 +102,11 @@ pub fn Runs(
         } else {
             serde_json::json!({"agent":agent.get_untracked(),"mode":mode.get_untracked()})
         };
-        pending.set(true);
+        if stop {
+            cancelling.set(true);
+        } else {
+            pending.set(true);
+        }
         error.set(String::new());
         let alive = acting.clone();
         spawn_local(async move {
@@ -114,7 +122,11 @@ pub fn Runs(
                 if let Err(message) = result {
                     error.set(message);
                 }
-                pending.set(false);
+                if stop {
+                    cancelling.set(false);
+                } else {
+                    pending.set(false);
+                }
             }
         });
     };
@@ -219,14 +231,14 @@ pub fn Runs(
         })
     });
     view! {
-        <section class="task-files" aria-labelledby="runs-heading" aria-busy=move || pending.get().to_string()>
+        <section class="task-files" aria-labelledby="runs-heading" aria-busy=move || (pending.get() || cancelling.get()).to_string()>
             <h3 id="runs-heading">{move || i18n.text("Exécutions")}</h3>
             <p class="field-help">{move || i18n.text("Choisis un profil enregistré dans Agents. Les demandes d’autorisation et les questions apparaissent pendant l’exécution.")}</p>
             <label for="run-agent">{move || i18n.text("Profil d’agent")}</label>
             <p class="field-help" hidden=move || !profiles.get().is_empty()>{move || i18n.text("Crée un profil de commande dans Agents pour démarrer une exécution.")}</p>
             <select id="run-agent" prop:value=move || agent.get() disabled=move || pending.get() || running.get() on:change=move |event| agent.set(event_target_value(&event))><option value="">{move || i18n.text("Choisir un profil")}</option><For each=move || profiles.get() key=|profile| field(profile,"id") children=move |profile| view! { <option value=field(&profile,"id")>{field(&profile,"name")}</option> } /></select>
             <label for="run-mode">{move || i18n.text("Mode")}</label><select id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
-            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || pending.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
+            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie le worktree, puis enregistre tes modifications avant de lancer une commande.")}</p>
             <p role="status">{move || i18n.text(latest.get().map(|run| match field(&run,"status").as_str() { "starting"=>"Démarrage…", "running"=>"Processus actif", "stopping"=>"Arrêt…", "completed"=>"Exécution terminée", "cancelled"=>"Exécution arrêtée", "interrupted"=>"Exécution interrompue : vérifie le dépôt avant de relancer.", _=>"Échec de l’exécution" }).unwrap_or("Aucune exécution pour cette tâche."))}</p>
             <p class="error" role="alert">{move || { let message = error.get(); i18n.text(&if message.is_empty() { latest.get().map(|run| field(&run,"attention")).unwrap_or_default() } else { message }) }}</p>

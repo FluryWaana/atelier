@@ -18,6 +18,7 @@ mod runs;
 mod services;
 mod settings;
 mod task_editor;
+mod time;
 mod worktree;
 use agent_profiles::AgentProfiles;
 use backups::Backups;
@@ -264,6 +265,7 @@ fn App() -> impl IntoView {
     view! {
         <main id="main-content" class="main-content">
             <header class="app-header"><div><p class="eyebrow">"ATELIER KANBAN"</p><h1>{move || i18n.text("Votre espace de travail")}</h1><p class="subtitle">{move || i18n.text("Des idées aux tâches terminées, une étape à la fois.")}</p></div><span class="development">{move || i18n.text("En développement")}</span></header>
+            <crate::time::TimerBanner board token />
             <div class="toolbar" aria-label=move || i18n.text("Filtres du tableau")>
                 <div><label for="board-search">{move || i18n.text("Rechercher")}</label><input id="board-search" type="search" placeholder=move || i18n.text("Titre ou description…") prop:value=move || search.get() on:input=move |event| search.set(event_target_value(&event)) /></div>
                 <div><label for="board-project">{move || i18n.text("Projet")}</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">{move || i18n.text("Tous les projets")}</option><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
