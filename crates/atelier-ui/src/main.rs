@@ -12,6 +12,7 @@ mod brainstorm;
 mod files;
 mod forge;
 mod forge_task;
+mod git_push;
 mod i18n;
 mod jira;
 mod jira_creation;

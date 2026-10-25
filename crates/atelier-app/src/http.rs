@@ -32,6 +32,8 @@ mod events;
 mod files;
 mod forge;
 mod forge_draft;
+#[cfg(windows)]
+mod git_push;
 mod jira;
 mod jira_creation;
 mod jira_refresh;
@@ -161,6 +163,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/forge/attach")
             || path.ends_with("/forge/draft")
             || path.ends_with("/forge/draft-reconcile")
+            || path.ends_with("/forge/push-preview")
+            || path.ends_with("/forge/push")
+            || path.ends_with("/forge/push-reconcile")
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -455,6 +460,15 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route(
+            "/api/cards/{id}/forge/push-preview",
+            post(git_push::preview),
+        )
+        .route("/api/cards/{id}/forge/push", post(git_push::push))
+        .route(
+            "/api/cards/{id}/forge/push-reconcile",
+            post(git_push::reconcile),
+        )
         .route("/api/queue", get(queue::get).post(queue::change))
         .route("/api/queue/pause", post(queue::pause))
         .route("/api/cards/{id}/verification/start", post(runs::verify))

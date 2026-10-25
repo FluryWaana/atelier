@@ -17,6 +17,8 @@ pub mod files;
 pub mod forge;
 pub mod forge_association;
 pub mod forge_draft;
+#[cfg(windows)]
+pub mod git_push;
 pub mod git_transport;
 pub mod installation;
 #[cfg(windows)]

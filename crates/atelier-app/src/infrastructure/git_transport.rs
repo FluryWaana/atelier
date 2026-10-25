@@ -64,6 +64,14 @@ pub struct HttpsAuthentication {
     #[cfg(windows)]
     authorization: String,
 }
+#[cfg(windows)]
+pub struct PreparedPush {
+    home: tempfile::TempDir,
+    origin: String,
+    reference: String,
+    commit: String,
+    previous: String,
+}
 
 impl HttpsAuthentication {
     pub fn new(
@@ -109,6 +117,8 @@ impl HttpsAuthentication {
         atelier_core::application::forge::repository(configuration.kind, &repository, 1)?;
         if token.is_empty()
             || token.len() > 4000
+            || configuration.base.contains(&token)
+            || repository.contains(&token)
             || token.chars().any(|c| c.is_control() || c.is_whitespace())
         {
             return Err("Jeton Git HTTPS invalide.".into());
@@ -182,7 +192,7 @@ impl HttpsAuthentication {
                         .iter()
                         .any(|suffix| key.ends_with(suffix))
             {
-                return Err("Le fetch authentifié refuse les surcharges locales de transport, d’identifiants, les inclusions et clones partiels. La configuration est conservée.".into());
+                return Err("Le transport Git authentifié refuse les surcharges locales de transport, d’identifiants, les inclusions et clones partiels. La configuration est conservée.".into());
             }
         }
         Ok(())
@@ -227,6 +237,28 @@ impl HttpsAuthentication {
         {
             return Err("Référence temporaire Git invalide.".into());
         }
+        let scope = self.configure_network(command, home, origin)?;
+        command.args([
+            "fetch",
+            "--no-tags",
+            "--no-write-fetch-head",
+            "--no-recurse-submodules",
+            "--no-auto-maintenance",
+            "--no-prune",
+            "--refmap=",
+            "--",
+            &scope,
+            &format!("{reference}:{private_ref}"),
+        ]);
+        Ok(())
+    }
+    #[cfg(windows)]
+    fn configure_network(
+        &self,
+        command: &mut tokio::process::Command,
+        home: &std::path::Path,
+        origin: &str,
+    ) -> Result<String> {
         let scope = self.origin(origin)?;
         Self::isolate(command, home);
         command
@@ -273,19 +305,196 @@ impl HttpsAuthentication {
         if self.synthetic {
             command.args(["-c", "protocol.http.allow=always"]);
         }
-        command.args([
+        Ok(scope)
+    }
+    #[cfg(windows)]
+    pub async fn remote_head(&self, origin: &str, reference: &str) -> Result<String> {
+        atelier_core::application::worktrees::validate_reference(reference)?;
+        if !reference.starts_with("refs/heads/") || reference.contains(':') {
+            return Err("Branche distante Git invalide.".into());
+        }
+        let home = tempfile::Builder::new()
+            .prefix("atelier-git-read-")
+            .tempdir()?;
+        let result=async {
+            let mut command=git_command().await?;
+            let scope=self.configure_network(&mut command,home.path(),origin)?;
+            command.args(["ls-remote","--refs","--exit-code","--",&scope,reference]);
+            let output=super::process_tree::capture(&mut command,&[],std::time::Duration::from_secs(30),1024*1024).await.map_err(|_|"Lecture de branche HTTPS interrompue.")?;
+            if !output.status.success(){return Err("Branche HTTPS absente ou inaccessible. Aucun détail d’authentification n’est affiché.".into());}
+            let text=String::from_utf8(output.stdout)?;
+            let mut lines=text.lines();
+            let (commit,actual)=lines.next().and_then(|line|line.split_once('\t')).ok_or("Réponse de branche Git invalide.")?;
+            validate_commit(commit)?;
+            if actual!=reference || lines.next().is_some(){return Err("Réponse de branche Git ambiguë.".into());}
+            Ok(commit.to_owned())
+        }.await;
+        home.close()
+            .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
+        result
+    }
+    #[cfg(windows)]
+    pub async fn prepare_push(
+        &self,
+        source: &Repository,
+        origin: &str,
+        reference: &str,
+        commit: &str,
+        previous: &str,
+    ) -> Result<PreparedPush> {
+        source.verify_root().await?;
+        validate_commit(commit)?;
+        validate_commit(previous)?;
+        if commit == previous || commit.len() != previous.len() {
+            return Err("Aucun nouveau commit compatible à pousser.".into());
+        }
+        source.git(&["check-ref-format", reference]).await?;
+        if !reference.starts_with("refs/heads/") {
+            return Err("Branche distante Git invalide.".into());
+        }
+        let keys = String::from_utf8(
+            source
+                .git(&[
+                    "config",
+                    "--local",
+                    "--no-includes",
+                    "--null",
+                    "--name-only",
+                    "--list",
+                ])
+                .await?,
+        )?;
+        Self::validate_configuration(&keys)?;
+        let origin = self.origin(origin)?;
+        let home = tempfile::Builder::new()
+            .prefix("atelier-git-push-")
+            .tempdir()?;
+        let prepared=async {
+        let format = String::from_utf8(source.git(&["rev-parse", "--show-object-format"]).await?)?;
+        let format = format.trim();
+        if !["sha1", "sha256"].contains(&format) {
+            return Err("Format d’objets Git non pris en charge.".into());
+        }
+        let mut initialize = git_command().await?;
+        Self::isolate(&mut initialize, home.path());
+        initialize.args([
+            "init",
+            "--bare",
+            "--quiet",
+            "--template=",
+            &format!("--object-format={format}"),
+        ]);
+        let output = super::process_tree::capture(
+            &mut initialize,
+            &[],
+            std::time::Duration::from_secs(15),
+            1024 * 1024,
+        )
+        .await
+        .map_err(|_| "Préparation du push isolé impossible.")?;
+        if !output.status.success() {
+            return Err("Préparation du push isolé impossible.".into());
+        }
+        let source_path = super::task_creation::path_string(&source.path).utf8()?;
+        let mut import = git_command().await?;
+        Self::isolate(&mut import, home.path());
+        import.args([
+            "--no-lazy-fetch",
+            "--no-replace-objects",
+            "-c",
+            "core.hooksPath=NUL",
+            "-c",
+            "protocol.allow=never",
+            "-c",
+            "protocol.file.allow=always",
+            "-c",
+            "gc.auto=0",
+            "-c",
+            "pack.threads=1",
             "fetch",
             "--no-tags",
             "--no-write-fetch-head",
             "--no-recurse-submodules",
             "--no-auto-maintenance",
-            "--no-prune",
-            "--refmap=",
             "--",
-            &scope,
-            &format!("{reference}:{private_ref}"),
         ]);
-        Ok(())
+        // Build the path as an argument; no shell interpolation or remote source transport is used.
+        import
+            .arg(source_path)
+            .arg(format!("{commit}:refs/atelier-push/commit"));
+        let output = super::process_tree::capture_guarded(
+            &mut import,
+            &[],
+            std::time::Duration::from_secs(120),
+            4 * 1024 * 1024,
+            download_guard(home.path().to_owned()),
+        )
+        .await
+        .map_err(|_| "Import des commits pour le push interrompu ou trop volumineux.")?;
+        if !output.status.success() {
+            return Err("Import des commits pour le push impossible.".into());
+        }
+        let imported = home.path().to_owned();
+        tokio::task::spawn_blocking(move || check_download(&imported, DOWNLOAD_LIMIT)).await??;
+        let mut ancestry = git_command().await?;
+        Self::isolate(&mut ancestry, home.path());
+        ancestry.args([
+            "--no-replace-objects",
+            "merge-base",
+            "--is-ancestor",
+            previous,
+            commit,
+        ]);
+        let output = super::process_tree::capture(
+            &mut ancestry,
+            &[],
+            std::time::Duration::from_secs(15),
+            1024 * 1024,
+        )
+        .await
+        .map_err(|_| "Inspection de l’historique Git impossible.")?;
+        if !output.status.success() {
+            return Err("Push refusé : la branche distante ne doit perdre aucun commit. Récupère et intègre ses changements.".into());
+        }
+        if self.remote_head(&origin, reference).await? != previous {
+            return Err("La branche distante a changé. Recharge l’aperçu du push.".into());
+        }
+        Ok::<(),crate::Error>(())
+        }.await;
+        if let Err(error) = prepared {
+            home.close()
+                .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
+            return Err(error);
+        }
+        Ok(PreparedPush {
+            home,
+            origin,
+            reference: reference.into(),
+            commit: commit.into(),
+            previous: previous.into(),
+        })
+    }
+    #[cfg(windows)]
+    pub async fn push(&self, prepared: PreparedPush) -> Result<()> {
+        let PreparedPush {
+            home,
+            origin,
+            reference,
+            commit,
+            previous,
+        } = prepared;
+        let result=async {
+            let mut command=git_command().await?;
+            let scope=self.configure_network(&mut command,home.path(),&origin)?;
+            command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&format!("--force-with-lease={reference}:{previous}"),"--",&scope,&format!("{commit}:{reference}")]);
+            let output=super::process_tree::capture_guarded(&mut command,&[],std::time::Duration::from_secs(120),4*1024*1024,download_guard(home.path().to_owned())).await.map_err(|_|"Push HTTPS incertain. Relis la branche distante avant toute nouvelle tentative.")?;
+            if !output.status.success(){return Err("Push HTTPS refusé ou incertain. Relis la branche distante avant toute nouvelle tentative.".into());}
+            if self.remote_head(&origin,&reference).await?!=commit {return Err("Push HTTPS incertain. Relis la branche distante avant toute nouvelle tentative.".into());}
+            Ok(())
+        }.await;
+        home.close()
+            .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
+        result
     }
     #[cfg(windows)]
     pub(super) async fn fetch(
@@ -351,6 +560,21 @@ impl HttpsAuthentication {
     ) -> Result<()> {
         Err("Le fetch HTTPS natif attend sa qualification sur ce système.".into())
     }
+}
+
+#[cfg(windows)]
+async fn git_command() -> Result<tokio::process::Command> {
+    let mut profile = Document::default();
+    profile.set("type", &"command")?;
+    profile.set("command", &"git")?;
+    super::agent_diagnostics::command(&profile).await
+}
+#[cfg(windows)]
+fn validate_commit(value: &str) -> Result<()> {
+    if ![40, 64].contains(&value.len()) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("Commit Git invalide.".into());
+    }
+    Ok(())
 }
 
 #[cfg(all(test, windows))]

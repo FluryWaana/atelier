@@ -324,5 +324,7 @@ pub fn ForgeTask(
         </fieldset>
         <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Écriture de forge incertaine. Relis l’état distant ; Atelier ne renverra pas la demande.")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"État demandé : brouillon."}else{"État demandé : prête pour review."})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||draft.get()!=original.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("Relire l’état brouillon distant")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button></div>
         <p class="error" id="forge-task-error" role="alert">{move||i18n.text(&error.get())}</p><p id="forge-task-notice" role="status">{move||i18n.text(&notice.get())}</p>
+        <button type="button" hidden=move||!unresolved.get() disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
+        <crate::git_push::GitPush card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()) archived />
     </section>}
 }

@@ -786,6 +786,8 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     // No forge connection is configured: refusal must happen before any remote I/O.
     click(client, "#change-forge-draft").await?;
     wait_dom(client,"return document.querySelector('#forge-task-error')?.textContent.length > 0 && document.querySelector('#change-forge-draft')?.disabled === true && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
+    click(client, "#preview-git-push").await?;
+    wait_dom(client,"return document.querySelector('#git-push-error')?.textContent.length > 0 && document.querySelector('#preview-git-push')?.disabled === false && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
     click(client, "#confirm-detach-forge").await?;
     click(client, "#detach-task-forge").await?;
     wait_dom(client,"return document.querySelector('#forge-task-notice')?.textContent.includes('Aucune PR/MR distante modifiée') && document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('.criterion-done')?.checked === true;",vec![]).await?;

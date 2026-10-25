@@ -231,18 +231,20 @@ fn restore_checked(
     let cards = documents(&source, Documents::Cards)?;
     let runs = documents(&source, Documents::Runs)?;
     for current in store.documents::<Document>(Documents::Cards)? {
-        if let Some(effect) = current.get::<serde_json::Value>("forgeDraftEffect")? {
-            let id = current
-                .get::<String>("id")?
-                .ok_or("Identifiant de carte absent.")?;
-            let saved = cards
-                .iter()
-                .find(|saved| saved.id == id)
-                .map(|saved| saved.value.get::<serde_json::Value>("forgeDraftEffect"))
-                .transpose()?
-                .flatten();
-            if saved != Some(effect) {
-                return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge.").into());
+        for key in ["forgeDraftEffect", "gitPushEffect"] {
+            if let Some(effect) = current.get::<serde_json::Value>(key)? {
+                let id = current
+                    .get::<String>("id")?
+                    .ok_or("Identifiant de carte absent.")?;
+                let saved = cards
+                    .iter()
+                    .find(|saved| saved.id == id)
+                    .map(|saved| saved.value.get::<serde_json::Value>(key))
+                    .transpose()?
+                    .flatten();
+                if saved != Some(effect) {
+                    return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge.").into());
+                }
             }
         }
         for key in ["jiraTransition", "jiraCreation"] {
