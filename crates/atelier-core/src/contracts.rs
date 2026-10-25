@@ -1,6 +1,38 @@
 use crate::document::{Document, JsonString};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[derive(Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TempoConfiguration {
+    pub base: String,
+    pub revision: u64,
+}
+impl Default for TempoConfiguration {
+    fn default() -> Self {
+        Self {
+            base: "https://api.tempo.io/4".into(),
+            revision: 0,
+        }
+    }
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TempoConnection {
+    pub configuration: TempoConfiguration,
+    pub token_set: bool,
+    pub jira_url: String,
+    pub jira_revision: u64,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TempoConfigurationUpdate {
+    pub expected_revision: u64,
+    pub expected_jira_revision: u64,
+    pub base: String,
+    pub token: Option<String>,
+    pub clear_token: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LocalCommitSnapshot {

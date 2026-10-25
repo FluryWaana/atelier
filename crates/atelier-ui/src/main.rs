@@ -30,6 +30,7 @@ mod runs;
 mod services;
 mod settings;
 mod task_editor;
+mod tempo;
 mod time;
 mod time_report;
 mod worktree;

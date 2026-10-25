@@ -2027,6 +2027,56 @@ async fn settings_scenario(
     click(client, "#forge-clear-token").await?;
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
+    // Jira changed above: read the current scope before entering a new token.
+    click(client, "#reload-tempo").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#tempo-settings')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#tempo-token"))
+        .await?
+        .send_keys("synthetic-tempo-ui-token")
+        .await?;
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#tempo-token')?.value === 'synthetic-tempo-ui-token';",
+        vec![],
+    )
+    .await?;
+    click(client, "#save-tempo").await?;
+    wait_dom(client,"return document.querySelector('#tempo-token')?.value === '' && document.querySelector('#tempo-notice')?.textContent.includes('Aucun accès distant ni export vérifié') && document.querySelector('#save-tempo')?.disabled === true;",vec![]).await?;
+    let tempo: atelier_core::contracts::TempoConnection = http
+        .get(format!("{address}/api/tempo/config"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if serde_json::to_string(&tempo)?.contains("synthetic-tempo-ui-token") || !tempo.token_set {
+        return Err(
+            "Le secret Tempo est absent du coffre ou exposé dans la réponse publique.".into(),
+        );
+    }
+    client
+        .find(Locator::Css("#tempo-token"))
+        .await?
+        .send_keys("synthetic-tempo-local-draft")
+        .await?;
+    http.put(format!("{address}/api/tempo/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":tempo.configuration.revision,"expectedJiraRevision":tempo.jira_revision,"base":tempo.configuration.base,"token":"synthetic-tempo-external-rotation","clearToken":false})).send().await?.error_for_status()?;
+    click(client, "#save-tempo").await?;
+    wait_dom(client,"return document.querySelector('#tempo-error')?.textContent.includes('a changé') && document.querySelector('#tempo-token')?.value === 'synthetic-tempo-local-draft';",vec![]).await?;
+    click(client, "#reload-tempo").await?;
+    click(client, "#confirm-reload-tempo").await?;
+    wait_dom(client,"return document.querySelector('#tempo-token')?.value === '' && document.querySelector('#save-tempo')?.disabled === true;",vec![]).await?;
+    click(client, "#tempo-clear-token").await?;
+    click(client, "#save-tempo").await?;
+    wait_dom(client,"return document.querySelector('#tempo-notice')?.textContent.includes('Aucun accès distant ni export vérifié') && document.querySelector('#tempo-clear-token')?.checked === false && document.querySelector('#save-tempo')?.disabled === true;",vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-settings.png"),
         client.screenshot().await?,

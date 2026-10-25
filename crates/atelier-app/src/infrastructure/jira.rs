@@ -70,6 +70,7 @@ pub fn configure(
         || configuration.mode != previous.mode
     {
         tokens.set("tempo", &"")?;
+        super::tempo::invalidate(&mut stored, None)?;
     }
     stored.set("jiraConnection", &configuration)?;
     let result = JiraConnection {

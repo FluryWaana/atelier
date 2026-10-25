@@ -58,6 +58,7 @@ mod settings;
 mod task_creation;
 mod task_editing;
 mod task_templates;
+mod tempo;
 mod time_tracking;
 mod worktrees;
 
@@ -522,6 +523,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/time/{id}/{action}", any(time_tracking::action))
         .route("/api/state", get(board))
         .route("/api/jira/config", get(jira::get).put(jira::save))
+        .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route(
             "/api/cards/{id}/jira/transitions",
             get(jira_transitions::choices),

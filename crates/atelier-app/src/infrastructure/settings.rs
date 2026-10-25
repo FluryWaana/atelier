@@ -88,6 +88,9 @@ pub fn update(
     {
         super::jira::invalidate_configuration(&mut next.settings, None)?;
     }
+    if tokens.get::<JsonString>("tempo")? != next.tokens.get::<JsonString>("tempo")? {
+        super::tempo::invalidate(&mut next.settings, None)?;
+    }
     let response = settings::public_config(&next.settings, &next.tokens, platform())?;
     persist(store, &next, protect)?;
     Ok(response)
@@ -115,7 +118,12 @@ pub fn remove_token(
     let next = settings::remove_token(&load(store, protect)?, service)?;
     let encrypted = encrypt(&next, protect)?;
     let mut stored = store.settings::<Document>()?;
-    let changed = service == "jira" && super::jira::invalidate_configuration(&mut stored, None)?;
+    let mut changed =
+        service == "jira" && super::jira::invalidate_configuration(&mut stored, None)?;
+    if service == "tempo" {
+        super::tempo::invalidate(&mut stored, None)?;
+        changed = true;
+    }
     let response = settings::public_config(&stored, &next, platform())?;
     store.transaction(|store| {
         token_vault::save_encrypted(store, encrypted.as_deref())?;

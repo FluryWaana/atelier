@@ -50,6 +50,7 @@ pub fn Settings(
     let pending = RwSignal::new(false);
     let jira_dirty = RwSignal::new(false);
     let forge_dirty = RwSignal::new(false);
+    let tempo_dirty = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let discard = RwSignal::new(false);
@@ -67,7 +68,11 @@ pub fn Settings(
         if pending.get_untracked() {
             return;
         }
-        if dirty.get_untracked() || jira_dirty.get_untracked() || forge_dirty.get_untracked() {
+        if dirty.get_untracked()
+            || jira_dirty.get_untracked()
+            || forge_dirty.get_untracked()
+            || tempo_dirty.get_untracked()
+        {
             discard.set(true);
         } else {
             close();
@@ -77,6 +82,7 @@ pub fn Settings(
         if dirty.get_untracked()
             || jira_dirty.get_untracked()
             || forge_dirty.get_untracked()
+            || tempo_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -123,6 +129,7 @@ pub fn Settings(
             </form>
             <crate::forge::ForgeSettings token pending dirty=forge_dirty />
             <crate::jira::JiraSettings board token pending dirty=jira_dirty />
+            <crate::tempo::TempoSettings token pending dirty=tempo_dirty />
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| discard.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
         </dialog>
     }

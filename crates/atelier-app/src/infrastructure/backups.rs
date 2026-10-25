@@ -365,6 +365,7 @@ fn restore_checked(
         let mut settings = store.settings::<Document>()?;
         super::jira::invalidate_configuration(&mut settings,jira_revision)?;
         super::forge::invalidate(&mut settings,&previous_settings)?;
+        super::tempo::invalidate(&mut settings,Some(&previous_settings))?;
         settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
         super::queue::recover_in_transaction(store)?;
