@@ -96,11 +96,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ["app-server", ..] => fake_agent::run(true),
         ["-p", ..] => fake_agent::run(false),
-        ["run-command", mode @ ("success" | "hang")] => {
+        ["run-command", mode @ ("success" | "hang" | "brainstorm")] => {
             if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
             let mut prompt = String::new();
             std::io::Read::read_to_string(&mut io::stdin(), &mut prompt)?;
             if prompt.is_empty() { return Err("Missing synthetic task input".into()); }
+            if *mode=="brainstorm" {
+                if !prompt.contains("Données de la conversation") || !prompt.contains("Synthetic structured proposal") {return Err("Missing synthetic conversation history".into());}
+                if prompt.contains("Second synthetic question") && !prompt.contains("Synthetic agent conversation reply") {return Err("Missing preceding synthetic answer".into());}
+                ready(r#"{"message":"Synthetic agent conversation reply","questions":[],"tickets":[]}"#)?;
+                return Ok(());
+            }
             io::stdout().write_all(b"<script>window.syntheticRunExecuted=true</script>\n")?;
             io::stdout().write_all("Commande synthétique é😀\n".as_bytes())?;
             io::stdout().flush()?;

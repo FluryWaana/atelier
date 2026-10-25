@@ -577,7 +577,41 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     {
         let root = PrototypeDirectory::open(data.path())?;
         let database = root.database()?;
-        database.call(|store| {
+        let brainstorm_repo = root.path.join("repositories/brainstorm");
+        std::fs::create_dir_all(&brainstorm_repo)?;
+        run(command("git")
+            .current_dir(&brainstorm_repo)
+            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .args(["init", "-b", "main"]))?;
+        std::fs::write(
+            brainstorm_repo.join(".run-fixture"),
+            "atelier-r03-synthetic-only",
+        )?;
+        run(command("git")
+            .current_dir(&brainstorm_repo)
+            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .args(["add", "--", ".run-fixture"]))?;
+        run(command("git")
+            .current_dir(&brainstorm_repo)
+            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .args([
+                "-c",
+                "user.name=Synthetic",
+                "-c",
+                "user.email=synthetic@example.invalid",
+                "-c",
+                "core.hooksPath=NUL",
+                "commit",
+                "-qm",
+                "Synthetic brainstorm baseline",
+            ]))?;
+        database.call(move |store| {
+            store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo}))?;
+            store.put(Documents::Cards,&json!({"id":"brainstorm-session","title":"Synthetic brainstorm idea","description":"Keep original idea","instructions":"","mode":"analyze","agent":"codex","status":"todo","brainstormSession":true,"repo":brainstorm_repo}))?;
+            store.put(Documents::Runs,&json!({"id":"brainstorm-result","cardId":"brainstorm-session","status":"completed","purpose":"brainstorm","startedAt":"2026-10-25T10:00:00Z","userMessage":"Découpe cette idée","brainstormAnswer":{"message":"Synthetic structured proposal","questions":[{"question":"Synthetic choice?","options":["Local only","Shared"]}],"tickets":[{"title":"Synthetic converted task","description":"Converted description","criteria":["Manual validation remains required"],"questions":["Keep open question"]}]}}))?;
             store.save_settings(&json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic-recovery.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-creation","title":"Synthetic Jira creation","description":"Keep local creation content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"jiraCreation":{"id":"synthetic-creation-operation","state":"sending","base":"https://synthetic-recovery.example.test","projectKey":"SYN","issueType":{"id":"1","name":"Task","subtask":false},"revision":1,"startedAt":"2026-10-25T10:00:00Z","result":null}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"},"jiraTransition":{"id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"11","name":"Complete","target":{"id":"2","name":"Done"},"requiresFields":false},"startedAt":"2026-10-25T10:00:00Z","observed":null}}))?;
@@ -688,7 +722,96 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#apply-jira-refresh").await?;
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
     time_task_scenario(client, http, &address, &token).await?;
+    brainstorm_scenario(client, http, &address, &token).await?;
     stop_server(&mut server, port, &token).await?;
+    Ok(())
+}
+
+async fn brainstorm_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    // The completed answer is an explicit fixture, not evidence of a native agent run.
+    client
+        .goto(&format!("{address}/?task=brainstorm-session"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic structured proposal') && document.querySelector('#convert-brainstorm')?.disabled === true;",vec![]).await?;
+    click(client, ".brainstorm-option").await?;
+    wait_dom(client,"return document.querySelector('#brainstorm-message')?.value.includes('Synthetic choice? : Local only');",vec![]).await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    client
+        .find(Locator::Css("#brainstorm-message"))
+        .await?
+        .clear()
+        .await?;
+    click(client, ".brainstorm-proposal").await?;
+    client.execute("const select=document.querySelector('#brainstorm-project');select.value='brainstorm-project';select.dispatchEvent(new Event('change',{bubbles:true}));return true;",vec![]).await?;
+    click(client, "#confirm-brainstorm-convert").await?;
+    click(client, "#convert-brainstorm").await?;
+    wait_dom(client,"return document.querySelector('.brainstorm-proposal')?.disabled === true && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Propositions converties');",vec![]).await?;
+    client
+        .goto(&format!("{address}/?task=brainstorm-session"))
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('.brainstorm-proposal')?.disabled === true;",
+        vec![],
+    )
+    .await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let converted: Vec<_> = board
+        .cards
+        .iter()
+        .filter(|card| String::from_utf16_lossy(&card.title.0) == "Synthetic converted task")
+        .collect();
+    if converted.len() != 1 || !converted[0].fields.string_equals("status", "todo")? {
+        return Err("La conversion de brainstorm est absente ou dupliquée.".into());
+    }
+    client
+        .goto(&format!("{address}/?task={}", converted[0].id))
+        .await?;
+    wait_dom(client,"return document.querySelector('#task-editor')?.textContent.includes('Keep open question') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
+    let fixture = root()
+        .join("target/debug")
+        .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"branch":"atelier/synthetic-brainstorm","base":"main","fetchOrigin":false}))
+        .send()
+        .await?
+        .error_for_status()?;
+    client
+        .goto(&format!("{address}/?task=brainstorm-session"))
+        .await?;
+    wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='brainstorm-command');",vec![]).await?;
+    client.execute("const select=document.querySelector('#run-agent');select.value='brainstorm-command';select.dispatchEvent(new Event('change',{bubbles:true}));return true;",vec![]).await?;
+    for message in ["First synthetic question", "Second synthetic question"] {
+        client
+            .find(Locator::Css("#brainstorm-message"))
+            .await?
+            .send_keys(message)
+            .await?;
+        click(client, "#start-run").await?;
+        wait_dom(client,"return document.querySelector('#brainstorm-message')?.value==='' && document.querySelector('#stop-run')?.disabled===true && document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic agent conversation reply');",vec![]).await?;
+    }
     Ok(())
 }
 

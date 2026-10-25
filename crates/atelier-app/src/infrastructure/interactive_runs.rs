@@ -72,7 +72,15 @@ async fn apply(
             run.set("interactions", &interactions)?;
             run.set("waiting", &waiting)?;
             if let Some(summary) = effects.summary {
-                let mut start = summary.len().saturating_sub(12 * 1024);
+                let limit = if run.string_equals("purpose", "brainstorm")? {
+                    64 * 1024
+                } else {
+                    12 * 1024
+                };
+                if summary.len() > limit && run.string_equals("purpose", "brainstorm")? {
+                    run.set("brainstormOverflow", &true)?;
+                }
+                let mut start = summary.len().saturating_sub(limit);
                 while !summary.is_char_boundary(start) {
                     start += 1;
                 }

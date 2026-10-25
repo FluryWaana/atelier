@@ -91,12 +91,29 @@ pub fn transition(
             return Err("Transition d’exécution périmée ou invalide.".into());
         }
         run.set("status", &status)?;
+        if status == "completed" && run.string_equals("purpose", "brainstorm")? {
+            let text = if run.string_equals("agentType", "command")? {
+                run.get::<String>("brainstormOutput")?.unwrap_or_default()
+            } else {
+                run.get::<String>("summary")?.unwrap_or_default()
+            };
+            let parsed = if run.get::<bool>("brainstormOverflow")?.unwrap_or(false) {
+                Err("Réponse de brainstorm trop volumineuse.")
+            } else {
+                atelier_core::application::brainstorm::parse(&text)
+            };
+            match parsed {
+                Ok(answer) => run.set("brainstormAnswer", &answer)?,
+                Err(message) => run.set("brainstormError", &message)?,
+            }
+        }
         if !active(&run)? {
             run.set("endedAt", &timestamp)?;
             run.set("exitCode", &code)?;
             run.remove("interactions");
             run.set("waiting", &false)?;
             run.remove("liveText");
+            run.remove("brainstormOutput");
         }
         store.put(Documents::Runs, &run)?;
         Ok(run)
@@ -115,10 +132,22 @@ pub fn append(store: &Store<'_>, id: &str, stream: &str, message: &str) -> Resul
         if !active(&run)? {
             return Err("Exécution terminée.".into());
         }
+        if stream == "stdout"
+            && run.string_equals("purpose", "brainstorm")?
+            && run.string_equals("agentType", "command")?
+        {
+            let mut output = run.get::<String>("brainstormOutput")?.unwrap_or_default();
+            if output.len().saturating_add(message.len()) > 64 * 1024 {
+                run.set("brainstormOverflow", &true)?;
+            } else if !run.get::<bool>("brainstormOverflow")?.unwrap_or(false) {
+                output.push_str(message);
+                run.set("brainstormOutput", &output)?;
+            }
+        }
         let bytes = run.get::<usize>("logBytes")?.unwrap_or(0);
         let entries = run.get::<usize>("logEntries")?.unwrap_or(0);
         if run.get::<bool>("logTruncated")?.unwrap_or(false) {
-            return Ok(());
+            return store.put(Documents::Runs, &run);
         }
         if entries.saturating_add(chunks(message).count()) > 10_000
             || bytes
@@ -173,6 +202,7 @@ fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
         run.remove("interactions");
         run.remove("pid");
         run.remove("liveText");
+        run.remove("brainstormOutput");
         run.set("waiting", &false)?;
         store.log(&id, "system", "Atelier a été interrompu pendant cette exécution. Vérifie le dépôt avant de relancer explicitement.")?;
         store.put(Documents::Runs, &run)?;

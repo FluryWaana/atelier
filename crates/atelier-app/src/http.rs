@@ -25,6 +25,7 @@ mod agent_providers;
 mod assets;
 pub use assets::LEGACY_ASSETS;
 mod backups;
+mod brainstorm;
 mod card_lifecycle;
 mod events;
 mod files;
@@ -507,6 +508,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         )
         .route("/api/cards", post(task_creation::create))
         .route("/api/brainstorms", post(task_creation::create))
+        .route(
+            "/api/cards/{id}/brainstorm/convert",
+            post(brainstorm::convert),
+        )
         .route("/api/templates", post(task_templates::create))
         .route(
             "/api/templates/{id}",

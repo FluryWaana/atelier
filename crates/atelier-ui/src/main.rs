@@ -7,6 +7,7 @@ use wasm_bindgen_futures::spawn_local;
 mod agent_diagnostics;
 mod agent_profiles;
 mod backups;
+mod brainstorm;
 mod files;
 mod i18n;
 mod jira;
@@ -255,14 +256,15 @@ fn App() -> impl IntoView {
             loading.set(false);
         }
     }
-    let visible = move || {
+    let visible = move |brainstorms: bool| {
         let query = search.get().trim().to_lowercase();
         let repo = repository.get();
         cards
             .get()
             .into_iter()
             .filter(|card| {
-                card.fields.truthy("archived").unwrap_or(false) == archives.get()
+                card.fields.truthy("brainstormSession").unwrap_or(false) == brainstorms
+                    && card.fields.truthy("archived").unwrap_or(false) == archives.get()
                     && (repo.is_empty() || field(&card.fields, "repo") == repo)
                     && (query.is_empty()
                         || format!(
@@ -303,9 +305,10 @@ fn App() -> impl IntoView {
                 <button id="manage-agents" type="button" disabled=move || loading.get() on:click=move |_| show_agents.set(true)>{move || i18n.text("Agents")}</button>
                 <button id="view-time-report" type="button" disabled=move || loading.get() on:click=move |_|{if let Err(message)=location_parameter("view",Some("time")){error.set(message);}show_time_report.set(true);}>{move ||i18n.text("Temps")}</button>
                 <button id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true)>{move || i18n.text("Sauvegardes")}</button>
-                <span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible().len().to_string())}</span>
+                <span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible(false).len().to_string())}</span>
             </div>
-            <form class="quick-create" on:submit=move |event| {
+            <form class="quick-create" on:submit=move |event:leptos::ev::SubmitEvent| {
+                let brainstorming=event.submitter().is_some_and(|button|button.id()=="create-brainstorm");
                 event.prevent_default();
                 if pending.get_untracked() || template_pending.get_untracked() { return; }
                 let Ok(token) = token.get_value() else { return; };
@@ -317,8 +320,8 @@ fn App() -> impl IntoView {
                     let operation = async {
                         let mut body = serde_json::json!({"title":entered});
                         if !repo.is_empty() { body["repo"] = serde_json::json!(repo); }
-                        if !selected_template.is_empty() { body["templateId"] = serde_json::json!(selected_template); }
-                        let response = write(&token, Method::POST, "/api/cards", &body).await?;
+                        if !brainstorming && !selected_template.is_empty() { body["templateId"] = serde_json::json!(selected_template); }
+                        let response = write(&token, Method::POST, if brainstorming{"/api/brainstorms"}else{"/api/cards"}, &body).await?;
                         let card: Card = response.json().await.map_err(|_| "Réponse du serveur invalide.".to_owned())?;
                         replace_card(cards, card); title.set(String::new()); archives.set(false); let _ = board.refresh(&token).await; Ok::<(), String>(())
                     }.await;
@@ -329,6 +332,7 @@ fn App() -> impl IntoView {
                 <div><label for="task-title">{move || i18n.text("Nouvelle tâche")}</label><input id="task-title" name="title" required maxlength="300" disabled=move || pending.get() placeholder=move || i18n.text("Que voulez-vous accomplir ?") prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
                 <div class="template-picker" hidden=move || templates.get().is_empty()><label for="task-template">{move || i18n.text("Modèle")}</label><select id="task-template" disabled=move || pending.get() || template_pending.get() prop:value=move || template.get() on:change=move |event| { template.set(event_target_value(&event)); remove_template.set(false); }><option value="">{move || i18n.text("Sans modèle")}</option><For each=move || templates.get() key=|item| field(item,"id") children=|item| view! { <option value=field(&item,"id")>{field(&item,"name")}</option> } /></select><button id="remove-template" type="button" class="text-action" hidden=move || template.get().is_empty() disabled=move || pending.get() || template_pending.get() on:click=move |_| remove_template.set(true)>{move || i18n.text("Retirer ce modèle…")}</button></div>
                 <button id="create-task" class="primary" type="submit" disabled=move || pending.get() || template_pending.get() || loading.get()>{move || i18n.text(if pending.get() { "Création…" } else { "Créer la tâche" })}</button>
+                <button id="create-brainstorm" type="submit" disabled=move||pending.get()||template_pending.get()||loading.get()||repository.get().is_empty()>{move||i18n.text("Créer une session de brainstorm")}</button>
             </form>
             <div class="confirmation" hidden=move || !remove_template.get()><p>{move || i18n.text("Retirer ce modèle ? Les tâches existantes sont conservées.")}</p><button id="confirm-remove-template" type="button" disabled=move || template_pending.get() on:click=move |_| {
                 if template_pending.get_untracked() { return; }
@@ -347,7 +351,7 @@ fn App() -> impl IntoView {
             <p class="loading" role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement du tableau…")}</p>
             <section aria-label=move || i18n.text("Tableau des tâches") id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
                 <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
-                    let column = move || visible().into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
+                    let column = move || visible(false).into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
                     view! { <section class="kanban-column" data-status=status aria-label=move || i18n.text(label)><header class="column-heading"><h2>{move || i18n.text(label)}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=move |card| {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
@@ -355,6 +359,7 @@ fn App() -> impl IntoView {
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>{move || i18n.text("Aucune tâche")}</p></div></section> }
                 } />
             </section>
+            <section class="task-files" aria-labelledby="brainstorms-heading"><h2 id="brainstorms-heading">{move||i18n.text("Brainstorms")}</h2><p class="field-help">{move||i18n.text("Choisis un projet et saisis une idée pour ouvrir une conversation en lecture seule. Les propositions deviennent des tâches uniquement après confirmation.")}</p><For each=move||visible(true) key=|card|(card.id.clone(),String::from_utf16_lossy(&card.title.0)) children=move|card|view!{<button id=format!("card-open-{}",card.id) type="button" on:click=move|_|open_task.run(card.id.clone())>{String::from_utf16_lossy(&card.title.0)}</button>} /><p hidden=move||!visible(true).is_empty()>{move||i18n.text("Aucun brainstorm pour ces filtres.")}</p></section>
             {move || selected.get().map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>

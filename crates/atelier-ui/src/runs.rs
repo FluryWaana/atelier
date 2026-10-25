@@ -26,9 +26,34 @@ pub fn Runs(
     pending: RwSignal<bool>,
     reply_drafts: RwSignal<std::collections::BTreeSet<String>>,
     blocked: Memo<bool>,
+    on_open: Callback<String>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let card = StoredValue::new(card_id);
+    let brainstorm = Memo::new(move |_| {
+        board.cards.with(|cards| {
+            cards
+                .iter()
+                .find(|item| item.id == card.get_value())
+                .is_some_and(|item| item.fields.truthy("brainstormSession").unwrap_or(false))
+        })
+    });
+    let message = RwSignal::new(String::new());
+    let message_id = StoredValue::new(format!("brainstorm-message:{}", card.get_value()));
+    Effect::new(move |_| {
+        reply_drafts.update(|drafts| {
+            if !message.get().is_empty() {
+                drafts.insert(message_id.get_value());
+            } else {
+                drafts.remove(&message_id.get_value());
+            }
+        })
+    });
+    on_cleanup(move || {
+        let _ = reply_drafts.try_update(|drafts| {
+            drafts.remove(&message_id.get_value());
+        });
+    });
     let agent = RwSignal::new(String::new());
     let mode = RwSignal::new("analyze".to_owned());
     let error = RwSignal::new(String::new());
@@ -100,7 +125,13 @@ pub fn Runs(
         let body = if stop {
             serde_json::json!({})
         } else {
-            serde_json::json!({"agent":agent.get_untracked(),"mode":mode.get_untracked()})
+            let expected = board.cards.with_untracked(|cards| {
+                cards
+                    .iter()
+                    .find(|item| item.id == card.get_value())
+                    .cloned()
+            });
+            serde_json::json!({"agent":agent.get_untracked(),"mode":if brainstorm.get_untracked(){"analyze".to_owned()}else{mode.get_untracked()},"expected":expected,"message":message.get_untracked()})
         };
         if stop {
             cancelling.set(true);
@@ -118,6 +149,7 @@ pub fn Runs(
             if alive.get() {
                 if result.is_ok() && !stop {
                     selected_run.set(String::new());
+                    message.set(String::new());
                 }
                 if let Err(message) = result {
                     error.set(message);
@@ -237,8 +269,9 @@ pub fn Runs(
             <label for="run-agent">{move || i18n.text("Profil d’agent")}</label>
             <p class="field-help" hidden=move || !profiles.get().is_empty()>{move || i18n.text("Crée un profil de commande dans Agents pour démarrer une exécution.")}</p>
             <select id="run-agent" prop:value=move || agent.get() disabled=move || pending.get() || running.get() on:change=move |event| agent.set(event_target_value(&event))><option value="">{move || i18n.text("Choisir un profil")}</option><For each=move || profiles.get() key=|profile| field(profile,"id") children=move |profile| view! { <option value=field(&profile,"id")>{field(&profile,"name")}</option> } /></select>
-            <label for="run-mode">{move || i18n.text("Mode")}</label><select id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
-            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
+            <label hidden=move||brainstorm.get() for="run-mode">{move || i18n.text("Mode")}</label><select hidden=move||brainstorm.get() id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
+            <div hidden=move||!brainstorm.get()><label for="brainstorm-message">{move||i18n.text("Message pour le brainstorm")}</label><textarea id="brainstorm-message" maxlength="12000" rows="4" disabled=move||pending.get()||running.get() prop:value=move||message.get() on:input=move|event|message.set(event_target_value(&event)) /><p class="field-help">{move||i18n.text("Décris ta question ou demande un découpage en tâches. Chaque envoi démarre explicitement une exécution de l’agent choisi.")}</p></div>
+            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() || (brainstorm.get()&&message.get().trim().is_empty()) on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie le worktree, puis enregistre tes modifications avant de lancer une commande.")}</p>
             <p role="status">{move || i18n.text(latest.get().map(|run| match field(&run,"status").as_str() { "starting"=>"Démarrage…", "running"=>"Processus actif", "stopping"=>"Arrêt…", "completed"=>"Exécution terminée", "cancelled"=>"Exécution arrêtée", "interrupted"=>"Exécution interrompue : vérifie le dépôt avant de relancer.", _=>"Échec de l’exécution" }).unwrap_or("Aucune exécution pour cette tâche."))}</p>
             <p class="error" role="alert">{move || { let message = error.get(); i18n.text(&if message.is_empty() { latest.get().map(|run| field(&run,"attention")).unwrap_or_default() } else { message }) }}</p>
@@ -246,6 +279,7 @@ pub fn Runs(
             <p role="status" hidden=move || !active_run.get().is_some_and(|run| run.get::<bool>("waiting").ok().flatten().unwrap_or(false))>{move || i18n.text("En attente de votre réponse")}</p>
             <For each=move || active_run.get().map(|run| { let id=field(&run,"id"); run.get::<Vec<atelier_core::contracts::AgentInteraction>>("interactions").ok().flatten().unwrap_or_default().into_iter().map(|request| (id.clone(),request)).collect::<Vec<_>>() }).unwrap_or_default() key=|(id,request)| (id.clone(),request.id.clone(),serde_json::to_string(request).unwrap_or_default()) children=move |(run_id,request)| view! { <Interaction run_id request token board reply_drafts /> } />
             <pre class="service-log" tabindex="0" hidden=move || active_run.get().is_none_or(|run| field(&run,"liveText").is_empty())>{move || active_run.get().map(|run| field(&run,"liveText")).unwrap_or_default()}</pre>
+            <Show when=move||brainstorm.get()><crate::brainstorm::Results card_id=card.get_value() board token pending blocked message run=latest on_open /></Show>
             <details hidden=move || latest.get().is_none_or(|run| field(&run,"summary").is_empty())><summary>{move || i18n.text("Résumé de l’exécution")}</summary><p>{move || latest.get().map(|run| field(&run,"summary")).unwrap_or_default()}</p></details>
             <p hidden=move || latest.get().is_none_or(|run| run.raw("usage").is_none())>{move || latest.get().and_then(|run| run.get::<serde_json::Value>("usage").ok().flatten()).map(|usage| format!("{} {} / {} / {}",i18n.text("Jetons entrée/cache/sortie :"),usage["inputTokens"],usage["cachedInputTokens"],usage["outputTokens"])).unwrap_or_default()}</p>
             <p hidden=move || latest.get().is_none_or(|run| run.raw("activeMilliseconds").is_none())>{move || latest.get().and_then(|run| run.get::<u64>("activeMilliseconds").ok().flatten()).map(|milliseconds| format!("{} {} s",i18n.text("Durée active :"),milliseconds/1000)).unwrap_or_default()}</p>

@@ -49,7 +49,9 @@ impl BoardState {
         }
         self.revision.set(board.revision);
         self.loaded.set(true);
-        self.cards.set(board.cards);
+        let mut cards = board.cards;
+        cards.extend(board.brainstorms);
+        self.cards.set(cards);
         self.projects.set(board.projects);
         self.runs.set(board.runs);
         self.times.set(board.times);

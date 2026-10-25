@@ -55,7 +55,8 @@ pub(super) async fn start(
         let agent = body.get::<String>("agent")?.ok_or("Profil requis.")?;
         let vault=state.vault.clone();
         let requested=body.clone();
-        let (card, profile, api_key, rules) = state
+        let conversation_body=body.clone();
+        let (card, profile, api_key, rules, conversation) = state
             .database
             .call(move |store| {
                 let card = store
@@ -72,7 +73,13 @@ pub(super) async fn start(
                 }
                 let project = card.fields.get::<String>("projectId")?.map(|id| store.document::<Document>(Documents::Projects, &id)).transpose()?.flatten();
                 let rules = project.map(|project| project.get::<String>("projectRules")).transpose()?.flatten().unwrap_or_default();
-                Ok((card, profile, api_key, rules))
+                let conversation=if card.fields.truthy("brainstormSession")? {
+                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("Un brainstorm utilise uniquement le mode Analyse.".into());}
+                    let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de session requis.")?;
+                    let reply=conversation_body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?;
+                    Some(crate::infrastructure::brainstorm::conversation(store,&card,&expected,&reply)?)
+                }else{None};
+                Ok((card, profile, api_key, rules, conversation))
             })
             .await?;
         let worktree = card
@@ -116,7 +123,7 @@ pub(super) async fn start(
             .current_dir(&worktree.path);
         let criteria = card.fields.get::<Vec<Document>>("checklist")?.unwrap_or_default().iter().map(|criterion| criterion.get::<String>("text").map(|text| text.unwrap_or_default())).collect::<std::result::Result<Vec<_>,_>>()?.join("\n- ");
         let instruction = if mode == "analyze" { "Analyse seulement, sans modifier les fichiers." } else { "Effectue les modifications nécessaires et indique les vérifications et limites." };
-        let prompt = format!(
+        let prompt = if let Some(conversation)=conversation {format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",worktree.branch)} else {format!(
             "{instruction} Branche : {}. Ne change pas de branche. Ne crée aucun commit, ne pousse rien et ne publie rien.\nRègles du projet :\n{rules}\n\n{}\n\n{}\n\n{}\n\nCritères :\n- {criteria}",
             worktree.branch,
             card.title.utf8()?,
@@ -126,7 +133,7 @@ pub(super) async fn start(
             card.fields
                 .get::<String>("instructions")?
                 .unwrap_or_default()
-        );
+        )};
         if prompt.len() > 256 * 1024 {
             return Err("Instructions trop longues.".into());
         }
@@ -136,6 +143,7 @@ pub(super) async fn start(
         run.set("agent", &profile.get::<String>("id")?)?;
         run.set("agentType", &kind)?;
         run.set("mode", &mode)?;
+        if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?)?;}
         run.set("model", &model)?;
         run.set("effort", &effort)?;
         run.set("repo", &worktree.path)?;
