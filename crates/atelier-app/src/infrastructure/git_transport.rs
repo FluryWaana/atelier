@@ -7,6 +7,56 @@ use atelier_core::document::Document;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::Url;
 
+#[cfg(windows)]
+const DOWNLOAD_LIMIT: u64 = 512 * 1024 * 1024;
+
+#[cfg(windows)]
+fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
+    let mut pending = vec![(path.to_owned(), 0usize)];
+    let mut bytes = 0u64;
+    let mut entries = 0usize;
+    while let Some((directory, depth)) = pending.pop() {
+        for entry in std::fs::read_dir(directory)? {
+            let entry = entry?;
+            entries += 1;
+            if entries > 10_000 || depth > 16 {
+                return Err("Téléchargement Git trop volumineux.".into());
+            }
+            // Git may rename a temporary object while this read-only inspection is running.
+            let metadata = super::checked_file::plain_metadata(&entry.path())?;
+            if metadata.is_dir() {
+                pending.push((entry.path(), depth + 1));
+            } else if metadata.is_file() {
+                bytes = bytes
+                    .checked_add(metadata.len())
+                    .ok_or("Téléchargement Git trop volumineux.")?;
+                if bytes > limit {
+                    return Err("Téléchargement Git trop volumineux.".into());
+                }
+            } else {
+                return Err("Fichier inattendu dans le téléchargement Git.".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+async fn download_guard(path: std::path::PathBuf) -> crate::Error {
+    // shortcut: polling can overshoot the temporary-storage threshold; use OS quotas for a hard disk cap.
+    loop {
+        let directory = path.clone();
+        let check =
+            tokio::task::spawn_blocking(move || check_download(&directory, DOWNLOAD_LIMIT)).await;
+        match check {
+            Ok(Ok(())) => {},
+            Ok(Err(error)) if error.downcast_ref::<std::io::Error>().is_some_and(|error|error.kind()==std::io::ErrorKind::NotFound) => {},
+            _ => return "Téléchargement Git interrompu : limite de stockage ou inspection indisponible.".into(),
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
+}
+
 pub struct HttpsAuthentication {
     configuration: ForgeConfiguration,
     repository: String,
@@ -269,11 +319,14 @@ impl HttpsAuthentication {
             }
             let mut command = super::agent_diagnostics::command(&profile).await?;
             self.configure_command(&mut command, home.path(), origin, reference, private_ref)?;
-            let output = super::process_tree::capture(&mut command, &[], std::time::Duration::from_secs(120), 4 * 1024 * 1024)
+            let output = super::process_tree::capture_guarded(&mut command, &[], std::time::Duration::from_secs(120), 4 * 1024 * 1024, download_guard(home.path().to_owned()))
                 .await.map_err(|_| "Fetch HTTPS interrompu, trop long ou trop volumineux. Aucun détail d’authentification n’est affiché.")?;
             if !output.status.success() {
                 return Err("Fetch HTTPS refusé. Vérifie l’URL exacte d’origin, le jeton et les droits du dépôt ; aucun helper ni dialogue de connexion n’est lancé.".into());
             }
+            let downloaded = home.path().to_owned();
+            tokio::task::spawn_blocking(move || check_download(&downloaded, DOWNLOAD_LIMIT)).await?
+                .map_err(|_| "Téléchargement Git trop volumineux ou impossible à inspecter.")?;
             let path = super::task_creation::path_string(home.path()).utf8()?;
             source.without_programs(&[
                 "-c", "protocol.allow=never", "-c", "protocol.file.allow=always",
@@ -303,6 +356,23 @@ impl HttpsAuthentication {
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn download_limits_include_all_objects_and_prevent_import_of_excessive_storage() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::create_dir(directory.path().join("objects")).unwrap();
+        std::fs::write(directory.path().join("objects/one"), [1u8; 8]).unwrap();
+        std::fs::write(directory.path().join("objects/two"), [2u8; 8]).unwrap();
+        check_download(directory.path(), 16).unwrap();
+        assert!(check_download(directory.path(), 15).is_err());
+        let mut nested = directory.path().to_owned();
+        for _ in 0..18 {
+            nested.push("nested");
+            std::fs::create_dir(&nested).unwrap();
+        }
+        std::fs::write(nested.join("leaf"), [0]).unwrap();
+        assert!(check_download(directory.path(), DOWNLOAD_LIMIT).is_err());
+    }
 
     #[test]
     fn credential_is_only_in_scoped_process_environment_not_arguments_or_files() {

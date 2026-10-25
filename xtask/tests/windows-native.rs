@@ -216,7 +216,7 @@ async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_
     assert_eq!(output.stdout, [vec![b'o'; 200_000], input].concat());
     let mut unrelated = Fixture::spawn(executable, &["idle"]);
     assert_eq!(unrelated.line(), "ready");
-    for mode in ["flood", "hang", "failure", "cancel"] {
+    for mode in ["flood", "hang", "failure", "cancel", "guard"] {
         let fixture = tempfile::tempdir().unwrap();
         std::fs::write(
             fixture.path().join(".process-fixture"),
@@ -225,16 +225,32 @@ async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_
         .unwrap();
         let directory = fixture.path().to_owned();
         let running = tokio::spawn(async move {
-            capture(
+            let guarded_directory = directory.clone();
+            atelier_app::infrastructure::process_tree::capture_guarded(
                 tokio::process::Command::new(executable)
                     .args([
                         "process-output",
-                        if mode == "cancel" { "hang" } else { mode },
+                        if ["cancel", "guard"].contains(&mode) {
+                            "hang"
+                        } else {
+                            mode
+                        },
                     ])
                     .arg(directory),
                 &[],
                 Duration::from_secs(5),
                 1024,
+                async move {
+                    if mode != "guard" {
+                        return std::future::pending::<atelier_app::Error>().await;
+                    }
+                    loop {
+                        if guarded_directory.join("go").exists() {
+                            return "Synthetic storage guard stopped download".into();
+                        }
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                    }
+                },
             )
             .await
         });
@@ -270,6 +286,10 @@ async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_
                 "flood" => assert_eq!(
                     result.unwrap_err().to_string(),
                     "Limite de sortie stderr dépassée."
+                ),
+                "guard" => assert_eq!(
+                    result.unwrap_err().to_string(),
+                    "Synthetic storage guard stopped download"
                 ),
                 _ => assert_eq!(
                     result.unwrap_err().to_string(),

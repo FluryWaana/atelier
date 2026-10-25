@@ -1073,5 +1073,9 @@
   "Besoin de review invalide.": "Invalid review requirements.",
   "Bilan des critères incomplet ou dupliqué.": "Criteria assessment is incomplete or duplicated.",
   "Commits de review invalides.": "Invalid review commits.",
-  "Besoin de review trop volumineux.": "Review requirements exceed size limits."
+  "Besoin de review trop volumineux.": "Review requirements exceed size limits.",
+  "Téléchargement Git trop volumineux.": "Git download exceeds storage limits.",
+  "Fichier inattendu dans le téléchargement Git.": "Unexpected file in the Git download.",
+  "Téléchargement Git interrompu : limite de stockage ou inspection indisponible.": "Git download stopped: storage limit exceeded or inspection unavailable.",
+  "Téléchargement Git trop volumineux ou impossible à inspecter.": "Git download exceeds storage limits or cannot be inspected."
 }

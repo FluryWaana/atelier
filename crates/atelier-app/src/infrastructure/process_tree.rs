@@ -249,6 +249,16 @@ pub async fn capture(
     timeout: Duration,
     limit: usize,
 ) -> Result<std::process::Output> {
+    capture_guarded(command, input, timeout, limit, std::future::pending()).await
+}
+
+pub async fn capture_guarded(
+    command: &mut Command,
+    input: &[u8],
+    timeout: Duration,
+    limit: usize,
+    guard: impl std::future::Future<Output = crate::Error>,
+) -> Result<std::process::Output> {
     use std::process::Stdio;
     command
         .stdin(Stdio::piped())
@@ -289,9 +299,12 @@ pub async fn capture(
             stderr,
         })
     };
-    let result = match tokio::time::timeout(timeout, operation).await {
-        Ok(result) => result,
-        Err(_) => Err("Durée maximale du processus dépassée.".into()),
+    let result = tokio::select! {
+        result = tokio::time::timeout(timeout, operation) => match result {
+            Ok(result) => result,
+            Err(_) => Err("Durée maximale du processus dépassée.".into()),
+        },
+        error = guard => Err(error),
     };
     if result.is_err() {
         child.stop().await?;

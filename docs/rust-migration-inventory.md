@@ -1256,14 +1256,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/git_transport.rs:5](../crates/atelier-app/src/infrastructure/git_transport.rs#L5) | <code>use atelier_core::document::Document;</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:7](../crates/atelier-app/src/infrastructure/git_transport.rs#L7) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:8](../crates/atelier-app/src/infrastructure/git_transport.rs#L8) | <code>use reqwest::Url;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:10](../crates/atelier-app/src/infrastructure/git_transport.rs#L10) | <code>pub struct HttpsAuthentication {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:19](../crates/atelier-app/src/infrastructure/git_transport.rs#L19) | <code>pub fn new(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:28](../crates/atelier-app/src/infrastructure/git_transport.rs#L28) | <code>pub fn synthetic(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:77](../crates/atelier-app/src/infrastructure/git_transport.rs#L77) | <code>pub fn origin(&amp;self, origin: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:113](../crates/atelier-app/src/infrastructure/git_transport.rs#L113) | <code>pub fn validate_configuration(keys: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:304](../crates/atelier-app/src/infrastructure/git_transport.rs#L304) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:305](../crates/atelier-app/src/infrastructure/git_transport.rs#L305) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:307](../crates/atelier-app/src/infrastructure/git_transport.rs#L307) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:60](../crates/atelier-app/src/infrastructure/git_transport.rs#L60) | <code>pub struct HttpsAuthentication {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:69](../crates/atelier-app/src/infrastructure/git_transport.rs#L69) | <code>pub fn new(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:78](../crates/atelier-app/src/infrastructure/git_transport.rs#L78) | <code>pub fn synthetic(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:127](../crates/atelier-app/src/infrastructure/git_transport.rs#L127) | <code>pub fn origin(&amp;self, origin: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:163](../crates/atelier-app/src/infrastructure/git_transport.rs#L163) | <code>pub fn validate_configuration(keys: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:357](../crates/atelier-app/src/infrastructure/git_transport.rs#L357) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:358](../crates/atelier-app/src/infrastructure/git_transport.rs#L358) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:360](../crates/atelier-app/src/infrastructure/git_transport.rs#L360) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:377](../crates/atelier-app/src/infrastructure/git_transport.rs#L377) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
@@ -1510,7 +1511,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/process_tree.rs:221](../crates/atelier-app/src/infrastructure/process_tree.rs#L221) | <code>pub async fn wait(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:228](../crates/atelier-app/src/infrastructure/process_tree.rs#L228) | <code>pub async fn stop(&amp;mut self) -&gt; Result&lt;ExitStatus&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:246](../crates/atelier-app/src/infrastructure/process_tree.rs#L246) | <code>pub async fn capture(</code> |
-| [crates/atelier-app/src/infrastructure/process_tree.rs:252](../crates/atelier-app/src/infrastructure/process_tree.rs#L252) | <code>use std::process::Stdio;</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:255](../crates/atelier-app/src/infrastructure/process_tree.rs#L255) | <code>pub async fn capture_guarded(</code> |
+| [crates/atelier-app/src/infrastructure/process_tree.rs:262](../crates/atelier-app/src/infrastructure/process_tree.rs#L262) | <code>use std::process::Stdio;</code> |
 | [crates/atelier-app/src/infrastructure/projects.rs:1](../crates/atelier-app/src/infrastructure/projects.rs#L1) | <code>use super::store::{Documents, Store};</code> |
 | [crates/atelier-app/src/infrastructure/projects.rs:2](../crates/atelier-app/src/infrastructure/projects.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:1](../crates/atelier-app/src/infrastructure/prototype.rs#L1) | <code>use super::{</code> |
@@ -3067,8 +3069,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:131](../xtask/tests/windows-native.rs#L131) | <code>use tokio::io::{AsyncBufReadExt, BufReader};</code> |
 | [xtask/tests/windows-native.rs:201](../xtask/tests/windows-native.rs#L201) | <code>#[tokio::test]</code> |
 | [xtask/tests/windows-native.rs:203](../xtask/tests/windows-native.rs#L203) | <code>use atelier_app::infrastructure::process_tree::capture;</code> |
-| [xtask/tests/windows-native.rs:285](../xtask/tests/windows-native.rs#L285) | <code>#[test]</code> |
-| [xtask/tests/windows-native.rs:287](../xtask/tests/windows-native.rs#L287) | <code>use std::fs;</code> |
+| [xtask/tests/windows-native.rs:305](../xtask/tests/windows-native.rs#L305) | <code>#[test]</code> |
+| [xtask/tests/windows-native.rs:307](../xtask/tests/windows-native.rs#L307) | <code>use std::fs;</code> |
 
 ## Tests et scénarios nommés
 
@@ -3554,14 +3556,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/files.rs:262](../crates/atelier-app/src/infrastructure/files.rs#L262) | <code>self.git(&amp;args).await</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:339](../crates/atelier-app/src/infrastructure/files.rs#L339) | <code>.args([</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:352](../crates/atelier-app/src/infrastructure/files.rs#L352) | <code>.args(arguments);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:186](../crates/atelier-app/src/infrastructure/git_transport.rs#L186) | <code>.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:221](../crates/atelier-app/src/infrastructure/git_transport.rs#L221) | <code>command.args(["-c", option]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:224](../crates/atelier-app/src/infrastructure/git_transport.rs#L224) | <code>command.args(["-c", "protocol.http.allow=always"]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:226](../crates/atelier-app/src/infrastructure/git_transport.rs#L226) | <code>command.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:264](../crates/atelier-app/src/infrastructure/git_transport.rs#L264) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:345](../crates/atelier-app/src/infrastructure/git_transport.rs#L345) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:349](../crates/atelier-app/src/infrastructure/git_transport.rs#L349) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:358](../crates/atelier-app/src/infrastructure/git_transport.rs#L358) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:236](../crates/atelier-app/src/infrastructure/git_transport.rs#L236) | <code>.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:271](../crates/atelier-app/src/infrastructure/git_transport.rs#L271) | <code>command.args(["-c", option]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:274](../crates/atelier-app/src/infrastructure/git_transport.rs#L274) | <code>command.args(["-c", "protocol.http.allow=always"]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:276](../crates/atelier-app/src/infrastructure/git_transport.rs#L276) | <code>command.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:314](../crates/atelier-app/src/infrastructure/git_transport.rs#L314) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:415](../crates/atelier-app/src/infrastructure/git_transport.rs#L415) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:419](../crates/atelier-app/src/infrastructure/git_transport.rs#L419) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:428](../crates/atelier-app/src/infrastructure/git_transport.rs#L428) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:644](../crates/atelier-app/src/infrastructure/launch_detection.rs#L644) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:417](../crates/atelier-app/src/infrastructure/portable_import.rs#L417) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>.args(["/D", "/C"])</code> |
@@ -3838,7 +3840,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
 | [xtask/tests/windows-native.rs:138](../xtask/tests/windows-native.rs#L138) | <code>.args([</code> |
 | [xtask/tests/windows-native.rs:170](../xtask/tests/windows-native.rs#L170) | <code>.args(["family-immediate", "breakaway"])</code> |
-| [xtask/tests/windows-native.rs:230](../xtask/tests/windows-native.rs#L230) | <code>.args([</code> |
+| [xtask/tests/windows-native.rs:231](../xtask/tests/windows-native.rs#L231) | <code>.args([</code> |
 
 ## Routes, méthodes et événements
 
