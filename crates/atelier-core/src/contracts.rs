@@ -629,3 +629,39 @@ pub struct GitPushIntent {
     pub preview: GitPushPreview,
     pub observed: Option<String>,
 }
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ForgePublicationRequest {
+    pub expected: Card,
+    pub revision: u64,
+    pub kind: ForgeKind,
+    pub repository: String,
+    pub target: String,
+    pub title: String,
+    pub body: String,
+    pub draft: bool,
+    pub confirmed: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgePublicationPreview {
+    pub configuration: ForgeConfiguration,
+    pub revision: u64,
+    pub repository: String,
+    pub worktree: Worktree,
+    pub target: String,
+    pub source_commit: String,
+    pub target_commit: String,
+    pub title: String,
+    pub body: String,
+    pub draft: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgePublicationIntent {
+    pub id: String,
+    pub state: ForgeWriteState,
+    pub preview: ForgePublicationPreview,
+    pub number: Option<u64>,
+    pub result: Option<PullRequest>,
+}

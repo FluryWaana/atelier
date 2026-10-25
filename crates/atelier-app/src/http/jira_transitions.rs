@@ -29,9 +29,9 @@ pub(super) async fn input<T: DeserializeOwned>(
         .map_err(|(status, message)| failure(status, message))?;
     serde_json::from_str(
         &serde_json::to_string(&body)
-            .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres Jira invalides."))?,
+            .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres de requête invalides."))?,
     )
-    .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres Jira invalides."))
+    .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres de requête invalides."))
 }
 pub(super) async fn client(state: &Shared, revision: u64) -> Result<jira::Jira> {
     let vault = state.vault.clone();

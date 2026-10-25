@@ -11,6 +11,7 @@ mod backups;
 mod brainstorm;
 mod files;
 mod forge;
+mod forge_publication;
 mod forge_task;
 mod git_push;
 mod i18n;

@@ -322,18 +322,28 @@ pub struct PreparedDraft {
     body: Value,
     mutation: Option<&'static str>,
 }
+pub struct PreparedPublication {
+    configuration: ForgeConfiguration,
+    revision: u64,
+    url: Url,
+    body: Value,
+}
 impl Forge {
     pub async fn list_pull_requests(
         &self,
         repository: &str,
     ) -> Result<Vec<atelier_core::contracts::PullRequestSummary>> {
-        tokio::time::timeout(Duration::from_secs(60), self.read_pull_requests(repository))
-            .await
-            .map_err(|_| "Liste de PR/MR trop longue.")?
+        tokio::time::timeout(
+            Duration::from_secs(60),
+            self.read_pull_requests(repository, false),
+        )
+        .await
+        .map_err(|_| "Liste de PR/MR trop longue.")?
     }
     async fn read_pull_requests(
         &self,
         repository: &str,
+        all: bool,
     ) -> Result<Vec<atelier_core::contracts::PullRequestSummary>> {
         let parts =
             atelier_core::application::forge::repository(self.configuration.kind, repository, 1)?;
@@ -393,20 +403,20 @@ impl Forge {
             match self.configuration.kind {
                 ForgeKind::Github => {
                     url.query_pairs_mut()
-                        .append_pair("state", "open")
+                        .append_pair("state", if all { "all" } else { "open" })
                         .append_pair("per_page", "100")
                         .append_pair("page", &page.to_string());
                 }
                 ForgeKind::Gitlab => {
                     url.query_pairs_mut()
-                        .append_pair("state", "opened")
+                        .append_pair("state", if all { "all" } else { "opened" })
                         .append_pair("scope", "all")
                         .append_pair("per_page", "100")
                         .append_pair("page", &page.to_string());
                 }
                 ForgeKind::Azure => {
                     url.query_pairs_mut()
-                        .append_pair("searchCriteria.status", "active")
+                        .append_pair("searchCriteria.status", if all { "all" } else { "active" })
                         .append_pair("$top", "100")
                         .append_pair("$skip", &result.len().to_string());
                 }
@@ -431,7 +441,11 @@ impl Forge {
                 let (number, source, target, draft) = match self.configuration.kind {
                     ForgeKind::Github => {
                         if self.text(&row["base"]["repo"]["full_name"], 1000)? != repository
-                            || row["state"] != "open"
+                            || if all {
+                                !matches!(row["state"].as_str(), Some("open" | "closed"))
+                            } else {
+                                row["state"] != "open"
+                            }
                         {
                             return Err(
                                 "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
@@ -446,7 +460,14 @@ impl Forge {
                     }
                     ForgeKind::Gitlab => {
                         if row["target_project_id"].as_u64().map(|id| id.to_string()) != identity
-                            || row["state"] != "opened"
+                            || if all {
+                                !matches!(
+                                    row["state"].as_str(),
+                                    Some("opened" | "closed" | "merged" | "locked")
+                                )
+                            } else {
+                                row["state"] != "opened"
+                            }
                         {
                             return Err(
                                 "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
@@ -461,7 +482,14 @@ impl Forge {
                     }
                     ForgeKind::Azure => {
                         if Some(self.text(&row["repository"]["id"], 64)?.to_owned()) != identity
-                            || row["status"] != "active"
+                            || if all {
+                                !matches!(
+                                    row["status"].as_str(),
+                                    Some("active" | "completed" | "abandoned")
+                                )
+                            } else {
+                                row["status"] != "active"
+                            }
                         {
                             return Err(
                                 "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
@@ -648,6 +676,7 @@ impl Forge {
         mut url: Url,
         body: Option<Value>,
     ) -> Result<Value> {
+        let creating = method == reqwest::Method::POST;
         if self.configuration.kind == ForgeKind::Azure {
             url.query_pairs_mut().append_pair("api-version", "7.1");
         }
@@ -672,6 +701,7 @@ impl Forge {
             .map_err(|_| "Connexion à la forge impossible ou trop longue.")?;
         match response.status().as_u16() {
             200 => {}
+            201 if creating => {}
             401 | 403 => {
                 return Err(
                     "La forge refuse l’accès. Vérifie le jeton et les droits de lecture.".into(),
@@ -878,15 +908,207 @@ impl Forge {
         }
         Ok(observed)
     }
+    pub async fn prepare_publication(
+        &self,
+        preview: &atelier_core::contracts::ForgePublicationPreview,
+        operation: &str,
+    ) -> Result<PreparedPublication> {
+        let parts = atelier_core::application::forge::repository(
+            self.configuration.kind,
+            &preview.repository,
+            1,
+        )?;
+        let marker = publication_marker(operation)?;
+        if preview.configuration.kind != self.configuration.kind
+            || preview.configuration.base != self.configuration.base
+            || preview.revision != self.revision
+            || preview.worktree.branch == preview.target
+            || preview.title.trim().is_empty()
+            || preview.title.encode_utf16().count() > 255
+            || preview.title.chars().any(char::is_control)
+            || preview.body.encode_utf16().count() > 3500
+            || preview
+                .body
+                .chars()
+                .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
+            || [
+                &preview.title,
+                &preview.body,
+                &preview.repository,
+                &preview.worktree.branch,
+                &preview.target,
+            ]
+            .iter()
+            .any(|value| value.contains(&self.token))
+        {
+            return Err("Aperçu de publication invalide ou confidentiel.".into());
+        }
+        for branch in [&preview.worktree.branch, &preview.target] {
+            atelier_core::application::worktrees::validate_reference(branch)?;
+        }
+        for commit in [&preview.source_commit, &preview.target_commit] {
+            self.commit(&Value::String(commit.clone()))?
+                .ok_or("Commit de publication absent.")?;
+        }
+        let candidates = self
+            .list_pull_requests(&preview.repository)
+            .await?
+            .into_iter()
+            .filter(|pr| {
+                pr.source_branch == preview.worktree.branch && pr.target_branch == preview.target
+            })
+            .collect::<Vec<_>>();
+        if candidates.len() > 20 {
+            return Err(
+                "Trop de PR/MR candidates. La publication est refusée sans résultat partiel."
+                    .into(),
+            );
+        }
+        for candidate in candidates {
+            let pr = self
+                .pull_request(&preview.repository, candidate.number)
+                .await?;
+            if !pr.fork
+                && pr.status == "active"
+                && pr.source_branch == preview.worktree.branch
+                && pr.target_branch == preview.target
+            {
+                return Err("Une PR/MR ouverte existe déjà pour ces branches. Associe-la au lieu de créer un doublon.".into());
+            }
+        }
+        let body = format!("{}\n\n{marker}", preview.body);
+        let (url, body) = match self.configuration.kind {
+            ForgeKind::Github => (
+                self.endpoint(true, &["repos", parts[0], parts[1], "pulls"])?,
+                serde_json::json!({"head":preview.worktree.branch,"base":preview.target,"title":preview.title,"body":body,"draft":preview.draft,"maintainer_can_modify":false}),
+            ),
+            ForgeKind::Gitlab => (
+                self.endpoint(true, &["projects", &preview.repository, "merge_requests"])?,
+                serde_json::json!({"source_branch":preview.worktree.branch,"target_branch":preview.target,"title":preview.title,"description":body,"remove_source_branch":false,"allow_collaboration":false}),
+            ),
+            ForgeKind::Azure => (
+                self.endpoint(
+                    true,
+                    &[
+                        parts[0],
+                        "_apis",
+                        "git",
+                        "repositories",
+                        parts[1],
+                        "pullrequests",
+                    ],
+                )?,
+                serde_json::json!({"sourceRefName":format!("refs/heads/{}",preview.worktree.branch),"targetRefName":format!("refs/heads/{}",preview.target),"title":preview.title,"description":body,"isDraft":preview.draft}),
+            ),
+        };
+        Ok(PreparedPublication {
+            configuration: self.configuration.clone(),
+            revision: self.revision,
+            url,
+            body,
+        })
+    }
+    /// Returns a candidate identity to persist before any further remote read.
+    pub async fn create_publication(&self, prepared: PreparedPublication) -> Result<u64> {
+        if prepared.configuration.kind != self.configuration.kind
+            || prepared.configuration.base != self.configuration.base
+            || prepared.revision != self.revision
+        {
+            return Err("Intention de publication incohérente.".into());
+        }
+        let row = self
+            .request(reqwest::Method::POST, prepared.url, Some(prepared.body))
+            .await?;
+        let field = match self.configuration.kind {
+            ForgeKind::Github => "number",
+            ForgeKind::Gitlab => "iid",
+            ForgeKind::Azure => "pullRequestId",
+        };
+        row[field]
+            .as_u64()
+            .filter(|number| *number > 0 && *number <= i32::MAX as u64)
+            .ok_or_else(|| {
+                "Création de PR/MR incertaine. Relis la forge sans renvoyer la demande.".into()
+            })
+    }
+    pub async fn reconcile_publication(
+        &self,
+        preview: &atelier_core::contracts::ForgePublicationPreview,
+        operation: &str,
+        known: Option<u64>,
+    ) -> Result<Option<PullRequest>> {
+        tokio::time::timeout(
+            Duration::from_secs(120),
+            self.find_publication(preview, operation, known),
+        )
+        .await
+        .map_err(|_| "Recherche de publication trop longue. L’incertitude est conservée.")?
+    }
+    async fn find_publication(
+        &self,
+        preview: &atelier_core::contracts::ForgePublicationPreview,
+        operation: &str,
+        known: Option<u64>,
+    ) -> Result<Option<PullRequest>> {
+        if self.configuration.kind != preview.configuration.kind
+            || self.configuration.base != preview.configuration.base
+        {
+            return Err("Reconnecte le site de forge de la publication incertaine.".into());
+        }
+        let marker = publication_marker(operation)?;
+        let candidates = if let Some(number) = known {
+            vec![number]
+        } else {
+            let rows = self.read_pull_requests(&preview.repository, true).await?;
+            let candidates = rows
+                .into_iter()
+                .filter(|pr| {
+                    pr.source_branch == preview.worktree.branch
+                        && pr.target_branch == preview.target
+                })
+                .map(|pr| pr.number)
+                .collect::<Vec<_>>();
+            if candidates.len() > 20 {
+                return Err("Trop de PR/MR candidates. L’incertitude est conservée.".into());
+            }
+            candidates
+        };
+        let mut found = None;
+        for number in candidates {
+            let (pr, body) = self
+                .read_pull_request_content(&preview.repository, number, true)
+                .await?;
+            if body.lines().any(|line| line == marker) {
+                if pr.fork
+                    || pr.source_branch != preview.worktree.branch
+                    || pr.target_branch != preview.target
+                    || found.is_some()
+                {
+                    return Err(
+                        "Publication retrouvée ambiguë ou déplacée. L’incertitude est conservée."
+                            .into(),
+                    );
+                }
+                found = Some(pr);
+            }
+        }
+        Ok(found)
+    }
     pub async fn pull_request(&self, repository: &str, number: u64) -> Result<PullRequest> {
         tokio::time::timeout(
             Duration::from_secs(60),
-            self.read_pull_request(repository, number),
+            self.read_pull_request_content(repository, number, false),
         )
         .await
         .map_err(|_| "Lecture de PR trop longue.")?
+        .map(|(pr, _)| pr)
     }
-    async fn read_pull_request(&self, repository: &str, number: u64) -> Result<PullRequest> {
+    async fn read_pull_request_content(
+        &self,
+        repository: &str,
+        number: u64,
+        include_body: bool,
+    ) -> Result<(PullRequest, String)> {
         let parts = atelier_core::application::forge::repository(
             self.configuration.kind,
             repository,
@@ -1045,25 +1267,60 @@ impl Forge {
                 Ok(value.into())
             }
         };
-        Ok(PullRequest {
-            revision: self.revision,
-            kind: self.configuration.kind,
-            repository: repository.into(),
-            number,
-            title: self.text(title, 8000)?.into(),
-            url: browser_link(&self.configuration, repository, number)?,
-            status: status.into(),
-            draft: draft.ok_or("État brouillon de PR absent.")?,
-            source_branch: branch(source)?,
-            target_branch: branch(target)?,
-            source_commit: self.commit(source_commit)?,
-            target_commit: self.commit(target_commit)?,
-            fork,
-            base_url: self.configuration.base.clone(),
-            checked_at: time::OffsetDateTime::now_utc()
-                .format(&time::format_description::well_known::Rfc3339)?,
-        })
+        let body = if include_body {
+            let value = if self.configuration.kind == ForgeKind::Github {
+                &row["body"]
+            } else {
+                &row["description"]
+            };
+            let text = if value.is_null() {
+                ""
+            } else {
+                value.as_str().ok_or("Contenu de PR/MR invalide.")?
+            };
+            if text.len() > 128 * 1024
+                || text.contains(&self.token)
+                || text
+                    .chars()
+                    .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
+            {
+                return Err("Contenu de PR/MR invalide ou confidentiel.".into());
+            }
+            text.to_owned()
+        } else {
+            String::new()
+        };
+        Ok((
+            PullRequest {
+                revision: self.revision,
+                kind: self.configuration.kind,
+                repository: repository.into(),
+                number,
+                title: self.text(title, 8000)?.into(),
+                url: browser_link(&self.configuration, repository, number)?,
+                status: status.into(),
+                draft: draft.ok_or("État brouillon de PR absent.")?,
+                source_branch: branch(source)?,
+                target_branch: branch(target)?,
+                source_commit: self.commit(source_commit)?,
+                target_commit: self.commit(target_commit)?,
+                fork,
+                base_url: self.configuration.base.clone(),
+                checked_at: time::OffsetDateTime::now_utc()
+                    .format(&time::format_description::well_known::Rfc3339)?,
+            },
+            body,
+        ))
     }
+}
+
+pub fn publication_marker(operation: &str) -> Result<String> {
+    let id =
+        uuid::Uuid::parse_str(operation).map_err(|_| "Identifiant de publication invalide.")?;
+    if id.to_string() != operation {
+        return Err("Identifiant de publication invalide.".into());
+    }
+    Ok(format!("<!-- atelier-publication:{operation} -->"))
 }
 
 pub fn same_pull_request(left: &PullRequest, right: &PullRequest) -> bool {

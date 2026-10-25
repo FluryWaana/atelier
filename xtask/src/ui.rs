@@ -795,6 +795,30 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .goto(&format!("{address}/?task=jira-refresh"))
         .await?;
     wait_dom(client,"return document.querySelector('#forge-task-heading') && !document.querySelector('#forge-task-heading')?.parentElement.querySelector('a') && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
+    client
+        .find(Locator::Css("#publication-repository"))
+        .await?
+        .send_keys("owner/repo")
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#task-forge-kind')?.disabled === true;",
+        vec![],
+    )
+    .await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    click(client, "#preview-publication").await?;
+    // Missing synthetic credentials must refuse before Git or any remote request.
+    wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-repository')?.value === 'owner/repo' && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
+    click(client, "#cancel-publication").await?;
+    wait_dom(client,"return document.querySelector('#publication-repository')?.value === '' && document.querySelector('#task-forge-kind')?.disabled === false;",vec![]).await?;
     Ok(())
 }
 

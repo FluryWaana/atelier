@@ -42,6 +42,7 @@ pub fn ForgeTask(
     let approved = RwSignal::new(None::<(Draft, u64)>);
     let detach_ack = RwSignal::new(String::new());
     let draft_ack = RwSignal::new(String::new());
+    let publication_dirty = RwSignal::new(false);
     let intent = Signal::derive(move || {
         card.get().and_then(|card| {
             card.fields
@@ -66,7 +67,7 @@ pub fn ForgeTask(
         let linked = linked.get()?;
         Some(serde_json::json!({"card":atelier_core::application::jira::card_snapshot(&card),"revision":configuration.revision,"draft":if uncertain.get(){intent.get()?.draft}else{!linked.draft}}).to_string())
     });
-    Effect::new(move |_| dirty.set(draft.get() != original.get()));
+    Effect::new(move |_| dirty.set(draft.get() != original.get() || publication_dirty.get()));
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || {
@@ -111,6 +112,7 @@ pub fn ForgeTask(
     let writing = alive.clone();
     let change_draft = move |reconcile: bool| {
         if pending.get_untracked()
+            || publication_dirty.get_untracked()
             || loading.get_untracked()
             || blocked.get_untracked()
             || draft.get_untracked() != original.get_untracked()
@@ -200,7 +202,7 @@ pub fn ForgeTask(
     };
     let change_draft = StoredValue::new_local(change_draft);
     let execute = StoredValue::new_local(move |remove: bool| {
-        if pending.get_untracked() || blocked.get_untracked() {
+        if pending.get_untracked() || blocked.get_untracked() || publication_dirty.get_untracked() {
             return;
         }
         let Some(expected) = card.get_untracked() else {
@@ -308,7 +310,7 @@ pub fn ForgeTask(
     view! {<section class="task-files" hidden=move||brain.get() aria-labelledby="forge-task-heading" aria-busy=move||(pending.get()||loading.get()).to_string()><h3 id="forge-task-heading">{move||i18n.text("PR/MR de la tâche")}</h3>
         {move||linked.get().map(|pr|view!{<p>{let label=format!("{} #{} · {}",pr.repository,pr.number,pr.title);if pr.url.starts_with("https://")&&!pr.url.chars().any(char::is_control){view!{<a href=pr.url target="_blank" rel="noopener noreferrer">{label}</a>}.into_any()}else{view!{<span>{label}</span>}.into_any()}}</p><p>{pr.source_branch}" → "{pr.target_branch}</p><p>{move||i18n.text("Dernière lecture : {0}").replace("{0}",&pr.checked_at)}</p>})}
         <p class="field-help">{move||i18n.text("Associe une PR/MR existante dont le dépôt origin et la branche source correspondent au worktree vérifié. Relire une liaison met à jour ses commits et rend les anciennes reviews périmées si nécessaire. Aucune publication distante.")}</p>
-        <fieldset disabled=move||pending.get()||loading.get()||blocked.get()||archived||unresolved.get()>
+        <fieldset disabled=move||pending.get()||loading.get()||blocked.get()||archived||unresolved.get()||publication_dirty.get()>
             <label for="task-forge-kind">{move||i18n.text("Forge")}</label><select id="task-forge-kind" prop:value=move||draft.get().0.name() on:change=move|event|{draft.update(|draft|draft.0=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github});approved.set(None);} ><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
             <label for="task-forge-repository">{move||i18n.text("Dépôt de la PR/MR")}</label><input id="task-forge-repository" maxlength="1000" prop:value=move||draft.get().1 on:input=move|event|{draft.update(|draft|draft.1=event_target_value(&event));approved.set(None);} />
             <label for="task-forge-number">{move||i18n.text("Numéro de PR/MR")}</label><input id="task-forge-number" type="number" min="1" max="2147483647" step="1" prop:value=move||draft.get().2 on:input=move|event|{draft.update(|draft|draft.2=event_target_value(&event));approved.set(None);} />
@@ -316,8 +318,8 @@ pub fn ForgeTask(
             <button id="attach-task-forge" type="button" disabled=move||configuration.with(|configuration|configuration.as_ref().is_none_or(|configuration|approved.get()!=Some((draft.get(),configuration.revision)))) on:click=move|_|execute.with_value(|execute|execute(false))>{move||i18n.text("Vérifier et enregistrer la liaison")}</button>
             <button id="cancel-task-forge" type="button" on:click=move|_|{draft.set(original.get_untracked());approved.set(None);}>{move||i18n.text("Annuler la préparation")}</button><button id="reload-task-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
         </fieldset>
-        <fieldset hidden=move||linked.with(|linked|linked.is_none()) disabled=move||pending.get()||blocked.get()||draft.get()!=original.get()||archived||unresolved.get()><label><input id="confirm-detach-forge" type="checkbox" prop:checked=move||linked.with(|linked|linked.as_ref().is_some_and(|linked|serde_json::to_string(linked).unwrap_or_default()==detach_ack.get())) on:change=move|event|detach_ack.set(if event_target_checked(&event){linked.with(|linked|linked.as_ref().map(|linked|serde_json::to_string(linked).unwrap_or_default()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("Retirer uniquement la liaison locale ; conserver la PR/MR et le worktree.")}</label><button id="detach-task-forge" type="button" disabled=move||linked.with(|linked|linked.as_ref().is_none_or(|linked|serde_json::to_string(linked).unwrap_or_default()!=detach_ack.get())) on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("Confirmer le retrait de la liaison")}</button></fieldset>
-        <fieldset hidden=move||linked.with(|linked|linked.as_ref().is_none_or(|pr|pr.status!="active"))||unresolved.get() disabled=move||pending.get()||loading.get()||blocked.get()||archived||draft.get()!=original.get()||configuration.with(|value|value.is_none())>
+        <fieldset hidden=move||linked.with(|linked|linked.is_none()) disabled=move||pending.get()||blocked.get()||draft.get()!=original.get()||archived||unresolved.get()||publication_dirty.get()><label><input id="confirm-detach-forge" type="checkbox" prop:checked=move||linked.with(|linked|linked.as_ref().is_some_and(|linked|serde_json::to_string(linked).unwrap_or_default()==detach_ack.get())) on:change=move|event|detach_ack.set(if event_target_checked(&event){linked.with(|linked|linked.as_ref().map(|linked|serde_json::to_string(linked).unwrap_or_default()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("Retirer uniquement la liaison locale ; conserver la PR/MR et le worktree.")}</label><button id="detach-task-forge" type="button" disabled=move||linked.with(|linked|linked.as_ref().is_none_or(|linked|serde_json::to_string(linked).unwrap_or_default()!=detach_ack.get())) on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("Confirmer le retrait de la liaison")}</button></fieldset>
+        <fieldset hidden=move||linked.with(|linked|linked.as_ref().is_none_or(|pr|pr.status!="active"))||unresolved.get() disabled=move||pending.get()||loading.get()||blocked.get()||archived||publication_dirty.get()||draft.get()!=original.get()||configuration.with(|value|value.is_none())>
             <p class="field-help">{move||i18n.text("Ce changement écrit sur la forge. Passer prête pour review peut notifier les reviewers ; aucune fusion ni CI n’est demandée par Atelier.")}</p>
             <label><input id="confirm-forge-draft" type="checkbox" prop:checked=move||draft_key.get().is_some_and(|key|key==draft_ack.get()) on:change=move|event|draft_ack.set(if event_target_checked(&event){draft_key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Confirmer le passage de cette PR/MR prête pour review."}else{"Confirmer le passage de cette PR/MR en brouillon."})}</label>
             <button id="change-forge-draft" type="button" disabled=move||draft_key.get().is_none_or(|key|key!=draft_ack.get()) on:click=move|_|change_draft.with_value(|change|change(false))>{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Passer prête pour review"}else{"Passer en brouillon"})}</button>
@@ -325,6 +327,7 @@ pub fn ForgeTask(
         <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Écriture de forge incertaine. Relis l’état distant ; Atelier ne renverra pas la demande.")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"État demandé : brouillon."}else{"État demandé : prête pour review."})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||draft.get()!=original.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("Relire l’état brouillon distant")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button></div>
         <p class="error" id="forge-task-error" role="alert">{move||i18n.text(&error.get())}</p><p id="forge-task-notice" role="status">{move||i18n.text(&notice.get())}</p>
         <button type="button" hidden=move||!unresolved.get() disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
-        <crate::git_push::GitPush card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()) archived />
+        <crate::git_push::GitPush card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()||publication_dirty.get()) archived />
+        <crate::forge_publication::ForgePublication card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()) dirty=publication_dirty archived on_linked=Callback::new(move|pr:PullRequest|{let next=(pr.kind,pr.repository,pr.number.to_string());original.set(next.clone());draft.set(next);approved.set(None);detach_ack.set(String::new());}) />
     </section>}
 }

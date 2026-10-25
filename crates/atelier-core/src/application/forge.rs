@@ -25,7 +25,16 @@ pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json
                 ForgeWriteState::Preparing | ForgeWriteState::Sending | ForgeWriteState::Uncertain
             )
         });
-    Ok(pushing
+    let publishing = fields
+        .get::<crate::contracts::ForgePublicationIntent>("forgePublication")?
+        .is_some_and(|intent| {
+            matches!(
+                intent.state,
+                ForgeWriteState::Preparing | ForgeWriteState::Sending | ForgeWriteState::Uncertain
+            )
+        });
+    Ok(publishing
+        || pushing
         || fields
             .get::<ForgeDraftIntent>("forgeDraft")?
             .is_some_and(|intent| {

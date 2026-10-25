@@ -142,6 +142,21 @@ pub fn recover(store: &Store<'_>) -> Result<()> {
         for mut card in store.documents::<Card>(Documents::Cards)? {
             if let Some(mut intent) = card
                 .fields
+                .get::<atelier_core::contracts::ForgePublicationIntent>("forgePublication")?
+            {
+                let next = match intent.state {
+                    Phase::Preparing => Some(Phase::Failed),
+                    Phase::Sending => Some(Phase::Uncertain),
+                    _ => None,
+                };
+                if let Some(next) = next {
+                    intent.state = next;
+                    card.fields.set("forgePublication", &intent)?;
+                    store.put(Documents::Cards, &card)?;
+                }
+            }
+            if let Some(mut intent) = card
+                .fields
                 .get::<atelier_core::contracts::GitPushIntent>("gitPush")?
             {
                 let next = match intent.state {
@@ -179,7 +194,8 @@ pub fn blocks(store: &Store<'_>, path: &str) -> Result<bool> {
                 || path.starts_with("/api/projects")
                 || affected.is_some_and(|id| card_id.as_deref() == Some(id))
                     && !path.ends_with("/forge/draft-reconcile")
-                    && !path.ends_with("/forge/push-reconcile"))
+                    && !path.ends_with("/forge/push-reconcile")
+                    && !path.ends_with("/forge/publication-reconcile"))
         {
             return Ok(true);
         }

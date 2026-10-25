@@ -231,7 +231,11 @@ fn restore_checked(
     let cards = documents(&source, Documents::Cards)?;
     let runs = documents(&source, Documents::Runs)?;
     for current in store.documents::<Document>(Documents::Cards)? {
-        for key in ["forgeDraftEffect", "gitPushEffect"] {
+        for key in [
+            "forgeDraftEffect",
+            "gitPushEffect",
+            "forgePublicationEffect",
+        ] {
             if let Some(effect) = current.get::<serde_json::Value>(key)? {
                 let id = current
                     .get::<String>("id")?

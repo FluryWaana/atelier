@@ -33,6 +33,8 @@ mod files;
 mod forge;
 mod forge_draft;
 #[cfg(windows)]
+mod forge_publication;
+#[cfg(windows)]
 mod git_push;
 mod jira;
 mod jira_creation;
@@ -166,6 +168,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/forge/push-preview")
             || path.ends_with("/forge/push")
             || path.ends_with("/forge/push-reconcile")
+            || path.ends_with("/forge/publication-preview")
+            || path.ends_with("/forge/publication")
+            || path.ends_with("/forge/publication-reconcile")
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -460,6 +465,18 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route(
+            "/api/cards/{id}/forge/publication-preview",
+            post(forge_publication::preview),
+        )
+        .route(
+            "/api/cards/{id}/forge/publication",
+            post(forge_publication::create),
+        )
+        .route(
+            "/api/cards/{id}/forge/publication-reconcile",
+            post(forge_publication::reconcile),
+        )
         .route(
             "/api/cards/{id}/forge/push-preview",
             post(git_push::preview),
