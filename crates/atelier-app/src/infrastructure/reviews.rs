@@ -172,6 +172,35 @@ pub fn validate(
     })
 }
 
+pub fn correction(
+    store: &Store<'_>,
+    card: &Card,
+    id: &str,
+    indexes: &[usize],
+) -> Result<(Context, String)> {
+    let run = store
+        .document::<Document>(Documents::Runs, id)?
+        .ok_or("Review introuvable.")?;
+    if !run.string_equals("cardId", &card.id)?
+        || !run.string_equals("kind", "pr-review")?
+        || !run.string_equals("status", "completed")?
+        || run.truthy("reviewStaleReason")?
+        || !run.truthy("reviewValidatedAt")?
+    {
+        return Err(
+            "Choisis une review aboutie et revalidée avant de corriger ses constats.".into(),
+        );
+    }
+    let context = run
+        .get::<Context>("reviewContext")?
+        .ok_or("Contexte de review absent.")?;
+    matches(store, card, &context)?;
+    let review = run
+        .get::<Review>("review")?
+        .ok_or("Review incomplète ou périmée. Relance la review.")?;
+    Ok((context, reviews::correction_prompt(&review, indexes)?))
+}
+
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;

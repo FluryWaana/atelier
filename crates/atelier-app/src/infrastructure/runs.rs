@@ -26,7 +26,7 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if !run.string_equals("status", "starting")? {
             return Err("État initial d’exécution invalide.".into());
         }
-        let card = store
+        let mut card = store
             .document::<Card>(Documents::Cards, &card_id)?
             .ok_or("Carte introuvable.")?;
         if card.fields.truthy("archived")? {
@@ -37,6 +37,33 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
                 .get::<atelier_core::application::reviews::Context>("reviewContext")?
                 .ok_or("Contexte de review absent.")?;
             super::reviews::matches(store, &card, &context)?;
+        }
+        if run.string_equals("purpose", "correction")? {
+            if !run.string_equals("mode", "edit")? {
+                return Err("Confirme la correction sélectionnée en mode Modification.".into());
+            }
+            let context = run
+                .get::<atelier_core::application::reviews::Context>("reviewContext")?
+                .ok_or("Contexte de review absent.")?;
+            let review = run
+                .get::<String>("correctionOf")?
+                .ok_or("Review introuvable.")?;
+            let indexes = run
+                .get::<Vec<usize>>("correctionIndexes")?
+                .ok_or("Sélection de constats invalide.")?;
+            if super::reviews::correction(store, &card, &review, &indexes)?.0 != context {
+                return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+            }
+            let invalidation = atelier_core::application::task_editing::invalidate_reviews(
+                &card_id,
+                &mut card.fields,
+                store.documents::<Document>(Documents::Runs)?,
+                "Une correction a démarré. Relance la review sur les changements obtenus.",
+            )?;
+            for previous in invalidation.runs {
+                store.put(Documents::Runs, &previous)?;
+            }
+            store.put(Documents::Cards, &card)?;
         }
         for dependency in card
             .fields

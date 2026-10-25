@@ -1077,5 +1077,13 @@
   "Téléchargement Git trop volumineux.": "Git download exceeds storage limits.",
   "Fichier inattendu dans le téléchargement Git.": "Unexpected file in the Git download.",
   "Téléchargement Git interrompu : limite de stockage ou inspection indisponible.": "Git download stopped: storage limit exceeded or inspection unavailable.",
-  "Téléchargement Git trop volumineux ou impossible à inspecter.": "Git download exceeds storage limits or cannot be inspected."
+  "Téléchargement Git trop volumineux ou impossible à inspecter.": "Git download exceeds storage limits or cannot be inspected.",
+  "Sélection de constats invalide.": "Invalid finding selection.",
+  "Sélection de constats trop volumineuse.": "Selected findings exceed size limits.",
+  "Choisis une review aboutie et revalidée avant de corriger ses constats.": "Choose a completed and revalidated review before correcting its findings.",
+  "Confirme la correction sélectionnée en mode Modification.": "Confirm the selected correction in Edit mode.",
+  "Une correction a démarré. Relance la review sur les changements obtenus.": "A correction started. Review the resulting changes again.",
+  "Sélectionner ce constat pour correction": "Select this finding for correction",
+  "Confirmer et corriger les constats sélectionnés": "Confirm and correct selected findings",
+  "La correction utilise le profil choisi dans Exécutions, en mode Modification. Les commits et le besoin sont relus avant lancement ; une nouvelle review sera nécessaire après la correction.": "Correction uses the profile selected in Runs, in Edit mode. Commits and requirements are checked before starting; a new review is required after correction."
 }

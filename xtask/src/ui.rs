@@ -793,6 +793,23 @@ async fn brainstorm_scenario(
     click(client, "#validate-review").await?;
     // No PR is linked: fail locally before credential lookup or a remote request.
     wait_dom(client,"return document.querySelector('#review-result')?.textContent.includes('Liaison de PR/MR retirée') && document.querySelector('#review-freshness')?.textContent.includes('non revalidée') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
+    click(client, ".review-selection").await?;
+    wait_dom(client,"return document.querySelector('.review-selection')?.checked === true && document.querySelector('#correct-review')?.disabled === true;",vec![]).await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('.review-selection')?.checked === true;",
+        vec![],
+    )
+    .await?;
+    click(client, ".review-selection").await?;
     // The completed answer is an explicit fixture, not evidence of a native agent run.
     client
         .goto(&format!("{address}/?task=brainstorm-session"))
