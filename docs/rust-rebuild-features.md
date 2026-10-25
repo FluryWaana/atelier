@@ -8,6 +8,8 @@ Point candidat connecteurs : paramètres en cinq onglets conservant leurs pannea
 
 Point candidat lanceur : commandes natives launch/stop/serve, réutilisation de la preuve de session loopback et vérification du dossier, lancement en arrière-plan, arrêt via annulation existante, sélection des chemins portables/installés des trois OS et ouverture native du navigateur raccordés. Le service produit refuse les assets legacy. Scénarios synthétiques de parsing/ports/démarrage/redémarrage/persistance et refus avant initialisation écrits, **non compilés/non exécutés**. Tray, vrais installeurs/paquets et update/rollback restent ouverts ; voir [le suivi du lanceur](rust-launcher.md). R06/R07 non validés.
 
+Point candidat archives : validateur de payload partagé dans atelier-app, création ZIP Rust sans remplacement et extraction privée avec bornes/chemins/types/CRC/SHA/cible, commandes xtask et scénarios synthétiques des cinq architectures écrits. **Aucun build/test/archivage exécuté, aucun artefact réel** ; signature, installateurs, récupération, avis de licences complets et qualification restent ouverts. Voir [les paquets Rust](rust-packages.md).
+
 | Fonction à conserver | Référence existante | Briques Rust / travail restant | Lot |
 | --- | --- | --- | --- |
 | Projets multiples, configuration, héritage, dépôts Front/Back et projets liés | `lib/application/projects.mjs`, vues projets/réglages | Gestion WASM candidate : création, renommage, dossier, branche/consignes, retrait confirmé ; réglages Front/Back/projet lié et détection des commandes raccordés avec conflits par champ ; lancement des services et héritage complet restent à livrer | R01/R02 |

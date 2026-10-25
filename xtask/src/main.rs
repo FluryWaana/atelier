@@ -117,6 +117,8 @@ async fn main() -> Result<()> {
         ["build-ui"] => build_ui(),
         ["stage-package", target, binary, assets, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(output)),
         ["verify-package", directory] => package::verify(Path::new(directory)),
+        ["archive-package", directory, output] => atelier_app::infrastructure::package_archive::create(Path::new(directory),Path::new(output)),
+        ["verify-archive", archive, target] => atelier_app::infrastructure::package_archive::verify(Path::new(archive),target),
         ["build-legacy-ui"] => build_legacy_ui(),
         ["test-storage-parity"] => storage::test().await,
         ["test-domain-parity"] => {
@@ -152,7 +154,7 @@ async fn main() -> Result<()> {
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test(false).await },
         ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
-        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Le staging prépare un payload candidat ; lanceur, installateurs et mises à jour R06 restent à livrer.".into()),
+        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives et lanceur sont candidats non qualifiés ; installateurs, tray et mises à jour R06 restent à livrer.".into()),
     }
 }
 

@@ -1,12 +1,14 @@
 # Paquets Rust de préproduction
 
-Le staging ci-dessous est implémenté mais **non compilé et non exécuté**. Aucun paquet réel n’a encore été produit ou qualifié. Il prépare le contenu applicatif ; le lanceur produit, le tray, les installateurs, la signature et l’update/rollback restent ouverts dans R06/R07. Aucune publication ni aucun tag ne sont autorisés par cette commande.
+Le staging, les archives ZIP et le lanceur natif sont candidats **non compilés et non exécutés**. Aucun paquet réel n’a encore été produit ou qualifié. Le tray, les installateurs, la signature et l’update/rollback restent ouverts dans R06/R07. Aucune publication ni aucun tag ne sont autorisés par ces commandes.
 
 Après construction lors de la campagne finale, utiliser :
 
 ```text
 cargo xtask stage-package TARGET BINARY ASSETS OUTPUT
 cargo xtask verify-package OUTPUT
+cargo xtask archive-package OUTPUT ARCHIVE.zip
+cargo xtask verify-archive ARCHIVE.zip TARGET
 ```
 
 `TARGET` vaut `x86_64-pc-windows-msvc`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin` ou `aarch64-apple-darwin`. Le binaire est fourni explicitement, avec une vérification de son en-tête PE/ELF/Mach-O et de son architecture ; cela ne prouve pas qu’il démarre. `ASSETS` est le répertoire produit par `cargo xtask build-ui`. La commande ne construit rien et ne parcourt aucun dossier de données.
@@ -15,4 +17,12 @@ Contenu autorisé : binaire `atelier[.exe]`, dossier `ui` contenant exclusivemen
 
 Le manifeste recense version, cible, tailles et SHA-256. La vérification refuse fichier ajouté, absent ou modifié et en-tête incohérent. **Ces empreintes ne constituent pas une signature ni une racine de confiance pour les mises à jour.** Un futur updater ne doit pas les accepter comme preuve d’authenticité. Les tests utilisent uniquement de petits faux en-têtes et assets synthétiques ; seuls les artefacts natifs réels et les parcours de lancement de la campagne finale pourront qualifier le paquet.
 
-Fabrication prévue : toolchain et dépendances Cargo verrouillés, SQLite embarqué dans le binaire, Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 pour les assets. Les outils de référence Node peuvent encore servir à l’inventaire de développement ; ils n’entrent pas dans le payload Rust. Les outils d’installation, de signature et d’archivage seront recensés à leur livraison.
+Le validateur du répertoire est partagé avec le lecteur natif d’archives ; il n’est plus dupliqué dans xtask. Une version contient trois nombres sans zéro initial superflu ; sa comparaison future est numérique, pas lexicale. La vérification structurelle peut ainsi examiner un autre numéro de version que celui du vérificateur, sans promettre de compatibilité de données ni de droit à un downgrade.
+
+Les cinq cibles utilisent le même conteneur ZIP Stored sans compression, chiffrement, volumes, commentaire global ou ZIP64. Le choix évite l’ajout de codecs ; la taille est bornée à 260 Mio, contenu à 257 Mio manifeste compris, 132 fichiers au plus. Avant le parseur, la fin du ZIP borne le répertoire central et son nombre d’entrées. Chemins strictement allowlistés, noms bruts ASCII inchangés, doublons/collisions de casse, liens/types spéciaux, droits setuid/setgid, chevauchements, octets non référencés et entrées hors contenu sont refusés. L’extraction se fait seulement dans un temporaire privé neuf ; aucun extracteur générique qui écrase un dossier existant n’est utilisé. Taille réelle et CRC sont lus, puis le manifeste complet, les SHA-256, le WASM et la cible sont revalidés. Sur POSIX seul le binaire reçoit les droits exécutables.
+
+La création vérifie le payload source, écrit une archive temporaire, la relit/extrait/vérifie avec le lecteur partagé, recontrôle le source et son manifeste, puis publie sans remplacer un fichier existant. Ces opérations sont du code de fabrication, **pas des commandes exécutées pendant l’implémentation**. Les scénarios d’aller-retour des cinq cibles emploient de faux en-têtes, jamais des exécutables réels : ils ne prouvent ni lancement ni qualification d’OS. Parcours supplémentaires écrits pour traversée, chemins Node/données/absolus, liens, collisions, corruption, troncature, compteurs excessifs, versions et refus de remplacement ; **aucun exécuté**.
+
+Fabrication prévue : toolchain et dépendances Cargo verrouillés, SQLite embarqué dans le binaire, Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 pour les assets. Le conteneur est produit/lu en Rust avec [zip 8.6.0](https://docs.rs/crate/zip/8.6.0) (MIT), options par défaut désactivées, et typed-path 0.12.4 (MIT OR Apache-2.0). Les métadonnées et checksums ont été lus sur crates.io pour éditer le verrouillage ; résolution/compilation restent à vérifier dans la campagne finale. Aucun outil d’archivage Python/Node ni système n’est ajouté au runtime. Les outils Node de référence peuvent encore servir à l’inventaire de développement ; ils n’entrent pas dans le payload. Inventaire complet des licences/avis distribués et outils d’installation/signature restent à finaliser.
+
+Le lecteur d’archives ne prouve pas l’authenticité. Le futur installateur/updater doit vérifier une signature et sa clé de confiance avant toute acceptation ou exécution ; ni les CRC ni les SHA du manifeste ne la remplacent. Aucun paquet n’est signé, installé ou publié par cet incrément.

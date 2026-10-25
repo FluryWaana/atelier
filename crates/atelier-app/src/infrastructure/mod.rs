@@ -41,6 +41,8 @@ pub mod launcher;
 #[cfg(windows)]
 pub mod local_commit;
 pub mod local_http;
+pub mod package;
+pub mod package_archive;
 pub mod portable_import;
 pub mod preparation;
 #[cfg(windows)]

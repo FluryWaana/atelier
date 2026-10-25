@@ -95,6 +95,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/local_commit.rs](../crates/atelier-app/src/infrastructure/local_commit.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/local_http.rs](../crates/atelier-app/src/infrastructure/local_http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/mod.rs](../crates/atelier-app/src/infrastructure/mod.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/package.rs](../crates/atelier-app/src/infrastructure/package.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/package_archive.rs](../crates/atelier-app/src/infrastructure/package_archive.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/portable_import.rs](../crates/atelier-app/src/infrastructure/portable_import.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/preparation.rs](../crates/atelier-app/src/infrastructure/preparation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/process_inspection.rs](../crates/atelier-app/src/infrastructure/process_inspection.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -884,9 +886,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:34](../crates/atelier-app/Cargo.toml#L34) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
 | [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
 | [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }</code> |
-| [crates/atelier-app/Cargo.toml:38](../crates/atelier-app/Cargo.toml#L38) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:39](../crates/atelier-app/Cargo.toml#L39) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }</code> |
-| [crates/atelier-app/Cargo.toml:41](../crates/atelier-app/Cargo.toml#L41) | <code>[target.'cfg(unix)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:37](../crates/atelier-app/Cargo.toml#L37) | <code>zip = { version = "=8.6.0", default-features = false }</code> |
+| [crates/atelier-app/Cargo.toml:39](../crates/atelier-app/Cargo.toml#L39) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:40](../crates/atelier-app/Cargo.toml#L40) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }</code> |
+| [crates/atelier-app/Cargo.toml:42](../crates/atelier-app/Cargo.toml#L42) | <code>[target.'cfg(unix)'.dependencies]</code> |
 | [crates/atelier-app/examples/connector-demo.rs:2](../crates/atelier-app/examples/connector-demo.rs#L2) | <code>use atelier_core::application::extensions::{</code> |
 | [crates/atelier-app/examples/connector-demo.rs:5](../crates/atelier-app/examples/connector-demo.rs#L5) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/examples/connector-demo.rs:6](../crates/atelier-app/examples/connector-demo.rs#L6) | <code>use std::io::{Read, Write};</code> |
@@ -1682,29 +1685,63 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:40](../crates/atelier-app/src/infrastructure/mod.rs#L40) | <code>pub mod launcher;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod local_commit;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod local_http;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:44](../crates/atelier-app/src/infrastructure/mod.rs#L44) | <code>pub mod portable_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:45](../crates/atelier-app/src/infrastructure/mod.rs#L45) | <code>pub mod preparation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:47](../crates/atelier-app/src/infrastructure/mod.rs#L47) | <code>mod process_inspection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:49](../crates/atelier-app/src/infrastructure/mod.rs#L49) | <code>pub mod process_tree;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:50](../crates/atelier-app/src/infrastructure/mod.rs#L50) | <code>pub mod projects;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:51](../crates/atelier-app/src/infrastructure/mod.rs#L51) | <code>pub mod prototype;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:52](../crates/atelier-app/src/infrastructure/mod.rs#L52) | <code>mod publish;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:53](../crates/atelier-app/src/infrastructure/mod.rs#L53) | <code>pub mod queue;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:54](../crates/atelier-app/src/infrastructure/mod.rs#L54) | <code>pub mod reviews;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:55](../crates/atelier-app/src/infrastructure/mod.rs#L55) | <code>pub mod runs;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:56](../crates/atelier-app/src/infrastructure/mod.rs#L56) | <code>pub mod service_launch;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:57](../crates/atelier-app/src/infrastructure/mod.rs#L57) | <code>pub mod session;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:58](../crates/atelier-app/src/infrastructure/mod.rs#L58) | <code>pub mod settings;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:59](../crates/atelier-app/src/infrastructure/mod.rs#L59) | <code>pub mod store;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:60](../crates/atelier-app/src/infrastructure/mod.rs#L60) | <code>pub mod task_creation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:61](../crates/atelier-app/src/infrastructure/mod.rs#L61) | <code>pub mod task_editing;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:62](../crates/atelier-app/src/infrastructure/mod.rs#L62) | <code>pub mod task_templates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:63](../crates/atelier-app/src/infrastructure/mod.rs#L63) | <code>pub mod tempo;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:64](../crates/atelier-app/src/infrastructure/mod.rs#L64) | <code>pub mod tempo_export;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:65](../crates/atelier-app/src/infrastructure/mod.rs#L65) | <code>pub mod time_tracking;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:66](../crates/atelier-app/src/infrastructure/mod.rs#L66) | <code>pub mod token_vault;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:67](../crates/atelier-app/src/infrastructure/mod.rs#L67) | <code>pub mod verification;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod worktrees;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:44](../crates/atelier-app/src/infrastructure/mod.rs#L44) | <code>pub mod package;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:45](../crates/atelier-app/src/infrastructure/mod.rs#L45) | <code>pub mod package_archive;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:46](../crates/atelier-app/src/infrastructure/mod.rs#L46) | <code>pub mod portable_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:47](../crates/atelier-app/src/infrastructure/mod.rs#L47) | <code>pub mod preparation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:49](../crates/atelier-app/src/infrastructure/mod.rs#L49) | <code>mod process_inspection;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:51](../crates/atelier-app/src/infrastructure/mod.rs#L51) | <code>pub mod process_tree;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:52](../crates/atelier-app/src/infrastructure/mod.rs#L52) | <code>pub mod projects;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:53](../crates/atelier-app/src/infrastructure/mod.rs#L53) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:54](../crates/atelier-app/src/infrastructure/mod.rs#L54) | <code>mod publish;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:55](../crates/atelier-app/src/infrastructure/mod.rs#L55) | <code>pub mod queue;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:56](../crates/atelier-app/src/infrastructure/mod.rs#L56) | <code>pub mod reviews;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:57](../crates/atelier-app/src/infrastructure/mod.rs#L57) | <code>pub mod runs;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:58](../crates/atelier-app/src/infrastructure/mod.rs#L58) | <code>pub mod service_launch;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:59](../crates/atelier-app/src/infrastructure/mod.rs#L59) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:60](../crates/atelier-app/src/infrastructure/mod.rs#L60) | <code>pub mod settings;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:61](../crates/atelier-app/src/infrastructure/mod.rs#L61) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:62](../crates/atelier-app/src/infrastructure/mod.rs#L62) | <code>pub mod task_creation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:63](../crates/atelier-app/src/infrastructure/mod.rs#L63) | <code>pub mod task_editing;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:64](../crates/atelier-app/src/infrastructure/mod.rs#L64) | <code>pub mod task_templates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:65](../crates/atelier-app/src/infrastructure/mod.rs#L65) | <code>pub mod tempo;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:66](../crates/atelier-app/src/infrastructure/mod.rs#L66) | <code>pub mod tempo_export;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:67](../crates/atelier-app/src/infrastructure/mod.rs#L67) | <code>pub mod time_tracking;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:69](../crates/atelier-app/src/infrastructure/mod.rs#L69) | <code>pub mod verification;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:70](../crates/atelier-app/src/infrastructure/mod.rs#L70) | <code>pub mod worktrees;</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:1](../crates/atelier-app/src/infrastructure/package.rs#L1) | <code>use crate::{</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:6](../crates/atelier-app/src/infrastructure/package.rs#L6) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:7](../crates/atelier-app/src/infrastructure/package.rs#L7) | <code>use sha2::{Digest, Sha256};</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:8](../crates/atelier-app/src/infrastructure/package.rs#L8) | <code>use std::{collections::BTreeSet, fs, io::Write, path::Path};</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:10](../crates/atelier-app/src/infrastructure/package.rs#L10) | <code>pub const TARGETS: &amp;[&amp;str] = &amp;[</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:17](../crates/atelier-app/src/infrastructure/package.rs#L17) | <code>pub fn binary_name(target: &amp;str) -&gt; Result&lt;&amp;'static str&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:27](../crates/atelier-app/src/infrastructure/package.rs#L27) | <code>pub fn read(path: &amp;Path, limit: usize) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:33](../crates/atelier-app/src/infrastructure/package.rs#L33) | <code>pub fn executable(target: &amp;str, bytes: &amp;[u8]) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:70](../crates/atelier-app/src/infrastructure/package.rs#L70) | <code>pub fn write(path: &amp;Path, bytes: &amp;[u8]) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:79](../crates/atelier-app/src/infrastructure/package.rs#L79) | <code>pub fn assets(directory: &amp;Path) -&gt; Result&lt;Vec&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:112](../crates/atelier-app/src/infrastructure/package.rs#L112) | <code>pub fn version_parts(value: &amp;str) -&gt; Result&lt;[u64; 3]&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:133](../crates/atelier-app/src/infrastructure/package.rs#L133) | <code>pub fn native_target() -&gt; Result&lt;&amp;'static str&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:144](../crates/atelier-app/src/infrastructure/package.rs#L144) | <code>pub fn manifest(directory: &amp;Path, target: &amp;str, version: &amp;str) -&gt; Result&lt;Value&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:200](../crates/atelier-app/src/infrastructure/package.rs#L200) | <code>pub fn verify(directory: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package.rs:209](../crates/atelier-app/src/infrastructure/package.rs#L209) | <code>let version = recorded["version"]</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:1](../crates/atelier-app/src/infrastructure/package_archive.rs#L1) | <code>use super::package;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:2](../crates/atelier-app/src/infrastructure/package_archive.rs#L2) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:3](../crates/atelier-app/src/infrastructure/package_archive.rs#L3) | <code>use serde_json::Value;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:4](../crates/atelier-app/src/infrastructure/package_archive.rs#L4) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:10](../crates/atelier-app/src/infrastructure/package_archive.rs#L10) | <code>use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:12](../crates/atelier-app/src/infrastructure/package_archive.rs#L12) | <code>pub const ARCHIVE_LIMIT: usize = 260 * 1024 * 1024;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:16](../crates/atelier-app/src/infrastructure/package_archive.rs#L16) | <code>pub struct StagedPackage {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:21](../crates/atelier-app/src/infrastructure/package_archive.rs#L21) | <code>pub fn path(&amp;self) -&gt; &amp;Path {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:24](../crates/atelier-app/src/infrastructure/package_archive.rs#L24) | <code>pub fn manifest(&amp;self) -&gt; &amp;Value {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:62](../crates/atelier-app/src/infrastructure/package_archive.rs#L62) | <code>pub fn unpack(bytes: &amp;[u8], target: &amp;str, parent: &amp;Path) -&gt; Result&lt;StagedPackage&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:152](../crates/atelier-app/src/infrastructure/package_archive.rs#L152) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:173](../crates/atelier-app/src/infrastructure/package_archive.rs#L173) | <code>pub fn create(directory: &amp;Path, output: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:237](../crates/atelier-app/src/infrastructure/package_archive.rs#L237) | <code>pub fn verify(archive: &amp;Path, target: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:245](../crates/atelier-app/src/infrastructure/package_archive.rs#L245) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:246](../crates/atelier-app/src/infrastructure/package_archive.rs#L246) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:262](../crates/atelier-app/src/infrastructure/package_archive.rs#L262) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:311](../crates/atelier-app/src/infrastructure/package_archive.rs#L311) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:1](../crates/atelier-app/src/infrastructure/portable_import.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:5](../crates/atelier-app/src/infrastructure/portable_import.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use cap_fs_ext::DirExt;</code> |
@@ -3768,18 +3805,20 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:10](../xtask/src/main.rs#L10) | <code>mod storage;</code> |
 | [xtask/src/main.rs:11](../xtask/src/main.rs#L11) | <code>mod ui;</code> |
 | [xtask/src/main.rs:25](../xtask/src/main.rs#L25) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:160](../xtask/src/main.rs#L160) | <code>mod tests {</code> |
-| [xtask/src/main.rs:161](../xtask/src/main.rs#L161) | <code>use super::*;</code> |
-| [xtask/src/main.rs:162](../xtask/src/main.rs#L162) | <code>#[test]</code> |
-| [xtask/src/main.rs:199](../xtask/src/main.rs#L199) | <code>#[test]</code> |
-| [xtask/src/package.rs:1](../xtask/src/package.rs#L1) | <code>use atelier_app::{</code> |
-| [xtask/src/package.rs:6](../xtask/src/package.rs#L6) | <code>use serde_json::{Value, json};</code> |
-| [xtask/src/package.rs:7](../xtask/src/package.rs#L7) | <code>use sha2::{Digest, Sha256};</code> |
-| [xtask/src/package.rs:8](../xtask/src/package.rs#L8) | <code>use std::{collections::BTreeSet, fs, io::Write, path::Path};</code> |
-| [xtask/src/package.rs:198](../xtask/src/package.rs#L198) | <code>use std::os::unix::fs::PermissionsExt;</code> |
-| [xtask/src/package.rs:230](../xtask/src/package.rs#L230) | <code>mod tests {</code> |
-| [xtask/src/package.rs:231](../xtask/src/package.rs#L231) | <code>use super::*;</code> |
-| [xtask/src/package.rs:252](../xtask/src/package.rs#L252) | <code>#[test]</code> |
+| [xtask/src/main.rs:162](../xtask/src/main.rs#L162) | <code>mod tests {</code> |
+| [xtask/src/main.rs:163](../xtask/src/main.rs#L163) | <code>use super::*;</code> |
+| [xtask/src/main.rs:164](../xtask/src/main.rs#L164) | <code>#[test]</code> |
+| [xtask/src/main.rs:201](../xtask/src/main.rs#L201) | <code>#[test]</code> |
+| [xtask/src/package.rs:2](../xtask/src/package.rs#L2) | <code>use atelier_app::{</code> |
+| [xtask/src/package.rs:7](../xtask/src/package.rs#L7) | <code>use atelier_app::{http::wasm_asset_name, infrastructure::package::TARGETS};</code> |
+| [xtask/src/package.rs:8](../xtask/src/package.rs#L8) | <code>use std::{fs, path::Path};</code> |
+| [xtask/src/package.rs:33](../xtask/src/package.rs#L33) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [xtask/src/package.rs:65](../xtask/src/package.rs#L65) | <code>mod tests {</code> |
+| [xtask/src/package.rs:66](../xtask/src/package.rs#L66) | <code>use super::*;</code> |
+| [xtask/src/package.rs:67](../xtask/src/package.rs#L67) | <code>#[test]</code> |
+| [xtask/src/package.rs:69](../xtask/src/package.rs#L69) | <code>use atelier_app::infrastructure::package_archive;</code> |
+| [xtask/src/package.rs:115](../xtask/src/package.rs#L115) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [xtask/src/package.rs:147](../xtask/src/package.rs#L147) | <code>#[test]</code> |
 | [xtask/src/storage.rs:1](../xtask/src/storage.rs#L1) | <code>use crate::{Result, command, node_executable, run};</code> |
 | [xtask/src/storage.rs:2](../xtask/src/storage.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/storage.rs:10](../xtask/src/storage.rs#L10) | <code>use atelier_core::document::{Document, JsonString};</code> |
@@ -4630,24 +4669,24 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:81](../xtask/src/main.rs#L81) | <code>run(command("trunk").args([</code> |
 | [xtask/src/main.rs:115](../xtask/src/main.rs#L115) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
 | [xtask/src/main.rs:116](../xtask/src/main.rs#L116) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:123](../xtask/src/main.rs#L123) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:124](../xtask/src/main.rs#L124) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:125](../xtask/src/main.rs#L125) | <code>run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:126](../xtask/src/main.rs#L126) | <code>run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:127](../xtask/src/main.rs#L127) | <code>run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:128](../xtask/src/main.rs#L128) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;</code> |
-| [xtask/src/main.rs:129](../xtask/src/main.rs#L129) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))</code> |
-| [xtask/src/main.rs:132](../xtask/src/main.rs#L132) | <code>run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:133](../xtask/src/main.rs#L133) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))</code> |
-| [xtask/src/main.rs:136](../xtask/src/main.rs#L136) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:137](../xtask/src/main.rs#L137) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))</code> |
-| [xtask/src/main.rs:140](../xtask/src/main.rs#L140) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:141](../xtask/src/main.rs#L141) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
-| [xtask/src/main.rs:145](../xtask/src/main.rs#L145) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:146](../xtask/src/main.rs#L146) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:147](../xtask/src/main.rs#L147) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;</code> |
-| [xtask/src/main.rs:152](../xtask/src/main.rs#L152) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:165](../xtask/src/main.rs#L165) | <code>.args([</code> |
+| [xtask/src/main.rs:125](../xtask/src/main.rs#L125) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:126](../xtask/src/main.rs#L126) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:127](../xtask/src/main.rs#L127) | <code>run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:128](../xtask/src/main.rs#L128) | <code>run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:129](../xtask/src/main.rs#L129) | <code>run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:130](../xtask/src/main.rs#L130) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;</code> |
+| [xtask/src/main.rs:131](../xtask/src/main.rs#L131) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))</code> |
+| [xtask/src/main.rs:134](../xtask/src/main.rs#L134) | <code>run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:135](../xtask/src/main.rs#L135) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))</code> |
+| [xtask/src/main.rs:138](../xtask/src/main.rs#L138) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:139](../xtask/src/main.rs#L139) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))</code> |
+| [xtask/src/main.rs:142](../xtask/src/main.rs#L142) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:143](../xtask/src/main.rs#L143) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
+| [xtask/src/main.rs:147](../xtask/src/main.rs#L147) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:148](../xtask/src/main.rs#L148) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:149](../xtask/src/main.rs#L149) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;</code> |
+| [xtask/src/main.rs:154](../xtask/src/main.rs#L154) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:167](../xtask/src/main.rs#L167) | <code>.args([</code> |
 | [xtask/src/storage.rs:44](../xtask/src/storage.rs#L44) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "try"])</code> |
 | [xtask/src/storage.rs:69](../xtask/src/storage.rs#L69) | <code>.args(["test/fixtures/rust-lock-reference.mjs", "hold"])</code> |
 | [xtask/src/storage.rs:95](../xtask/src/storage.rs#L95) | <code>run(crate::command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
@@ -5636,7 +5675,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:298](../crates/atelier-app/src/infrastructure/dev_servers.rs#L298) | <code>let Some((stdout, stderr)) = streams else {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:162](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L162) | <code>if let Some((stream,line))=message {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:164](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L164) | <code>let mut effects=if stream=="stdout" {</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:66](../crates/atelier-app/src/infrastructure/mod.rs#L66) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/package_archive.rs:271](../crates/atelier-app/src/infrastructure/package_archive.rs#L271) | <code>"data/kanban.sqlite",</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:45](../crates/atelier-app/src/infrastructure/portable_import.rs#L45) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:53](../crates/atelier-app/src/infrastructure/portable_import.rs#L53) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:186](../crates/atelier-app/src/infrastructure/portable_import.rs#L186) | <code>let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;</code> |
@@ -5907,7 +5947,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/keyring.rs:126](../xtask/src/keyring.rs#L126) | <code>let own = database.call(token_vault::read_encrypted).await?.ok_or("Second coffre absent.")?;</code> |
 | [xtask/src/keyring.rs:127](../xtask/src/keyring.rs#L127) | <code>database.call(move \|store\| token_vault::save_encrypted(store, Some(&amp;encrypted))).await?;</code> |
 | [xtask/src/keyring.rs:132](../xtask/src/keyring.rs#L132) | <code>database.call(move \|store\| token_vault::save_encrypted(store, Some(&amp;own))).await?;</code> |
-| [xtask/src/package.rs:273](../xtask/src/package.rs#L273) | <code>"kanban.sqlite",</code> |
+| [xtask/src/package.rs:168](../xtask/src/package.rs#L168) | <code>"kanban.sqlite",</code> |
 | [xtask/src/storage.rs:8](../xtask/src/storage.rs#L8) | <code>token_vault::{self, KeyringPlatform},</code> |
 | [xtask/src/storage.rs:18](../xtask/src/storage.rs#L18) | <code>let page = store.logs("run-0", cursor)?;</code> |
 | [xtask/src/storage.rs:247](../xtask/src/storage.rs#L247) | <code>store.log("run-0", "stderr", &amp;format!("{}🔧tail", "a".repeat(65_535)))?;</code> |
@@ -5921,4 +5961,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 555 fichiers ; 97 fichiers de tests Node.
+Total : 557 fichiers ; 97 fichiers de tests Node.
