@@ -66,5 +66,6 @@ pub mod tempo;
 pub mod tempo_export;
 pub mod time_tracking;
 pub mod token_vault;
+pub mod update_package;
 pub mod verification;
 pub mod worktrees;

@@ -119,6 +119,13 @@ async fn main() -> Result<()> {
         ["verify-package", directory] => package::verify(Path::new(directory)),
         ["archive-package", directory, output] => atelier_app::infrastructure::package_archive::create(Path::new(directory),Path::new(output)),
         ["verify-archive", archive, target] => atelier_app::infrastructure::package_archive::verify(Path::new(archive),target),
+        ["synthetic-update-key", directory] => atelier_app::infrastructure::update_package::generate_synthetic(Path::new(directory)),
+        ["sign-package", archive, target, keys, output] => atelier_app::infrastructure::update_package::sign(Path::new(archive),target,Path::new(keys),Path::new(output)),
+        ["verify-signed-package", archive, metadata, trust, target, current] => {
+            let trust=atelier_app::infrastructure::update_package::Trust::load(Path::new(trust))?;
+            let scratch=tempfile::tempdir()?;
+            atelier_app::infrastructure::update_package::prepare(Path::new(archive),Path::new(metadata),&trust,target,current,scratch.path()).map(|_|())
+        },
         ["build-legacy-ui"] => build_legacy_ui(),
         ["test-storage-parity"] => storage::test().await,
         ["test-domain-parity"] => {
@@ -154,7 +161,7 @@ async fn main() -> Result<()> {
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test(false).await },
         ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
-        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives et lanceur sont candidats non qualifiés ; installateurs, tray et mises à jour R06 restent à livrer.".into()),
+        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives, signature et lanceur sont candidats non qualifiés ; installateurs, tray et mise à jour récupérable R06 restent à livrer.".into()),
     }
 }
 

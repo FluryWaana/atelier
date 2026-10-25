@@ -25,4 +25,22 @@ La création vérifie le payload source, écrit une archive temporaire, la relit
 
 Fabrication prévue : toolchain et dépendances Cargo verrouillés, SQLite embarqué dans le binaire, Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 pour les assets. Le conteneur est produit/lu en Rust avec [zip 8.6.0](https://docs.rs/crate/zip/8.6.0) (MIT), options par défaut désactivées, et typed-path 0.12.4 (MIT OR Apache-2.0). Les métadonnées et checksums ont été lus sur crates.io pour éditer le verrouillage ; résolution/compilation restent à vérifier dans la campagne finale. Aucun outil d’archivage Python/Node ni système n’est ajouté au runtime. Les outils Node de référence peuvent encore servir à l’inventaire de développement ; ils n’entrent pas dans le payload. Inventaire complet des licences/avis distribués et outils d’installation/signature restent à finaliser.
 
-Le lecteur d’archives ne prouve pas l’authenticité. Le futur installateur/updater doit vérifier une signature et sa clé de confiance avant toute acceptation ou exécution ; ni les CRC ni les SHA du manifeste ne la remplacent. Aucun paquet n’est signé, installé ou publié par cet incrément.
+Le lecteur d’archives seul ne prouve pas l’authenticité. L’installateur/updater doit passer par l’authentification décrite ci-dessous avant toute acceptation ou exécution ; ni les CRC ni les SHA du manifeste ne la remplacent. Aucun paquet réel n’est signé, installé ou publié à ce stade.
+
+## Signature synthétique et préparation authentifiée candidates
+
+Commandes supplémentaires écrites, réservées aux fixtures de la campagne finale :
+
+```text
+cargo xtask synthetic-update-key NEW_SYNTHETIC_KEY_DIRECTORY
+cargo xtask sign-package ARCHIVE.zip TARGET NEW_SYNTHETIC_KEY_DIRECTORY SIGNED_METADATA.json
+cargo xtask verify-signed-package ARCHIVE.zip SIGNED_METADATA.json NEW_SYNTHETIC_KEY_DIRECTORY/synthetic-update-public.json TARGET CURRENT_VERSION
+```
+
+Le générateur exige un nouveau dossier, crée une paire Ed25519 synthétique et un document public séparé marqué synthétique ; il refuse toute réutilisation/remplacement. La clé privée PKCS8 reste dans ce dossier privé (0700/0600 sur POSIX), jamais dans le payload, les arguments ou les messages. Les scénarios doivent utiliser un compte/temporary dédié sous Windows ; aucune clé réelle ni aucun trousseau personnel ne sont consultés. Ces fonctions ne sont pas appelées pendant l’implémentation : **aucune clé n’a été générée sur ce PC**.
+
+Le signataire revalide l’archive pour sa cible avant de lire la clé synthétique, puis signe une structure sérialisée stable : schéma/application, cible, version, taille/SHA-256 exacts de l’archive et empreinte de clé. Crypto réutilisée : ring 0.17.14, déjà verrouillé. Le document signé ne contient pas de clé publique qui pourrait s’autoriser elle-même ; la confiance doit venir d’un document public choisi et conservé indépendamment. Le code candidat accepte uniquement la confiance synthétique, sans annonce de clé de release. Champs inconnus/dupliqués, formes de signature non canoniques et clés incompatibles sont refusés.
+
+La préparation authentifiée vérifie contrat, clé et signature, puis cible et version strictement supérieure **avant de lire l’archive**. Version identique et downgrade sont refusés. Ensuite lecture bornée à la taille signée, empreinte des octets capturés, extraction privée et revalidation du manifeste interne ; sa version/cible doivent correspondre au document signé. La préparation retourne un temporaire vérifié ; elle ne lance ni ne remplace aucun programme, n’ouvre aucune donnée applicative et ne constitue pas une installation ou une mise à jour réussie.
+
+Scénarios écrits : paire synthétique/paquet à faux en-tête, préparation valide puis nettoyage du temporaire, refus de clé étrangère, métadonnées modifiées, archive corrompue, mauvaise architecture, version identique/antérieure et remplacement de fichiers existants ; les refus de signature/version/cible sont contrôlés avec un chemin d’archive inexistant pour vérifier l’ordre des accès. **Non compilés/non exécutés.** Le stockage produit de la clé de confiance, l’aperçu/confirmation utilisateur, le worker de remplacement, les journaux de récupération/rollback, le tray et les vrais installeurs restent à raccorder. Aucune vérification distante, publication ou garantie de qualification n’en découle.

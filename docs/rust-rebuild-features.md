@@ -10,6 +10,8 @@ Point candidat lanceur : commandes natives launch/stop/serve, réutilisation de 
 
 Point candidat archives : validateur de payload partagé dans atelier-app, création ZIP Rust sans remplacement et extraction privée avec bornes/chemins/types/CRC/SHA/cible, commandes xtask et scénarios synthétiques des cinq architectures écrits. **Aucun build/test/archivage exécuté, aucun artefact réel** ; signature, installateurs, récupération, avis de licences complets et qualification restent ouverts. Voir [les paquets Rust](rust-packages.md).
 
+Suite candidate : signature Ed25519 et préparation authentifiée de paquets avec confiance synthétique externe, taille/empreinte, cible et version strictement supérieure vérifiées avant lecture/extraction. Générateur/signataire de fixtures et scénarios de falsification/clé étrangère/downgrade/remplacement écrits seulement ; **aucune clé générée, aucun paquet signé ni test exécuté sur ce PC**. Interfaces, clé produit, worker/installation/rollback et qualification restent à livrer. Ce point remplace la mention de signature entièrement absente du point précédent, sans valider R06/R07.
+
 | Fonction à conserver | Référence existante | Briques Rust / travail restant | Lot |
 | --- | --- | --- | --- |
 | Projets multiples, configuration, héritage, dépôts Front/Back et projets liés | `lib/application/projects.mjs`, vues projets/réglages | Gestion WASM candidate : création, renommage, dossier, branche/consignes, retrait confirmé ; réglages Front/Back/projet lié et détection des commandes raccordés avec conflits par champ ; lancement des services et héritage complet restent à livrer | R01/R02 |
