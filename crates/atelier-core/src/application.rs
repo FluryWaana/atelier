@@ -9,6 +9,7 @@ pub mod agent_usage;
 pub mod backups;
 pub mod brainstorm;
 pub mod card_lifecycle;
+pub mod extensions;
 pub mod forge;
 pub mod jira;
 pub mod preparation;
