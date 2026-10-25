@@ -52,6 +52,9 @@ pub(super) async fn start(
         if !["analyze", "edit"].contains(&mode.as_str()) {
             return Err("Mode invalide.".into());
         }
+        let purpose=body.get::<String>("purpose")?.unwrap_or_else(||"work".into());
+        if !["work","preparation","review"].contains(&purpose.as_str()) {return Err("Objectif d’exécution invalide.".into());}
+        if purpose=="review" && mode!="analyze" {return Err("La review utilise uniquement le mode Analyse.".into());}
         let agent = body.get::<String>("agent")?.ok_or("Profil requis.")?;
         let vault=state.vault.clone();
         let requested=body.clone();
@@ -87,6 +90,15 @@ pub(super) async fn start(
                 Ok((card, profile, api_key, rules, conversation))
             })
             .await?;
+        let review_context=if purpose=="review" {
+            let expected=body.get::<Card>("expected")?.ok_or("Instantané de tâche requis.")?;
+            if card.fields.truthy("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("La tâche a changé. Recharge avant la review.".into());}
+            let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
+            let vault=state.vault.clone();let kind=linked.kind;let revision=linked.revision;
+            let (configuration,token)=state.database.call(move|store|crate::infrastructure::forge::credentials(store,kind,revision,&mut|value,decrypt|vault.protect(value,decrypt))).await?;
+            Some(crate::infrastructure::reviews::prepare(&state.prototype_directory,&state.prototype_paths,&card,configuration,token).await?)
+        }else{None};
+        let conversation=if let Some(context)=&review_context {Some(atelier_core::application::reviews::prompt(context)?)}else{conversation};
         let no_repository=(card.fields.truthy("brainstormSession")? || body.get::<String>("purpose")?.as_deref()==Some("preparation")) && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
         let (directory,branch)=if no_repository {
             if card.fields.raw("worktree").is_some(){return Err("Retire le worktree avant de poursuivre sans dépôt.".into());}
@@ -144,6 +156,7 @@ pub(super) async fn start(
         run.set("agent", &profile.get::<String>("id")?)?;
         run.set("agentType", &kind)?;
         run.set("mode", &mode)?;
+        if let Some(context)=review_context {run.set("kind",&"pr-review")?;run.set("purpose",&"review")?;run.set("reviewContext",&context)?;run.set("reviewStaleReason",&crate::infrastructure::reviews::UNCHECKED)?;}
         if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?)?;}
         if !card.fields.truthy("brainstormSession")? && body.get::<String>("purpose")?.as_deref()==Some("preparation"){run.set("purpose",&"preparation")?;run.set("requirements",&atelier_core::application::preparation::requirements(&card)?)?;}
         run.set("model", &model)?;

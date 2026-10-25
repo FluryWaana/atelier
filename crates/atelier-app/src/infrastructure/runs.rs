@@ -32,6 +32,12 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if card.fields.truthy("archived")? {
             return Err("Restaure cette tâche avant de lancer un agent.".into());
         }
+        if run.string_equals("kind", "pr-review")? {
+            let context = run
+                .get::<atelier_core::application::reviews::Context>("reviewContext")?
+                .ok_or("Contexte de review absent.")?;
+            super::reviews::matches(store, &card, &context)?;
+        }
         for dependency in card
             .fields
             .get::<Vec<String>>("blockedBy")?
@@ -92,7 +98,9 @@ pub fn transition(
         }
         run.set("status", &status)?;
         let purpose = run.get::<String>("purpose")?.unwrap_or_default();
-        if status == "completed" && ["brainstorm", "preparation"].contains(&purpose.as_str()) {
+        if status == "completed"
+            && ["brainstorm", "preparation", "review"].contains(&purpose.as_str())
+        {
             let text = if run.string_equals("agentType", "command")? {
                 run.get::<String>("structuredOutput")?.unwrap_or_default()
             } else {
@@ -103,14 +111,22 @@ pub fn transition(
             } else if purpose == "brainstorm" {
                 atelier_core::application::brainstorm::parse(&text)
                     .map(|value| serde_json::to_value(value).expect("brainstorm serialization"))
-            } else {
+            } else if purpose == "preparation" {
                 atelier_core::application::preparation::parse(&text)
                     .map(|value| serde_json::to_value(value).expect("preparation serialization"))
+            } else {
+                let context = run
+                    .get::<atelier_core::application::reviews::Context>("reviewContext")?
+                    .ok_or("Contexte de review absent.")?;
+                atelier_core::application::reviews::parse(&text, &context)
+                    .map(|value| serde_json::to_value(value).expect("review serialization"))
             };
             let (answer_key, error_key) = if purpose == "brainstorm" {
                 ("brainstormAnswer", "brainstormError")
-            } else {
+            } else if purpose == "preparation" {
                 ("preparation", "preparationError")
+            } else {
+                ("review", "reviewError")
             };
             match parsed {
                 Ok(answer) => run.set(answer_key, &answer)?,
@@ -145,7 +161,7 @@ pub fn append(store: &Store<'_>, id: &str, stream: &str, message: &str) -> Resul
         if stream == "stdout"
             && matches!(
                 run.get::<String>("purpose")?.as_deref(),
-                Some("brainstorm" | "preparation")
+                Some("brainstorm" | "preparation" | "review")
             )
             && run.string_equals("agentType", "command")?
         {

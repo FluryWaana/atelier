@@ -39,6 +39,8 @@ mod preparation;
 mod projects;
 mod responses;
 #[cfg(windows)]
+mod reviews;
+#[cfg(windows)]
 mod runs;
 #[cfg(windows)]
 mod services;
@@ -159,6 +161,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/services/stop")
             || path.ends_with("/services/restart")
             || path.ends_with("/runs/start")
+            || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
         let cancellation = request.method() == Method::POST && mutations::is_cancellation(&path);
@@ -436,6 +439,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route(
+            "/api/cards/{id}/runs/{run}/review/validate",
+            post(reviews::validate),
+        )
         .route("/api/runs/{id}/stop", post(runs::stop))
         .route("/api/runs/{id}/reply", post(runs::reply))
         .route("/api/runs/{id}/logs", get(runs::logs))

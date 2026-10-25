@@ -174,11 +174,24 @@ async fn prepare_from_origin_with_auth(
     // Validate the destination before downloading; existing task branches are never moved.
     let mut plan = prepare(root, roots, repo, branch, "HEAD".into()).await?;
     let source = source(root, roots, &plan).await?;
+    plan.base_commit = fetch_origin_commit(root, roots, &source, &base, authentication).await?;
+    plan.base = base;
+    Ok(plan)
+}
+
+pub(super) async fn fetch_origin_commit(
+    root: &Dir,
+    roots: &[PathBuf],
+    source: &Repository,
+    base: &str,
+    authentication: Option<&super::git_transport::HttpsAuthentication>,
+) -> Result<String> {
+    reference(base)?;
     let remote_base = base
         .strip_prefix("refs/remotes/origin/")
         .or_else(|| base.strip_prefix("origin/"))
         .or_else(|| base.strip_prefix("refs/heads/"))
-        .unwrap_or(&base);
+        .unwrap_or(base);
     let remote_ref = if remote_base == "HEAD" {
         "HEAD".to_owned()
     } else {
@@ -236,7 +249,7 @@ async fn prepare_from_origin_with_auth(
     let fetched = async {
         if let Some(authentication) = authentication {
             authentication
-                .fetch(&source, &remote_path, &remote_ref, &private_ref)
+                .fetch(source, &remote_path, &remote_ref, &private_ref)
                 .await?;
         } else {
             source
@@ -282,9 +295,7 @@ async fn prepare_from_origin_with_auth(
     if cleanup.is_err() {
         return Err("Nettoyage de la référence temporaire impossible. Le dépôt source et ses branches sont conservés ; vérifie les références refs/atelier-fetch avant de reprendre.".into());
     }
-    plan.base_commit = fetched?;
-    plan.base = base;
-    Ok(plan)
+    fetched
 }
 
 pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<Repository> {

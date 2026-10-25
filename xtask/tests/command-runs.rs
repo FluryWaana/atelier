@@ -55,7 +55,7 @@ async fn explicit_commands_persist_failure_and_stop_descendants_before_releasing
                 record,
                 command,
                 atelier_app::infrastructure::command_runs::RunInput::Command(String::new()),
-                selected,
+                atelier_app::infrastructure::command_runs::RunDirectory::Worktree(selected),
             )
             .await
             .unwrap();

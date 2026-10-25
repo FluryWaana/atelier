@@ -116,7 +116,7 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
                     record,
                     command,
                     RunInput::Agent(Box::new(protocol)),
-                    selected,
+                    atelier_app::infrastructure::command_runs::RunDirectory::Worktree(selected),
                 )
                 .await
                 .unwrap();

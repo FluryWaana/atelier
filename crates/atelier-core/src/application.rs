@@ -13,6 +13,7 @@ pub mod forge;
 pub mod jira;
 pub mod preparation;
 pub mod projects;
+pub mod reviews;
 pub mod services;
 pub mod settings;
 pub mod task_creation;

@@ -610,6 +610,9 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             ]))?;
         database.call(move |store| {
             store.put(Documents::Runs,&json!({"id":"usage-fixture","cardId":"jira-refresh","agentType":"codex","agent":"synthetic-usage-profile","model":"synthetic-usage-model","status":"completed","startedAt":"2026-10-25T10:00:00Z","usage":{"inputTokens":11,"cachedInputTokens":null,"outputTokens":2}}))?;
+            // Report fixture only: no agent execution or remote identity proof is implied.
+            store.put(Documents::Cards,&json!({"id":"review-report","title":"Synthetic review report","status":"todo","repo":"","checklist":[{"text":"Synthetic review criterion","done":false}]}))?;
+            store.put(Documents::Runs,&json!({"id":"review-report-run","cardId":"review-report","kind":"pr-review","purpose":"review","status":"completed","startedAt":"2026-10-25T10:00:00Z","reviewStaleReason":atelier_app::infrastructure::reviews::UNCHECKED,"reviewContext":{"requirements":{"criteria":["Synthetic review criterion"]},"worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"},"kind":"github","revision":0,"repository":"owner/repo","number":7,"source":"b".repeat(40),"target":"a".repeat(40),"base":"a".repeat(40)},"review":{"summary":"Synthetic review limits: browser and service not executed","findings":[{"priority":"P2","title":"Synthetic finding <script>ignored</script>","file":"src/lib.rs","line":12,"problem":"Synthetic evidence","suggestion":"Synthetic correction"}],"criteria":[{"index":0,"status":"unverifiable","evidence":"Synthetic UI not executed"}]}}))?;
             store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo}))?;
             store.put(Documents::Cards,&json!({"id":"brainstorm-session","title":"Synthetic brainstorm idea","description":"Keep original idea","instructions":"","mode":"analyze","agent":"codex","status":"todo","brainstormSession":true,"repo":brainstorm_repo}))?;
             store.put(Documents::Runs,&json!({"id":"brainstorm-result","cardId":"brainstorm-session","status":"completed","purpose":"brainstorm","startedAt":"2026-10-25T10:00:00Z","userMessage":"Découpe cette idée","brainstormAnswer":{"message":"Synthetic structured proposal","questions":[{"question":"Synthetic choice?","options":["Local only","Shared"]}],"tickets":[{"title":"Synthetic converted task","description":"Converted description","criteria":["Manual validation remains required"],"questions":["Keep open question"]}]}}))?;
@@ -783,6 +786,13 @@ async fn brainstorm_scenario(
     address: &str,
     token: &str,
 ) -> Result<()> {
+    client
+        .goto(&format!("{address}/?task=review-report"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#review-summary')?.textContent.includes('Synthetic review limits') && document.querySelector('.review-criterion')?.textContent.includes('Synthetic review criterion') && document.querySelector('#review-freshness')?.textContent.includes('non revalidée') && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('#review-result script');",vec![]).await?;
+    click(client, "#validate-review").await?;
+    // No PR is linked: fail locally before credential lookup or a remote request.
+    wait_dom(client,"return document.querySelector('#review-result')?.textContent.includes('Liaison de PR/MR retirée') && document.querySelector('#review-freshness')?.textContent.includes('non revalidée') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     // The completed answer is an explicit fixture, not evidence of a native agent run.
     client
         .goto(&format!("{address}/?task=brainstorm-session"))

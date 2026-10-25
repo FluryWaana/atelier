@@ -20,6 +20,7 @@ mod jira_task;
 mod live;
 mod preparation;
 mod projects;
+mod review;
 mod runs;
 mod services;
 mod settings;
