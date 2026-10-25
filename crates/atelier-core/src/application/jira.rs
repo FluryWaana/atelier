@@ -223,3 +223,10 @@ pub fn linked_issue(card: &crate::contracts::Card, base: &str) -> Result<String,
     }
     Ok(id)
 }
+
+/// Read-only previews are cached separately from the editable card precondition.
+pub fn card_snapshot(card: &crate::contracts::Card) -> crate::contracts::Card {
+    let mut card = card.clone();
+    card.fields.remove("jiraRefresh");
+    card
+}

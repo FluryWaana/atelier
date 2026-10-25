@@ -24,14 +24,9 @@ fn conflict() -> crate::Error {
     )
     .into()
 }
-fn without_preview(card: &Card) -> Card {
-    let mut card = card.clone();
-    card.fields.remove("jiraRefresh");
-    card
-}
 fn same_content(left: &Card, right: &Card) -> Result<bool> {
-    Ok(serde_json::to_value(without_preview(left))?
-        == serde_json::to_value(without_preview(right))?)
+    Ok(serde_json::to_value(jira::card_snapshot(left))?
+        == serde_json::to_value(jira::card_snapshot(right))?)
 }
 pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -> Result<String> {
     store.transaction(|store| {
@@ -57,7 +52,7 @@ pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -
             revision: input.revision,
             base,
             issue_id: issue.clone(),
-            expected: without_preview(&card),
+            expected: jira::card_snapshot(&card),
             detail: None,
             created_at: Clock.format(Clock.now())?,
         };

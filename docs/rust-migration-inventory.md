@@ -1192,28 +1192,28 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/jira_import.rs:2](../crates/atelier-app/src/infrastructure/jira_import.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/jira_import.rs:3](../crates/atelier-app/src/infrastructure/jira_import.rs#L3) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/jira_import.rs:8](../crates/atelier-app/src/infrastructure/jira_import.rs#L8) | <code>use serde::{Deserialize, Serialize};</code> |
-| [crates/atelier-app/src/infrastructure/jira_import.rs:67](../crates/atelier-app/src/infrastructure/jira_import.rs#L67) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: JiraImport, id: String) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_import.rs:102](../crates/atelier-app/src/infrastructure/jira_import.rs#L102) | <code>pub fn release(store: &amp;Store&lt;'_&gt;, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_import.rs:117](../crates/atelier-app/src/infrastructure/jira_import.rs#L117) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_import.rs:126](../crates/atelier-app/src/infrastructure/jira_import.rs#L126) | <code>pub fn finish(store: &amp;Store&lt;'_&gt;, id: &amp;str, detail: JiraIssueDetail) -&gt; Result&lt;JiraImported&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_import.rs:69](../crates/atelier-app/src/infrastructure/jira_import.rs#L69) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: JiraImport, id: String) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_import.rs:104](../crates/atelier-app/src/infrastructure/jira_import.rs#L104) | <code>pub fn release(store: &amp;Store&lt;'_&gt;, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_import.rs:119](../crates/atelier-app/src/infrastructure/jira_import.rs#L119) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_import.rs:128](../crates/atelier-app/src/infrastructure/jira_import.rs#L128) | <code>pub fn finish(store: &amp;Store&lt;'_&gt;, id: &amp;str, detail: JiraIssueDetail) -&gt; Result&lt;JiraImported&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_refresh.rs:1](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/jira_refresh.rs:6](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/jira_refresh.rs:7](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L7) | <code>use atelier_core::{</code> |
-| [crates/atelier-app/src/infrastructure/jira_refresh.rs:36](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L36) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshRequest, operation: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_refresh.rs:69](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L69) | <code>pub fn ready(</code> |
-| [crates/atelier-app/src/infrastructure/jira_refresh.rs:109](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L109) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_refresh.rs:123](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L123) | <code>pub fn apply(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshApply) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_refresh.rs:202](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L202) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:31](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L31) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshRequest, operation: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:64](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L64) | <code>pub fn ready(</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:104](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L104) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:118](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L118) | <code>pub fn apply(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshApply) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:197](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L197) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:1](../crates/atelier-app/src/infrastructure/jira_transition.rs#L1) | <code>use super::store::{Documents, Store};</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:2](../crates/atelier-app/src/infrastructure/jira_transition.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:3](../crates/atelier-app/src/infrastructure/jira_transition.rs#L3) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:18](../crates/atelier-app/src/infrastructure/jira_transition.rs#L18) | <code>pub fn snapshot(store: &amp;Store&lt;'_&gt;, id: &amp;str, revision: u64) -&gt; Result&lt;(Card, String)&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:32](../crates/atelier-app/src/infrastructure/jira_transition.rs#L32) | <code>pub fn revalidate(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, revision: u64) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_transition.rs:39](../crates/atelier-app/src/infrastructure/jira_transition.rs#L39) | <code>pub fn reserve(</code> |
-| [crates/atelier-app/src/infrastructure/jira_transition.rs:102](../crates/atelier-app/src/infrastructure/jira_transition.rs#L102) | <code>pub fn sending(</code> |
-| [crates/atelier-app/src/infrastructure/jira_transition.rs:137](../crates/atelier-app/src/infrastructure/jira_transition.rs#L137) | <code>pub fn complete(</code> |
-| [crates/atelier-app/src/infrastructure/jira_transition.rs:193](../crates/atelier-app/src/infrastructure/jira_transition.rs#L193) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira_transition.rs:210](../crates/atelier-app/src/infrastructure/jira_transition.rs#L210) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_transition.rs:41](../crates/atelier-app/src/infrastructure/jira_transition.rs#L41) | <code>pub fn reserve(</code> |
+| [crates/atelier-app/src/infrastructure/jira_transition.rs:104](../crates/atelier-app/src/infrastructure/jira_transition.rs#L104) | <code>pub fn sending(</code> |
+| [crates/atelier-app/src/infrastructure/jira_transition.rs:139](../crates/atelier-app/src/infrastructure/jira_transition.rs#L139) | <code>pub fn complete(</code> |
+| [crates/atelier-app/src/infrastructure/jira_transition.rs:195](../crates/atelier-app/src/infrastructure/jira_transition.rs#L195) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_transition.rs:212](../crates/atelier-app/src/infrastructure/jira_transition.rs#L212) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:1](../crates/atelier-app/src/infrastructure/launch_detection.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:2](../crates/atelier-app/src/infrastructure/launch_detection.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:3](../crates/atelier-app/src/infrastructure/launch_detection.rs#L3) | <code>use atelier_core::{</code> |
@@ -1593,6 +1593,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/jira-refresh.rs:11](../crates/atelier-app/tests/jira-refresh.rs#L11) | <code>use serde_json::json;</code> |
 | [crates/atelier-app/tests/jira-refresh.rs:57](../crates/atelier-app/tests/jira-refresh.rs#L57) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/jira-refresh.rs:185](../crates/atelier-app/tests/jira-refresh.rs#L185) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:244](../crates/atelier-app/tests/jira-refresh.rs#L244) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/jira-storage.rs:1](../crates/atelier-app/tests/jira-storage.rs#L1) | <code>use atelier_app::infrastructure::{database::Database, jira, settings, store::Documents};</code> |
 | [crates/atelier-app/tests/jira-storage.rs:2](../crates/atelier-app/tests/jira-storage.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/jira-storage.rs:19](../crates/atelier-app/tests/jira-storage.rs#L19) | <code>#[tokio::test]</code> |
@@ -1785,6 +1786,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/jira.rs:180](../crates/atelier-core/src/application/jira.rs#L180) | <code>pub fn unresolved(fields: &amp;crate::document::Document) -&gt; Result&lt;bool, serde_json::Error&gt; {</code> |
 | [crates/atelier-core/src/application/jira.rs:181](../crates/atelier-core/src/application/jira.rs#L181) | <code>use crate::contracts::{JiraTransitionIntent, JiraTransitionState};</code> |
 | [crates/atelier-core/src/application/jira.rs:197](../crates/atelier-core/src/application/jira.rs#L197) | <code>pub fn linked_issue(card: &amp;crate::contracts::Card, base: &amp;str) -&gt; Result&lt;String, JiraFailure&gt; {</code> |
+| [crates/atelier-core/src/application/jira.rs:228](../crates/atelier-core/src/application/jira.rs#L228) | <code>pub fn card_snapshot(card: &amp;crate::contracts::Card) -&gt; crate::contracts::Card {</code> |
 | [crates/atelier-core/src/application/projects.rs:1](../crates/atelier-core/src/application/projects.rs#L1) | <code>use super::task_creation::{CreationContext, Result, text};</code> |
 | [crates/atelier-core/src/application/projects.rs:2](../crates/atelier-core/src/application/projects.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/projects.rs:8](../crates/atelier-core/src/application/projects.rs#L8) | <code>pub enum ProjectFailure {</code> |

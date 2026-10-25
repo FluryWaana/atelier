@@ -31,7 +31,9 @@ pub fn snapshot(store: &Store<'_>, id: &str, revision: u64) -> Result<(Card, Str
 }
 pub fn revalidate(store: &Store<'_>, expected: &Card, revision: u64) -> Result<()> {
     let (card, _) = snapshot(store, &expected.id, revision)?;
-    if serde_json::to_value(card)? != serde_json::to_value(expected)? {
+    if serde_json::to_value(jira::card_snapshot(&card))?
+        != serde_json::to_value(jira::card_snapshot(expected))?
+    {
         return Err(conflict());
     }
     Ok(())

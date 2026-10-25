@@ -240,3 +240,51 @@ async fn failing_review_invalidation_rolls_back_the_card_preview_and_review_toge
         .unwrap();
     database.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn full_length_card_text_does_not_resend_the_nested_read_cache() {
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database
+        .call(|store| {
+            let mut card = seed(store)?;
+            card.fields.set("description", &"d".repeat(20_000))?;
+            card.fields.set("instructions", &"i".repeat(20_000))?;
+            card.fields.set(
+                "checklist",
+                &vec![json!({"text":"c".repeat(500),"done":true}); 20],
+            )?;
+            store.put(Documents::Cards, &card)?;
+            workflow::reserve(
+                store,
+                &JiraRefreshRequest {
+                    revision: 1,
+                    expected: card,
+                },
+                "large",
+            )?;
+            let mut remote = detail();
+            remote.description = "r".repeat(20_000);
+            let preview = workflow::ready(store, "card", "large", remote)?;
+            let snapshot = atelier_core::application::jira::card_snapshot(&preview);
+            let body = JiraRefreshApply {
+                revision: 1,
+                expected: snapshot,
+                preview_id: "large".into(),
+            };
+            assert!(serde_json::to_string(&preview)?.encode_utf16().count() > 100_000);
+            assert!(serde_json::to_string(&body)?.encode_utf16().count() < 100_000);
+            let applied = workflow::apply(store, &body)?;
+            assert_eq!(
+                applied.fields.get::<String>("description")?.unwrap().len(),
+                20_000
+            );
+            assert_eq!(
+                applied.fields.get::<String>("instructions")?.unwrap().len(),
+                20_000
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+}

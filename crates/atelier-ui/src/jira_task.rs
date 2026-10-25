@@ -150,7 +150,7 @@ pub fn JiraTask(
         };
         let body = serde_json::to_value(JiraTransitionRequest {
             revision: options.connection_revision,
-            expected,
+            expected: atelier_core::application::jira::card_snapshot(&expected),
             from: options.current,
             transition,
         })
@@ -223,7 +223,7 @@ pub fn JiraTask(
         };
         let body = serde_json::to_value(JiraReconciliation {
             revision: revision(),
-            expected,
+            expected: atelier_core::application::jira::card_snapshot(&expected),
             dismiss: dismiss_operation,
         })
         .expect("Jira reconciliation serialization");

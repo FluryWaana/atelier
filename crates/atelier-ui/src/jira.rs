@@ -256,7 +256,10 @@ pub fn JiraSettings(
             revision: value.connection_revision,
             issue_id: value.issue.id,
             project_id: import_project.get_untracked(),
-            attach_to: attach_to.get_untracked(),
+            attach_to: attach_to
+                .get_untracked()
+                .as_ref()
+                .map(atelier_core::application::jira::card_snapshot),
         })
         .expect("Jira import serialization");
         pending.set(true);

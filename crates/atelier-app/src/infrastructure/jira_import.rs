@@ -41,7 +41,9 @@ fn target(
     } else {
         false
     };
-    if (!already_linked && serde_json::to_value(&card)? != serde_json::to_value(expected)?)
+    if (!already_linked
+        && serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
+            != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?)
         || card.fields.truthy("archived")?
     {
         return Err(conflict());

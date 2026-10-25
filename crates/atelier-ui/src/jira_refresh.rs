@@ -82,7 +82,7 @@ pub fn JiraRefresh(
         };
         let body = serde_json::to_value(JiraRefreshRequest {
             revision: revision(),
-            expected,
+            expected: atelier_core::application::jira::card_snapshot(&expected),
         })
         .expect("Jira refresh serialization");
         pending.set(true);
@@ -137,7 +137,7 @@ pub fn JiraRefresh(
         }
         let body = serde_json::to_value(JiraRefreshApply {
             revision: revision(),
-            expected,
+            expected: atelier_core::application::jira::card_snapshot(&expected),
             preview_id: preview.id,
         })
         .expect("Jira refresh apply serialization");
