@@ -3,7 +3,9 @@ use crate::infrastructure::{
     forge, forge_association, git_push as workflow, git_transport::HttpsAuthentication,
     store::Documents,
 };
-use atelier_core::contracts::{Card, ForgeWriteState, GitPushIntent, GitPushRequest, PullRequest};
+use atelier_core::contracts::{
+    Card, ForgePublicationRequest, ForgeWriteState, GitPushIntent, GitPushRequest, PullRequest,
+};
 use axum::{
     extract::{Path, Request, State},
     http::StatusCode,
@@ -77,20 +79,45 @@ pub(super) async fn push(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    execute(state, id, request, false).await
+    request_input(state, id, request, false).await
 }
 pub(super) async fn reconcile(
     State(state): State<Shared>,
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    execute(state, id, request, true).await
+    request_input(state, id, request, true).await
 }
-async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
+pub(super) async fn publication_branch(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let publication: ForgePublicationRequest = match super::jira_transitions::input(request).await {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    let input = GitPushRequest {
+        expected: publication.expected.clone(),
+        revision: publication.revision,
+        confirmed: publication.confirmed,
+    };
+    execute(state, id, input, false, Some(publication)).await
+}
+async fn request_input(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
     let input: GitPushRequest = match super::jira_transitions::input(request).await {
         Ok(input) => input,
         Err(response) => return response,
     };
+    execute(state, id, input, reconcile, None).await
+}
+async fn execute(
+    state: Shared,
+    id: String,
+    input: GitPushRequest,
+    reconcile: bool,
+    publication: Option<ForgePublicationRequest>,
+) -> Response {
     if id != input.expected.id || !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
@@ -108,6 +135,13 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     let card = state
         .database
         .call(move |store| {
+            if let Some(publication) = publication {
+                return crate::infrastructure::forge_publication::reserve_branch(
+                    store,
+                    &publication,
+                    &operation,
+                );
+            }
             if !reconcile {
                 return workflow::reserve(store, &requested, &operation);
             }
@@ -127,8 +161,8 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
                 .filter(|intent| intent.state == ForgeWriteState::Uncertain)
                 .ok_or("Aucun push incertain à vérifier.")?;
             let configuration =
-                forge::configuration(store, intent.preview.pull_request.kind, requested.revision)?;
-            if configuration.base != intent.preview.pull_request.base_url {
+                forge::configuration(store, intent.preview.configuration.kind, requested.revision)?;
+            if configuration.base != intent.preview.configuration.base {
                 return Err("Reconnecte le site de forge du push incertain.".into());
             }
             Ok(card)
@@ -152,7 +186,7 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     let work = async {
         let vault = state.vault.clone();
         let revision = input.revision;
-        let kind = intent.preview.pull_request.kind;
+        let kind = intent.preview.configuration.kind;
         let (configuration, token) = state
             .database
             .call(move |store| {
@@ -163,7 +197,7 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
             .await?;
         let authentication = HttpsAuthentication::new(
             configuration.clone(),
-            intent.preview.pull_request.repository.clone(),
+            intent.preview.repository.clone(),
             token,
         )?;
         if !reconcile {
@@ -187,7 +221,7 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
         let observed = authentication
             .remote_head(
                 &intent.preview.origin,
-                &format!("refs/heads/{}", intent.preview.pull_request.source_branch),
+                &format!("refs/heads/{}", intent.preview.worktree.branch),
             )
             .await?;
         let card_id = id.clone();

@@ -78,7 +78,7 @@ pub async fn preview(
         .git(&["merge-base", "--is-ancestor", &previous, &commit])
         .await
         .map_err(|_| "Push refusé : récupère et intègre d’abord la branche distante.")?;
-    let authentication = HttpsAuthentication::new(configuration, linked.repository, token)?;
+    let authentication = HttpsAuthentication::new(configuration.clone(), linked.repository, token)?;
     let origin = authentication.origin(&origin(&repository).await?)?;
     if authentication
         .remote_head(&origin, &format!("refs/heads/{}", remote.source_branch))
@@ -95,11 +95,14 @@ pub async fn preview(
         return Err("HEAD a changé pendant l’aperçu du push.".into());
     }
     Ok(GitPushPreview {
+        configuration,
+        revision: remote.revision,
+        repository: remote.repository.clone(),
         worktree,
-        pull_request: remote,
+        pull_request: Some(remote),
         origin,
         commit,
-        previous,
+        previous: Some(previous),
         local_changes,
     })
 }
@@ -121,23 +124,44 @@ pub fn save_preview(
     })
 }
 pub fn reserve(store: &Store<'_>, input: &GitPushRequest, id: &str) -> Result<Card> {
+    let preview = input
+        .expected
+        .fields
+        .get::<GitPushPreview>("gitPushPreview")?
+        .ok_or("Prépare un aperçu avant de pousser.")?;
+    reserve_preview(store, input, id, preview)
+}
+pub(super) fn reserve_preview(
+    store: &Store<'_>,
+    input: &GitPushRequest,
+    id: &str,
+    preview: GitPushPreview,
+) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed || uuid::Uuid::parse_str(id).is_err() {
             return Err("Confirme le commit et la branche à pousser.".into());
         }
         let mut card = forge_association::snapshot(store, &input.expected)?;
-        let preview = card
-            .fields
-            .get::<GitPushPreview>("gitPushPreview")?
-            .ok_or("Prépare un aperçu avant de pousser.")?;
-        let configuration = forge::configuration(store, preview.pull_request.kind, input.revision)?;
-        if preview.pull_request.revision != input.revision
-            || preview.pull_request.base_url != configuration.base
+        let configuration =
+            forge::configuration(store, preview.configuration.kind, input.revision)?;
+        let linked = card.fields.get::<PullRequest>("pullRequest")?;
+        let link_matches = match (linked.as_ref(), preview.pull_request.as_ref()) {
+            (Some(linked), Some(expected)) => {
+                forge::same_pull_request(linked, expected)
+                    && expected.kind == preview.configuration.kind
+                    && expected.base_url == preview.configuration.base
+                    && expected.repository == preview.repository
+                    && expected.revision == preview.revision
+                    && expected.source_branch == preview.worktree.branch
+                    && expected.source_commit == preview.previous
+            }
+            (None, None) => true,
+            _ => false,
+        };
+        if preview.revision != input.revision
+            || preview.configuration.base != configuration.base
             || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
-            || !card
-                .fields
-                .get::<PullRequest>("pullRequest")?
-                .is_some_and(|linked| forge::same_pull_request(&linked, &preview.pull_request))
+            || !link_matches
         {
             return Err("L’aperçu du push est périmé. Prépare-le à nouveau.".into());
         }
@@ -166,14 +190,8 @@ pub async fn prepare(
         .get::<GitPushIntent>("gitPush")?
         .ok_or("Intention de push absente.")?;
     let preview = intent.preview;
-    let repository = forge_association::verify(
-        root,
-        roots,
-        card,
-        configuration,
-        &preview.pull_request.repository,
-    )
-    .await?;
+    let repository =
+        forge_association::verify(root, roots, card, configuration, &preview.repository).await?;
     if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
         || head(&repository).await? != preview.commit
         || authentication.origin(&origin(&repository).await?)? != preview.origin
@@ -184,16 +202,16 @@ pub async fn prepare(
         .prepare_push(
             &repository,
             &preview.origin,
-            &format!("refs/heads/{}", preview.pull_request.source_branch),
+            &format!("refs/heads/{}", preview.worktree.branch),
             &preview.commit,
-            &preview.previous,
+            preview.previous.as_deref(),
         )
         .await
 }
 pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
     store.transaction(|store| {
         let (mut card, mut intent) = active(store, &expected.id, id)?;
-        forge::require_revision(store, intent.preview.pull_request.revision)?;
+        forge::require_revision(store, intent.preview.revision)?;
         if intent.state != Phase::Preparing
             || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?
@@ -245,9 +263,9 @@ pub fn record(
     store.transaction(|store| {
         let (mut card, mut intent) = active(store, card_id, id)?;
         let configuration =
-            forge::configuration(store, intent.preview.pull_request.kind, revision)?;
+            forge::configuration(store, intent.preview.configuration.kind, revision)?;
         if !matches!(intent.state, Phase::Sending | Phase::Uncertain)
-            || configuration.base != intent.preview.pull_request.base_url
+            || configuration.base != intent.preview.configuration.base
         {
             return Err("L’intention de push a changé.".into());
         }
@@ -257,15 +275,31 @@ pub fn record(
             return Err("Commit distant invalide.".into());
         }
         intent.observed = Some(observed.clone());
-        intent.state = if reconciled && observed != intent.preview.previous {
-            // A delayed request with the old lease cannot replace this different remote value.
-            Phase::Reconciled
-        } else if observed == intent.preview.commit {
-            Phase::Confirmed
-        } else {
-            Phase::Uncertain
-        };
+        intent.state =
+            if reconciled && Some(observed.as_str()) != intent.preview.previous.as_deref() {
+                // A delayed request with the old lease cannot replace this different remote value.
+                Phase::Reconciled
+            } else if observed == intent.preview.commit {
+                Phase::Confirmed
+            } else {
+                Phase::Uncertain
+            };
         if matches!(intent.state, Phase::Confirmed | Phase::Reconciled) {
+            if intent.preview.pull_request.is_none()
+                && let Some(mut publication) = card
+                    .fields
+                    .get::<atelier_core::contracts::ForgePublicationPreview>(
+                    "forgePublicationPreview",
+                )?
+                && publication.configuration.kind == intent.preview.configuration.kind
+                && publication.configuration.base == intent.preview.configuration.base
+                && publication.repository == intent.preview.repository
+                && publication.worktree == intent.preview.worktree
+                && publication.source_commit == intent.preview.commit
+            {
+                publication.remote_source = Some(observed.clone());
+                card.fields.set("forgePublicationPreview", &publication)?;
+            }
             card.fields.set("gitPushEffect", &intent)?;
             card.fields.remove("gitPushPreview");
         }

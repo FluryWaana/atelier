@@ -614,11 +614,14 @@ pub struct GitPushRequest {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitPushPreview {
+    pub configuration: ForgeConfiguration,
+    pub revision: u64,
+    pub repository: String,
     pub worktree: Worktree,
-    pub pull_request: PullRequest,
+    pub pull_request: Option<PullRequest>,
     pub origin: String,
     pub commit: String,
-    pub previous: String,
+    pub previous: Option<String>,
     pub local_changes: bool,
 }
 #[derive(Clone, Deserialize, Serialize)]
@@ -650,6 +653,9 @@ pub struct ForgePublicationPreview {
     pub repository: String,
     pub worktree: Worktree,
     pub target: String,
+    pub origin: String,
+    pub remote_source: Option<String>,
+    pub local_changes: bool,
     pub source_commit: String,
     pub target_commit: String,
     pub title: String,

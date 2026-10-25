@@ -66,7 +66,7 @@ async fn durable_push_reservations_recover_without_replay_and_protect_backup_his
         let settings:Document=serde_json::from_str(&json!({"forgeRevision":1,"forgeConnections":{"github":{"kind":"github","base":"https://github.example.test"}}}).to_string())?;store.save_settings(&settings)?;
         let worktree=json!({"path":"synthetic/worktree","source":"synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"});
         let pr=json!({"revision":1,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic title","url":"https://github.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github.example.test","checkedAt":"2026-10-25T10:00:00Z"});
-        let card:Card=serde_json::from_str(&json!({"id":"task","title":"Human title","description":"Human text","repo":"synthetic/source","worktree":worktree,"pullRequest":pr,"gitPushPreview":{"worktree":worktree,"pullRequest":pr,"origin":"https://github.example.test/owner/repo.git","commit":"c".repeat(40),"previous":"a".repeat(40),"localChanges":true}}).to_string())?;
+        let card:Card=serde_json::from_str(&json!({"id":"task","title":"Human title","description":"Human text","repo":"synthetic/source","worktree":worktree,"pullRequest":pr,"gitPushPreview":{"configuration":{"kind":"github","base":"https://github.example.test"},"revision":1,"repository":"owner/repo","worktree":worktree,"pullRequest":pr,"origin":"https://github.example.test/owner/repo.git","commit":"c".repeat(40),"previous":"a".repeat(40),"localChanges":true}}).to_string())?;
         store.put(Documents::Cards,&card)?;
         let backups=BackupDirectory::open(&path)?;let old=backups.create(store)?;
         let mut input=GitPushRequest{expected:card,revision:1,confirmed:false};let id=uuid::Uuid::new_v4().to_string();
@@ -281,7 +281,7 @@ async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_l
     )
     .unwrap();
     let prepared = auth
-        .prepare_push(&source, &origin, "refs/heads/task", &second, &initial)
+        .prepare_push(&source, &origin, "refs/heads/task", &second, Some(&initial))
         .await
         .unwrap();
     assert_eq!(remote.writes.load(Ordering::SeqCst), 0);
@@ -324,7 +324,7 @@ async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_l
     )
     .await;
     let prepared = auth
-        .prepare_push(&source, &origin, "refs/heads/task", &second, &initial)
+        .prepare_push(&source, &origin, "refs/heads/task", &second, Some(&initial))
         .await
         .unwrap();
     remote.lose_response.store(true, Ordering::SeqCst);
@@ -340,10 +340,37 @@ async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_l
     git(&bare, &["update-ref", "refs/heads/task", &initial, &second]).await;
     remote.lose_response.store(false, Ordering::SeqCst);
     let prepared = auth
-        .prepare_push(&source, &origin, "refs/heads/task", &second, &initial)
+        .prepare_push(&source, &origin, "refs/heads/task", &second, Some(&initial))
         .await
         .unwrap();
     auth.push(prepared).await.unwrap();
+    assert!(
+        auth.remote_head_optional(&origin, "refs/heads/first")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let absent = auth
+        .prepare_push(&source, &origin, "refs/heads/first", &second, None)
+        .await
+        .unwrap();
+    git(&bare, &["update-ref", "refs/heads/first", &competing]).await;
+    assert!(auth.push(absent).await.is_err());
+    assert_eq!(
+        auth.remote_head(&origin, "refs/heads/first").await.unwrap(),
+        competing
+    );
+    // Delete only the competing disposable fixture ref, then exercise creation under an empty lease.
+    git(&bare, &["update-ref", "-d", "refs/heads/first", &competing]).await;
+    let absent = auth
+        .prepare_push(&source, &origin, "refs/heads/first", &second, None)
+        .await
+        .unwrap();
+    auth.push(absent).await.unwrap();
+    assert_eq!(
+        auth.remote_head(&origin, "refs/heads/first").await.unwrap(),
+        second
+    );
     assert_eq!(
         std::fs::read(source_path.join(".git/index")).unwrap(),
         index
@@ -366,7 +393,7 @@ async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_l
         "human untracked"
     );
     assert!(
-        auth.prepare_push(&source, &origin, "refs/heads/task", &initial, &second)
+        auth.prepare_push(&source, &origin, "refs/heads/task", &initial, Some(&second))
             .await
             .is_err()
     );

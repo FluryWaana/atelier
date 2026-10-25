@@ -112,10 +112,11 @@ pub fn ForgeTask(
     let writing = alive.clone();
     let change_draft = move |reconcile: bool| {
         if pending.get_untracked()
-            || publication_dirty.get_untracked()
             || loading.get_untracked()
-            || blocked.get_untracked()
-            || draft.get_untracked() != original.get_untracked()
+            || (!reconcile
+                && (publication_dirty.get_untracked()
+                    || blocked.get_untracked()
+                    || draft.get_untracked() != original.get_untracked()))
         {
             return;
         }
@@ -324,10 +325,10 @@ pub fn ForgeTask(
             <label><input id="confirm-forge-draft" type="checkbox" prop:checked=move||draft_key.get().is_some_and(|key|key==draft_ack.get()) on:change=move|event|draft_ack.set(if event_target_checked(&event){draft_key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Confirmer le passage de cette PR/MR prête pour review."}else{"Confirmer le passage de cette PR/MR en brouillon."})}</label>
             <button id="change-forge-draft" type="button" disabled=move||draft_key.get().is_none_or(|key|key!=draft_ack.get()) on:click=move|_|change_draft.with_value(|change|change(false))>{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Passer prête pour review"}else{"Passer en brouillon"})}</button>
         </fieldset>
-        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Écriture de forge incertaine. Relis l’état distant ; Atelier ne renverra pas la demande.")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"État demandé : brouillon."}else{"État demandé : prête pour review."})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||draft.get()!=original.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("Relire l’état brouillon distant")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button></div>
+        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Écriture de forge incertaine. Relis l’état distant ; Atelier ne renverra pas la demande.")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"État demandé : brouillon."}else{"État demandé : prête pour review."})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("Relire l’état brouillon distant")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button></div>
         <p class="error" id="forge-task-error" role="alert">{move||i18n.text(&error.get())}</p><p id="forge-task-notice" role="status">{move||i18n.text(&notice.get())}</p>
         <button type="button" hidden=move||!unresolved.get() disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
         <crate::git_push::GitPush card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()||publication_dirty.get()) archived />
-        <crate::forge_publication::ForgePublication card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()) dirty=publication_dirty archived on_linked=Callback::new(move|pr:PullRequest|{let next=(pr.kind,pr.repository,pr.number.to_string());original.set(next.clone());draft.set(next);approved.set(None);detach_ack.set(String::new());}) />
+        <crate::forge_publication::ForgePublication card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()) dirty=publication_dirty archived on_linked=Callback::new(move|pr:PullRequest|{if draft.get_untracked()==original.get_untracked(){let next=(pr.kind,pr.repository,pr.number.to_string());original.set(next.clone());draft.set(next);approved.set(None);detach_ack.set(String::new());}}) />
     </section>}
 }

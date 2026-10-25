@@ -1288,5 +1288,16 @@
   "Contenu de PR/MR invalide.": "Invalid PR/MR content.",
   "Contenu de PR/MR invalide ou confidentiel.": "Invalid or confidential PR/MR content.",
   "Identifiant de publication invalide.": "Invalid publication identifier.",
-  "Paramètres de requête invalides.": "Invalid request parameters."
+  "Paramètres de requête invalides.": "Invalid request parameters.",
+  "Branche absente": "Branch absent",
+  "Branche distante Git absente.": "Remote Git branch absent.",
+  "Pousse la branche confirmée puis actualise l’aperçu avant de créer la PR/MR.": "Push the confirmed branch, then refresh the preview before creating the PR/MR.",
+  "La branche est déjà à jour. Actualise l’aperçu de publication.": "The branch is already up to date. Refresh the publication preview.",
+  "HEAD a changé pendant l’aperçu de publication.": "HEAD changed during the publication preview.",
+  "Prépare les branches et le contenu. Si nécessaire, confirme d’abord le push de la branche, puis la création de la PR/MR. Aucun commit local ni fusion ne sera effectué.": "Preview the branches and content. If needed, confirm the branch push first, then PR/MR creation. No local commit or merge will be performed.",
+  "Des fichiers locaux ont changé. Ils ne font pas partie de cette publication.": "Local files changed. They are not included in this publication.",
+  "Le push écrit sur la forge et peut déclencher ses règles CI. Une branche absente sera créée seulement si elle est encore absente lors de l’envoi.": "Pushing writes to the forge and may trigger its CI rules. An absent branch is created only if it is still absent when sending.",
+  "Pousser la branche avant publication": "Push branch before publication",
+  "Branche distante relue. Confirme séparément la création de la PR/MR quand l’aperçu est à jour.": "Remote branch read again. Confirm PR/MR creation separately once the preview is current.",
+  "Seuls les commits déjà enregistrés seront envoyés à la branche de tâche vérifiée. Les fichiers modifiés et l’index sont conservés. Le push refuse toute perte de commit distant.": "Only existing commits will be sent to the verified task branch. Modified files and the index are preserved. The push refuses any loss of remote commits."
 }

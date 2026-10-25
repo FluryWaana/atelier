@@ -216,6 +216,13 @@ async fn publication_creation_records_one_attempt_and_reconciliation_requires_a_
                     state: WorktreeState::Ready,
                 },
                 target: "main".into(),
+                origin: match kind {
+                    ForgeKind::Github => format!("{address}/owner/repo.git"),
+                    ForgeKind::Gitlab => format!("{address}/prefix/group/repo.git"),
+                    ForgeKind::Azure => format!("{address}/org/project/_git/repo"),
+                },
+                remote_source: Some("a".repeat(40)),
+                local_changes: false,
                 source_commit: "a".repeat(40),
                 target_commit: "b".repeat(40),
                 title: if kind == ForgeKind::Gitlab {

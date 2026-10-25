@@ -70,7 +70,7 @@ pub struct PreparedPush {
     origin: String,
     reference: String,
     commit: String,
-    previous: String,
+    previous: Option<String>,
 }
 
 impl HttpsAuthentication {
@@ -309,6 +309,16 @@ impl HttpsAuthentication {
     }
     #[cfg(windows)]
     pub async fn remote_head(&self, origin: &str, reference: &str) -> Result<String> {
+        self.remote_head_optional(origin, reference)
+            .await?
+            .ok_or_else(|| "Branche distante Git absente.".into())
+    }
+    #[cfg(windows)]
+    pub async fn remote_head_optional(
+        &self,
+        origin: &str,
+        reference: &str,
+    ) -> Result<Option<String>> {
         atelier_core::application::worktrees::validate_reference(reference)?;
         if !reference.starts_with("refs/heads/") || reference.contains(':') {
             return Err("Branche distante Git invalide.".into());
@@ -321,13 +331,14 @@ impl HttpsAuthentication {
             let scope=self.configure_network(&mut command,home.path(),origin)?;
             command.args(["ls-remote","--refs","--exit-code","--",&scope,reference]);
             let output=super::process_tree::capture(&mut command,&[],std::time::Duration::from_secs(30),1024*1024).await.map_err(|_|"Lecture de branche HTTPS interrompue.")?;
+            if output.status.code()==Some(2){if !output.stdout.is_empty(){return Err("Réponse de branche Git ambiguë.".into());}return Ok(None);}
             if !output.status.success(){return Err("Branche HTTPS absente ou inaccessible. Aucun détail d’authentification n’est affiché.".into());}
             let text=String::from_utf8(output.stdout)?;
             let mut lines=text.lines();
             let (commit,actual)=lines.next().and_then(|line|line.split_once('\t')).ok_or("Réponse de branche Git invalide.")?;
             validate_commit(commit)?;
             if actual!=reference || lines.next().is_some(){return Err("Réponse de branche Git ambiguë.".into());}
-            Ok(commit.to_owned())
+            Ok(Some(commit.to_owned()))
         }.await;
         home.close()
             .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
@@ -340,12 +351,14 @@ impl HttpsAuthentication {
         origin: &str,
         reference: &str,
         commit: &str,
-        previous: &str,
+        previous: Option<&str>,
     ) -> Result<PreparedPush> {
         source.verify_root().await?;
         validate_commit(commit)?;
-        validate_commit(previous)?;
-        if commit == previous || commit.len() != previous.len() {
+        if let Some(previous) = previous {
+            validate_commit(previous)?;
+        }
+        if previous.is_some_and(|previous| commit == previous || commit.len() != previous.len()) {
             return Err("Aucun nouveau commit compatible à pousser.".into());
         }
         source.git(&["check-ref-format", reference]).await?;
@@ -436,6 +449,7 @@ impl HttpsAuthentication {
         }
         let imported = home.path().to_owned();
         tokio::task::spawn_blocking(move || check_download(&imported, DOWNLOAD_LIMIT)).await??;
+        if let Some(previous)=previous {
         let mut ancestry = git_command().await?;
         Self::isolate(&mut ancestry, home.path());
         ancestry.args([
@@ -456,7 +470,8 @@ impl HttpsAuthentication {
         if !output.status.success() {
             return Err("Push refusé : la branche distante ne doit perdre aucun commit. Récupère et intègre ses changements.".into());
         }
-        if self.remote_head(&origin, reference).await? != previous {
+        }
+        if self.remote_head_optional(&origin, reference).await?.as_deref() != previous {
             return Err("La branche distante a changé. Recharge l’aperçu du push.".into());
         }
         Ok::<(),crate::Error>(())
@@ -471,7 +486,7 @@ impl HttpsAuthentication {
             origin,
             reference: reference.into(),
             commit: commit.into(),
-            previous: previous.into(),
+            previous: previous.map(str::to_owned),
         })
     }
     #[cfg(windows)]
@@ -486,7 +501,7 @@ impl HttpsAuthentication {
         let result=async {
             let mut command=git_command().await?;
             let scope=self.configure_network(&mut command,home.path(),&origin)?;
-            command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&format!("--force-with-lease={reference}:{previous}"),"--",&scope,&format!("{commit}:{reference}")]);
+            command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&format!("--force-with-lease={reference}:{}",previous.as_deref().unwrap_or("")),"--",&scope,&format!("{commit}:{reference}")]);
             let output=super::process_tree::capture_guarded(&mut command,&[],std::time::Duration::from_secs(120),4*1024*1024,download_guard(home.path().to_owned())).await.map_err(|_|"Push HTTPS incertain. Relis la branche distante avant toute nouvelle tentative.")?;
             if !output.status.success(){return Err("Push HTTPS refusé ou incertain. Relis la branche distante avant toute nouvelle tentative.".into());}
             if self.remote_head(&origin,&reference).await?!=commit {return Err("Push HTTPS incertain. Relis la branche distante avant toute nouvelle tentative.".into());}

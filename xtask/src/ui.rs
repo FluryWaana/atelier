@@ -612,6 +612,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             store.put(Documents::Runs,&json!({"id":"usage-fixture","cardId":"jira-refresh","agentType":"codex","agent":"synthetic-usage-profile","model":"synthetic-usage-model","status":"completed","startedAt":"2026-10-25T10:00:00Z","usage":{"inputTokens":11,"cachedInputTokens":null,"outputTokens":2}}))?;
             // Report fixture only: no agent execution or remote identity proof is implied.
             store.put(Documents::Cards,&json!({"id":"review-report","title":"Synthetic review report","status":"todo","repo":"","checklist":[{"text":"Synthetic review criterion","done":false}]}))?;
+            // Preview fixture only; no native Git operation or remote creation is implied.
+            store.put(Documents::Cards,&json!({"id":"publication-branch","title":"Synthetic branch task","description":"Human branch content","status":"todo","repo":"","forgePublicationPreview":{"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"},"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":true,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic first publication","body":"Keep first publication draft","draft":true}}))?;
             store.put(Documents::Runs,&json!({"id":"review-report-run","cardId":"review-report","kind":"pr-review","purpose":"review","status":"completed","startedAt":"2026-10-25T10:00:00Z","reviewStaleReason":atelier_app::infrastructure::reviews::UNCHECKED,"reviewContext":{"requirements":{"criteria":["Synthetic review criterion"]},"worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"},"kind":"github","revision":0,"repository":"owner/repo","number":7,"source":"b".repeat(40),"target":"a".repeat(40),"base":"a".repeat(40)},"review":{"summary":"Synthetic review limits: browser and service not executed","findings":[{"priority":"P2","title":"Synthetic finding <script>ignored</script>","file":"src/lib.rs","line":12,"problem":"Synthetic evidence","suggestion":"Synthetic correction"}],"criteria":[{"index":0,"status":"unverifiable","evidence":"Synthetic UI not executed"}]}}))?;
             store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo}))?;
             store.put(Documents::Cards,&json!({"id":"brainstorm-session","title":"Synthetic brainstorm idea","description":"Keep original idea","instructions":"","mode":"analyze","agent":"codex","status":"todo","brainstormSession":true,"repo":brainstorm_repo}))?;
@@ -819,6 +821,42 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-repository')?.value === 'owner/repo' && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
     click(client, "#cancel-publication").await?;
     wait_dom(client,"return document.querySelector('#publication-repository')?.value === '' && document.querySelector('#task-forge-kind')?.disabled === false;",vec![]).await?;
+    client
+        .goto(&format!("{address}/?task=publication-branch"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#confirm-publication-push')?.disabled === false && document.querySelector('#create-publication')?.offsetParent === null && document.querySelector('#publication-title')?.value === 'Synthetic first publication';",vec![]).await?;
+    click(client, "#confirm-publication-push").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#push-publication-branch')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#publication-title"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#publication-title"))
+        .await?
+        .send_keys("Changed publication")
+        .await?;
+    client
+        .find(Locator::Css("#publication-title"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#publication-title"))
+        .await?
+        .send_keys("Synthetic first publication")
+        .await?;
+    wait_dom(client,"return document.querySelector('#confirm-publication-push')?.checked === false && document.querySelector('#push-publication-branch')?.disabled === true;",vec![]).await?;
+    click(client, "#confirm-publication-push").await?;
+    click(client, "#push-publication-branch").await?;
+    // No forge connection exists, so this refuses before Git or network I/O.
+    wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-body')?.value === 'Keep first publication draft' && document.querySelector('#edit-description')?.value === 'Human branch content';",vec![]).await?;
     Ok(())
 }
 

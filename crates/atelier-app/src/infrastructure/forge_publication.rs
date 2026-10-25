@@ -102,14 +102,19 @@ pub async fn preview(
         input.repository.clone(),
         token.clone(),
     )?;
-    let source_commit = authentication
-        .remote_head(&origin, &format!("refs/heads/{}", worktree.branch))
+    let origin = authentication.origin(&origin)?;
+    let remote_source = authentication
+        .remote_head_optional(&origin, &format!("refs/heads/{}", worktree.branch))
         .await?;
-    if source_commit != head {
-        return Err(
-            "Pousse d’abord le commit HEAD sur la branche de tâche avant de créer la PR/MR.".into(),
-        );
+    if let Some(previous) = remote_source.as_deref()
+        && previous != head
+    {
+        directory
+            .git(&["merge-base", "--is-ancestor", previous, &head])
+            .await
+            .map_err(|_| "Push refusé : récupère et intègre d’abord la branche distante.")?;
     }
+    let source_commit = head;
     let target_commit = authentication
         .remote_head(&origin, &format!("refs/heads/{}", input.target))
         .await?;
@@ -122,6 +127,12 @@ pub async fn preview(
         repository: input.repository.clone(),
         worktree,
         target: input.target.clone(),
+        origin,
+        remote_source,
+        local_changes: !directory
+            .without_programs(&["status", "--porcelain=v1", "--untracked-files=all"])
+            .await?
+            .is_empty(),
         source_commit,
         target_commit,
         title,
@@ -132,6 +143,16 @@ pub async fn preview(
     forge::Forge::new(configuration, token, input.revision)?
         .prepare_publication(&preview, &uuid::Uuid::new_v4().to_string())
         .await?;
+    if String::from_utf8(
+        directory
+            .git(&["rev-parse", "--verify", "HEAD^{commit}"])
+            .await?,
+    )?
+    .trim()
+        != preview.source_commit
+    {
+        return Err("HEAD a changé pendant l’aperçu de publication.".into());
+    }
     Ok(preview)
 }
 pub fn save_preview(
@@ -154,28 +175,13 @@ pub fn save_preview(
 }
 pub fn reserve(store: &Store<'_>, input: &ForgePublicationRequest, id: &str) -> Result<Card> {
     store.transaction(|store| {
-        if !input.confirmed {
-            return Err("Confirme les branches et le contenu de la PR/MR à créer.".into());
-        }
         forge::publication_marker(id)?;
-        let mut card = forge_association::snapshot(store, &input.expected)?;
-        let preview = card
-            .fields
-            .get::<ForgePublicationPreview>("forgePublicationPreview")?
-            .ok_or("Prépare un aperçu avant de créer la PR/MR.")?;
-        let configuration = forge::configuration(store, input.kind, input.revision)?;
-        if preview.configuration.kind != input.kind
-            || preview.configuration.base != configuration.base
-            || preview.revision != input.revision
-            || preview.repository != input.repository
-            || preview.target != input.target
-            || preview.title != validate(input)?
-            || preview.body != input.body
-            || preview.draft != input.draft
-            || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
-            || card.fields.raw("pullRequest").is_some()
-        {
-            return Err("L’aperçu de publication est périmé. Prépare-le à nouveau.".into());
+        let (mut card, preview) = checked_preview(store, input)?;
+        if preview.remote_source.as_deref() != Some(preview.source_commit.as_str()) {
+            return Err(
+                "Pousse la branche confirmée puis actualise l’aperçu avant de créer la PR/MR."
+                    .into(),
+            );
         }
         card.fields.set(
             "forgePublication",
@@ -191,6 +197,65 @@ pub fn reserve(store: &Store<'_>, input: &ForgePublicationRequest, id: &str) -> 
         Ok(card)
     })
 }
+fn checked_preview(
+    store: &Store<'_>,
+    input: &ForgePublicationRequest,
+) -> Result<(Card, ForgePublicationPreview)> {
+    if !input.confirmed {
+        return Err("Confirme les branches et le contenu de la PR/MR à créer.".into());
+    }
+    let card = forge_association::snapshot(store, &input.expected)?;
+    let preview = card
+        .fields
+        .get::<ForgePublicationPreview>("forgePublicationPreview")?
+        .ok_or("Prépare un aperçu avant de créer la PR/MR.")?;
+    let configuration = forge::configuration(store, input.kind, input.revision)?;
+    if preview.configuration.kind != input.kind
+        || preview.configuration.base != configuration.base
+        || preview.revision != input.revision
+        || preview.repository != input.repository
+        || preview.target != input.target
+        || preview.title != validate(input)?
+        || preview.body != input.body
+        || preview.draft != input.draft
+        || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
+        || card.fields.raw("pullRequest").is_some()
+    {
+        return Err("L’aperçu de publication est périmé. Prépare-le à nouveau.".into());
+    }
+    Ok((card, preview))
+}
+pub fn reserve_branch(
+    store: &Store<'_>,
+    input: &ForgePublicationRequest,
+    id: &str,
+) -> Result<Card> {
+    let (card, preview) = checked_preview(store, input)?;
+    if preview.remote_source.as_deref() == Some(preview.source_commit.as_str()) {
+        return Err("La branche est déjà à jour. Actualise l’aperçu de publication.".into());
+    }
+    let push = atelier_core::contracts::GitPushPreview {
+        configuration: preview.configuration,
+        revision: preview.revision,
+        repository: preview.repository,
+        worktree: preview.worktree,
+        pull_request: None,
+        origin: preview.origin,
+        commit: preview.source_commit,
+        previous: preview.remote_source,
+        local_changes: preview.local_changes,
+    };
+    super::git_push::reserve_preview(
+        store,
+        &atelier_core::contracts::GitPushRequest {
+            expected: card,
+            revision: input.revision,
+            confirmed: input.confirmed,
+        },
+        id,
+        push,
+    )
+}
 pub async fn prepare(
     root: &Dir,
     roots: &[PathBuf],
@@ -203,6 +268,11 @@ pub async fn prepare(
         .get::<ForgePublicationIntent>("forgePublication")?
         .ok_or("Intention de publication absente.")?;
     let preview = intent.preview;
+    if preview.remote_source.as_deref() != Some(preview.source_commit.as_str()) {
+        return Err(
+            "Pousse la branche confirmée puis actualise l’aperçu avant de créer la PR/MR.".into(),
+        );
+    }
     let directory =
         forge_association::verify(root, roots, card, configuration, &preview.repository).await?;
     if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree) {

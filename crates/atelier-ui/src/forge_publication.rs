@@ -94,6 +94,12 @@ pub fn ForgePublication(
     let own_dirty = Memo::new(move |_| draft.get() != original.get());
     Effect::new(move |_| dirty.set(own_dirty.get()));
     let approved = RwSignal::new(String::new());
+    let push_approved = RwSignal::new(String::new());
+    let needs_push = Memo::new(move |_| {
+        preview.get().is_some_and(|preview| {
+            preview.remote_source.as_deref() != Some(preview.source_commit.as_str())
+        })
+    });
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let matches = Memo::new(move |_| {
@@ -108,6 +114,14 @@ pub fn ForgePublication(
         let fields = draft.get();
         Some(serde_json::json!({"card":atelier_core::application::jira::card_snapshot(&card.get()?),"revision":configuration.get()?.revision,"kind":fields.kind,"repository":fields.repository,"target":fields.target,"title":fields.title,"body":fields.body,"draft":fields.draft}).to_string())
     });
+    Effect::new(move |previous: Option<Option<String>>| {
+        let current = key.get();
+        if previous.as_ref() != Some(&current) {
+            approved.set(String::new());
+            push_approved.set(String::new());
+        }
+        current
+    });
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || {
@@ -115,7 +129,8 @@ pub fn ForgePublication(
         let _ = dirty.try_update(|dirty| *dirty = false);
     });
     let execute = StoredValue::new_local(move |action: &'static str| {
-        if pending.get_untracked() || blocked.get_untracked() {
+        if pending.get_untracked() || (action != "publication-reconcile" && blocked.get_untracked())
+        {
             return;
         }
         if action == "publication-reconcile" {
@@ -126,8 +141,16 @@ pub fn ForgePublication(
             return;
         }
         if action == "publication"
-            && (!matches.get_untracked()
+            && (needs_push.get_untracked()
+                || !matches.get_untracked()
                 || key.get_untracked().as_deref() != Some(approved.get_untracked().as_str()))
+        {
+            return;
+        }
+        if action == "publication-push"
+            && (!needs_push.get_untracked()
+                || !matches.get_untracked()
+                || key.get_untracked().as_deref() != Some(push_approved.get_untracked().as_str()))
         {
             return;
         }
@@ -162,6 +185,7 @@ pub fn ForgePublication(
         error.set(String::new());
         notice.set(String::new());
         approved.set(String::new());
+        push_approved.set(String::new());
         let alive = alive.clone();
         spawn_local(async move {
             let result = async {
@@ -175,20 +199,29 @@ pub fn ForgePublication(
             if alive.get() {
                 match result {
                     Ok(card) => {
-                        if let Ok(Some(preview)) = card
-                            .fields
-                            .get::<ForgePublicationPreview>("forgePublicationPreview")
+                        if action == "publication-preview"
+                            && let Ok(Some(preview)) = card
+                                .fields
+                                .get::<ForgePublicationPreview>("forgePublicationPreview")
                         {
                             draft.set(Draft::from(preview));
                         }
                         let unresolved = atelier_core::application::forge::unresolved(&card.fields)
                             .unwrap_or(true);
                         if let Ok(Some(pr)) = card.fields.get::<PullRequest>("pullRequest") {
-                            original.set(draft.get_untracked());
+                            let published = card
+                                .fields
+                                .get::<ForgePublicationIntent>("forgePublication")
+                                .ok()
+                                .flatten()
+                                .map(|intent| Draft::from(intent.preview));
+                            if published.as_ref() == Some(&draft.get_untracked()) {
+                                original.set(draft.get_untracked());
+                            }
                             on_linked.run(pr);
                         }
                         replace_card(board.cards, card);
-                        notice.set(if action=="publication-preview"{"Aperçu préparé. Aucune PR/MR créée."}else if unresolved{"Publication retrouvée mais association impossible. L’incertitude est conservée."}else{"PR/MR retrouvée, vérifiée et associée. Aucun renvoi de création."}.into());
+                        notice.set(if action=="publication-preview"{"Aperçu préparé. Aucune PR/MR créée."}else if action=="publication-push"{if unresolved{"Push incertain. Relis la branche distante ; aucun renvoi automatique."}else{"Branche distante relue. Confirme séparément la création de la PR/MR quand l’aperçu est à jour."}}else if unresolved{"Publication retrouvée mais association impossible. L’incertitude est conservée."}else{"PR/MR retrouvée, vérifiée et associée. Aucun renvoi de création."}.into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -200,7 +233,7 @@ pub fn ForgePublication(
         });
     });
     view! {<section class="task-files" hidden=move||linked.get()&&!own_dirty.get()&&!uncertain.get() aria-labelledby="forge-publication-heading" aria-busy=move||pending.get().to_string()><h4 id="forge-publication-heading">{move||i18n.text("Créer une PR/MR")}</h4>
-        <p class="field-help">{move||i18n.text("La branche de tâche et son commit doivent déjà être présents sur la forge. Prépare puis confirme le contenu ; aucun commit local ni fusion ne sera effectué.")}</p>
+        <p class="field-help">{move||i18n.text("Prépare les branches et le contenu. Si nécessaire, confirme d’abord le push de la branche, puis la création de la PR/MR. Aucun commit local ni fusion ne sera effectué.")}</p>
         <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();execute.with_value(|execute|execute("publication-preview"));}><fieldset disabled=move||pending.get()||blocked.get()||archived||linked.get()||unresolved.get()||configuration.with(|value|value.is_none())>
             <label for="publication-kind">{move||i18n.text("Forge")}</label><select id="publication-kind" prop:value=move||draft.get().kind.name() on:change=move|event|draft.update(|draft|draft.kind=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github})><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
             <label for="publication-repository">{move||i18n.text("Dépôt de la PR/MR")}</label><input id="publication-repository" required maxlength="1000" prop:value=move||draft.get().repository on:input=move|event|draft.update(|draft|draft.repository=event_target_value(&event)) />
@@ -210,9 +243,10 @@ pub fn ForgePublication(
             <label><input id="publication-draft" type="checkbox" prop:checked=move||draft.get().draft on:change=move|event|draft.update(|draft|draft.draft=event_target_checked(&event)) />{move||i18n.text("Créer en brouillon")}</label>
             <button id="preview-publication" type="submit">{move||i18n.text("Préparer l’aperçu de publication")}</button>
         </fieldset></form>
-        {move||preview.get().map(|preview|view!{<p>{preview.worktree.branch}" → "{preview.target}</p><p><code>{preview.source_commit}</code>" / "<code>{preview.target_commit}</code></p>})}
-        <fieldset hidden=move||!matches.get()||unresolved.get()||linked.get() disabled=move||pending.get()||blocked.get()||archived><p>{move||i18n.text("La création écrit sur la forge et peut déclencher ses notifications ou règles CI.")}</p><label><input id="confirm-publication" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("Confirmer la création de cette PR/MR avec ces branches et ce contenu.")}</label><button id="create-publication" type="button" disabled=move||key.get().is_none_or(|key|key!=approved.get()) on:click=move|_|execute.with_value(|execute|execute("publication"))>{move||i18n.text("Créer la PR/MR confirmée")}</button></fieldset>
-        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Publication incertaine. Recherche la PR/MR existante ; aucune nouvelle création automatique.")}</p><button id="reconcile-publication" type="button" disabled=move||pending.get()||blocked.get() on:click=move|_|execute.with_value(|execute|execute("publication-reconcile"))>{move||i18n.text("Rechercher la publication existante")}</button></div>
+        {move||preview.get().map(|preview|view!{<p>{preview.worktree.branch}" → "{preview.target}</p><p><code>{preview.source_commit}</code>" / "<code>{preview.target_commit}</code></p><p>{move||i18n.text("Commit distant attendu")}" : "<code>{preview.remote_source.unwrap_or_else(||i18n.text("Branche absente"))}</code></p><p hidden=!preview.local_changes>{move||i18n.text("Des fichiers locaux ont changé. Ils ne font pas partie de cette publication.")}</p>})}
+        <fieldset hidden=move||!matches.get()||!needs_push.get()||unresolved.get()||linked.get() disabled=move||pending.get()||blocked.get()||archived><p>{move||i18n.text("Le push écrit sur la forge et peut déclencher ses règles CI. Une branche absente sera créée seulement si elle est encore absente lors de l’envoi.")}</p><label><input id="confirm-publication-push" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==push_approved.get()) on:change=move|event|push_approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("Confirmer l’envoi de ce commit à cette branche distante.")}</label><button id="push-publication-branch" type="button" disabled=move||key.get().is_none_or(|key|key!=push_approved.get()) on:click=move|_|execute.with_value(|execute|execute("publication-push"))>{move||i18n.text("Pousser la branche avant publication")}</button></fieldset>
+        <fieldset hidden=move||!matches.get()||needs_push.get()||unresolved.get()||linked.get() disabled=move||pending.get()||blocked.get()||archived><p>{move||i18n.text("La création écrit sur la forge et peut déclencher ses notifications ou règles CI.")}</p><label><input id="confirm-publication" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("Confirmer la création de cette PR/MR avec ces branches et ce contenu.")}</label><button id="create-publication" type="button" disabled=move||key.get().is_none_or(|key|key!=approved.get()) on:click=move|_|execute.with_value(|execute|execute("publication"))>{move||i18n.text("Créer la PR/MR confirmée")}</button></fieldset>
+        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Publication incertaine. Recherche la PR/MR existante ; aucune nouvelle création automatique.")}</p><button id="reconcile-publication" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute("publication-reconcile"))>{move||i18n.text("Rechercher la publication existante")}</button></div>
         <button id="cancel-publication" type="button" hidden=move||!own_dirty.get() disabled=move||pending.get()||unresolved.get() on:click=move|_|{draft.set(original.get_untracked());approved.set(String::new());}>{move||i18n.text("Annuler la préparation")}</button>
         <p id="publication-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="publication-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}

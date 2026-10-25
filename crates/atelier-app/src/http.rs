@@ -171,6 +171,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/forge/publication-preview")
             || path.ends_with("/forge/publication")
             || path.ends_with("/forge/publication-reconcile")
+            || path.ends_with("/forge/publication-push")
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -465,6 +466,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route(
+            "/api/cards/{id}/forge/publication-push",
+            post(git_push::publication_branch),
+        )
         .route(
             "/api/cards/{id}/forge/publication-preview",
             post(forge_publication::preview),

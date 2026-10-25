@@ -897,9 +897,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http.rs:59](../crates/atelier-app/src/http.rs#L59) | <code>mod time_tracking;</code> |
 | [crates/atelier-app/src/http.rs:60](../crates/atelier-app/src/http.rs#L60) | <code>mod worktrees;</code> |
 | [crates/atelier-app/src/http.rs:62](../crates/atelier-app/src/http.rs#L62) | <code>pub const CSP: &amp;str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";</code> |
-| [crates/atelier-app/src/http.rs:277](../crates/atelier-app/src/http.rs#L277) | <code>use crate::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/src/http.rs:352](../crates/atelier-app/src/http.rs#L352) | <code>use crate::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/src/http.rs:417](../crates/atelier-app/src/http.rs#L417) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/http.rs:278](../crates/atelier-app/src/http.rs#L278) | <code>use crate::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/src/http.rs:353](../crates/atelier-app/src/http.rs#L353) | <code>use crate::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/src/http.rs:418](../crates/atelier-app/src/http.rs#L418) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:1](../crates/atelier-app/src/http/agent_providers.rs#L1) | <code>use super::{Shared, failure, object};</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:2](../crates/atelier-app/src/http/agent_providers.rs#L2) | <code>use crate::infrastructure::{agent_providers, settings::VaultFailure};</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:3](../crates/atelier-app/src/http/agent_providers.rs#L3) | <code>use atelier_core::application::agent_providers::ProviderFailure;</code> |
@@ -955,8 +955,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http/forge_publication.rs:9](../crates/atelier-app/src/http/forge_publication.rs#L9) | <code>use axum::{</code> |
 | [crates/atelier-app/src/http/git_push.rs:1](../crates/atelier-app/src/http/git_push.rs#L1) | <code>use super::{Shared, failure, responses::response};</code> |
 | [crates/atelier-app/src/http/git_push.rs:2](../crates/atelier-app/src/http/git_push.rs#L2) | <code>use crate::infrastructure::{</code> |
-| [crates/atelier-app/src/http/git_push.rs:6](../crates/atelier-app/src/http/git_push.rs#L6) | <code>use atelier_core::contracts::{Card, ForgeWriteState, GitPushIntent, GitPushRequest, PullRequest};</code> |
-| [crates/atelier-app/src/http/git_push.rs:7](../crates/atelier-app/src/http/git_push.rs#L7) | <code>use axum::{</code> |
+| [crates/atelier-app/src/http/git_push.rs:6](../crates/atelier-app/src/http/git_push.rs#L6) | <code>use atelier_core::contracts::{</code> |
+| [crates/atelier-app/src/http/git_push.rs:9](../crates/atelier-app/src/http/git_push.rs#L9) | <code>use axum::{</code> |
 | [crates/atelier-app/src/http/jira.rs:1](../crates/atelier-app/src/http/jira.rs#L1) | <code>use super::{Shared, failure, object, responses::response};</code> |
 | [crates/atelier-app/src/http/jira.rs:2](../crates/atelier-app/src/http/jira.rs#L2) | <code>use crate::infrastructure::jira;</code> |
 | [crates/atelier-app/src/http/jira.rs:3](../crates/atelier-app/src/http/jira.rs#L3) | <code>use atelier_core::{application::jira::JiraFailure, contracts::JiraConfigurationUpdate};</code> |
@@ -1318,25 +1318,26 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/forge_publication.rs:11](../crates/atelier-app/src/infrastructure/forge_publication.rs#L11) | <code>use cap_std::fs::Dir;</code> |
 | [crates/atelier-app/src/infrastructure/forge_publication.rs:12](../crates/atelier-app/src/infrastructure/forge_publication.rs#L12) | <code>use std::path::PathBuf;</code> |
 | [crates/atelier-app/src/infrastructure/forge_publication.rs:52](../crates/atelier-app/src/infrastructure/forge_publication.rs#L52) | <code>pub async fn preview(</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:137](../crates/atelier-app/src/infrastructure/forge_publication.rs#L137) | <code>pub fn save_preview(</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:155](../crates/atelier-app/src/infrastructure/forge_publication.rs#L155) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;ForgePublicationRequest, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:194](../crates/atelier-app/src/infrastructure/forge_publication.rs#L194) | <code>pub async fn prepare(</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:254](../crates/atelier-app/src/infrastructure/forge_publication.rs#L254) | <code>pub fn sending(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:274](../crates/atelier-app/src/infrastructure/forge_publication.rs#L274) | <code>pub fn remember_number(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str, number: u64) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:285](../crates/atelier-app/src/infrastructure/forge_publication.rs#L285) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge_publication.rs:298](../crates/atelier-app/src/infrastructure/forge_publication.rs#L298) | <code>pub fn record(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str, pr: PullRequest) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:158](../crates/atelier-app/src/infrastructure/forge_publication.rs#L158) | <code>pub fn save_preview(</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:176](../crates/atelier-app/src/infrastructure/forge_publication.rs#L176) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;ForgePublicationRequest, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:228](../crates/atelier-app/src/infrastructure/forge_publication.rs#L228) | <code>pub fn reserve_branch(</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:259](../crates/atelier-app/src/infrastructure/forge_publication.rs#L259) | <code>pub async fn prepare(</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:324](../crates/atelier-app/src/infrastructure/forge_publication.rs#L324) | <code>pub fn sending(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:344](../crates/atelier-app/src/infrastructure/forge_publication.rs#L344) | <code>pub fn remember_number(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str, number: u64) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:355](../crates/atelier-app/src/infrastructure/forge_publication.rs#L355) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge_publication.rs:368](../crates/atelier-app/src/infrastructure/forge_publication.rs#L368) | <code>pub fn record(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str, pr: PullRequest) -&gt; Result&lt;Card&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:1](../crates/atelier-app/src/infrastructure/git_push.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:7](../crates/atelier-app/src/infrastructure/git_push.rs#L7) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:8](../crates/atelier-app/src/infrastructure/git_push.rs#L8) | <code>use atelier_core::contracts::{</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:12](../crates/atelier-app/src/infrastructure/git_push.rs#L12) | <code>use cap_std::fs::Dir;</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:13](../crates/atelier-app/src/infrastructure/git_push.rs#L13) | <code>use std::path::PathBuf;</code> |
 | [crates/atelier-app/src/infrastructure/git_push.rs:39](../crates/atelier-app/src/infrastructure/git_push.rs#L39) | <code>pub async fn preview(</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:106](../crates/atelier-app/src/infrastructure/git_push.rs#L106) | <code>pub fn save_preview(</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:123](../crates/atelier-app/src/infrastructure/git_push.rs#L123) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;GitPushRequest, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:157](../crates/atelier-app/src/infrastructure/git_push.rs#L157) | <code>pub async fn prepare(</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:193](../crates/atelier-app/src/infrastructure/git_push.rs#L193) | <code>pub fn sending(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:224](../crates/atelier-app/src/infrastructure/git_push.rs#L224) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_push.rs:237](../crates/atelier-app/src/infrastructure/git_push.rs#L237) | <code>pub fn record(</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:109](../crates/atelier-app/src/infrastructure/git_push.rs#L109) | <code>pub fn save_preview(</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:126](../crates/atelier-app/src/infrastructure/git_push.rs#L126) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;GitPushRequest, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:181](../crates/atelier-app/src/infrastructure/git_push.rs#L181) | <code>pub async fn prepare(</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:211](../crates/atelier-app/src/infrastructure/git_push.rs#L211) | <code>pub fn sending(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:242](../crates/atelier-app/src/infrastructure/git_push.rs#L242) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, id: &amp;str) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_push.rs:255](../crates/atelier-app/src/infrastructure/git_push.rs#L255) | <code>pub fn record(</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:1](../crates/atelier-app/src/infrastructure/git_transport.rs#L1) | <code>use super::{files::Repository, forge, forge_association};</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:2](../crates/atelier-app/src/infrastructure/git_transport.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:3](../crates/atelier-app/src/infrastructure/git_transport.rs#L3) | <code>use atelier_core::contracts::ForgeConfiguration;</code> |
@@ -1350,12 +1351,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/git_transport.rs:137](../crates/atelier-app/src/infrastructure/git_transport.rs#L137) | <code>pub fn origin(&amp;self, origin: &amp;str) -&gt; Result&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:173](../crates/atelier-app/src/infrastructure/git_transport.rs#L173) | <code>pub fn validate_configuration(keys: &amp;str) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:311](../crates/atelier-app/src/infrastructure/git_transport.rs#L311) | <code>pub async fn remote_head(&amp;self, origin: &amp;str, reference: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:337](../crates/atelier-app/src/infrastructure/git_transport.rs#L337) | <code>pub async fn prepare_push(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:478](../crates/atelier-app/src/infrastructure/git_transport.rs#L478) | <code>pub async fn push(&amp;self, prepared: PreparedPush) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:581](../crates/atelier-app/src/infrastructure/git_transport.rs#L581) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:582](../crates/atelier-app/src/infrastructure/git_transport.rs#L582) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:584](../crates/atelier-app/src/infrastructure/git_transport.rs#L584) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:601](../crates/atelier-app/src/infrastructure/git_transport.rs#L601) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:317](../crates/atelier-app/src/infrastructure/git_transport.rs#L317) | <code>pub async fn remote_head_optional(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:348](../crates/atelier-app/src/infrastructure/git_transport.rs#L348) | <code>pub async fn prepare_push(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:493](../crates/atelier-app/src/infrastructure/git_transport.rs#L493) | <code>pub async fn push(&amp;self, prepared: PreparedPush) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:596](../crates/atelier-app/src/infrastructure/git_transport.rs#L596) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:597](../crates/atelier-app/src/infrastructure/git_transport.rs#L597) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:599](../crates/atelier-app/src/infrastructure/git_transport.rs#L599) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:616](../crates/atelier-app/src/infrastructure/git_transport.rs#L616) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
@@ -2699,44 +2701,50 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/contracts.rs:611](../crates/atelier-core/src/contracts.rs#L611) | <code>pub revision: u64,</code> |
 | [crates/atelier-core/src/contracts.rs:612](../crates/atelier-core/src/contracts.rs#L612) | <code>pub confirmed: bool,</code> |
 | [crates/atelier-core/src/contracts.rs:616](../crates/atelier-core/src/contracts.rs#L616) | <code>pub struct GitPushPreview {</code> |
-| [crates/atelier-core/src/contracts.rs:617](../crates/atelier-core/src/contracts.rs#L617) | <code>pub worktree: Worktree,</code> |
-| [crates/atelier-core/src/contracts.rs:618](../crates/atelier-core/src/contracts.rs#L618) | <code>pub pull_request: PullRequest,</code> |
-| [crates/atelier-core/src/contracts.rs:619](../crates/atelier-core/src/contracts.rs#L619) | <code>pub origin: String,</code> |
-| [crates/atelier-core/src/contracts.rs:620](../crates/atelier-core/src/contracts.rs#L620) | <code>pub commit: String,</code> |
-| [crates/atelier-core/src/contracts.rs:621](../crates/atelier-core/src/contracts.rs#L621) | <code>pub previous: String,</code> |
-| [crates/atelier-core/src/contracts.rs:622](../crates/atelier-core/src/contracts.rs#L622) | <code>pub local_changes: bool,</code> |
-| [crates/atelier-core/src/contracts.rs:626](../crates/atelier-core/src/contracts.rs#L626) | <code>pub struct GitPushIntent {</code> |
-| [crates/atelier-core/src/contracts.rs:627](../crates/atelier-core/src/contracts.rs#L627) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/contracts.rs:628](../crates/atelier-core/src/contracts.rs#L628) | <code>pub state: ForgeWriteState,</code> |
-| [crates/atelier-core/src/contracts.rs:629](../crates/atelier-core/src/contracts.rs#L629) | <code>pub preview: GitPushPreview,</code> |
-| [crates/atelier-core/src/contracts.rs:630](../crates/atelier-core/src/contracts.rs#L630) | <code>pub observed: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/contracts.rs:634](../crates/atelier-core/src/contracts.rs#L634) | <code>pub struct ForgePublicationRequest {</code> |
-| [crates/atelier-core/src/contracts.rs:635](../crates/atelier-core/src/contracts.rs#L635) | <code>pub expected: Card,</code> |
-| [crates/atelier-core/src/contracts.rs:636](../crates/atelier-core/src/contracts.rs#L636) | <code>pub revision: u64,</code> |
-| [crates/atelier-core/src/contracts.rs:637](../crates/atelier-core/src/contracts.rs#L637) | <code>pub kind: ForgeKind,</code> |
-| [crates/atelier-core/src/contracts.rs:638](../crates/atelier-core/src/contracts.rs#L638) | <code>pub repository: String,</code> |
-| [crates/atelier-core/src/contracts.rs:639](../crates/atelier-core/src/contracts.rs#L639) | <code>pub target: String,</code> |
-| [crates/atelier-core/src/contracts.rs:640](../crates/atelier-core/src/contracts.rs#L640) | <code>pub title: String,</code> |
-| [crates/atelier-core/src/contracts.rs:641](../crates/atelier-core/src/contracts.rs#L641) | <code>pub body: String,</code> |
-| [crates/atelier-core/src/contracts.rs:642](../crates/atelier-core/src/contracts.rs#L642) | <code>pub draft: bool,</code> |
-| [crates/atelier-core/src/contracts.rs:643](../crates/atelier-core/src/contracts.rs#L643) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/contracts.rs:647](../crates/atelier-core/src/contracts.rs#L647) | <code>pub struct ForgePublicationPreview {</code> |
-| [crates/atelier-core/src/contracts.rs:648](../crates/atelier-core/src/contracts.rs#L648) | <code>pub configuration: ForgeConfiguration,</code> |
-| [crates/atelier-core/src/contracts.rs:649](../crates/atelier-core/src/contracts.rs#L649) | <code>pub revision: u64,</code> |
-| [crates/atelier-core/src/contracts.rs:650](../crates/atelier-core/src/contracts.rs#L650) | <code>pub repository: String,</code> |
-| [crates/atelier-core/src/contracts.rs:651](../crates/atelier-core/src/contracts.rs#L651) | <code>pub worktree: Worktree,</code> |
-| [crates/atelier-core/src/contracts.rs:652](../crates/atelier-core/src/contracts.rs#L652) | <code>pub target: String,</code> |
-| [crates/atelier-core/src/contracts.rs:653](../crates/atelier-core/src/contracts.rs#L653) | <code>pub source_commit: String,</code> |
-| [crates/atelier-core/src/contracts.rs:654](../crates/atelier-core/src/contracts.rs#L654) | <code>pub target_commit: String,</code> |
-| [crates/atelier-core/src/contracts.rs:655](../crates/atelier-core/src/contracts.rs#L655) | <code>pub title: String,</code> |
-| [crates/atelier-core/src/contracts.rs:656](../crates/atelier-core/src/contracts.rs#L656) | <code>pub body: String,</code> |
-| [crates/atelier-core/src/contracts.rs:657](../crates/atelier-core/src/contracts.rs#L657) | <code>pub draft: bool,</code> |
-| [crates/atelier-core/src/contracts.rs:661](../crates/atelier-core/src/contracts.rs#L661) | <code>pub struct ForgePublicationIntent {</code> |
-| [crates/atelier-core/src/contracts.rs:662](../crates/atelier-core/src/contracts.rs#L662) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/contracts.rs:663](../crates/atelier-core/src/contracts.rs#L663) | <code>pub state: ForgeWriteState,</code> |
-| [crates/atelier-core/src/contracts.rs:664](../crates/atelier-core/src/contracts.rs#L664) | <code>pub preview: ForgePublicationPreview,</code> |
-| [crates/atelier-core/src/contracts.rs:665](../crates/atelier-core/src/contracts.rs#L665) | <code>pub number: Option&lt;u64&gt;,</code> |
-| [crates/atelier-core/src/contracts.rs:666](../crates/atelier-core/src/contracts.rs#L666) | <code>pub result: Option&lt;PullRequest&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:617](../crates/atelier-core/src/contracts.rs#L617) | <code>pub configuration: ForgeConfiguration,</code> |
+| [crates/atelier-core/src/contracts.rs:618](../crates/atelier-core/src/contracts.rs#L618) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:619](../crates/atelier-core/src/contracts.rs#L619) | <code>pub repository: String,</code> |
+| [crates/atelier-core/src/contracts.rs:620](../crates/atelier-core/src/contracts.rs#L620) | <code>pub worktree: Worktree,</code> |
+| [crates/atelier-core/src/contracts.rs:621](../crates/atelier-core/src/contracts.rs#L621) | <code>pub pull_request: Option&lt;PullRequest&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:622](../crates/atelier-core/src/contracts.rs#L622) | <code>pub origin: String,</code> |
+| [crates/atelier-core/src/contracts.rs:623](../crates/atelier-core/src/contracts.rs#L623) | <code>pub commit: String,</code> |
+| [crates/atelier-core/src/contracts.rs:624](../crates/atelier-core/src/contracts.rs#L624) | <code>pub previous: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:625](../crates/atelier-core/src/contracts.rs#L625) | <code>pub local_changes: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:629](../crates/atelier-core/src/contracts.rs#L629) | <code>pub struct GitPushIntent {</code> |
+| [crates/atelier-core/src/contracts.rs:630](../crates/atelier-core/src/contracts.rs#L630) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/contracts.rs:631](../crates/atelier-core/src/contracts.rs#L631) | <code>pub state: ForgeWriteState,</code> |
+| [crates/atelier-core/src/contracts.rs:632](../crates/atelier-core/src/contracts.rs#L632) | <code>pub preview: GitPushPreview,</code> |
+| [crates/atelier-core/src/contracts.rs:633](../crates/atelier-core/src/contracts.rs#L633) | <code>pub observed: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:637](../crates/atelier-core/src/contracts.rs#L637) | <code>pub struct ForgePublicationRequest {</code> |
+| [crates/atelier-core/src/contracts.rs:638](../crates/atelier-core/src/contracts.rs#L638) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:639](../crates/atelier-core/src/contracts.rs#L639) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:640](../crates/atelier-core/src/contracts.rs#L640) | <code>pub kind: ForgeKind,</code> |
+| [crates/atelier-core/src/contracts.rs:641](../crates/atelier-core/src/contracts.rs#L641) | <code>pub repository: String,</code> |
+| [crates/atelier-core/src/contracts.rs:642](../crates/atelier-core/src/contracts.rs#L642) | <code>pub target: String,</code> |
+| [crates/atelier-core/src/contracts.rs:643](../crates/atelier-core/src/contracts.rs#L643) | <code>pub title: String,</code> |
+| [crates/atelier-core/src/contracts.rs:644](../crates/atelier-core/src/contracts.rs#L644) | <code>pub body: String,</code> |
+| [crates/atelier-core/src/contracts.rs:645](../crates/atelier-core/src/contracts.rs#L645) | <code>pub draft: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:646](../crates/atelier-core/src/contracts.rs#L646) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:650](../crates/atelier-core/src/contracts.rs#L650) | <code>pub struct ForgePublicationPreview {</code> |
+| [crates/atelier-core/src/contracts.rs:651](../crates/atelier-core/src/contracts.rs#L651) | <code>pub configuration: ForgeConfiguration,</code> |
+| [crates/atelier-core/src/contracts.rs:652](../crates/atelier-core/src/contracts.rs#L652) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:653](../crates/atelier-core/src/contracts.rs#L653) | <code>pub repository: String,</code> |
+| [crates/atelier-core/src/contracts.rs:654](../crates/atelier-core/src/contracts.rs#L654) | <code>pub worktree: Worktree,</code> |
+| [crates/atelier-core/src/contracts.rs:655](../crates/atelier-core/src/contracts.rs#L655) | <code>pub target: String,</code> |
+| [crates/atelier-core/src/contracts.rs:656](../crates/atelier-core/src/contracts.rs#L656) | <code>pub origin: String,</code> |
+| [crates/atelier-core/src/contracts.rs:657](../crates/atelier-core/src/contracts.rs#L657) | <code>pub remote_source: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:658](../crates/atelier-core/src/contracts.rs#L658) | <code>pub local_changes: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:659](../crates/atelier-core/src/contracts.rs#L659) | <code>pub source_commit: String,</code> |
+| [crates/atelier-core/src/contracts.rs:660](../crates/atelier-core/src/contracts.rs#L660) | <code>pub target_commit: String,</code> |
+| [crates/atelier-core/src/contracts.rs:661](../crates/atelier-core/src/contracts.rs#L661) | <code>pub title: String,</code> |
+| [crates/atelier-core/src/contracts.rs:662](../crates/atelier-core/src/contracts.rs#L662) | <code>pub body: String,</code> |
+| [crates/atelier-core/src/contracts.rs:663](../crates/atelier-core/src/contracts.rs#L663) | <code>pub draft: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:667](../crates/atelier-core/src/contracts.rs#L667) | <code>pub struct ForgePublicationIntent {</code> |
+| [crates/atelier-core/src/contracts.rs:668](../crates/atelier-core/src/contracts.rs#L668) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/contracts.rs:669](../crates/atelier-core/src/contracts.rs#L669) | <code>pub state: ForgeWriteState,</code> |
+| [crates/atelier-core/src/contracts.rs:670](../crates/atelier-core/src/contracts.rs#L670) | <code>pub preview: ForgePublicationPreview,</code> |
+| [crates/atelier-core/src/contracts.rs:671](../crates/atelier-core/src/contracts.rs#L671) | <code>pub number: Option&lt;u64&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:672](../crates/atelier-core/src/contracts.rs#L672) | <code>pub result: Option&lt;PullRequest&gt;,</code> |
 | [crates/atelier-core/src/document.rs:1](../crates/atelier-core/src/document.rs#L1) | <code>use serde::{</code> |
 | [crates/atelier-core/src/document.rs:5](../crates/atelier-core/src/document.rs#L5) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/src/document.rs:6](../crates/atelier-core/src/document.rs#L6) | <code>use std::fmt;</code> |
@@ -3833,15 +3841,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/git_transport.rs:268](../crates/atelier-app/src/infrastructure/git_transport.rs#L268) | <code>.args([</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:303](../crates/atelier-app/src/infrastructure/git_transport.rs#L303) | <code>command.args(["-c", option]);</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:306](../crates/atelier-app/src/infrastructure/git_transport.rs#L306) | <code>command.args(["-c", "protocol.http.allow=always"]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:322](../crates/atelier-app/src/infrastructure/git_transport.rs#L322) | <code>command.args(["ls-remote","--refs","--exit-code","--",&amp;scope,reference]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:380](../crates/atelier-app/src/infrastructure/git_transport.rs#L380) | <code>initialize.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:401](../crates/atelier-app/src/infrastructure/git_transport.rs#L401) | <code>import.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:441](../crates/atelier-app/src/infrastructure/git_transport.rs#L441) | <code>ancestry.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:489](../crates/atelier-app/src/infrastructure/git_transport.rs#L489) | <code>command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&amp;format!("--force-with-lease={reference}:{previous}"),"--",&amp;scope,&amp;format!("{commit}:{reference}")]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:523](../crates/atelier-app/src/infrastructure/git_transport.rs#L523) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:639](../crates/atelier-app/src/infrastructure/git_transport.rs#L639) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:643](../crates/atelier-app/src/infrastructure/git_transport.rs#L643) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:652](../crates/atelier-app/src/infrastructure/git_transport.rs#L652) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:332](../crates/atelier-app/src/infrastructure/git_transport.rs#L332) | <code>command.args(["ls-remote","--refs","--exit-code","--",&amp;scope,reference]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:393](../crates/atelier-app/src/infrastructure/git_transport.rs#L393) | <code>initialize.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:414](../crates/atelier-app/src/infrastructure/git_transport.rs#L414) | <code>import.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:455](../crates/atelier-app/src/infrastructure/git_transport.rs#L455) | <code>ancestry.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:504](../crates/atelier-app/src/infrastructure/git_transport.rs#L504) | <code>command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&amp;format!("--force-with-lease={reference}:{}",previous.as_deref().unwrap_or("")),"--",&amp;scope,&amp;format!("{commit}:{reference}")]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:538](../crates/atelier-app/src/infrastructure/git_transport.rs#L538) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:654](../crates/atelier-app/src/infrastructure/git_transport.rs#L654) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:658](../crates/atelier-app/src/infrastructure/git_transport.rs#L658) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:667](../crates/atelier-app/src/infrastructure/git_transport.rs#L667) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs:644](../crates/atelier-app/src/infrastructure/launch_detection.rs#L644) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:417](../crates/atelier-app/src/infrastructure/portable_import.rs#L417) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>.args(["/D", "/C"])</code> |
@@ -4112,11 +4120,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:586](../xtask/src/ui.rs#L586) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:595](../xtask/src/ui.rs#L595) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
 | [xtask/src/ui.rs:600](../xtask/src/ui.rs#L600) | <code>.args([</code> |
-| [xtask/src/ui.rs:2099](../xtask/src/ui.rs#L2099) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:2111](../xtask/src/ui.rs#L2111) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:2116](../xtask/src/ui.rs#L2116) | <code>.args([</code> |
-| [xtask/src/ui.rs:2131](../xtask/src/ui.rs#L2131) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:2137](../xtask/src/ui.rs#L2137) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:2137](../xtask/src/ui.rs#L2137) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:2149](../xtask/src/ui.rs#L2149) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:2154](../xtask/src/ui.rs#L2154) | <code>.args([</code> |
+| [xtask/src/ui.rs:2169](../xtask/src/ui.rs#L2169) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:2175](../xtask/src/ui.rs#L2175) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
 | [xtask/tests/command-runs.rs:49](../xtask/tests/command-runs.rs#L49) | <code>.args(["process-output", mode])</code> |
 | [xtask/tests/verification-runs.rs:13](../xtask/tests/verification-runs.rs#L13) | <code>async fn git(path: &amp;Path, args: &amp;[&amp;str]) {</code> |
 | [xtask/tests/verification-runs.rs:19](../xtask/tests/verification-runs.rs#L19) | <code>.args([</code> |
@@ -5045,7 +5053,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [.github/workflows/release.yml:92](../.github/workflows/release.yml#L92) | <code>run: node --input-type=module -e "import {mkdirSync,writeFileSync} from 'node:fs'; const r=await fetch('https://raw.githubusercontent.com/nodejs/node/v'+process.versions.node+'/LICENSE'); if(!r.ok) throw Error('Licence Node indisponible'); mkdirSync('.updates',{recursive:true}); writeFileSync('.updates/Node-LICENSE', await r.text());"</code> |
 | [.github/workflows/release.yml:95](../.github/workflows/release.yml#L95) | <code>NODE_LICENSE: .updates/Node-LICENSE</code> |
 | [crates/atelier-app/src/http.rs:68](../crates/atelier-app/src/http.rs#L68) | <code>vault: crate::infrastructure::token_vault::PrototypeVault,</code> |
-| [crates/atelier-app/src/http.rs:425](../crates/atelier-app/src/http.rs#L425) | <code>crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;</code> |
+| [crates/atelier-app/src/http.rs:426](../crates/atelier-app/src/http.rs#L426) | <code>crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;</code> |
 | [crates/atelier-app/src/http/assets.rs:13](../crates/atelier-app/src/http/assets.rs#L13) | <code>"local-session.mjs",</code> |
 | [crates/atelier-app/src/http/events.rs:5](../crates/atelier-app/src/http/events.rs#L5) | <code>use futures_util::stream::{self, Stream};</code> |
 | [crates/atelier-app/src/http/events.rs:19](../crates/atelier-app/src/http/events.rs#L19) | <code>stream::unfold(</code> |

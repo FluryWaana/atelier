@@ -51,7 +51,7 @@ pub fn GitPush(
     on_cleanup(move || mounted.with_value(|alive| alive.set(false)));
     let execute = StoredValue::new_local(move |action: &'static str| {
         if pending.get_untracked()
-            || blocked.get_untracked()
+            || (action != "push-reconcile" && blocked.get_untracked())
             || (action != "push-reconcile" && (archived || unresolved.get_untracked()))
         {
             return;
@@ -127,12 +127,12 @@ pub fn GitPush(
             }
         });
     });
-    view! {<section class="task-files" aria-labelledby="git-push-heading" aria-busy=move||pending.get().to_string()><h4 id="git-push-heading">{move||i18n.text("Pousser les commits de la tâche")}</h4>
-        <p class="field-help">{move||i18n.text("Seuls les commits déjà enregistrés seront envoyés à la branche source de la PR/MR liée. Les fichiers modifiés et l’index sont conservés. Le push refuse toute perte de commit distant.")}</p>
-        <button id="preview-git-push" type="button" disabled=move||pending.get()||blocked.get()||archived||unresolved.get()||configuration.with(|value|value.is_none()) on:click=move|_|execute.with_value(|execute|execute("push-preview"))>{move||i18n.text("Préparer l’aperçu du push")}</button>
-        {move||preview.get().map(|preview|view!{<dl><dt>{move||i18n.text("Branche distante")}</dt><dd>{preview.pull_request.source_branch}</dd><dt>{move||i18n.text("Commit distant attendu")}</dt><dd><code>{preview.previous}</code></dd><dt>{move||i18n.text("Commit à pousser")}</dt><dd><code>{preview.commit}</code></dd></dl><p hidden=!preview.local_changes>{move||i18n.text("Des fichiers locaux ont changé. Ils ne font pas partie de ce push.")}</p>})}
+    view! {<section class="task-files" hidden=move||card.get().is_none_or(|card|card.fields.raw("pullRequest").is_none())&&intent.get().is_none() aria-labelledby="git-push-heading" aria-busy=move||pending.get().to_string()><h4 id="git-push-heading">{move||i18n.text("Pousser les commits de la tâche")}</h4>
+        <p class="field-help">{move||i18n.text("Seuls les commits déjà enregistrés seront envoyés à la branche de tâche vérifiée. Les fichiers modifiés et l’index sont conservés. Le push refuse toute perte de commit distant.")}</p>
+        <button id="preview-git-push" type="button" hidden=move||card.get().is_none_or(|card|card.fields.raw("pullRequest").is_none()) disabled=move||pending.get()||blocked.get()||archived||unresolved.get()||configuration.with(|value|value.is_none()) on:click=move|_|execute.with_value(|execute|execute("push-preview"))>{move||i18n.text("Préparer l’aperçu du push")}</button>
+        {move||preview.get().map(|preview|view!{<dl><dt>{move||i18n.text("Branche distante")}</dt><dd>{preview.worktree.branch}</dd><dt>{move||i18n.text("Commit distant attendu")}</dt><dd><code>{preview.previous.unwrap_or_else(||i18n.text("Branche absente"))}</code></dd><dt>{move||i18n.text("Commit à pousser")}</dt><dd><code>{preview.commit}</code></dd></dl><p hidden=!preview.local_changes>{move||i18n.text("Des fichiers locaux ont changé. Ils ne font pas partie de ce push.")}</p>})}
         <fieldset hidden=move||preview.with(|preview|preview.is_none())||unresolved.get() disabled=move||pending.get()||blocked.get()||archived><label><input id="confirm-git-push" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("Confirmer l’envoi de ce commit à cette branche distante.")}</label><button id="send-git-push" type="button" disabled=move||key.get().is_none_or(|key|key!=approved.get()) on:click=move|_|execute.with_value(|execute|execute("push"))>{move||i18n.text("Pousser le commit confirmé")}</button></fieldset>
-        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Push incertain. Relis la branche distante ; aucun renvoi automatique.")}</p><button id="reconcile-git-push" type="button" disabled=move||pending.get()||blocked.get() on:click=move|_|execute.with_value(|execute|execute("push-reconcile"))>{move||i18n.text("Relire la branche distante")}</button></div>
+        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Push incertain. Relis la branche distante ; aucun renvoi automatique.")}</p><button id="reconcile-git-push" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute("push-reconcile"))>{move||i18n.text("Relire la branche distante")}</button></div>
         {move||intent.get().and_then(|intent|intent.observed).map(|observed|view!{<p>{move||i18n.text("Dernier commit distant observé :")}" "<code>{observed}</code></p>})}
         <p id="git-push-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="git-push-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}
