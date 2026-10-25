@@ -1,7 +1,7 @@
 use super::{
     Shared, failure,
-    jira::response,
     jira_transitions::{client, input},
+    responses::response,
 };
 use crate::infrastructure::jira_refresh as workflow;
 use atelier_core::contracts::{Card, JiraRefreshApply, JiraRefreshRequest};

@@ -10,6 +10,7 @@ mod agent_usage;
 mod backups;
 mod brainstorm;
 mod files;
+mod forge;
 mod i18n;
 mod jira;
 mod jira_creation;

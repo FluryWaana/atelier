@@ -14,6 +14,7 @@ mod dependencies;
 pub mod dev_servers;
 mod directory_link;
 pub mod files;
+pub mod forge;
 pub mod installation;
 #[cfg(windows)]
 mod interactive_runs;

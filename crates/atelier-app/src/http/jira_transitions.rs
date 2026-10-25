@@ -1,4 +1,4 @@
-use super::{Shared, failure, jira::response, object};
+use super::{Shared, failure, object, responses::response};
 use crate::{
     Result,
     infrastructure::{jira, jira_transition as workflow},

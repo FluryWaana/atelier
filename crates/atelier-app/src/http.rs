@@ -29,6 +29,7 @@ mod brainstorm;
 mod card_lifecycle;
 mod events;
 mod files;
+mod forge;
 mod jira;
 mod jira_creation;
 mod jira_refresh;
@@ -36,6 +37,7 @@ mod jira_transitions;
 mod mutations;
 mod preparation;
 mod projects;
+mod responses;
 #[cfg(windows)]
 mod runs;
 #[cfg(windows)]
@@ -476,6 +478,11 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/jira/creation-metadata", get(jira::creation_metadata))
         .route("/api/jira/search", get(jira::search))
         .route("/api/jira/import", post(jira::import))
+        .route(
+            "/api/forges",
+            get(forge::configurations).put(forge::configure),
+        )
+        .route("/api/forges/pull-request", get(forge::pull_request))
         .route("/api/jira/import-batch", post(jira::import_batch))
         .route("/api/jira/issues/{id}", get(jira::detail))
         .route("/api/backups", get(backups::list).post(backups::create))

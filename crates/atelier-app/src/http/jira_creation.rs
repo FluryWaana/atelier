@@ -1,7 +1,7 @@
 use super::{
     Shared, failure,
-    jira::response,
     jira_transitions::{client, input},
+    responses::response,
 };
 use crate::{Result, infrastructure::jira_creation as workflow};
 use atelier_core::{

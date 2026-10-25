@@ -458,3 +458,63 @@ pub struct JiraBatchImport {
     pub project_id: String,
     pub confirmed: bool,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ForgeKind {
+    Github,
+    Gitlab,
+    Azure,
+}
+impl ForgeKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Github => "github",
+            Self::Gitlab => "gitlab",
+            Self::Azure => "azure",
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ForgeConfiguration {
+    pub kind: ForgeKind,
+    pub base: String,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgeConnection {
+    pub configuration: ForgeConfiguration,
+    pub token_set: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ForgeConnections {
+    pub revision: u64,
+    pub connections: Vec<ForgeConnection>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ForgeUpdate {
+    pub expected_revision: u64,
+    pub configuration: ForgeConfiguration,
+    pub token: Option<String>,
+    #[serde(default)]
+    pub clear_token: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PullRequest {
+    pub revision: u64,
+    pub kind: ForgeKind,
+    pub repository: String,
+    pub number: u64,
+    pub title: String,
+    pub url: String,
+    pub status: String,
+    pub draft: bool,
+    pub source_branch: String,
+    pub target_branch: String,
+    pub source_commit: Option<String>,
+    pub target_commit: Option<String>,
+    pub fork: bool,
+}

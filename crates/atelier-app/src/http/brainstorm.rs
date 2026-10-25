@@ -18,7 +18,7 @@ pub(super) async fn convert(
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Session incohérente.");
     }
-    super::jira::response(
+    super::responses::response(
         state
             .database
             .call(move |store| brainstorm::convert(store, input))

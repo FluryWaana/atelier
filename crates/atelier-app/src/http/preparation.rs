@@ -17,7 +17,7 @@ pub(super) async fn apply(
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
     }
-    super::jira::response(
+    super::responses::response(
         state
             .database
             .call(move |store| crate::infrastructure::preparation::apply(store, input))

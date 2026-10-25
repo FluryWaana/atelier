@@ -1,41 +1,12 @@
-use super::{Shared, failure, object};
-use crate::infrastructure::{jira, settings::VaultFailure};
+use super::{Shared, failure, object, responses::response};
+use crate::infrastructure::jira;
 use atelier_core::{application::jira::JiraFailure, contracts::JiraConfigurationUpdate};
 use axum::{
-    Json,
     extract::{Path, Query, Request, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use serde::Deserialize;
-
-pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
-    match result {
-        Ok(value) => Json(value).into_response(),
-        Err(error) => {
-            let status = if matches!(
-                error.downcast_ref::<JiraFailure>(),
-                Some(JiraFailure::Conflict | JiraFailure::OperationConflict(_))
-            ) {
-                StatusCode::CONFLICT
-            } else if error.is::<VaultFailure>() {
-                StatusCode::SERVICE_UNAVAILABLE
-            } else if error.is::<serde_json::Error>() || error.is::<rusqlite::Error>() {
-                StatusCode::INTERNAL_SERVER_ERROR
-            } else {
-                StatusCode::BAD_REQUEST
-            };
-            if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(
-                    status,
-                    "Lecture ou enregistrement de la connexion Jira impossible.",
-                )
-            } else {
-                failure(status, &error.to_string())
-            }
-        }
-    }
-}
 
 pub(super) async fn get(State(state): State<Shared>) -> Response {
     let vault = state.vault.clone();

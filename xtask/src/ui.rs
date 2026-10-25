@@ -1670,6 +1670,63 @@ async fn settings_scenario(
     click(client, "#jira-clear-token").await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#search-jira')?.disabled === true && document.querySelector('#save-jira')?.disabled === true;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#forge-base')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    for (selector, value) in [
+        ("#forge-base", "https://github-synthetic.example.test"),
+        ("#forge-token", "synthetic-forge-ui"),
+    ] {
+        client.find(Locator::Css(selector)).await?.clear().await?;
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(value)
+            .await?;
+    }
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#forge-token')?.value === 'synthetic-forge-ui';",
+        vec![],
+    )
+    .await?;
+    click(client, "#save-forge").await?;
+    wait_dom(client,"return document.querySelector('#forge-token')?.value === '' && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié') && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
+    let forges: atelier_core::contracts::ForgeConnections = http
+        .get(format!("{address}/api/forges"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if serde_json::to_string(&forges)?.contains("synthetic-forge-ui") {
+        return Err("Le jeton de forge apparaît dans la réponse publique.".into());
+    }
+    client
+        .find(Locator::Css("#forge-base"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#forge-base"))
+        .await?
+        .send_keys("https://local-forge-draft.example.test")
+        .await?;
+    http.put(format!("{address}/api/forges")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":forges.revision,"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"token":"synthetic-forge-rotation"})).send().await?.error_for_status()?;
+    click(client, "#save-forge").await?;
+    wait_dom(client,"return document.querySelector('#forge-error')?.textContent.includes('ont changé') && document.querySelector('#forge-base')?.value === 'https://local-forge-draft.example.test';",vec![]).await?;
+    click(client, "#reload-forges").await?;
+    click(client, "#confirm-reload-forges").await?;
+    wait_dom(client,"return document.querySelector('#forge-base')?.value === 'https://github-synthetic.example.test' && document.querySelector('#forge-token')?.value === '' && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
+    click(client, "#forge-clear-token").await?;
+    click(client, "#save-forge").await?;
+    wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-settings.png"),
         client.screenshot().await?,

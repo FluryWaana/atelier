@@ -49,6 +49,7 @@ pub fn Settings(
     let dirty = Memo::new(move |_| original.get() != draft.get());
     let pending = RwSignal::new(false);
     let jira_dirty = RwSignal::new(false);
+    let forge_dirty = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let discard = RwSignal::new(false);
@@ -66,14 +67,18 @@ pub fn Settings(
         if pending.get_untracked() {
             return;
         }
-        if dirty.get_untracked() || jira_dirty.get_untracked() {
+        if dirty.get_untracked() || jira_dirty.get_untracked() || forge_dirty.get_untracked() {
             discard.set(true);
         } else {
             close();
         }
     };
     let unload = window_event_listener(leptos::ev::beforeunload, move |event| {
-        if dirty.get_untracked() || jira_dirty.get_untracked() || pending.get_untracked() {
+        if dirty.get_untracked()
+            || jira_dirty.get_untracked()
+            || forge_dirty.get_untracked()
+            || pending.get_untracked()
+        {
             event.prevent_default();
             event.set_return_value("");
         }
@@ -116,6 +121,7 @@ pub fn Settings(
                 <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
                 <div class="editor-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button></div>
             </form>
+            <crate::forge::ForgeSettings token pending dirty=forge_dirty />
             <crate::jira::JiraSettings board token pending dirty=jira_dirty />
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| discard.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
         </dialog>
