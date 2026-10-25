@@ -671,3 +671,60 @@ pub struct ForgePublicationIntent {
     pub number: Option<u64>,
     pub result: Option<PullRequest>,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ForgeCheckState {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+    Skipped,
+    Unknown,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ForgeCheckScope {
+    SourceCommit,
+    OtherSnapshot,
+    Unscoped,
+}
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgeCheck {
+    pub id: String,
+    pub name: String,
+    pub state: ForgeCheckState,
+    pub scope: ForgeCheckScope,
+    pub commit: Option<String>,
+    pub description: String,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ForgeReviewDecision {
+    Approved,
+    ApprovedWithSuggestions,
+    ChangesRequested,
+    Waiting,
+    Dismissed,
+    None,
+    Unknown,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgeReviewer {
+    pub name: String,
+    pub decision: ForgeReviewDecision,
+    pub scope: ForgeCheckScope,
+    pub commit: Option<String>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgeChecks {
+    pub pull_request: PullRequest,
+    pub checks: Vec<ForgeCheck>,
+    pub reviewers: Vec<ForgeReviewer>,
+    pub reviewers_available: bool,
+    pub other_snapshot_count: usize,
+    pub limits: Vec<String>,
+}

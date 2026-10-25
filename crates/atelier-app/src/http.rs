@@ -546,6 +546,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             get(forge::configurations).put(forge::configure),
         )
         .route("/api/forges/pull-request", get(forge::pull_request))
+        .route("/api/forges/checks", get(forge::checks))
         .route("/api/cards/{id}/forge/draft", post(forge_draft::change))
         .route(
             "/api/cards/{id}/forge/draft-reconcile",

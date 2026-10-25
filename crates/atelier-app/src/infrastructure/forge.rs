@@ -14,6 +14,8 @@ use reqwest::{
 };
 use serde_json::Value;
 use std::{collections::BTreeMap, time::Duration};
+mod checks;
+pub use atelier_core::application::forge::same_pull_request;
 
 fn conflict() -> crate::Error {
     atelier_core::application::forge::ForgeFailure::Conflict.into()
@@ -673,8 +675,21 @@ impl Forge {
     async fn request(
         &self,
         method: reqwest::Method,
+        url: Url,
+        body: Option<Value>,
+    ) -> Result<Value> {
+        self.request_inner(method, url, body, false).await
+    }
+    async fn get_unpaged(&self, url: Url) -> Result<Value> {
+        self.request_inner(reqwest::Method::GET, url, None, true)
+            .await
+    }
+    async fn request_inner(
+        &self,
+        method: reqwest::Method,
         mut url: Url,
         body: Option<Value>,
+        unpaged: bool,
     ) -> Result<Value> {
         let creating = method == reqwest::Method::POST;
         if self.configuration.kind == ForgeKind::Azure {
@@ -717,6 +732,15 @@ impl Forge {
                 return Err("Redirection de forge refusée. Vérifie l’adresse et le dépôt.".into());
             }
             _ => return Err("Lecture de la PR impossible sur la forge.".into()),
+        }
+        if unpaged
+            && response
+                .headers()
+                .get_all("x-ms-continuationtoken")
+                .iter()
+                .any(|value| !value.to_str().is_ok_and(|value| value.trim().is_empty()))
+        {
+            return Err("Pagination de forge inattendue. Aucun résultat partiel affiché.".into());
         }
         if response
             .content_length()
@@ -1075,7 +1099,7 @@ impl Forge {
         };
         let mut found = None;
         for number in candidates {
-            let (pr, body) = self
+            let (pr, body, _) = self
                 .read_pull_request_content(&preview.repository, number, true)
                 .await?;
             if body.lines().any(|line| line == marker) {
@@ -1101,14 +1125,14 @@ impl Forge {
         )
         .await
         .map_err(|_| "Lecture de PR trop longue.")?
-        .map(|(pr, _)| pr)
+        .map(|(pr, _, _)| pr)
     }
     async fn read_pull_request_content(
         &self,
         repository: &str,
         number: u64,
         include_body: bool,
-    ) -> Result<(PullRequest, String)> {
+    ) -> Result<(PullRequest, String, Value)> {
         let parts = atelier_core::application::forge::repository(
             self.configuration.kind,
             repository,
@@ -1230,7 +1254,11 @@ impl Forge {
                     row["draft"].as_bool(),
                     &row["source_branch"],
                     &row["target_branch"],
-                    &row["diff_refs"]["head_sha"],
+                    if row["sha"].is_null() {
+                        &row["diff_refs"]["head_sha"]
+                    } else {
+                        &row["sha"]
+                    },
                     &row["diff_refs"]["start_sha"],
                     row["source_project_id"].as_u64() != row["target_project_id"].as_u64(),
                 ),
@@ -1310,6 +1338,7 @@ impl Forge {
                     .format(&time::format_description::well_known::Rfc3339)?,
             },
             body,
+            row,
         ))
     }
 }
@@ -1321,19 +1350,4 @@ pub fn publication_marker(operation: &str) -> Result<String> {
         return Err("Identifiant de publication invalide.".into());
     }
     Ok(format!("<!-- atelier-publication:{operation} -->"))
-}
-
-pub fn same_pull_request(left: &PullRequest, right: &PullRequest) -> bool {
-    left.kind == right.kind
-        && left.base_url == right.base_url
-        && left.repository == right.repository
-        && left.number == right.number
-        && left.source_branch == right.source_branch
-        && left.target_branch == right.target_branch
-        && left.source_commit == right.source_commit
-        && left.target_commit == right.target_commit
-        && left.status == right.status
-        && left.draft == right.draft
-        && left.fork == right.fork
-        && left.title == right.title
 }

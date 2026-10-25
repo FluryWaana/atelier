@@ -741,6 +741,36 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .goto(&format!("{address}/?task=jira-refresh"))
         .await?;
     wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true;",vec![]).await?;
+    let description = client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .prop("value")
+        .await?
+        .ok_or("Synthetic description absent")?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .send_keys(" Synthetic checks draft")
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#read-forge-checks')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#read-forge-checks").await?;
+    // A metadata read remains usable with a local draft; no forge connection means no remote request.
+    wait_dom(client,"return document.querySelector('#forge-checks-error')?.textContent.length > 0 && document.querySelector('#edit-description')?.value.endsWith(' Synthetic checks draft');",vec![]).await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#edit-description"))
+        .await?
+        .send_keys(&description)
+        .await?;
     client
         .find(Locator::Css("#task-forge-repository"))
         .await?

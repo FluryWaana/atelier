@@ -15,6 +15,23 @@ impl std::fmt::Display for ForgeFailure {
     }
 }
 impl std::error::Error for ForgeFailure {}
+pub fn same_pull_request(
+    left: &crate::contracts::PullRequest,
+    right: &crate::contracts::PullRequest,
+) -> bool {
+    left.kind == right.kind
+        && left.base_url == right.base_url
+        && left.repository == right.repository
+        && left.number == right.number
+        && left.source_branch == right.source_branch
+        && left.target_branch == right.target_branch
+        && left.source_commit == right.source_commit
+        && left.target_commit == right.target_commit
+        && left.status == right.status
+        && left.draft == right.draft
+        && left.fork == right.fork
+        && left.title == right.title
+}
 pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
     use crate::contracts::{ForgeDraftIntent, ForgeWriteState};
     let pushing = fields

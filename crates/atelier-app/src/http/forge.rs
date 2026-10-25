@@ -132,19 +132,30 @@ pub(super) struct PullQuery {
     #[serde(default)]
     number: u64,
 }
+enum ReadOperation {
+    PullRequest,
+    List,
+    Checks,
+}
 pub(super) async fn pull_request(
     State(state): State<Shared>,
     Query(query): Query<PullQuery>,
 ) -> Response {
-    read_pull_requests(state, query, false).await
+    read_forge(state, query, ReadOperation::PullRequest).await
 }
 pub(super) async fn pull_requests(
     State(state): State<Shared>,
     Query(query): Query<PullQuery>,
 ) -> Response {
-    read_pull_requests(state, query, true).await
+    read_forge(state, query, ReadOperation::List).await
 }
-async fn read_pull_requests(state: Shared, query: PullQuery, list: bool) -> Response {
+pub(super) async fn checks(
+    State(state): State<Shared>,
+    Query(query): Query<PullQuery>,
+) -> Response {
+    read_forge(state, query, ReadOperation::Checks).await
+}
+async fn read_forge(state: Shared, query: PullQuery, operation: ReadOperation) -> Response {
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -155,7 +166,7 @@ async fn read_pull_requests(state: Shared, query: PullQuery, list: bool) -> Resp
     if *stopped.borrow() {
         return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
     }
-    let operation = async {
+    let reading = async {
         let vault = state.vault.clone();
         let revision = query.revision;
         let kind = query.kind;
@@ -168,10 +179,16 @@ async fn read_pull_requests(state: Shared, query: PullQuery, list: bool) -> Resp
             })
             .await?;
         let client = forge::Forge::new(configuration, token, revision)?;
-        let result = if list {
-            serde_json::to_value(client.list_pull_requests(&query.repository).await?)?
-        } else {
-            serde_json::to_value(client.pull_request(&query.repository, query.number).await?)?
+        let result = match operation {
+            ReadOperation::List => {
+                serde_json::to_value(client.list_pull_requests(&query.repository).await?)?
+            }
+            ReadOperation::Checks => {
+                serde_json::to_value(client.checks(&query.repository, query.number).await?)?
+            }
+            ReadOperation::PullRequest => {
+                serde_json::to_value(client.pull_request(&query.repository, query.number).await?)?
+            }
         };
         state
             .database
@@ -179,5 +196,5 @@ async fn read_pull_requests(state: Shared, query: PullQuery, list: bool) -> Resp
             .await?;
         Ok(result)
     };
-    tokio::select! {result=operation=>super::responses::response(result),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=reading=>super::responses::response(result),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
 }
