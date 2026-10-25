@@ -882,6 +882,34 @@ async fn brainstorm_scenario(
     click(client, "#confirm-preparation").await?;
     click(client, "#apply-preparation").await?;
     wait_dom(client,"return document.querySelector('.criterion-text')?.value === 'Synthetic prepared criterion' && document.querySelector('.criterion-done')?.checked === false && document.querySelector('#preparation-notice')?.textContent.includes('Préparation appliquée') && document.querySelector('#save-task')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#edit-model"))
+        .await?
+        .send_keys("synthetic invalid model")
+        .await?;
+    click(client, "#save-task").await?;
+    wait_dom(client,"return document.querySelector('#editor-error')?.textContent.includes('Modèle invalide') && document.querySelector('#edit-model')?.value === 'synthetic invalid model';",vec![]).await?;
+    client
+        .find(Locator::Css("#edit-model"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#edit-model"))
+        .await?
+        .send_keys("synthetic-task-model")
+        .await?;
+    click(client, "#save-task").await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#task-editor');",
+        vec![],
+    )
+    .await?;
+    client
+        .goto(&format!("{address}/?task={}", converted[0].id))
+        .await?;
+    wait_dom(client,"return document.querySelector('#edit-model')?.value === 'synthetic-task-model' && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     let verification_command = format!("\"{}\" verify success", fixture.display());
     http.patch(format!("{address}/api/projects/brainstorm-project"))
         .bearer_auth(token)

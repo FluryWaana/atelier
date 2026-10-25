@@ -56,6 +56,24 @@ pub fn Runs(
         });
     });
     let agent = RwSignal::new(String::new());
+    let override_agent = RwSignal::new(false);
+    Effect::new(move |_| {
+        if !override_agent.get() {
+            let saved = board.cards.with(|cards| {
+                cards
+                    .iter()
+                    .find(|item| item.id == card.get_value())
+                    .map(|item| field(&item.fields, "agent"))
+                    .unwrap_or_default()
+            });
+            let saved = if saved.is_empty() {
+                board.settings.with(|settings| field(settings, "agent"))
+            } else {
+                saved
+            };
+            agent.set(saved);
+        }
+    });
     let mode = RwSignal::new("analyze".to_owned());
     let purpose = RwSignal::new("work".to_owned());
     let error = RwSignal::new(String::new());
@@ -311,7 +329,7 @@ pub fn Runs(
             <p class="field-help">{move || i18n.text("Choisis un profil enregistré dans Agents. Les demandes d’autorisation et les questions apparaissent pendant l’exécution.")}</p>
             <label for="run-agent">{move || i18n.text("Profil d’agent")}</label>
             <p class="field-help" hidden=move || !profiles.get().is_empty()>{move || i18n.text("Crée un profil de commande dans Agents pour démarrer une exécution.")}</p>
-            <select id="run-agent" prop:value=move || agent.get() disabled=move || pending.get() || running.get() on:change=move |event| agent.set(event_target_value(&event))><option value="">{move || i18n.text("Choisir un profil")}</option><For each=move || profiles.get() key=|profile| field(profile,"id") children=move |profile| view! { <option value=field(&profile,"id")>{field(&profile,"name")}</option> } /></select>
+            <select id="run-agent" prop:value=move || agent.get() disabled=move || pending.get() || running.get() on:change=move |event| { override_agent.set(true); agent.set(event_target_value(&event)); }><option value="">{move || i18n.text("Choisir un profil")}</option><For each=move || profiles.get() key=|profile| field(profile,"id") children=move |profile| view! { <option value=field(&profile,"id")>{field(&profile,"name")}</option> } /></select>
             <div hidden=move||brainstorm.get()><label for="run-purpose">{move||i18n.text("Objectif de l’exécution")}</label><select id="run-purpose" prop:value=move||purpose.get() disabled=move||pending.get()||running.get() on:change=move|event|purpose.set(event_target_value(&event))><option value="work">{move||i18n.text("Travailler sur la tâche")}</option><option value="preparation">{move||i18n.text("Préparer les critères et questions")}</option><option value="review">{move||i18n.text("Examiner la PR/MR et ses critères")}</option></select></div>
             <label hidden=move||brainstorm.get()||["preparation","review"].contains(&purpose.get().as_str()) for="run-mode">{move || i18n.text("Mode")}</label><select hidden=move||brainstorm.get()||["preparation","review"].contains(&purpose.get().as_str()) id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
             <div hidden=move||!brainstorm.get()><label for="brainstorm-message">{move||i18n.text("Message pour le brainstorm")}</label><textarea id="brainstorm-message" maxlength="12000" rows="4" disabled=move||pending.get()||running.get() prop:value=move||message.get() on:input=move|event|message.set(event_target_value(&event)) /><p class="field-help">{move||i18n.text("Décris ta question ou demande un découpage en tâches. Chaque envoi démarre explicitement une exécution de l’agent choisi.")}</p></div>

@@ -1117,5 +1117,10 @@
   "La liste de PR/MR ne correspond pas au dépôt demandé.": "The PR/MR list does not match the requested repository.",
   "Identité de PR/MR invalide.": "Invalid PR/MR identity.",
   "Pagination de PR/MR répétée ou modifiée. Relance la lecture.": "PR/MR pagination repeated or changed. Read the list again.",
-  "Liste de PR/MR limitée à 100 pages ; aucun résultat partiel affiché.": "PR/MR list is limited to 100 pages; no partial results are displayed."
+  "Liste de PR/MR limitée à 100 pages ; aucun résultat partiel affiché.": "PR/MR list is limited to 100 pages; no partial results are displayed.",
+  "Profil de cette tâche": "Task profile",
+  "Modèle de cette tâche": "Task model",
+  "Effort de cette tâche": "Task effort",
+  "Hériter du profil si vide": "Inherit from the profile when empty",
+  "Changer de profil réinitialise les choix de modèle et d’effort de la tâche. L’enregistrement ne démarre aucun agent.": "Changing profile resets the task model and effort choices. Saving does not start an agent."
 }

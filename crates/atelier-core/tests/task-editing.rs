@@ -65,6 +65,36 @@ impl EditingContext for Context {
 }
 
 #[test]
+fn task_agent_preferences_are_conflict_checked_and_reset_options_on_profile_change() {
+    let context = Context {
+        scenario: Document::default(),
+        events: RefCell::default(),
+    };
+    let card:Card=serde_json::from_str(r#"{"id":"task","title":"Synthetic","agent":"codex","model":"old-model","effort":"high","status":"todo"}"#).unwrap();
+    let body: Document =
+        serde_json::from_str(r#"{"model":"new-model","expected":{"model":"old-model"}}"#).unwrap();
+    let edited = task_editing::prepare(&context, &card, &body, false).unwrap();
+    assert!(
+        edited
+            .card
+            .fields
+            .string_equals("model", "new-model")
+            .unwrap()
+    );
+    assert!(!edited.requirements_changed);
+    assert!(task_editing::prepare(&context, &edited.card, &body, false).is_err());
+    let change: Document =
+        serde_json::from_str(r#"{"agent":"claude","expected":{"agent":"codex"}}"#).unwrap();
+    let edited = task_editing::prepare(&context, &edited.card, &change, false).unwrap();
+    assert!(edited.card.fields.string_equals("agent", "claude").unwrap());
+    assert!(edited.card.fields.string_equals("model", "").unwrap());
+    assert!(edited.card.fields.string_equals("effort", "").unwrap());
+    let invalid: Document =
+        serde_json::from_str(r#"{"effort":"none","expected":{"effort":""}}"#).unwrap();
+    assert!(task_editing::prepare(&context, &edited.card, &invalid, false).is_err());
+}
+
+#[test]
 fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
         "../../../test/fixtures/rust-task-editing-reference.json"

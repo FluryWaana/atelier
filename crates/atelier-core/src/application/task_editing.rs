@@ -37,6 +37,9 @@ fn check_expected(card: &Card, body: &Document) -> Result<()> {
         "status",
         "checklist",
         "blockedBy",
+        "agent",
+        "model",
+        "effort",
     ];
     if expected
         .keys()

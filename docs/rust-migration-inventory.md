@@ -2217,12 +2217,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/task_editing.rs:21](../crates/atelier-core/src/application/task_editing.rs#L21) | <code>pub sync_status: bool,</code> |
 | [crates/atelier-core/src/application/task_editing.rs:22](../crates/atelier-core/src/application/task_editing.rs#L22) | <code>pub requirements_changed: bool,</code> |
 | [crates/atelier-core/src/application/task_editing.rs:25](../crates/atelier-core/src/application/task_editing.rs#L25) | <code>pub const REVIEW_CHANGE_REASON: &amp;str = "Le besoin ou les critères ont changé. Relancez la review.";</code> |
-| [crates/atelier-core/src/application/task_editing.rs:78](../crates/atelier-core/src/application/task_editing.rs#L78) | <code>pub struct ReviewInvalidation {</code> |
-| [crates/atelier-core/src/application/task_editing.rs:79](../crates/atelier-core/src/application/task_editing.rs#L79) | <code>pub runs: Vec&lt;Document&gt;,</code> |
-| [crates/atelier-core/src/application/task_editing.rs:80](../crates/atelier-core/src/application/task_editing.rs#L80) | <code>pub automation_changed: bool,</code> |
-| [crates/atelier-core/src/application/task_editing.rs:83](../crates/atelier-core/src/application/task_editing.rs#L83) | <code>pub fn invalidate_reviews(</code> |
-| [crates/atelier-core/src/application/task_editing.rs:135](../crates/atelier-core/src/application/task_editing.rs#L135) | <code>pub fn requirements_changed(before: &amp;Card, after: &amp;Card) -&gt; Result&lt;bool&gt; {</code> |
-| [crates/atelier-core/src/application/task_editing.rs:180](../crates/atelier-core/src/application/task_editing.rs#L180) | <code>pub fn prepare(</code> |
+| [crates/atelier-core/src/application/task_editing.rs:81](../crates/atelier-core/src/application/task_editing.rs#L81) | <code>pub struct ReviewInvalidation {</code> |
+| [crates/atelier-core/src/application/task_editing.rs:82](../crates/atelier-core/src/application/task_editing.rs#L82) | <code>pub runs: Vec&lt;Document&gt;,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:83](../crates/atelier-core/src/application/task_editing.rs#L83) | <code>pub automation_changed: bool,</code> |
+| [crates/atelier-core/src/application/task_editing.rs:86](../crates/atelier-core/src/application/task_editing.rs#L86) | <code>pub fn invalidate_reviews(</code> |
+| [crates/atelier-core/src/application/task_editing.rs:138](../crates/atelier-core/src/application/task_editing.rs#L138) | <code>pub fn requirements_changed(before: &amp;Card, after: &amp;Card) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-core/src/application/task_editing.rs:183](../crates/atelier-core/src/application/task_editing.rs#L183) | <code>pub fn prepare(</code> |
 | [crates/atelier-core/src/application/task_templates.rs:1](../crates/atelier-core/src/application/task_templates.rs#L1) | <code>use super::card_lifecycle::CardFailure;</code> |
 | [crates/atelier-core/src/application/task_templates.rs:2](../crates/atelier-core/src/application/task_templates.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/task_templates.rs:6](../crates/atelier-core/src/application/task_templates.rs#L6) | <code>use serde_json::value::RawValue;</code> |
@@ -2736,7 +2736,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/task-editing.rs:12](../crates/atelier-core/tests/task-editing.rs#L12) | <code>use std::cell::RefCell;</code> |
 | [crates/atelier-core/tests/task-editing.rs:14](../crates/atelier-core/tests/task-editing.rs#L14) | <code>mod json;</code> |
 | [crates/atelier-core/tests/task-editing.rs:67](../crates/atelier-core/tests/task-editing.rs#L67) | <code>#[test]</code> |
-| [crates/atelier-core/tests/task-editing.rs:119](../crates/atelier-core/tests/task-editing.rs#L119) | <code>#[test]</code> |
+| [crates/atelier-core/tests/task-editing.rs:97](../crates/atelier-core/tests/task-editing.rs#L97) | <code>#[test]</code> |
+| [crates/atelier-core/tests/task-editing.rs:149](../crates/atelier-core/tests/task-editing.rs#L149) | <code>#[test]</code> |
 | [crates/atelier-ui/Cargo.toml:3](../crates/atelier-ui/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:4](../crates/atelier-ui/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:5](../crates/atelier-ui/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -2918,7 +2919,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/runs.rs:10](../crates/atelier-ui/src/runs.rs#L10) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/runs.rs:19](../crates/atelier-ui/src/runs.rs#L19) | <code>use atelier_core::contracts::RunLog as Log;</code> |
 | [crates/atelier-ui/src/runs.rs:22](../crates/atelier-ui/src/runs.rs#L22) | <code>pub fn Runs(</code> |
-| [crates/atelier-ui/src/runs.rs:348](../crates/atelier-ui/src/runs.rs#L348) | <code>use std::collections::BTreeMap;</code> |
+| [crates/atelier-ui/src/runs.rs:366](../crates/atelier-ui/src/runs.rs#L366) | <code>use std::collections::BTreeMap;</code> |
 | [crates/atelier-ui/src/services.rs:1](../crates/atelier-ui/src/services.rs#L1) | <code>use crate::{i18n::I18n, live::BoardState, read, write};</code> |
 | [crates/atelier-ui/src/services.rs:2](../crates/atelier-ui/src/services.rs#L2) | <code>use atelier_core::contracts::{ServiceSession, ServiceStatus, Worktree, WorktreeState};</code> |
 | [crates/atelier-ui/src/services.rs:3](../crates/atelier-ui/src/services.rs#L3) | <code>use gloo_net::http::Method;</code> |
@@ -2945,8 +2946,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/task_editor.rs:9](../crates/atelier-ui/src/task_editor.rs#L9) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/task_editor.rs:10](../crates/atelier-ui/src/task_editor.rs#L10) | <code>use wasm_bindgen::JsCast;</code> |
 | [crates/atelier-ui/src/task_editor.rs:11](../crates/atelier-ui/src/task_editor.rs#L11) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:74](../crates/atelier-ui/src/task_editor.rs#L74) | <code>pub fn TaskEditor(</code> |
-| [crates/atelier-ui/src/task_editor.rs:283](../crates/atelier-ui/src/task_editor.rs#L283) | <code>&lt;dialog id="task-editor" class="editor" class:workspace=move \|\| show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move \|event: web_sys::Event\| { event.prevent_default(); request_close(); }&gt;</code> |
+| [crates/atelier-ui/src/task_editor.rs:80](../crates/atelier-ui/src/task_editor.rs#L80) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/task_editor.rs:289](../crates/atelier-ui/src/task_editor.rs#L289) | <code>&lt;dialog id="task-editor" class="editor" class:workspace=move \|\| show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move \|event: web_sys::Event\| { event.prevent_default(); request_close(); }&gt;</code> |
 | [crates/atelier-ui/src/time.rs:1](../crates/atelier-ui/src/time.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/time.rs:2](../crates/atelier-ui/src/time.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/time.rs:6](../crates/atelier-ui/src/time.rs#L6) | <code>use gloo_net::http::Method;</code> |
@@ -3884,11 +3885,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:586](../xtask/src/ui.rs#L586) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:595](../xtask/src/ui.rs#L595) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
 | [xtask/src/ui.rs:600](../xtask/src/ui.rs#L600) | <code>.args([</code> |
-| [xtask/src/ui.rs:2003](../xtask/src/ui.rs#L2003) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:2015](../xtask/src/ui.rs#L2015) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:2020](../xtask/src/ui.rs#L2020) | <code>.args([</code> |
-| [xtask/src/ui.rs:2035](../xtask/src/ui.rs#L2035) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:2041](../xtask/src/ui.rs#L2041) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:2031](../xtask/src/ui.rs#L2031) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:2043](../xtask/src/ui.rs#L2043) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:2048](../xtask/src/ui.rs#L2048) | <code>.args([</code> |
+| [xtask/src/ui.rs:2063](../xtask/src/ui.rs#L2063) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:2069](../xtask/src/ui.rs#L2069) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
 | [xtask/tests/command-runs.rs:49](../xtask/tests/command-runs.rs#L49) | <code>.args(["process-output", mode])</code> |
 | [xtask/tests/verification-runs.rs:13](../xtask/tests/verification-runs.rs#L13) | <code>async fn git(path: &amp;Path, args: &amp;[&amp;str]) {</code> |
 | [xtask/tests/verification-runs.rs:19](../xtask/tests/verification-runs.rs#L19) | <code>.args([</code> |
@@ -5027,7 +5028,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/domain/files.rs:52](../crates/atelier-core/src/domain/files.rs#L52) | <code>"a:stream",</code> |
 | [crates/atelier-core/src/domain/files.rs:61](../crates/atelier-core/src/domain/files.rs#L61) | <code>"sub/lpt1.log",</code> |
 | [crates/atelier-core/tests/agent-protocol.rs:185](../crates/atelier-core/tests/agent-protocol.rs#L185) | <code>fn streaming_preview_withholds_incomplete_secrets_and_masks_before_truncation() {</code> |
-| [crates/atelier-ui/src/runs.rs:258](../crates/atelier-ui/src/runs.rs#L258) | <code>text.push_str(&amp;format!("[{}] {}", entry.stream, entry.text));</code> |
+| [crates/atelier-ui/src/runs.rs:276](../crates/atelier-ui/src/runs.rs#L276) | <code>text.push_str(&amp;format!("[{}] {}", entry.stream, entry.text));</code> |
 | [launcher.mjs:11](../launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
 | [launcher.mjs:33](../launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |
 | [launcher.mjs:54](../launcher.mjs#L54) | <code>const out = openSync(join(dataDir, 'server.stdout.log'), 'a');</code> |

@@ -18,6 +18,9 @@ struct Draft {
     status: String,
     criteria: Vec<Criterion>,
     dependencies: Vec<String>,
+    agent: String,
+    model: String,
+    effort: String,
 }
 
 impl Draft {
@@ -27,6 +30,9 @@ impl Draft {
             description: field(&card.fields, "description"),
             instructions: field(&card.fields, "instructions"),
             status: field(&card.fields, "status"),
+            agent: field(&card.fields, "agent"),
+            model: field(&card.fields, "model"),
+            effort: field(&card.fields, "effort"),
             criteria: card
                 .fields
                 .get("checklist")
@@ -43,7 +49,7 @@ impl Draft {
     }
 
     fn fields(&self) -> serde_json::Value {
-        serde_json::json!({"title":self.title, "description":self.description, "instructions":self.instructions, "status":self.status, "checklist":self.criteria, "blockedBy":self.dependencies})
+        serde_json::json!({"title":self.title, "description":self.description, "instructions":self.instructions, "status":self.status, "checklist":self.criteria, "blockedBy":self.dependencies,"agent":self.agent,"model":self.model,"effort":self.effort})
     }
     fn patch(&self, original: &Self) -> serde_json::Value {
         let current = self.fields();
@@ -291,6 +297,10 @@ pub fn TaskEditor(
                     <label for="edit-status">{move || i18n.text("Statut")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, label)| view! { <option value=status>{move || i18n.text(label)}</option> }).collect_view()}</select>
                     <label for="edit-description">{move || i18n.text("Description")}</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=move ||ticket.get() prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
                     <label for="edit-instructions">{move || i18n.text("Instructions pour l’agent")}</label><textarea id="edit-instructions" rows="4" maxlength="20000" prop:value=move || draft.get().instructions on:input=move |event| draft.update(|draft| draft.instructions = event_target_value(&event))></textarea>
+                    <label for="edit-agent">{move||i18n.text("Profil de cette tâche")}</label><select id="edit-agent" prop:value=move||draft.get().agent on:change=move|event|draft.update(|draft|{draft.agent=event_target_value(&event);draft.model.clear();draft.effort.clear();})><option value="" disabled>{move||i18n.text("Choisir un profil")}</option><For each=move||atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move|profile|view!{<option value=field(&profile,"id")>{field(&profile,"name")}</option>} /></select>
+                    <label for="edit-model">{move||i18n.text("Modèle de cette tâche")}</label><input id="edit-model" maxlength="180" spellcheck="false" placeholder=move||i18n.text("Hériter du profil si vide") prop:value=move||draft.get().model on:input=move|event|draft.update(|draft|draft.model=event_target_value(&event)) />
+                    <label for="edit-effort">{move||i18n.text("Effort de cette tâche")}</label><input id="edit-effort" maxlength="40" spellcheck="false" placeholder=move||i18n.text("Hériter du profil si vide") prop:value=move||draft.get().effort on:input=move|event|draft.update(|draft|draft.effort=event_target_value(&event)) />
+                    <p class="field-help">{move||i18n.text("Changer de profil réinitialise les choix de modèle et d’effort de la tâche. L’enregistrement ne démarre aucun agent.")}</p>
                     <p class="field-help">{move || i18n.text("Changer le statut ne lance pas d’agent.")}</p>
                     <section class="criteria" aria-labelledby="criteria-heading"><h3 id="criteria-heading">{move || i18n.text("Critères de réussite")}</h3><p class="field-help">{move || i18n.text("Cochez les critères après votre vérification. Maximum 20 critères.")}</p>
                         <For each={move || (0..draft.get().criteria.len()).collect::<Vec<_>>()} key=|index| *index children=move |index| view! {
