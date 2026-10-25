@@ -16,6 +16,7 @@ mod directory_link;
 pub mod files;
 pub mod forge;
 pub mod forge_association;
+pub mod git_transport;
 pub mod installation;
 #[cfg(windows)]
 mod interactive_runs;

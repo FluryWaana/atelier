@@ -1,6 +1,6 @@
 use crate::{field, i18n::I18n, live::BoardState, write};
 use atelier_core::application::worktrees::ServiceWorktrees;
-use atelier_core::contracts::{Worktree, WorktreeState};
+use atelier_core::contracts::{ForgeConfiguration, ForgeKind, Worktree, WorktreeState};
 use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
@@ -48,6 +48,37 @@ pub fn Workspace(
     let branch = RwSignal::new(initial.0);
     let base = RwSignal::new(initial.1);
     let fetch_origin = RwSignal::new(false);
+    let fetch_forge = RwSignal::new("local".to_owned());
+    let fetch_repository = RwSignal::new(String::new());
+    let fetch_revision = RwSignal::new(0u64);
+    let fetch_site = RwSignal::new(String::new());
+    let forge_kind = move || match fetch_forge.get_untracked().as_str() {
+        "github" => Some(ForgeKind::Github),
+        "gitlab" => Some(ForgeKind::Gitlab),
+        "azure" => Some(ForgeKind::Azure),
+        _ => None,
+    };
+    let snapshot_forge = move || {
+        let settings = board.settings.get_untracked();
+        fetch_revision.set(
+            settings
+                .get::<u64>("forgeRevision")
+                .ok()
+                .flatten()
+                .unwrap_or(0),
+        );
+        let connections = settings
+            .get::<std::collections::BTreeMap<ForgeKind, ForgeConfiguration>>("forgeConnections")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        fetch_site.set(
+            forge_kind()
+                .and_then(|kind| connections.get(&kind).cloned())
+                .map(|configuration| configuration.base)
+                .unwrap_or_default(),
+        );
+    };
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let confirming = RwSignal::new(false);
@@ -71,7 +102,10 @@ pub fn Workspace(
         let body = if remove {
             serde_json::json!({"confirmed":true,"discardChanges":discard.get_untracked()})
         } else {
-            serde_json::json!({"branch":branch.get_untracked(),"base":base.get_untracked(),"fetchOrigin":fetch_origin.get_untracked()})
+            {
+                let remote = fetch_origin.get_untracked().then(forge_kind).flatten();
+                serde_json::json!({"branch":branch.get_untracked(),"base":base.get_untracked(),"fetchOrigin":fetch_origin.get_untracked(),"fetchForge":remote,"fetchRepository":if remote.is_some(){fetch_repository.get_untracked()}else{String::new()},"forgeRevision":remote.map(|_|fetch_revision.get_untracked())})
+            }
         };
         pending.set(true);
         error.set(String::new());
@@ -128,10 +162,11 @@ pub fn Workspace(
                 <fieldset disabled=move || pending.get() || blocked.get()>
                     <label for="worktree-branch">{move || i18n.text("Branche de la tâche")}</label><input id="worktree-branch" required maxlength="180" prop:value=move || branch.get() on:input=move |event| { branch.set(event_target_value(&event)); dirty.set(true); } />
                     <label for="worktree-base">{move || i18n.text("Référence de départ")}</label><input id="worktree-base" required maxlength="180" prop:value=move || base.get() on:input=move |event| { base.set(event_target_value(&event)); dirty.set(true); } />
-                    <label class="check-filter"><input id="worktree-fetch" type="checkbox" prop:checked=move || fetch_origin.get() on:change=move |event| { fetch_origin.set(event_target_checked(&event)); dirty.set(true); } />{move || i18n.text("Actualiser la référence depuis origin")}</label>
+                    <label class="check-filter"><input id="worktree-fetch" type="checkbox" prop:checked=move || fetch_origin.get() on:change=move |event| { fetch_origin.set(event_target_checked(&event));snapshot_forge(); dirty.set(true); } />{move || i18n.text("Actualiser la référence depuis origin")}</label>
                     <p class="field-help">{move || i18n.text("Sans actualisation, la référence doit exister localement. L’actualisation récupère une branche précise, sans déplacer la branche du dépôt source. Une reprise conserve le commit choisi.")}</p>
-                    <p class="field-help" hidden=move || !fetch_origin.get()>{move || i18n.text("Origin doit désigner un dépôt synthétique local. Les connexions distantes seront raccordées avec les connecteurs.")}</p>
-                    <div class="editor-actions"><button id="create-worktree" type="submit">{move || i18n.text("Préparer le worktree")}</button><button type="button" hidden=move || !dirty.get() on:click=move |_| { let initial = defaults(); branch.set(initial.0); base.set(initial.1); fetch_origin.set(false); dirty.set(false); }>{move || i18n.text("Réinitialiser")}</button></div>
+                    <fieldset hidden=move||!fetch_origin.get()><label for="worktree-fetch-forge">{move||i18n.text("Connexion pour l’actualisation d’origin")}</label><select id="worktree-fetch-forge" prop:value=move||fetch_forge.get() on:change=move|event|{fetch_forge.set(event_target_value(&event));snapshot_forge();dirty.set(true);} ><option value="local">{move||i18n.text("Dépôt synthétique local")}</option><option value="github">"GitHub HTTPS"</option><option value="gitlab">"GitLab HTTPS"</option><option value="azure">"Azure DevOps HTTPS"</option></select>
+                    <div hidden=move||fetch_forge.get()=="local"><p>{move||if fetch_site.get().is_empty(){i18n.text("Configure cette forge dans les paramètres avant le téléchargement.")}else{fetch_site.get()}}</p><label for="worktree-fetch-repository">{move||i18n.text("Dépôt distant autorisé")}</label><input id="worktree-fetch-repository" maxlength="1000" placeholder=move||i18n.text("groupe/dépôt") prop:value=move||fetch_repository.get() on:input=move|event|{fetch_repository.set(event_target_value(&event));dirty.set(true);} /><p class="field-help">{move||i18n.text("Le site, le dépôt et l’URL HTTPS d’origin doivent correspondre. Le jeton du coffre est utilisé uniquement pour ce téléchargement, sans helper ni dialogue de connexion. Les redirections sont refusées.")}</p><button id="reload-worktree-forge" type="button" on:click=move|_|{let Ok(credential)=token.get_value()else{return;};pending.set(true);spawn_local(async move{let result=board.refresh(&credential).await;if pending.try_get_untracked().is_some(){if let Err(message)=result{error.set(message);}else{snapshot_forge();}pending.set(false);}});}>{move||i18n.text("Recharger la connexion choisie")}</button></div></fieldset>
+                    <div class="editor-actions"><button id="create-worktree" type="submit">{move || i18n.text("Préparer le worktree")}</button><button type="button" hidden=move || !dirty.get() on:click=move |_| { let initial = defaults(); branch.set(initial.0); base.set(initial.1); fetch_origin.set(false);fetch_forge.set("local".into());fetch_repository.set(String::new());fetch_site.set(String::new()); dirty.set(false); }>{move || i18n.text("Réinitialiser")}</button></div>
                 </fieldset>
             </form>
             <div hidden=move || current.get().is_none()>

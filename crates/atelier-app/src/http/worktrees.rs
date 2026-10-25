@@ -214,7 +214,45 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
     let worktree = match original {
         Some(worktree) => worktree,
         None => {
-            let worktree = if options.fetch_origin {
+            let worktree = if let Some(kind) = options.fetch_forge {
+                let revision = options
+                    .forge_revision
+                    .ok_or("Révision de forge requise pour le fetch HTTPS.")?;
+                let vault = state.vault.clone();
+                let (configuration, token) = state
+                    .database
+                    .call(move |store| {
+                        crate::infrastructure::forge::credentials(
+                            store,
+                            kind,
+                            revision,
+                            &mut |value, decrypt| vault.protect(value, decrypt),
+                        )
+                    })
+                    .await?;
+                let authentication =
+                    crate::infrastructure::git_transport::HttpsAuthentication::new(
+                        configuration,
+                        options.fetch_repository,
+                        token,
+                    )?;
+                let plan = worktrees::prepare_from_forge_origin(
+                    root,
+                    roots,
+                    &options.repo,
+                    options.branch,
+                    options.base,
+                    &authentication,
+                )
+                .await?;
+                state
+                    .database
+                    .call(move |store| {
+                        crate::infrastructure::forge::require_revision(store, revision)
+                    })
+                    .await?;
+                plan
+            } else if options.fetch_origin {
                 worktrees::prepare_from_origin(
                     root,
                     roots,

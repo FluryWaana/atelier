@@ -76,6 +76,8 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 
 La reconstruction reste en cours tant que cette checklist n'est pas satisfaite.
 
+Reprise du 25 octobre : modifications HTTPS non commitées de `be8793d` conservées et complétées (portée exacte, refus des caractères de contrôle avant parsing, proxy désactivé, traductions et scénarios synthétiques). Fetch authentifié Windows candidat, sans build/test/Clippy/navigateur/CI. Voir le point de contrôle fonctionnel pour les limites ; aucun lot supplémentaire ni élément de la checklist finale n’est déclaré validé. Le workflow Rust reste exclusivement manuel ; la campagne finale n’a pas été lancée.
+
 ## Journal R00
 
 Le point archivé `7326122` est entièrement vert en CI Windows, journaux relus : la correction des chemins synthétiques passe, ainsi que les nouveaux scénarios de processus. Les instructions, le README et les références d'architecture distinguent désormais le produit cible du code Node historique. Le workflow Rust conserve Clippy, les tests Rust, les preuves natives Windows et le parcours WASM ; il ne reconstruit plus les paquets Node ni les comparateurs historiques à chaque push. Les outils de référence restent disponibles. La [CI de `28629e4`](https://github.com/FluryWaana/atelier/actions/runs/40121046698) confirme les deux jobs Windows : journaux natif et Edge relus, Clippy natif/WASM et tests Rust sans échec, isolation DPAPI entre comptes vérifiée, création/redémarrage/persistance/rotation de session dans le navigateur réussis. R00 est validé ; aucune qualification produit ni POSIX n'en découle.

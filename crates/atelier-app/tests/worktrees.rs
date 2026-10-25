@@ -43,6 +43,198 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn authenticated_fetch_uses_only_the_selected_repository_and_preserves_local_state() {
+    use atelier_app::infrastructure::git_transport::HttpsAuthentication;
+    use atelier_core::contracts::{ForgeConfiguration, ForgeKind};
+    use axum::{
+        Router,
+        extract::{Request, State},
+        http::{StatusCode, header},
+        response::{IntoResponse, Response},
+    };
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    #[derive(Clone)]
+    struct Remote {
+        directory: std::path::PathBuf,
+        requests: Arc<AtomicUsize>,
+        fault: Arc<AtomicUsize>,
+    }
+    async fn serve(State(remote): State<Remote>, request: Request) -> Response {
+        remote.requests.fetch_add(1, Ordering::SeqCst);
+        assert_eq!(request.method(), "GET");
+        assert_eq!(
+            request.headers()[header::AUTHORIZATION].to_str().unwrap(),
+            format!("Basic {}", STANDARD.encode("atelier:synthetic-git-token"))
+        );
+        let Some(path) = request.uri().path().strip_prefix("/owner/repo.git/") else {
+            panic!("Git requested a different repository");
+        };
+        assert!(!path.split('/').any(|part| part == ".."));
+        match remote.fault.load(Ordering::SeqCst) {
+            1 => {
+                return (
+                    StatusCode::FOUND,
+                    [(header::LOCATION, "/unselected/repository")],
+                )
+                    .into_response();
+            }
+            2 => {
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    "synthetic-git-token must never reach the caller",
+                )
+                    .into_response();
+            }
+            _ => {}
+        }
+        match std::fs::read(remote.directory.join(path)) {
+            Ok(bytes) => ([(header::CONTENT_TYPE, "text/plain")], bytes).into_response(),
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        }
+    }
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+    let remote_path = root_path.join("repositories/remote");
+    let repo = root_path.join("repositories/source");
+    std::fs::create_dir_all(&remote_path).unwrap();
+    git(&remote_path, &["init", "-b", "main"]).await;
+    std::fs::write(remote_path.join("version.txt"), "one").unwrap();
+    git(&remote_path, &["add", "."]).await;
+    git(&remote_path, &["commit", "-qm", "Synthetic initial"]).await;
+    git(
+        &root_path,
+        &[
+            "clone",
+            "--no-hardlinks",
+            "--",
+            remote_path.to_str().unwrap(),
+            repo.to_str().unwrap(),
+        ],
+    )
+    .await;
+    std::fs::write(remote_path.join("version.txt"), "two").unwrap();
+    git(&remote_path, &["commit", "-am", "Synthetic remote change"]).await;
+    git(&remote_path, &["update-server-info"]).await;
+    let expected = String::from_utf8(git(&remote_path, &["rev-parse", "HEAD"]).await)
+        .unwrap()
+        .trim()
+        .to_owned();
+    let requests = Arc::new(AtomicUsize::new(0));
+    let fault = Arc::new(AtomicUsize::new(0));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let app = Router::new().fallback(serve).with_state(Remote {
+        directory: remote_path.join(".git"),
+        requests: requests.clone(),
+        fault: fault.clone(),
+    });
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    let origin = format!("{address}/owner/repo.git");
+    git(&repo, &["remote", "set-url", "origin", &origin]).await;
+    std::fs::write(repo.join("version.txt"), "human staged edit").unwrap();
+    git(&repo, &["add", "version.txt"]).await;
+    std::fs::write(repo.join("version.txt"), "human unstaged edit").unwrap();
+    std::fs::write(repo.join(".git/FETCH_HEAD"), "preserve synthetic fetch\n").unwrap();
+    let head = git(&repo, &["rev-parse", "HEAD"]).await;
+    let refs = git(&repo, &["show-ref"]).await;
+    let index = std::fs::read(repo.join(".git/index")).unwrap();
+    let config = std::fs::read(repo.join(".git/config")).unwrap();
+    let authentication = HttpsAuthentication::synthetic(
+        ForgeConfiguration {
+            kind: ForgeKind::Github,
+            base: address,
+        },
+        "owner/repo".into(),
+        "synthetic-git-token".into(),
+    )
+    .unwrap();
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path];
+    let plan = worktrees::prepare_from_forge_origin(
+        &root,
+        &roots,
+        repo.to_str().unwrap(),
+        "task/authenticated".into(),
+        "main".into(),
+        &authentication,
+    )
+    .await
+    .unwrap();
+    assert_eq!(plan.base_commit, expected);
+    assert!(requests.load(Ordering::SeqCst) > 0);
+    for value in [1, 2] {
+        fault.store(value, Ordering::SeqCst);
+        let error = worktrees::prepare_from_forge_origin(
+            &root,
+            &roots,
+            repo.to_str().unwrap(),
+            "task/refused".into(),
+            "main".into(),
+            &authentication,
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(!error.contains("synthetic-git-token"));
+    }
+    let before = requests.load(Ordering::SeqCst);
+    git(
+        &repo,
+        &[
+            "config",
+            "http.extraHeader",
+            "Authorization: synthetic-forbidden",
+        ],
+    )
+    .await;
+    let overridden = std::fs::read(repo.join(".git/config")).unwrap();
+    assert!(
+        worktrees::prepare_from_forge_origin(
+            &root,
+            &roots,
+            repo.to_str().unwrap(),
+            "task/overridden".into(),
+            "main".into(),
+            &authentication
+        )
+        .await
+        .is_err()
+    );
+    assert_eq!(requests.load(Ordering::SeqCst), before);
+    assert_eq!(std::fs::read(repo.join(".git/config")).unwrap(), overridden);
+    std::fs::write(repo.join(".git/config"), &config).unwrap();
+    assert_eq!(git(&repo, &["rev-parse", "HEAD"]).await, head);
+    assert_eq!(git(&repo, &["show-ref"]).await, refs);
+    assert_eq!(std::fs::read(repo.join(".git/index")).unwrap(), index);
+    assert_eq!(std::fs::read(repo.join(".git/config")).unwrap(), config);
+    assert_eq!(
+        std::fs::read_to_string(repo.join(".git/FETCH_HEAD")).unwrap(),
+        "preserve synthetic fetch\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(repo.join("version.txt")).unwrap(),
+        "human unstaged edit"
+    );
+    assert!(
+        git(
+            &repo,
+            &["for-each-ref", "--format=%(refname)", "refs/atelier-fetch/"]
+        )
+        .await
+        .is_empty()
+    );
+    server.abort();
+    let _ = server.await;
+}
+
+#[tokio::test]
 async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
     let fixture = tempfile::tempdir().unwrap();
     let root_path = std::fs::canonicalize(fixture.path()).unwrap();

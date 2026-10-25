@@ -2119,6 +2119,16 @@ async fn files_scenario(
         .send_keys("main")
         .await?;
     click(client, "#worktree-fetch").await?;
+    client.execute("const select=document.querySelector('#worktree-fetch-forge'); select.value='github'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#worktree-fetch-repository"))
+        .await?
+        .send_keys("../repo")
+        .await?;
+    click(client, "#create-worktree").await?;
+    // Invalid scope fails before any credential lookup or network access.
+    wait_dom(client, "return document.querySelector('#worktree-error')?.textContent.length > 0 && document.querySelector('#worktree-fetch-repository')?.value === '../repo' && document.querySelector('#create-worktree')?.disabled === false;", vec![]).await?;
+    client.execute("const select=document.querySelector('#worktree-fetch-forge'); select.value='local'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#create-worktree").await?;
     wait_dom(client,"return document.querySelector('#worktree-state')?.textContent === 'Worktree prêt.' && document.querySelector('#worktree-error')?.textContent === '' && document.querySelector('#verify-worktree')?.disabled === false;",vec![]).await?;
     let board: atelier_core::contracts::Board = http

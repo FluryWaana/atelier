@@ -1,6 +1,6 @@
 use super::{card_lifecycle::CardFailure, task_creation::Result};
 use crate::{
-    contracts::{Card, Worktree},
+    contracts::{Card, ForgeKind, Worktree},
     document::{Document, JsonString},
     domain::projects::same_repository,
 };
@@ -93,6 +93,9 @@ pub struct CreateOptions {
     pub branch: String,
     pub base: String,
     pub fetch_origin: bool,
+    pub fetch_forge: Option<ForgeKind>,
+    pub fetch_repository: String,
+    pub forge_revision: Option<u64>,
 }
 
 pub fn validate_reference(value: &str) -> Result<()> {
@@ -140,11 +143,28 @@ pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Resu
     validate_reference(&branch)?;
     validate_reference(&base)?;
     let fetch_origin = body.get::<bool>("fetchOrigin")?.unwrap_or(false);
+    let fetch_forge = body.get::<Option<ForgeKind>>("fetchForge")?.flatten();
+    let fetch_repository = body.get::<String>("fetchRepository")?.unwrap_or_default();
+    let forge_revision = body.get::<Option<u64>>("forgeRevision")?.flatten();
+    if let Some(kind) = fetch_forge {
+        if !fetch_origin || forge_revision.is_none() {
+            return Err(
+                "Confirme l’actualisation et recharge la connexion de forge avant le fetch HTTPS."
+                    .into(),
+            );
+        }
+        super::forge::repository(kind, &fetch_repository, 1)?;
+    } else if !fetch_repository.is_empty() || forge_revision.is_some() {
+        return Err("Choisis la forge du téléchargement HTTPS ou retire ses paramètres.".into());
+    }
     Ok(CreateOptions {
         repo,
         branch,
         base,
         fetch_origin,
+        fetch_forge,
+        fetch_repository,
+        forge_revision,
     })
 }
 
@@ -296,6 +316,35 @@ mod tests {
             service_repositories(Some(&project), &primary, false).unwrap(),
             BTreeMap::from([("back".into(), "/service".into())])
         );
+    }
+
+    #[test]
+    fn authenticated_fetch_requires_an_explicit_scope_and_credential_revision() {
+        let card: Card = serde_json::from_str(
+            &json!({"id":"task","title":"Synthetic","repo":"/repo"}).to_string(),
+        )
+        .unwrap();
+        for body in [
+            json!({"fetchForge":"github","fetchRepository":"owner/repo","forgeRevision":1}),
+            json!({"fetchOrigin":true,"fetchForge":"github","fetchRepository":"owner/repo"}),
+            json!({"fetchOrigin":true,"fetchRepository":"owner/repo","forgeRevision":1}),
+            json!({"fetchOrigin":true,"fetchForge":"github","fetchRepository":"../repo","forgeRevision":1}),
+            json!({"fetchOrigin":true,"fetchForge":"github","fetchRepository":"owner/repo","forgeRevision":"1"}),
+        ] {
+            assert!(
+                create_options(
+                    &card,
+                    &Document::default(),
+                    &serde_json::from_str(&body.to_string()).unwrap()
+                )
+                .is_err()
+            );
+        }
+        let body = serde_json::from_str(&json!({"fetchOrigin":true,"fetchForge":"gitlab","fetchRepository":"group/nested/repo","forgeRevision":7}).to_string()).unwrap();
+        let options = create_options(&card, &Document::default(), &body).unwrap();
+        assert_eq!(options.fetch_forge, Some(ForgeKind::Gitlab));
+        assert_eq!(options.forge_revision, Some(7));
+        assert_eq!(options.fetch_repository, "group/nested/repo");
     }
 
     #[test]

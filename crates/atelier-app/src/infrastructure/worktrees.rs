@@ -150,6 +150,26 @@ pub async fn prepare_from_origin(
     branch: String,
     base: String,
 ) -> Result<Worktree> {
+    prepare_from_origin_with_auth(root, roots, repo, branch, base, None).await
+}
+pub async fn prepare_from_forge_origin(
+    root: &Dir,
+    roots: &[PathBuf],
+    repo: &str,
+    branch: String,
+    base: String,
+    authentication: &super::git_transport::HttpsAuthentication,
+) -> Result<Worktree> {
+    prepare_from_origin_with_auth(root, roots, repo, branch, base, Some(authentication)).await
+}
+async fn prepare_from_origin_with_auth(
+    root: &Dir,
+    roots: &[PathBuf],
+    repo: &str,
+    branch: String,
+    base: String,
+    authentication: Option<&super::git_transport::HttpsAuthentication>,
+) -> Result<Worktree> {
     reference(&base)?;
     // Validate the destination before downloading; existing task branches are never moved.
     let mut plan = prepare(root, roots, repo, branch, "HEAD".into()).await?;
@@ -179,7 +199,11 @@ pub async fn prepare_from_origin(
             "--list",
         ])
         .await?;
-    for key in String::from_utf8(config)?.split('\0') {
+    let config = String::from_utf8(config)?;
+    if authentication.is_some() {
+        super::git_transport::HttpsAuthentication::validate_configuration(&config)?;
+    }
+    for key in config.split('\0') {
         let key = key.to_ascii_lowercase();
         if key.starts_with("url.")
             || key.starts_with("include.")
@@ -201,30 +225,38 @@ pub async fn prepare_from_origin(
             .await?,
     )?;
     let origin = origin.trim_end_matches(['\r', '\n']);
-    // shortcut: remote transports and their credentials are enabled with the R04 connectors.
-    let remote = Repository::synthetic(root, roots, &JsonString::from(origin))
-        .map_err(|_| "Origin doit désigner un dépôt Git dans le dossier repositories du prototype. Les connexions distantes attendent les connecteurs.")?;
-    remote.verify_root().await?;
-    let remote_path = path_string(&remote.path).utf8()?;
+    let remote_path = if let Some(authentication) = authentication {
+        authentication.origin(origin)?
+    } else {
+        let remote=Repository::synthetic(root,roots,&JsonString::from(origin)).map_err(|_|"Origin doit désigner un dépôt synthétique local ou une connexion HTTPS de forge explicitement choisie.")?;
+        remote.verify_root().await?;
+        path_string(&remote.path).utf8()?
+    };
     let private_ref = format!("refs/atelier-fetch/{}", uuid::Uuid::new_v4());
     let fetched = async {
-        source
-            .without_programs(&[
-                "-c",
-                "protocol.allow=never",
-                "-c",
-                "protocol.file.allow=always",
-                "fetch",
-                "--no-tags",
-                "--no-write-fetch-head",
-                "--no-recurse-submodules",
-                "--no-auto-maintenance",
-                "--no-prune",
-                "--",
-                &remote_path,
-                &format!("{remote_ref}:{private_ref}"),
-            ])
-            .await?;
+        if let Some(authentication) = authentication {
+            authentication
+                .fetch(&source, &remote_path, &remote_ref, &private_ref)
+                .await?;
+        } else {
+            source
+                .without_programs(&[
+                    "-c",
+                    "protocol.allow=never",
+                    "-c",
+                    "protocol.file.allow=always",
+                    "fetch",
+                    "--no-tags",
+                    "--no-write-fetch-head",
+                    "--no-recurse-submodules",
+                    "--no-auto-maintenance",
+                    "--no-prune",
+                    "--",
+                    &remote_path,
+                    &format!("{remote_ref}:{private_ref}"),
+                ])
+                .await?;
+        }
         let commit = String::from_utf8(
             source
                 .git(&[
