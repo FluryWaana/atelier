@@ -1105,5 +1105,17 @@
   "Commande de vérification invalide.": "Invalid verification command.",
   "Sources trop volumineuses pour la vérification.": "Sources exceed verification size limits.",
   "Les sources ont changé pendant leur inspection.": "Sources changed during inspection.",
-  "Durée maximale de l’exécution atteinte.": "Run time limit reached."
+  "Durée maximale de l’exécution atteinte.": "Run time limit reached.",
+  "Lister les PR/MR ouvertes": "List open PRs/MRs",
+  "PR/MR ouvertes du dépôt": "Open repository PRs/MRs",
+  "Liste lue sur demande. Sélectionne un numéro, puis lis la PR/MR pour vérifier ses commits. Aucun résultat partiel n’est présenté comme une liste complète.": "List read on request. Select a number, then read the PR/MR to check its commits. Partial results are never presented as a complete list.",
+  "Aucune PR/MR ouverte dans ce dépôt.": "No open PRs/MRs in this repository.",
+  "PR/MR sélectionnée. Lance sa lecture pour obtenir ses détails.": "PR/MR selected. Read it to retrieve its details.",
+  "Liste de PR/MR trop longue.": "PR/MR list request timed out.",
+  "Liste de PR/MR trop volumineuse. Aucun résultat partiel affiché.": "PR/MR list exceeds size limits. No partial results are displayed.",
+  "Pagination de PR/MR invalide.": "Invalid PR/MR pagination.",
+  "La liste de PR/MR ne correspond pas au dépôt demandé.": "The PR/MR list does not match the requested repository.",
+  "Identité de PR/MR invalide.": "Invalid PR/MR identity.",
+  "Pagination de PR/MR répétée ou modifiée. Relance la lecture.": "PR/MR pagination repeated or changed. Read the list again.",
+  "Liste de PR/MR limitée à 100 pages ; aucun résultat partiel affiché.": "PR/MR list is limited to 100 pages; no partial results are displayed."
 }

@@ -103,6 +103,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/document-storage.rs](../crates/atelier-app/tests/document-storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/files.rs](../crates/atelier-app/tests/files.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/forge-association.rs](../crates/atelier-app/tests/forge-association.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/forge-lists.rs](../crates/atelier-app/tests/forge-lists.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/forge.rs](../crates/atelier-app/tests/forge.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/git-transport.rs](../crates/atelier-app/tests/git-transport.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/jira-creation.rs](../crates/atelier-app/tests/jira-creation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -1239,9 +1240,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/forge.rs:211](../crates/atelier-app/src/infrastructure/forge.rs#L211) | <code>pub fn configure(</code> |
 | [crates/atelier-app/src/infrastructure/forge.rs:267](../crates/atelier-app/src/infrastructure/forge.rs#L267) | <code>pub fn credentials(</code> |
 | [crates/atelier-app/src/infrastructure/forge.rs:308](../crates/atelier-app/src/infrastructure/forge.rs#L308) | <code>pub struct Forge {</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:317](../crates/atelier-app/src/infrastructure/forge.rs#L317) | <code>pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:322](../crates/atelier-app/src/infrastructure/forge.rs#L322) | <code>pub fn synthetic(</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:497](../crates/atelier-app/src/infrastructure/forge.rs#L497) | <code>pub async fn pull_request(&amp;self, repository: &amp;str, number: u64) -&gt; Result&lt;PullRequest&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:317](../crates/atelier-app/src/infrastructure/forge.rs#L317) | <code>pub async fn list_pull_requests(</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:513](../crates/atelier-app/src/infrastructure/forge.rs#L513) | <code>pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:518](../crates/atelier-app/src/infrastructure/forge.rs#L518) | <code>pub fn synthetic(</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:693](../crates/atelier-app/src/infrastructure/forge.rs#L693) | <code>pub async fn pull_request(&amp;self, repository: &amp;str, number: u64) -&gt; Result&lt;PullRequest&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/forge_association.rs:1](../crates/atelier-app/src/infrastructure/forge_association.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/forge_association.rs:7](../crates/atelier-app/src/infrastructure/forge_association.rs#L7) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/forge_association.rs:8](../crates/atelier-app/src/infrastructure/forge_association.rs#L8) | <code>use atelier_core::{</code> |
@@ -1775,6 +1777,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/forge-association.rs:139](../crates/atelier-app/tests/forge-association.rs#L139) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/forge-association.rs:141](../crates/atelier-app/tests/forge-association.rs#L141) | <code>use atelier_app::infrastructure::{process_tree, worktrees};</code> |
 | [crates/atelier-app/tests/forge-association.rs:142](../crates/atelier-app/tests/forge-association.rs#L142) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
+| [crates/atelier-app/tests/forge-lists.rs:1](../crates/atelier-app/tests/forge-lists.rs#L1) | <code>use atelier_app::infrastructure::forge::Forge;</code> |
+| [crates/atelier-app/tests/forge-lists.rs:2](../crates/atelier-app/tests/forge-lists.rs#L2) | <code>use atelier_core::contracts::{ForgeConfiguration, ForgeKind};</code> |
+| [crates/atelier-app/tests/forge-lists.rs:3](../crates/atelier-app/tests/forge-lists.rs#L3) | <code>use axum::{</code> |
+| [crates/atelier-app/tests/forge-lists.rs:8](../crates/atelier-app/tests/forge-lists.rs#L8) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/tests/forge-lists.rs:73](../crates/atelier-app/tests/forge-lists.rs#L73) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/forge.rs:1](../crates/atelier-app/tests/forge.rs#L1) | <code>use atelier_app::infrastructure::{</code> |
 | [crates/atelier-app/tests/forge.rs:7](../crates/atelier-app/tests/forge.rs#L7) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/forge.rs:11](../crates/atelier-app/tests/forge.rs#L11) | <code>use axum::{</code> |
@@ -2515,16 +2522,23 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/contracts.rs:519](../crates/atelier-core/src/contracts.rs#L519) | <code>pub fork: bool,</code> |
 | [crates/atelier-core/src/contracts.rs:520](../crates/atelier-core/src/contracts.rs#L520) | <code>pub base_url: String,</code> |
 | [crates/atelier-core/src/contracts.rs:521](../crates/atelier-core/src/contracts.rs#L521) | <code>pub checked_at: String,</code> |
-| [crates/atelier-core/src/contracts.rs:526](../crates/atelier-core/src/contracts.rs#L526) | <code>pub struct PullRequestAttach {</code> |
-| [crates/atelier-core/src/contracts.rs:527](../crates/atelier-core/src/contracts.rs#L527) | <code>pub expected: Card,</code> |
-| [crates/atelier-core/src/contracts.rs:528](../crates/atelier-core/src/contracts.rs#L528) | <code>pub revision: u64,</code> |
-| [crates/atelier-core/src/contracts.rs:529](../crates/atelier-core/src/contracts.rs#L529) | <code>pub kind: ForgeKind,</code> |
-| [crates/atelier-core/src/contracts.rs:530](../crates/atelier-core/src/contracts.rs#L530) | <code>pub repository: String,</code> |
-| [crates/atelier-core/src/contracts.rs:531](../crates/atelier-core/src/contracts.rs#L531) | <code>pub number: u64,</code> |
-| [crates/atelier-core/src/contracts.rs:532](../crates/atelier-core/src/contracts.rs#L532) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/contracts.rs:536](../crates/atelier-core/src/contracts.rs#L536) | <code>pub struct PullRequestDetach {</code> |
-| [crates/atelier-core/src/contracts.rs:537](../crates/atelier-core/src/contracts.rs#L537) | <code>pub expected: Card,</code> |
-| [crates/atelier-core/src/contracts.rs:538](../crates/atelier-core/src/contracts.rs#L538) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:526](../crates/atelier-core/src/contracts.rs#L526) | <code>pub struct PullRequestSummary {</code> |
+| [crates/atelier-core/src/contracts.rs:527](../crates/atelier-core/src/contracts.rs#L527) | <code>pub number: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:528](../crates/atelier-core/src/contracts.rs#L528) | <code>pub title: String,</code> |
+| [crates/atelier-core/src/contracts.rs:529](../crates/atelier-core/src/contracts.rs#L529) | <code>pub url: String,</code> |
+| [crates/atelier-core/src/contracts.rs:530](../crates/atelier-core/src/contracts.rs#L530) | <code>pub draft: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:531](../crates/atelier-core/src/contracts.rs#L531) | <code>pub source_branch: String,</code> |
+| [crates/atelier-core/src/contracts.rs:532](../crates/atelier-core/src/contracts.rs#L532) | <code>pub target_branch: String,</code> |
+| [crates/atelier-core/src/contracts.rs:537](../crates/atelier-core/src/contracts.rs#L537) | <code>pub struct PullRequestAttach {</code> |
+| [crates/atelier-core/src/contracts.rs:538](../crates/atelier-core/src/contracts.rs#L538) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:539](../crates/atelier-core/src/contracts.rs#L539) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:540](../crates/atelier-core/src/contracts.rs#L540) | <code>pub kind: ForgeKind,</code> |
+| [crates/atelier-core/src/contracts.rs:541](../crates/atelier-core/src/contracts.rs#L541) | <code>pub repository: String,</code> |
+| [crates/atelier-core/src/contracts.rs:542](../crates/atelier-core/src/contracts.rs#L542) | <code>pub number: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:543](../crates/atelier-core/src/contracts.rs#L543) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/contracts.rs:547](../crates/atelier-core/src/contracts.rs#L547) | <code>pub struct PullRequestDetach {</code> |
+| [crates/atelier-core/src/contracts.rs:548](../crates/atelier-core/src/contracts.rs#L548) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:549](../crates/atelier-core/src/contracts.rs#L549) | <code>pub confirmed: bool,</code> |
 | [crates/atelier-core/src/document.rs:1](../crates/atelier-core/src/document.rs#L1) | <code>use serde::{</code> |
 | [crates/atelier-core/src/document.rs:5](../crates/atelier-core/src/document.rs#L5) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/src/document.rs:6](../crates/atelier-core/src/document.rs#L6) | <code>use std::fmt;</code> |
@@ -3858,11 +3872,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:586](../xtask/src/ui.rs#L586) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:595](../xtask/src/ui.rs#L595) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
 | [xtask/src/ui.rs:600](../xtask/src/ui.rs#L600) | <code>.args([</code> |
-| [xtask/src/ui.rs:1990](../xtask/src/ui.rs#L1990) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:2002](../xtask/src/ui.rs#L2002) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:2007](../xtask/src/ui.rs#L2007) | <code>.args([</code> |
-| [xtask/src/ui.rs:2022](../xtask/src/ui.rs#L2022) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:2028](../xtask/src/ui.rs#L2028) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:2003](../xtask/src/ui.rs#L2003) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:2015](../xtask/src/ui.rs#L2015) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:2020](../xtask/src/ui.rs#L2020) | <code>.args([</code> |
+| [xtask/src/ui.rs:2035](../xtask/src/ui.rs#L2035) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:2041](../xtask/src/ui.rs#L2041) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
 | [xtask/tests/command-runs.rs:49](../xtask/tests/command-runs.rs#L49) | <code>.args(["process-output", mode])</code> |
 | [xtask/tests/verification-runs.rs:13](../xtask/tests/verification-runs.rs#L13) | <code>async fn git(path: &amp;Path, args: &amp;[&amp;str]) {</code> |
 | [xtask/tests/verification-runs.rs:19](../xtask/tests/verification-runs.rs#L19) | <code>.args([</code> |
@@ -5113,4 +5127,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 508 fichiers ; 97 fichiers de tests Node.
+Total : 509 fichiers ; 97 fichiers de tests Node.

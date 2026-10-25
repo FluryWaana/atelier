@@ -314,6 +314,202 @@ pub struct Forge {
     revision: u64,
 }
 impl Forge {
+    pub async fn list_pull_requests(
+        &self,
+        repository: &str,
+    ) -> Result<Vec<atelier_core::contracts::PullRequestSummary>> {
+        tokio::time::timeout(Duration::from_secs(60), self.read_pull_requests(repository))
+            .await
+            .map_err(|_| "Liste de PR/MR trop longue.")?
+    }
+    async fn read_pull_requests(
+        &self,
+        repository: &str,
+    ) -> Result<Vec<atelier_core::contracts::PullRequestSummary>> {
+        let parts =
+            atelier_core::application::forge::repository(self.configuration.kind, repository, 1)?;
+        if repository.contains(&self.token) {
+            return Err("Dépôt ou numéro de PR invalide.".into());
+        }
+        let identity = match self.configuration.kind {
+            ForgeKind::Github => None,
+            ForgeKind::Gitlab => {
+                let project = self
+                    .get(self.endpoint(true, &["projects", repository])?)
+                    .await?;
+                if self.text(&project["path_with_namespace"], 1000)? != repository {
+                    return Err(
+                        "Le dépôt GitLab a changé de chemin. Utilise son chemin actuel.".into(),
+                    );
+                }
+                Some(
+                    project["id"]
+                        .as_u64()
+                        .ok_or("Identifiant de projet GitLab invalide.")?
+                        .to_string(),
+                )
+            }
+            ForgeKind::Azure => {
+                let project = self
+                    .get(
+                        self.endpoint(true, &[parts[0], "_apis", "git", "repositories", parts[1]])?,
+                    )
+                    .await?;
+                Some(self.text(&project["id"], 64)?.to_owned())
+            }
+        };
+        let mut result = Vec::new();
+        let mut ids = std::collections::BTreeSet::new();
+        let mut bytes = 0usize;
+        for page in 1..=100 {
+            let mut url = match self.configuration.kind {
+                ForgeKind::Github => {
+                    self.endpoint(true, &["repos", parts[0], parts[1], "pulls"])?
+                }
+                ForgeKind::Gitlab => {
+                    self.endpoint(true, &["projects", repository, "merge_requests"])?
+                }
+                ForgeKind::Azure => self.endpoint(
+                    true,
+                    &[
+                        parts[0],
+                        "_apis",
+                        "git",
+                        "repositories",
+                        parts[1],
+                        "pullrequests",
+                    ],
+                )?,
+            };
+            match self.configuration.kind {
+                ForgeKind::Github => {
+                    url.query_pairs_mut()
+                        .append_pair("state", "open")
+                        .append_pair("per_page", "100")
+                        .append_pair("page", &page.to_string());
+                }
+                ForgeKind::Gitlab => {
+                    url.query_pairs_mut()
+                        .append_pair("state", "opened")
+                        .append_pair("scope", "all")
+                        .append_pair("per_page", "100")
+                        .append_pair("page", &page.to_string());
+                }
+                ForgeKind::Azure => {
+                    url.query_pairs_mut()
+                        .append_pair("searchCriteria.status", "active")
+                        .append_pair("$top", "100")
+                        .append_pair("$skip", &result.len().to_string());
+                }
+            }
+            let value = self.get(url).await?;
+            bytes = bytes.saturating_add(serde_json::to_vec(&value)?.len());
+            if bytes > 8 * 1024 * 1024 {
+                return Err(
+                    "Liste de PR/MR trop volumineuse. Aucun résultat partiel affiché.".into(),
+                );
+            }
+            let rows = if self.configuration.kind == ForgeKind::Azure {
+                value["value"].as_array()
+            } else {
+                value.as_array()
+            }
+            .ok_or("Pagination de PR/MR invalide.")?;
+            if rows.len() > 100 {
+                return Err("Pagination de PR/MR invalide.".into());
+            }
+            for row in rows {
+                let (number, source, target, draft) = match self.configuration.kind {
+                    ForgeKind::Github => {
+                        if self.text(&row["base"]["repo"]["full_name"], 1000)? != repository
+                            || row["state"] != "open"
+                        {
+                            return Err(
+                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                            );
+                        }
+                        (
+                            row["number"].as_u64(),
+                            &row["head"]["ref"],
+                            &row["base"]["ref"],
+                            row["draft"].as_bool(),
+                        )
+                    }
+                    ForgeKind::Gitlab => {
+                        if row["target_project_id"].as_u64().map(|id| id.to_string()) != identity
+                            || row["state"] != "opened"
+                        {
+                            return Err(
+                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                            );
+                        }
+                        (
+                            row["iid"].as_u64(),
+                            &row["source_branch"],
+                            &row["target_branch"],
+                            row["draft"].as_bool(),
+                        )
+                    }
+                    ForgeKind::Azure => {
+                        if Some(self.text(&row["repository"]["id"], 64)?.to_owned()) != identity
+                            || row["status"] != "active"
+                        {
+                            return Err(
+                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                            );
+                        }
+                        (
+                            row["pullRequestId"].as_u64(),
+                            &row["sourceRefName"],
+                            &row["targetRefName"],
+                            row["isDraft"].as_bool(),
+                        )
+                    }
+                };
+                let number = number.ok_or("Identité de PR/MR invalide.")?;
+                atelier_core::application::forge::repository(
+                    self.configuration.kind,
+                    repository,
+                    number,
+                )?;
+                if !ids.insert(number) {
+                    return Err(
+                        "Pagination de PR/MR répétée ou modifiée. Relance la lecture.".into(),
+                    );
+                }
+                let branch = |value: &Value| -> Result<String> {
+                    let value = self.text(value, 1000)?;
+                    Ok(if self.configuration.kind == ForgeKind::Azure {
+                        value
+                            .strip_prefix("refs/heads/")
+                            .filter(|value| !value.is_empty())
+                            .ok_or("Référence de branche Azure invalide.")?
+                    } else {
+                        value
+                    }
+                    .to_owned())
+                };
+                result.push(atelier_core::contracts::PullRequestSummary {
+                    number,
+                    title: self.text(&row["title"], 8000)?.to_owned(),
+                    url: browser_link(&self.configuration, repository, number)?,
+                    draft: draft.ok_or("État brouillon de PR absent.")?,
+                    source_branch: branch(source)?,
+                    target_branch: branch(target)?,
+                });
+            }
+            // A short page is not proof of completion: some servers lower their page size.
+            if rows.is_empty() {
+                if serde_json::to_vec(&result)?.len() > 8 * 1024 * 1024 {
+                    return Err(
+                        "Liste de PR/MR trop volumineuse. Aucun résultat partiel affiché.".into(),
+                    );
+                }
+                return Ok(result);
+            }
+        }
+        Err("Liste de PR/MR limitée à 100 pages ; aucun résultat partiel affiché.".into())
+    }
     pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -> Result<Self> {
         let normalized = normalize(&configuration)?;
         Self::prepare(normalized, token, revision, false)

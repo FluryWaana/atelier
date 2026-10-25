@@ -129,12 +129,22 @@ pub(super) struct PullQuery {
     revision: u64,
     kind: ForgeKind,
     repository: String,
+    #[serde(default)]
     number: u64,
 }
 pub(super) async fn pull_request(
     State(state): State<Shared>,
     Query(query): Query<PullQuery>,
 ) -> Response {
+    read_pull_requests(state, query, false).await
+}
+pub(super) async fn pull_requests(
+    State(state): State<Shared>,
+    Query(query): Query<PullQuery>,
+) -> Response {
+    read_pull_requests(state, query, true).await
+}
+async fn read_pull_requests(state: Shared, query: PullQuery, list: bool) -> Response {
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -157,9 +167,12 @@ pub(super) async fn pull_request(
                 })
             })
             .await?;
-        let result = forge::Forge::new(configuration, token, revision)?
-            .pull_request(&query.repository, query.number)
-            .await?;
+        let client = forge::Forge::new(configuration, token, revision)?;
+        let result = if list {
+            serde_json::to_value(client.list_pull_requests(&query.repository).await?)?
+        } else {
+            serde_json::to_value(client.pull_request(&query.repository, query.number).await?)?
+        };
         state
             .database
             .call(move |store| forge::require_revision(store, revision))

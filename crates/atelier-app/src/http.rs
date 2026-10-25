@@ -493,6 +493,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             get(forge::configurations).put(forge::configure),
         )
         .route("/api/forges/pull-request", get(forge::pull_request))
+        .route("/api/forges/pull-requests", get(forge::pull_requests))
         .route("/api/cards/{id}/forge/attach", post(forge::attach))
         .route("/api/cards/{id}/forge/detach", post(forge::detach))
         .route("/api/jira/import-batch", post(jira::import_batch))
