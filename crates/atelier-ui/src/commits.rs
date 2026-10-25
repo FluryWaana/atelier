@@ -206,7 +206,7 @@ pub fn Commits(
             }
         });
     });
-    view! {<section class="task-files" aria-labelledby="local-commit-heading" hidden=move||card.get().is_none_or(|card|card.fields.raw("worktree").is_none()) aria-busy=move||pending.get().to_string()>
+    view! {<section id="local-commit" class="task-files" aria-labelledby="local-commit-heading" hidden=move||card.get().is_none_or(|card|card.fields.raw("worktree").is_none()) aria-busy=move||pending.get().to_string()>
         <h4 id="local-commit-heading">{move||i18n.text("Créer un commit local")}</h4>
         <p class="field-help">{move||i18n.text("Choisis les fichiers du disque à inclure. L’index existant reste inchangé, y compris les sélections partielles ; inspecte-le avant un prochain commit externe. Aucun push automatique.")}</p>
         <fieldset disabled=move||pending.get()||blocked.get()||archived||unresolved.get()>
@@ -214,7 +214,7 @@ pub fn Commits(
             <p hidden=move||!loaded.get()||!files.get().is_empty()>{move||i18n.text("Aucun fichier modifié depuis le dernier commit.")}</p>
             <div class="file-list" role="group" aria-label=move||i18n.text("Fichiers du commit")>{move||files.get().into_iter().skip(page.get()*100).take(100).map(|file|{
                 let path=StoredValue::new(file.path);
-                view!{<label><input type="checkbox" prop:checked=move||selected.with(|selected|selected.contains(&path.get_value())) disabled=move||selected.with(|selected|selected.len()>=100&&!selected.contains(&path.get_value())) on:change=move|event|selected.update(|selected|{let value=path.get_value(); if event_target_checked(&event){if !selected.contains(&value){selected.push(value);selected.sort();}}else{selected.retain(|path|path!=&value);}}) /><code>{path.get_value()}</code></label>}
+                view!{<label><input type="checkbox" data-commit-path=path.get_value() prop:checked=move||selected.with(|selected|selected.contains(&path.get_value())) disabled=move||selected.with(|selected|selected.len()>=100&&!selected.contains(&path.get_value())) on:change=move|event|selected.update(|selected|{let value=path.get_value(); if event_target_checked(&event){if !selected.contains(&value){selected.push(value);selected.sort();}}else{selected.retain(|path|path!=&value);}}) /><code>{path.get_value()}</code></label>}
             }).collect_view()}</div>
             <div class="editor-actions"><button type="button" disabled=move||page.get()==0 on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled=move||(page.get()+1)*100>=files.with(Vec::len) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button></div>
             <p>{move||i18n.text("Sélection du commit :")}" "{move||selected.get().join(", ")}</p>

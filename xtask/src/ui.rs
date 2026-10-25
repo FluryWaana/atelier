@@ -2601,6 +2601,7 @@ async fn files_scenario(
     if std::fs::read_to_string(repo.join("src/tracked.txt"))? != "tracked synthetic file\n" {
         return Err("Le worktree a modifié le dépôt source.".into());
     }
+    local_commit_scenario(client, http, address, token, &card.id, &worktree).await?;
     click(client, "#remove-worktree").await?;
     click(client, "#confirm-remove-worktree").await?;
     wait_dom(client,"return document.querySelector('#worktree-error')?.textContent.includes('modifiés') && document.querySelector('#confirm-remove-worktree')?.disabled === false;",vec![]).await?;
@@ -2634,6 +2635,62 @@ async fn files_scenario(
         return Err("Le retrait du worktree a modifié les dépendances sources.".into());
     }
     click(client, "#close-editor").await?;
+    Ok(())
+}
+
+async fn local_commit_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    card_id: &str,
+    worktree: &atelier_core::contracts::Worktree,
+) -> Result<()> {
+    let directory = Path::new(&worktree.path);
+    let metadata = std::fs::read_to_string(directory.join(".git"))?;
+    let metadata = metadata.trim().strip_prefix("gitdir: ").ok_or("Métadonnées synthétiques absentes.")?;
+    let index_path = Path::new(metadata).join("index");
+    let index_before = std::fs::read(&index_path)?;
+    std::fs::write(directory.join("human-unselected.txt"), "Keep human unselected content\n")?;
+    click(client, "#load-commit-files").await?;
+    wait_dom(client,"return document.querySelector('#local-commit')?.getAttribute('aria-busy') === 'false' && document.querySelector('[data-commit-path=\"src/tracked.txt\"]') && document.querySelector('[data-commit-path=\"human-unselected.txt\"]');",vec![]).await?;
+    click(client,"[data-commit-path='src/tracked.txt']").await?;
+    for (selector, value) in [("#commit-author-name", "Synthetic author"), ("#commit-author-email", "synthetic@example.invalid"), ("#commit-message", "Synthetic browser commit")] {
+        client.find(Locator::Css(selector)).await?.send_keys(value).await?;
+    }
+    click(client,"#preview-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#local-commit-notice')?.textContent === 'Aperçu préparé. Aucun commit créé.' && document.querySelector('#local-commit .file-preview')?.textContent.includes('+worktree synthetic modification') && !document.querySelector('#local-commit .file-preview')?.textContent.includes('Keep human unselected content') && document.querySelector('#create-local-commit')?.disabled === true;",vec![]).await?;
+    click(client,"#confirm-local-commit").await?;
+    client.find(Locator::Css("#commit-message")).await?.clear().await?;
+    client.find(Locator::Css("#commit-message")).await?.send_keys("Changed synthetic message").await?;
+    client.find(Locator::Css("#commit-message")).await?.clear().await?;
+    client.find(Locator::Css("#commit-message")).await?.send_keys("Synthetic browser commit").await?;
+    wait_dom(client,"return document.querySelector('#confirm-local-commit')?.checked === false && document.querySelector('#create-local-commit')?.disabled === true;",vec![]).await?;
+    click(client,"#confirm-local-commit").await?;
+    // Refuse the exact reviewed tree when a human has changed the file since preview.
+    std::fs::write(directory.join("src/tracked.txt"), "human changed after preview\n")?;
+    click(client,"#create-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#local-commit-error')?.textContent.includes('Prépare un nouvel aperçu') && document.querySelector('#commit-message')?.value === 'Synthetic browser commit' && document.querySelector('#local-commit')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    if std::fs::read(&index_path)? != index_before { return Err("Le refus du commit a modifié l’index humain.".into()); }
+    click(client,"#preview-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#local-commit .file-preview')?.textContent.includes('+human changed after preview') && document.querySelector('#confirm-local-commit')?.checked === false;",vec![]).await?;
+    click(client,"#confirm-local-commit").await?;
+    click(client,"#create-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#local-commit-notice')?.textContent.includes('Commit observé sur la branche locale') && document.querySelector('#commit-message')?.value === '' && document.querySelector('#edit-title')?.disabled === false;",vec![]).await?;
+    let board: atelier_core::contracts::Board = http.get(format!("{address}/api/state")).bearer_auth(token).send().await?.error_for_status()?.json().await?;
+    let card = board.cards.iter().find(|card| card.id == card_id).ok_or("Tâche synthétique absente.")?;
+    let intent = card.fields.get::<atelier_core::contracts::LocalCommitIntent>("localCommit")?.ok_or("Intention de commit absente.")?;
+    if intent.state != atelier_core::contracts::ForgeWriteState::Confirmed || intent.commit != intent.observed {
+        return Err("Le commit synthétique n’est pas confirmé sur sa branche.".into());
+    }
+    let output = command("git").current_dir(directory)
+        .env("GIT_CONFIG_GLOBAL", "NUL").env("GIT_CONFIG_SYSTEM", "NUL")
+        .args(["--no-pager", "--no-replace-objects", "show", "HEAD:src/tracked.txt"]).output()?;
+    if !output.status.success() || output.stdout != b"human changed after preview\n"
+        || std::fs::read(&index_path)? != index_before
+        || std::fs::read(directory.join("human-unselected.txt"))? != b"Keep human unselected content\n" {
+        return Err("Le commit navigateur ne conserve pas le contenu sélectionné ou les données humaines.".into());
+    }
     Ok(())
 }
 
