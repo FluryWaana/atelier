@@ -12,6 +12,7 @@ atelier-core.workspace = true
 tokio.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
+sha2 = "=0.11.1"
 reqwest.workspace = true
 fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }
 

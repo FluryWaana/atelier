@@ -24,6 +24,7 @@ use tokio::{net::TcpListener, sync::watch};
 mod agent_providers;
 mod assets;
 pub use assets::LEGACY_ASSETS;
+pub use assets::wasm_asset_name;
 mod backups;
 mod brainstorm;
 mod card_lifecycle;

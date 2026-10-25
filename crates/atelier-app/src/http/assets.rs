@@ -46,6 +46,19 @@ pub const LEGACY_ASSETS: &[&str] = &[
     "lib/domain/validation.mjs",
 ];
 
+pub fn wasm_asset_name(name: &str) -> bool {
+    if !name
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || b"-_.".contains(&byte))
+    {
+        return false;
+    }
+    name == "index.html"
+        || name == "atelier-loader.js"
+        || (name.starts_with("atelier-ui-") && (name.ends_with(".js") || name.ends_with(".wasm")))
+        || (name.starts_with("style-") && name.ends_with(".css"))
+}
+
 pub(super) fn router(path: &Path) -> Result<Router<Shared>> {
     let directory = Dir::open_ambient_dir(path, ambient_authority())?;
     let names: Vec<String> = if directory.symlink_metadata("app.js").is_ok() {
@@ -56,12 +69,7 @@ pub(super) fn router(path: &Path) -> Result<Router<Shared>> {
             let entry = entry?;
             let name = entry.file_name();
             let Some(name) = name.to_str() else { continue };
-            if name == "index.html"
-                || name == "atelier-loader.js"
-                || (name.starts_with("atelier-ui-")
-                    && (name.ends_with(".js") || name.ends_with(".wasm")))
-                || (name.starts_with("style-") && name.ends_with(".css"))
-            {
+            if wasm_asset_name(name) {
                 names.push(name.into());
             }
         }

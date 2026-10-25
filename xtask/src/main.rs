@@ -6,6 +6,7 @@ use std::{
 
 mod keyring;
 mod launch_detection;
+mod package;
 mod storage;
 mod ui;
 
@@ -114,6 +115,8 @@ async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["build-ui"] => build_ui(),
+        ["stage-package", target, binary, assets, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(output)),
+        ["verify-package", directory] => package::verify(Path::new(directory)),
         ["build-legacy-ui"] => build_legacy_ui(),
         ["test-storage-parity"] => storage::test().await,
         ["test-domain-parity"] => {
@@ -149,7 +152,7 @@ async fn main() -> Result<()> {
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test(false).await },
         ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
-        _ => Err("Usage : cargo xtask build-ui | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison Rust de R06 restent à implémenter.".into()),
+        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Le staging prépare un payload candidat ; lanceur, installateurs et mises à jour R06 restent à livrer.".into()),
     }
 }
 
