@@ -79,6 +79,117 @@ pub struct Invocation {
     pub confirmed: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketIdentity {
+    pub instance: String,
+    pub id: String,
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Ticket {
+    pub instance: String,
+    pub id: String,
+    pub key: String,
+    pub title: String,
+    pub description: String,
+    pub url: String,
+    pub status: String,
+}
+impl Ticket {
+    pub fn identity(&self) -> TicketIdentity {
+        TicketIdentity {
+            instance: self.instance.clone(),
+            id: self.id.clone(),
+        }
+    }
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketPage {
+    pub items: Vec<Ticket>,
+    pub next: Option<String>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketImport {
+    pub expected_revision: u64,
+    pub report_id: String,
+    pub project: crate::document::Document,
+    pub tickets: Vec<TicketIdentity>,
+    pub confirmed: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ImportedTicket {
+    pub card: crate::contracts::Card,
+    pub created: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReportItem {
+    pub label: String,
+    pub value: String,
+}
+pub fn report_items(report: &Report) -> Result<Vec<ReportItem>> {
+    if !matches!(report.method, Method::Check | Method::Action) {
+        return Ok(Vec::new());
+    }
+    let Some(items) = report.output.get("items") else {
+        return Ok(Vec::new());
+    };
+    let items = serde_json::from_value::<Vec<ReportItem>>(items.clone())
+        .map_err(|_| "Éléments du rapport de connecteur invalides.")?;
+    if items.len() > 100
+        || items
+            .iter()
+            .any(|item| !text(&item.label, 200, false) || !text(&item.value, 2000, true))
+    {
+        return Err("Éléments du rapport de connecteur trop volumineux.");
+    }
+    Ok(items)
+}
+
+pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
+    let page = match method {
+        Method::TicketsSearch => serde_json::from_value::<TicketPage>(output.clone())
+            .map_err(|_| "Page de tickets du connecteur invalide.")?,
+        Method::TicketsRead => TicketPage {
+            items: vec![
+                serde_json::from_value::<Ticket>(output.clone())
+                    .map_err(|_| "Ticket du connecteur invalide.")?,
+            ],
+            next: None,
+        },
+        _ => return Err("Ce rapport ne contient pas de tickets."),
+    };
+    if page.items.len() > 100
+        || page
+            .next
+            .as_ref()
+            .is_some_and(|next| !text(next, 2000, false))
+    {
+        return Err("Page de tickets du connecteur trop volumineuse.");
+    }
+    let mut identities = BTreeSet::new();
+    for ticket in &page.items {
+        if !text(&ticket.instance, 2000, false)
+            || !text(&ticket.id, 200, false)
+            || !text(&ticket.key, 100, false)
+            || !text(&ticket.title, 300, false)
+            || ticket.title.trim().is_empty()
+            || !text(&ticket.description, 20_000, true)
+            || !text(&ticket.url, 2000, false)
+            || !text(&ticket.status, 200, true)
+            || !identities.insert(ticket.identity())
+        {
+            return Err("Ticket du connecteur invalide ou dupliqué.");
+        }
+    }
+    Ok(page)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Method {
@@ -437,6 +548,24 @@ pub fn decode_reply(bytes: &[u8], request: &Request) -> Result<Reply> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn structured_report_items_have_explicit_text_and_count_bounds() {
+        let mut report = Report {
+            id: "synthetic".into(),
+            method: Method::Action,
+            action: Some("count".into()),
+            message: "Synthetic".into(),
+            observed_at: "2026-10-25T00:00:00Z".into(),
+            output: serde_json::json!({"items":[{"label":"Imported tickets","value":"3"}]}),
+        };
+        assert_eq!(report_items(&report).unwrap()[0].value, "3");
+        report.output["items"][0]["value"] = serde_json::json!(3);
+        assert!(report_items(&report).is_err());
+        report.output = serde_json::json!({"items":vec![serde_json::json!({"label":"Repeated","value":"0"});101]});
+        assert!(report_items(&report).is_err());
+        report.output = serde_json::json!({"items":[{"label":"Bounded","value":"x".repeat(2001)}]});
+        assert!(report_items(&report).is_err());
+    }
     fn manifest() -> Manifest {
         Manifest {
             id: "synthetic-demo".into(),

@@ -2185,7 +2185,7 @@ async fn settings_scenario(
     click(client, "#tempo-clear-token").await?;
     click(client, "#save-tempo").await?;
     wait_dom(client,"return document.querySelector('#tempo-notice')?.textContent.includes('Aucun accès distant ni export vérifié') && document.querySelector('#tempo-clear-token')?.checked === false && document.querySelector('#save-tempo')?.disabled === true;",vec![]).await?;
-    connectors_scenario(client, http, address, token).await?;
+    connectors_scenario(client, http, address, token, data).await?;
     click(client, "#settings-tab-general").await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-settings.png"),
@@ -2205,6 +2205,7 @@ async fn connectors_scenario(
     http: &reqwest::Client,
     address: &str,
     token: &str,
+    data: &Path,
 ) -> Result<()> {
     use atelier_core::application::extensions::Registry;
     click(client, "#settings-tab-connectors").await?;
@@ -2294,6 +2295,54 @@ async fn connectors_scenario(
     click(client, "#reload-connectors").await?;
     click(client, "#confirm-reload-connectors").await?;
     wait_dom(client,"return document.querySelector('#connector-field-token')?.value === '' && document.querySelector('#connector-field-fault')?.value === 'success' && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    let repository = data.join("repositories/connector-ticket-import");
+    std::fs::create_dir_all(&repository)?;
+    let project: serde_json::Value = http
+        .post(format!("{address}/api/projects"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Synthetic connector import","repo":repository}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let project_id = project["id"].as_str().ok_or("Projet synthétique absent")?;
+    click(client, "#search-connector-tickets").await?;
+    wait_dom(client,"return !!document.querySelector('[data-connector-ticket=synthetic-ticket]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false' && Array.from(document.querySelector('#connector-import-project')?.options ?? []).some(option=>option.value===arguments[0]);",vec![json!(project_id)]).await?;
+    click(client, "[data-connector-ticket=synthetic-ticket]").await?;
+    client.execute("const select=document.querySelector('#connector-import-project');select.value=arguments[0];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(project_id)]).await?;
+    click(client, "#approve-connector-import").await?;
+    http.patch(format!("{address}/api/projects/{project_id}"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"name":"Updated synthetic connector import"}))
+        .send()
+        .await?
+        .error_for_status()?;
+    click(client, "#import-connector-tickets").await?;
+    wait_dom(client,"return document.querySelector('#connectors-error')?.textContent.includes('projet a changé') && document.querySelector('[data-connector-ticket=synthetic-ticket]')?.checked === true && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    wait_dom(client,"return Array.from(document.querySelector('#connector-import-project')?.options ?? []).some(option=>option.value===arguments[0] && option.textContent==='Updated synthetic connector import');",vec![json!(project_id)]).await?;
+    client.execute("const select=document.querySelector('#connector-import-project');select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));select.value=arguments[0];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(project_id)]).await?;
+    wait_dom(client,"return document.querySelector('#approve-connector-import')?.checked === false && document.querySelector('#import-connector-tickets')?.disabled === true;",vec![]).await?;
+    click(client, "#approve-connector-import").await?;
+    click(client, "#import-connector-tickets").await?;
+    wait_dom(client,"return document.querySelector('#connectors-notice')?.textContent.includes('Import terminé') && document.querySelector('[data-connector-ticket=synthetic-ticket]')?.checked === false && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let imported = state["cards"]
+        .as_array()
+        .ok_or("Cartes absentes")?
+        .iter()
+        .find(|card| card["ticket"]["connector"] == "extension:synthetic-extension")
+        .cloned()
+        .ok_or("Ticket synthétique non importé")?;
     click(client, "#remove-connector").await?;
     click(client, "#confirm-remove-connector").await?;
     wait_dom(client,"return !document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
@@ -2307,6 +2356,20 @@ async fn connectors_scenario(
         .await?;
     if !registry.modules.is_empty() {
         return Err("Le connecteur synthétique n’a pas été retiré.".into());
+    }
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if state["cards"]
+        .as_array()
+        .is_none_or(|cards| !cards.contains(&imported))
+    {
+        return Err("Le retrait du module a modifié la carte importée.".into());
     }
     Ok(())
 }

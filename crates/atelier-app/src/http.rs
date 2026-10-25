@@ -544,6 +544,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route("/api/extensions", get(connectors::get))
         .route(
+            "/api/extensions/{id}/tickets/import",
+            post(connectors::import_tickets),
+        )
+        .route(
             "/api/cards/{id}/jira/transitions",
             get(jira_transitions::choices),
         )

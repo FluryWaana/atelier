@@ -47,7 +47,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account or remote effect","sourceLocale":"en-US","methods":["check"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account or remote effect","sourceLocale":"en-US","methods":["check","ticketsSearch"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -58,6 +58,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         message: "Synthetic extension ready".into(),
         output: if request.method == Method::Describe {
             serde_json::to_value(&manifest)?
+        } else if request.method == Method::TicketsSearch {
+            json!({"items":[{"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Synthetic connector ticket","description":"No remote account or paid agent.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Open"}],"next":null})
         } else {
             json!({"available":true,"privateHome":true})
         },

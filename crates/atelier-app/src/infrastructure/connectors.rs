@@ -366,6 +366,13 @@ pub fn invocation(
     Ok((profile, request))
 }
 pub fn record(store: &Store<'_>, id: &str, expected: u64, report: Report) -> Result<()> {
+    protocol::report_items(&report)?;
+    if matches!(
+        report.method,
+        protocol::Method::TicketsSearch | protocol::Method::TicketsRead
+    ) {
+        super::connector_tickets::page(&report)?;
+    }
     store.transaction(|store| {
         profile(store, id, expected)?;
         let mut stored = store.settings::<Document>()?;

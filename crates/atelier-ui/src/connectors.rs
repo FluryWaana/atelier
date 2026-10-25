@@ -1,6 +1,7 @@
-use crate::{i18n::I18n, read, write};
+use crate::{i18n::I18n, live::BoardState, read, write};
 use atelier_core::application::extensions::{
-    Candidate, Connection, Effect, FieldKind, Manifest, Method as ConnectorMethod, Registry, Report,
+    self as protocol, Candidate, Connection, Effect, FieldKind, ImportedTicket, Manifest,
+    Method as ConnectorMethod, Registry, Report, TicketIdentity,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -44,10 +45,13 @@ enum Action {
     Save,
     Remove,
     Invoke(ConnectorMethod, Option<String>),
+    Search(Option<String>),
+    Import,
 }
 
 #[component]
 pub fn Connectors(
+    board: BoardState,
     token: StoredValue<Result<String, String>>,
     pending: RwSignal<bool>,
     dirty: RwSignal<bool>,
@@ -66,6 +70,10 @@ pub fn Connectors(
     let remove = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
+    let tickets = RwSignal::new(BTreeSet::<TicketIdentity>::new());
+    let project = RwSignal::new(None::<atelier_core::document::Document>);
+    let import_approved = RwSignal::new(false);
+    let import_dirty = Memo::new(move |_| !tickets.get().is_empty() || project.get().is_some());
     let profile_dirty = Memo::new(move |_| {
         original
             .get()
@@ -73,6 +81,7 @@ pub fn Connectors(
     });
     let own_dirty = Memo::new(move |_| {
         profile_dirty.get()
+            || import_dirty.get()
             || !module.get().is_empty()
             || !path.get().is_empty()
             || trusted.get()
@@ -90,12 +99,20 @@ pub fn Connectors(
                 .unwrap_or_default(),
         );
         original.set(connection);
+        tickets.set(BTreeSet::new());
+        project.set(None);
+        import_approved.set(false);
         remove.set(false);
         error.set(String::new());
         notice.set(String::new());
     };
     let execute = StoredValue::new_local(move |action: Action| {
         if pending.get_untracked() || loading.get_untracked() {
+            return;
+        }
+        if import_dirty.get_untracked()
+            && !matches!(action, Action::Reload | Action::Search(_) | Action::Import)
+        {
             return;
         }
         let credential = match token.get_value() {
@@ -184,6 +201,41 @@ pub fn Connectors(
                     json!({"expectedRevision":revision,"method":method,"action":action,"input":{},"confirmed":true}),
                 ))
             }
+            Action::Search(cursor) => {
+                if profile_dirty.get_untracked() || !tickets.get_untracked().is_empty() {
+                    return;
+                }
+                let Some(endpoint) = endpoint.clone() else {
+                    return;
+                };
+                Some((
+                    Method::POST,
+                    format!("{endpoint}/invoke"),
+                    json!({"expectedRevision":revision,"method":"ticketsSearch","action":null,"input":{"cursor":cursor},"confirmed":true}),
+                ))
+            }
+            Action::Import => {
+                if profile_dirty.get_untracked()
+                    || !import_approved.get_untracked()
+                    || tickets.get_untracked().is_empty()
+                {
+                    return;
+                }
+                let Some(connection) = selected.as_ref() else {
+                    return;
+                };
+                let Some(report) = connection.installed.report.as_ref() else {
+                    return;
+                };
+                let Some(project) = project.get_untracked() else {
+                    return;
+                };
+                Some((
+                    Method::POST,
+                    format!("{}/tickets/import", endpoint.clone().unwrap()),
+                    json!({"expectedRevision":revision,"reportId":report.id,"project":project,"tickets":tickets.get_untracked(),"confirmed":true}),
+                ))
+            }
         };
         let probe_revision = registry.get_untracked().map(|value| value.revision);
         let reading = matches!(action, Action::Reload);
@@ -224,7 +276,7 @@ pub fn Connectors(
                                 )));
                                 approved.set(false);
                             }
-                            Action::Invoke(_, _) => {
+                            Action::Invoke(_, _) | Action::Search(_) => {
                                 let report = serde_json::from_value::<Report>(value)
                                     .map_err(|_| "Réponse du serveur invalide.")?;
                                 registry.update(|registry| {
@@ -245,6 +297,21 @@ pub fn Connectors(
                                         connection.installed.report = Some(report);
                                     }
                                 });
+                                import_approved.set(false);
+                            }
+                            Action::Import => {
+                                let imported = serde_json::from_value::<Vec<ImportedTicket>>(value)
+                                    .map_err(|_| "Réponse du serveur invalide.")?;
+                                if imported.len() != tickets.get_untracked().len() {
+                                    return Err("Réponse du serveur invalide.".into());
+                                }
+                                notice.set(
+                                    "Import terminé. Les cartes existantes ont été conservées."
+                                        .into(),
+                                );
+                                tickets.set(BTreeSet::new());
+                                project.set(None);
+                                import_approved.set(false);
                             }
                             _ => {
                                 let saved = serde_json::from_value::<Registry>(value)
@@ -280,6 +347,9 @@ pub fn Connectors(
                 }
                 Err(message) => error.set(message),
             }
+            if matches!(action, Action::Import) {
+                let _ = board.refresh(&credential).await;
+            }
             if reading {
                 loading.set(false);
             } else {
@@ -293,6 +363,14 @@ pub fn Connectors(
         approved.set(false);
         trusted.set(false);
     };
+    let page = move || {
+        original.get().and_then(|connection| {
+            connection
+                .installed
+                .report
+                .and_then(|report| protocol::ticket_page(report.method, &report.output).ok())
+        })
+    };
     view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
         <h3 id="connectors-heading">{move||i18n.text("Connecteurs locaux")}</h3>
         <fieldset disabled=move||loading.get()>
@@ -304,13 +382,13 @@ pub fn Connectors(
         <div class="editor-actions"><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
             let manifest=StoredValue::new(connection.installed.manifest.clone());
             let connection=StoredValue::new(connection);
-            view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
+            view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get()||import_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
         }/></div>
         <div hidden=move||original.get().is_none()>
             <h4>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name))}</h4>
             <p>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.description))}</p>
             <p>{move||original.get().map(|connection|connection.installed.binary.path)}</p>
-            <fieldset disabled=move||pending.get()||registry.get().is_none_or(|value|!value.native_available)>
+            <fieldset disabled=move||pending.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.fields).unwrap_or_default() key=move|field|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),field.id.clone()) children=move|field|{
                     let field=StoredValue::new(field);
                     let key=field.with_value(|field|field.id.clone());
@@ -338,9 +416,27 @@ pub fn Connectors(
             </fieldset>
             <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("Retirer le connecteur et ses secrets ? Les tâches importées seront conservées.")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("Confirmer")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("Annuler")}</button></div>
             <div role="status"><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|report.observed_at))}</p><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|translated(i18n,&connection.installed.manifest,&report.message)))}</p></div>
+            <dl>{move||original.get().map(|connection|connection.installed.report.as_ref().and_then(|report|protocol::report_items(report).ok()).unwrap_or_default().into_iter().map(|item|view!{<dt>{translated(i18n,&connection.installed.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view())}</dl>
+            <fieldset disabled=move||pending.get()||profile_dirty.get()>
+                <button id="search-connector-tickets" type="button" hidden=move||original.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&ConnectorMethod::TicketsSearch)) disabled=move||!tickets.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Search(None)))>{move||i18n.text("Rechercher les tickets du connecteur")}</button>
+                <div hidden=move||page().is_none()>
+                    <p>{move||i18n.text("Sélectionne au plus 20 tickets de cette page. Les cartes déjà liées seront conservées, même archivées ou dans un autre projet.")}</p>
+                    <p hidden=move||page().is_none_or(|page|!page.items.is_empty())>{move||i18n.text("Aucun ticket dans cette page.")}</p>
+                    <For each=move||page().map(|page|page.items).unwrap_or_default() key=move|ticket|(original.get_untracked().and_then(|connection|connection.installed.report.map(|report|report.id)),ticket.instance.clone(),ticket.id.clone()) children=move|ticket|{
+                        let ticket=StoredValue::new(ticket);
+                        view!{<article><label><input type="checkbox" data-connector-ticket=ticket.with_value(|ticket|ticket.id.clone()) prop:checked=move||ticket.with_value(|ticket|tickets.get().contains(&ticket.identity())) disabled=move||ticket.with_value(|ticket|!tickets.get().contains(&ticket.identity())&&tickets.get().len()>=20) on:change=move|event|{let checked=event_target_checked(&event);tickets.update(|selected|{let identity=ticket.with_value(|ticket|ticket.identity());if checked{selected.insert(identity);}else{selected.remove(&identity);}});import_approved.set(false);}/>{ticket.with_value(|ticket|format!("{} — {}",ticket.key,ticket.title))}</label><p>{ticket.with_value(|ticket|ticket.instance.clone())}</p><p>{ticket.with_value(|ticket|ticket.status.clone())}</p><p class="task-description">{ticket.with_value(|ticket|ticket.description.clone())}</p></article>}
+                    }/>
+                    <p hidden=move||page().is_none_or(|page|page.next.is_none())>{move||i18n.text("D’autres résultats sont disponibles ; cette page ne représente pas toute la recherche.")}</p>
+                    <button id="next-connector-tickets" type="button" hidden=move||page().is_none_or(|page|page.next.is_none()) disabled=move||!tickets.get().is_empty() on:click=move|_|{if let Some(cursor)=page().and_then(|page|page.next){execute.with_value(|execute|execute(Action::Search(Some(cursor))));}}>{move||i18n.text("Page suivante")}</button>
+                    <label for="connector-import-project">{move||i18n.text("Projet de destination")}</label><select id="connector-import-project" prop:value=move||project.get().and_then(|project|project.get::<String>("id").ok().flatten()).unwrap_or_default() on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.get_untracked().into_iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(id.as_str())));import_approved.set(false);}><option value="">{move||i18n.text("Choisir un projet")}</option><For each=move||board.projects.get() key=|project|(crate::field(project,"id"),crate::field(project,"name")) children=move|project|view!{<option value=crate::field(&project,"id")>{crate::field(&project,"name")}</option>}/></select>
+                    <label><input id="approve-connector-import" type="checkbox" disabled=move||tickets.get().is_empty()||project.get().is_none() prop:checked=move||import_approved.get() on:change=move|event|import_approved.set(event_target_checked(&event))/>{move||i18n.text("Créer les cartes manquantes à partir de cette sélection et de ce projet exacts.")}</label>
+                    <button id="import-connector-tickets" type="button" disabled=move||!import_approved.get()||tickets.get().is_empty()||project.get().is_none() on:click=move|_|execute.with_value(|execute|execute(Action::Import))>{move||i18n.text("Importer la sélection")}</button>
+                    <button id="cancel-connector-import" type="button" disabled=move||!import_dirty.get() on:click=move|_|{tickets.set(BTreeSet::new());project.set(None);import_approved.set(false);}>{move||i18n.text("Annuler la sélection d’import")}</button>
+                </div>
+            </fieldset>
         </div>
         <h4>{move||i18n.text("Ajouter un connecteur")}</h4>
-        <fieldset disabled=move||pending.get()||profile_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
+        <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
             <label for="connector-module">{move||i18n.text("Identifiant du module")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>
             <label for="connector-path">{move||i18n.text("Programme du connecteur")}</label><input id="connector-path" maxlength="32000" spellcheck="false" prop:value=move||path.get() on:input=move|event|{path.set(event_target_value(&event));invalidate();}/>
             <label><input id="connector-trusted" type="checkbox" prop:checked=move||trusted.get() on:change=move|event|{trusted.set(event_target_checked(&event));candidate.set(None);approved.set(false);}/>{move||i18n.text("Je fais confiance à ce programme et autorise sa lecture de manifeste.")}</label>

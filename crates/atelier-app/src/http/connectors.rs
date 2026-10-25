@@ -14,6 +14,26 @@ pub(super) async fn get(State(state): State<Shared>) -> Response {
     )
 }
 
+pub(super) async fn import_tickets(
+    State(state): State<Shared>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    request: axum::extract::Request,
+) -> Response {
+    let input: atelier_core::application::extensions::TicketImport =
+        match super::jira_transitions::input(request).await {
+            Ok(input) => input,
+            Err(response) => return response,
+        };
+    let result = state
+        .database
+        .call(move |store| crate::infrastructure::connector_tickets::import(store, &id, &input))
+        .await;
+    if result.is_ok() {
+        let _ = state.changed.send(());
+    }
+    response(result)
+}
+
 #[cfg(windows)]
 use {
     crate::{

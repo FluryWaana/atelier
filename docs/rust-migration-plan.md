@@ -62,6 +62,8 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 
 ## Checklist finale
 
+Point candidat supplémentaire : registre/exécuteur de connecteurs par processus, réglages bilingues et import local confirmé de tickets paginés raccordés, avec portée tenant/module, rapport/projet exacts, rollback et conservation des cartes humaines. Scénarios purs/SQLite/navigateur uniquement écrits, aucun compilé/exécuté. Les autres capacités des modules, écritures/reprises, POSIX et livraison restent ouvertes ; aucune case ci-dessous ni lot supplémentaire n’est validé. Campagne finale non lancée.
+
 - [ ] Chaque ligne de l'inventaire fonctionnel a un parcours réel, ses erreurs et une preuve au commit livré.
 - [ ] Tous les écrans sont utilisables : clavier, focus, brouillons, navigation, traductions, états vides/occupés/erreur.
 - [ ] Redémarrage, transactions, sauvegarde/restauration et secrets vérifiés ; aucune perte silencieuse.

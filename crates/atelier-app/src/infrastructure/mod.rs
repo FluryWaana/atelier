@@ -8,6 +8,7 @@ pub mod checked_file;
 #[cfg(windows)]
 pub mod command_runs;
 pub mod commits;
+pub mod connector_tickets;
 pub mod connectors;
 pub mod data_lock;
 pub mod database;
