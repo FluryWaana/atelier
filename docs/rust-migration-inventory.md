@@ -4264,6 +4264,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:2215](../xtask/src/ui.rs#L2215) | <code>.args([</code> |
 | [xtask/src/ui.rs:2230](../xtask/src/ui.rs#L2230) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
 | [xtask/src/ui.rs:2236](../xtask/src/ui.rs#L2236) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:2741](../xtask/src/ui.rs#L2741) | <code>.args([</code> |
 | [xtask/tests/command-runs.rs:49](../xtask/tests/command-runs.rs#L49) | <code>.args(["process-output", mode])</code> |
 | [xtask/tests/verification-runs.rs:13](../xtask/tests/verification-runs.rs#L13) | <code>async fn git(path: &amp;Path, args: &amp;[&amp;str]) {</code> |
 | [xtask/tests/verification-runs.rs:19](../xtask/tests/verification-runs.rs#L19) | <code>.args([</code> |
