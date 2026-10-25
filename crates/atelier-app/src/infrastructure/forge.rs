@@ -313,6 +313,15 @@ pub struct Forge {
     token: String,
     revision: u64,
 }
+pub struct PreparedDraft {
+    expected: PullRequest,
+    draft: bool,
+    operation: String,
+    method: reqwest::Method,
+    url: Url,
+    body: Value,
+    mutation: Option<&'static str>,
+}
 impl Forge {
     pub async fn list_pull_requests(
         &self,
@@ -561,6 +570,7 @@ impl Forge {
         authorization.set_sensitive(true);
         let mut client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
+            .retry(reqwest::retry::never())
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(20))
             .https_only(!synthetic)
@@ -629,17 +639,30 @@ impl Forge {
         }
         Ok(Some(text.to_ascii_lowercase()))
     }
-    async fn get(&self, mut url: Url) -> Result<Value> {
+    async fn get(&self, url: Url) -> Result<Value> {
+        self.request(reqwest::Method::GET, url, None).await
+    }
+    async fn request(
+        &self,
+        method: reqwest::Method,
+        mut url: Url,
+        body: Option<Value>,
+    ) -> Result<Value> {
         if self.configuration.kind == ForgeKind::Azure {
             url.query_pairs_mut().append_pair("api-version", "7.1");
         }
         let request = self
             .client
-            .get(url)
+            .request(method, url)
             .header(AUTHORIZATION, self.authorization.clone())
             .header(ACCEPT, "application/json");
         let request = if self.configuration.kind == ForgeKind::Github {
             request.header("X-GitHub-Api-Version", "2022-11-28")
+        } else {
+            request
+        };
+        let request = if let Some(body) = body {
+            request.json(&body)
         } else {
             request
         };
@@ -689,6 +712,171 @@ impl Forge {
             bytes.extend_from_slice(&chunk);
         }
         serde_json::from_slice(&bytes).map_err(|_| "Réponse JSON de forge invalide.".into())
+    }
+    fn graphql_endpoint(&self) -> Result<Url> {
+        match self.configuration.kind {
+            ForgeKind::Github if self.base.host_str() == Some("github.com") => {
+                Ok(Url::parse("https://api.github.com/graphql")?)
+            }
+            ForgeKind::Github => self.endpoint(false, &["api", "graphql"]),
+            ForgeKind::Gitlab => self.endpoint(false, &["api", "graphql"]),
+            ForgeKind::Azure => Err("GraphQL indisponible pour cette forge.".into()),
+        }
+    }
+    /// Reads only; the caller persists `sending` after this preflight and before `send_draft`.
+    pub async fn prepare_draft(
+        &self,
+        expected: &PullRequest,
+        draft: bool,
+        operation: &str,
+    ) -> Result<PreparedDraft> {
+        if expected.kind != self.configuration.kind
+            || expected.base_url != self.configuration.base
+            || expected.revision != self.revision
+            || uuid::Uuid::parse_str(operation).is_err()
+        {
+            return Err("Intention de forge incohérente.".into());
+        }
+        let current = self
+            .pull_request(&expected.repository, expected.number)
+            .await?;
+        if !same_pull_request(expected, &current)
+            || current.status != "active"
+            || current.fork
+            || current.draft == draft
+        {
+            return Err("La PR/MR a changé. Relis-la avant de modifier son état brouillon.".into());
+        }
+        let parts = atelier_core::application::forge::repository(
+            current.kind,
+            &current.repository,
+            current.number,
+        )?;
+        let number = current.number.to_string();
+        let (method, url, body, mutation) = match current.kind {
+            ForgeKind::Github => {
+                // Resolve the node through the exact REST repository, never an arbitrary caller-supplied ID.
+                let row = self
+                    .get(self.endpoint(true, &["repos", parts[0], parts[1], "pulls", &number])?)
+                    .await?;
+                if row["number"].as_u64() != Some(current.number)
+                    || self.text(&row["base"]["repo"]["full_name"], 1000)? != current.repository
+                    || self.commit(&row["head"]["sha"])? != current.source_commit
+                    || self.commit(&row["base"]["sha"])? != current.target_commit
+                    || row["draft"].as_bool() != Some(current.draft)
+                    || row["state"] != "open"
+                {
+                    return Err(
+                        "La PR/MR a changé. Relis-la avant de modifier son état brouillon.".into(),
+                    );
+                }
+                let id = self.text(&row["node_id"], 256)?;
+                let (mutation, input) = if draft {
+                    (
+                        "convertPullRequestToDraft",
+                        "ConvertPullRequestToDraftInput!",
+                    )
+                } else {
+                    (
+                        "markPullRequestReadyForReview",
+                        "MarkPullRequestReadyForReviewInput!",
+                    )
+                };
+                let query = format!(
+                    "mutation($input:{input}){{{mutation}(input:$input){{clientMutationId pullRequest{{isDraft}}}}}}"
+                );
+                (
+                    reqwest::Method::POST,
+                    self.graphql_endpoint()?,
+                    serde_json::json!({"query":query,"variables":{"input":{"pullRequestId":id,"clientMutationId":operation}}}),
+                    Some(mutation),
+                )
+            }
+            ForgeKind::Gitlab => {
+                // The dedicated mutation preserves concurrent human edits to the MR title.
+                let query = "mutation($input:MergeRequestSetDraftInput!){mergeRequestSetDraft(input:$input){clientMutationId errors mergeRequest{draft}}}";
+                (
+                    reqwest::Method::POST,
+                    self.graphql_endpoint()?,
+                    serde_json::json!({"query":query,"variables":{"input":{"projectPath":current.repository,"iid":number,"draft":draft,"clientMutationId":operation}}}),
+                    Some("mergeRequestSetDraft"),
+                )
+            }
+            ForgeKind::Azure => (
+                reqwest::Method::PATCH,
+                self.endpoint(
+                    true,
+                    &[
+                        parts[0],
+                        "_apis",
+                        "git",
+                        "repositories",
+                        parts[1],
+                        "pullrequests",
+                        &number,
+                    ],
+                )?,
+                serde_json::json!({"isDraft":draft}),
+                None,
+            ),
+        };
+        Ok(PreparedDraft {
+            expected: current,
+            draft,
+            operation: operation.into(),
+            method,
+            url,
+            body,
+            mutation,
+        })
+    }
+    /// Consumed once; no retry, redirection or compensating remote write.
+    pub async fn send_draft(&self, prepared: PreparedDraft) -> Result<PullRequest> {
+        let PreparedDraft {
+            expected: current,
+            draft,
+            operation,
+            method,
+            url,
+            body,
+            mutation,
+        } = prepared;
+        if current.kind != self.configuration.kind
+            || current.base_url != self.configuration.base
+            || current.revision != self.revision
+        {
+            return Err("Intention de forge incohérente.".into());
+        }
+        let result = self.request(method, url, Some(body)).await?;
+        if let Some(mutation) = mutation {
+            let payload = &result["data"][mutation];
+            let observed_draft = if current.kind == ForgeKind::Gitlab {
+                payload["mergeRequest"]["draft"].as_bool()
+            } else {
+                payload["pullRequest"]["isDraft"].as_bool()
+            };
+            if result
+                .get("errors")
+                .is_some_and(|errors| !errors.as_array().is_some_and(Vec::is_empty))
+                || current.kind == ForgeKind::Gitlab
+                    && !payload["errors"].as_array().is_some_and(Vec::is_empty)
+                || payload["clientMutationId"].as_str() != Some(operation.as_str())
+                || observed_draft != Some(draft)
+            {
+                return Err(
+                    "Écriture de forge incertaine. Relis l’état distant sans réenvoyer.".into(),
+                );
+            }
+        }
+        let observed = self
+            .pull_request(&current.repository, current.number)
+            .await?;
+        if observed.draft != draft {
+            return Err(
+                "Écriture de forge incertaine. Relis l’état distant sans réenvoyer.".into(),
+            );
+        }
+        Ok(observed)
     }
     pub async fn pull_request(&self, repository: &str, number: u64) -> Result<PullRequest> {
         tokio::time::timeout(
@@ -876,4 +1064,19 @@ impl Forge {
                 .format(&time::format_description::well_known::Rfc3339)?,
         })
     }
+}
+
+pub fn same_pull_request(left: &PullRequest, right: &PullRequest) -> bool {
+    left.kind == right.kind
+        && left.base_url == right.base_url
+        && left.repository == right.repository
+        && left.number == right.number
+        && left.source_branch == right.source_branch
+        && left.target_branch == right.target_branch
+        && left.source_commit == right.source_commit
+        && left.target_commit == right.target_commit
+        && left.status == right.status
+        && left.draft == right.draft
+        && left.fork == right.fork
+        && left.title == right.title
 }

@@ -31,6 +31,7 @@ mod card_lifecycle;
 mod events;
 mod files;
 mod forge;
+mod forge_draft;
 mod jira;
 mod jira_creation;
 mod jira_refresh;
@@ -158,6 +159,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path == "/api/jira/import"
             || path == "/api/jira/import-batch"
             || path.ends_with("/forge/attach")
+            || path.ends_with("/forge/draft")
+            || path.ends_with("/forge/draft-reconcile")
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -190,14 +193,20 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                 match state
                     .database
                     .call(move |store| {
-                        crate::infrastructure::jira_transition::blocks(store, &guarded_path)
+                        Ok(
+                            crate::infrastructure::jira_transition::blocks(store, &guarded_path)?
+                                || crate::infrastructure::forge_draft::blocks(
+                                    store,
+                                    &guarded_path,
+                                )?,
+                        )
                     })
                     .await
                 {
                     Ok(true) => {
                         return failure(
                             StatusCode::CONFLICT,
-                            "Termine ou vérifie l’opération Jira avant de modifier cette tâche, les projets ou les sauvegardes.",
+                            "Termine ou vérifie l’opération distante avant de modifier cette tâche, les projets ou les sauvegardes.",
                         );
                     }
                     Err(_) => {
@@ -415,6 +424,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             crate::infrastructure::jira_creation::recover(store)?;
             crate::infrastructure::jira_refresh::recover(store)?;
             crate::infrastructure::jira_transition::recover(store)?;
+            crate::infrastructure::forge_draft::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)?;
             crate::infrastructure::queue::recover(store)
         })
@@ -500,6 +510,11 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             get(forge::configurations).put(forge::configure),
         )
         .route("/api/forges/pull-request", get(forge::pull_request))
+        .route("/api/cards/{id}/forge/draft", post(forge_draft::change))
+        .route(
+            "/api/cards/{id}/forge/draft-reconcile",
+            post(forge_draft::reconcile),
+        )
         .route("/api/forges/pull-requests", get(forge::pull_requests))
         .route("/api/cards/{id}/forge/attach", post(forge::attach))
         .route("/api/cards/{id}/forge/detach", post(forge::detach))

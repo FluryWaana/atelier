@@ -30,6 +30,7 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
         || card.fields.truthy("archived")?
         || card.fields.truthy("brainstormSession")?
         || atelier_core::application::jira::unresolved(&card.fields)?
+        || atelier_core::application::forge::unresolved(&card.fields)?
     {
         return Err(conflict());
     }
@@ -241,7 +242,7 @@ pub fn attach(store: &Store<'_>, input: &PullRequestAttach, pr: PullRequest) -> 
         Ok(card)
     })
 }
-fn invalidate(store: &Store<'_>, card: &mut Card, reason: &str) -> Result<()> {
+pub(super) fn invalidate(store: &Store<'_>, card: &mut Card, reason: &str) -> Result<()> {
     let invalidation = task_editing::invalidate_reviews(
         &card.id,
         &mut card.fields,

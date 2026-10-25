@@ -15,6 +15,17 @@ impl std::fmt::Display for ForgeFailure {
     }
 }
 impl std::error::Error for ForgeFailure {}
+pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
+    use crate::contracts::{ForgeDraftIntent, ForgeWriteState};
+    Ok(fields
+        .get::<ForgeDraftIntent>("forgeDraft")?
+        .is_some_and(|intent| {
+            matches!(
+                intent.state,
+                ForgeWriteState::Preparing | ForgeWriteState::Sending | ForgeWriteState::Uncertain
+            )
+        }))
+}
 pub fn repository(kind: ForgeKind, name: &str, number: u64) -> Result<Vec<&str>, ForgeFailure> {
     let parts = name.split('/').collect::<Vec<_>>();
     if name.len() > 1000

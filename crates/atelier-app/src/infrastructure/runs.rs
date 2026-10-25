@@ -35,6 +35,9 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if card.fields.truthy("archived")? {
             return Err("Restaure cette tâche avant de lancer un agent.".into());
         }
+        if atelier_core::application::forge::unresolved(&card.fields)? {
+            return Err("Vérifie l’opération de forge avant de lancer une exécution.".into());
+        }
         if run.string_equals("purpose", "verification")? {
             let worktree = run
                 .get::<atelier_core::contracts::Worktree>("verificationWorktree")?

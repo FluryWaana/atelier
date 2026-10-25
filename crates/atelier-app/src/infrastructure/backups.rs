@@ -191,6 +191,12 @@ fn restore_checked(
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
     for card in store.documents::<Document>(Documents::Cards)? {
+        if atelier_core::application::forge::unresolved(&card)? {
+            return Err(BackupFailure::Conflict(
+                "Vérifie les écritures de forge incertaines avant une restauration.",
+            )
+            .into());
+        }
         if atelier_core::application::jira::unresolved(&card)? {
             return Err(BackupFailure::Conflict(
                 "Vérifie les envois Jira incertains avant une restauration.",
@@ -225,6 +231,20 @@ fn restore_checked(
     let cards = documents(&source, Documents::Cards)?;
     let runs = documents(&source, Documents::Runs)?;
     for current in store.documents::<Document>(Documents::Cards)? {
+        if let Some(effect) = current.get::<serde_json::Value>("forgeDraftEffect")? {
+            let id = current
+                .get::<String>("id")?
+                .ok_or("Identifiant de carte absent.")?;
+            let saved = cards
+                .iter()
+                .find(|saved| saved.id == id)
+                .map(|saved| saved.value.get::<serde_json::Value>("forgeDraftEffect"))
+                .transpose()?
+                .flatten();
+            if saved != Some(effect) {
+                return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge.").into());
+            }
+        }
         for key in ["jiraTransition", "jiraCreation"] {
             if let Some(intent) = current.get::<Document>(key)? {
                 let state = intent
@@ -280,6 +300,9 @@ fn restore_checked(
         }
     }
     for card in &cards {
+        if atelier_core::application::forge::unresolved(&card.value)? {
+            return Err(BackupFailure::Invalid(unfinished).into());
+        }
         if atelier_core::application::jira::unresolved(&card.value)? {
             return Err(BackupFailure::Invalid(unfinished).into());
         }

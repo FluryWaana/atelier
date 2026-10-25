@@ -575,3 +575,32 @@ pub struct PullRequestDetach {
     pub expected: Card,
     pub confirmed: bool,
 }
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ForgeDraftRequest {
+    pub expected: Card,
+    pub revision: u64,
+    pub draft: bool,
+    pub confirmed: bool,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ForgeWriteState {
+    Preparing,
+    Sending,
+    Uncertain,
+    Confirmed,
+    Failed,
+    Reconciled,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgeDraftIntent {
+    pub id: String,
+    pub state: ForgeWriteState,
+    pub expected: PullRequest,
+    pub draft: bool,
+    pub started_at: String,
+    pub observed: Option<PullRequest>,
+}
