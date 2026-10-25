@@ -91,12 +91,14 @@ pub fn Runs(
                 .find(|item| item.id == card.get_value())
                 .is_some_and(|item| {
                     !item.fields.truthy("archived").unwrap_or(true)
-                        && item
-                            .fields
-                            .get::<Worktree>("worktree")
-                            .ok()
-                            .flatten()
-                            .is_some_and(|worktree| worktree.state == WorktreeState::Ready)
+                        && ((item.fields.truthy("brainstormSession").unwrap_or(false)
+                            && field(&item.fields, "repo").is_empty())
+                            || item
+                                .fields
+                                .get::<Worktree>("worktree")
+                                .ok()
+                                .flatten()
+                                .is_some_and(|worktree| worktree.state == WorktreeState::Ready))
                 })
         })
     });
@@ -272,6 +274,7 @@ pub fn Runs(
             <label hidden=move||brainstorm.get() for="run-mode">{move || i18n.text("Mode")}</label><select hidden=move||brainstorm.get() id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
             <div hidden=move||!brainstorm.get()><label for="brainstorm-message">{move||i18n.text("Message pour le brainstorm")}</label><textarea id="brainstorm-message" maxlength="12000" rows="4" disabled=move||pending.get()||running.get() prop:value=move||message.get() on:input=move|event|message.set(event_target_value(&event)) /><p class="field-help">{move||i18n.text("Décris ta question ou demande un découpage en tâches. Chaque envoi démarre explicitement une exécution de l’agent choisi.")}</p></div>
             <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() || (brainstorm.get()&&message.get().trim().is_empty()) on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
+            <p class="field-help" hidden=move||!brainstorm.get()||board.cards.with(|cards|cards.iter().find(|item|item.id==card.get_value()).is_none_or(|item|!field(&item.fields,"repo").is_empty()))>{move||i18n.text("Conversation sans dépôt : chaque échange utilise un dossier temporaire vide, supprimé à la fin. Les permissions restent celles de l’agent choisi.")}</p>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie le worktree, puis enregistre tes modifications avant de lancer une commande.")}</p>
             <p role="status">{move || i18n.text(latest.get().map(|run| match field(&run,"status").as_str() { "starting"=>"Démarrage…", "running"=>"Processus actif", "stopping"=>"Arrêt…", "completed"=>"Exécution terminée", "cancelled"=>"Exécution arrêtée", "interrupted"=>"Exécution interrompue : vérifie le dépôt avant de relancer.", _=>"Échec de l’exécution" }).unwrap_or("Aucune exécution pour cette tâche."))}</p>
             <p class="error" role="alert">{move || { let message = error.get(); i18n.text(&if message.is_empty() { latest.get().map(|run| field(&run,"attention")).unwrap_or_default() } else { message }) }}</p>

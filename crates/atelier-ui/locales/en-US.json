@@ -837,7 +837,6 @@
   "Lot importé : nouvelles cartes créées, cartes déjà liées conservées.": "Batch imported: new cards created, already linked cards preserved.",
   "Créer une session de brainstorm": "Create a brainstorm session",
   "Brainstorms": "Brainstorms",
-  "Choisis un projet et saisis une idée pour ouvrir une conversation en lecture seule. Les propositions deviennent des tâches uniquement après confirmation.": "Choose a project and enter an idea to start a read-only conversation. Proposals become tasks only after confirmation.",
   "Aucun brainstorm pour ces filtres.": "No brainstorms match these filters.",
   "Message pour le brainstorm": "Message for the brainstorm",
   "Décris ta question ou demande un découpage en tâches. Chaque envoi démarre explicitement une exécution de l’agent choisi.": "Describe your question or request a task breakdown. Each message explicitly starts a run of the chosen agent.",
@@ -870,5 +869,8 @@
   "Instantané de session requis.": "Session snapshot required.",
   "Message de brainstorm requis.": "Brainstorm message required.",
   "Questions issues du brainstorm": "Questions from the brainstorm",
-  "Historique de brainstorm invalide.": "Invalid brainstorm history."
+  "Historique de brainstorm invalide.": "Invalid brainstorm history.",
+  "Saisis une idée pour ouvrir une conversation en lecture seule, avec ou sans projet. Les propositions deviennent des tâches uniquement après confirmation.": "Enter an idea to start a read-only conversation, with or without a project. Proposals become tasks only after confirmation.",
+  "Conversation sans dépôt : chaque échange utilise un dossier temporaire vide, supprimé à la fin. Les permissions restent celles de l’agent choisi.": "Conversation without a repository: each exchange uses an empty temporary directory, removed on completion. The chosen agent’s permissions still apply.",
+  "Retire le worktree avant de poursuivre sans dépôt.": "Remove the worktree before continuing without a repository."
 }

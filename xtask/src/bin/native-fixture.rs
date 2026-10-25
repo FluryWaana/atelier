@@ -96,6 +96,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ["app-server", ..] => fake_agent::run(true),
         ["-p", ..] => fake_agent::run(false),
+        ["run-empty-brainstorm","synthetic-only"] => {
+            let cwd=std::env::current_dir()?;
+            if !cwd.file_name().and_then(|name|name.to_str()).is_some_and(|name|name.starts_with("atelier-brainstorm-")) || cwd.read_dir()?.next().is_some(){return Err("Empty synthetic conversation directory required".into());}
+            let mut prompt=String::new();std::io::Read::read_to_string(&mut io::stdin(),&mut prompt)?;
+            if !prompt.contains("Synthetic idea without repo") || !prompt.contains("Conversation sans dépôt"){return Err("Synthetic repository-free prompt required".into());}
+            ready(r#"{"message":"Synthetic repository-free reply","questions":[],"tickets":[]}"#)?;Ok(())
+        }
         ["run-command", mode @ ("success" | "hang" | "brainstorm")] => {
             if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
             let mut prompt = String::new();

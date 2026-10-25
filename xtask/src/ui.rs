@@ -812,6 +812,52 @@ async fn brainstorm_scenario(
         click(client, "#start-run").await?;
         wait_dom(client,"return document.querySelector('#brainstorm-message')?.value==='' && document.querySelector('#stop-run')?.disabled===true && document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic agent conversation reply');",vec![]).await?;
     }
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"empty-brainstorm-command","name":"Synthetic empty brainstorm","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-empty-brainstorm","synthetic-only"],"editArgs":["run-empty-brainstorm","synthetic-only"],"expected":null})).send().await?.error_for_status()?;
+    let empty: atelier_core::contracts::Card = http
+        .post(format!("{address}/api/brainstorms"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Synthetic idea without repo","repo":""}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    client
+        .goto(&format!("{address}/?task={}", empty.id))
+        .await?;
+    wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='empty-brainstorm-command') && document.querySelector('#task-editor')?.textContent.includes('Conversation sans dépôt');",vec![]).await?;
+    client.execute("const select=document.querySelector('#run-agent');select.value='empty-brainstorm-command';select.dispatchEvent(new Event('change',{bubbles:true}));return true;",vec![]).await?;
+    client
+        .find(Locator::Css("#brainstorm-message"))
+        .await?
+        .send_keys("Explore this synthetic idea")
+        .await?;
+    click(client, "#start-run").await?;
+    wait_dom(client,"return document.querySelector('#brainstorm-message')?.value==='' && document.querySelector('#stop-run')?.disabled===true && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic repository-free reply');",vec![]).await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let record = board
+        .runs
+        .iter()
+        .find(|run| run.string_equals("cardId", &empty.id).unwrap_or(false))
+        .ok_or("Exécution de brainstorm sans dépôt absente.")?;
+    let scratch = record
+        .get::<String>("repo")?
+        .ok_or("Dossier temporaire absent.")?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while Path::new(&scratch).exists() && Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    if Path::new(&scratch).exists() {
+        return Err("Le dossier temporaire du brainstorm est encore présent après l’arrêt.".into());
+    }
     Ok(())
 }
 

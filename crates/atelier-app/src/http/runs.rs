@@ -3,7 +3,7 @@ use crate::{
     Result,
     infrastructure::{
         agent_diagnostics, agent_providers,
-        command_runs::{CommandRuns, RunInput},
+        command_runs::{CommandRuns, RunDirectory, RunInput},
         store::Documents,
         worktrees,
     },
@@ -82,23 +82,19 @@ pub(super) async fn start(
                 Ok((card, profile, api_key, rules, conversation))
             })
             .await?;
-        let worktree = card
-            .fields
-            .get::<Worktree>("worktree")?
-            .ok_or("Prépare le worktree avant de lancer une commande.")?;
-        if worktree.state != WorktreeState::Ready {
-            return Err("Vérifie le worktree avant de lancer une commande.".into());
-        }
-        let source = card.fields.get::<String>("repo")?.ok_or("Dépôt absent.")?;
-        if !same_repository(&source, &worktree.source, true) {
-            return Err("Le dépôt source ne correspond plus au worktree.".into());
-        }
-        let directory = worktrees::inspect(
-            &state.prototype_directory,
-            &state.prototype_paths,
-            &worktree,
-        )
-        .await?;
+        let no_repository=card.fields.truthy("brainstormSession")? && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
+        let (directory,branch)=if no_repository {
+            if card.fields.raw("worktree").is_some(){return Err("Retire le worktree avant de poursuivre sans dépôt.".into());}
+            (RunDirectory::conversation()?,String::new())
+        }else{
+            let worktree=card.fields.get::<Worktree>("worktree")?.ok_or("Prépare le worktree avant de lancer une commande.")?;
+            if worktree.state!=WorktreeState::Ready {return Err("Vérifie le worktree avant de lancer une commande.".into());}
+            let source=card.fields.get::<String>("repo")?.ok_or("Dépôt absent.")?;
+            if !same_repository(&source,&worktree.source,true){return Err("Le dépôt source ne correspond plus au worktree.".into());}
+            let repository=worktrees::inspect(&state.prototype_directory,&state.prototype_paths,&worktree).await?;
+            (RunDirectory::Worktree(repository),worktree.branch)
+        };
+        let working_path=crate::infrastructure::task_creation::path_string(directory.path()).utf8()?;
         let kind=profile.get::<String>("type")?.ok_or("Agent invalide.")?;
         let (mut command,secrets)=if kind=="command" { (agent_diagnostics::command(&profile).await?,Vec::new()) } else { agent_diagnostics::agent_command(&profile,&api_key).await? };
         let model = profile.get::<String>("model")?.unwrap_or_default();
@@ -120,12 +116,12 @@ pub(super) async fn start(
                 args.iter()
                     .map(|arg| arg.replace("{model}", &model).replace("{effort}", &effort)),
             )
-            .current_dir(&worktree.path);
+            .current_dir(&working_path);
         let criteria = card.fields.get::<Vec<Document>>("checklist")?.unwrap_or_default().iter().map(|criterion| criterion.get::<String>("text").map(|text| text.unwrap_or_default())).collect::<std::result::Result<Vec<_>,_>>()?.join("\n- ");
         let instruction = if mode == "analyze" { "Analyse seulement, sans modifier les fichiers." } else { "Effectue les modifications nécessaires et indique les vérifications et limites." };
-        let prompt = if let Some(conversation)=conversation {format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",worktree.branch)} else {format!(
+        let prompt = if let Some(conversation)=conversation {if no_repository{format!("Conversation sans dépôt, dans un dossier temporaire vide. Aucun fichier utilisateur ni projet à inspecter. Ne crée aucun fichier.\n{conversation}")}else{format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",branch)}} else {format!(
             "{instruction} Branche : {}. Ne change pas de branche. Ne crée aucun commit, ne pousse rien et ne publie rien.\nRègles du projet :\n{rules}\n\n{}\n\n{}\n\n{}\n\nCritères :\n- {criteria}",
-            worktree.branch,
+            branch,
             card.title.utf8()?,
             card.fields
                 .get::<String>("description")?
@@ -146,15 +142,15 @@ pub(super) async fn start(
         if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?)?;}
         run.set("model", &model)?;
         run.set("effort", &effort)?;
-        run.set("repo", &worktree.path)?;
-        run.set("branch", &worktree.branch)?;
+        run.set("repo", &working_path)?;
+        run.set("branch", &branch)?;
         run.set("status", &"starting")?;
         run.set(
             "startedAt",
             &time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?,
         )?;
-        let input=if kind=="command" { RunInput::Command(prompt) } else { RunInput::Agent(Box::new(Protocol::new(ProtocolConfig { kind:if kind=="codex"{Kind::Codex}else{Kind::Claude},edit:mode=="edit",repo:worktree.path,prompt,model,effort,api_key,secrets }))) };
+        let input=if kind=="command" { RunInput::Command(prompt) } else { RunInput::Agent(Box::new(Protocol::new(ProtocolConfig { kind:if kind=="codex"{Kind::Codex}else{Kind::Claude},edit:mode=="edit",repo:working_path,prompt,model,effort,api_key,secrets }))) };
         state
             .runs
             .start(state.database.clone(), run, command, input, directory)

@@ -27,6 +27,37 @@ pub enum RunInput {
     Agent(Box<Protocol>),
 }
 
+pub enum RunDirectory {
+    Worktree(Repository),
+    Conversation(tempfile::TempDir),
+}
+impl RunDirectory {
+    pub fn conversation() -> Result<Self> {
+        let mut builder = tempfile::Builder::new();
+        builder.prefix("atelier-brainstorm-");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            builder.permissions(std::fs::Permissions::from_mode(0o700));
+        }
+        Ok(Self::Conversation(builder.tempdir()?))
+    }
+    pub fn path(&self) -> &std::path::Path {
+        match self {
+            Self::Worktree(repository) => &repository.path,
+            Self::Conversation(directory) => directory.path(),
+        }
+    }
+    fn close(self) -> Result<()> {
+        match self {
+            Self::Worktree(_) => Ok(()),
+            Self::Conversation(directory) => directory.close().map_err(|_| {
+                "Le dossier temporaire du brainstorm n’a pas pu être supprimé.".into()
+            }),
+        }
+    }
+}
+
 pub(super) struct Reply {
     pub answer: AgentAnswer,
     pub result: oneshot::Sender<std::result::Result<(), &'static str>>,
@@ -66,7 +97,7 @@ impl CommandRuns {
         record: Document,
         mut command: Command,
         input: RunInput,
-        directory: Repository,
+        directory: RunDirectory,
     ) -> Result<Document> {
         let id = record
             .get::<String>("id")?
@@ -112,8 +143,7 @@ impl CommandRuns {
             .stderr(Stdio::piped());
         let manager = self.clone();
         tokio::spawn(async move {
-            // Retain the verified worktree handle until every child has stopped.
-            let _directory = directory;
+            // Retain the directory owner until every child has stopped.
             let result = supervise(
                 &database,
                 &id,
@@ -124,6 +154,8 @@ impl CommandRuns {
                 &manager.changed,
             )
             .await;
+            let cleanup = directory.close();
+            let result = result.and(cleanup);
             if result.is_ok() {
                 let _ = finished.send(true);
             } else {
@@ -350,6 +382,18 @@ async fn supervise(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn repository_free_conversations_have_unique_empty_directories_with_owned_lifetimes() {
+        let first = RunDirectory::conversation().unwrap();
+        let path = first.path().to_path_buf();
+        let second = RunDirectory::conversation().unwrap();
+        assert_ne!(path, second.path());
+        assert_eq!(std::fs::read_dir(&path).unwrap().count(), 0);
+        drop(first);
+        assert!(!path.exists());
+        assert!(second.path().exists());
+    }
 
     #[tokio::test]
     async fn output_accepts_split_unicode_and_final_lines_and_refuses_invalid_or_unbounded_lines() {
