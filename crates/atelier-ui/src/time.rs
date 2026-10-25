@@ -226,6 +226,7 @@ pub fn TimerBanner(
     board: BoardState,
     token: StoredValue<Result<String, String>>,
     #[prop(optional)] nested: bool,
+    on_task: Callback<String>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let now = clock();
@@ -276,5 +277,5 @@ pub fn TimerBanner(
             }
         });
     };
-    view! {<aside id={if nested{"human-timer-in-task"}else{"human-timer-banner"}} class="task-files" hidden=move||active.with(|entry|entry.is_none()) aria-label=move||i18n.text("Chronomètre actif")><strong>{move||i18n.text("Chronomètre actif")}</strong><span>{move||active.get().map(|entry|duration_text(seconds(&entry,now.get()))).unwrap_or_default()}</span><a href=move||active.get().map(|entry|format!("?task={}",field(&entry,"cardId"))).unwrap_or_default()>{move||i18n.text("Ouvrir la tâche du chronomètre")}</a><button id={if nested{"stop-human-timer-in-task"}else{"stop-human-timer"}} type="button" disabled=move||pending.get() on:click=stop>{move||i18n.text("Arrêter le chronomètre")}</button><p class="error" role="alert">{move||i18n.text(&error.get())}</p></aside>}
+    view! {<aside id={if nested{"human-timer-in-task"}else{"human-timer-banner"}} class="task-files" hidden=move||active.with(|entry|entry.is_none()) aria-label=move||i18n.text("Chronomètre actif")><strong>{move||i18n.text("Chronomètre actif")}</strong><span>{move||active.get().map(|entry|duration_text(seconds(&entry,now.get()))).unwrap_or_default()}</span><button id={if nested{"open-timer-task-in-task"}else{"open-timer-task"}} type="button" on:click=move|_|{if let Some(entry)=active.get_untracked(){on_task.run(field(&entry,"cardId"));}}>{move||i18n.text("Ouvrir la tâche du chronomètre")}</button><button id={if nested{"stop-human-timer-in-task"}else{"stop-human-timer"}} type="button" disabled=move||pending.get() on:click=stop>{move||i18n.text("Arrêter le chronomètre")}</button><p class="error" role="alert">{move||i18n.text(&error.get())}</p></aside>}
 }

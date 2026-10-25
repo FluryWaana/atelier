@@ -274,10 +274,21 @@ fn App() -> impl IntoView {
             })
             .collect::<Vec<_>>()
     };
+    let open_task = Callback::new(move |id: String| {
+        error.set(String::new());
+        if let Err(message) = task_location(Some(&id)) {
+            error.set(message);
+        }
+        let card = cards.with(|cards| cards.iter().find(|card| card.id == id).cloned());
+        if card.is_none() {
+            error.set("Cette tâche est introuvable. Le tableau reste disponible.".into());
+        }
+        selected.set(card);
+    });
     view! {
         <main id="main-content" class="main-content">
             <header class="app-header"><div><p class="eyebrow">"ATELIER KANBAN"</p><h1>{move || i18n.text("Votre espace de travail")}</h1><p class="subtitle">{move || i18n.text("Des idées aux tâches terminées, une étape à la fois.")}</p></div><span class="development">{move || i18n.text("En développement")}</span></header>
-            <crate::time::TimerBanner board token />
+            <crate::time::TimerBanner board token on_task=open_task />
             <div class="toolbar" aria-label=move || i18n.text("Filtres du tableau")>
                 <div><label for="board-search">{move || i18n.text("Rechercher")}</label><input id="board-search" type="search" placeholder=move || i18n.text("Titre ou description…") prop:value=move || search.get() on:input=move |event| search.set(event_target_value(&event)) /></div>
                 <div><label for="board-project">{move || i18n.text("Projet")}</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">{move || i18n.text("Tous les projets")}</option><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
@@ -339,15 +350,15 @@ fn App() -> impl IntoView {
                     view! { <section class="kanban-column" data-status=status aria-label=move || i18n.text(label)><header class="column-heading"><h2>{move || i18n.text(label)}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=move |card| {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
-                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_| { error.set(String::new()); if let Err(message) = task_location(Some(&id.get_value())) { error.set(message); } selected.set(current()); }>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
+                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>{move || i18n.text("Aucune tâche")}</p></div></section> }
                 } />
             </section>
-            {move || selected.get().map(|card| view! { <TaskEditor card board token on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
+            {move || selected.get().map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>
             <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
-            <Show when=move || show_time_report.get()><crate::time_report::TimeReport board loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move|()|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message);}}) on_task=Callback::new(move|id:String|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message); }if let Err(message)=task_location(Some(&id)){error.set(message);}selected.set(cards.with(|cards|cards.iter().find(|card|card.id==id).cloned()));}) /></Show>
+            <Show when=move || show_time_report.get()><crate::time_report::TimeReport board loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move|()|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message);}}) on_task=Callback::new(move|id:String|{show_time_report.set(false);if let Err(message)=location_parameter("view",None){error.set(message); }open_task.run(id);}) /></Show>
             <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>
         </main>
     }

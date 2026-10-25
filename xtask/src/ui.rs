@@ -749,6 +749,27 @@ async fn time_task_scenario(
         .await?;
     click(client, "#start-human-timer").await?;
     wait_dom(client,"return document.querySelector('#human-timer-in-task')?.hidden === false && document.querySelectorAll('[data-time-id]').length === 2 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
+    click(client, "#close-editor").await?;
+    client
+        .find(Locator::Css("#task-title"))
+        .await?
+        .send_keys("Unsaved synthetic idea")
+        .await?;
+    click(client, "#open-timer-task").await?;
+    wait_dom(client,"return document.querySelector('#task-editor')?.open && document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#card-open-jira-recovery").await?;
+    client
+        .find(Locator::Css("#edit-instructions"))
+        .await?
+        .send_keys("Unsaved synthetic task draft")
+        .await?;
+    click(client, "#open-timer-task-in-task").await?;
+    wait_dom(client,"return document.querySelector('#edit-instructions')?.value==='Unsaved synthetic task draft' && document.querySelector('#cancel-confirmation')?.offsetParent !== null;",vec![]).await?;
+    click(client, "#cancel-confirmation").await?;
+    click(client, "#open-timer-task-in-task").await?;
+    click(client, "#confirm-editor").await?;
+    wait_dom(client,"return document.querySelector('#edit-title')?.value==='Remote refresh title' && document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",vec![]).await?;
     click(client, "#stop-human-timer-in-task").await?;
     wait_dom(
         client,
@@ -760,6 +781,17 @@ async fn time_task_scenario(
     click(client, "#confirm-delete-time").await?;
     wait_dom(client,"return document.querySelectorAll('[data-time-id]').length === 1 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
     click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#task-title"))
+        .await?
+        .clear()
+        .await?;
     click(client, "#view-time-report").await?;
     wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     client.refresh().await?;

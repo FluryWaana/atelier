@@ -76,6 +76,7 @@ pub fn TaskEditor(
     board: BoardState,
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
+    on_open: Callback<String>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let cards = board.cards;
@@ -102,6 +103,7 @@ pub fn TaskEditor(
     let show_files = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let confirmation = RwSignal::new("");
+    let next_task = RwSignal::new(String::new());
     let show_template = RwSignal::new(false);
     let template_name = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
@@ -126,6 +128,27 @@ pub fn TaskEditor(
             }
         });
     };
+    let navigate = Callback::new(move |target: String| {
+        if target == id.get_value() {
+            return;
+        }
+        if pending.get_untracked() {
+            error.set("Attends la fin de l’opération avant de changer de tâche.".into());
+            return;
+        }
+        if dirty.get_untracked()
+            || workspace_dirty.get_untracked()
+            || time_dirty.get_untracked()
+            || !reply_drafts.with_untracked(std::collections::BTreeSet::is_empty)
+            || !template_name.get_untracked().is_empty()
+        {
+            next_task.set(target);
+            confirmation.set("switch");
+        } else {
+            close();
+            request_animation_frame(move || on_open.run(target));
+        }
+    });
     let request_close = move || {
         if pending.get_untracked() {
             return;
@@ -240,7 +263,7 @@ pub fn TaskEditor(
         <dialog id="task-editor" class="editor" class:workspace=move || show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text(if archived { "ARCHIVE" } else { "TÂCHE" })}</p><h2 id="editor-heading">{move || i18n.text("Détails de la tâche")}</h2></div><button id="close-editor" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
             {move ||ticket_info.get().map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("Ticket associé")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.")}</p></section>}})}
-            <crate::time::TimerBanner board token nested=true />
+            <crate::time::TimerBanner board token nested=true on_task=navigate />
             <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
                 <fieldset disabled=move || pending.get() || workspace_dirty.get() || time_dirty.get() || archived || show_template.get()>
                     <label for="edit-title">{move || i18n.text("Titre")}</label><input id="edit-title" required maxlength="300" autofocus readonly=ticket prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
@@ -279,7 +302,7 @@ pub fn TaskEditor(
             <p id="editor-notice" role="status">{move || i18n.text(&notice.get())}</p>
             <div class="confirmation" role="alert" hidden=move || confirmation.get().is_empty()>
                 <p>{move || i18n.text(if confirmation.get() == "delete" { "Supprimer définitivement cette tâche ? Cette action ne peut pas être annulée." } else { "Fermer sans enregistrer les modifications ?" })}</p>
-                <button id="confirm-editor" class="danger" type="button" disabled=move || pending.get() on:click=move |_| { if confirmation.get_untracked() == "delete" { perform(Action::Delete); } else { close(); } }>{move || i18n.text(if confirmation.get() == "delete" { "Supprimer définitivement" } else { "Abandonner les modifications" })}</button>
+                <button id="confirm-editor" class="danger" type="button" disabled=move || pending.get() on:click=move |_| { if confirmation.get_untracked() == "delete" { perform(Action::Delete); } else if confirmation.get_untracked()=="switch" {let target=next_task.get_untracked();close();request_animation_frame(move ||on_open.run(target));} else { close(); } }>{move || i18n.text(if confirmation.get() == "delete" { "Supprimer définitivement" } else { "Abandonner les modifications" })}</button>
                 <button id="cancel-confirmation" type="button" disabled=move || pending.get() on:click=move |_| confirmation.set("")>{move || i18n.text("Continuer l’édition")}</button>
             </div>
         </dialog>

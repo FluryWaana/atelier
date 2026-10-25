@@ -759,5 +759,6 @@
   "Secondes": "Seconds",
   "État Tempo": "Tempo state",
   "ID Tempo": "Tempo ID",
-  "Adresse de navigation indisponible.": "Navigation address unavailable."
+  "Adresse de navigation indisponible.": "Navigation address unavailable.",
+  "Attends la fin de l’opération avant de changer de tâche.": "Wait for the operation to finish before switching tasks."
 }
