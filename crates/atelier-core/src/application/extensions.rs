@@ -7,6 +7,13 @@ pub const INPUT_LIMIT: usize = 256 * 1024;
 pub const OUTPUT_LIMIT: usize = 512 * 1024;
 pub type Result<T> = std::result::Result<T, &'static str>;
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Binary {
+    pub path: String,
+    pub sha256: String,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Method {
@@ -102,7 +109,7 @@ pub struct Manifest {
     #[serde(default)]
     pub translations: BTreeMap<String, BTreeMap<String, String>>,
 }
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Request {
     pub protocol: String,

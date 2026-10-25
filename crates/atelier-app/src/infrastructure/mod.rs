@@ -14,6 +14,8 @@ mod dependencies;
 #[cfg(windows)]
 pub mod dev_servers;
 mod directory_link;
+#[cfg(windows)]
+pub mod extensions;
 pub mod files;
 pub mod forge;
 pub mod forge_association;

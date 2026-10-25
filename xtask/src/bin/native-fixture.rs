@@ -6,6 +6,8 @@ use std::{
 
 #[path = "../fake_agent.rs"]
 mod fake_agent;
+#[path = "../fake_extension.rs"]
+mod fake_extension;
 
 #[cfg(windows)]
 #[path = "../../tests/support/windows.rs"]
@@ -36,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        [] => fake_extension::run(),
         ["--version"] => {
             for key in ["CODEX_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "JIRA_TOKEN", "NODE_OPTIONS"] {
                 if std::env::var_os(key).is_some() { return Err("Unexpected secret or injection in synthetic version environment".into()); }
