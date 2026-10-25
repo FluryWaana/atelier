@@ -30,6 +30,7 @@ mod brainstorm;
 mod card_lifecycle;
 #[cfg(windows)]
 mod commits;
+mod connectors;
 mod events;
 mod files;
 mod forge;
@@ -159,6 +160,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
         let exclusive = path.ends_with("/jira/create")
+            || path.starts_with("/api/extensions")
             || (path.starts_with("/api/time/")
                 && ["/export-preview", "/export", "/reconcile", "/reset-export"]
                     .iter()
@@ -481,6 +483,13 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route("/api/extensions/probe", post(connectors::probe))
+        .route("/api/extensions/install", post(connectors::install))
+        .route(
+            "/api/extensions/{id}",
+            axum::routing::put(connectors::configure).delete(connectors::remove),
+        )
+        .route("/api/extensions/{id}/invoke", post(connectors::invoke))
         .route("/api/cards/{id}/commit/preview", post(commits::preview))
         .route("/api/cards/{id}/commit/changes", get(commits::changes))
         .route("/api/cards/{id}/commit/create", post(commits::create))
@@ -533,6 +542,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/state", get(board))
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
+        .route("/api/extensions", get(connectors::get))
         .route(
             "/api/cards/{id}/jira/transitions",
             get(jira_transitions::choices),

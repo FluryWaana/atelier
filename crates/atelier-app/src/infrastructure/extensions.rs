@@ -103,6 +103,9 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
         path: super::task_creation::path_string(&path).utf8()?,
         sha256: hash,
     };
+    if binary.path.len() > 32_000 || binary.path.chars().any(char::is_control) {
+        return Err("Chemin d’exécutable de connecteur invalide ou trop long.".into());
+    }
     Ok(Executable {
         binary,
         file,
@@ -125,7 +128,7 @@ fn contains_secret(value: &Value, secrets: &std::collections::BTreeMap<String, S
         _ => false,
     }
 }
-fn values(manifest: &Manifest, request: &Request) -> Result<()> {
+pub(super) fn values(manifest: &Manifest, request: &Request) -> Result<()> {
     protocol::validate_manifest(manifest)?;
     protocol::effect(manifest, request)?;
     for field in manifest

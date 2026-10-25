@@ -14,6 +14,71 @@ pub struct Binary {
     pub sha256: String,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Installed {
+    pub manifest: Manifest,
+    pub binary: Binary,
+    pub revision: u64,
+    pub values: BTreeMap<String, Value>,
+    pub report: Option<Report>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Report {
+    pub id: String,
+    pub method: Method,
+    pub action: Option<String>,
+    pub message: String,
+    pub output: Value,
+    pub observed_at: String,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Connection {
+    pub installed: Installed,
+    pub secret_fields: BTreeSet<String>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Registry {
+    pub revision: u64,
+    pub native_available: bool,
+    pub modules: Vec<Connection>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Candidate {
+    pub binary: Binary,
+    pub manifest: Manifest,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Installation {
+    pub expected_revision: u64,
+    pub candidate: Candidate,
+    pub confirmed: bool,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Configuration {
+    pub expected_revision: u64,
+    pub values: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub forget_values: BTreeSet<String>,
+    pub secrets: BTreeMap<String, String>,
+    pub forget_secrets: BTreeSet<String>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Invocation {
+    pub expected_revision: u64,
+    pub method: Method,
+    pub action: Option<String>,
+    pub input: Value,
+    pub confirmed: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Method {
