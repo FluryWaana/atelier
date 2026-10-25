@@ -926,6 +926,32 @@ async fn brainstorm_scenario(
     .await?;
     click(client, "#start-verification").await?;
     wait_dom(client,"return document.querySelector('#verification-result')?.textContent.includes('Vérification réussie sur cet instantané') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('.service-log script');",vec![]).await?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"queue-command","name":"Synthetic queued command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","success"],"expected":null})).send().await?.error_for_status()?;
+    http.patch(format!("{address}/api/cards/{}", converted[0].id))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"agent":"queue-command","expected":{"agent":"codex"}}))
+        .send()
+        .await?
+        .error_for_status()?;
+    wait_dom(
+        client,
+        "return document.querySelector('#enqueue-task')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#enqueue-task").await?;
+    wait_dom(client,"return document.querySelector('#close-editor')?.disabled === false && document.querySelector('#run-queue summary')?.textContent.includes('(1)');",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#run-queue summary").await?;
+    click(client, "#confirm-resume-queue").await?;
+    click(client, "#resume-queue").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#run-queue summary')?.textContent.includes('(0)');",
+        vec![],
+    )
+    .await?;
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
     http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
         .bearer_auth(token)

@@ -533,6 +533,33 @@ pub struct PullRequestSummary {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunQueue {
+    pub revision: u64,
+    pub ids: Vec<String>,
+    pub paused: bool,
+    pub active: Option<QueuedRun>,
+    pub message: String,
+}
+impl Default for RunQueue {
+    fn default() -> Self {
+        Self {
+            revision: 0,
+            ids: Vec::new(),
+            paused: true,
+            active: None,
+            message: String::new(),
+        }
+    }
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QueuedRun {
+    pub card_id: String,
+    pub run_id: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PullRequestAttach {
     pub expected: Card,

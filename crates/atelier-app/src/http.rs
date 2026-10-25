@@ -38,6 +38,8 @@ mod jira_transitions;
 mod mutations;
 mod preparation;
 mod projects;
+#[cfg(windows)]
+mod queue;
 mod responses;
 #[cfg(windows)]
 mod reviews;
@@ -163,6 +165,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/services/restart")
             || path.ends_with("/runs/start")
             || path.ends_with("/verification/start")
+            || path == "/api/queue"
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
@@ -412,7 +415,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             crate::infrastructure::jira_creation::recover(store)?;
             crate::infrastructure::jira_refresh::recover(store)?;
             crate::infrastructure::jira_transition::recover(store)?;
-            crate::infrastructure::runs::recover(store, &now)
+            crate::infrastructure::runs::recover(store, &now)?;
+            crate::infrastructure::queue::recover(store)
         })
         .await?;
     database
@@ -441,6 +445,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route("/api/queue", get(queue::get).post(queue::change))
+        .route("/api/queue/pause", post(queue::pause))
         .route("/api/cards/{id}/verification/start", post(runs::verify))
         .route(
             "/api/cards/{id}/runs/{run}/review/validate",
@@ -561,6 +567,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .with_state(state.clone());
     let stop_events = state.shutdown.clone();
     let clock = tokio::spawn(time_tracking::run(state.clone()));
+    #[cfg(windows)]
+    let queue_worker = tokio::spawn(queue::run(state.clone()));
     let result = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             tokio::select! { _ = stopped.changed() => {}, _ = tokio::signal::ctrl_c() => {} }
@@ -569,6 +577,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .await;
     let _ = state.shutdown.send(true);
     let clock_result = clock.await;
+    #[cfg(windows)]
+    let queue_result = queue_worker.await;
     let _mutations = state.mutations.write().await;
     #[cfg(windows)]
     let services_result = state.services.close().await;
@@ -591,6 +601,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     services_result?;
     #[cfg(windows)]
     runs_result?;
+    #[cfg(windows)]
+    queue_result??;
     clock_result??;
     timers?;
     result?;

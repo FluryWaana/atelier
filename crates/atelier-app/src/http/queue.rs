@@ -1,0 +1,86 @@
+use super::{Shared, failure, object};
+use crate::{Result, infrastructure::queue};
+use axum::{
+    extract::{Request, State},
+    response::Response,
+};
+pub(super) async fn get(State(state): State<Shared>) -> Response {
+    super::responses::response(state.database.call(queue::read).await)
+}
+pub(super) async fn change(State(state): State<Shared>, request: Request) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let result = state
+        .database
+        .call(move |store| queue::change(store, &body))
+        .await;
+    let _ = state.changed.send(());
+    super::responses::response(result)
+}
+pub(super) async fn pause(State(state): State<Shared>, request: Request) -> Response {
+    if let Err((status, message)) = object(request.into_body()).await {
+        return failure(status, message);
+    }
+    let result = state
+        .database
+        .call(|store| queue::pause(store, "File en pause ; la tâche active peut se terminer."))
+        .await;
+    let _ = state.changed.send(());
+    super::responses::response(result)
+}
+pub(super) async fn run(state: Shared) -> Result<()> {
+    let mut stopped = state.shutdown.subscribe();
+    while !*stopped.borrow() {
+        tokio::select! {_=stopped.changed()=>break,_=tokio::time::sleep(std::time::Duration::from_millis(500))=>{}}
+        if !state.runs.active_cards().is_empty() {
+            continue;
+        }
+        let Ok(_gate) = state.mutations.clone().try_write_owned() else {
+            continue;
+        };
+        if *stopped.borrow() {
+            break;
+        }
+        let operation = async {
+            if state.database.call(queue::settle).await? {
+                let _ = state.changed.send(());
+            }
+            let id = uuid::Uuid::new_v4().to_string();
+            let run_id = id.clone();
+            if let Some((card, body)) = state
+                .database
+                .call(move |store| queue::claim(store, id))
+                .await?
+            {
+                let _ = state.changed.send(());
+                super::runs::launch(&state, card.id, body, run_id, true).await?;
+                let _ = state.changed.send(());
+            }
+            Ok::<(), crate::Error>(())
+        }
+        .await;
+        if operation.is_err() {
+            state.database.call(|store|queue::pause(store,"Exécution arrêtée, incertaine ou en échec. Vérifie la tâche avant de reprendre la file.")).await?;
+            let _ = state.changed.send(());
+        }
+    }
+    if state
+        .database
+        .call(|store| Ok(queue::read(store)?.ids.is_empty()))
+        .await?
+    {
+        return Ok(());
+    }
+    state
+        .database
+        .call(|store| {
+            queue::pause(
+                store,
+                "File en pause après redémarrage. Vérifie les tâches avant de reprendre.",
+            )
+        })
+        .await?;
+    Ok(())
+}

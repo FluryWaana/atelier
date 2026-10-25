@@ -153,8 +153,10 @@ pub fn Runs(
         })
     });
     let act = move |action: &str| {
-        let stop = action == "stop";
+        let pausing = action == "pausequeue";
+        let stop = action == "stop" || pausing;
         let verifying = action == "verify";
+        let queuing = action == "queue";
         if cancelling.get_untracked() || (!stop && pending.get_untracked()) {
             return;
         }
@@ -165,11 +167,15 @@ pub fn Runs(
                 return;
             }
         };
-        let path = if stop {
+        let path = if pausing {
+            "/api/queue/pause".to_owned()
+        } else if stop {
             let Some(run) = active_run.get_untracked() else {
                 return;
             };
             format!("/api/runs/{}/stop", field(&run, "id"))
+        } else if queuing {
+            "/api/queue".to_owned()
         } else if verifying {
             format!("/api/cards/{}/verification/start", card.get_value())
         } else {
@@ -177,6 +183,22 @@ pub fn Runs(
         };
         let body = if stop {
             serde_json::json!({})
+        } else if queuing {
+            let expected = board.cards.with_untracked(|cards| {
+                cards
+                    .iter()
+                    .find(|item| item.id == card.get_value())
+                    .map(atelier_core::application::jira::card_snapshot)
+            });
+            let revision = board.settings.with_untracked(|settings| {
+                settings
+                    .get::<atelier_core::contracts::RunQueue>("runQueue")
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default()
+                    .revision
+            });
+            serde_json::json!({"action":"add","revision":revision,"confirmed":true,"expected":expected})
         } else if verifying {
             let expected = board.cards.with_untracked(|cards| {
                 cards
@@ -336,6 +358,8 @@ pub fn Runs(
             <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() || (brainstorm.get()&&message.get().trim().is_empty()) on:click=move |_| act.with_value(|act| act("start"))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act("stop"))>{move || i18n.text("Arrêter l’exécution")}</button></div>
             <p class="field-help" hidden=move||!brainstorm.get()||board.cards.with(|cards|cards.iter().find(|item|item.id==card.get_value()).is_none_or(|item|!field(&item.fields,"repo").is_empty()))>{move||i18n.text("Conversation sans dépôt : chaque échange utilise un dossier temporaire vide, supprimé à la fin. Les permissions restent celles de l’agent choisi.")}</p>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie le worktree, puis enregistre tes modifications avant de lancer une commande.")}</p>
+            <div hidden=move||brainstorm.get()><button id="enqueue-task" type="button" disabled=move||pending.get()||blocked.get()||running.get()||!ready.get() on:click=move|_|act.with_value(|act|act("queue"))>{move||i18n.text("Ajouter cette tâche à la file d’exécution")}</button><p class="field-help">{move||i18n.text("La file utilise les réglages enregistrés de la tâche, pas le choix temporaire ci-dessus. Si elle est active, cette tâche pourra démarrer sans autre confirmation.")}</p></div>
+            <button id="pause-task-queue" type="button" hidden=move||board.settings.with(|settings|settings.get::<atelier_core::contracts::RunQueue>("runQueue").ok().flatten().unwrap_or_default().paused) disabled=move||cancelling.get() on:click=move|_|act.with_value(|act|act("pausequeue"))>{move||i18n.text("Mettre la file en pause")}</button>
             <div hidden=move||brainstorm.get()><h4>{move||i18n.text("Vérification des sources")}</h4><p class="field-help" hidden=move||!verification_command.get().is_empty()>{move||i18n.text("Configure la commande de vérification dans le projet.")}</p><pre class="service-log" tabindex="0">{move||verification_command.get()}</pre><button id="start-verification" type="button" disabled=move||pending.get()||blocked.get()||running.get()||!ready.get()||verification_command.get().trim().is_empty() on:click=move |_|act.with_value(|act|act("verify"))>{move||i18n.text("Confirmer et lancer la vérification")}</button><p class="field-help">{move||i18n.text("La commande utilise les permissions de ton compte, sans agent ni clé du coffre. Le résultat ne vaut que pour les sources examinées ; aucun critère n’est coché.")}</p></div>
             <p id="verification-result" role="status" hidden=move||latest.get().is_none_or(|run|field(&run,"purpose")!="verification")>{move||latest.get().map(|run|i18n.text(match field(&run,"verificationState").as_str(){"passed"=>"Vérification réussie sur cet instantané des sources.","failed"=>"Vérification échouée ou arrêtée.","stale"=>"Résultat périmé : les sources, le besoin ou la commande ont changé.","interrupted"=>"Vérification interrompue : relance explicitement la commande.",_=>"Vérification en cours…"})).unwrap_or_default()}</p>
             <p role="status">{move || i18n.text(latest.get().map(|run| match field(&run,"status").as_str() { "starting"=>"Démarrage…", "running"=>"Processus actif", "stopping"=>"Arrêt…", "completed"=>"Exécution terminée", "cancelled"=>"Exécution arrêtée", "interrupted"=>"Exécution interrompue : vérifie le dépôt avant de relancer.", _=>"Échec de l’exécution" }).unwrap_or("Aucune exécution pour cette tâche."))}</p>

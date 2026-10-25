@@ -16,6 +16,9 @@ pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Respons
             ) || matches!(
                 error.downcast_ref::<ForgeFailure>(),
                 Some(ForgeFailure::Conflict | ForgeFailure::OperationConflict(_))
+            ) || matches!(
+                error.downcast_ref::<atelier_core::application::card_lifecycle::CardFailure>(),
+                Some(atelier_core::application::card_lifecycle::CardFailure::Conflict(_))
             ) {
                 StatusCode::CONFLICT
             } else if error.is::<VaultFailure>() {

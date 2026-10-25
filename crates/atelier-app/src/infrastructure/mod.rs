@@ -37,6 +37,7 @@ pub mod process_tree;
 pub mod projects;
 pub mod prototype;
 mod publish;
+pub mod queue;
 pub mod reviews;
 pub mod runs;
 pub mod service_launch;

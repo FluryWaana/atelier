@@ -26,6 +26,9 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if !run.string_equals("status", "starting")? {
             return Err("État initial d’exécution invalide.".into());
         }
+        if run.get::<bool>("queued")?.unwrap_or(false) {
+            super::queue::require_claim(store, run)?;
+        }
         let mut card = store
             .document::<Card>(Documents::Cards, &card_id)?
             .ok_or("Carte introuvable.")?;

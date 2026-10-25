@@ -20,6 +20,7 @@ mod jira_task;
 mod live;
 mod preparation;
 mod projects;
+mod queue;
 mod review;
 mod runs;
 mod services;
@@ -354,6 +355,7 @@ fn App() -> impl IntoView {
             <p role="alert" id="error">{move || i18n.text(&error.get())}</p>
             <p id="live-status" class="field-help" role="status" hidden=move || token.get_value().is_err() data-connected=move || board.connected.get().to_string()>{move || i18n.text(&(if !board.sync_error.get().is_empty() { board.sync_error.get() } else if board.connected.get() { "Tableau à jour".to_owned() } else { "Actualisation interrompue. Reconnexion automatique…".to_owned() }))}</p>
             <p class="loading" role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement du tableau…")}</p>
+            <crate::queue::Queue board token on_open=open_task />
             <section aria-label=move || i18n.text("Tableau des tâches") id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
                 <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
                     let column = move || visible(false).into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
