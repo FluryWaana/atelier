@@ -26,6 +26,7 @@ pub mod launch_detection;
 pub mod launch_ports;
 pub mod local_http;
 pub mod portable_import;
+pub mod preparation;
 #[cfg(windows)]
 mod process_inspection;
 #[cfg(windows)]

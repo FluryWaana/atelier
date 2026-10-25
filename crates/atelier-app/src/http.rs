@@ -34,6 +34,7 @@ mod jira_creation;
 mod jira_refresh;
 mod jira_transitions;
 mod mutations;
+mod preparation;
 mod projects;
 #[cfg(windows)]
 mod runs;
@@ -508,6 +509,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         )
         .route("/api/cards", post(task_creation::create))
         .route("/api/brainstorms", post(task_creation::create))
+        .route(
+            "/api/cards/{id}/preparation/apply",
+            post(preparation::apply),
+        )
         .route(
             "/api/cards/{id}/brainstorm/convert",
             post(brainstorm::convert),

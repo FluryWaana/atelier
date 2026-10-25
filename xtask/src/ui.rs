@@ -790,6 +790,21 @@ async fn brainstorm_scenario(
     let fixture = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"preparation-command","name":"Synthetic preparation command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","preparation"],"editArgs":["run-command","preparation"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/cards/{}/worktree", converted[0].id))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"branch":"atelier/synthetic-preparation","base":"main","fetchOrigin":false}))
+        .send()
+        .await?
+        .error_for_status()?;
+    wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='preparation-command');",vec![]).await?;
+    client.execute("for(const [id,value] of [['run-agent','preparation-command'],['run-purpose','preparation']]){const select=document.getElementById(id);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));}return true;",vec![]).await?;
+    click(client, "#start-run").await?;
+    wait_dom(client,"return document.querySelector('#preparation-heading')?.parentElement.textContent.includes('Synthetic prepared criterion') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('#apply-preparation')?.disabled === true;",vec![]).await?;
+    click(client, "#confirm-preparation").await?;
+    click(client, "#apply-preparation").await?;
+    wait_dom(client,"return document.querySelector('.criterion-text')?.value === 'Synthetic prepared criterion' && document.querySelector('.criterion-done')?.checked === false && document.querySelector('#preparation-notice')?.textContent.includes('Préparation appliquée') && document.querySelector('#save-task')?.disabled === true;",vec![]).await?;
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
     http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
         .bearer_auth(token)

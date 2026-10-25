@@ -78,11 +78,16 @@ pub(super) async fn start(
                     let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de session requis.")?;
                     let reply=conversation_body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?;
                     Some(crate::infrastructure::brainstorm::conversation(store,&card,&expected,&reply)?)
+                }else if conversation_body.get::<String>("purpose")?.as_deref()==Some("preparation") {
+                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("La préparation utilise uniquement le mode Analyse.".into());}
+                    let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de tâche requis.")?;
+                    if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("La tâche a changé. Recharge avant de préparer le ticket.".into());}
+                    Some(atelier_core::application::preparation::prompt(&card)?)
                 }else{None};
                 Ok((card, profile, api_key, rules, conversation))
             })
             .await?;
-        let no_repository=card.fields.truthy("brainstormSession")? && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
+        let no_repository=(card.fields.truthy("brainstormSession")? || body.get::<String>("purpose")?.as_deref()==Some("preparation")) && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
         let (directory,branch)=if no_repository {
             if card.fields.raw("worktree").is_some(){return Err("Retire le worktree avant de poursuivre sans dépôt.".into());}
             (RunDirectory::conversation()?,String::new())
@@ -119,7 +124,7 @@ pub(super) async fn start(
             .current_dir(&working_path);
         let criteria = card.fields.get::<Vec<Document>>("checklist")?.unwrap_or_default().iter().map(|criterion| criterion.get::<String>("text").map(|text| text.unwrap_or_default())).collect::<std::result::Result<Vec<_>,_>>()?.join("\n- ");
         let instruction = if mode == "analyze" { "Analyse seulement, sans modifier les fichiers." } else { "Effectue les modifications nécessaires et indique les vérifications et limites." };
-        let prompt = if let Some(conversation)=conversation {if no_repository{format!("Conversation sans dépôt, dans un dossier temporaire vide. Aucun fichier utilisateur ni projet à inspecter. Ne crée aucun fichier.\n{conversation}")}else{format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",branch)}} else {format!(
+        let prompt = if let Some(conversation)=conversation {if no_repository{let context=if card.fields.truthy("brainstormSession")?{"Conversation sans dépôt"}else{"Préparation sans dépôt"};format!("{context}, dans un dossier temporaire vide. Aucun fichier utilisateur ni projet à inspecter. Ne crée aucun fichier.\n{conversation}")}else{format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",branch)}} else {format!(
             "{instruction} Branche : {}. Ne change pas de branche. Ne crée aucun commit, ne pousse rien et ne publie rien.\nRègles du projet :\n{rules}\n\n{}\n\n{}\n\n{}\n\nCritères :\n- {criteria}",
             branch,
             card.title.utf8()?,
@@ -140,6 +145,7 @@ pub(super) async fn start(
         run.set("agentType", &kind)?;
         run.set("mode", &mode)?;
         if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?)?;}
+        if !card.fields.truthy("brainstormSession")? && body.get::<String>("purpose")?.as_deref()==Some("preparation"){run.set("purpose",&"preparation")?;run.set("requirements",&atelier_core::application::preparation::requirements(&card)?)?;}
         run.set("model", &model)?;
         run.set("effort", &effort)?;
         run.set("repo", &working_path)?;

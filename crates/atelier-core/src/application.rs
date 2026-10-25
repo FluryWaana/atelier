@@ -9,6 +9,7 @@ pub mod backups;
 pub mod brainstorm;
 pub mod card_lifecycle;
 pub mod jira;
+pub mod preparation;
 pub mod projects;
 pub mod services;
 pub mod settings;

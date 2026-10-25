@@ -91,20 +91,30 @@ pub fn transition(
             return Err("Transition d’exécution périmée ou invalide.".into());
         }
         run.set("status", &status)?;
-        if status == "completed" && run.string_equals("purpose", "brainstorm")? {
+        let purpose = run.get::<String>("purpose")?.unwrap_or_default();
+        if status == "completed" && ["brainstorm", "preparation"].contains(&purpose.as_str()) {
             let text = if run.string_equals("agentType", "command")? {
-                run.get::<String>("brainstormOutput")?.unwrap_or_default()
+                run.get::<String>("structuredOutput")?.unwrap_or_default()
             } else {
                 run.get::<String>("summary")?.unwrap_or_default()
             };
-            let parsed = if run.get::<bool>("brainstormOverflow")?.unwrap_or(false) {
-                Err("Réponse de brainstorm trop volumineuse.")
-            } else {
+            let parsed = if run.get::<bool>("structuredOverflow")?.unwrap_or(false) {
+                Err("Réponse structurée trop volumineuse.")
+            } else if purpose == "brainstorm" {
                 atelier_core::application::brainstorm::parse(&text)
+                    .map(|value| serde_json::to_value(value).expect("brainstorm serialization"))
+            } else {
+                atelier_core::application::preparation::parse(&text)
+                    .map(|value| serde_json::to_value(value).expect("preparation serialization"))
+            };
+            let (answer_key, error_key) = if purpose == "brainstorm" {
+                ("brainstormAnswer", "brainstormError")
+            } else {
+                ("preparation", "preparationError")
             };
             match parsed {
-                Ok(answer) => run.set("brainstormAnswer", &answer)?,
-                Err(message) => run.set("brainstormError", &message)?,
+                Ok(answer) => run.set(answer_key, &answer)?,
+                Err(message) => run.set(error_key, &message)?,
             }
         }
         if !active(&run)? {
@@ -113,7 +123,7 @@ pub fn transition(
             run.remove("interactions");
             run.set("waiting", &false)?;
             run.remove("liveText");
-            run.remove("brainstormOutput");
+            run.remove("structuredOutput");
         }
         store.put(Documents::Runs, &run)?;
         Ok(run)
@@ -133,15 +143,18 @@ pub fn append(store: &Store<'_>, id: &str, stream: &str, message: &str) -> Resul
             return Err("Exécution terminée.".into());
         }
         if stream == "stdout"
-            && run.string_equals("purpose", "brainstorm")?
+            && matches!(
+                run.get::<String>("purpose")?.as_deref(),
+                Some("brainstorm" | "preparation")
+            )
             && run.string_equals("agentType", "command")?
         {
-            let mut output = run.get::<String>("brainstormOutput")?.unwrap_or_default();
+            let mut output = run.get::<String>("structuredOutput")?.unwrap_or_default();
             if output.len().saturating_add(message.len()) > 64 * 1024 {
-                run.set("brainstormOverflow", &true)?;
-            } else if !run.get::<bool>("brainstormOverflow")?.unwrap_or(false) {
+                run.set("structuredOverflow", &true)?;
+            } else if !run.get::<bool>("structuredOverflow")?.unwrap_or(false) {
                 output.push_str(message);
-                run.set("brainstormOutput", &output)?;
+                run.set("structuredOutput", &output)?;
             }
         }
         let bytes = run.get::<usize>("logBytes")?.unwrap_or(0);
@@ -202,7 +215,7 @@ fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
         run.remove("interactions");
         run.remove("pid");
         run.remove("liveText");
-        run.remove("brainstormOutput");
+        run.remove("structuredOutput");
         run.set("waiting", &false)?;
         store.log(&id, "system", "Atelier a été interrompu pendant cette exécution. Vérifie le dépôt avant de relancer explicitement.")?;
         store.put(Documents::Runs, &run)?;

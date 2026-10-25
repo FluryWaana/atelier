@@ -103,11 +103,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !prompt.contains("Synthetic idea without repo") || !prompt.contains("Conversation sans dépôt"){return Err("Synthetic repository-free prompt required".into());}
             ready(r#"{"message":"Synthetic repository-free reply","questions":[],"tickets":[]}"#)?;Ok(())
         }
-        ["run-command", mode @ ("success" | "hang" | "brainstorm")] => {
+        ["run-command", mode @ ("success" | "hang" | "brainstorm" | "preparation")] => {
             if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
             let mut prompt = String::new();
             std::io::Read::read_to_string(&mut io::stdin(), &mut prompt)?;
             if prompt.is_empty() { return Err("Missing synthetic task input".into()); }
+            if *mode=="preparation" {
+                if !prompt.contains("Besoin enregistré") || !prompt.contains("Synthetic converted task"){return Err("Synthetic preparation prompt required".into());}
+                ready(r#"{"criteria":["Synthetic prepared criterion"],"questions":["Synthetic preparation question"]}"#)?;return Ok(());
+            }
             if *mode=="brainstorm" {
                 if !prompt.contains("Données de la conversation") || !prompt.contains("Synthetic structured proposal") {return Err("Missing synthetic conversation history".into());}
                 if prompt.contains("Second synthetic question") && !prompt.contains("Synthetic agent conversation reply") {return Err("Missing preceding synthetic answer".into());}

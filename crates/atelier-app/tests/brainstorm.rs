@@ -24,7 +24,7 @@ async fn structured_command_conversation_converts_atomically_and_never_recreates
         runs::reserve(store,&run)?;runs::transition(store,"run","running","synthetic-time",None)?;
         let output=json!({"message":"Voici le découpage","questions":[],"tickets":[{"title":"First","description":"First result","criteria":["Human validation"],"questions":["Keep this question"]},{"title":"Second","description":"Second result","criteria":["Observable result"],"questions":[]}]}).to_string();
         runs::append(store,"run","stdout",&output)?;runs::transition(store,"run","completed","synthetic-time",Some(0))?;
-        let run=store.document::<Document>(Documents::Runs,"run")?.unwrap();assert!(run.get::<Answer>("brainstormAnswer")?.is_some());assert!(run.raw("brainstormOutput").is_none());
+        let run=store.document::<Document>(Documents::Runs,"run")?.unwrap();assert!(run.get::<Answer>("brainstormAnswer")?.is_some());assert!(run.raw("structuredOutput").is_none());
         let prompt=brainstorm::conversation(store,&session,&session,"Précise la première tâche")?;assert!(prompt.contains("Découpe en tâches"));assert!(prompt.contains("Voici le découpage"));
         let mut input=Convert{expected:session.clone(),run_id:"run".into(),indices:vec![0,9],project:project.clone(),confirmed:true};
         assert!(brainstorm::convert(store,input.clone()).is_err());assert_eq!(store.documents::<Card>(Documents::Cards)?.len(),1);
@@ -49,7 +49,7 @@ async fn malformed_or_overflowing_output_never_becomes_a_convertible_proposal() 
         for (id,overflow) in [("invalid",false),("overflow",true)] {
             let run=document(json!({"id":id,"cardId":"session","repo":format!("synthetic-{id}"),"purpose":"brainstorm","agentType":"command","status":"starting"}));runs::reserve(store,&run)?;runs::transition(store,id,"running","time",None)?;
             if overflow {for _ in 0..5 {runs::append(store,id,"stdout",&"x".repeat(16*1024))?;}}else{runs::append(store,id,"stdout","{\"tickets\":[]}")?;}
-            runs::transition(store,id,"completed","time",Some(0))?;let run=store.document::<Document>(Documents::Runs,id)?.unwrap();assert!(run.raw("brainstormAnswer").is_none());assert!(run.raw("brainstormError").is_some());assert!(run.raw("brainstormOutput").is_none());
+            runs::transition(store,id,"completed","time",Some(0))?;let run=store.document::<Document>(Documents::Runs,id)?.unwrap();assert!(run.raw("brainstormAnswer").is_none());assert!(run.raw("brainstormError").is_some());assert!(run.raw("structuredOutput").is_none());
         }Ok(())
     }).await.unwrap();
     database.close().await.unwrap();
