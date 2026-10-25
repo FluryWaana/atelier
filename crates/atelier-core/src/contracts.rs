@@ -361,3 +361,36 @@ pub struct JiraTransitionIntent {
     pub started_at: String,
     pub observed: Option<JiraStatus>,
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum JiraRefreshState {
+    Reading,
+    Ready,
+    Interrupted,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraRefreshPreview {
+    pub id: String,
+    pub state: JiraRefreshState,
+    pub revision: u64,
+    pub base: String,
+    pub issue_id: String,
+    pub expected: Card,
+    pub detail: Option<JiraIssueDetail>,
+    pub created_at: String,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraRefreshRequest {
+    pub revision: u64,
+    pub expected: Card,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraRefreshApply {
+    pub revision: u64,
+    pub expected: Card,
+    pub preview_id: String,
+}

@@ -687,5 +687,21 @@
   "Lecture des opérations Jira impossible.": "Unable to read Jira operations.",
   "Vérifie les envois Jira incertains avant une restauration.": "Check uncertain Jira submissions before restoring.",
   "Restauration refusée : cette sauvegarde ne conserve pas les derniers effets Jira. Choisis une sauvegarde récente.": "Restore refused: this backup does not preserve the latest Jira effects. Choose a recent backup.",
-  "Vérifie l’envoi Jira incertain avant de lier ce ticket.": "Check the uncertain Jira submission before linking this issue."
+  "Vérifie l’envoi Jira incertain avant de lier ce ticket.": "Check the uncertain Jira submission before linking this issue.",
+  "La carte ou l’aperçu Jira a changé. Recharge l’aperçu avant de réessayer.": "The card or Jira preview changed. Reload the preview before trying again.",
+  "Arrête l’exécution avant de synchroniser le ticket Jira.": "Stop the run before synchronizing the Jira issue.",
+  "Cet aperçu Jira a expiré. Recharge-le avant de l’appliquer.": "This Jira preview expired. Reload it before applying it.",
+  "Titre Jira requis.": "A Jira title is required.",
+  "Carte synchronisée depuis l’aperçu Jira. Aucun ticket distant modifié.": "Card synchronized from the Jira preview. No remote issue was changed.",
+  "Synchroniser le contenu Jira": "Synchronize Jira content",
+  "Relis le ticket, compare l’aperçu, puis applique-le explicitement. Les critères et instructions locaux sont conservés.": "Read the issue again, compare the preview, then explicitly apply it. Local criteria and instructions are preserved.",
+  "Relire le ticket pour comparer": "Read the issue again to compare",
+  "Lecture du ticket pour préparer l’aperçu…": "Reading the issue to prepare the preview…",
+  "La lecture précédente a été interrompue. Tu peux relire le ticket.": "The previous read was interrupted. You can read the issue again.",
+  "Contenu actuel de la carte": "Current card content",
+  "Contenu relu depuis Jira": "Content read from Jira",
+  "L’aperçu expire après dix minutes. Une modification concurrente impose une nouvelle lecture.": "The preview expires after ten minutes. A concurrent change requires reading the issue again.",
+  "Remplacer le titre et la description locaux par cet aperçu Jira.": "Replace the local title and description with this Jira preview.",
+  "Appliquer cet aperçu à la carte": "Apply this preview to the card",
+  "Termine ou vérifie l’opération Jira avant de modifier cette tâche, les projets ou les sauvegardes.": "Finish or check the Jira operation before changing this task, projects or backups."
 }

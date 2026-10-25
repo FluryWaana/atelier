@@ -21,7 +21,9 @@ use std::time::Duration;
 pub(super) struct Revision {
     revision: u64,
 }
-async fn input<T: DeserializeOwned>(request: Request) -> std::result::Result<T, Response> {
+pub(super) async fn input<T: DeserializeOwned>(
+    request: Request,
+) -> std::result::Result<T, Response> {
     let body = object(request.into_body())
         .await
         .map_err(|(status, message)| failure(status, message))?;
@@ -31,7 +33,7 @@ async fn input<T: DeserializeOwned>(request: Request) -> std::result::Result<T, 
     )
     .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres Jira invalides."))
 }
-async fn client(state: &Shared, revision: u64) -> Result<jira::Jira> {
+pub(super) async fn client(state: &Shared, revision: u64) -> Result<jira::Jira> {
     let vault = state.vault.clone();
     let (configuration, token) = state
         .database

@@ -179,16 +179,20 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
 
 pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
     use crate::contracts::{JiraTransitionIntent, JiraTransitionState};
-    Ok(fields
-        .get::<JiraTransitionIntent>("jiraTransition")?
-        .is_some_and(|intent| {
-            matches!(
-                intent.state,
-                JiraTransitionState::Preparing
-                    | JiraTransitionState::Sending
-                    | JiraTransitionState::Uncertain
-            )
-        }))
+    let reading = fields
+        .get::<crate::contracts::JiraRefreshPreview>("jiraRefresh")?
+        .is_some_and(|preview| preview.state == crate::contracts::JiraRefreshState::Reading);
+    Ok(reading
+        || fields
+            .get::<JiraTransitionIntent>("jiraTransition")?
+            .is_some_and(|intent| {
+                matches!(
+                    intent.state,
+                    JiraTransitionState::Preparing
+                        | JiraTransitionState::Sending
+                        | JiraTransitionState::Uncertain
+                )
+            }))
 }
 pub fn linked_issue(card: &crate::contracts::Card, base: &str) -> Result<String, JiraFailure> {
     let ticket = card

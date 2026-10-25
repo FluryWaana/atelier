@@ -29,6 +29,7 @@ mod card_lifecycle;
 mod events;
 mod files;
 mod jira;
+mod jira_refresh;
 mod jira_transitions;
 mod mutations;
 mod projects;
@@ -138,7 +139,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         }
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
-        let exclusive = path.ends_with("/jira/transition")
+        let exclusive = path.ends_with("/jira/refresh-preview")
+            || path.ends_with("/jira/refresh-apply")
+            || path.ends_with("/jira/transition")
             || path.ends_with("/jira/reconcile")
             || path == "/api/jira/import"
             || path.ends_with("/worktree")
@@ -177,7 +180,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     Ok(true) => {
                         return failure(
                             StatusCode::CONFLICT,
-                            "Vérifie l’envoi Jira incertain avant de modifier cette tâche, les projets ou les sauvegardes.",
+                            "Termine ou vérifie l’opération Jira avant de modifier cette tâche, les projets ou les sauvegardes.",
                         );
                     }
                     Err(_) => {
@@ -392,6 +395,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             let now = time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?;
             crate::infrastructure::jira_import::recover(store)?;
+            crate::infrastructure::jira_refresh::recover(store)?;
             crate::infrastructure::jira_transition::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)
         })
@@ -448,6 +452,14 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route(
             "/api/cards/{id}/jira/reconcile",
             post(jira_transitions::reconcile),
+        )
+        .route(
+            "/api/cards/{id}/jira/refresh-preview",
+            post(jira_refresh::preview),
+        )
+        .route(
+            "/api/cards/{id}/jira/refresh-apply",
+            post(jira_refresh::apply),
         )
         .route("/api/jira/search", get(jira::search))
         .route("/api/jira/import", post(jira::import))

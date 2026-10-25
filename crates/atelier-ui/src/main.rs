@@ -10,6 +10,7 @@ mod backups;
 mod files;
 mod i18n;
 mod jira;
+mod jira_refresh;
 mod jira_task;
 mod live;
 mod projects;

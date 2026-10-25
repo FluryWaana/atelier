@@ -18,6 +18,7 @@ pub mod installation;
 mod interactive_runs;
 pub mod jira;
 pub mod jira_import;
+pub mod jira_refresh;
 pub mod jira_transition;
 pub mod launch_detection;
 pub mod launch_ports;

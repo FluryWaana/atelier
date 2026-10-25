@@ -31,6 +31,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http/events.rs](../crates/atelier-app/src/http/events.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http/files.rs](../crates/atelier-app/src/http/files.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http/jira.rs](../crates/atelier-app/src/http/jira.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/http/jira_refresh.rs](../crates/atelier-app/src/http/jira_refresh.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http/jira_transitions.rs](../crates/atelier-app/src/http/jira_transitions.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http/mutations.rs](../crates/atelier-app/src/http/mutations.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http/projects.rs](../crates/atelier-app/src/http/projects.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -58,6 +59,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs](../crates/atelier-app/src/infrastructure/interactive_runs.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/jira.rs](../crates/atelier-app/src/infrastructure/jira.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/jira_import.rs](../crates/atelier-app/src/infrastructure/jira_import.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs](../crates/atelier-app/src/infrastructure/jira_refresh.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs](../crates/atelier-app/src/infrastructure/jira_transition.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/launch_detection.rs](../crates/atelier-app/src/infrastructure/launch_detection.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/launch_ports.rs](../crates/atelier-app/src/infrastructure/launch_ports.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -87,6 +89,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/files.rs](../crates/atelier-app/tests/files.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/jira-http.rs](../crates/atelier-app/tests/jira-http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/jira-import.rs](../crates/atelier-app/tests/jira-import.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/jira-refresh.rs](../crates/atelier-app/tests/jira-refresh.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/jira-storage.rs](../crates/atelier-app/tests/jira-storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/jira-transitions.rs](../crates/atelier-app/tests/jira-transitions.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/local-http.rs](../crates/atelier-app/tests/local-http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -143,6 +146,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/files.rs](../crates/atelier-ui/src/files.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/i18n.rs](../crates/atelier-ui/src/i18n.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira.rs](../crates/atelier-ui/src/jira.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/jira_refresh.rs](../crates/atelier-ui/src/jira_refresh.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira_task.rs](../crates/atelier-ui/src/jira_task.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/live.rs](../crates/atelier-ui/src/live.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/main.rs](../crates/atelier-ui/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -809,21 +813,22 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http.rs:29](../crates/atelier-app/src/http.rs#L29) | <code>mod events;</code> |
 | [crates/atelier-app/src/http.rs:30](../crates/atelier-app/src/http.rs#L30) | <code>mod files;</code> |
 | [crates/atelier-app/src/http.rs:31](../crates/atelier-app/src/http.rs#L31) | <code>mod jira;</code> |
-| [crates/atelier-app/src/http.rs:32](../crates/atelier-app/src/http.rs#L32) | <code>mod jira_transitions;</code> |
-| [crates/atelier-app/src/http.rs:33](../crates/atelier-app/src/http.rs#L33) | <code>mod mutations;</code> |
-| [crates/atelier-app/src/http.rs:34](../crates/atelier-app/src/http.rs#L34) | <code>mod projects;</code> |
-| [crates/atelier-app/src/http.rs:36](../crates/atelier-app/src/http.rs#L36) | <code>mod runs;</code> |
-| [crates/atelier-app/src/http.rs:38](../crates/atelier-app/src/http.rs#L38) | <code>mod services;</code> |
-| [crates/atelier-app/src/http.rs:39](../crates/atelier-app/src/http.rs#L39) | <code>mod settings;</code> |
-| [crates/atelier-app/src/http.rs:40](../crates/atelier-app/src/http.rs#L40) | <code>mod task_creation;</code> |
-| [crates/atelier-app/src/http.rs:41](../crates/atelier-app/src/http.rs#L41) | <code>mod task_editing;</code> |
-| [crates/atelier-app/src/http.rs:42](../crates/atelier-app/src/http.rs#L42) | <code>mod task_templates;</code> |
-| [crates/atelier-app/src/http.rs:43](../crates/atelier-app/src/http.rs#L43) | <code>mod time_tracking;</code> |
-| [crates/atelier-app/src/http.rs:44](../crates/atelier-app/src/http.rs#L44) | <code>mod worktrees;</code> |
-| [crates/atelier-app/src/http.rs:46](../crates/atelier-app/src/http.rs#L46) | <code>pub const CSP: &amp;str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";</code> |
-| [crates/atelier-app/src/http.rs:238](../crates/atelier-app/src/http.rs#L238) | <code>use crate::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/src/http.rs:313](../crates/atelier-app/src/http.rs#L313) | <code>use crate::infrastructure::store::Documents;</code> |
-| [crates/atelier-app/src/http.rs:378](../crates/atelier-app/src/http.rs#L378) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/http.rs:32](../crates/atelier-app/src/http.rs#L32) | <code>mod jira_refresh;</code> |
+| [crates/atelier-app/src/http.rs:33](../crates/atelier-app/src/http.rs#L33) | <code>mod jira_transitions;</code> |
+| [crates/atelier-app/src/http.rs:34](../crates/atelier-app/src/http.rs#L34) | <code>mod mutations;</code> |
+| [crates/atelier-app/src/http.rs:35](../crates/atelier-app/src/http.rs#L35) | <code>mod projects;</code> |
+| [crates/atelier-app/src/http.rs:37](../crates/atelier-app/src/http.rs#L37) | <code>mod runs;</code> |
+| [crates/atelier-app/src/http.rs:39](../crates/atelier-app/src/http.rs#L39) | <code>mod services;</code> |
+| [crates/atelier-app/src/http.rs:40](../crates/atelier-app/src/http.rs#L40) | <code>mod settings;</code> |
+| [crates/atelier-app/src/http.rs:41](../crates/atelier-app/src/http.rs#L41) | <code>mod task_creation;</code> |
+| [crates/atelier-app/src/http.rs:42](../crates/atelier-app/src/http.rs#L42) | <code>mod task_editing;</code> |
+| [crates/atelier-app/src/http.rs:43](../crates/atelier-app/src/http.rs#L43) | <code>mod task_templates;</code> |
+| [crates/atelier-app/src/http.rs:44](../crates/atelier-app/src/http.rs#L44) | <code>mod time_tracking;</code> |
+| [crates/atelier-app/src/http.rs:45](../crates/atelier-app/src/http.rs#L45) | <code>mod worktrees;</code> |
+| [crates/atelier-app/src/http.rs:47](../crates/atelier-app/src/http.rs#L47) | <code>pub const CSP: &amp;str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";</code> |
+| [crates/atelier-app/src/http.rs:241](../crates/atelier-app/src/http.rs#L241) | <code>use crate::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/src/http.rs:316](../crates/atelier-app/src/http.rs#L316) | <code>use crate::infrastructure::store::Documents;</code> |
+| [crates/atelier-app/src/http.rs:381](../crates/atelier-app/src/http.rs#L381) | <code>pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:1](../crates/atelier-app/src/http/agent_providers.rs#L1) | <code>use super::{Shared, failure, object};</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:2](../crates/atelier-app/src/http/agent_providers.rs#L2) | <code>use crate::infrastructure::{agent_providers, settings::VaultFailure};</code> |
 | [crates/atelier-app/src/http/agent_providers.rs:3](../crates/atelier-app/src/http/agent_providers.rs#L3) | <code>use atelier_core::application::agent_providers::ProviderFailure;</code> |
@@ -865,6 +870,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http/jira.rs:10](../crates/atelier-app/src/http/jira.rs#L10) | <code>use serde::Deserialize;</code> |
 | [crates/atelier-app/src/http/jira.rs:140](../crates/atelier-app/src/http/jira.rs#L140) | <code>use crate::infrastructure::jira_import;</code> |
 | [crates/atelier-app/src/http/jira.rs:141](../crates/atelier-app/src/http/jira.rs#L141) | <code>use atelier_core::contracts::JiraImport;</code> |
+| [crates/atelier-app/src/http/jira_refresh.rs:1](../crates/atelier-app/src/http/jira_refresh.rs#L1) | <code>use super::{</code> |
+| [crates/atelier-app/src/http/jira_refresh.rs:6](../crates/atelier-app/src/http/jira_refresh.rs#L6) | <code>use crate::infrastructure::jira_refresh as workflow;</code> |
+| [crates/atelier-app/src/http/jira_refresh.rs:7](../crates/atelier-app/src/http/jira_refresh.rs#L7) | <code>use atelier_core::contracts::{Card, JiraRefreshApply, JiraRefreshRequest};</code> |
+| [crates/atelier-app/src/http/jira_refresh.rs:8](../crates/atelier-app/src/http/jira_refresh.rs#L8) | <code>use axum::{</code> |
+| [crates/atelier-app/src/http/jira_refresh.rs:13](../crates/atelier-app/src/http/jira_refresh.rs#L13) | <code>use std::time::Duration;</code> |
 | [crates/atelier-app/src/http/jira_transitions.rs:1](../crates/atelier-app/src/http/jira_transitions.rs#L1) | <code>use super::{Shared, failure, jira::response, object};</code> |
 | [crates/atelier-app/src/http/jira_transitions.rs:2](../crates/atelier-app/src/http/jira_transitions.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http/jira_transitions.rs:6](../crates/atelier-app/src/http/jira_transitions.rs#L6) | <code>use atelier_core::{</code> |
@@ -1186,6 +1196,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/jira_import.rs:102](../crates/atelier-app/src/infrastructure/jira_import.rs#L102) | <code>pub fn release(store: &amp;Store&lt;'_&gt;, id: &amp;str) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_import.rs:117](../crates/atelier-app/src/infrastructure/jira_import.rs#L117) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_import.rs:126](../crates/atelier-app/src/infrastructure/jira_import.rs#L126) | <code>pub fn finish(store: &amp;Store&lt;'_&gt;, id: &amp;str, detail: JiraIssueDetail) -&gt; Result&lt;JiraImported&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:1](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L1) | <code>use super::{</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:6](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L6) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:7](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L7) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:36](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L36) | <code>pub fn reserve(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshRequest, operation: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:69](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L69) | <code>pub fn ready(</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:109](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L109) | <code>pub fn interrupted(store: &amp;Store&lt;'_&gt;, card_id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:123](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L123) | <code>pub fn apply(store: &amp;Store&lt;'_&gt;, input: &amp;JiraRefreshApply) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira_refresh.rs:202](../crates/atelier-app/src/infrastructure/jira_refresh.rs#L202) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:1](../crates/atelier-app/src/infrastructure/jira_transition.rs#L1) | <code>use super::store::{Documents, Store};</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:2](../crates/atelier-app/src/infrastructure/jira_transition.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/jira_transition.rs:3](../crates/atelier-app/src/infrastructure/jira_transition.rs#L3) | <code>use atelier_core::{</code> |
@@ -1255,27 +1273,28 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:18](../crates/atelier-app/src/infrastructure/mod.rs#L18) | <code>mod interactive_runs;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:19](../crates/atelier-app/src/infrastructure/mod.rs#L19) | <code>pub mod jira;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:20](../crates/atelier-app/src/infrastructure/mod.rs#L20) | <code>pub mod jira_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:21](../crates/atelier-app/src/infrastructure/mod.rs#L21) | <code>pub mod jira_transition;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:22](../crates/atelier-app/src/infrastructure/mod.rs#L22) | <code>pub mod launch_detection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:23](../crates/atelier-app/src/infrastructure/mod.rs#L23) | <code>pub mod launch_ports;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:24](../crates/atelier-app/src/infrastructure/mod.rs#L24) | <code>pub mod local_http;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:25](../crates/atelier-app/src/infrastructure/mod.rs#L25) | <code>pub mod portable_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:27](../crates/atelier-app/src/infrastructure/mod.rs#L27) | <code>mod process_inspection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:29](../crates/atelier-app/src/infrastructure/mod.rs#L29) | <code>pub mod process_tree;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:30](../crates/atelier-app/src/infrastructure/mod.rs#L30) | <code>pub mod projects;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:31](../crates/atelier-app/src/infrastructure/mod.rs#L31) | <code>pub mod prototype;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:32](../crates/atelier-app/src/infrastructure/mod.rs#L32) | <code>mod publish;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:33](../crates/atelier-app/src/infrastructure/mod.rs#L33) | <code>pub mod runs;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:34](../crates/atelier-app/src/infrastructure/mod.rs#L34) | <code>pub mod service_launch;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:35](../crates/atelier-app/src/infrastructure/mod.rs#L35) | <code>pub mod session;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:36](../crates/atelier-app/src/infrastructure/mod.rs#L36) | <code>pub mod settings;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:37](../crates/atelier-app/src/infrastructure/mod.rs#L37) | <code>pub mod store;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:38](../crates/atelier-app/src/infrastructure/mod.rs#L38) | <code>pub mod task_creation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:39](../crates/atelier-app/src/infrastructure/mod.rs#L39) | <code>pub mod task_editing;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:40](../crates/atelier-app/src/infrastructure/mod.rs#L40) | <code>pub mod task_templates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:41](../crates/atelier-app/src/infrastructure/mod.rs#L41) | <code>pub mod time_tracking;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod token_vault;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod worktrees;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:21](../crates/atelier-app/src/infrastructure/mod.rs#L21) | <code>pub mod jira_refresh;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:22](../crates/atelier-app/src/infrastructure/mod.rs#L22) | <code>pub mod jira_transition;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:23](../crates/atelier-app/src/infrastructure/mod.rs#L23) | <code>pub mod launch_detection;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:24](../crates/atelier-app/src/infrastructure/mod.rs#L24) | <code>pub mod launch_ports;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:25](../crates/atelier-app/src/infrastructure/mod.rs#L25) | <code>pub mod local_http;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:26](../crates/atelier-app/src/infrastructure/mod.rs#L26) | <code>pub mod portable_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:28](../crates/atelier-app/src/infrastructure/mod.rs#L28) | <code>mod process_inspection;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:30](../crates/atelier-app/src/infrastructure/mod.rs#L30) | <code>pub mod process_tree;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:31](../crates/atelier-app/src/infrastructure/mod.rs#L31) | <code>pub mod projects;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:32](../crates/atelier-app/src/infrastructure/mod.rs#L32) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:33](../crates/atelier-app/src/infrastructure/mod.rs#L33) | <code>mod publish;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:34](../crates/atelier-app/src/infrastructure/mod.rs#L34) | <code>pub mod runs;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:35](../crates/atelier-app/src/infrastructure/mod.rs#L35) | <code>pub mod service_launch;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:36](../crates/atelier-app/src/infrastructure/mod.rs#L36) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:37](../crates/atelier-app/src/infrastructure/mod.rs#L37) | <code>pub mod settings;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:38](../crates/atelier-app/src/infrastructure/mod.rs#L38) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:39](../crates/atelier-app/src/infrastructure/mod.rs#L39) | <code>pub mod task_creation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:40](../crates/atelier-app/src/infrastructure/mod.rs#L40) | <code>pub mod task_editing;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:41](../crates/atelier-app/src/infrastructure/mod.rs#L41) | <code>pub mod task_templates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod time_tracking;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:44](../crates/atelier-app/src/infrastructure/mod.rs#L44) | <code>pub mod worktrees;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:1](../crates/atelier-app/src/infrastructure/portable_import.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:5](../crates/atelier-app/src/infrastructure/portable_import.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:6](../crates/atelier-app/src/infrastructure/portable_import.rs#L6) | <code>use cap_fs_ext::DirExt;</code> |
@@ -1569,6 +1588,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/jira-import.rs:139](../crates/atelier-app/tests/jira-import.rs#L139) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/jira-import.rs:170](../crates/atelier-app/tests/jira-import.rs#L170) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/jira-import.rs:172](../crates/atelier-app/tests/jira-import.rs#L172) | <code>use atelier_core::contracts::{JiraIssue, JiraIssueDetail};</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:1](../crates/atelier-app/tests/jira-refresh.rs#L1) | <code>use atelier_app::infrastructure::{</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:4](../crates/atelier-app/tests/jira-refresh.rs#L4) | <code>use atelier_core::{</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:11](../crates/atelier-app/tests/jira-refresh.rs#L11) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:57](../crates/atelier-app/tests/jira-refresh.rs#L57) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/jira-refresh.rs:185](../crates/atelier-app/tests/jira-refresh.rs#L185) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/jira-storage.rs:1](../crates/atelier-app/tests/jira-storage.rs#L1) | <code>use atelier_app::infrastructure::{database::Database, jira, settings, store::Documents};</code> |
 | [crates/atelier-app/tests/jira-storage.rs:2](../crates/atelier-app/tests/jira-storage.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/jira-storage.rs:19](../crates/atelier-app/tests/jira-storage.rs#L19) | <code>#[tokio::test]</code> |
@@ -1760,7 +1784,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/jira.rs:103](../crates/atelier-core/src/application/jira.rs#L103) | <code>pub fn description(value: &amp;serde_json::Value) -&gt; Result&lt;String, JiraFailure&gt; {</code> |
 | [crates/atelier-core/src/application/jira.rs:180](../crates/atelier-core/src/application/jira.rs#L180) | <code>pub fn unresolved(fields: &amp;crate::document::Document) -&gt; Result&lt;bool, serde_json::Error&gt; {</code> |
 | [crates/atelier-core/src/application/jira.rs:181](../crates/atelier-core/src/application/jira.rs#L181) | <code>use crate::contracts::{JiraTransitionIntent, JiraTransitionState};</code> |
-| [crates/atelier-core/src/application/jira.rs:193](../crates/atelier-core/src/application/jira.rs#L193) | <code>pub fn linked_issue(card: &amp;crate::contracts::Card, base: &amp;str) -&gt; Result&lt;String, JiraFailure&gt; {</code> |
+| [crates/atelier-core/src/application/jira.rs:197](../crates/atelier-core/src/application/jira.rs#L197) | <code>pub fn linked_issue(card: &amp;crate::contracts::Card, base: &amp;str) -&gt; Result&lt;String, JiraFailure&gt; {</code> |
 | [crates/atelier-core/src/application/projects.rs:1](../crates/atelier-core/src/application/projects.rs#L1) | <code>use super::task_creation::{CreationContext, Result, text};</code> |
 | [crates/atelier-core/src/application/projects.rs:2](../crates/atelier-core/src/application/projects.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/projects.rs:8](../crates/atelier-core/src/application/projects.rs#L8) | <code>pub enum ProjectFailure {</code> |
@@ -2034,6 +2058,23 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/contracts.rs:360](../crates/atelier-core/src/contracts.rs#L360) | <code>pub transition: JiraTransition,</code> |
 | [crates/atelier-core/src/contracts.rs:361](../crates/atelier-core/src/contracts.rs#L361) | <code>pub started_at: String,</code> |
 | [crates/atelier-core/src/contracts.rs:362](../crates/atelier-core/src/contracts.rs#L362) | <code>pub observed: Option&lt;JiraStatus&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:367](../crates/atelier-core/src/contracts.rs#L367) | <code>pub enum JiraRefreshState {</code> |
+| [crates/atelier-core/src/contracts.rs:374](../crates/atelier-core/src/contracts.rs#L374) | <code>pub struct JiraRefreshPreview {</code> |
+| [crates/atelier-core/src/contracts.rs:375](../crates/atelier-core/src/contracts.rs#L375) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/contracts.rs:376](../crates/atelier-core/src/contracts.rs#L376) | <code>pub state: JiraRefreshState,</code> |
+| [crates/atelier-core/src/contracts.rs:377](../crates/atelier-core/src/contracts.rs#L377) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:378](../crates/atelier-core/src/contracts.rs#L378) | <code>pub base: String,</code> |
+| [crates/atelier-core/src/contracts.rs:379](../crates/atelier-core/src/contracts.rs#L379) | <code>pub issue_id: String,</code> |
+| [crates/atelier-core/src/contracts.rs:380](../crates/atelier-core/src/contracts.rs#L380) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:381](../crates/atelier-core/src/contracts.rs#L381) | <code>pub detail: Option&lt;JiraIssueDetail&gt;,</code> |
+| [crates/atelier-core/src/contracts.rs:382](../crates/atelier-core/src/contracts.rs#L382) | <code>pub created_at: String,</code> |
+| [crates/atelier-core/src/contracts.rs:386](../crates/atelier-core/src/contracts.rs#L386) | <code>pub struct JiraRefreshRequest {</code> |
+| [crates/atelier-core/src/contracts.rs:387](../crates/atelier-core/src/contracts.rs#L387) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:388](../crates/atelier-core/src/contracts.rs#L388) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:392](../crates/atelier-core/src/contracts.rs#L392) | <code>pub struct JiraRefreshApply {</code> |
+| [crates/atelier-core/src/contracts.rs:393](../crates/atelier-core/src/contracts.rs#L393) | <code>pub revision: u64,</code> |
+| [crates/atelier-core/src/contracts.rs:394](../crates/atelier-core/src/contracts.rs#L394) | <code>pub expected: Card,</code> |
+| [crates/atelier-core/src/contracts.rs:395](../crates/atelier-core/src/contracts.rs#L395) | <code>pub preview_id: String,</code> |
 | [crates/atelier-core/src/document.rs:1](../crates/atelier-core/src/document.rs#L1) | <code>use serde::{</code> |
 | [crates/atelier-core/src/document.rs:5](../crates/atelier-core/src/document.rs#L5) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/src/document.rs:6](../crates/atelier-core/src/document.rs#L6) | <code>use std::fmt;</code> |
@@ -2257,6 +2298,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/jira.rs:9](../crates/atelier-ui/src/jira.rs#L9) | <code>use wasm_bindgen::JsCast;</code> |
 | [crates/atelier-ui/src/jira.rs:10](../crates/atelier-ui/src/jira.rs#L10) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/jira.rs:25](../crates/atelier-ui/src/jira.rs#L25) | <code>pub fn JiraSettings(</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:1](../crates/atelier-ui/src/jira_refresh.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, replace_card, write};</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:2](../crates/atelier-ui/src/jira_refresh.rs#L2) | <code>use atelier_core::contracts::{</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:6](../crates/atelier-ui/src/jira_refresh.rs#L6) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:7](../crates/atelier-ui/src/jira_refresh.rs#L7) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:8](../crates/atelier-ui/src/jira_refresh.rs#L8) | <code>use std::{cell::Cell, rc::Rc};</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:9](../crates/atelier-ui/src/jira_refresh.rs#L9) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/jira_refresh.rs:11](../crates/atelier-ui/src/jira_refresh.rs#L11) | <code>pub fn JiraRefresh(</code> |
 | [crates/atelier-ui/src/jira_task.rs:1](../crates/atelier-ui/src/jira_task.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, read, write};</code> |
 | [crates/atelier-ui/src/jira_task.rs:2](../crates/atelier-ui/src/jira_task.rs#L2) | <code>use atelier_core::contracts::{</code> |
 | [crates/atelier-ui/src/jira_task.rs:6](../crates/atelier-ui/src/jira_task.rs#L6) | <code>use gloo_net::http::Method;</code> |
@@ -2292,20 +2340,21 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/main.rs:10](../crates/atelier-ui/src/main.rs#L10) | <code>mod files;</code> |
 | [crates/atelier-ui/src/main.rs:11](../crates/atelier-ui/src/main.rs#L11) | <code>mod i18n;</code> |
 | [crates/atelier-ui/src/main.rs:12](../crates/atelier-ui/src/main.rs#L12) | <code>mod jira;</code> |
-| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>mod jira_task;</code> |
-| [crates/atelier-ui/src/main.rs:14](../crates/atelier-ui/src/main.rs#L14) | <code>mod live;</code> |
-| [crates/atelier-ui/src/main.rs:15](../crates/atelier-ui/src/main.rs#L15) | <code>mod projects;</code> |
-| [crates/atelier-ui/src/main.rs:16](../crates/atelier-ui/src/main.rs#L16) | <code>mod runs;</code> |
-| [crates/atelier-ui/src/main.rs:17](../crates/atelier-ui/src/main.rs#L17) | <code>mod services;</code> |
-| [crates/atelier-ui/src/main.rs:18](../crates/atelier-ui/src/main.rs#L18) | <code>mod settings;</code> |
-| [crates/atelier-ui/src/main.rs:19](../crates/atelier-ui/src/main.rs#L19) | <code>mod task_editor;</code> |
-| [crates/atelier-ui/src/main.rs:20](../crates/atelier-ui/src/main.rs#L20) | <code>mod worktree;</code> |
-| [crates/atelier-ui/src/main.rs:21](../crates/atelier-ui/src/main.rs#L21) | <code>use agent_profiles::AgentProfiles;</code> |
-| [crates/atelier-ui/src/main.rs:22](../crates/atelier-ui/src/main.rs#L22) | <code>use backups::Backups;</code> |
-| [crates/atelier-ui/src/main.rs:23](../crates/atelier-ui/src/main.rs#L23) | <code>use live::BoardState;</code> |
-| [crates/atelier-ui/src/main.rs:24](../crates/atelier-ui/src/main.rs#L24) | <code>use projects::Projects;</code> |
-| [crates/atelier-ui/src/main.rs:25](../crates/atelier-ui/src/main.rs#L25) | <code>use settings::Settings;</code> |
-| [crates/atelier-ui/src/main.rs:26](../crates/atelier-ui/src/main.rs#L26) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/main.rs:13](../crates/atelier-ui/src/main.rs#L13) | <code>mod jira_refresh;</code> |
+| [crates/atelier-ui/src/main.rs:14](../crates/atelier-ui/src/main.rs#L14) | <code>mod jira_task;</code> |
+| [crates/atelier-ui/src/main.rs:15](../crates/atelier-ui/src/main.rs#L15) | <code>mod live;</code> |
+| [crates/atelier-ui/src/main.rs:16](../crates/atelier-ui/src/main.rs#L16) | <code>mod projects;</code> |
+| [crates/atelier-ui/src/main.rs:17](../crates/atelier-ui/src/main.rs#L17) | <code>mod runs;</code> |
+| [crates/atelier-ui/src/main.rs:18](../crates/atelier-ui/src/main.rs#L18) | <code>mod services;</code> |
+| [crates/atelier-ui/src/main.rs:19](../crates/atelier-ui/src/main.rs#L19) | <code>mod settings;</code> |
+| [crates/atelier-ui/src/main.rs:20](../crates/atelier-ui/src/main.rs#L20) | <code>mod task_editor;</code> |
+| [crates/atelier-ui/src/main.rs:21](../crates/atelier-ui/src/main.rs#L21) | <code>mod worktree;</code> |
+| [crates/atelier-ui/src/main.rs:22](../crates/atelier-ui/src/main.rs#L22) | <code>use agent_profiles::AgentProfiles;</code> |
+| [crates/atelier-ui/src/main.rs:23](../crates/atelier-ui/src/main.rs#L23) | <code>use backups::Backups;</code> |
+| [crates/atelier-ui/src/main.rs:24](../crates/atelier-ui/src/main.rs#L24) | <code>use live::BoardState;</code> |
+| [crates/atelier-ui/src/main.rs:25](../crates/atelier-ui/src/main.rs#L25) | <code>use projects::Projects;</code> |
+| [crates/atelier-ui/src/main.rs:26](../crates/atelier-ui/src/main.rs#L26) | <code>use settings::Settings;</code> |
+| [crates/atelier-ui/src/main.rs:27](../crates/atelier-ui/src/main.rs#L27) | <code>use task_editor::TaskEditor;</code> |
 | [crates/atelier-ui/src/projects.rs:1](../crates/atelier-ui/src/projects.rs#L1) | <code>use crate::i18n::I18n;</code> |
 | [crates/atelier-ui/src/projects.rs:2](../crates/atelier-ui/src/projects.rs#L2) | <code>use crate::{field, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/projects.rs:3](../crates/atelier-ui/src/projects.rs#L3) | <code>use atelier_core::application::projects::EDITABLE_FIELDS;</code> |
@@ -2351,8 +2400,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/task_editor.rs:9](../crates/atelier-ui/src/task_editor.rs#L9) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/task_editor.rs:10](../crates/atelier-ui/src/task_editor.rs#L10) | <code>use wasm_bindgen::JsCast;</code> |
 | [crates/atelier-ui/src/task_editor.rs:11](../crates/atelier-ui/src/task_editor.rs#L11) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/task_editor.rs:53](../crates/atelier-ui/src/task_editor.rs#L53) | <code>pub fn TaskEditor(</code> |
-| [crates/atelier-ui/src/task_editor.rs:233](../crates/atelier-ui/src/task_editor.rs#L233) | <code>&lt;dialog id="task-editor" class="editor" class:workspace=move \|\| show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move \|event: web_sys::Event\| { event.prevent_default(); request_close(); }&gt;</code> |
+| [crates/atelier-ui/src/task_editor.rs:74](../crates/atelier-ui/src/task_editor.rs#L74) | <code>pub fn TaskEditor(</code> |
+| [crates/atelier-ui/src/task_editor.rs:237](../crates/atelier-ui/src/task_editor.rs#L237) | <code>&lt;dialog id="task-editor" class="editor" class:workspace=move \|\| show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move \|event: web_sys::Event\| { event.prevent_default(); request_close(); }&gt;</code> |
 | [crates/atelier-ui/src/worktree.rs:1](../crates/atelier-ui/src/worktree.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/worktree.rs:2](../crates/atelier-ui/src/worktree.rs#L2) | <code>use atelier_core::application::worktrees::ServiceWorktrees;</code> |
 | [crates/atelier-ui/src/worktree.rs:3](../crates/atelier-ui/src/worktree.rs#L3) | <code>use atelier_core::contracts::{Worktree, WorktreeState};</code> |
@@ -3244,11 +3293,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:134](../xtask/src/ui.rs#L134) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:170](../xtask/src/ui.rs#L170) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
 | [xtask/src/ui.rs:174](../xtask/src/ui.rs#L174) | <code>capabilities.insert("moz:firefoxOptions".into(), json!({"args":["-headless"]}));</code> |
-| [xtask/src/ui.rs:1452](../xtask/src/ui.rs#L1452) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:1464](../xtask/src/ui.rs#L1464) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:1469](../xtask/src/ui.rs#L1469) | <code>.args([</code> |
-| [xtask/src/ui.rs:1484](../xtask/src/ui.rs#L1484) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:1490](../xtask/src/ui.rs#L1490) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:1464](../xtask/src/ui.rs#L1464) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:1476](../xtask/src/ui.rs#L1476) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:1481](../xtask/src/ui.rs#L1481) | <code>.args([</code> |
+| [xtask/src/ui.rs:1496](../xtask/src/ui.rs#L1496) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:1502](../xtask/src/ui.rs#L1502) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
 | [xtask/tests/command-runs.rs:49](../xtask/tests/command-runs.rs#L49) | <code>.args(["process-output", mode])</code> |
 | [xtask/tests/windows-native.rs:31](../xtask/tests/windows-native.rs#L31) | <code>fn spawn(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Self {</code> |
 | [xtask/tests/windows-native.rs:33](../xtask/tests/windows-native.rs#L33) | <code>.args(args)</code> |
@@ -4172,8 +4221,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | --- | --- |
 | [.github/workflows/release.yml:92](../.github/workflows/release.yml#L92) | <code>run: node --input-type=module -e "import {mkdirSync,writeFileSync} from 'node:fs'; const r=await fetch('https://raw.githubusercontent.com/nodejs/node/v'+process.versions.node+'/LICENSE'); if(!r.ok) throw Error('Licence Node indisponible'); mkdirSync('.updates',{recursive:true}); writeFileSync('.updates/Node-LICENSE', await r.text());"</code> |
 | [.github/workflows/release.yml:95](../.github/workflows/release.yml#L95) | <code>NODE_LICENSE: .updates/Node-LICENSE</code> |
-| [crates/atelier-app/src/http.rs:52](../crates/atelier-app/src/http.rs#L52) | <code>vault: crate::infrastructure::token_vault::PrototypeVault,</code> |
-| [crates/atelier-app/src/http.rs:386](../crates/atelier-app/src/http.rs#L386) | <code>crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;</code> |
+| [crates/atelier-app/src/http.rs:53](../crates/atelier-app/src/http.rs#L53) | <code>vault: crate::infrastructure::token_vault::PrototypeVault,</code> |
+| [crates/atelier-app/src/http.rs:389](../crates/atelier-app/src/http.rs#L389) | <code>crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;</code> |
 | [crates/atelier-app/src/http/assets.rs:13](../crates/atelier-app/src/http/assets.rs#L13) | <code>"local-session.mjs",</code> |
 | [crates/atelier-app/src/http/events.rs:5](../crates/atelier-app/src/http/events.rs#L5) | <code>use futures_util::stream::{self, Stream};</code> |
 | [crates/atelier-app/src/http/events.rs:19](../crates/atelier-app/src/http/events.rs#L19) | <code>stream::unfold(</code> |
@@ -4213,7 +4262,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:298](../crates/atelier-app/src/infrastructure/dev_servers.rs#L298) | <code>let Some((stdout, stderr)) = streams else {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:146](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L146) | <code>if let Some((stream,line))=message {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:148](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L148) | <code>let mut effects=if stream=="stdout" {</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:45](../crates/atelier-app/src/infrastructure/portable_import.rs#L45) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:53](../crates/atelier-app/src/infrastructure/portable_import.rs#L53) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:186](../crates/atelier-app/src/infrastructure/portable_import.rs#L186) | <code>let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;</code> |
@@ -4493,4 +4542,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 462 fichiers ; 97 fichiers de tests Node.
+Total : 466 fichiers ; 97 fichiers de tests Node.

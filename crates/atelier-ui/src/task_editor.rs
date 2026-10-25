@@ -21,6 +21,27 @@ struct Draft {
 }
 
 impl Draft {
+    fn from_card(card: &Card) -> Self {
+        Self {
+            title: String::from_utf16_lossy(&card.title.0),
+            description: field(&card.fields, "description"),
+            instructions: field(&card.fields, "instructions"),
+            status: field(&card.fields, "status"),
+            criteria: card
+                .fields
+                .get("checklist")
+                .ok()
+                .flatten()
+                .unwrap_or_default(),
+            dependencies: card
+                .fields
+                .get("blockedBy")
+                .ok()
+                .flatten()
+                .unwrap_or_default(),
+        }
+    }
+
     fn fields(&self) -> serde_json::Value {
         serde_json::json!({"title":self.title, "description":self.description, "instructions":self.instructions, "status":self.status, "checklist":self.criteria, "blockedBy":self.dependencies})
     }
@@ -62,24 +83,7 @@ pub fn TaskEditor(
     let archived = card.fields.truthy("archived").unwrap_or(false);
     let ticket = card.fields.truthy("ticket").unwrap_or(false);
 
-    let original = StoredValue::new(Draft {
-        title: String::from_utf16_lossy(&card.title.0),
-        description: field(&card.fields, "description"),
-        instructions: field(&card.fields, "instructions"),
-        status: field(&card.fields, "status"),
-        criteria: card
-            .fields
-            .get("checklist")
-            .ok()
-            .flatten()
-            .unwrap_or_default(),
-        dependencies: card
-            .fields
-            .get("blockedBy")
-            .ok()
-            .flatten()
-            .unwrap_or_default(),
-    });
+    let original = StoredValue::new(Draft::from_card(&card));
     let id = StoredValue::new(card.id);
     let ticket_info = Signal::derive(move || {
         board.cards.with(|cards| {
@@ -260,6 +264,7 @@ pub fn TaskEditor(
                 <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
             </form>
             <Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) />
+            <crate::jira_refresh::JiraRefresh card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || show_template.get() || archived) on_applied=Callback::new(move |card:Card|{if !dirty.get_untracked(){let next=Draft::from_card(&card);original.set_value(next.clone());draft.set(next);}}) />
             <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || show_template.get()) />
             <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />
             <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || show_template.get()) />

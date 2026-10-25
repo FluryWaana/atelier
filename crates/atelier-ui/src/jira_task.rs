@@ -65,7 +65,7 @@ pub fn JiraTask(
     let choices = RwSignal::new(None::<(Card, JiraTransitions)>);
     let selected = RwSignal::new(String::new());
     let confirm = RwSignal::new(false);
-    let dismiss = RwSignal::new(false);
+    let dismiss = RwSignal::new(String::new());
     let loading = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
@@ -204,6 +204,16 @@ pub fn JiraTask(
         let Some(expected) = card.get_untracked() else {
             return;
         };
+        if dismiss_operation
+            && expected
+                .fields
+                .get::<JiraTransitionIntent>("jiraTransition")
+                .ok()
+                .flatten()
+                .is_none_or(|intent| intent.id != dismiss.get_untracked())
+        {
+            return;
+        }
         let credential = match token.get_value() {
             Ok(value) => value,
             Err(message) => {
@@ -218,7 +228,7 @@ pub fn JiraTask(
         })
         .expect("Jira reconciliation serialization");
         pending.set(true);
-        dismiss.set(false);
+        dismiss.set(String::new());
         error.set(String::new());
         notice.set(String::new());
         let alive = reconcile_alive.clone();
@@ -262,7 +272,7 @@ pub fn JiraTask(
             <option value="">{move ||i18n.text("Choisir une transition")}</option><For each=move ||choices.get().map(|(_,value)|value.transitions).unwrap_or_default() key=|transition|transition.id.clone() children=move |transition|view!{<option value=transition.id disabled=transition.requires_fields>{transition.name}" → "{transition.target.name}{if transition.requires_fields{" *"}else{""}}</option>} />
         </select><p class="field-help">{move ||i18n.text("* Les transitions exigeant des champs supplémentaires doivent être effectuées dans Jira.")}</p><button type="button" disabled=move ||selected.get().is_empty()||pending.get()||blocked.get()||unresolved.get() on:click=move |_|confirm.set(true)>{move ||i18n.text("Préparer le changement Jira")}</button></div>
         <div class="confirmation" role="alert" hidden=move ||!confirm.get()><p>{move ||i18n.text("Confirmer l’envoi de cette transition au ticket Jira ?")}</p><p>{move ||choices.get().and_then(|(_,value)|value.transitions.into_iter().find(|transition|transition.id==selected.get())).map(|transition|format!("{} → {}",transition.name,transition.target.name)).unwrap_or_default()}</p><button id="confirm-jira-transition" type="button" disabled=move ||pending.get()||blocked.get()||unresolved.get() on:click=send>{move ||i18n.text("Confirmer l’envoi à Jira")}</button><button type="button" on:click=move |_|confirm.set(false)>{move ||i18n.text("Annuler")}</button></div>
-        <div hidden=move ||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.state!=Phase::Uncertain))><button id="reconcile-jira-transition" type="button" disabled=move ||pending.get()||blocked.get() on:click=move |_|reconcile.with_value(|reconcile|reconcile(false))>{move ||i18n.text("Vérifier le statut sans renvoyer")}</button><label><input id="dismiss-jira-ack" type="checkbox" disabled=move ||pending.get() prop:checked=move ||dismiss.get() on:change=move |event|dismiss.set(event_target_checked(&event)) />{move ||i18n.text("J’ai vérifié le ticket dans Jira et je souhaite clore cette incertitude sans nouvel envoi.")}</label><button id="dismiss-jira-transition" type="button" disabled=move ||pending.get()||blocked.get()||!dismiss.get() on:click=move |_|reconcile.with_value(|reconcile|reconcile(true))>{move ||i18n.text("Clore l’incertitude après vérification")}</button></div>
+        <div hidden=move ||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.state!=Phase::Uncertain))><button id="reconcile-jira-transition" type="button" disabled=move ||pending.get()||blocked.get() on:click=move |_|reconcile.with_value(|reconcile|reconcile(false))>{move ||i18n.text("Vérifier le statut sans renvoyer")}</button><label><input id="dismiss-jira-ack" type="checkbox" disabled=move ||pending.get() prop:checked=move ||intent.with(|intent|intent.as_ref().is_some_and(|intent|intent.id==dismiss.get())) on:change=move |event|dismiss.set(if event_target_checked(&event){intent.with(|intent|intent.as_ref().map(|intent|intent.id.clone()).unwrap_or_default())}else{String::new()}) />{move ||i18n.text("J’ai vérifié le ticket dans Jira et je souhaite clore cette incertitude sans nouvel envoi.")}</label><button id="dismiss-jira-transition" type="button" disabled=move ||pending.get()||blocked.get()||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.id!=dismiss.get())) on:click=move |_|reconcile.with_value(|reconcile|reconcile(true))>{move ||i18n.text("Clore l’incertitude après vérification")}</button></div>
         <p class="error" role="alert">{move ||i18n.text(&error.get())}</p><p role="status">{move ||i18n.text(&notice.get())}</p>
     </section>}
 }
