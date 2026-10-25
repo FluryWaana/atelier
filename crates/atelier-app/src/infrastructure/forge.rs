@@ -71,6 +71,40 @@ mod tests {
 fn token_key(kind: ForgeKind) -> String {
     format!("forge.{}", kind.name())
 }
+pub(super) fn browser_link(
+    configuration: &ForgeConfiguration,
+    repository: &str,
+    number: u64,
+) -> Result<String> {
+    let parts =
+        atelier_core::application::forge::repository(configuration.kind, repository, number)?;
+    let mut url = Url::parse(&configuration.base)?;
+    {
+        let mut path = url
+            .path_segments_mut()
+            .map_err(|_| "Adresse de forge invalide.")?;
+        path.pop_if_empty();
+        for (index, part) in parts.iter().enumerate() {
+            if configuration.kind == ForgeKind::Azure && index == 1 {
+                path.push("_git");
+            }
+            path.push(part);
+        }
+        match configuration.kind {
+            ForgeKind::Github => {
+                path.push("pull");
+            }
+            ForgeKind::Gitlab => {
+                path.push("-").push("merge_requests");
+            }
+            ForgeKind::Azure => {
+                path.push("pullrequest");
+            }
+        }
+        path.push(&number.to_string());
+    }
+    Ok(url.into())
+}
 fn configurations(store: &Store<'_>) -> Result<BTreeMap<ForgeKind, ForgeConfiguration>> {
     Ok(store
         .settings::<Document>()?
@@ -236,6 +270,18 @@ pub fn credentials(
     expected: u64,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<(ForgeConfiguration, String)> {
+    let configuration = configuration(store, kind, expected)?;
+    let token = settings::load(store, protect)?
+        .get::<String>(&token_key(kind))?
+        .filter(|token| !token.is_empty())
+        .ok_or("Renseigne le jeton de cette forge avant la lecture.")?;
+    Ok((configuration, token))
+}
+pub(super) fn configuration(
+    store: &Store<'_>,
+    kind: ForgeKind,
+    expected: u64,
+) -> Result<ForgeConfiguration> {
     require_revision(store, expected)?;
     let configuration = configurations(store)?
         .remove(&kind)
@@ -243,11 +289,7 @@ pub fn credentials(
     if configuration.kind != kind {
         return Err("Configuration de forge incohérente.".into());
     }
-    let token = settings::load(store, protect)?
-        .get::<String>(&token_key(kind))?
-        .filter(|token| !token.is_empty())
-        .ok_or("Renseigne le jeton de cette forge avant la lecture.")?;
-    Ok((configuration, token))
+    Ok(configuration)
 }
 pub(super) fn invalidate(stored: &mut Document, previous: &Document) -> Result<()> {
     if stored.raw("forgeConnections").is_none() && previous.raw("forgeConnections").is_none() {
@@ -625,7 +667,7 @@ impl Forge {
             repository: repository.into(),
             number,
             title: self.text(title, 8000)?.into(),
-            url: url.into(),
+            url: browser_link(&self.configuration, repository, number)?,
             status: status.into(),
             draft: draft.ok_or("État brouillon de PR absent.")?,
             source_branch: branch(source)?,
@@ -633,6 +675,9 @@ impl Forge {
             source_commit: self.commit(source_commit)?,
             target_commit: self.commit(target_commit)?,
             fork,
+            base_url: self.configuration.base.clone(),
+            checked_at: time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)?,
         })
     }
 }

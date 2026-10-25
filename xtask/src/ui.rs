@@ -616,7 +616,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             store.save_settings(&json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic-recovery.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-creation","title":"Synthetic Jira creation","description":"Keep local creation content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"jiraCreation":{"id":"synthetic-creation-operation","state":"sending","base":"https://synthetic-recovery.example.test","projectKey":"SYN","issueType":{"id":"1","name":"Task","subtask":false},"revision":1,"startedAt":"2026-10-25T10:00:00Z","result":null}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"},"jiraTransition":{"id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"11","name":"Complete","target":{"id":"2","name":"Done"},"requiresFields":false},"startedAt":"2026-10-25T10:00:00Z","observed":null}}))?;
-            let card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"jira-refresh","title":"Local refresh title","description":"Local refresh description","instructions":"Keep refresh instructions","agent":"codex","mode":"analyze","status":"todo","checklist":[{"text":"Keep refresh criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"2","key":"SYN-2","status":"Open"}}).to_string())?;
+            let mut card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"jira-refresh","title":"Local refresh title","description":"Local refresh description","instructions":"Keep refresh instructions","agent":"codex","mode":"analyze","status":"todo","checklist":[{"text":"Keep refresh criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"2","key":"SYN-2","status":"Open"}}).to_string())?;
+            card.fields.set("pullRequest",&json!({"revision":0,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic linked PR","url":"https://github-synthetic.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task/synthetic","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github-synthetic.example.test","checkedAt":"2026-10-25T10:00:00Z"}))?;
             store.put(Documents::Cards,&card)?;
             atelier_app::infrastructure::jira_refresh::reserve(store,&atelier_core::contracts::JiraRefreshRequest{revision:1,expected:card},"synthetic-preview")?;
             atelier_app::infrastructure::jira_refresh::ready(store,"jira-refresh","synthetic-preview",atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Remote refresh description é😀".into(),issue:atelier_core::contracts::JiraIssue{id:"2".into(),key:"SYN-2".into(),title:"Remote refresh title".into(),status:"Open".into(),url:"https://synthetic-recovery.example.test/browse/SYN-2".into()}})?;
@@ -723,8 +724,56 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#apply-jira-refresh").await?;
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
     time_task_scenario(client, http, &address, &token).await?;
+    forge_task_scenario(client, &address).await?;
     brainstorm_scenario(client, http, &address, &token).await?;
     stop_server(&mut server, port, &token).await?;
+    Ok(())
+}
+
+async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
+    // The link is seeded explicitly; this journey proves local UI guards, not remote identity.
+    client
+        .goto(&format!("{address}/?task=jira-refresh"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#task-forge-repository"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#task-forge-repository"))
+        .await?
+        .send_keys("owner/draft")
+        .await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#task-forge-repository')?.value === 'owner/draft';",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-task-forge").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#task-forge-repository')?.value === 'owner/repo';",
+        vec![],
+    )
+    .await?;
+    click(client, "#confirm-detach-forge").await?;
+    click(client, "#detach-task-forge").await?;
+    wait_dom(client,"return document.querySelector('#forge-task-notice')?.textContent.includes('Aucune PR/MR distante modifiée') && document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('.criterion-done')?.checked === true;",vec![]).await?;
+    client
+        .goto(&format!("{address}/?task=jira-refresh"))
+        .await?;
+    wait_dom(client,"return document.querySelector('#forge-task-heading') && !document.querySelector('#forge-task-heading')?.parentElement.querySelector('a') && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
     Ok(())
 }
 

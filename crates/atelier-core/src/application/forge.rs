@@ -2,6 +2,7 @@ use crate::contracts::ForgeKind;
 #[derive(Debug)]
 pub enum ForgeFailure {
     Conflict,
+    OperationConflict(&'static str),
     Invalid(&'static str),
 }
 impl std::fmt::Display for ForgeFailure {
@@ -9,6 +10,7 @@ impl std::fmt::Display for ForgeFailure {
         formatter.write_str(match self {
             Self::Conflict => "Les connexions aux forges ont changé. Recharge avant de réessayer.",
             Self::Invalid(message) => message,
+            Self::OperationConflict(message) => message,
         })
     }
 }

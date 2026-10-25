@@ -152,6 +152,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/jira/reconcile")
             || path == "/api/jira/import"
             || path == "/api/jira/import-batch"
+            || path.ends_with("/forge/attach")
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -483,6 +484,8 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
             get(forge::configurations).put(forge::configure),
         )
         .route("/api/forges/pull-request", get(forge::pull_request))
+        .route("/api/cards/{id}/forge/attach", post(forge::attach))
+        .route("/api/cards/{id}/forge/detach", post(forge::detach))
         .route("/api/jira/import-batch", post(jira::import_batch))
         .route("/api/jira/issues/{id}", get(jira::detail))
         .route("/api/backups", get(backups::list).post(backups::create))

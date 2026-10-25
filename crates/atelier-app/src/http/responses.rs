@@ -15,7 +15,7 @@ pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Respons
                 Some(JiraFailure::Conflict | JiraFailure::OperationConflict(_))
             ) || matches!(
                 error.downcast_ref::<ForgeFailure>(),
-                Some(ForgeFailure::Conflict)
+                Some(ForgeFailure::Conflict | ForgeFailure::OperationConflict(_))
             ) {
                 StatusCode::CONFLICT
             } else if error.is::<VaultFailure>() {

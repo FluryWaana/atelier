@@ -43,15 +43,15 @@ pub fn conversation(
     runs.sort_by(|left, right| (&left.0, &left.1).cmp(&(&right.0, &right.1)));
     let mut history = Vec::new();
     for (_, _, run) in runs {
-        if run.string_equals("status", "completed")? {
-            if let Some(assistant) = run.get::<Answer>("brainstormAnswer")? {
-                history.push(Exchange {
-                    user: run
-                        .get::<String>("userMessage")?
-                        .ok_or("Historique de brainstorm invalide.")?,
-                    assistant,
-                });
-            }
+        if run.string_equals("status", "completed")?
+            && let Some(assistant) = run.get::<Answer>("brainstormAnswer")?
+        {
+            history.push(Exchange {
+                user: run
+                    .get::<String>("userMessage")?
+                    .ok_or("Historique de brainstorm invalide.")?,
+                assistant,
+            });
         }
     }
     let mut description = card

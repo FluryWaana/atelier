@@ -517,4 +517,23 @@ pub struct PullRequest {
     pub source_commit: Option<String>,
     pub target_commit: Option<String>,
     pub fork: bool,
+    pub base_url: String,
+    pub checked_at: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PullRequestAttach {
+    pub expected: Card,
+    pub revision: u64,
+    pub kind: ForgeKind,
+    pub repository: String,
+    pub number: u64,
+    pub confirmed: bool,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PullRequestDetach {
+    pub expected: Card,
+    pub confirmed: bool,
 }

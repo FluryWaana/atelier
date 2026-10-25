@@ -11,6 +11,7 @@ mod backups;
 mod brainstorm;
 mod files;
 mod forge;
+mod forge_task;
 mod i18n;
 mod jira;
 mod jira_creation;

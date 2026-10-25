@@ -8,6 +8,94 @@ use axum::{
 };
 use serde::Deserialize;
 
+pub(super) async fn attach(
+    State(state): State<Shared>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    request: Request,
+) -> Response {
+    use crate::infrastructure::forge_association as workflow;
+    use atelier_core::contracts::PullRequestAttach;
+    let input: PullRequestAttach = match super::jira_transitions::input(request).await {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    if id != input.expected.id {
+        return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
+    }
+    let Ok(_permit) = state.integration_reads.try_acquire() else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+        );
+    };
+    let mut stopped = state.shutdown.subscribe();
+    if *stopped.borrow() {
+        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+    }
+    let operation = async {
+        let expected = input.clone();
+        let (card, configuration) = state
+            .database
+            .call(move |store| workflow::prepare(store, &expected))
+            .await?;
+        let _directory = workflow::verify(
+            &state.prototype_directory,
+            &state.prototype_paths,
+            &card,
+            &configuration,
+            &input.repository,
+        )
+        .await?;
+        let vault = state.vault.clone();
+        let kind = input.kind;
+        let revision = input.revision;
+        let (configuration, token) = state
+            .database
+            .call(move |store| {
+                forge::credentials(store, kind, revision, &mut |value, decrypt| {
+                    vault.protect(value, decrypt)
+                })
+            })
+            .await?;
+        let pr = forge::Forge::new(configuration.clone(), token, revision)?
+            .pull_request(&input.repository, input.number)
+            .await?;
+        let _checked = workflow::verify(
+            &state.prototype_directory,
+            &state.prototype_paths,
+            &card,
+            &configuration,
+            &input.repository,
+        )
+        .await?;
+        state
+            .database
+            .call(move |store| workflow::attach(store, &input, pr))
+            .await
+    };
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),operation)=>super::responses::response(result.unwrap_or_else(|_|Err("Association de PR/MR trop longue. Recharge la tâche avant de réessayer.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+}
+pub(super) async fn detach(
+    State(state): State<Shared>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    request: Request,
+) -> Response {
+    let input: atelier_core::contracts::PullRequestDetach =
+        match super::jira_transitions::input(request).await {
+            Ok(input) => input,
+            Err(response) => return response,
+        };
+    if id != input.expected.id {
+        return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
+    }
+    super::responses::response(
+        state
+            .database
+            .call(move |store| crate::infrastructure::forge_association::detach(store, input))
+            .await,
+    )
+}
+
 pub(super) async fn configurations(State(state): State<Shared>) -> Response {
     let vault = state.vault.clone();
     super::responses::response(

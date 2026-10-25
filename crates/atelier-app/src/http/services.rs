@@ -32,6 +32,7 @@ pub(super) fn guard(manager: &DevServers, path: &str) -> Option<Response> {
                 && !action.starts_with("services")
                 && action != "runs/start"
                 && !action.starts_with("jira/")
+                && !["forge/attach", "forge/detach"].contains(&action)
         });
     blocked.then(|| failure(StatusCode::CONFLICT, "Arrête les services concernés avant de modifier la tâche, le projet ou les sauvegardes."))
 }
