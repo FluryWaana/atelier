@@ -45,7 +45,8 @@ pub fn archive(
         for entry in times {
             if entry.string_equals("cardId", &card.id)?
                 && (entry.truthy("runningSince")?
-                    || entry.string_equals("exportState", "sending")?)
+                    || entry.string_equals("exportState", "sending")?
+                    || (archived && entry.string_equals("exportState", "uncertain")?))
             {
                 active = true;
                 break;
@@ -178,6 +179,7 @@ mod tests {
         for entry in [
             json!({"cardId":"card", "runningSince":"now"}),
             json!({"cardId":"card", "exportState":"sending"}),
+            json!({"cardId":"card", "exportState":"uncertain"}),
         ] {
             assert!(matches!(
                 archive(

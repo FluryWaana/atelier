@@ -18,10 +18,15 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
             Err((status, message)) => return failure(status, message),
         }
     };
-    if action == "export" || action == "reconcile" {
-        return failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "L’envoi de temps n’est pas encore disponible dans le prototype Rust.",
+    if matches!(action, "export-preview" | "export" | "reconcile") {
+        return super::tempo_export::action(state, id, action, body).await;
+    }
+    if action == "reset-export" {
+        return super::responses::response(
+            state
+                .database
+                .call(move |store| crate::infrastructure::tempo_export::reset(store, &id, &body))
+                .await,
         );
     }
     if action == "route" {
@@ -51,11 +56,18 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
         );
     }
     let action = action.to_owned();
-    // shortcut: wire the export reservation guard when R05 enables export/reconcile; both reject above.
     match state
         .database
         .call(move |store| {
             store.transaction(|store| {
+                let sending = action != "create"
+                    && store
+                        .document::<Document>(crate::infrastructure::store::Documents::Times, &id)?
+                        .is_some_and(|entry| {
+                            entry
+                                .string_equals("exportState", "sending")
+                                .unwrap_or(true)
+                        });
                 time_tracking::execute(
                     store,
                     &Clock,
@@ -63,7 +75,7 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
                     &id,
                     &body,
                     || uuid::Uuid::new_v4().to_string(),
-                    |_| false,
+                    |candidate| candidate == id && sending,
                 )
             })
         })
@@ -108,7 +120,15 @@ pub(super) async fn action(
     Path((id, action)): Path<(String, String)>,
     request: Request,
 ) -> Response {
-    let action = if !["stop", "export", "reconcile", "reset-export"].contains(&action.as_str()) {
+    let action = if ![
+        "stop",
+        "export-preview",
+        "export",
+        "reconcile",
+        "reset-export",
+    ]
+    .contains(&action.as_str())
+    {
         "route"
     } else if request.method() != Method::POST {
         "method"

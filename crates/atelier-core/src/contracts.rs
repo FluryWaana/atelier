@@ -35,6 +35,49 @@ pub struct TempoConfigurationUpdate {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TempoPayload {
+    pub issue_id: u64,
+    pub author_account_id: String,
+    pub time_spent_seconds: u32,
+    pub start_date: String,
+    pub start_time: String,
+    pub description: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TempoExportPreview {
+    pub entry: Document,
+    pub card_id: String,
+    pub ticket: Document,
+    pub jira_url: String,
+    pub jira_revision: u64,
+    pub tempo: TempoConfiguration,
+    pub payload: TempoPayload,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TempoExportIntent {
+    pub id: String,
+    pub state: ForgeWriteState,
+    pub preview: TempoExportPreview,
+    pub worklog_id: Option<u64>,
+    pub observed_at: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TempoExportRequest {
+    pub expected: Document,
+    pub expected_card: Card,
+    pub jira_revision: u64,
+    pub tempo_revision: u64,
+    pub confirmed: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LocalCommitSnapshot {
     pub branch: String,
     pub head: String,

@@ -153,6 +153,24 @@ pub struct Jira {
 }
 
 impl Jira {
+    pub async fn account_id(&self) -> Result<String> {
+        if self.configuration.mode != JiraMode::Cloud {
+            return Err("L’export Tempo nécessite Jira Cloud.".into());
+        }
+        let row = self
+            .request(self.endpoint(&["rest", "api", "3", "myself"])?, None)
+            .await?;
+        let account = row["accountId"]
+            .as_str()
+            .filter(|account| {
+                !account.is_empty()
+                    && account.len() <= 300
+                    && !account.chars().any(|c| c.is_control() || c.is_whitespace())
+                    && !account.contains(&self.token)
+            })
+            .ok_or("Identifiant du compte Jira indisponible.")?;
+        Ok(account.into())
+    }
     pub fn new(configuration: JiraConfiguration, token: String) -> Result<Self> {
         let base = Url::parse(&normalize_url(&configuration.url)?)?;
         Self::prepare(configuration, token, base, false)

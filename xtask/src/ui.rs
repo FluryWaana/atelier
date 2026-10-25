@@ -612,6 +612,17 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             store.put(Documents::Runs,&json!({"id":"usage-fixture","cardId":"jira-refresh","agentType":"codex","agent":"synthetic-usage-profile","model":"synthetic-usage-model","status":"completed","startedAt":"2026-10-25T10:00:00Z","usage":{"inputTokens":11,"cachedInputTokens":null,"outputTokens":2}}))?;
             // Report fixture only: no agent execution or remote identity proof is implied.
             store.put(Documents::Cards,&json!({"id":"review-report","title":"Synthetic review report","status":"todo","repo":"","checklist":[{"text":"Synthetic review criterion","done":false}]}))?;
+            // Export preview/recovery fixtures only: no remote worklog is implied.
+            store.put(Documents::Cards,&json!({"id":"time-export","title":"Synthetic time export","description":"Keep local export content","status":"todo","repo":"","ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"123","key":"SYN-123"}}))?;
+            for (suffix,state) in [("1","draft"),("2","sending")] {
+                let id=format!("00000000-0000-4000-8000-00000000000{suffix}");
+                let entry=json!({"id":id,"cardId":"time-export","seconds":3600,"date":"2026-10-25","startTime":"09:30:00","description":"Synthetic human time","exportState":state});
+                let mut snapshot=entry.clone();snapshot["exportState"]=json!("draft");
+                let preview=json!({"entry":snapshot,"cardId":"time-export","ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"123","key":"SYN-123"},"jiraUrl":"https://synthetic-recovery.example.test","jiraRevision":1,"tempo":{"base":"https://api.tempo.io/4","revision":0},"payload":{"issueId":123,"authorAccountId":"synthetic-account","timeSpentSeconds":3600,"startDate":"2026-10-25","startTime":"09:30:00","description":format!("Synthetic human time\n[atelier:{id}]")}});
+                let mut entry=entry;
+                if state=="draft" {entry["tempoExportPreview"]=preview;} else {entry["tempoExport"]=json!({"id":"00000000-0000-4000-8000-000000000003","state":"sending","preview":preview,"worklogId":null});}
+                store.put(Documents::Times,&entry)?;
+            }
             // Preview fixture only; no native Git operation or remote creation is implied.
             store.put(Documents::Cards,&json!({"id":"commit-draft","title":"Synthetic commit draft","description":"Human commit content","status":"todo","repo":"/synthetic/source","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/commit","base":"main","baseCommit":"a".repeat(40),"state":"ready"}}))?;
             store.put(Documents::Cards,&json!({"id":"publication-branch","title":"Synthetic branch task","description":"Human branch content","status":"todo","repo":"","forgePublicationPreview":{"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"},"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":true,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic first publication","body":"Keep first publication draft","draft":true}}))?;
@@ -635,6 +646,10 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     let address = format!("http://127.0.0.1:{port}");
     let (mut server, token) =
         start_server(data.path(), port, &root().join(".artifacts/rust-ui")).await?;
+    client
+        .goto(&format!("{address}/?task=time-export#session={token}"))
+        .await?;
+    tempo_export_scenario(client, http, &address, &token).await?;
     client
         .goto(&format!("{address}/?task=jira-recovery#session={token}"))
         .await?;
@@ -733,6 +748,84 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     forge_task_scenario(client, &address).await?;
     brainstorm_scenario(client, http, &address, &token).await?;
     stop_server(&mut server, port, &token).await?;
+    Ok(())
+}
+
+async fn tempo_export_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    let first = "[data-time-id='00000000-0000-4000-8000-000000000001']";
+    let second = "[data-time-id='00000000-0000-4000-8000-000000000002']";
+    wait_dom(client,"return document.querySelector('.send-time-export')?.disabled === true && document.querySelector('.reconcile-time-export')?.offsetParent !== null;",vec![]).await?;
+    click(client, &format!("{first} .confirm-time-export")).await?;
+    click(client, &format!("{first} .send-time-export")).await?;
+    // No Tempo credential is stored: refuse before any Jira or Tempo HTTP request.
+    wait_dom(client,"return document.querySelector('.time-export-error')?.textContent.includes('Renseigne le jeton Tempo') && document.querySelector('.send-time-export')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#time-description"))
+        .await?
+        .send_keys("Keep local time draft")
+        .await?;
+    click(client, &format!("{second} .reconcile-time-export")).await?;
+    wait_dom(client,"return document.querySelectorAll('.time-export-error')[1]?.textContent.includes('Renseigne le jeton Tempo') && document.querySelector('#time-description')?.value === 'Keep local time draft';",vec![]).await?;
+    let response=http.patch(format!("{address}/api/cards/time-export")).bearer_auth(token).header("x-local-request","1").json(&json!({"description":"Must be refused","expected":{"description":"Keep local export content"}})).send().await?;
+    if response.status() != reqwest::StatusCode::CONFLICT {
+        return Err("Une mutation a accepté un export Tempo incertain.".into());
+    }
+    client
+        .find(Locator::Css("#time-description"))
+        .await?
+        .clear()
+        .await?;
+    click(client, &format!("{second} .open-time-export-reset")).await?;
+    wait_dom(client,"return document.querySelector('[data-time-id=\"00000000-0000-4000-8000-000000000002\"] .reset-time-export')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css(&format!("{second} .time-export-evidence")))
+        .await?
+        .send_keys("Synthetic manual decision only; no remote effect qualified")
+        .await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(client,"return document.querySelector('[data-time-id=\"00000000-0000-4000-8000-000000000002\"] .time-export-evidence')?.value.includes('Synthetic manual decision') && document.querySelector('[data-time-id=\"00000000-0000-4000-8000-000000000002\"] .reset-time-export')?.disabled === true;",vec![]).await?;
+    click(client, &format!("{second} .time-export-risk")).await?;
+    click(client, &format!("{second} .reset-time-export")).await?;
+    wait_dom(client,"return Array.from(document.querySelectorAll('.time-export-notice')).some(element=>element.textContent.includes('historique incertain est conservé')) && document.querySelector('#edit-description')?.value === 'Keep local export content';",vec![]).await?;
+    let board: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let entry = board
+        .times
+        .iter()
+        .find(|entry| {
+            entry
+                .string_equals("id", "00000000-0000-4000-8000-000000000002")
+                .unwrap_or(false)
+        })
+        .ok_or("Temps synthétique absent.")?;
+    if !entry.string_equals("exportState", "draft")?
+        || entry
+            .get::<Vec<serde_json::Value>>("tempoExportHistory")?
+            .is_none_or(|history| history.len() != 1)
+        || entry.raw("tempoId").is_some()
+    {
+        return Err(
+            "La décision manuelle a perdu l’historique ou inventé une preuve Tempo.".into(),
+        );
+    }
     Ok(())
 }
 

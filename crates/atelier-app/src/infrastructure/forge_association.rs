@@ -39,6 +39,16 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
             return Err("Arrête l’exécution avant de modifier la liaison de PR/MR.".into());
         }
     }
+    for entry in store.documents::<Document>(Documents::Times)? {
+        if entry.string_equals("cardId", &card.id)?
+            && (entry.string_equals("exportState", "sending")?
+                || entry.string_equals("exportState", "uncertain")?)
+        {
+            return Err(
+                "Termine ou vérifie l’export de temps avant de modifier cette tâche.".into(),
+            );
+        }
+    }
     Ok(card)
 }
 pub fn prepare(store: &Store<'_>, input: &PullRequestAttach) -> Result<(Card, ForgeConfiguration)> {

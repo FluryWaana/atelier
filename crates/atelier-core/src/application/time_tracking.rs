@@ -34,6 +34,12 @@ pub fn initialize(repository: &impl TimeRepository) -> Result<()> {
         }
         if entry.string_equals("exportState", "sending")? {
             entry.set("exportState", &"uncertain")?;
+            if let Some(mut intent) =
+                entry.get::<crate::contracts::TempoExportIntent>("tempoExport")?
+            {
+                intent.state = crate::contracts::ForgeWriteState::Uncertain;
+                entry.set("tempoExport", &intent)?;
+            }
         }
         repository.save(&entry)?;
     }
@@ -165,16 +171,27 @@ pub fn execute(
                 );
             }
             if action == "remove" {
+                if entry.raw("tempoExportHistory").is_some()
+                    || entry.raw("tempoExportEffect").is_some()
+                {
+                    return Err(
+                        "Conserve cette saisie : elle contient l’historique d’effets Tempo.".into(),
+                    );
+                }
                 repository.remove(&entry_id)?;
                 let mut response = Document::default();
                 response.set("ok", &true)?;
                 return Ok(response);
             }
             apply_fields(&mut entry, body)?;
+            entry.remove("tempoExportPreview");
             entry.remove("error");
             entry.set("interrupted", &false)?;
         }
         "reset-export" => {
+            if entry.raw("tempoExport").is_some() {
+                return Err("Utilise la confirmation explicite avec historique pour débloquer cet export Tempo.".into());
+            }
             if !entry.string_equals("exportState", "uncertain")?
                 || body.get::<bool>("confirmed").ok().flatten() != Some(true)
             {

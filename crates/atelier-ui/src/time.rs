@@ -100,7 +100,10 @@ pub fn TimeTask(
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let own_dirty = Memo::new(move |_| draft.get() != original.get());
-    Effect::new(move |_| dirty.set(own_dirty.get()));
+    let export_drafts = RwSignal::new(std::collections::BTreeSet::<String>::new());
+    Effect::new(move |_| {
+        dirty.set(own_dirty.get() || !export_drafts.with(std::collections::BTreeSet::is_empty))
+    });
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || {
@@ -164,7 +167,10 @@ pub fn TimeTask(
         },
     );
     let save = StoredValue::new_local(move |start: bool| {
-        if blocked.get_untracked() || pending.get_untracked() {
+        if blocked.get_untracked()
+            || pending.get_untracked()
+            || !export_drafts.with_untracked(std::collections::BTreeSet::is_empty)
+        {
             return;
         }
         let value = draft.get_untracked();
@@ -182,7 +188,9 @@ pub fn TimeTask(
         execute.with_value(|execute| execute(method, path, body, true));
     });
     let select = StoredValue::new_local(move |entry: Document| {
-        if own_dirty.get_untracked() {
+        if own_dirty.get_untracked()
+            || !export_drafts.with_untracked(std::collections::BTreeSet::is_empty)
+        {
             error.set("Enregistre ou abandonne la saisie avant d’en ouvrir une autre.".into());
             return;
         }
@@ -205,7 +213,7 @@ pub fn TimeTask(
         <p class="field-help">{move||i18n.text("Saisies locales et chronomètre unique pour toute l’application. Aucun envoi distant automatique.")}</p>
         <p>{move||format!("{} : {}",i18n.text("Temps humain"),duration_text(entries.with(|entries|entries.iter().fold(0u64,|sum,entry|sum.saturating_add(seconds(entry,now.get()))))))}</p>
         <p>{move||format!("{} : {}",i18n.text("Temps actif des agents mesuré"),duration_text(board.runs.with(|runs|runs.iter().filter(|run|field(run,"cardId")==id.get_value()).filter_map(|run|run.get::<u64>("activeMilliseconds").ok().flatten()).fold(0u64,u64::saturating_add)/1000)))}</p>
-        <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();save.with_value(|save|save(event.submitter().is_some_and(|button|button.id()=="start-human-timer")));}><fieldset disabled=move||pending.get()||blocked.get()||(archived&&selected.with(|entry|entry.is_none()))>
+        <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();save.with_value(|save|save(event.submitter().is_some_and(|button|button.id()=="start-human-timer")));}><fieldset disabled=move||pending.get()||blocked.get()||!export_drafts.with(std::collections::BTreeSet::is_empty)||(archived&&selected.with(|entry|entry.is_none()))>
             <label for="time-date">{move||i18n.text("Date")}</label><input id="time-date" type="date" required prop:value=move||draft.get().date on:input=move|event|draft.update(|draft|draft.date=event_target_value(&event)) />
             <label for="time-start">{move||i18n.text("Heure de début")}</label><input id="time-start" type="time" step="1" required prop:value=move||draft.get().start on:input=move|event|draft.update(|draft|draft.start=event_target_value(&event)) />
             <label for="time-duration">{move||i18n.text("Durée (hh:mm:ss)")}</label><input id="time-duration" required maxlength="8" inputmode="text" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}" placeholder="00:30:00" prop:value=move||draft.get().duration on:input=move|event|draft.update(|draft|draft.duration=event_target_value(&event)) />
@@ -214,8 +222,8 @@ pub fn TimeTask(
         </fieldset></form><button id="reset-time-draft" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){discard.set(true);}else{reset();}}>{move||i18n.text("Nouvelle saisie")}</button>
         <div class="confirmation" role="alert" hidden=move||!discard.get()><p>{move||i18n.text("Abandonner la saisie de temps non enregistrée ?")}</p><button id="discard-time-draft" type="button" on:click=move|_|reset()>{move||i18n.text("Abandonner")}</button><button type="button" on:click=move|_|discard.set(false)>{move||i18n.text("Continuer à modifier")}</button></div>
         <p hidden=move||!entries.with(|entries|entries.is_empty())>{move||i18n.text("Aucune saisie de temps pour cette tâche.")}</p>
-        <ul><For each=move||entries.with(|entries|entries.iter().skip(page.get()*100).take(100).map(|entry|field(entry,"id")).collect::<Vec<_>>()) key=|id|id.clone() children=move|entry_id|{let entry_id=StoredValue::new(entry_id);let entry=Signal::derive(move||board.times.with(|entries|entries.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned().unwrap_or_default()));view!{<li data-time-id=entry_id.get_value()><strong>{move||format!("{} {} · {}",field(&entry.get(),"date"),field(&entry.get(),"startTime"),duration_text(seconds(&entry.get(),now.get())))}</strong><p>{move||field(&entry.get(),"description")}</p><p>{move||i18n.text(match field(&entry.get(),"exportState").as_str(){"draft"=>"Non envoyé","exported"=>"Envoyé","sending"=>"Envoi en cours","uncertain"=>"Envoi incertain",_=>"État d’envoi inconnu"})}</p><p hidden=move||!entry.with(|entry|entry.truthy("interrupted").unwrap_or(false))>{move||i18n.text("Chronomètre interrompu au redémarrage ; durée conservée.")}</p><button type="button" hidden=move||!entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)) disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Method::POST,format!("/api/time/{}/stop",entry_id.get_value()),serde_json::json!({}),false))>{move||i18n.text("Arrêter le chronomètre")}</button><button class="edit-time" type="button" disabled=move||pending.get()||blocked.get()||entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|select.with_value(|select|select(entry.get_untracked()))>{move||i18n.text("Corriger la saisie")}</button><button class="delete-time" type="button" disabled=move||pending.get()||blocked.get()||own_dirty.get()||entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|removing.set(Some(entry.get_untracked()))>{move||i18n.text("Supprimer la saisie")}</button></li>}} /></ul>
-        <div class="editor-actions" hidden=move||entries.with(|entries|entries.len()<=100)><button type="button" disabled=move||page.get()==0 on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled=move||entries.with(|entries|(page.get()+1)*100>=entries.len()) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button></div>
+        <ul><For each=move||{let mut ids=entries.with(|entries|entries.iter().skip(page.get()*100).take(100).map(|entry|field(entry,"id")).collect::<Vec<_>>());for id in export_drafts.get(){if !ids.contains(&id){ids.push(id);}}ids} key=|id|id.clone() children=move|entry_id|{let entry_id=StoredValue::new(entry_id);let entry=Signal::derive(move||board.times.with(|entries|entries.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned().unwrap_or_default()));view!{<li data-time-id=entry_id.get_value()><strong>{move||format!("{} {} · {}",field(&entry.get(),"date"),field(&entry.get(),"startTime"),duration_text(seconds(&entry.get(),now.get())))}</strong><p>{move||field(&entry.get(),"description")}</p><p>{move||i18n.text(match field(&entry.get(),"exportState").as_str(){"draft"=>"Non envoyé","exported"=>"Envoyé","sending"=>"Envoi en cours","uncertain"=>"Envoi incertain",_=>"État d’envoi inconnu"})}</p><p hidden=move||!entry.with(|entry|entry.truthy("interrupted").unwrap_or(false))>{move||i18n.text("Chronomètre interrompu au redémarrage ; durée conservée.")}</p><button type="button" hidden=move||!entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)) disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Method::POST,format!("/api/time/{}/stop",entry_id.get_value()),serde_json::json!({}),false))>{move||i18n.text("Arrêter le chronomètre")}</button><crate::tempo_export::TempoExport entry card_id=id.get_value() board token pending blocked=Memo::new(move |_|blocked.get()||own_dirty.get()) drafts=export_drafts archived /><button class="edit-time" type="button" disabled=move||pending.get()||blocked.get()||entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|select.with_value(|select|select(entry.get_untracked()))>{move||i18n.text("Corriger la saisie")}</button><button class="delete-time" type="button" disabled=move||pending.get()||blocked.get()||own_dirty.get()||!export_drafts.with(std::collections::BTreeSet::is_empty)||entry.with(|entry|entry.truthy("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|removing.set(Some(entry.get_untracked()))>{move||i18n.text("Supprimer la saisie")}</button></li>}} /></ul>
+        <div class="editor-actions" hidden=move||entries.with(|entries|entries.len()<=100)><button type="button" disabled=move||page.get()==0||!export_drafts.with(std::collections::BTreeSet::is_empty) on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled=move||!export_drafts.with(std::collections::BTreeSet::is_empty)||entries.with(|entries|(page.get()+1)*100>=entries.len()) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button></div>
         <div class="confirmation" role="alert" hidden=move||removing.with(|entry|entry.is_none())><p>{move||i18n.text("Supprimer définitivement cette saisie de temps ?")}</p><button id="confirm-delete-time" type="button" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=removing.get_untracked(){execute.with_value(|execute|execute(Method::DELETE,format!("/api/time/{}",field(&entry,"id")),serde_json::json!({"expected":entry}),true));}}>{move||i18n.text("Supprimer définitivement")}</button><button type="button" disabled=move||pending.get() on:click=move|_|removing.set(None)>{move||i18n.text("Annuler")}</button></div>
         <p role="status">{move||if own_dirty.get(){i18n.text("Saisie de temps non enregistrée")}else{String::new()}}</p>
         <p id="time-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="time-notice" role="status">{move||i18n.text(&notice.get())}</p>

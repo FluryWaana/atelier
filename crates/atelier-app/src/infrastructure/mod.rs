@@ -56,6 +56,7 @@ pub mod task_creation;
 pub mod task_editing;
 pub mod task_templates;
 pub mod tempo;
+pub mod tempo_export;
 pub mod time_tracking;
 pub mod token_vault;
 pub mod verification;

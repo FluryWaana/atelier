@@ -59,6 +59,7 @@ mod task_creation;
 mod task_editing;
 mod task_templates;
 mod tempo;
+mod tempo_export;
 mod time_tracking;
 mod worktrees;
 
@@ -158,6 +159,10 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
         let exclusive = path.ends_with("/jira/create")
+            || (path.starts_with("/api/time/")
+                && ["/export-preview", "/export", "/reconcile", "/reset-export"]
+                    .iter()
+                    .any(|suffix| path.ends_with(suffix)))
             || path.ends_with("/commit/preview")
             || path.ends_with("/commit/create")
             || path.ends_with("/commit/reconcile")
@@ -212,6 +217,10 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     .call(move |store| {
                         Ok(
                             crate::infrastructure::jira_transition::blocks(store, &guarded_path)?
+                                || crate::infrastructure::tempo_export::blocks(
+                                    store,
+                                    &guarded_path,
+                                )?
                                 || crate::infrastructure::forge_draft::blocks(
                                     store,
                                     &guarded_path,

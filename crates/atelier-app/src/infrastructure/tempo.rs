@@ -4,6 +4,28 @@ use atelier_core::{
     contracts::{JiraConfiguration, TempoConfiguration, TempoConfigurationUpdate, TempoConnection},
     document::Document,
 };
+mod client;
+pub use client::Tempo;
+pub(super) use client::validate as validate_payload;
+
+pub fn credentials(
+    store: &Store<'_>,
+    expected: u64,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<(TempoConfiguration, String)> {
+    let configuration = store
+        .settings::<Document>()?
+        .get::<TempoConfiguration>("tempoConnection")?
+        .unwrap_or_default();
+    if configuration.revision != expected {
+        return Err("La connexion Tempo a changé. Recharge avant de réessayer.".into());
+    }
+    let token = settings::load(store, protect)?
+        .get::<String>("tempo")?
+        .filter(|token| !token.is_empty())
+        .ok_or("Renseigne le jeton Tempo Cloud dans les réglages.")?;
+    Ok((configuration, token))
+}
 
 pub const BASES: [&str; 3] = [
     "https://api.tempo.io/4",

@@ -284,6 +284,25 @@ fn restore_checked(
         .map(|row| (row.id.as_str(), &row.value))
         .collect();
     for current in store.documents::<Document>(Documents::Times)? {
+        for key in ["tempoExportHistory", "tempoExportEffect"] {
+            if let Some(effect) = current.get::<Value>(key)? {
+                let id = current
+                    .get::<String>("id")?
+                    .ok_or("Identifiant de temps invalide.")?;
+                if times
+                    .get(id.as_str())
+                    .map(|saved| saved.get::<Value>(key))
+                    .transpose()?
+                    .flatten()
+                    != Some(effect)
+                {
+                    return Err(BackupFailure::Invalid(
+                        "Restauration refusée : l’historique des effets Tempo doit être conservé.",
+                    )
+                    .into());
+                }
+            }
+        }
         if current.string_equals("exportState", "draft")? {
             continue;
         }
