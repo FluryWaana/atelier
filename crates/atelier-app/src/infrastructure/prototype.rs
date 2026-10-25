@@ -107,7 +107,7 @@ fn prepare(directory: &Dir) -> Result<()> {
     match directory.symlink_metadata(marker) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             if directory.entries()?.next().is_some() {
-                return Err("Le prototype exige un dossier vide ; les données Node sont interdites avant qualification M02.".into());
+                return Err("Le dossier doit être vide ou identifié comme espace Rust. Aucune donnée existante n’est effacée.".into());
             }
             let mut options = cap_std::fs::OpenOptions::new();
             options.write(true).create_new(true);

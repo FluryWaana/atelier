@@ -68,7 +68,7 @@ pub fn data_directory(
     }
     match platform {
         Platform::Windows => Ok(local_app_data
-            .filter(|path| !path.as_os_str().is_empty())
+            .filter(|path| path.is_absolute())
             .map(Path::to_owned)
             .unwrap_or_else(|| home.join("AppData/Local"))
             .join("AtelierKanban/data")),
@@ -77,7 +77,7 @@ pub fn data_directory(
             .map(Path::to_owned)
             .unwrap_or_else(|| home.join(".local/share"))
             .join("atelier-kanban")),
-        Platform::Macos => Err("Installation native non prise en charge sur ce système.".into()),
+        Platform::Macos => Ok(home.join("Library/Application Support/AtelierKanban/data")),
     }
 }
 
@@ -120,7 +120,10 @@ mod tests {
             data_directory(root, Platform::Linux, &home, None, Some(&home)).unwrap(),
             home.join("atelier-kanban")
         );
-        assert!(data_directory(root, Platform::Macos, &home, None, None).is_err());
+        assert_eq!(
+            data_directory(root, Platform::Macos, &home, None, None).unwrap(),
+            home.join("Library/Application Support/AtelierKanban/data")
+        );
         fs::write(root.join("installation.json"), r#"{"mode":"system"}"#).unwrap();
         assert_eq!(mode(root).unwrap(), InstallationMode::System);
         for invalid in [r#"{"mode":"portable"}"#, "invalid", "null", "{}"] {

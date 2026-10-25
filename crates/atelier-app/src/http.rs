@@ -284,7 +284,7 @@ async fn health(State(state): State<Shared>, Query(query): Query<HealthQuery>) -
             ),
         };
     }
-    Json(json!({"app":"atelier-kanban", "version":env!("CARGO_PKG_VERSION"), "pid":std::process::id(), "prototype":true})).into_response()
+    Json(json!({"app":"atelier-kanban", "protocol":"atelier-local/1", "version":env!("CARGO_PKG_VERSION"), "pid":std::process::id(), "dataDirectory":state.prototype_paths[0]})).into_response()
 }
 
 async fn board(State(state): State<Shared>) -> Response {
@@ -433,10 +433,27 @@ async fn unavailable(request: Request) -> Response {
 }
 
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
+    serve_mode(listener, directory, assets, true).await
+}
+
+pub async fn serve_native(
+    listener: TcpListener,
+    directory: PathBuf,
+    assets: PathBuf,
+) -> Result<()> {
+    serve_mode(listener, directory, assets, false).await
+}
+
+async fn serve_mode(
+    listener: TcpListener,
+    directory: PathBuf,
+    assets: PathBuf,
+    legacy: bool,
+) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
     }
-    let app = assets::router(&assets)?;
+    let app = assets::router(&assets, legacy)?;
     let original_directory = std::path::absolute(&directory)?;
     let directory = PrototypeDirectory::open(&directory)?;
     let vault =
@@ -648,6 +665,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/cards/{id}/worktree", post(worktrees::create))
         .route("/api/cards/{id}/worktree/remove", post(worktrees::remove))
         .route("/api/prototype/stop", post(stop))
+        .route("/api/shutdown", post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());

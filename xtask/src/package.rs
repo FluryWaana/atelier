@@ -212,7 +212,7 @@ pub(super) fn stage(target: &str, binary: &Path, ui: &Path, output: &Path) -> Re
         &temporary.path().join("LICENSE"),
         &read(&super::root().join("LICENSE"), 1024 * 1024)?,
     )?;
-    write(&temporary.path().join("README.txt"),b"Atelier Kanban Rust - preproduction payload\nNative binary and Leptos WASM assets. No Node runtime.\nThis candidate payload does not qualify the launcher, installer or updater.\nFor isolated qualification only: atelier serve-prototype --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets ui\n")?;
+    write(&temporary.path().join("README.txt"),b"Atelier Kanban Rust - preproduction payload\nNative binary and Leptos WASM assets. No Node runtime.\nNative launcher candidate; no launcher, installer or updater qualification is claimed.\nIsolated qualification only: atelier launch --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets ui --no-browser\nStop with: atelier stop --data-dir EMPTY_SYNTHETIC_DIRECTORY\nUse atelier serve --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets ui for foreground diagnostics.\n")?;
     let value = manifest(temporary.path(), target)?;
     write(
         &temporary.path().join("atelier-package.json"),

@@ -35,6 +35,7 @@ pub(super) async fn run(
 
 pub(super) fn is_cancellation(path: &str) -> bool {
     path == "/api/prototype/stop"
+        || path == "/api/shutdown"
         || path == "/api/queue/pause"
         || path.strip_prefix("/api/time/").is_some_and(|tail| {
             tail.split_once('/')
@@ -72,6 +73,7 @@ mod tests {
     fn only_known_stop_routes_bypass_the_mutation_gate() {
         for path in [
             "/api/prototype/stop",
+            "/api/shutdown",
             "/api/queue/pause",
             "/api/time/entry/stop",
             "/api/runs/run/stop",
@@ -86,6 +88,7 @@ mod tests {
             "/api/cards/card/jira/transition",
             "/api/cards/card/stop",
             "/api/backups/stop",
+            "/api/shutdown/extra",
         ] {
             assert!(!is_cancellation(path));
         }
