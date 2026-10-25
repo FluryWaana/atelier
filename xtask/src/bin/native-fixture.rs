@@ -103,6 +103,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !prompt.contains("Synthetic idea without repo") || !prompt.contains("Conversation sans dépôt"){return Err("Synthetic repository-free prompt required".into());}
             ready(r#"{"message":"Synthetic repository-free reply","questions":[],"tickets":[]}"#)?;Ok(())
         }
+        ["verify", mode @ ("success" | "failure" | "modify" | "hang")] => {
+            if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" {return Err("Not a verification fixture".into());}
+            ready("synthetic-verification <script>ignored</script>")?;
+            match *mode {
+                "failure"=>std::process::exit(7),
+                "modify"=>std::fs::write(".run-fixture","synthetic changed source")?,
+                "hang"=>loop{std::thread::sleep(Duration::from_secs(60));},
+                _=>{},
+            }
+            Ok(())
+        }
         ["run-command", mode @ ("success" | "hang" | "brainstorm" | "preparation")] => {
             if std::fs::read_to_string(".run-fixture")? != "atelier-r03-synthetic-only" { return Err("Not a run test fixture".into()); }
             let mut prompt = String::new();

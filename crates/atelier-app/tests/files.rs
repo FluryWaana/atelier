@@ -25,6 +25,59 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn source_fingerprints_detect_staging_disk_and_untracked_changes_but_preserve_the_index() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = fixture.path().canonicalize().unwrap();
+    let path = root_path.join("repositories/fingerprint");
+    std::fs::create_dir_all(&path).unwrap();
+    git(&path, &["init", "-b", "main"]).await;
+    git(&path, &["config", "user.name", "Synthetic"]).await;
+    git(
+        &path,
+        &["config", "user.email", "synthetic@example.invalid"],
+    )
+    .await;
+    std::fs::write(path.join("tracked"), "one").unwrap();
+    std::fs::write(path.join(".gitignore"), "ignored\n").unwrap();
+    git(&path, &["add", "."]).await;
+    git(
+        &path,
+        &[
+            "-c",
+            "core.hooksPath=NUL",
+            "commit",
+            "-qm",
+            "Synthetic baseline",
+        ],
+    )
+    .await;
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let repository = Repository::synthetic(
+        &root,
+        &[root_path],
+        &JsonString::from(path.to_str().unwrap()),
+    )
+    .unwrap();
+    let index = std::fs::read(path.join(".git/index")).unwrap();
+    let baseline = repository.fingerprint().await.unwrap();
+    assert_eq!(baseline, repository.fingerprint().await.unwrap());
+    std::fs::write(path.join("ignored"), "ignored build output").unwrap();
+    assert_eq!(baseline, repository.fingerprint().await.unwrap());
+    std::fs::write(path.join("tracked"), "two").unwrap();
+    let disk = repository.fingerprint().await.unwrap();
+    assert_ne!(baseline, disk);
+    assert_eq!(std::fs::read(path.join(".git/index")).unwrap(), index);
+    git(&path, &["add", "tracked"]).await;
+    let staged = repository.fingerprint().await.unwrap();
+    assert_ne!(disk, staged);
+    std::fs::write(path.join("new"), "untracked source").unwrap();
+    let untracked = repository.fingerprint().await.unwrap();
+    assert_ne!(staged, untracked);
+    std::fs::remove_file(path.join("tracked")).unwrap();
+    assert_ne!(untracked, repository.fingerprint().await.unwrap());
+}
+
+#[tokio::test]
 async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_programs() {
     let fixture = tempfile::tempdir().unwrap();
     let root_path = std::fs::canonicalize(fixture.path()).unwrap();

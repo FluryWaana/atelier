@@ -34,6 +34,12 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
     let mut groups = BTreeMap::<(String, String, String), Summary>::new();
     let mut ids = std::collections::BTreeSet::new();
     for run in runs {
+        if run
+            .string_equals("purpose", "verification")
+            .map_err(|_| "Exécution invalide pour la synthèse d’usage.")?
+        {
+            continue;
+        }
         let text = |key| {
             run.get::<String>(key)
                 .map_err(|_| "Exécution invalide pour la synthèse d’usage.")

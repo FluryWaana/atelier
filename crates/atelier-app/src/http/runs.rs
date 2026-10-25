@@ -68,6 +68,7 @@ pub(super) async fn start(
                     .ok_or("Carte introuvable.")?;
                 let (mut profile,api_key)=agent_providers::execution_profile(store,&agent,&mut |value,decrypt| vault.protect(value,decrypt))?;
                 let settings:serde_json::Value=serde_json::from_str(&serde_json::to_string(&store.settings::<Document>()?)?)?;
+                let settings=atelier_core::domain::projects::settings_for_project(&settings,&store.documents::<serde_json::Value>(Documents::Projects)?,&card.fields.get::<String>("repo")?.unwrap_or_default(),cfg!(windows));
                 let card_value:serde_json::Value=serde_json::from_str(&serde_json::to_string(&card)?)?;
                 let requested:serde_json::Value=serde_json::from_str(&serde_json::to_string(&requested)?)?;
                 let options=atelier_core::domain::agent_options::resolve_agent_options(&settings,&card_value,&requested)?;
@@ -75,8 +76,7 @@ pub(super) async fn start(
                 if card.fields.truthy("archived")? {
                     return Err("Restaure cette tâche avant de lancer un agent.".into());
                 }
-                let project = card.fields.get::<String>("projectId")?.map(|id| store.document::<Document>(Documents::Projects, &id)).transpose()?.flatten();
-                let rules = project.map(|project| project.get::<String>("projectRules")).transpose()?.flatten().unwrap_or_default();
+                let rules=settings["projectRules"].as_str().unwrap_or_default().to_owned();
                 let conversation=if card.fields.truthy("brainstormSession")? {
                     if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("Un brainstorm utilise uniquement le mode Analyse.".into());}
                     let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de session requis.")?;
@@ -212,6 +212,98 @@ pub(super) async fn reply(
         Ok(()) => Json(serde_json::json!({"ok":true})).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
     }
+}
+
+pub(super) async fn verify(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+    request: Request,
+) -> Response {
+    let body = match object(request.into_body()).await {
+        Ok(body) => body,
+        Err((status, message)) => return failure(status, message),
+    };
+    let result: Result<Document> = async {
+        if body.get::<bool>("confirmed")? != Some(true) {
+            return Err("Confirme la commande de vérification enregistrée dans le projet.".into());
+        }
+        let expected = body
+            .get::<Card>("expected")?
+            .ok_or("Instantané de tâche requis.")?;
+        if expected.id != id {
+            return Err("Carte incohérente.".into());
+        }
+        let command = body
+            .get::<String>("command")?
+            .ok_or("Commande de vérification invalide.")?;
+        let selected = command.clone();
+        let card = state
+            .database
+            .call(move |store| {
+                let card = crate::infrastructure::forge_association::snapshot(store, &expected)?;
+                crate::infrastructure::verification::require_command(store, &card, &selected)?;
+                Ok(card)
+            })
+            .await?;
+        let worktree = card
+            .fields
+            .get::<Worktree>("worktree")?
+            .filter(|worktree| worktree.state == WorktreeState::Ready)
+            .ok_or("Prépare le worktree avant la vérification.")?;
+        if !same_repository(
+            &card.fields.get::<String>("repo")?.unwrap_or_default(),
+            &worktree.source,
+            true,
+        ) {
+            return Err("Le dépôt source ne correspond plus au worktree.".into());
+        }
+        let repository = worktrees::inspect(
+            &state.prototype_directory,
+            &state.prototype_paths,
+            &worktree,
+        )
+        .await?;
+        let fingerprint = repository.fingerprint().await?;
+        let directory = RunDirectory::Worktree(repository);
+        let mut process = crate::infrastructure::service_launch::shell(&command).await?;
+        process.current_dir(directory.path());
+        let mut run = Document::default();
+        run.set("id", &uuid::Uuid::new_v4().to_string())?;
+        run.set("cardId", &card.id)?;
+        run.set("status", &"starting")?;
+        run.set("agentType", &"verification")?;
+        run.set("purpose", &"verification")?;
+        run.set(
+            "repo",
+            &crate::infrastructure::task_creation::path_string(directory.path()),
+        )?;
+        run.set("branch", &worktree.branch)?;
+        run.set("verificationCommand", &command)?;
+        run.set("verificationWorktree", &worktree)?;
+        run.set("sourceFingerprint", &fingerprint)?;
+        run.set(
+            "requirements",
+            &atelier_core::application::preparation::requirements(&card)?,
+        )?;
+        run.set("verificationState", &"running")?;
+        run.set(
+            "startedAt",
+            &time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)?,
+        )?;
+        state
+            .runs
+            .start(
+                state.database.clone(),
+                run,
+                process,
+                RunInput::Verification,
+                directory,
+            )
+            .await
+    }
+    .await;
+    super::responses::response(result)
 }
 
 pub(super) async fn stop(

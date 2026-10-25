@@ -32,6 +32,37 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if card.fields.truthy("archived")? {
             return Err("Restaure cette tâche avant de lancer un agent.".into());
         }
+        if run.string_equals("purpose", "verification")? {
+            let worktree = run
+                .get::<atelier_core::contracts::Worktree>("verificationWorktree")?
+                .filter(|worktree| worktree.state == atelier_core::contracts::WorktreeState::Ready)
+                .ok_or("Prépare le worktree avant la vérification.")?;
+            if !atelier_core::domain::projects::same_repository(
+                &repo,
+                &worktree.path,
+                cfg!(windows),
+            ) {
+                return Err("Le besoin ou le worktree a changé avant la vérification.".into());
+            }
+            super::forge_association::snapshot(store, &card)?;
+            super::verification::require_command(
+                store,
+                &card,
+                &run.get::<String>("verificationCommand")?
+                    .ok_or("Commande de vérification invalide.")?,
+            )?;
+            if run.get::<serde_json::Value>("requirements")?.as_ref()
+                != Some(&atelier_core::application::preparation::requirements(
+                    &card,
+                )?)
+                || card
+                    .fields
+                    .get::<atelier_core::contracts::Worktree>("worktree")?
+                    != run.get::<atelier_core::contracts::Worktree>("verificationWorktree")?
+            {
+                return Err("Le besoin ou le worktree a changé avant la vérification.".into());
+            }
+        }
         if run.string_equals("kind", "pr-review")? {
             let context = run
                 .get::<atelier_core::application::reviews::Context>("reviewContext")?
@@ -247,6 +278,12 @@ pub fn recover(store: &Store<'_>, timestamp: &str) -> Result<usize> {
 fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
     let mut recovered = 0;
     for mut run in store.documents::<Document>(Documents::Runs)? {
+        if run.string_equals("purpose", "verification")?
+            && run.string_equals("verificationState", "running")?
+        {
+            run.set("verificationState", &"interrupted")?;
+            store.put(Documents::Runs, &run)?;
+        }
         if !active(&run)? {
             continue;
         }

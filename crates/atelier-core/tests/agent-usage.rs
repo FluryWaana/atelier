@@ -10,6 +10,7 @@ fn usage_groups_provider_profile_and_model_and_reports_coverage_without_inventin
         run(json!({"id":"two","agentType":"codex","agent":"profile","model":"synthetic-model","usage":{"inputTokens":5,"cachedInputTokens":null,"cacheCreationInputTokens":null,"outputTokens":2}})),
         run(json!({"id":"three","agentType":"codex","agent":"profile","model":"synthetic-model"})),
         run(json!({"id":"four","agentType":"claude","agent":"profile","model":"synthetic-model","usage":{"inputTokens":8,"cachedInputTokens":2,"cacheCreationInputTokens":7,"outputTokens":4}})),
+        run(json!({"id":"verification","purpose":"verification","agentType":"verification","status":"completed"})),
     ]).unwrap();
     assert_eq!(summary.len(), 2);
     let codex = summary

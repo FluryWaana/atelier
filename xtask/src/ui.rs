@@ -882,6 +882,22 @@ async fn brainstorm_scenario(
     click(client, "#confirm-preparation").await?;
     click(client, "#apply-preparation").await?;
     wait_dom(client,"return document.querySelector('.criterion-text')?.value === 'Synthetic prepared criterion' && document.querySelector('.criterion-done')?.checked === false && document.querySelector('#preparation-notice')?.textContent.includes('Préparation appliquée') && document.querySelector('#save-task')?.disabled === true;",vec![]).await?;
+    let verification_command = format!("\"{}\" verify success", fixture.display());
+    http.patch(format!("{address}/api/projects/brainstorm-project"))
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"testCommand":verification_command,"expected":{"testCommand":""}}))
+        .send()
+        .await?
+        .error_for_status()?;
+    wait_dom(
+        client,
+        "return document.querySelector('#start-verification')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#start-verification").await?;
+    wait_dom(client,"return document.querySelector('#verification-result')?.textContent.includes('Vérification réussie sur cet instantané') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('.service-log script');",vec![]).await?;
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
     http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
         .bearer_auth(token)

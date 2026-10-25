@@ -338,6 +338,10 @@ fn restore_checked(
         settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
         for mut run in store.documents::<Document>(Documents::Runs)? {
+            if run.string_equals("purpose","verification")? {
+                run.set("verificationState",&"stale")?;
+                store.put(Documents::Runs,&run)?;
+            }
             if run.string_equals("kind", "pr-review")? {
                 run.set("reviewStaleReason", &"Données restaurées : relancez la review pour vérifier les commits actuels.")?;
                 store.put(Documents::Runs, &run)?;
@@ -500,6 +504,7 @@ mod tests {
                 &json!({"id":"export", "exportState":"exported", "tempoId":42}),
             )
             .unwrap();
+        store.put(Documents::Runs,&json!({"id":"verification","purpose":"verification","status":"completed","verificationState":"passed"})).unwrap();
         store.save_settings(&json!({"extra":null})).unwrap();
         store.log("review", "stdout", "saved").unwrap();
         let saved = root.path().join("saved.sqlite");
@@ -538,6 +543,14 @@ mod tests {
             0
         );
         assert_eq!(store.logs("review", 0).unwrap().len(), 1);
+        assert!(
+            store
+                .document::<Document>(Documents::Runs, "verification")
+                .unwrap()
+                .unwrap()
+                .string_equals("verificationState", "stale")
+                .unwrap()
+        );
         store.log("review", "stdout", "after restore").unwrap();
         assert_eq!(store.logs("review", 0).unwrap()[1].seq, 3);
         let rescued = open(&rescue).unwrap();

@@ -25,6 +25,7 @@ struct Entry {
 pub enum RunInput {
     Command(String),
     Agent(Box<Protocol>),
+    Verification,
 }
 
 pub enum RunDirectory {
@@ -107,6 +108,7 @@ impl CommandRuns {
         let (finished, done) = watch::channel(false);
         let (replies, responses) = mpsc::channel(8);
         let interactive = matches!(&input, RunInput::Agent(_));
+        let verification = matches!(&input, RunInput::Verification);
         {
             let mut entries = self.entries();
             entries.retain(|_, entry| !*entry.done.borrow());
@@ -154,6 +156,20 @@ impl CommandRuns {
                 &manager.changed,
             )
             .await;
+            let result = if verification && result.is_ok() {
+                let fingerprint = match &directory {
+                    RunDirectory::Worktree(repository) => repository.fingerprint().await.ok(),
+                    _ => None,
+                };
+                let selected = id.clone();
+                database
+                    .call(move |store| {
+                        super::verification::finish(store, &selected, fingerprint.as_deref())
+                    })
+                    .await
+            } else {
+                result
+            };
             let cleanup = directory.close();
             let result = result.and(cleanup);
             if result.is_ok() {
@@ -305,8 +321,10 @@ async fn supervise(
         })
         .await;
     }
-    let RunInput::Command(prompt) = input else {
-        unreachable!()
+    let (prompt, duration) = match input {
+        RunInput::Command(prompt) => (prompt, 3600),
+        RunInput::Verification => (String::new(), 600),
+        RunInput::Agent(_) => unreachable!(),
     };
     let (sender, mut receiver) = mpsc::channel(16);
     let output = async {
@@ -328,8 +346,10 @@ async fn supervise(
     };
     let operation = async {
         let input = async {
-            stdin.write_all(prompt.as_bytes()).await?;
-            stdin.shutdown().await?;
+            if !prompt.is_empty() {
+                stdin.write_all(prompt.as_bytes()).await?;
+                stdin.shutdown().await?;
+            }
             drop(stdin);
             Ok::<(), crate::Error>(())
         };
@@ -338,7 +358,7 @@ async fn supervise(
     };
     // Preserve the actual root exit status separately from successful stream draining.
     let outcome = tokio::select! {
-        result = tokio::time::timeout(Duration::from_secs(3600), operation) => match result { Ok(result) => result.map(|()| false), Err(_) => Err("Durée maximale de 60 minutes atteinte.".into()) },
+        result = tokio::time::timeout(Duration::from_secs(duration), operation) => match result { Ok(result) => result.map(|()| false), Err(_) => Err("Durée maximale de l’exécution atteinte.".into()) },
         _ = async { if !*cancel.borrow() { let _ = cancel.changed().await; } } => Ok(true),
     };
     let cancelled = matches!(outcome, Ok(true));

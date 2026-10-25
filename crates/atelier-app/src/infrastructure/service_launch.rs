@@ -16,6 +16,26 @@ pub struct WorkingDirectory {
     pub directory: Dir,
 }
 
+#[cfg(windows)]
+pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
+    use std::os::windows::process::CommandExt;
+    if command.trim().is_empty() || command.len() > 8000 || command.contains('\0') {
+        return Err("Commande de vérification invalide.".into());
+    }
+    let system = std::env::var_os("SystemRoot").ok_or("Dossier système Windows absent.")?;
+    let mut profile = atelier_core::document::Document::default();
+    profile.set("type", &"command")?;
+    profile.set(
+        "command",
+        &path_string(&PathBuf::from(system).join("System32/cmd.exe")).utf8()?,
+    )?;
+    let mut child = super::agent_diagnostics::command(&profile).await?;
+    child
+        .as_std_mut()
+        .raw_arg(format!("/d /s /c \"{command}\""));
+    Ok(child)
+}
+
 pub async fn prepare(root: &Dir, roots: &[PathBuf], plan: LaunchPlan) -> Result<PreparedLaunch> {
     let mut directories = Vec::new();
     for service in &plan.services {

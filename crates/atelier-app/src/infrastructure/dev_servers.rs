@@ -614,21 +614,12 @@ async fn spawn(
     directory: &WorkingDirectory,
     port: Option<u16>,
 ) -> Result<ContainedChild> {
-    use std::os::windows::process::CommandExt;
-    let system = std::env::var_os("SystemRoot").ok_or("Dossier système Windows absent.")?;
-    let mut child =
-        tokio::process::Command::new(std::path::PathBuf::from(system).join("System32/cmd.exe"));
-    child
-        .as_std_mut()
-        .raw_arg(format!("/d /s /c \"{command}\""));
+    let mut child = super::service_launch::shell(command).await?;
     child
         .current_dir(&directory.path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    for key in ["JIRA_TOKEN", "AZURE_DEVOPS_PAT", "TEMPO_TOKEN"] {
-        child.env_remove(key);
-    }
     if let Some(port) = port {
         child.env("PORT", port.to_string()).env("HOST", "127.0.0.1");
     }

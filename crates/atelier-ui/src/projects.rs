@@ -25,6 +25,7 @@ struct Draft {
     agent: String,
     services: [ServiceDraft; 2],
     linked: String,
+    verification: String,
 }
 impl Draft {
     fn from_document(project: &Document) -> Self {
@@ -47,12 +48,13 @@ impl Draft {
                     .to_string(),
             }),
             linked: field(project, "linkedProjectId"),
+            verification: field(project, "testCommand"),
         }
     }
 
     fn patch(&self, previous: &Self) -> serde_json::Value {
         let fields = |value: &Self| {
-            let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked});
+            let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked,"testCommand":value.verification});
             for (index, role) in ["front", "back"].into_iter().enumerate() {
                 let service = &value.services[index];
                 for (suffix, text) in [
@@ -224,6 +226,8 @@ pub fn Projects(
                     <label for="project-rules">{move || i18n.text("Consignes du projet")}</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
                     <label for="project-agent">{move || i18n.text("Agent préféré")}</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">{move || i18n.text("Hériter du réglage global")}</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select>
                     <ProjectServices draft=draft pending=pending token=token />
+                    <label for="project-test-command">{move||i18n.text("Commande de vérification")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
+                    <p class="field-help">{move||i18n.text("Cette commande sera exécutée explicitement dans le worktree de la tâche, avec les permissions de ton compte. L’enregistrement ne la lance pas.")}</p>
                     <label for="project-linked">{move || i18n.text("Projet lié pour les tests")}</label>
                     <select id="project-linked" prop:value=move || draft.get().linked on:change=move |event| draft.update(|draft| draft.linked = event_target_value(&event))><option value="">{move || i18n.text("Aucun projet lié")}</option><For each={move || projects.get().into_iter().filter(|project| field(project,"id") != draft.get().id).collect::<Vec<_>>()} key=|project| field(project,"id") children=move |project| { let id = field(&project,"id"); view! { <option value=id.clone()>{move || projects.with(|projects| projects.iter().find(|project| field(project,"id") == id).map(|project| field(project,"name")).unwrap_or_default())}</option> } } /></select>
                     <p class="field-help">{move || i18n.text("Les commandes et le projet lié sont enregistrés pour les futurs lancements. Aucun service n’est démarré par cet écran.")}</p></div>

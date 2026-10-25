@@ -269,3 +269,47 @@ fn project_rename_validates_without_moving_cards_or_changing_settings() {
         );
     }
 }
+
+#[test]
+fn verification_command_edits_require_the_observed_project_value() {
+    let context = Context {
+        scenario: Document::default(),
+        projects: RefCell::new(vec![
+            serde_json::from_str(r#"{"id":"project","name":"Synthetic","repo":"checked:repo"}"#)
+                .unwrap(),
+        ]),
+        cards: RefCell::new(vec![]),
+        events: RefCell::default(),
+    };
+    let body: Document =
+        serde_json::from_str(r#"{"testCommand":"synthetic verify","expected":{"testCommand":""}}"#)
+            .unwrap();
+    let edit = projects::prepare_update(
+        &context,
+        "project",
+        &body,
+        false,
+        |_| false,
+        |_| false,
+        false,
+    )
+    .unwrap();
+    assert!(
+        edit.project
+            .string_equals("testCommand", "synthetic verify")
+            .unwrap()
+    );
+    context.projects.borrow_mut()[0] = edit.project;
+    assert!(
+        projects::prepare_update(
+            &context,
+            "project",
+            &body,
+            false,
+            |_| false,
+            |_| false,
+            false
+        )
+        .is_err()
+    );
+}

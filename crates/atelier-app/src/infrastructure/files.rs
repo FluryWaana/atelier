@@ -19,6 +19,77 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Fingerprints tracked sources and nonignored files, not build outputs or dependencies.
+    pub async fn fingerprint(&self) -> Result<String> {
+        use sha2::{Digest, Sha256};
+        self.verify_root().await?;
+        let head = self
+            .git(&["rev-parse", "--verify", "HEAD^{commit}"])
+            .await?;
+        let index = self.git(&["ls-files", "--stage", "-z"]).await?;
+        let paths = self.list().await?.files;
+        let root = self.directory.try_clone()?;
+        let first_head = head.clone();
+        let hash = tokio::task::spawn_blocking(move || {
+            let mut digest = Sha256::new();
+            digest.update(&first_head);
+            digest.update(&index);
+            let mut total = 0usize;
+            for path in paths {
+                validate_path(&path, cfg!(windows))?;
+                digest.update((path.len() as u64).to_le_bytes());
+                digest.update(path.as_bytes());
+                let mut directory = root.try_clone()?;
+                let parts = path.split('/').collect::<Vec<_>>();
+                let mut missing = false;
+                for part in &parts[..parts.len() - 1] {
+                    match directory.symlink_metadata(part) {
+                        Ok(metadata) => require_plain(&metadata)?,
+                        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                            missing = true;
+                            break;
+                        }
+                        Err(error) => return Err(error.into()),
+                    }
+                    directory = directory.open_dir_nofollow(part)?;
+                }
+                if missing {
+                    digest.update([0]);
+                    continue;
+                }
+                let name = std::path::Path::new(parts.last().ok_or("Chemin de fichier invalide.")?);
+                match directory.symlink_metadata(name) {
+                    Ok(metadata) => require_plain(&metadata)?,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        digest.update([0]);
+                        continue;
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+                let content = CheckedFile::open_in(&directory, name)?.read(16 * 1024 * 1024)?;
+                digest.update([1]);
+                total = total
+                    .checked_add(content.len())
+                    .ok_or("Sources trop volumineuses pour la vérification.")?;
+                if total > 256 * 1024 * 1024 {
+                    return Err("Sources trop volumineuses pour la vérification.".into());
+                }
+                digest.update((content.len() as u64).to_le_bytes());
+                digest.update(&content);
+            }
+            Ok::<_, crate::Error>(format!("{:x}", digest.finalize()))
+        })
+        .await??;
+        if self
+            .git(&["rev-parse", "--verify", "HEAD^{commit}"])
+            .await?
+            != head
+        {
+            return Err("Les sources ont changé pendant leur inspection.".into());
+        }
+        Ok(hash)
+    }
+
     pub fn synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
         let repository = Self::open_synthetic(root, roots, repo)?;
         if !repository.directory.symlink_metadata(".git")?.is_dir() {

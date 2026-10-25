@@ -38,7 +38,7 @@ pub struct ProjectEdit {
     pub moved: bool,
 }
 
-pub const EDITABLE_FIELDS: [&str; 14] = [
+pub const EDITABLE_FIELDS: [&str; 15] = [
     "name",
     "repo",
     "baseBranch",
@@ -53,6 +53,7 @@ pub const EDITABLE_FIELDS: [&str; 14] = [
     "backCommand",
     "backPort",
     "linkedProjectId",
+    "testCommand",
 ];
 
 pub fn detect(

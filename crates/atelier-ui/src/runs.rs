@@ -108,7 +108,35 @@ pub fn Runs(
     let alive = Rc::new(Cell::new(true));
     let acting = alive.clone();
     let cancelling = RwSignal::new(false);
-    let act = move |stop: bool| {
+    let verification_command = Signal::derive(move || {
+        let repo = board.cards.with(|cards| {
+            cards
+                .iter()
+                .find(|item| item.id == card.get_value())
+                .map(|item| field(&item.fields, "repo"))
+                .unwrap_or_default()
+        });
+        let windows = board
+            .settings
+            .with(|settings| field(settings, "platform") == "win32");
+        board.projects.with(|projects| {
+            projects
+                .iter()
+                .find(|project| {
+                    !repo.is_empty()
+                        && atelier_core::domain::projects::same_repository(
+                            &field(project, "repo"),
+                            &repo,
+                            windows,
+                        )
+                })
+                .map(|project| field(project, "testCommand"))
+                .unwrap_or_default()
+        })
+    });
+    let act = move |action: &str| {
+        let stop = action == "stop";
+        let verifying = action == "verify";
         if cancelling.get_untracked() || (!stop && pending.get_untracked()) {
             return;
         }
@@ -124,11 +152,21 @@ pub fn Runs(
                 return;
             };
             format!("/api/runs/{}/stop", field(&run, "id"))
+        } else if verifying {
+            format!("/api/cards/{}/verification/start", card.get_value())
         } else {
             format!("/api/cards/{}/runs/start", card.get_value())
         };
         let body = if stop {
             serde_json::json!({})
+        } else if verifying {
+            let expected = board.cards.with_untracked(|cards| {
+                cards
+                    .iter()
+                    .find(|item| item.id == card.get_value())
+                    .cloned()
+            });
+            serde_json::json!({"confirmed":true,"command":verification_command.get_untracked(),"expected":expected})
         } else {
             let expected = board.cards.with_untracked(|cards| {
                 cards
@@ -277,9 +315,11 @@ pub fn Runs(
             <div hidden=move||brainstorm.get()><label for="run-purpose">{move||i18n.text("Objectif de l’exécution")}</label><select id="run-purpose" prop:value=move||purpose.get() disabled=move||pending.get()||running.get() on:change=move|event|purpose.set(event_target_value(&event))><option value="work">{move||i18n.text("Travailler sur la tâche")}</option><option value="preparation">{move||i18n.text("Préparer les critères et questions")}</option><option value="review">{move||i18n.text("Examiner la PR/MR et ses critères")}</option></select></div>
             <label hidden=move||brainstorm.get()||["preparation","review"].contains(&purpose.get().as_str()) for="run-mode">{move || i18n.text("Mode")}</label><select hidden=move||brainstorm.get()||["preparation","review"].contains(&purpose.get().as_str()) id="run-mode" prop:value=move || mode.get() disabled=move || pending.get() || running.get() on:change=move |event| mode.set(event_target_value(&event))><option value="analyze">{move || i18n.text("Analyse")}</option><option value="edit">{move || i18n.text("Modification")}</option></select>
             <div hidden=move||!brainstorm.get()><label for="brainstorm-message">{move||i18n.text("Message pour le brainstorm")}</label><textarea id="brainstorm-message" maxlength="12000" rows="4" disabled=move||pending.get()||running.get() prop:value=move||message.get() on:input=move|event|message.set(event_target_value(&event)) /><p class="field-help">{move||i18n.text("Décris ta question ou demande un découpage en tâches. Chaque envoi démarre explicitement une exécution de l’agent choisi.")}</p></div>
-            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() || (brainstorm.get()&&message.get().trim().is_empty()) on:click=move |_| act.with_value(|act| act(false))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act(true))>{move || i18n.text("Arrêter l’exécution")}</button></div>
+            <div class="editor-actions"><button id="start-run" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() || agent.get().is_empty() || (brainstorm.get()&&message.get().trim().is_empty()) on:click=move |_| act.with_value(|act| act("start"))>{move || i18n.text("Démarrer l’exécution")}</button><button id="stop-run" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act("stop"))>{move || i18n.text("Arrêter l’exécution")}</button></div>
             <p class="field-help" hidden=move||!brainstorm.get()||board.cards.with(|cards|cards.iter().find(|item|item.id==card.get_value()).is_none_or(|item|!field(&item.fields,"repo").is_empty()))>{move||i18n.text("Conversation sans dépôt : chaque échange utilise un dossier temporaire vide, supprimé à la fin. Les permissions restent celles de l’agent choisi.")}</p>
             <p class="field-help" hidden=move || ready.get()>{move || i18n.text("Prépare et vérifie le worktree, puis enregistre tes modifications avant de lancer une commande.")}</p>
+            <div hidden=move||brainstorm.get()><h4>{move||i18n.text("Vérification des sources")}</h4><p class="field-help" hidden=move||!verification_command.get().is_empty()>{move||i18n.text("Configure la commande de vérification dans le projet.")}</p><pre class="service-log" tabindex="0">{move||verification_command.get()}</pre><button id="start-verification" type="button" disabled=move||pending.get()||blocked.get()||running.get()||!ready.get()||verification_command.get().trim().is_empty() on:click=move |_|act.with_value(|act|act("verify"))>{move||i18n.text("Confirmer et lancer la vérification")}</button><p class="field-help">{move||i18n.text("La commande utilise les permissions de ton compte, sans agent ni clé du coffre. Le résultat ne vaut que pour les sources examinées ; aucun critère n’est coché.")}</p></div>
+            <p id="verification-result" role="status" hidden=move||latest.get().is_none_or(|run|field(&run,"purpose")!="verification")>{move||latest.get().map(|run|i18n.text(match field(&run,"verificationState").as_str(){"passed"=>"Vérification réussie sur cet instantané des sources.","failed"=>"Vérification échouée ou arrêtée.","stale"=>"Résultat périmé : les sources, le besoin ou la commande ont changé.","interrupted"=>"Vérification interrompue : relance explicitement la commande.",_=>"Vérification en cours…"})).unwrap_or_default()}</p>
             <p role="status">{move || i18n.text(latest.get().map(|run| match field(&run,"status").as_str() { "starting"=>"Démarrage…", "running"=>"Processus actif", "stopping"=>"Arrêt…", "completed"=>"Exécution terminée", "cancelled"=>"Exécution arrêtée", "interrupted"=>"Exécution interrompue : vérifie le dépôt avant de relancer.", _=>"Échec de l’exécution" }).unwrap_or("Aucune exécution pour cette tâche."))}</p>
             <p class="error" role="alert">{move || { let message = error.get(); i18n.text(&if message.is_empty() { latest.get().map(|run| field(&run,"attention")).unwrap_or_default() } else { message }) }}</p>
             <label for="run-history">{move || i18n.text("Historique des exécutions")}</label><select id="run-history" prop:value=move || selected_run.get() on:change=move |event| selected_run.set(event_target_value(&event))><option value="">{move || i18n.text("Dernière exécution")}</option><For each=move || history.get() key=|run| field(run,"id") children=move |run| view! { <option value=field(&run,"id")>{format!("{} · {}",field(&run,"startedAt"),field(&run,"agent"))}</option> } /></select>
