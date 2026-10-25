@@ -449,3 +449,12 @@ pub struct JiraCreationIntent {
     pub started_at: String,
     pub result: Option<JiraIssue>,
 }
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraBatchImport {
+    pub revision: u64,
+    pub issue_ids: Vec<String>,
+    pub project_id: String,
+    pub confirmed: bool,
+}

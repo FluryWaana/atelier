@@ -218,6 +218,70 @@ pub(super) struct MetadataQuery {
     project: String,
     issue_type: Option<String>,
 }
+
+pub(super) async fn import_batch(State(state): State<Shared>, request: Request) -> Response {
+    use crate::infrastructure::jira_import;
+    use atelier_core::contracts::{JiraBatchImport, JiraImported};
+    let input: JiraBatchImport = match super::jira_transitions::input(request).await {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    let mut stopped = state.shutdown.subscribe();
+    if *stopped.borrow() {
+        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+    }
+    let Ok(_permit) = state.integration_reads.try_acquire() else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+        );
+    };
+    let id = uuid::Uuid::new_v4().to_string();
+    let reserved = id.clone();
+    let prepared = input.clone();
+    if let Err(error) = state
+        .database
+        .call(move |store| jira_import::reserve_batch(store, prepared, reserved))
+        .await
+    {
+        return response::<Vec<JiraImported>>(Err(error));
+    }
+    let reading = async {
+        let client = super::jira_transitions::client(&state, input.revision).await?;
+        let mut details = Vec::with_capacity(input.issue_ids.len());
+        for issue in input.issue_ids {
+            details.push(client.detail(&issue).await?);
+        }
+        Ok(details)
+    };
+    let fetched = tokio::select! {
+        result=tokio::time::timeout(std::time::Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("Lecture du lot Jira trop longue. Réduis la sélection.".into())),
+        _=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into()),
+    };
+    let result = match fetched {
+        Ok(details) => {
+            let reserved = id.clone();
+            state
+                .database
+                .call(move |store| jira_import::finish_batch(store, &reserved, details))
+                .await
+        }
+        Err(error) => Err(error),
+    };
+    if result.is_err()
+        && state
+            .database
+            .call(move |store| jira_import::release(store, &id))
+            .await
+            .is_err()
+    {
+        return failure(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Import Jira interrompu. Redémarre Atelier avant de réessayer.",
+        );
+    }
+    response(result)
+}
 pub(super) async fn creation_metadata(
     State(state): State<Shared>,
     Query(query): Query<MetadataQuery>,

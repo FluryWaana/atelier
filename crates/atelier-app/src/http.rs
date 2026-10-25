@@ -147,6 +147,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/jira/transition")
             || path.ends_with("/jira/reconcile")
             || path == "/api/jira/import"
+            || path == "/api/jira/import-batch"
             || path.ends_with("/worktree")
             || path.ends_with("/worktree/remove")
             || path.ends_with("/services/start")
@@ -473,6 +474,7 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
         .route("/api/jira/creation-metadata", get(jira::creation_metadata))
         .route("/api/jira/search", get(jira::search))
         .route("/api/jira/import", post(jira::import))
+        .route("/api/jira/import-batch", post(jira::import_batch))
         .route("/api/jira/issues/{id}", get(jira::detail))
         .route("/api/backups", get(backups::list).post(backups::create))
         .route("/api/backups/restore", post(backups::restore))

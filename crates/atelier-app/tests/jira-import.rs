@@ -15,6 +15,45 @@ fn input() -> JiraImport {
         attach_to: None,
     }
 }
+
+#[tokio::test]
+async fn batches_are_atomic_bounded_and_retries_preserve_existing_cards() {
+    use atelier_core::contracts::{JiraBatchImport, JiraIssue, JiraIssueDetail};
+    let directory = tempfile::tempdir().unwrap();
+    let repo = directory.path().to_string_lossy().into_owned();
+    let database = Database::open(&directory.path().join("synthetic.sqlite")).unwrap();
+    database.call(move|store|{
+        store.save_settings(&document(json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}})))?;
+        store.put(Documents::Projects,&document(json!({"id":"project","name":"Synthetic","repo":repo})))?;
+        let input=JiraBatchImport{revision:1,issue_ids:vec!["1".into(),"2".into()],project_id:"project".into(),confirmed:true};
+        for ids in [vec![],vec!["1".into(),"1".into()],(1..=21).map(|id|id.to_string()).collect(),vec!["../invalid".into()]]{
+            let mut invalid=input.clone();invalid.issue_ids=ids;assert!(jira_import::reserve_batch(store,invalid,"invalid".into()).is_err());
+        }
+        let mut unconfirmed=input.clone();unconfirmed.confirmed=false;assert!(jira_import::reserve_batch(store,unconfirmed,"unconfirmed".into()).is_err());
+        let details:Vec<_>=(1..=2).map(|id|JiraIssueDetail{connection_revision:1,description:format!("Synthetic description {id}"),issue:JiraIssue{id:id.to_string(),key:format!("SYN-{id}"),title:format!("Synthetic {id}"),status:"Open".into(),url:format!("https://synthetic.example.test/browse/SYN-{id}")}}).collect();
+        jira_import::reserve_batch(store,input.clone(),"batch".into())?;
+        assert!(jira_import::finish_batch(store,"batch",vec![details[0].clone()]).is_err());
+        let mut invalid=details.clone();invalid[1].issue.title="x".repeat(301);
+        assert!(jira_import::finish_batch(store,"batch",invalid).is_err());
+        assert!(store.documents::<Card>(Documents::Cards)?.is_empty());
+        assert!(store.settings::<Document>()?.raw("jiraImportReservation").is_some());
+        let mut reversed=details.clone();reversed.reverse();assert!(jira_import::finish_batch(store,"batch",reversed).is_err());
+        let imported=jira_import::finish_batch(store,"batch",details.clone())?;
+        assert_eq!(imported.len(),2);assert!(imported.iter().all(|card|card.created));
+        let mut edited=imported[0].card.clone();edited.fields.set("description",&"Local edits survive retry")?;store.put(Documents::Cards,&edited)?;
+        jira_import::reserve_batch(store,input.clone(),"retry".into())?;
+        let repeated=jira_import::finish_batch(store,"retry",details.clone())?;
+        assert!(repeated.iter().all(|card|!card.created&&!card.attached));
+        assert!(repeated[0].card.fields.string_equals("description","Local edits survive retry")?);
+        assert_eq!(store.documents::<Card>(Documents::Cards)?.len(),2);
+        jira_import::reserve_batch(store,input,"stale".into())?;
+        let mut settings=store.settings::<Document>()?;let mut configuration=settings.get::<JiraConfiguration>("jiraConnection")?.unwrap();configuration.revision+=1;settings.set("jiraConnection",&configuration)?;store.save_settings(&settings)?;
+        assert!(jira_import::finish_batch(store,"stale",details).is_err());
+        jira_import::recover(store)?;assert!(store.settings::<Document>()?.raw("jiraImportReservation").is_none());
+        assert_eq!(store.documents::<Card>(Documents::Cards)?.len(),2);Ok(())
+    }).await.unwrap();
+    database.close().await.unwrap();
+}
 #[tokio::test]
 async fn a_real_synthetic_read_imports_once_and_preserves_local_edits_on_retry() {
     let temporary = tempfile::tempdir().unwrap();

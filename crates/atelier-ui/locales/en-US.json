@@ -821,5 +821,18 @@
   "Opérations de champ Jira invalides.": "Invalid Jira field operations.",
   "Valeur par défaut de champ Jira invalide.": "Invalid Jira field default value.",
   "Réponse de création Jira incertaine. Vérifie le ticket dans Jira.": "Uncertain Jira creation response. Check the issue in Jira.",
-  "La clé Jira a changé. Utilise la clé actuelle du ticket.": "The Jira key changed. Use the issue’s current key."
+  "La clé Jira a changé. Utilise la clé actuelle du ticket.": "The Jira key changed. Use the issue’s current key.",
+  "Confirme un lot de 1 à 20 tickets Jira.": "Confirm a batch of 1 to 20 Jira issues.",
+  "Sélection Jira dupliquée.": "Duplicate Jira selection.",
+  "Lecture du lot Jira trop longue. Réduis la sélection.": "Reading the Jira batch took too long. Select fewer issues.",
+  "Importer une sélection Jira": "Import selected Jira issues",
+  "Sélectionne jusqu’à 20 tickets, y compris sur plusieurs pages. Ils seront tous relus avant une seule transaction ; en cas d’erreur, aucune nouvelle carte ne sera conservée.": "Select up to 20 issues across pages. All will be read again before a single transaction; on error, no new cards will be kept.",
+  "Tickets sélectionnés : {0}": "Selected issues: {0}",
+  "Projet de destination du lot": "Batch destination project",
+  "Importer cette sélection dans le projet choisi et conserver les cartes déjà liées.": "Import this selection into the chosen project and preserve already linked cards.",
+  "Confirmer l’import du lot": "Confirm batch import",
+  "Vider la sélection": "Clear selection",
+  "Sélectionner le ticket {0}": "Select issue {0}",
+  "Sélectionner": "Select",
+  "Lot importé : nouvelles cartes créées, cartes déjà liées conservées.": "Batch imported: new cards created, already linked cards preserved."
 }
