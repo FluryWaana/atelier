@@ -235,6 +235,7 @@ fn restore_checked(
             "forgeDraftEffect",
             "gitPushEffect",
             "forgePublicationEffect",
+            "localCommitEffect",
         ] {
             if let Some(effect) = current.get::<serde_json::Value>(key)? {
                 let id = current

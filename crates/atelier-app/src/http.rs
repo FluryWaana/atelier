@@ -28,6 +28,8 @@ pub use assets::wasm_asset_name;
 mod backups;
 mod brainstorm;
 mod card_lifecycle;
+#[cfg(windows)]
+mod commits;
 mod events;
 mod files;
 mod forge;
@@ -155,6 +157,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
         let exclusive = path.ends_with("/jira/create")
+            || path.ends_with("/commit/preview")
+            || path.ends_with("/commit/create")
+            || path.ends_with("/commit/reconcile")
             || path.ends_with("/jira/creation-reconcile")
             || path.ends_with("/jira/refresh-preview")
             || path.ends_with("/jira/refresh-apply")
@@ -217,7 +222,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     Ok(true) => {
                         return failure(
                             StatusCode::CONFLICT,
-                            "Termine ou vérifie l’opération distante avant de modifier cette tâche, les projets ou les sauvegardes.",
+                            "Termine ou vérifie l’opération en cours avant de modifier cette tâche, les projets ou les sauvegardes.",
                         );
                     }
                     Err(_) => {
@@ -466,6 +471,10 @@ pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -
     #[cfg(windows)]
     let app = app
         .route("/api/cards/{id}/runs/start", post(runs::start))
+        .route("/api/cards/{id}/commit/preview", post(commits::preview))
+        .route("/api/cards/{id}/commit/changes", get(commits::changes))
+        .route("/api/cards/{id}/commit/create", post(commits::create))
+        .route("/api/cards/{id}/commit/reconcile", post(commits::reconcile))
         .route(
             "/api/cards/{id}/forge/publication-push",
             post(git_push::publication_branch),

@@ -7,6 +7,7 @@ pub mod brainstorm;
 pub mod checked_file;
 #[cfg(windows)]
 pub mod command_runs;
+pub mod commits;
 pub mod data_lock;
 pub mod database;
 mod dependencies;
@@ -32,6 +33,8 @@ pub mod jira_refresh;
 pub mod jira_transition;
 pub mod launch_detection;
 pub mod launch_ports;
+#[cfg(windows)]
+pub mod local_commit;
 pub mod local_http;
 pub mod portable_import;
 pub mod preparation;

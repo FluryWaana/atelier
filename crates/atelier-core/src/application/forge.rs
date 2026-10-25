@@ -50,7 +50,16 @@ pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json
                 ForgeWriteState::Preparing | ForgeWriteState::Sending | ForgeWriteState::Uncertain
             )
         });
-    Ok(publishing
+    let committing = fields
+        .get::<crate::contracts::LocalCommitIntent>("localCommit")?
+        .is_some_and(|intent| {
+            matches!(
+                intent.state,
+                ForgeWriteState::Preparing | ForgeWriteState::Sending | ForgeWriteState::Uncertain
+            )
+        });
+    Ok(committing
+        || publishing
         || pushing
         || fields
             .get::<ForgeDraftIntent>("forgeDraft")?

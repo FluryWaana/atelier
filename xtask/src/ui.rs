@@ -613,6 +613,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             // Report fixture only: no agent execution or remote identity proof is implied.
             store.put(Documents::Cards,&json!({"id":"review-report","title":"Synthetic review report","status":"todo","repo":"","checklist":[{"text":"Synthetic review criterion","done":false}]}))?;
             // Preview fixture only; no native Git operation or remote creation is implied.
+            store.put(Documents::Cards,&json!({"id":"commit-draft","title":"Synthetic commit draft","description":"Human commit content","status":"todo","repo":"/synthetic/source","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/commit","base":"main","baseCommit":"a".repeat(40),"state":"ready"}}))?;
             store.put(Documents::Cards,&json!({"id":"publication-branch","title":"Synthetic branch task","description":"Human branch content","status":"todo","repo":"","forgePublicationPreview":{"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"},"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":true,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic first publication","body":"Keep first publication draft","draft":true}}))?;
             store.put(Documents::Runs,&json!({"id":"review-report-run","cardId":"review-report","kind":"pr-review","purpose":"review","status":"completed","startedAt":"2026-10-25T10:00:00Z","reviewStaleReason":atelier_app::infrastructure::reviews::UNCHECKED,"reviewContext":{"requirements":{"criteria":["Synthetic review criterion"]},"worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"},"kind":"github","revision":0,"repository":"owner/repo","number":7,"source":"b".repeat(40),"target":"a".repeat(40),"base":"a".repeat(40)},"review":{"summary":"Synthetic review limits: browser and service not executed","findings":[{"priority":"P2","title":"Synthetic finding <script>ignored</script>","file":"src/lib.rs","line":12,"problem":"Synthetic evidence","suggestion":"Synthetic correction"}],"criteria":[{"index":0,"status":"unverifiable","evidence":"Synthetic UI not executed"}]}}))?;
             store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo}))?;
@@ -887,6 +888,36 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#push-publication-branch").await?;
     // No forge connection exists, so this refuses before Git or network I/O.
     wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-body')?.value === 'Keep first publication draft' && document.querySelector('#edit-description')?.value === 'Human branch content';",vec![]).await?;
+    client
+        .goto(&format!("{address}/?task=commit-draft"))
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#commit-author-name')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    client
+        .find(Locator::Css("#commit-author-name"))
+        .await?
+        .send_keys("Synthetic author")
+        .await?;
+    client
+        .find(Locator::Css("#commit-message"))
+        .await?
+        .send_keys("Keep synthetic commit draft")
+        .await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    click(client, "#load-commit-files").await?;
+    // Invalid synthetic association refuses before a Git mutation; this is not a native commit proof.
+    wait_dom(client,"return document.querySelector('#local-commit-error')?.textContent.length > 0 && document.querySelector('#commit-author-name')?.value === 'Synthetic author' && document.querySelector('#commit-message')?.value === 'Keep synthetic commit draft' && document.querySelector('#edit-description')?.value === 'Human commit content';",vec![]).await?;
     Ok(())
 }
 

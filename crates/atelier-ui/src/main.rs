@@ -9,6 +9,7 @@ mod agent_profiles;
 mod agent_usage;
 mod backups;
 mod brainstorm;
+mod commits;
 mod files;
 mod forge;
 mod forge_checks;

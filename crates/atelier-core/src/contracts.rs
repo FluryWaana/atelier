@@ -1,6 +1,53 @@
 use crate::document::{Document, JsonString};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LocalCommitSnapshot {
+    pub branch: String,
+    pub head: String,
+    pub tree: String,
+    pub paths: Vec<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LocalCommitRequest {
+    pub expected: Card,
+    pub paths: Vec<String>,
+    pub author_name: String,
+    pub author_email: String,
+    pub message: String,
+    pub confirmed: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCommitPreview {
+    pub worktree: Worktree,
+    pub snapshot: LocalCommitSnapshot,
+    pub author_name: String,
+    pub author_email: String,
+    pub message: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCommitIntent {
+    pub id: String,
+    pub state: ForgeWriteState,
+    pub preview: LocalCommitPreview,
+    pub commit: Option<String>,
+    pub observed: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCommitResponse {
+    pub card: Card,
+    pub patch: String,
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct RunLog {
     pub seq: i64,

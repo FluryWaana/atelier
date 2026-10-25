@@ -295,6 +295,13 @@ impl Repository {
     }
 
     pub(super) async fn without_programs(&self, arguments: &[&str]) -> Result<Vec<u8>> {
+        let options = self.program_options().await?;
+        let mut args = options.iter().map(String::as_str).collect::<Vec<_>>();
+        args.extend_from_slice(arguments);
+        self.git(&args).await
+    }
+
+    pub(super) async fn program_options(&self) -> Result<Vec<String>> {
         // Checkout/status/diff can invoke clean/smudge/process filters independently of diff drivers.
         let config = self
             .git(&["config", "--includes", "--null", "--name-only", "--list"])
@@ -327,10 +334,10 @@ impl Repository {
                 ));
             }
         }
-        let mut args = options.iter().map(String::as_str).collect::<Vec<_>>();
-        args.extend(["-c", "core.hooksPath=NUL", "-c", "submodule.recurse=false"]);
-        args.extend_from_slice(arguments);
-        self.git(&args).await
+        options.extend(
+            ["-c", "core.hooksPath=NUL", "-c", "submodule.recurse=false"].map(str::to_owned),
+        );
+        Ok(options)
     }
 
     pub async fn preview(self, path: String) -> Result<FilePreview> {
