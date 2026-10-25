@@ -34,12 +34,6 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
     let mut groups = BTreeMap::<(String, String, String), Summary>::new();
     let mut ids = std::collections::BTreeSet::new();
     for run in runs {
-        if run
-            .string_equals("purpose", "verification")
-            .map_err(|_| "Exécution invalide pour la synthèse d’usage.")?
-        {
-            continue;
-        }
         let text = |key| {
             run.get::<String>(key)
                 .map_err(|_| "Exécution invalide pour la synthèse d’usage.")
@@ -47,6 +41,12 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
         let id = text("id")?.ok_or("Exécution sans identifiant dans la synthèse d’usage.")?;
         if !ids.insert(id) {
             return Err("Exécutions dupliquées dans la synthèse d’usage.");
+        }
+        if run
+            .string_equals("purpose", "verification")
+            .map_err(|_| "Exécution invalide pour la synthèse d’usage.")?
+        {
+            continue;
         }
         let agent_type = text("agentType")?.unwrap_or_default();
         let agent = text("agent")?.unwrap_or_default();

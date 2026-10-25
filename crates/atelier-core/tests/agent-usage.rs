@@ -34,6 +34,13 @@ fn usage_groups_provider_profile_and_model_and_reports_coverage_without_inventin
 }
 #[test]
 fn invalid_or_overflowing_metrics_and_duplicate_sessions_fail_instead_of_undercounting() {
+    assert!(
+        summarize(&[
+            run(json!({"id":"shared"})),
+            run(json!({"id":"shared","purpose":"verification"}))
+        ])
+        .is_err()
+    );
     for bad in [
         json!({"id":"bad","usage":{"inputTokens":-1}}),
         json!({"id":"bad","usage":{"inputTokens":"10"}}),
