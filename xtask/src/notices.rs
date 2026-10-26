@@ -5,6 +5,53 @@ use atelier_app::{
 use serde_json::Value;
 use std::{collections::BTreeSet, fs, path::Path, time::Duration};
 pub(super) const LIMIT: usize = 32 * 1024 * 1024;
+fn collect(
+    root: &Path,
+    relative: &Path,
+    depth: usize,
+    entries: &mut usize,
+    files: &mut BTreeSet<std::path::PathBuf>,
+) -> Result<()> {
+    if depth > 32 {
+        return Err("Arbre de licences trop profond.".into());
+    }
+    for entry in fs::read_dir(root.join(relative))? {
+        let entry = entry?;
+        *entries = entries
+            .checked_add(1)
+            .ok_or("Inventaire des licences excessif.")?;
+        if *entries > 1_000_000 {
+            return Err("Inventaire des licences excessif.".into());
+        }
+        let path = relative.join(entry.file_name());
+        let metadata =
+            atelier_app::infrastructure::checked_file::plain_metadata(&root.join(&path))?;
+        if metadata.is_dir() {
+            collect(root, &path, depth + 1, entries, files)?;
+        } else if metadata.is_file() {
+            let upper = entry.file_name().to_string_lossy().to_ascii_uppercase();
+            if [
+                "LICENSE",
+                "LICENCE",
+                "COPYING",
+                "NOTICE",
+                "UNLICENSE",
+                "COPYRIGHT",
+            ]
+            .iter()
+            .any(|prefix| upper.starts_with(prefix))
+            {
+                files.insert(path);
+                if files.len() > 4096 {
+                    return Err("Trop de textes de licences dans une dépendance.".into());
+                }
+            }
+        } else {
+            return Err("Fichier spécial interdit dans l’inventaire des licences.".into());
+        }
+    }
+    Ok(())
+}
 fn render(metadata: &Value) -> Result<String> {
     let packages = metadata["packages"]
         .as_array()
@@ -32,6 +79,7 @@ fn render(metadata: &Value) -> Result<String> {
     let mut output = String::from(
         "Atelier Rust third-party notices\nCargo.lock dependency inventory; includes build tools and all target platforms.\nLicense expressions are declarations from dependency metadata.\n\n",
     );
+    let mut entries = 0;
     for dependency in packages {
         let name = dependency["name"]
             .as_str()
@@ -71,25 +119,7 @@ fn render(metadata: &Value) -> Result<String> {
             }
             files.insert(file.to_path_buf());
         }
-        for entry in fs::read_dir(root)? {
-            let entry = entry?;
-            let file = entry.file_name();
-            let upper = file.to_string_lossy().to_ascii_uppercase();
-            if [
-                "LICENSE",
-                "LICENCE",
-                "COPYING",
-                "NOTICE",
-                "UNLICENSE",
-                "COPYRIGHT",
-            ]
-            .iter()
-            .any(|prefix| upper.starts_with(prefix))
-                && entry.file_type()?.is_file()
-            {
-                files.insert(file.into());
-            }
-        }
+        collect(root, Path::new(""), 0, &mut entries, &mut files)?;
         if files.is_empty() {
             return Err(format!("Texte de licence manquant pour {name} {version}; compléter les avis avant le paquet.").into());
         }
@@ -153,10 +183,42 @@ mod tests {
         assert!(text.contains("synthetic-dependency 1.0.0"));
         assert!(text.contains("Synthetic license text"));
         assert!(!text.contains(&root.path().display().to_string()));
+        let embedded = root.path().join("src/polyfill/synthetic-component");
+        fs::create_dir_all(&embedded).unwrap();
+        fs::write(
+            embedded.join("LICENSE-APACHE"),
+            "Synthetic embedded component notice.",
+        )
+        .unwrap();
+        let text = render(&metadata).unwrap();
+        assert!(text.contains("Synthetic embedded component notice."));
+        assert_eq!(
+            text.matches("Synthetic embedded component notice.").count(),
+            1
+        );
         metadata["packages"][0]["license_file"] = json!("../outside");
         assert!(render(&metadata).is_err());
         metadata["packages"][0]["license_file"] = Value::Null;
         metadata["packages"][0]["source"] = json!("git+https://synthetic.example.test/private");
         assert!(render(&metadata).is_err());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn embedded_license_discovery_never_follows_an_external_directory_link() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(
+            outside.path().join("LICENSE"),
+            "Synthetic outside content; preserve.",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.path().join("vendor")).unwrap();
+        let mut files = BTreeSet::new();
+        assert!(collect(root.path(), Path::new(""), 0, &mut 0, &mut files).is_err());
+        assert!(files.is_empty());
+        assert_eq!(
+            fs::read_to_string(outside.path().join("LICENSE")).unwrap(),
+            "Synthetic outside content; preserve."
+        );
     }
 }
