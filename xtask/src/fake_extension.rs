@@ -47,7 +47,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account or remote effect","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -73,6 +73,47 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     if request.method != Method::Describe {
         extensions::effect(&manifest, &request)?;
+    }
+    if matches!(request.method, Method::Action | Method::Reconcile) {
+        let root = request
+            .settings
+            .get("fixtureRoot")
+            .and_then(Value::as_str)
+            .ok_or("Marked synthetic root required")?;
+        let root = std::fs::canonicalize(root)?;
+        if std::fs::read_to_string(root.join(".extension-fixture"))? != "atelier-r04-synthetic-only"
+        {
+            return Err("Synthetic fixture marker required".into());
+        }
+        let id = request
+            .operation_id
+            .as_deref()
+            .ok_or("Synthetic operation ID required")?;
+        if !extensions::identifier(id) {
+            return Err("Invalid synthetic operation ID".into());
+        }
+        let marker = root.join(format!("{id}.effect"));
+        if request.method == Method::Action {
+            if request.action.as_deref() != Some("synthetic-write") {
+                return Err("Unexpected synthetic action".into());
+            }
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&marker)?;
+            file.write_all(b"one synthetic effect")?;
+            file.sync_all()?;
+            if fault == "lost-write" {
+                std::io::stdout().write_all(b"{lost synthetic response")?;
+                return Ok(());
+            }
+        } else if request.input["method"] != "action"
+            || request.input["action"] != "synthetic-write"
+        {
+            return Err("Unexpected synthetic reconciliation scope".into());
+        }
+        let applied = std::fs::read(&marker)? == b"one synthetic effect";
+        reply.output = json!({"receipt":{"operationId":id,"outcome":if applied {"applied"} else {"unknown"},"reference":format!("synthetic:{id}"),"observedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}});
     }
     match fault {
         "secret" => reply.output = json!({"nested":[{"value":request.secrets.get("token")}]}),

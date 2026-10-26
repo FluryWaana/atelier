@@ -6,6 +6,151 @@ use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 #[path = "support/windows.rs"]
 mod windows;
 
+#[tokio::test]
+async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effect() {
+    use atelier_app::infrastructure::{connector_effects as effects, database::Database};
+    use atelier_core::{
+        application::extensions::RemotePreview, contracts::ForgeWriteState as Phase,
+        document::Document,
+    };
+    let fixture = tempfile::tempdir().unwrap();
+    std::fs::write(
+        fixture.path().join(".extension-fixture"),
+        "atelier-r04-synthetic-only",
+    )
+    .unwrap();
+    let (binary, manifest) = installed().await;
+    let db = Database::open(std::path::Path::new(":memory:")).unwrap();
+    let settings: Document = serde_json::from_str(&json!({"connectorRevision":1,"processConnectors":[{"manifest":manifest,"binary":binary,"revision":1,"values":{"fault":"lost-write","fixtureRoot":fixture.path()},"report":null}]}).to_string()).unwrap();
+    let prepared = db
+        .call(move |store| {
+            store.save_settings(&settings)?;
+            effects::preview(
+                store,
+                "synthetic-extension",
+                &RemotePreview {
+                    expected_revision: 1,
+                    action: "synthetic-write".into(),
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let id = prepared.id;
+    let selected = id.clone();
+    let (profile, request) = db
+        .call(move |store| {
+            effects::prepare(
+                store,
+                "synthetic-extension",
+                &selected,
+                1,
+                1,
+                false,
+                &mut |value, _| Ok(value.into()),
+            )
+        })
+        .await
+        .unwrap();
+    let nonce = request.request_id.clone();
+    let selected = id.clone();
+    db.call(move |store| effects::sending(store, "synthetic-extension", &selected, 1, 1, &nonce))
+        .await
+        .unwrap();
+    assert!(
+        Executable::open(
+            PathBuf::from(&profile.binary.path),
+            Some(profile.binary.sha256)
+        )
+        .await
+        .unwrap()
+        .prepare(&profile.manifest, request, Duration::from_secs(15))
+        .unwrap()
+        .dispatch()
+        .await
+        .is_err()
+    );
+    let marker = fixture.path().join(format!("{id}.effect"));
+    assert_eq!(std::fs::read(&marker).unwrap(), b"one synthetic effect");
+    let modified = std::fs::metadata(&marker).unwrap().modified().unwrap();
+    let selected = id.clone();
+    let (profile, request, version) = db
+        .call(move |store| {
+            effects::recover(store)?;
+            let uncertain = effects::current(store, "synthetic-extension", &selected)?;
+            assert_eq!(uncertain.state, Phase::Uncertain);
+            assert!(
+                effects::prepare(
+                    store,
+                    "synthetic-extension",
+                    &selected,
+                    uncertain.version,
+                    1,
+                    false,
+                    &mut |value, _| Ok(value.into())
+                )
+                .is_err()
+            );
+            let (profile, request) = effects::prepare(
+                store,
+                "synthetic-extension",
+                &selected,
+                uncertain.version,
+                1,
+                true,
+                &mut |value, _| Ok(value.into()),
+            )?;
+            let observing = effects::observing(
+                store,
+                "synthetic-extension",
+                &selected,
+                uncertain.version,
+                1,
+                &request.request_id,
+            )?;
+            Ok((profile, request, observing.version))
+        })
+        .await
+        .unwrap();
+    assert_eq!(request.method, Method::Reconcile);
+    assert_eq!(request.operation_id.as_deref(), Some(id.as_str()));
+    let reply = Executable::open(
+        PathBuf::from(&profile.binary.path),
+        Some(profile.binary.sha256),
+    )
+    .await
+    .unwrap()
+    .prepare(&profile.manifest, request, Duration::from_secs(15))
+    .unwrap()
+    .dispatch()
+    .await
+    .unwrap();
+    db.call(move |store| {
+        let observed = effects::record(store, "synthetic-extension", &id, version, 1, reply, true)?;
+        assert_eq!(observed.state, Phase::Reconciled);
+        Ok(())
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        std::fs::metadata(&marker).unwrap().modified().unwrap(),
+        modified
+    );
+    assert_eq!(
+        std::fs::read_dir(fixture.path())
+            .unwrap()
+            .filter(|entry| entry
+                .as_ref()
+                .unwrap()
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "effect"))
+            .count(),
+        1
+    );
+    db.close().await.unwrap();
+}
+
 fn request(fault: &str) -> Request {
     Request {
         protocol: PROTOCOL.into(),

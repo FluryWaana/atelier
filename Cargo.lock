@@ -4050,6 +4050,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
+ "time",
  "tokio",
  "tray-icon",
  "windows-sys 0.61.2",

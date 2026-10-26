@@ -4227,16 +4227,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/Cargo.toml:12](../xtask/Cargo.toml#L12) | <code>tokio.workspace = true</code> |
 | [xtask/Cargo.toml:13](../xtask/Cargo.toml#L13) | <code>serde_json.workspace = true</code> |
 | [xtask/Cargo.toml:14](../xtask/Cargo.toml#L14) | <code>tempfile.workspace = true</code> |
-| [xtask/Cargo.toml:16](../xtask/Cargo.toml#L16) | <code>reqwest.workspace = true</code> |
-| [xtask/Cargo.toml:17](../xtask/Cargo.toml#L17) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
-| [xtask/Cargo.toml:19](../xtask/Cargo.toml#L19) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [xtask/Cargo.toml:20](../xtask/Cargo.toml#L20) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }</code> |
-| [xtask/Cargo.toml:22](../xtask/Cargo.toml#L22) | <code>[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]</code> |
-| [xtask/Cargo.toml:24](../xtask/Cargo.toml#L24) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
-| [xtask/Cargo.toml:26](../xtask/Cargo.toml#L26) | <code>[target.'cfg(target_os = "linux")'.dependencies]</code> |
-| [xtask/Cargo.toml:29](../xtask/Cargo.toml#L29) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
-| [xtask/Cargo.toml:31](../xtask/Cargo.toml#L31) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSStatusItem", "NSStatusBarButton", "NSView", "NSWindow"] }</code> |
-| [xtask/Cargo.toml:32](../xtask/Cargo.toml#L32) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "block2", "NSDate", "NSRunLoop", "NSTimer"] }</code> |
+| [xtask/Cargo.toml:16](../xtask/Cargo.toml#L16) | <code>time = { version = "=0.3.55", features = ["formatting"] }</code> |
+| [xtask/Cargo.toml:17](../xtask/Cargo.toml#L17) | <code>reqwest.workspace = true</code> |
+| [xtask/Cargo.toml:18](../xtask/Cargo.toml#L18) | <code>fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }</code> |
+| [xtask/Cargo.toml:20](../xtask/Cargo.toml#L20) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [xtask/Cargo.toml:21](../xtask/Cargo.toml#L21) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }</code> |
+| [xtask/Cargo.toml:23](../xtask/Cargo.toml#L23) | <code>[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]</code> |
+| [xtask/Cargo.toml:25](../xtask/Cargo.toml#L25) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
+| [xtask/Cargo.toml:27](../xtask/Cargo.toml#L27) | <code>[target.'cfg(target_os = "linux")'.dependencies]</code> |
+| [xtask/Cargo.toml:30](../xtask/Cargo.toml#L30) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
+| [xtask/Cargo.toml:32](../xtask/Cargo.toml#L32) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSStatusItem", "NSStatusBarButton", "NSView", "NSWindow"] }</code> |
+| [xtask/Cargo.toml:33](../xtask/Cargo.toml#L33) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "block2", "NSDate", "NSRunLoop", "NSTimer"] }</code> |
 | [xtask/src/bin/native-fixture.rs:1](../xtask/src/bin/native-fixture.rs#L1) | <code>use std::{</code> |
 | [xtask/src/bin/native-fixture.rs:8](../xtask/src/bin/native-fixture.rs#L8) | <code>mod fake_agent;</code> |
 | [xtask/src/bin/native-fixture.rs:10](../xtask/src/bin/native-fixture.rs#L10) | <code>mod fake_extension;</code> |
@@ -4256,7 +4257,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/fake_extension.rs:4](../xtask/src/fake_extension.rs#L4) | <code>use serde_json::{Value, json};</code> |
 | [xtask/src/fake_extension.rs:5](../xtask/src/fake_extension.rs#L5) | <code>use std::{</code> |
 | [xtask/src/fake_extension.rs:10](../xtask/src/fake_extension.rs#L10) | <code>pub fn run() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {</code> |
-| [xtask/src/fake_extension.rs:119](../xtask/src/fake_extension.rs#L119) | <code>use std::os::windows::process::CommandExt;</code> |
+| [xtask/src/fake_extension.rs:160](../xtask/src/fake_extension.rs#L160) | <code>use std::os::windows::process::CommandExt;</code> |
 | [xtask/src/keyring.rs:1](../xtask/src/keyring.rs#L1) | <code>use crate::Result;</code> |
 | [xtask/src/keyring.rs:3](../xtask/src/keyring.rs#L3) | <code>pub mod accounts;</code> |
 | [xtask/src/keyring.rs:4](../xtask/src/keyring.rs#L4) | <code>use atelier_app::infrastructure::{</code> |
@@ -4344,9 +4345,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/extensions.rs:4](../xtask/tests/extensions.rs#L4) | <code>use serde_json::{Value, json};</code> |
 | [xtask/tests/extensions.rs:5](../xtask/tests/extensions.rs#L5) | <code>use std::{collections::BTreeMap, path::PathBuf, time::Duration};</code> |
 | [xtask/tests/extensions.rs:7](../xtask/tests/extensions.rs#L7) | <code>mod windows;</code> |
-| [xtask/tests/extensions.rs:31](../xtask/tests/extensions.rs#L31) | <code>#[tokio::test]</code> |
-| [xtask/tests/extensions.rs:98](../xtask/tests/extensions.rs#L98) | <code>#[tokio::test]</code> |
-| [xtask/tests/extensions.rs:136](../xtask/tests/extensions.rs#L136) | <code>#[tokio::test]</code> |
+| [xtask/tests/extensions.rs:9](../xtask/tests/extensions.rs#L9) | <code>#[tokio::test]</code> |
+| [xtask/tests/extensions.rs:11](../xtask/tests/extensions.rs#L11) | <code>use atelier_app::infrastructure::{connector_effects as effects, database::Database};</code> |
+| [xtask/tests/extensions.rs:12](../xtask/tests/extensions.rs#L12) | <code>use atelier_core::{</code> |
+| [xtask/tests/extensions.rs:176](../xtask/tests/extensions.rs#L176) | <code>#[tokio::test]</code> |
+| [xtask/tests/extensions.rs:243](../xtask/tests/extensions.rs#L243) | <code>#[tokio::test]</code> |
+| [xtask/tests/extensions.rs:281](../xtask/tests/extensions.rs#L281) | <code>#[tokio::test]</code> |
 | [xtask/tests/interactive-runs.rs:3](../xtask/tests/interactive-runs.rs#L3) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/tests/interactive-runs.rs:10](../xtask/tests/interactive-runs.rs#L10) | <code>use atelier_core::{</code> |
 | [xtask/tests/interactive-runs.rs:15](../xtask/tests/interactive-runs.rs#L15) | <code>use serde_json::json;</code> |
