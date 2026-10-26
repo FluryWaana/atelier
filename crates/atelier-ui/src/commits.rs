@@ -35,6 +35,7 @@ pub fn Commits(
     let patch = RwSignal::new(String::new());
     let patch_key = RwSignal::new(String::new());
     let approved = RwSignal::new(String::new());
+    let awaited = RwSignal::new(None::<LocalCommitPreview>);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let key = Signal::derive(move || {
@@ -68,6 +69,47 @@ pub fn Commits(
                 .flatten()
         })
     });
+    let workflow_waiting = Memo::new(move |_| {
+        card.get().is_some_and(|card| {
+            card.fields
+                .get::<atelier_core::application::automation::Flow>("automation")
+                .ok()
+                .flatten()
+                .is_some_and(|flow| {
+                    flow.state == atelier_core::application::automation::State::Waiting
+                })
+        })
+    });
+    Effect::new(move |previous: Option<Option<String>>| {
+        let completed = intent
+            .get()
+            .filter(|intent| intent.state == Phase::Confirmed);
+        let operation = completed.as_ref().map(|intent| intent.id.clone());
+        if previous.as_ref() != Some(&operation)
+            && preview.get_untracked().is_none()
+            && let Some(completed) = completed
+            && awaited.get_untracked().is_some_and(|expected| {
+                expected.snapshot == completed.preview.snapshot
+                    && expected.author_name == completed.preview.author_name
+                    && expected.author_email == completed.preview.author_email
+                    && expected.message == completed.preview.message
+            })
+            && completed.preview.snapshot.paths == selected.get_untracked()
+            && completed.preview.author_name == name.get_untracked()
+            && completed.preview.author_email == email.get_untracked()
+            && completed.preview.message == message.get_untracked()
+        {
+            selected.set(Vec::new());
+            name.set(String::new());
+            email.set(String::new());
+            message.set(String::new());
+            patch.set(String::new());
+            patch_key.set(String::new());
+            loaded.set(false);
+            awaited.set(None);
+        }
+        operation
+    });
     let uncertain = Memo::new(move |_| {
         intent
             .get()
@@ -96,9 +138,12 @@ pub fn Commits(
         {
             return;
         }
-        if action == "create"
+        if matches!(action, "create" | "workflow")
             && (!ready.get_untracked() || approved.get_untracked() != key.get_untracked())
         {
+            return;
+        }
+        if action == "workflow" && !workflow_waiting.get_untracked() {
             return;
         }
         if action == "reconcile" && !uncertain.get_untracked() {
@@ -122,7 +167,19 @@ pub fn Commits(
             message: message.get_untracked(),
             confirmed: action != "preview",
         };
-        let path = format!("/api/cards/{}/commit/{action}", expected.id);
+        let path = if action == "workflow" {
+            format!("/api/cards/{}/automation", expected.id)
+        } else {
+            format!("/api/cards/{}/commit/{action}", expected.id)
+        };
+        let body = if action == "workflow" {
+            serde_json::json!({"action":"commit","expected":expected,"confirmed":true})
+        } else {
+            serde_json::to_value(request).expect("commit request serialization")
+        };
+        if action == "workflow" {
+            awaited.set(preview.get_untracked());
+        }
         pending.set(true);
         error.set(String::new());
         notice.set(String::new());
@@ -138,13 +195,7 @@ pub fn Commits(
                         .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
                     Ok::<_, String>((None, None, Some(listing.files)))
                 } else {
-                    let response = write(
-                        &credential,
-                        Method::POST,
-                        &path,
-                        &serde_json::to_value(request).expect("commit request serialization"),
-                    )
-                    .await?;
+                    let response = write(&credential, Method::POST, &path, &body).await?;
                     if action == "preview" {
                         let response: LocalCommitResponse = response
                             .json()
@@ -181,6 +232,8 @@ pub fn Commits(
                                 patch.set(diff);
                                 patch_key.set(key.get_untracked());
                                 notice.set("Aperçu préparé. Aucun commit créé.".into());
+                            } else if action == "workflow" {
+                                notice.set("Commit réservé dans le parcours. Les vérifications suivront avant toute publication.".into());
                             } else if state.is_some_and(|intent| intent.state == Phase::Confirmed) {
                                 if action == "create" {
                                     selected.set(Vec::new());
@@ -197,7 +250,12 @@ pub fn Commits(
                             }
                         }
                     }
-                    Err(message) => error.set(message),
+                    Err(message) => {
+                        if action == "workflow" {
+                            awaited.set(None);
+                        }
+                        error.set(message);
+                    }
                 }
             }
             let _ = board.refresh(&credential).await;
@@ -223,7 +281,7 @@ pub fn Commits(
             <label for="commit-message">{move||i18n.text("Message du commit")}</label><textarea id="commit-message" maxlength="2000" prop:value=move||message.get() on:input=move|event|message.set(event_target_value(&event)) />
             <button id="preview-local-commit" type="button" disabled=move||selected.with(Vec::is_empty)||name.get().trim().is_empty()||email.get().trim().is_empty()||message.get().trim().is_empty() on:click=move|_|execute.with_value(|execute|execute("preview"))>{move||i18n.text("Préparer l’aperçu du commit")}</button>
             <button type="button" on:click=move|_|{selected.set(Vec::new());name.set(String::new());email.set(String::new());message.set(String::new());patch.set(String::new());patch_key.set(String::new());}>{move||i18n.text("Effacer le brouillon du commit")}</button>
-            <Show when=move||ready.get()><pre class="file-preview" tabindex="0" aria-label=move||i18n.text("Différence du commit")>{move||patch.get()}</pre><label><input id="confirm-local-commit" type="checkbox" prop:checked=move||approved.get()==key.get() on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked()}else{String::new()}) />{move||i18n.text("Confirmer cet auteur, ce message et ces changements.")}</label><button id="create-local-commit" type="button" disabled=move||approved.get()!=key.get() on:click=move|_|execute.with_value(|execute|execute("create"))>{move||i18n.text("Créer le commit confirmé")}</button></Show>
+            <Show when=move||ready.get()><pre class="file-preview" tabindex="0" aria-label=move||i18n.text("Différence du commit")>{move||patch.get()}</pre><label><input id="confirm-local-commit" type="checkbox" prop:checked=move||approved.get()==key.get() on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked()}else{String::new()}) />{move||i18n.text("Confirmer cet auteur, ce message et ces changements.")}</label><button id="create-local-commit" type="button" disabled=move||approved.get()!=key.get() on:click=move|_|execute.with_value(|execute|execute("create"))>{move||i18n.text("Créer le commit confirmé")}</button><button id="workflow-local-commit" type="button" hidden=move||!workflow_waiting.get() disabled=move||approved.get()!=key.get() on:click=move|_|execute.with_value(|execute|execute("workflow"))>{move||i18n.text("Créer ce commit dans le parcours puis vérifier")}</button></Show>
         </fieldset>
         <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Commit incertain. Relis la branche locale avant toute nouvelle tentative.")}</p><button id="reconcile-local-commit" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute("reconcile"))>{move||i18n.text("Relire la branche locale")}</button></div>
         {move||intent.get().and_then(|intent|intent.observed).map(|observed|view!{<p>{move||i18n.text("Dernier commit local observé :")}" "<code>{observed}</code></p>})}

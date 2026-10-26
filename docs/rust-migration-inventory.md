@@ -1172,23 +1172,26 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/automation.rs:7](../crates/atelier-app/src/infrastructure/automation.rs#L7) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:28](../crates/atelier-app/src/infrastructure/automation.rs#L28) | <code>pub fn read(card: &amp;Card) -&gt; Result&lt;Option&lt;Flow&gt;&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:69](../crates/atelier-app/src/infrastructure/automation.rs#L69) | <code>pub fn change(store: &amp;Store&lt;'_&gt;, id: &amp;str, body: &amp;Document) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:131](../crates/atelier-app/src/infrastructure/automation.rs#L131) | <code>pub fn cancel(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:151](../crates/atelier-app/src/infrastructure/automation.rs#L151) | <code>pub fn recover_in_transaction(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:163](../crates/atelier-app/src/infrastructure/automation.rs#L163) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:166](../crates/atelier-app/src/infrastructure/automation.rs#L166) | <code>pub fn require_run(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:187](../crates/atelier-app/src/infrastructure/automation.rs#L187) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:205](../crates/atelier-app/src/infrastructure/automation.rs#L205) | <code>pub fn running(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;(Card, Flow)&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:215](../crates/atelier-app/src/infrastructure/automation.rs#L215) | <code>pub fn fail(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str, message: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:231](../crates/atelier-app/src/infrastructure/automation.rs#L231) | <code>pub fn publication(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:256](../crates/atelier-app/src/infrastructure/automation.rs#L256) | <code>pub fn publication_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:273](../crates/atelier-app/src/infrastructure/automation.rs#L273) | <code>pub fn claim(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:329](../crates/atelier-app/src/infrastructure/automation.rs#L329) | <code>pub fn settle(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:366](../crates/atelier-app/src/infrastructure/automation.rs#L366) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:367](../crates/atelier-app/src/infrastructure/automation.rs#L367) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:368](../crates/atelier-app/src/infrastructure/automation.rs#L368) | <code>use serde_json::json;</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:407](../crates/atelier-app/src/infrastructure/automation.rs#L407) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:460](../crates/atelier-app/src/infrastructure/automation.rs#L460) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:543](../crates/atelier-app/src/infrastructure/automation.rs#L543) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:139](../crates/atelier-app/src/infrastructure/automation.rs#L139) | <code>pub fn cancel(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:159](../crates/atelier-app/src/infrastructure/automation.rs#L159) | <code>pub fn recover_in_transaction(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:171](../crates/atelier-app/src/infrastructure/automation.rs#L171) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:174](../crates/atelier-app/src/infrastructure/automation.rs#L174) | <code>pub fn require_run(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:195](../crates/atelier-app/src/infrastructure/automation.rs#L195) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:213](../crates/atelier-app/src/infrastructure/automation.rs#L213) | <code>pub fn running(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;(Card, Flow)&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:223](../crates/atelier-app/src/infrastructure/automation.rs#L223) | <code>pub fn fail(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str, message: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:239](../crates/atelier-app/src/infrastructure/automation.rs#L239) | <code>pub fn commit(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:264](../crates/atelier-app/src/infrastructure/automation.rs#L264) | <code>pub fn commit_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:278](../crates/atelier-app/src/infrastructure/automation.rs#L278) | <code>pub fn publication(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:303](../crates/atelier-app/src/infrastructure/automation.rs#L303) | <code>pub fn publication_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:320](../crates/atelier-app/src/infrastructure/automation.rs#L320) | <code>pub fn claim(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:377](../crates/atelier-app/src/infrastructure/automation.rs#L377) | <code>pub fn settle(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:415](../crates/atelier-app/src/infrastructure/automation.rs#L415) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:416](../crates/atelier-app/src/infrastructure/automation.rs#L416) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:417](../crates/atelier-app/src/infrastructure/automation.rs#L417) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:456](../crates/atelier-app/src/infrastructure/automation.rs#L456) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:509](../crates/atelier-app/src/infrastructure/automation.rs#L509) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:592](../crates/atelier-app/src/infrastructure/automation.rs#L592) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:686](../crates/atelier-app/src/infrastructure/automation.rs#L686) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:1](../crates/atelier-app/src/infrastructure/backups.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:5](../crates/atelier-app/src/infrastructure/backups.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:6](../crates/atelier-app/src/infrastructure/backups.rs#L6) | <code>use atelier_core::{application::backups::BackupFailure, document::Document};</code> |
@@ -2607,32 +2610,33 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/automation.rs:2](../crates/atelier-core/src/application/automation.rs#L2) | <code>use serde::{Deserialize, Serialize};</code> |
 | [crates/atelier-core/src/application/automation.rs:6](../crates/atelier-core/src/application/automation.rs#L6) | <code>pub enum State {</code> |
 | [crates/atelier-core/src/application/automation.rs:17](../crates/atelier-core/src/application/automation.rs#L17) | <code>pub enum Step {</code> |
-| [crates/atelier-core/src/application/automation.rs:27](../crates/atelier-core/src/application/automation.rs#L27) | <code>pub enum PublicationPlan {</code> |
-| [crates/atelier-core/src/application/automation.rs:33](../crates/atelier-core/src/application/automation.rs#L33) | <code>pub struct Flow {</code> |
-| [crates/atelier-core/src/application/automation.rs:34](../crates/atelier-core/src/application/automation.rs#L34) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:35](../crates/atelier-core/src/application/automation.rs#L35) | <code>pub state: State,</code> |
-| [crates/atelier-core/src/application/automation.rs:36](../crates/atelier-core/src/application/automation.rs#L36) | <code>pub step: Step,</code> |
-| [crates/atelier-core/src/application/automation.rs:37](../crates/atelier-core/src/application/automation.rs#L37) | <code>pub project: Document,</code> |
-| [crates/atelier-core/src/application/automation.rs:38](../crates/atelier-core/src/application/automation.rs#L38) | <code>pub requirements: serde_json::Value,</code> |
-| [crates/atelier-core/src/application/automation.rs:39](../crates/atelier-core/src/application/automation.rs#L39) | <code>pub worktree: Worktree,</code> |
-| [crates/atelier-core/src/application/automation.rs:40](../crates/atelier-core/src/application/automation.rs#L40) | <code>pub agent: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:41](../crates/atelier-core/src/application/automation.rs#L41) | <code>pub profile: Document,</code> |
-| [crates/atelier-core/src/application/automation.rs:42](../crates/atelier-core/src/application/automation.rs#L42) | <code>pub model: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:43](../crates/atelier-core/src/application/automation.rs#L43) | <code>pub effort: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:44](../crates/atelier-core/src/application/automation.rs#L44) | <code>pub instructions: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:45](../crates/atelier-core/src/application/automation.rs#L45) | <code>pub run_id: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/automation.rs:46](../crates/atelier-core/src/application/automation.rs#L46) | <code>pub review_id: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/automation.rs:47](../crates/atelier-core/src/application/automation.rs#L47) | <code>pub verification_id: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/automation.rs:48](../crates/atelier-core/src/application/automation.rs#L48) | <code>pub publication_plan: Option&lt;PublicationPlan&gt;,</code> |
-| [crates/atelier-core/src/application/automation.rs:49](../crates/atelier-core/src/application/automation.rs#L49) | <code>pub review_requested: bool,</code> |
-| [crates/atelier-core/src/application/automation.rs:50](../crates/atelier-core/src/application/automation.rs#L50) | <code>pub correction_indexes: Vec&lt;usize&gt;,</code> |
-| [crates/atelier-core/src/application/automation.rs:51](../crates/atelier-core/src/application/automation.rs#L51) | <code>pub cycles: u8,</code> |
-| [crates/atelier-core/src/application/automation.rs:52](../crates/atelier-core/src/application/automation.rs#L52) | <code>pub auto_fix: bool,</code> |
-| [crates/atelier-core/src/application/automation.rs:53](../crates/atelier-core/src/application/automation.rs#L53) | <code>pub started_at: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:54](../crates/atelier-core/src/application/automation.rs#L54) | <code>pub updated_at: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:55](../crates/atelier-core/src/application/automation.rs#L55) | <code>pub message: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:59](../crates/atelier-core/src/application/automation.rs#L59) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
-| [crates/atelier-core/src/application/automation.rs:72](../crates/atelier-core/src/application/automation.rs#L72) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-core/src/application/automation.rs:28](../crates/atelier-core/src/application/automation.rs#L28) | <code>pub enum PublicationPlan {</code> |
+| [crates/atelier-core/src/application/automation.rs:34](../crates/atelier-core/src/application/automation.rs#L34) | <code>pub struct Flow {</code> |
+| [crates/atelier-core/src/application/automation.rs:35](../crates/atelier-core/src/application/automation.rs#L35) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:36](../crates/atelier-core/src/application/automation.rs#L36) | <code>pub state: State,</code> |
+| [crates/atelier-core/src/application/automation.rs:37](../crates/atelier-core/src/application/automation.rs#L37) | <code>pub step: Step,</code> |
+| [crates/atelier-core/src/application/automation.rs:38](../crates/atelier-core/src/application/automation.rs#L38) | <code>pub project: Document,</code> |
+| [crates/atelier-core/src/application/automation.rs:39](../crates/atelier-core/src/application/automation.rs#L39) | <code>pub requirements: serde_json::Value,</code> |
+| [crates/atelier-core/src/application/automation.rs:40](../crates/atelier-core/src/application/automation.rs#L40) | <code>pub worktree: Worktree,</code> |
+| [crates/atelier-core/src/application/automation.rs:41](../crates/atelier-core/src/application/automation.rs#L41) | <code>pub agent: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:42](../crates/atelier-core/src/application/automation.rs#L42) | <code>pub profile: Document,</code> |
+| [crates/atelier-core/src/application/automation.rs:43](../crates/atelier-core/src/application/automation.rs#L43) | <code>pub model: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:44](../crates/atelier-core/src/application/automation.rs#L44) | <code>pub effort: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:45](../crates/atelier-core/src/application/automation.rs#L45) | <code>pub instructions: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:46](../crates/atelier-core/src/application/automation.rs#L46) | <code>pub run_id: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:47](../crates/atelier-core/src/application/automation.rs#L47) | <code>pub review_id: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:48](../crates/atelier-core/src/application/automation.rs#L48) | <code>pub verification_id: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:49](../crates/atelier-core/src/application/automation.rs#L49) | <code>pub publication_plan: Option&lt;PublicationPlan&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:50](../crates/atelier-core/src/application/automation.rs#L50) | <code>pub commit_plan: Option&lt;Box&lt;crate::contracts::LocalCommitPreview&gt;&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:51](../crates/atelier-core/src/application/automation.rs#L51) | <code>pub review_requested: bool,</code> |
+| [crates/atelier-core/src/application/automation.rs:52](../crates/atelier-core/src/application/automation.rs#L52) | <code>pub correction_indexes: Vec&lt;usize&gt;,</code> |
+| [crates/atelier-core/src/application/automation.rs:53](../crates/atelier-core/src/application/automation.rs#L53) | <code>pub cycles: u8,</code> |
+| [crates/atelier-core/src/application/automation.rs:54](../crates/atelier-core/src/application/automation.rs#L54) | <code>pub auto_fix: bool,</code> |
+| [crates/atelier-core/src/application/automation.rs:55](../crates/atelier-core/src/application/automation.rs#L55) | <code>pub started_at: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:56](../crates/atelier-core/src/application/automation.rs#L56) | <code>pub updated_at: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:57](../crates/atelier-core/src/application/automation.rs#L57) | <code>pub message: String,</code> |
+| [crates/atelier-core/src/application/automation.rs:61](../crates/atelier-core/src/application/automation.rs#L61) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-core/src/application/automation.rs:74](../crates/atelier-core/src/application/automation.rs#L74) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
 | [crates/atelier-core/src/application/backups.rs:1](../crates/atelier-core/src/application/backups.rs#L1) | <code>use super::task_creation::Result;</code> |
 | [crates/atelier-core/src/application/backups.rs:2](../crates/atelier-core/src/application/backups.rs#L2) | <code>use crate::document::Document;</code> |
 | [crates/atelier-core/src/application/backups.rs:5](../crates/atelier-core/src/application/backups.rs#L5) | <code>pub enum BackupFailure {</code> |
@@ -4089,7 +4093,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:579](../xtask/src/ui.rs#L579) | <code>use atelier_core::application::updates::Phase;</code> |
 | [xtask/src/ui.rs:668](../xtask/src/ui.rs#L668) | <code>use atelier_app::infrastructure::{prototype::PrototypeDirectory, store::Documents};</code> |
 | [xtask/src/ui.rs:669](../xtask/src/ui.rs#L669) | <code>use atelier_core::document::Document;</code> |
-| [xtask/src/ui.rs:2369](../xtask/src/ui.rs#L2369) | <code>use atelier_core::application::extensions::Registry;</code> |
+| [xtask/src/ui.rs:1386](../xtask/src/ui.rs#L1386) | <code>use std::io::Write;</code> |
+| [xtask/src/ui.rs:2480](../xtask/src/ui.rs#L2480) | <code>use atelier_core::application::extensions::Registry;</code> |
 | [xtask/src/update_flow.rs:1](../xtask/src/update_flow.rs#L1) | <code>use crate::{Result, command, package, root, run};</code> |
 | [xtask/src/update_flow.rs:2](../xtask/src/update_flow.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/update_flow.rs:6](../xtask/src/update_flow.rs#L6) | <code>use atelier_core::application::updates::Phase;</code> |
@@ -4973,12 +4978,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:680](../xtask/src/ui.rs#L680) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:689](../xtask/src/ui.rs#L689) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
 | [xtask/src/ui.rs:694](../xtask/src/ui.rs#L694) | <code>.args([</code> |
-| [xtask/src/ui.rs:2750](../xtask/src/ui.rs#L2750) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:2762](../xtask/src/ui.rs#L2762) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:2767](../xtask/src/ui.rs#L2767) | <code>.args([</code> |
-| [xtask/src/ui.rs:2782](../xtask/src/ui.rs#L2782) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:2788](../xtask/src/ui.rs#L2788) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
-| [xtask/src/ui.rs:3293](../xtask/src/ui.rs#L3293) | <code>.args([</code> |
+| [xtask/src/ui.rs:2861](../xtask/src/ui.rs#L2861) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:2873](../xtask/src/ui.rs#L2873) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:2878](../xtask/src/ui.rs#L2878) | <code>.args([</code> |
+| [xtask/src/ui.rs:2893](../xtask/src/ui.rs#L2893) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:2899](../xtask/src/ui.rs#L2899) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:3404](../xtask/src/ui.rs#L3404) | <code>.args([</code> |
 | [xtask/src/update_flow.rs:58](../xtask/src/update_flow.rs#L58) | <code>.args([</code> |
 | [xtask/src/update_flow.rs:129](../xtask/src/update_flow.rs#L129) | <code>.args(["build", "--locked", "--offline", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/update_flow.rs:183](../xtask/src/update_flow.rs#L183) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |

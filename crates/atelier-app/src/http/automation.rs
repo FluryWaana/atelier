@@ -164,6 +164,28 @@ pub(super) async fn tick(state: &Shared) -> Result<bool> {
         if flow.step == Step::Publication && flow.publication_plan.is_some() {
             return super::workflow_publication::perform(state, &card.id, &flow.id).await;
         }
+        if flow.step == Step::Commit {
+            let id = card.id.clone();
+            let operation = flow.id.clone();
+            let (expected, approved) = state
+                .database
+                .call(move |store| workflow::commit(store, &id, &operation))
+                .await?;
+            let input = atelier_core::contracts::LocalCommitRequest {
+                expected,
+                paths: approved.snapshot.paths,
+                author_name: approved.author_name,
+                author_email: approved.author_email,
+                message: approved.message,
+                confirmed: true,
+            };
+            let committed = super::commits::perform(state, card.id.clone(), input, false).await?;
+            let operation = flow.id.clone();
+            return state
+                .database
+                .call(move |store| workflow::commit_complete(store, &committed, &operation))
+                .await;
+        }
         if flow.run_id.is_some() {
             if flow.step == Step::Review {
                 validate_review(state, &card, &flow).await?;

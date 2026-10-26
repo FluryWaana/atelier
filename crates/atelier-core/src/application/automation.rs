@@ -17,6 +17,7 @@ pub enum State {
 pub enum Step {
     Development,
     Tests,
+    Commit,
     Publication,
     Review,
     Correction,
@@ -46,6 +47,7 @@ pub struct Flow {
     pub review_id: Option<String>,
     pub verification_id: Option<String>,
     pub publication_plan: Option<PublicationPlan>,
+    pub commit_plan: Option<Box<crate::contracts::LocalCommitPreview>>,
     pub review_requested: bool,
     pub correction_indexes: Vec<usize>,
     pub cycles: u8,
@@ -73,6 +75,7 @@ impl Step {
         match self {
             Self::Development => "Développement",
             Self::Tests => "Vérification",
+            Self::Commit => "Commit",
             Self::Publication => "Publication",
             Self::Review => "Review",
             Self::Correction => "Correction",

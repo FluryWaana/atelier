@@ -42,6 +42,8 @@ Cycle R06 candidat raccordé : installation CLI sans écrasement, confiance stoc
 
 ## Points de contrôle
 
+- R05, commit intégré au parcours candidat : aperçu confirmé auteur/message/fichiers/arbre réservé, commit natif commun avec index humain conservé, observation exacte puis nouvelles vérifications ; arrêt/reprise sans recréation automatique. Formulaire raccordé et scénarios de stockage/WebDriver étendus avec fichier marqué synthétique, comparaison d’index et contrôle du résultat après commit. **Non compilés/non exécutés** ; TLS de bout en bout, file par projet, POSIX et qualification restent ouverts.
+
 - R05, enchaînement de publication candidat : après commit explicite, aperçu site/révision/dépôt/branches/commits/contenu figé, consentement séparé pour une branche absente, revérification→push protégé→PR/MR brouillon→review. Réutilisation des intentions existantes, relecture des résultats, suspension sans rejeu après incertitude/arrêt ; préflight des PR/MR recontrôlé avant push. Scénarios de stockage/périmètre et contrôles WebDriver écrits, **non compilés/non exécutés**. Commit intégré au parcours, parcours TLS complet, file par projet et POSIX encore ouverts ; aucun lot ni checklist validé.
 
 - Correction candidate R05 : la review compare désormais le disque au commit source via un index privé et peut conserver un index humain différent après commit. Fichiers réellement non publiés, commit différent et modification pendant comparaison refusés ; scénarios Git et conservation index/FETCH_HEAD écrits, **non compilés/non exécutés**. Exécutions typées des intentions commit/push/PR partagées par les handlers ; orchestration et POSIX restent ouverts.

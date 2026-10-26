@@ -726,7 +726,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             let mut approval:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"publication-approval","title":"Synthetic publication approval","agent":"synthetic-unavailable","repo":"/synthetic/approval-source","status":"todo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/approval-source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"}}).to_string())?;
             let worktree=approval.fields.get::<atelier_core::contracts::Worktree>("worktree")?.ok_or("Synthetic approval worktree missing")?;
             let profile=serde_json::from_str(r#"{"id":"synthetic-unavailable","type":"command","name":"Synthetic unavailable profile"}"#)?;
-            let flow=atelier_core::application::automation::Flow{id:"00000000-0000-4000-8000-000000000007".into(),state:atelier_core::application::automation::State::Waiting,step:atelier_core::application::automation::Step::Publication,project:approval_project,requirements:atelier_core::application::preparation::requirements(&approval)?,worktree:worktree.clone(),agent:"synthetic-unavailable".into(),profile,model:String::new(),effort:String::new(),instructions:String::new(),run_id:None,review_id:None,verification_id:None,publication_plan:None,review_requested:false,correction_indexes:vec![],cycles:0,auto_fix:false,started_at:"2026-10-26T00:00:00Z".into(),updated_at:"2026-10-26T00:00:00Z".into(),message:"Synthetic approval fixture only; no verification performed".into()};
+            let flow=atelier_core::application::automation::Flow{id:"00000000-0000-4000-8000-000000000007".into(),state:atelier_core::application::automation::State::Waiting,step:atelier_core::application::automation::Step::Publication,project:approval_project,requirements:atelier_core::application::preparation::requirements(&approval)?,worktree:worktree.clone(),agent:"synthetic-unavailable".into(),profile,model:String::new(),effort:String::new(),instructions:String::new(),run_id:None,review_id:None,verification_id:None,publication_plan:None,commit_plan:None,review_requested:false,correction_indexes:vec![],cycles:0,auto_fix:false,started_at:"2026-10-26T00:00:00Z".into(),updated_at:"2026-10-26T00:00:00Z".into(),message:"Synthetic approval fixture only; no verification performed".into()};
             approval.fields.set("automation",&flow)?;
             approval.fields.set("forgePublicationPreview",&json!({"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":worktree,"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":false,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic approved publication","body":"Synthetic approval fixture","draft":true}))?;
             store.put(Documents::Cards,&approval)?;
@@ -850,7 +850,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
     time_task_scenario(client, http, &address, &token).await?;
     forge_task_scenario(client, &address).await?;
-    brainstorm_scenario(client, http, &address, &token).await?;
+    brainstorm_scenario(client, http, &address, &token, data.path()).await?;
     stop_server(&mut server, port, &token).await?;
     Ok(())
 }
@@ -1163,6 +1163,7 @@ async fn brainstorm_scenario(
     http: &reqwest::Client,
     address: &str,
     token: &str,
+    data: &Path,
 ) -> Result<()> {
     client
         .goto(&format!("{address}/?task=review-report"))
@@ -1341,6 +1342,116 @@ async fn brainstorm_scenario(
     click(client, "#approve-automation").await?;
     click(client, "#start-automation").await?;
     wait_dom(client,"return document.querySelector('#automation-error')?.textContent.includes('Publie ou lie une PR/MR') && document.querySelector('#approve-automation')?.checked === false;",vec![]).await?;
+    let before: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let task = before
+        .cards
+        .iter()
+        .find(|card| card.id == converted[0].id)
+        .ok_or("Synthetic workflow card missing")?;
+    let worktree = task
+        .fields
+        .get::<atelier_core::contracts::Worktree>("worktree")?
+        .ok_or("Synthetic workflow worktree missing")?;
+    let directory = std::fs::canonicalize(&worktree.path)?;
+    let fixture_root = std::fs::canonicalize(data)?;
+    if !directory.starts_with(&fixture_root)
+        || std::fs::read_to_string(directory.join(".run-fixture"))? != "atelier-r03-synthetic-only"
+    {
+        return Err("Synthetic workflow directory scope required".into());
+    }
+    let metadata = std::fs::read_to_string(directory.join(".git"))?;
+    let git_dir = Path::new(
+        metadata
+            .trim()
+            .strip_prefix("gitdir: ")
+            .ok_or("Synthetic worktree metadata missing")?,
+    );
+    let git_dir = std::fs::canonicalize(if git_dir.is_absolute() {
+        git_dir.to_owned()
+    } else {
+        directory.join(git_dir)
+    })?;
+    if !git_dir.starts_with(&fixture_root) {
+        return Err("Synthetic Git metadata outside fixture".into());
+    }
+    let index = std::fs::read(git_dir.join("index"))?;
+    {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(directory.join("workflow-synthetic-change.txt"))?;
+        file.write_all(b"Synthetic workflow commit, no user data.\n")?;
+        file.sync_all()?;
+    }
+    click(client, "#load-commit-files").await?;
+    wait_dom(client,"return document.querySelector('[data-commit-path=\"workflow-synthetic-change.txt\"]') !== null;",vec![]).await?;
+    click(
+        client,
+        "[data-commit-path=\"workflow-synthetic-change.txt\"]",
+    )
+    .await?;
+    for (selector, text) in [
+        ("#commit-author-name", "Synthetic workflow author"),
+        ("#commit-author-email", "synthetic@example.invalid"),
+        ("#commit-message", "feat: record synthetic workflow content"),
+    ] {
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(text)
+            .await?;
+    }
+    click(client, "#preview-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#confirm-local-commit')?.disabled === false && document.querySelector('#workflow-local-commit')?.offsetParent !== null;",vec![]).await?;
+    click(client, "#confirm-local-commit").await?;
+    click(client, "#workflow-local-commit").await?;
+    wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#commit-author-name')?.value === '' && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
+    let committed: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let task = committed
+        .cards
+        .iter()
+        .find(|card| card.id == converted[0].id)
+        .ok_or("Committed workflow card missing")?;
+    let effect = task
+        .fields
+        .get::<atelier_core::contracts::LocalCommitIntent>("localCommit")?
+        .ok_or("Workflow commit effect missing")?;
+    let flow = task
+        .fields
+        .get::<atelier_core::application::automation::Flow>("automation")?
+        .ok_or("Workflow missing after commit")?;
+    let verified = committed
+        .runs
+        .iter()
+        .find(|run| run.get::<String>("id").ok().flatten() == flow.verification_id)
+        .ok_or("Workflow verification run missing")?;
+    if effect.state != atelier_core::contracts::ForgeWriteState::Confirmed
+        || effect.commit.is_none()
+        || effect.observed != effect.commit
+        || !verified.string_equals("verificationState", "passed")?
+        || std::fs::read(git_dir.join("index"))? != index
+        || std::fs::read(directory.join("workflow-synthetic-change.txt"))?
+            != b"Synthetic workflow commit, no user data.\n"
+    {
+        return Err(
+            "Synthetic workflow commit or verification incomplete, or human index changed".into(),
+        );
+    }
     click(client, "#stop-automation").await?;
     wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Parcours arrêté') && document.querySelector('#stop-automation')?.hidden === true;",vec![]).await?;
     client.refresh().await?;

@@ -1735,5 +1735,15 @@
   "Revérifier, publier cet aperçu et lancer la review": "Recheck, publish this preview and start review",
   "Les sources vérifiées ne correspondent pas au commit approuvé. Prépare le commit avant de publier.": "The verified sources do not match the approved commit. Prepare the commit before publishing.",
   "La PR/MR n’expose pas le commit poussé. Relis ses commits avant de reprendre.": "The PR/MR does not expose the pushed commit. Check its commits before resuming.",
-  "Branche cible absente.": "Target branch missing."
+  "Branche cible absente.": "Target branch missing.",
+  "Commit": "Commit",
+  "Prépare l’aperçu du commit avant d’autoriser son enchaînement.": "Prepare the commit preview before authorizing the workflow.",
+  "Le commit ne correspond pas au worktree du parcours.": "The commit does not match the workflow worktree.",
+  "Le commit exige un aperçu confirmé.": "The commit requires a confirmed preview.",
+  "Le commit du parcours a été arrêté ou remplacé.": "The workflow commit was stopped or replaced.",
+  "Aperçu du commit du parcours absent.": "Workflow commit preview missing.",
+  "Le commit du parcours n’est pas confirmé sur son aperçu. Relis la branche avant de poursuivre.": "The workflow commit is not confirmed against its preview. Read the branch before continuing.",
+  "Commit observé. Les sources vont être revérifiées avant toute publication.": "Commit observed. Sources will be checked again before publication.",
+  "Commit réservé dans le parcours. Les vérifications suivront avant toute publication.": "Commit reserved in the workflow. Verification will follow before publication.",
+  "Créer ce commit dans le parcours puis vérifier": "Create this commit in the workflow, then verify"
 }

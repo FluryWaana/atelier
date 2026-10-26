@@ -84,7 +84,7 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 let profile = profile(store,&agent)?;
                 if body.get::<Document>("profile")?.as_ref().map(serde_json::to_value).transpose()?!=Some(serde_json::to_value(&profile)?) {return Err("Le profil du parcours a changé. Relis ses réglages avant de confirmer.".into());}
                 let stamp = now()?;
-                flow = Some(Flow {id:uuid::Uuid::new_v4().to_string(),state:State::Running,step:Step::Development,project,requirements:preparation::requirements(&card)?,worktree,agent,profile,model:card.fields.get::<String>("model")?.unwrap_or_default(),effort:card.fields.get::<String>("effort")?.unwrap_or_default(),instructions:card.fields.get::<String>("instructions")?.unwrap_or_default(),run_id:None,review_id:None,verification_id:None,publication_plan:None,review_requested:false,correction_indexes:Vec::new(),cycles:0,auto_fix,started_at:stamp.clone(),updated_at:stamp,message:String::new()});
+                flow = Some(Flow {id:uuid::Uuid::new_v4().to_string(),state:State::Running,step:Step::Development,project,requirements:preparation::requirements(&card)?,worktree,agent,profile,model:card.fields.get::<String>("model")?.unwrap_or_default(),effort:card.fields.get::<String>("effort")?.unwrap_or_default(),instructions:card.fields.get::<String>("instructions")?.unwrap_or_default(),run_id:None,review_id:None,verification_id:None,publication_plan:None,commit_plan:None,review_requested:false,correction_indexes:Vec::new(),cycles:0,auto_fix,started_at:stamp.clone(),updated_at:stamp,message:String::new()});
             },
             Some("resume") => {
                 let active = flow.as_mut().ok_or("Aucun parcours à reprendre.")?;
@@ -93,7 +93,8 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 // Repeating an interrupted local step requires this new explicit confirmation.
                 active.run_id = None; active.state = State::Running; active.message.clear();
                 active.publication_plan=None;
-                if matches!(active.step,Step::Publication|Step::Review) { active.step = Step::Tests; }
+                active.commit_plan=None;
+                if matches!(active.step,Step::Commit|Step::Publication|Step::Review) { active.step = Step::Tests; }
             },
             Some("review") => {
                 let active = flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
@@ -101,6 +102,13 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 let linked = card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
                 if active.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.source_branch != active.worktree.branch { return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into()); }
                 active.review_requested=true;active.step=Step::Tests;active.state=State::Running;active.run_id=None;active.message.clear();
+            },
+            Some("commit") => {
+                let active=flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
+                current(store,&card,active)?;
+                let preview=card.fields.get::<atelier_core::contracts::LocalCommitPreview>("localCommitPreview")?.ok_or("Prépare l’aperçu du commit avant d’autoriser son enchaînement.")?;
+                if preview.worktree!=active.worktree || preview.snapshot.branch!=active.worktree.branch {return Err("Le commit ne correspond pas au worktree du parcours.".into());}
+                active.commit_plan=Some(Box::new(preview));active.publication_plan=None;active.review_requested=false;active.step=Step::Commit;active.state=State::Running;active.run_id=None;active.message.clear();
             },
             Some("publish") => {
                 let active=flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
@@ -228,6 +236,45 @@ pub fn fail(store: &Store<'_>, id: &str, operation: &str, message: &str) -> Resu
     })
 }
 
+pub fn commit(
+    store: &Store<'_>,
+    id: &str,
+    operation: &str,
+) -> Result<(Card, atelier_core::contracts::LocalCommitPreview)> {
+    let card = store
+        .document::<Card>(Documents::Cards, id)?
+        .ok_or("Carte introuvable.")?;
+    let card = super::forge_association::snapshot(store, &card)?;
+    let flow = read(&card)?
+        .filter(|flow| {
+            flow.id == operation
+                && flow.state == State::Running
+                && flow.step == Step::Commit
+                && flow.run_id.is_none()
+        })
+        .ok_or("Le commit du parcours a été arrêté ou remplacé.")?;
+    current(store, &card, &flow)?;
+    Ok((
+        card,
+        *flow
+            .commit_plan
+            .ok_or("Aperçu du commit du parcours absent.")?,
+    ))
+}
+pub fn commit_complete(store: &Store<'_>, expected: &Card, operation: &str) -> Result<()> {
+    store.transaction(|store| {
+        super::forge_association::snapshot(store,expected)?;
+        let (mut card,approved)=commit(store,&expected.id,operation)?;
+        let effect=card.fields.get::<atelier_core::contracts::LocalCommitIntent>("localCommit")?.ok_or("Intention de commit absente.")?;
+        if effect.state!=atelier_core::contracts::ForgeWriteState::Confirmed || effect.commit.is_none() || effect.observed!=effect.commit || serde_json::to_value(effect.preview)?!=serde_json::to_value(approved)? {
+            return Err("Le commit du parcours n’est pas confirmé sur son aperçu. Relis la branche avant de poursuivre.".into());
+        }
+        let mut flow=read(&card)?.ok_or("Parcours absent.")?;
+        flow.commit_plan=None;flow.publication_plan=None;flow.verification_id=None;flow.step=Step::Tests;flow.run_id=None;flow.review_requested=false;flow.message="Commit observé. Les sources vont être revérifiées avant toute publication.".into();
+        save(store,&mut card,&mut flow)
+    })
+}
+
 pub fn publication(
     store: &Store<'_>,
     id: &str,
@@ -321,6 +368,7 @@ pub fn claim(
                 body.set("indexes", &flow.correction_indexes)?;
             }
             Step::Publication => return Err("La publication exige un contrôle explicite.".into()),
+            Step::Commit => return Err("Le commit exige un aperçu confirmé.".into()),
         }
         Ok((card, flow, body))
     })
@@ -336,7 +384,7 @@ pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
         if runs::active(&run)? {return Ok(());}
         if !run.string_equals("automationId",operation)? || !run.string_equals("cardId",id)? || !run.string_equals("status","completed")? || run.get::<i32>("exitCode")?!=Some(0) || run.truthy("attention")? {return Err("L’étape du parcours n’a pas abouti. Consulte le journal avant de reprendre.".into());}
         match flow.step {
-            Step::Development|Step::Correction => {flow.step=Step::Tests;flow.review_requested=false;flow.publication_plan=None;},
+            Step::Development|Step::Correction => {flow.step=Step::Tests;flow.review_requested=false;flow.publication_plan=None;flow.commit_plan=None;},
             Step::Tests => {
                 if !run.string_equals("purpose","verification")? || !run.string_equals("verificationState","passed")? {return Err("La vérification du parcours a échoué ou ses sources ont changé.".into());}
                 flow.verification_id=Some(run_id.clone());
@@ -357,6 +405,7 @@ pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
                 }
             },
             Step::Publication => return Err("La publication exige un contrôle explicite.".into()),
+            Step::Commit => return Err("Le commit exige un aperçu confirmé.".into()),
         }
         flow.run_id=None;save(store,&mut card,&mut flow)
     })
@@ -632,5 +681,92 @@ mod tests {
                 .raw("forgePublication")
                 .is_none()
         );
+    }
+
+    #[test]
+    fn workflow_commit_keeps_the_approved_snapshot_and_never_treats_commit_as_verification() {
+        let home = tempfile::tempdir().unwrap();
+        let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        let (initial, project) = seed(&store);
+        let started = change(&store, "task", &body(&initial, &project, "start")).unwrap();
+        let mut flow = read(&started).unwrap().unwrap();
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "commit-development",
+            json!({"purpose":"work"}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        flow = read(&card(&store)).unwrap().unwrap();
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "commit-prior-tests",
+            json!({"purpose":"verification","verificationState":"passed"}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        let mut ready = card(&store);
+        assert!(change(&store, "task", &body(&ready, &project, "commit")).is_err());
+        let preview = atelier_core::contracts::LocalCommitPreview {
+            worktree: flow.worktree.clone(),
+            snapshot: atelier_core::contracts::LocalCommitSnapshot {
+                branch: "task".into(),
+                head: "a".repeat(40),
+                tree: "b".repeat(40),
+                paths: vec!["file.txt".into()],
+            },
+            author_name: "Synthetic author".into(),
+            author_email: "synthetic@example.invalid".into(),
+            message: "Synthetic immutable commit".into(),
+        };
+        ready.fields.set("localCommitPreview", &preview).unwrap();
+        store.put(Documents::Cards, &ready).unwrap();
+        let authorized = change(&store, "task", &body(&ready, &project, "commit")).unwrap();
+        let (_, frozen) = commit(&store, "task", &flow.id).unwrap();
+        assert_eq!(
+            serde_json::to_value(frozen).unwrap(),
+            serde_json::to_value(&preview).unwrap()
+        );
+        assert!(read(&authorized).unwrap().unwrap().step == Step::Commit);
+        assert!(commit_complete(&store, &authorized, &flow.id).is_err());
+        let mut observed = authorized;
+        let mut effect = atelier_core::contracts::LocalCommitIntent {
+            id: "synthetic-effect".into(),
+            state: atelier_core::contracts::ForgeWriteState::Confirmed,
+            preview: preview.clone(),
+            commit: Some("c".repeat(40)),
+            observed: Some("d".repeat(40)),
+        };
+        observed.fields.set("localCommit", &effect).unwrap();
+        store.put(Documents::Cards, &observed).unwrap();
+        assert!(commit_complete(&store, &observed, &flow.id).is_err());
+        effect.observed = effect.commit.clone();
+        observed.fields.set("localCommit", &effect).unwrap();
+        store.put(Documents::Cards, &observed).unwrap();
+        commit_complete(&store, &observed, &flow.id).unwrap();
+        let finished = card(&store);
+        let flow = read(&finished).unwrap().unwrap();
+        assert!(
+            flow.state == State::Running
+                && flow.step == Step::Tests
+                && flow.commit_plan.is_none()
+                && flow.verification_id.is_none()
+        );
+        assert_eq!(finished.title, initial.title);
+        assert_eq!(
+            finished
+                .fields
+                .get::<Vec<serde_json::Value>>("checklist")
+                .unwrap()
+                .unwrap()[0]["done"],
+            false
+        );
+        recover(&store).unwrap();
+        let resumed = change(&store, "task", &body(&card(&store), &project, "resume")).unwrap();
+        let flow = read(&resumed).unwrap().unwrap();
+        assert!(flow.step == Step::Tests && flow.commit_plan.is_none());
+        cancel(&store, "task", &flow.id).unwrap();
+        assert!(commit(&store, "task", &flow.id).is_err());
     }
 }
