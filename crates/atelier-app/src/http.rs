@@ -689,7 +689,9 @@ async fn serve_mode(
         .route("/api/projects", post(projects::create))
         .route(
             "/api/repositories",
-            get(repository_access::read).post(repository_access::register),
+            get(repository_access::read)
+                .post(repository_access::register)
+                .delete(repository_access::revoke),
         )
         .route("/api/projects/archive-tasks", post(projects::archive))
         .route(

@@ -174,3 +174,53 @@ pub fn register(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Resul
     publish::write_private(root, Path::new(FILE), &bytes, false)?;
     Ok(registry)
 }
+
+pub fn revoke(
+    root: &Dir,
+    path: &str,
+    expected: u64,
+    confirmed: bool,
+    in_use: bool,
+) -> Result<Registry> {
+    let selected = path_string(Path::new(path)).utf8()?;
+    if !confirmed {
+        return Err("Confirme le retrait de cette autorisation locale.".into());
+    }
+    if in_use {
+        return Err("Ce dépôt est encore référencé par les réglages, projets ou tâches. Conserve son autorisation ou retire ces références explicitement.".into());
+    }
+    let mut registry = read(root)?;
+    if registry.revision != expected {
+        return Err("Les autorisations de dépôts ont changé. Recharge la liste.".into());
+    }
+    let position = registry
+        .repositories
+        .iter()
+        .position(|entry| {
+            atelier_core::domain::projects::same_repository(&entry.path, &selected, cfg!(windows))
+        })
+        .ok_or("Autorisation de dépôt introuvable.")?;
+    registry.repositories.remove(position);
+    registry.revision = registry
+        .revision
+        .checked_add(1)
+        .ok_or("Révision des dépôts épuisée.")?;
+    publish::write_private(
+        root,
+        Path::new(FILE),
+        &serde_json::to_vec(&registry)?,
+        false,
+    )?;
+    Ok(registry)
+}
+
+pub fn references(value: &serde_json::Value, path: &str) -> bool {
+    match value {
+        serde_json::Value::String(value) => {
+            atelier_core::domain::projects::same_repository(value, path, cfg!(windows))
+        }
+        serde_json::Value::Array(values) => values.iter().any(|value| references(value, path)),
+        serde_json::Value::Object(values) => values.values().any(|value| references(value, path)),
+        _ => false,
+    }
+}

@@ -1820,5 +1820,10 @@
   "Autoriser Atelier à utiliser ce dépôt et ses futurs worktrees après mes confirmations.": "Authorize Atelier to use this repository and its future worktrees after my confirmations.",
   "Autoriser ce dépôt": "Authorize this repository",
   "Recharger les autorisations": "Reload authorizations",
-  "Registre des dépôts trop volumineux.": "The repository registry is too large."
+  "Registre des dépôts trop volumineux.": "The repository registry is too large.",
+  "Confirme le retrait de cette autorisation locale.": "Confirm removal of this local authorization.",
+  "Ce dépôt est encore référencé par les réglages, projets ou tâches. Conserve son autorisation ou retire ces références explicitement.": "This repository is still referenced by settings, projects or tasks. Keep its authorization or explicitly remove those references.",
+  "Autorisation de dépôt introuvable.": "Repository authorization not found.",
+  "Retirer seulement cette autorisation locale, sans supprimer le dépôt.": "Remove only this local authorization, without deleting the repository.",
+  "Retirer l’autorisation": "Remove authorization"
 }

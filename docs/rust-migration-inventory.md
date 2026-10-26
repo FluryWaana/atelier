@@ -1985,6 +1985,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/repository_access.rs:92](../crates/atelier-app/src/infrastructure/repository_access.rs#L92) | <code>use windows_sys::Win32::Storage::FileSystem::{</code> |
 | [crates/atelier-app/src/infrastructure/repository_access.rs:114](../crates/atelier-app/src/infrastructure/repository_access.rs#L114) | <code>pub fn open(root: &amp;Dir, path: &amp;Path) -&gt; Result&lt;Dir&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/repository_access.rs:132](../crates/atelier-app/src/infrastructure/repository_access.rs#L132) | <code>pub fn register(root: &amp;Dir, path: &amp;str, expected: u64, confirmed: bool) -&gt; Result&lt;Registry&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/repository_access.rs:178](../crates/atelier-app/src/infrastructure/repository_access.rs#L178) | <code>pub fn revoke(</code> |
+| [crates/atelier-app/src/infrastructure/repository_access.rs:217](../crates/atelier-app/src/infrastructure/repository_access.rs#L217) | <code>pub fn references(value: &amp;serde_json::Value, path: &amp;str) -&gt; bool {</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:1](../crates/atelier-app/src/infrastructure/reviews.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:8](../crates/atelier-app/src/infrastructure/reviews.rs#L8) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:9](../crates/atelier-app/src/infrastructure/reviews.rs#L9) | <code>use atelier_core::{</code> |
@@ -2509,7 +2511,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/repository-access.rs:3](../crates/atelier-app/tests/repository-access.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/tests/repository-access.rs:4](../crates/atelier-app/tests/repository-access.rs#L4) | <code>use std::fs;</code> |
 | [crates/atelier-app/tests/repository-access.rs:5](../crates/atelier-app/tests/repository-access.rs#L5) | <code>#[test]</code> |
-| [crates/atelier-app/tests/repository-access.rs:49](../crates/atelier-app/tests/repository-access.rs#L49) | <code>#[test]</code> |
+| [crates/atelier-app/tests/repository-access.rs:60](../crates/atelier-app/tests/repository-access.rs#L60) | <code>#[test]</code> |
 | [crates/atelier-app/tests/reviews.rs:1](../crates/atelier-app/tests/reviews.rs#L1) | <code>use atelier_app::infrastructure::{database::Database, reviews, runs, store::Documents};</code> |
 | [crates/atelier-app/tests/reviews.rs:2](../crates/atelier-app/tests/reviews.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/reviews.rs:7](../crates/atelier-app/tests/reviews.rs#L7) | <code>use serde_json::json;</code> |

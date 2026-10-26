@@ -44,6 +44,17 @@ fn external_repositories_require_exact_local_authorization_and_keep_human_files(
     drop(repository_access::open(&root, &source).unwrap());
     let traversal = source.join("..").join("other");
     assert!(repository_access::register(&root, traversal.to_str().unwrap(), 2, true).is_err());
+    assert!(repository_access::references(
+        &serde_json::json!({"project":{"frontRepo":source_text}}),
+        source_text
+    ));
+    assert!(repository_access::revoke(&root, source_text, 2, true, true).is_err());
+    assert!(repository_access::revoke(&root, source_text, 1, true, false).is_err());
+    assert!(repository_access::revoke(&root, source_text, 2, false, false).is_err());
+    let removed = repository_access::revoke(&root, source_text, 2, true, false).unwrap();
+    assert!(removed.repositories.is_empty());
+    assert!(source.join(".git").is_dir());
+    assert!(repository_access::open(&root, &source).is_err());
 }
 #[cfg(unix)]
 #[test]

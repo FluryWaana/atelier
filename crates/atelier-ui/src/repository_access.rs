@@ -20,6 +20,7 @@ pub fn RepositoryAccess(
     let registry = RwSignal::new(None::<Registry>);
     let path = RwSignal::new(String::new());
     let approved = RwSignal::new(String::new());
+    let remove_ack = RwSignal::new(String::new());
     let loading = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let alive = Rc::new(Cell::new(true));
@@ -28,7 +29,7 @@ pub fn RepositoryAccess(
         mounted.with_value(|alive| alive.set(false));
         let _ = dirty.try_update(|value| *value = false);
     });
-    Effect::new(move |_| dirty.set(!path.get().is_empty()));
+    Effect::new(move |_| dirty.set(!path.get().is_empty() || !remove_ack.get().is_empty()));
     let key = Memo::new(move |_| {
         registry.get().map(|registry| {
             serde_json::json!({"revision":registry.revision,"path":path.get()}).to_string()
@@ -37,6 +38,7 @@ pub fn RepositoryAccess(
     Effect::new(move |_| {
         let _ = key.get();
         approved.set(String::new());
+        remove_ack.set(String::new());
     });
     let reading = alive.clone();
     let load = StoredValue::new_local(move || {
@@ -72,6 +74,50 @@ pub fn RepositoryAccess(
         });
     });
     Effect::new(move |_| load.with_value(|load| load()));
+    let revoking = alive.clone();
+    let revoke = StoredValue::new_local(move |selected: String| {
+        if pending.get_untracked()
+            || loading.get_untracked()
+            || remove_ack.get_untracked() != selected
+        {
+            return;
+        }
+        let Some(current) = registry
+            .get_untracked()
+            .filter(|registry| registry.available)
+        else {
+            return;
+        };
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(message) => {
+                error.set(message);
+                return;
+            }
+        };
+        let body = serde_json::json!({"path":selected,"expectedRevision":current.revision,"confirmed":true});
+        pending.set(true);
+        remove_ack.set(String::new());
+        error.set(String::new());
+        let alive = revoking.clone();
+        spawn_local(async move {
+            let result = async {
+                write(&credential, Method::DELETE, "/api/repositories", &body)
+                    .await?
+                    .json::<Registry>()
+                    .await
+                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+            }
+            .await;
+            if alive.get() {
+                match result {
+                    Ok(value) => registry.set(Some(value)),
+                    Err(message) => error.set(message),
+                }
+                pending.set(false);
+            }
+        });
+    });
     let save = move |_| {
         if pending.get_untracked()
             || loading.get_untracked()
@@ -122,7 +168,7 @@ pub fn RepositoryAccess(
     view! {<section class="task-files" aria-labelledby="repository-access-heading" aria-busy=move||loading.get().to_string()>
         <h3 id="repository-access-heading">{move||i18n.text("Dépôts autorisés sur cet ordinateur")}</h3>
         <p class="field-help">{move||i18n.text("Autorise le dossier principal Git avant de le choisir dans un projet. Cette autorisation locale ne modifie aucun fichier du dépôt et ne lance aucune commande. Les sauvegardes de la base ne la transfèrent pas sur un autre ordinateur.")}</p>
-        <ul>{move||registry.get().map(|registry|registry.repositories).unwrap_or_default().into_iter().map(|path|view!{<li><code>{path}</code></li>}).collect_view()}</ul>
+        <ul>{move||registry.get().map(|registry|registry.repositories).unwrap_or_default().into_iter().map(|path|{let selected=StoredValue::new(path.clone());view!{<li><code>{path}</code><label><input class="confirm-revoke-repository" type="checkbox" disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available) prop:checked=move||remove_ack.get()==selected.get_value() on:change=move|event|remove_ack.set(if event_target_checked(&event){selected.get_value()}else{String::new()})/>{move||i18n.text("Retirer seulement cette autorisation locale, sans supprimer le dépôt.")}</label><button class="revoke-repository" type="button" disabled=move||pending.get()||loading.get()||remove_ack.get()!=selected.get_value() on:click=move |_|revoke.with_value(|revoke|revoke(selected.get_value()))>{move||i18n.text("Retirer l’autorisation")}</button></li>}}).collect_view()}</ul>
         <p hidden=move||registry.get().is_none_or(|registry|registry.available)>{move||i18n.text("Autorise les dépôts depuis le lanceur natif.")}</p>
         <fieldset disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available)>
             <label for="repository-access-path">{move||i18n.text("Dossier du dépôt à autoriser")}</label><input id="repository-access-path" maxlength="2000" spellcheck="false" prop:value=move||path.get() on:input=move|event|path.set(event_target_value(&event))/>
