@@ -1,5 +1,99 @@
 use crate::Result;
 use std::path::Path;
+
+pub fn recover_command(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<()> {
+    let mut args = args.into_iter();
+    if args.next().as_deref() != Some(std::ffi::OsStr::new("--root")) {
+        return Err("Indique --root DOSSIER_INSTALLATION_ABSOLU --confirm.".into());
+    }
+    let root = args
+        .next()
+        .map(std::path::PathBuf::from)
+        .ok_or("Installation absente.")?;
+    if !root.is_absolute()
+        || root
+            .to_str()
+            .is_none_or(|root| root.len() > 32_000 || root.chars().any(char::is_control))
+        || args.next().as_deref() != Some(std::ffi::OsStr::new("--confirm"))
+        || args.next().is_some()
+    {
+        return Err("Confirme explicitement le dossier absolu de maintenance à récupérer.".into());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let receipt = recover(&root, || {
+            super::installed::verify_all(&root, super::package::native_target()?)
+        })?;
+        println!(
+            "Maintenance récupérée ; ancien marqueur conservé : {}",
+            receipt.display()
+        );
+        Ok(())
+    }
+    #[cfg(not(target_os = "linux"))]
+    Err("La récupération de marqueur de paquet concerne uniquement les paquets Linux.".into())
+}
+
+#[cfg(target_os = "linux")]
+fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path::PathBuf> {
+    use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+    use cap_std::fs::MetadataExt;
+    use std::{io::Write, os::fd::AsRawFd};
+    const MARKER: &str = ".package-maintenance";
+    const CONTENT: &[u8] = b"atelier-package-maintenance/1\n";
+    let directory = super::repository_access::absolute(root)?;
+    let original = directory.dir_metadata()?;
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
+    let lock = directory.open_with(".package-lock", &options)?.into_std();
+    super::checked_file::CheckedFile::from_file(lock.try_clone()?)?.single_link()?;
+    if lock.metadata()?.len() != 0 {
+        return Err("Verrou de paquet modifié ; contenu conservé.".into());
+    }
+    // Match the shared lock held by every Linux packaged server, without stopping any process.
+    if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        return Err("Arrête toutes les instances et opérations du gestionnaire de paquets avant la récupération.".into());
+    }
+    let marker =
+        super::checked_file::CheckedFile::open_in(&directory, Path::new(MARKER))?.single_link()?;
+    if marker.open_same(&root.join(MARKER))?.read(64)? != CONTENT {
+        return Err("Marqueur de maintenance étranger ; contenu conservé pour examen.".into());
+    }
+    verify()?;
+    let current = super::repository_access::absolute(root)?.dir_metadata()?;
+    if original.dev() != current.dev() || original.ino() != current.ino() {
+        return Err("Le dossier d’installation a changé ; aucune récupération appliquée.".into());
+    }
+    if marker.open_same(&root.join(MARKER))?.read(64)? != CONTENT {
+        return Err("Le marqueur a été modifié ; récupération refusée, contenu conservé.".into());
+    }
+    let receipt = format!(".package-maintenance-recovered-{}", uuid::Uuid::new_v4());
+    directory.rename(MARKER, &directory, &receipt)?;
+    if !matches!(marker.open_same(&root.join(&receipt)).and_then(|file| file.read(64)), Ok(bytes) if bytes == CONTENT)
+    {
+        // Preserve the raced file and leave the installation blocked, without replacing another marker.
+        let mut blocked = cap_std::fs::OpenOptions::new();
+        blocked
+            .write(true)
+            .create_new(true)
+            .follow(FollowSymlinks::No);
+        match directory.open_with(MARKER, &blocked) {
+            Ok(mut file) => {
+                file.write_all(CONTENT)?;
+                file.sync_all()?;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(_) => return Err("Le marqueur a changé et n’a pas pu être rétabli. Ne relance pas Atelier ; conserve le reçu et fais vérifier l’installation.".into()),
+        }
+        return Err(
+            "Le marqueur a changé pendant la récupération ; installation conservée et bloquée."
+                .into(),
+        );
+    }
+    directory.try_clone()?.into_std_file().sync_all()?;
+    Ok(root.join(receipt))
+}
+
 pub struct Guard {
     #[cfg(windows)]
     _running: std::os::windows::io::OwnedHandle,
@@ -19,13 +113,17 @@ pub fn acquire(root: Option<&Path>) -> Result<Guard> {
         let Some(root) = root else {
             return Ok(Guard { _lock: None });
         };
-        let directory = cap_std::fs::Dir::open_ambient_dir(root, cap_std::ambient_authority())?;
+        let directory = super::repository_access::absolute(root)?;
         let marker = || -> Result<()> {
             match directory.symlink_metadata(".package-maintenance") {Ok(_)=>Err("Une installation ou désinstallation est en cours. Termine sa récupération avant de lancer Atelier.".into()),Err(error) if error.kind()==std::io::ErrorKind::NotFound=>Ok(()),Err(error)=>Err(error.into())}
         };
         marker()?;
         let file = match directory.symlink_metadata(".package-lock") {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if super::installation::mode(root)? == super::installation::InstallationMode::System
+                {
+                    return Err("Verrou du paquet système absent ; termine l’installation avant de démarrer Atelier.".into());
+                }
                 return Ok(Guard { _lock: None });
             }
             Err(error) => return Err(error.into()),
@@ -34,7 +132,8 @@ pub fn acquire(root: Option<&Path>) -> Result<Guard> {
                 let mut options = cap_std::fs::OpenOptions::new();
                 options.read(true).follow(FollowSymlinks::No).nonblock(true);
                 let file = directory.open_with(".package-lock", &options)?.into_std();
-                if !file.metadata()?.is_file() {
+                super::checked_file::CheckedFile::from_file(file.try_clone()?)?.single_link()?;
+                if !file.metadata()?.is_file() || file.metadata()?.len() != 0 {
                     return Err("Fichier de verrou du paquet invalide.".into());
                 }
                 file
@@ -126,6 +225,84 @@ fn windows_named(running_name: &str, maintenance_name: &str) -> Result<Guard> {
 mod tests {
     use super::*;
     use std::os::fd::AsRawFd;
+    #[test]
+    fn a_system_installation_cannot_start_during_an_incomplete_unpack() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(
+            root.path().join("installation.json"),
+            r#"{"format":"atelier-rust-installation/1","mode":"system"}"#,
+        )
+        .unwrap();
+        assert!(acquire(Some(root.path())).is_err());
+        std::fs::write(root.path().join(".package-lock"), []).unwrap();
+        assert!(acquire(Some(root.path())).is_ok());
+    }
+    #[test]
+    fn recovery_preserves_a_receipt_and_refuses_foreign_or_changed_state() {
+        for fault in ["none", "signature", "edited"] {
+            let root = tempfile::tempdir().unwrap();
+            std::fs::write(root.path().join(".package-lock"), []).unwrap();
+            let marker = root.path().join(".package-maintenance");
+            std::fs::write(&marker, "atelier-package-maintenance/1\n").unwrap();
+            std::fs::write(root.path().join("synthetic-data"), "human content").unwrap();
+            let result = recover(root.path(), || {
+                if fault == "signature" {
+                    return Err("Synthetic signature refusal".into());
+                }
+                if fault == "edited" {
+                    std::fs::write(&marker, "human maintenance edit")?;
+                }
+                Ok(())
+            });
+            if fault == "none" {
+                let receipt = result.unwrap();
+                assert!(!marker.exists());
+                assert_eq!(
+                    std::fs::read(receipt).unwrap(),
+                    b"atelier-package-maintenance/1\n"
+                );
+                assert!(acquire(Some(root.path())).is_ok());
+            } else {
+                assert!(result.is_err());
+                assert!(marker.exists());
+                assert!(acquire(Some(root.path())).is_err());
+                if fault == "edited" {
+                    assert_eq!(
+                        std::fs::read_to_string(&marker).unwrap(),
+                        "human maintenance edit"
+                    );
+                }
+            }
+            assert_eq!(
+                std::fs::read_to_string(root.path().join("synthetic-data")).unwrap(),
+                "human content"
+            );
+        }
+    }
+
+    #[test]
+    fn recovery_cannot_overlap_a_server_or_follow_a_linked_marker() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join(".package-lock"), []).unwrap();
+        let server = acquire(Some(root.path())).unwrap();
+        let marker = root.path().join(".package-maintenance");
+        std::fs::write(&marker, "atelier-package-maintenance/1\n").unwrap();
+        assert!(
+            recover(root.path(), || panic!(
+                "verification must not run while a server owns the lock"
+            ))
+            .is_err()
+        );
+        drop(server);
+        let linked = root.path().join("human-marker-copy");
+        std::fs::hard_link(&marker, &linked).unwrap();
+        assert!(recover(root.path(), || panic!("linked marker must not be trusted")).is_err());
+        assert_eq!(
+            std::fs::read(linked).unwrap(),
+            b"atelier-package-maintenance/1\n"
+        );
+        assert!(marker.exists());
+    }
     #[test]
     fn maintenance_and_live_servers_exclude_each_other_without_touching_data() {
         let root = tempfile::tempdir().unwrap();
