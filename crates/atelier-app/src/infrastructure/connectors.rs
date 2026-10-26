@@ -222,6 +222,7 @@ pub fn configure(
     for (key, value) in &input.values {
         next.values.insert(key.clone(), value.clone());
     }
+    super::connector_effects::require_configuration(store, &next)?;
     let fields = original
         .manifest
         .fields
@@ -307,6 +308,7 @@ pub fn remove(
         return Err("Confirme le retrait du connecteur et de ses secrets locaux. Les cartes sont conservées.".into());
     }
     let original = profile(store, id, expected)?;
+    super::connector_effects::require_removal(store, id)?;
     let mut stored = store.settings::<Document>()?;
     let mut profiles = profiles(&stored)?;
     let mut tokens = settings::load(store, protect)?;

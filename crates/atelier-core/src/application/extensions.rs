@@ -80,6 +80,68 @@ pub struct Invocation {
     pub confirmed: bool,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RemoteOperation {
+    pub id: String,
+    pub module: String,
+    pub version: u64,
+    pub revision: u64,
+    pub manifest: Manifest,
+    pub binary: Binary,
+    pub values: BTreeMap<String, Value>,
+    pub action: String,
+    pub input: Value,
+    pub state: crate::contracts::ForgeWriteState,
+    pub started_at: String,
+    pub updated_at: String,
+    pub reply: Option<Reply>,
+    pub request_id: Option<String>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RemotePreview {
+    pub expected_revision: u64,
+    pub action: String,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RemoteCommand {
+    pub expected_revision: u64,
+    pub expected_version: u64,
+    pub confirmed: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RemoteReceipt {
+    pub operation_id: String,
+    pub outcome: RemoteOutcome,
+    pub reference: String,
+    pub observed_at: String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteOutcome {
+    Applied,
+    NotAttempted,
+    Unknown,
+}
+pub fn remote_receipt(output: &Value, operation_id: &str) -> Result<Option<RemoteReceipt>> {
+    let Some(value) = output.get("receipt") else {
+        return Ok(None);
+    };
+    let receipt: RemoteReceipt =
+        serde_json::from_value(value.clone()).map_err(|_| "Observation du connecteur invalide.")?;
+    if receipt.operation_id != operation_id
+        || receipt.reference.trim().is_empty()
+        || !text(&receipt.reference, 2000, false)
+        || !text(&receipt.observed_at, 100, false)
+    {
+        return Err("L’observation ne correspond pas à l’opération d’origine.");
+    }
+    Ok(Some(receipt))
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TicketIdentity {

@@ -28,7 +28,7 @@ impl Draft {
     }
 }
 
-fn translated(i18n: I18n, manifest: &Manifest, message: &str) -> String {
+pub(super) fn translated(i18n: I18n, manifest: &Manifest, message: &str) -> String {
     manifest
         .translations
         .get(i18n.code())
@@ -74,6 +74,7 @@ pub fn Connectors(
     let project = RwSignal::new(None::<atelier_core::document::Document>);
     let import_approved = RwSignal::new(false);
     let import_dirty = Memo::new(move |_| !tickets.get().is_empty() || project.get().is_some());
+    let effects_dirty = RwSignal::new(false);
     let profile_dirty = Memo::new(move |_| {
         original
             .get()
@@ -81,6 +82,7 @@ pub fn Connectors(
     });
     let own_dirty = Memo::new(move |_| {
         profile_dirty.get()
+            || effects_dirty.get()
             || import_dirty.get()
             || !module.get().is_empty()
             || !path.get().is_empty()
@@ -382,7 +384,7 @@ pub fn Connectors(
         <div class="editor-actions"><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
             let manifest=StoredValue::new(connection.installed.manifest.clone());
             let connection=StoredValue::new(connection);
-            view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get()||import_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
+            view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
         }/></div>
         <div hidden=move||original.get().is_none()>
             <h4>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name))}</h4>
@@ -435,8 +437,9 @@ pub fn Connectors(
                 </div>
             </fieldset>
         </div>
+        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
         <h4>{move||i18n.text("Ajouter un connecteur")}</h4>
-        <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
+        <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
             <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("Préparer Azure Work Items intégré")}</button>
             <p class="field-help">{move||i18n.text("Le connecteur Azure utilise le programme Atelier livré. Lis son manifeste et confirme son installation ; le PAT sera demandé ensuite, sans connexion implicite.")}</p>
             <label for="connector-module">{move||i18n.text("Identifiant du module")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>

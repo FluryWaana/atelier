@@ -33,6 +33,7 @@ pub fn config(stored: &Document) -> Result<Document> {
 pub fn public_config(stored: &Document, tokens: &Document, platform: &str) -> Result<Document> {
     let mut config = config(stored)?;
     config.remove("jiraImportReservation");
+    config.remove("connectorEffects");
     config.set("platform", &platform)?;
     for (service, flag) in [
         ("jira", "tokenSet"),

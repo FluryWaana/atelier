@@ -115,6 +115,15 @@ impl BackupDirectory {
     }
 
     pub fn create(&self, store: &Store<'_>) -> Result<CreatedBackup> {
+        if super::connector_effects::read(&store.settings::<Document>()?)?
+            .iter()
+            .any(super::connector_effects::pending)
+        {
+            return Err(BackupFailure::Conflict(
+                "Termine ou rapproche les écritures de connecteurs avant une sauvegarde.",
+            )
+            .into());
+        }
         let name = new_name()?;
         store.backup_in(&self.handle, Path::new(&name))?;
         Ok(CreatedBackup {
@@ -190,6 +199,16 @@ fn restore_checked(
     rescue: impl FnOnce() -> Result<()>,
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
+    let current_effects = super::connector_effects::read(&store.settings::<Document>()?)?;
+    if current_effects
+        .iter()
+        .any(super::connector_effects::pending)
+    {
+        return Err(BackupFailure::Conflict(
+            "Rapproche les écritures de connecteurs avant une restauration.",
+        )
+        .into());
+    }
     for card in store.documents::<Document>(Documents::Cards)? {
         if let Some(flow) = card.get::<Document>("automation")?
             && flow.string_equals("state", "running")?
@@ -226,8 +245,43 @@ fn restore_checked(
     let source_settings: Option<String> = source
         .query_row("SELECT data FROM settings WHERE id=1", [], |row| row.get(0))
         .optional()?;
+    if source_settings.is_none()
+        && current_effects.iter().any(|operation| {
+            matches!(
+                operation.state,
+                atelier_core::contracts::ForgeWriteState::Confirmed
+                    | atelier_core::contracts::ForgeWriteState::Reconciled
+            )
+        })
+    {
+        return Err(BackupFailure::Conflict(
+            "Cette restauration perdrait l’historique d’une écriture distante de connecteur.",
+        )
+        .into());
+    }
     if let Some(settings) = source_settings {
         let settings: Document = serde_json::from_str(&settings)?;
+        let saved_effects = super::connector_effects::read(&settings)?;
+        if saved_effects.iter().any(super::connector_effects::pending) {
+            return Err(BackupFailure::Invalid(
+                "Cette sauvegarde contient une écriture de connecteur inachevée.",
+            )
+            .into());
+        }
+        for current in current_effects.iter().filter(|operation| {
+            matches!(
+                operation.state,
+                atelier_core::contracts::ForgeWriteState::Confirmed
+                    | atelier_core::contracts::ForgeWriteState::Reconciled
+            )
+        }) {
+            if !saved_effects.iter().any(|saved| {
+                saved.id == current.id
+                    && serde_json::to_value(saved).ok() == serde_json::to_value(current).ok()
+            }) {
+                return Err(BackupFailure::Conflict("Cette restauration perdrait l’historique d’une écriture distante de connecteur.").into());
+            }
+        }
         if settings.raw("jiraImportReservation").is_some() {
             return Err(BackupFailure::Invalid(
                 "Cette sauvegarde contient un import Jira inachevé.",

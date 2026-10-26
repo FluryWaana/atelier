@@ -145,6 +145,33 @@ pub fn maintenance(root: &Path) -> Result<bool> {
     let directory = Dir::open_ambient_dir(root, ambient_authority())?;
     Ok(load(&directory)?.is_some_and(|journal| journal.operation.state.maintenance()))
 }
+async fn require_connector_idle(journal: &Journal) -> Result<()> {
+    let (data, _, directory) = data_identity(&journal.data)?;
+    match directory.symlink_metadata("kanban.sqlite") {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error.into()),
+        Ok(metadata) => super::checked_file::require_plain(&metadata)?,
+    }
+    let database = super::database::Database::open_in(data.join("kanban.sqlite"), directory)?;
+    let result = database
+        .call(|store| {
+            if super::connector_effects::read(
+                &store.settings::<atelier_core::document::Document>()?,
+            )?
+            .iter()
+            .any(super::connector_effects::pending)
+            {
+                return Err(
+                    "Termine ou rapproche les écritures de connecteurs avant une mise à jour."
+                        .into(),
+                );
+            }
+            Ok(())
+        })
+        .await;
+    database.close().await?;
+    result
+}
 pub fn expected_data_identity(root: &Path, data: &Path) -> Result<Option<String>> {
     let directory = Dir::open_ambient_dir(root, ambient_authority())?;
     let Some(journal) = load(&directory)?.filter(|journal| journal.operation.state.maintenance())
@@ -322,6 +349,33 @@ pub async fn apply(root: &Path, id: &str, confirmed: bool) -> Result<Operation> 
     if data_identity(&journal.data)?.1 != journal.data_identity {
         return Err("Le dossier de données a changé depuis l’aperçu.".into());
     }
+    let http = LocalHttp::new()?;
+    if let Some(observed) = launcher::health(&http, &journal.data, journal.port).await? {
+        if observed["version"] != journal.expected.active.version {
+            return Err(
+                "La version exécutée ne correspond pas à la version active installée.".into(),
+            );
+        }
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", session::read(&journal.data)?).parse()?,
+        );
+        let reply = http
+            .request(
+                &format!("http://127.0.0.1:{}/api/extensions/pending", journal.port),
+                reqwest::Method::GET,
+                headers,
+                None,
+                std::time::Duration::from_secs(2),
+            )
+            .await?;
+        if !reply.status.is_success() || reply.json()?["pending"].as_bool() != Some(false) {
+            return Err(
+                "Termine ou rapproche les écritures de connecteurs avant une mise à jour.".into(),
+            );
+        }
+    }
     phase(
         &installation,
         &mut journal,
@@ -496,6 +550,7 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
             validate_data(&journal)?;
             launcher::stop(&journal.data, journal.port).await?;
             let guard = data_lock(&journal).await?;
+            require_connector_idle(&journal).await?;
             phase(
                 &installation,
                 &mut journal,

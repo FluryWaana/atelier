@@ -31,6 +31,7 @@ mod backups;
 mod brainstorm;
 mod card_lifecycle;
 mod commits;
+mod connector_effects;
 mod connectors;
 mod events;
 mod files;
@@ -202,6 +203,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/automation")
             || path == "/api/queue"
             || path == "/api/repositories"
+            || (path.starts_with("/api/extensions/") && path.contains("/operations"))
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
@@ -217,7 +219,10 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                 if let Some(response) = updates::guard(state.installation_root.as_deref()) {
                     return response;
                 }
-                let guard_path = if request.uri().path() == "/api/repositories" {
+                let guard_path = if request.uri().path() == "/api/repositories"
+                    || (request.uri().path().starts_with("/api/extensions/")
+                        && request.uri().path().contains("/operations"))
+                {
                     "/api/projects"
                 } else {
                     request.uri().path()
@@ -231,21 +236,19 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     return response;
                 }
                 let guarded_path = guard_path.to_owned();
+                let operation_path = request.uri().path().to_owned();
                 match state
                     .database
                     .call(move |store| {
-                        Ok(
-                            crate::infrastructure::jira_transition::blocks(store, &guarded_path)?
-                                || crate::infrastructure::tempo_export::blocks(
-                                    store,
-                                    &guarded_path,
-                                )?
-                                || crate::infrastructure::forge_draft::blocks(
-                                    store,
-                                    &guarded_path,
-                                )?
-                                || crate::infrastructure::automation::blocks(store, &guarded_path)?,
-                        )
+                        Ok(crate::infrastructure::connector_effects::blocks(
+                            store,
+                            &operation_path,
+                        )? || crate::infrastructure::jira_transition::blocks(
+                            store,
+                            &guarded_path,
+                        )? || crate::infrastructure::tempo_export::blocks(store, &guarded_path)?
+                            || crate::infrastructure::forge_draft::blocks(store, &guarded_path)?
+                            || crate::infrastructure::automation::blocks(store, &guarded_path)?)
                     })
                     .await
                 {
@@ -512,6 +515,7 @@ async fn serve_mode(
             crate::infrastructure::jira_refresh::recover(store)?;
             crate::infrastructure::jira_transition::recover(store)?;
             crate::infrastructure::forge_draft::recover(store)?;
+            crate::infrastructure::connector_effects::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)?;
             crate::infrastructure::automation::recover(store)?;
             crate::infrastructure::queue::recover(store)
@@ -544,6 +548,14 @@ async fn serve_mode(
     });
     #[cfg(windows)]
     let app = app
+        .route(
+            "/api/extensions/{module}/operations/{id}/send",
+            post(connector_effects::send),
+        )
+        .route(
+            "/api/extensions/{module}/operations/{id}/reconcile",
+            post(connector_effects::reconcile),
+        )
         .route("/api/cards/{id}/runs/start", post(runs::start))
         .route("/api/extensions/probe", post(connectors::probe))
         .route("/api/extensions/install", post(connectors::install))
@@ -607,6 +619,15 @@ async fn serve_mode(
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route("/api/extensions", get(connectors::get))
+        .route("/api/extensions/pending", get(connector_effects::pending))
+        .route(
+            "/api/extensions/{module}/operations",
+            get(connector_effects::list).post(connector_effects::preview),
+        )
+        .route(
+            "/api/extensions/{module}/operations/{id}/cancel",
+            post(connector_effects::cancel),
+        )
         .route("/api/updates", get(updates::get))
         .route("/api/updates/preview", post(updates::action))
         .route("/api/updates/apply", post(updates::action))

@@ -8,7 +8,7 @@ use serde_json::Value;
 use std::{path::Path, process::Stdio, time::Duration};
 use tokio::{process::Command, time::Instant};
 
-async fn health(http: &LocalHttp, data: &Path, port: u16) -> Result<Option<Value>> {
+pub(super) async fn health(http: &LocalHttp, data: &Path, port: u16) -> Result<Option<Value>> {
     let observed = http
         .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
             session::read_optional(data)

@@ -1,5 +1,15 @@
 # Connecteurs par processus Rust — contrat candidat v1
 
+## Actions distantes manuelles — candidat non qualifié
+
+Les actions déclarées `remote` possèdent un journal SQLite séparé des rapports de lecture. L’aperçu fige module, manifeste, empreinte du programme, valeurs publiques, révision des identifiants et nombre de tickets locaux ; il ne lance aucun processus. La confirmation porte sur l’identifiant et la version de cet aperçu. Un envoi réserve `sending` avant le lancement. Après interruption, seul `reconcile` est permis, avec l’identifiant original et une nouvelle identité de requête ; aucune relance automatique de l’action.
+
+Une réponse `ok` seule reste incertaine. `output.receipt` contient exactement `operationId`, `outcome` (`applied`, `notAttempted`, `unknown`), `reference` et `observedAt` (RFC3339, observation récente). `applied` avec `ok` confirme la déclaration du module ; ce n’est pas une preuve indépendante de l’effet. `notAttempted` garantit explicitement qu’aucune demande distante n’a été tentée ; une recherche vide ou un effet non encore visible doivent rester `unknown`. Les autres résultats restent incertains et bloquent les opérations incompatibles.
+
+Le journal est borné à 1 024 entrées et 16 Mio, sans purge silencieuse ; une marge de réponse est réservée avant l’acceptation. Les secrets restent dans le coffre et sont transmis uniquement sur stdin au programme épinglé. Une rotation des secrets permet le rapprochement sous la nouvelle révision, mais invalide l’envoi d’un ancien aperçu. Programme, manifeste et valeurs publiques restent figés tant qu’une opération est inachevée. Les restaurations refusent de perdre un effet confirmé ; sauvegardes et mises à jour refusent les opérations inachevées. La mise à jour vérifie aussi la base après arrêt, sous verrou, avant de changer le code actif.
+
+L’interface présente les actions déclarées, leur portée, la confirmation, l’annulation d’un aperçu, le journal et le rapprochement. Ce parcours concerne les actions manuelles `action` sur Windows ; les méthodes typées de création/transition de tickets, publication de dépôts et export de temps ne sont pas implémentées par ce journal. Les scénarios SQLite sont écrits seulement (reprise, nonce, portée, observation manquante, absence de rejeu et conservation de l’historique lors des restaurations). Aucun scénario ni binaire exécuté pour cet incrément ; qualification native/navigateur et POSIX toujours ouvertes.
+
 Ce contrat remplace les modules JavaScript de référence. Il ne charge pas de code Node et n’ajoute pas de crate au workspace. Types/validations purs, exemple Rust, exécuteur Windows, registre/coffre, API de lecture, réglages et import confirmé de tickets sont candidats. **Les autres capacités métier, les écritures avec reprise et POSIX restent à livrer. Aucun exemple ni scénario n’est compilé/exécuté à ce stade.** Le protocole/exécuteur/API seuls ne qualifient aucune intégration.
 
 ## Transport

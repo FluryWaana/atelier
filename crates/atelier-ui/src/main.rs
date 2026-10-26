@@ -11,6 +11,7 @@ mod automation;
 mod backups;
 mod brainstorm;
 mod commits;
+mod connector_effects;
 mod connector_ticket;
 mod connectors;
 mod files;
