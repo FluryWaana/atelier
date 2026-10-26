@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
+const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data --source DONNEES_RUST --destination DOSSIER_VIDE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -130,6 +130,9 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
 async fn main() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
+    if first.as_deref() == Some(std::ffi::OsStr::new("import-data")) {
+        return atelier_app::infrastructure::portable_import::command(command);
+    }
     if first.as_deref() == Some(std::ffi::OsStr::new("choose-folder")) {
         if command.next().is_some() {
             return Err("Le sélecteur ne reçoit aucun argument ni dossier de données.".into());

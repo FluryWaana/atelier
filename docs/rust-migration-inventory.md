@@ -1942,31 +1942,34 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/portable_import.rs:9](../crates/atelier-app/src/infrastructure/portable_import.rs#L9) | <code>use std::{fs, path::Path};</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:16](../crates/atelier-app/src/infrastructure/portable_import.rs#L16) | <code>use std::os::unix::fs::DirBuilderExt;</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:27](../crates/atelier-app/src/infrastructure/portable_import.rs#L27) | <code>use cap_std::fs::DirBuilderExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:71](../crates/atelier-app/src/infrastructure/portable_import.rs#L71) | <code>use cap_std::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:225](../crates/atelier-app/src/infrastructure/portable_import.rs#L225) | <code>use cap_std::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:240](../crates/atelier-app/src/infrastructure/portable_import.rs#L240) | <code>pub fn import(source: &amp;Path, destination: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:323](../crates/atelier-app/src/infrastructure/portable_import.rs#L323) | <code>use cap_std::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:374](../crates/atelier-app/src/infrastructure/portable_import.rs#L374) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:375](../crates/atelier-app/src/infrastructure/portable_import.rs#L375) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:376](../crates/atelier-app/src/infrastructure/portable_import.rs#L376) | <code>use crate::infrastructure::store::{self, Documents};</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:377](../crates/atelier-app/src/infrastructure/portable_import.rs#L377) | <code>use serde_json::json;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:379](../crates/atelier-app/src/infrastructure/portable_import.rs#L379) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:398](../crates/atelier-app/src/infrastructure/portable_import.rs#L398) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:421](../crates/atelier-app/src/infrastructure/portable_import.rs#L421) | <code>use std::os::windows::process::CommandExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:435](../crates/atelier-app/src/infrastructure/portable_import.rs#L435) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:474](../crates/atelier-app/src/infrastructure/portable_import.rs#L474) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:498](../crates/atelier-app/src/infrastructure/portable_import.rs#L498) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:552](../crates/atelier-app/src/infrastructure/portable_import.rs#L552) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:618](../crates/atelier-app/src/infrastructure/portable_import.rs#L618) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:696](../crates/atelier-app/src/infrastructure/portable_import.rs#L696) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:712](../crates/atelier-app/src/infrastructure/portable_import.rs#L712) | <code>use std::os::unix::fs::symlink;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:736](../crates/atelier-app/src/infrastructure/portable_import.rs#L736) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:738](../crates/atelier-app/src/infrastructure/portable_import.rs#L738) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:763](../crates/atelier-app/src/infrastructure/portable_import.rs#L763) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:846](../crates/atelier-app/src/infrastructure/portable_import.rs#L846) | <code>use std::os::unix::fs::PermissionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:854](../crates/atelier-app/src/infrastructure/portable_import.rs#L854) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:871](../crates/atelier-app/src/infrastructure/portable_import.rs#L871) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:873](../crates/atelier-app/src/infrastructure/portable_import.rs#L873) | <code>use std::os::unix::fs::symlink;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:46](../crates/atelier-app/src/infrastructure/portable_import.rs#L46) | <code>use std::io::Write;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:104](../crates/atelier-app/src/infrastructure/portable_import.rs#L104) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:266](../crates/atelier-app/src/infrastructure/portable_import.rs#L266) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:281](../crates/atelier-app/src/infrastructure/portable_import.rs#L281) | <code>pub fn import(source: &amp;Path, destination: &amp;Path) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:358](../crates/atelier-app/src/infrastructure/portable_import.rs#L358) | <code>pub fn command(args: impl Iterator&lt;Item = std::ffi::OsString&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:404](../crates/atelier-app/src/infrastructure/portable_import.rs#L404) | <code>use cap_std::fs::OpenOptionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:455](../crates/atelier-app/src/infrastructure/portable_import.rs#L455) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:456](../crates/atelier-app/src/infrastructure/portable_import.rs#L456) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:457](../crates/atelier-app/src/infrastructure/portable_import.rs#L457) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:515](../crates/atelier-app/src/infrastructure/portable_import.rs#L515) | <code>use crate::infrastructure::store::{self, Documents};</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:516](../crates/atelier-app/src/infrastructure/portable_import.rs#L516) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:518](../crates/atelier-app/src/infrastructure/portable_import.rs#L518) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:537](../crates/atelier-app/src/infrastructure/portable_import.rs#L537) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:560](../crates/atelier-app/src/infrastructure/portable_import.rs#L560) | <code>use std::os::windows::process::CommandExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:574](../crates/atelier-app/src/infrastructure/portable_import.rs#L574) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:613](../crates/atelier-app/src/infrastructure/portable_import.rs#L613) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:637](../crates/atelier-app/src/infrastructure/portable_import.rs#L637) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:691](../crates/atelier-app/src/infrastructure/portable_import.rs#L691) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:757](../crates/atelier-app/src/infrastructure/portable_import.rs#L757) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:835](../crates/atelier-app/src/infrastructure/portable_import.rs#L835) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:851](../crates/atelier-app/src/infrastructure/portable_import.rs#L851) | <code>use std::os::unix::fs::symlink;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:875](../crates/atelier-app/src/infrastructure/portable_import.rs#L875) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:877](../crates/atelier-app/src/infrastructure/portable_import.rs#L877) | <code>use std::{os::windows::process::CommandExt, process::Command};</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:902](../crates/atelier-app/src/infrastructure/portable_import.rs#L902) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:997](../crates/atelier-app/src/infrastructure/portable_import.rs#L997) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1005](../crates/atelier-app/src/infrastructure/portable_import.rs#L1005) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1022](../crates/atelier-app/src/infrastructure/portable_import.rs#L1022) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1024](../crates/atelier-app/src/infrastructure/portable_import.rs#L1024) | <code>use std::os::unix::fs::symlink;</code> |
 | [crates/atelier-app/src/infrastructure/preparation.rs:1](../crates/atelier-app/src/infrastructure/preparation.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/preparation.rs:5](../crates/atelier-app/src/infrastructure/preparation.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/preparation.rs:6](../crates/atelier-app/src/infrastructure/preparation.rs#L6) | <code>use atelier_core::{</code> |
@@ -2376,9 +2379,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/lib.rs:5](../crates/atelier-app/src/lib.rs#L5) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Error&gt;;</code> |
 | [crates/atelier-app/src/main.rs:1](../crates/atelier-app/src/main.rs#L1) | <code>use atelier_app::{</code> |
 | [crates/atelier-app/src/main.rs:8](../crates/atelier-app/src/main.rs#L8) | <code>use std::{</code> |
-| [crates/atelier-app/src/main.rs:253](../crates/atelier-app/src/main.rs#L253) | <code>mod tests {</code> |
-| [crates/atelier-app/src/main.rs:254](../crates/atelier-app/src/main.rs#L254) | <code>use super::*;</code> |
-| [crates/atelier-app/src/main.rs:258](../crates/atelier-app/src/main.rs#L258) | <code>#[test]</code> |
+| [crates/atelier-app/src/main.rs:256](../crates/atelier-app/src/main.rs#L256) | <code>mod tests {</code> |
+| [crates/atelier-app/src/main.rs:257](../crates/atelier-app/src/main.rs#L257) | <code>use super::*;</code> |
+| [crates/atelier-app/src/main.rs:261](../crates/atelier-app/src/main.rs#L261) | <code>#[test]</code> |
 | [crates/atelier-app/tests/azure-tickets.rs:1](../crates/atelier-app/tests/azure-tickets.rs#L1) | <code>use atelier_app::infrastructure::azure_tickets::{Azure, manifest};</code> |
 | [crates/atelier-app/tests/azure-tickets.rs:2](../crates/atelier-app/tests/azure-tickets.rs#L2) | <code>use atelier_core::application::extensions as protocol;</code> |
 | [crates/atelier-app/tests/azure-tickets.rs:3](../crates/atelier-app/tests/azure-tickets.rs#L3) | <code>use axum::{</code> |
@@ -4963,8 +4966,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/local_commit.rs:234](../crates/atelier-app/src/infrastructure/local_commit.rs#L234) | <code>run(repository, &amp;index, &amp;args, &amp;[]).await?;</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:339](../crates/atelier-app/src/infrastructure/local_commit.rs#L339) | <code>.args(["commit-tree", &amp;expected.tree, "-p", &amp;expected.head]);</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:374](../crates/atelier-app/src/infrastructure/local_commit.rs#L374) | <code>command.args([</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:417](../crates/atelier-app/src/infrastructure/portable_import.rs#L417) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>.args(["/D", "/C"])</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:331](../crates/atelier-app/src/infrastructure/portable_import.rs#L331) | <code>args: impl Iterator&lt;Item = std::ffi::OsString&gt;,</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:333](../crates/atelier-app/src/infrastructure/portable_import.rs#L333) | <code>let mut args = args;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:337](../crates/atelier-app/src/infrastructure/portable_import.rs#L337) | <code>while let Some(argument) = args.next() {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:339](../crates/atelier-app/src/infrastructure/portable_import.rs#L339) | <code>Some("--source") if source.is_none()=&gt;source=Some(std::path::PathBuf::from(args.next().ok_or("Dossier source requis.")?)),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:340](../crates/atelier-app/src/infrastructure/portable_import.rs#L340) | <code>Some("--destination") if destination.is_none()=&gt;destination=Some(std::path::PathBuf::from(args.next().ok_or("Dossier de destination requis.")?)),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:358](../crates/atelier-app/src/infrastructure/portable_import.rs#L358) | <code>pub fn command(args: impl Iterator&lt;Item = std::ffi::OsString&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:359](../crates/atelier-app/src/infrastructure/portable_import.rs#L359) | <code>let (source, destination) = arguments(args)?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:487](../crates/atelier-app/src/infrastructure/portable_import.rs#L487) | <code>let args = vec![</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:493](../crates/atelier-app/src/infrastructure/portable_import.rs#L493) | <code>assert!(arguments(args.clone().into_iter()).is_err());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:494](../crates/atelier-app/src/infrastructure/portable_import.rs#L494) | <code>let mut approved = args.clone();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:497](../crates/atelier-app/src/infrastructure/portable_import.rs#L497) | <code>let mut unknown = args;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:556](../crates/atelier-app/src/infrastructure/portable_import.rs#L556) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:887](../crates/atelier-app/src/infrastructure/portable_import.rs#L887) | <code>.args(["/D", "/C"])</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:204](../crates/atelier-app/src/infrastructure/reviews.rs#L204) | <code>.args([</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:212](../crates/atelier-app/src/infrastructure/reviews.rs#L212) | <code>.args(arguments);</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:240](../crates/atelier-app/src/infrastructure/token_vault.rs#L240) | <code>args: &amp;[&amp;str],</code> |
@@ -5005,10 +5019,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:57](../crates/atelier-app/src/main.rs#L57) | <code>args.next();</code> |
 | [crates/atelier-app/src/main.rs:75](../crates/atelier-app/src/main.rs#L75) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:84](../crates/atelier-app/src/main.rs#L84) | <code>let value = args</code> |
-| [crates/atelier-app/src/main.rs:255](../crates/atelier-app/src/main.rs#L255) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
-| [crates/atelier-app/src/main.rs:256](../crates/atelier-app/src/main.rs#L256) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
-| [crates/atelier-app/src/main.rs:291](../crates/atelier-app/src/main.rs#L291) | <code>for args in [</code> |
-| [crates/atelier-app/src/main.rs:302](../crates/atelier-app/src/main.rs#L302) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
+| [crates/atelier-app/src/main.rs:258](../crates/atelier-app/src/main.rs#L258) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
+| [crates/atelier-app/src/main.rs:259](../crates/atelier-app/src/main.rs#L259) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
+| [crates/atelier-app/src/main.rs:294](../crates/atelier-app/src/main.rs#L294) | <code>for args in [</code> |
+| [crates/atelier-app/src/main.rs:305](../crates/atelier-app/src/main.rs#L305) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
 | [crates/atelier-app/tests/files.rs:19](../crates/atelier-app/tests/files.rs#L19) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
 | [crates/atelier-app/tests/files.rs:25](../crates/atelier-app/tests/files.rs#L25) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
 | [crates/atelier-app/tests/files.rs:26](../crates/atelier-app/tests/files.rs#L26) | <code>.args(args);</code> |
@@ -6243,50 +6257,52 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:164](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L164) | <code>let mut effects=if stream=="stdout" {</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:70](../crates/atelier-app/src/infrastructure/mod.rs#L70) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/package_archive.rs:276](../crates/atelier-app/src/infrastructure/package_archive.rs#L276) | <code>"data/kanban.sqlite",</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:45](../crates/atelier-app/src/infrastructure/portable_import.rs#L45) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:53](../crates/atelier-app/src/infrastructure/portable_import.rs#L53) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:186](../crates/atelier-app/src/infrastructure/portable_import.rs#L186) | <code>let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:191](../crates/atelier-app/src/infrastructure/portable_import.rs#L191) | <code>super::checked_file::Identity::sqlite_source(source, Path::new("kanban.sqlite"))?;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:206](../crates/atelier-app/src/infrastructure/portable_import.rs#L206) | <code>match source.symlink_metadata("kanban.sqlite-journal") {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:211](../crates/atelier-app/src/infrastructure/portable_import.rs#L211) | <code>let wal = match source.symlink_metadata("kanban.sqlite-wal") {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:214](../crates/atelier-app/src/infrastructure/portable_import.rs#L214) | <code>Path::new("kanban.sqlite-wal"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:219](../crates/atelier-app/src/infrastructure/portable_import.rs#L219) | <code>for (name, input) in [("kanban.sqlite", None), ("kanban.sqlite-wal", wal.as_ref())] {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:220](../crates/atelier-app/src/infrastructure/portable_import.rs#L220) | <code>if name == "kanban.sqlite" \|\| input.is_some() {</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:254](../crates/atelier-app/src/infrastructure/portable_import.rs#L254) | <code>let database = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:296](../crates/atelier-app/src/infrastructure/portable_import.rs#L296) | <code>snapshot.path().join("kanban.sqlite"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:309](../crates/atelier-app/src/infrastructure/portable_import.rs#L309) | <code>Store::new(&amp;connection).backup_in(&amp;stage, Path::new("kanban.sqlite"))?;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:327](../crates/atelier-app/src/infrastructure/portable_import.rs#L327) | <code>CheckedFile::open_in(&amp;stage, Path::new("kanban.sqlite"))?.copy_to(&amp;mut output)?;</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:385](../crates/atelier-app/src/infrastructure/portable_import.rs#L385) | <code>let database = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:410](../crates/atelier-app/src/infrastructure/portable_import.rs#L410) | <code>let path = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:479](../crates/atelier-app/src/infrastructure/portable_import.rs#L479) | <code>store::open(&amp;source.join("kanban.sqlite"))</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:483](../crates/atelier-app/src/infrastructure/portable_import.rs#L483) | <code>let before = fs::read(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:485](../crates/atelier-app/src/infrastructure/portable_import.rs#L485) | <code>source.join("kanban.sqlite-journal"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:490](../crates/atelier-app/src/infrastructure/portable_import.rs#L490) | <code>assert_eq!(fs::read(source.join("kanban.sqlite")).unwrap(), before);</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:492](../crates/atelier-app/src/infrastructure/portable_import.rs#L492) | <code>fs::read(source.join("kanban.sqlite-journal")).unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:505](../crates/atelier-app/src/infrastructure/portable_import.rs#L505) | <code>let database = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:518](../crates/atelier-app/src/infrastructure/portable_import.rs#L518) | <code>outside.join("kanban.sqlite-wal"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:523](../crates/atelier-app/src/infrastructure/portable_import.rs#L523) | <code>let selected = CheckedFile::open_in(&amp;opened, Path::new("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:537](../crates/atelier-app/src/infrastructure/portable_import.rs#L537) | <code>let recovered = Connection::open(copied.path().join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:546](../crates/atelier-app/src/infrastructure/portable_import.rs#L546) | <code>fs::read(outside.join("kanban.sqlite-wal")).unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:560](../crates/atelier-app/src/infrastructure/portable_import.rs#L560) | <code>let connection = store::open(&amp;path.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:569](../crates/atelier-app/src/infrastructure/portable_import.rs#L569) | <code>&amp;other.join("kanban.sqlite"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:582](../crates/atelier-app/src/infrastructure/portable_import.rs#L582) | <code>&amp;source.join("kanban.sqlite"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:593](../crates/atelier-app/src/infrastructure/portable_import.rs#L593) | <code>&amp;root_path.join("alias/kanban.sqlite"),</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:609](../crates/atelier-app/src/infrastructure/portable_import.rs#L609) | <code>let untouched = store::open(&amp;other.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:627](../crates/atelier-app/src/infrastructure/portable_import.rs#L627) | <code>let database = source.join("kanban.sqlite");</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:657](../crates/atelier-app/src/infrastructure/portable_import.rs#L657) | <code>let copied = store::open(&amp;actual.join("data/kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:769](../crates/atelier-app/src/infrastructure/portable_import.rs#L769) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:774](../crates/atelier-app/src/infrastructure/portable_import.rs#L774) | <code>fs::write(source.join("local-session"), "expired").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:775](../crates/atelier-app/src/infrastructure/portable_import.rs#L775) | <code>fs::write(source.join("local-browser.html"), "expired").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:794](../crates/atelier-app/src/infrastructure/portable_import.rs#L794) | <code>let originals: Vec&lt;_&gt; = ["kanban.sqlite", "kanban.sqlite-wal", "kanban.sqlite-shm"]</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:801](../crates/atelier-app/src/infrastructure/portable_import.rs#L801) | <code>fs::copy(source.join("kanban.sqlite"), &amp;main_only).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:818](../crates/atelier-app/src/infrastructure/portable_import.rs#L818) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:829](../crates/atelier-app/src/infrastructure/portable_import.rs#L829) | <code>assert!(!destination.join("local-session").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:830](../crates/atelier-app/src/infrastructure/portable_import.rs#L830) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:860](../crates/atelier-app/src/infrastructure/portable_import.rs#L860) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:864](../crates/atelier-app/src/infrastructure/portable_import.rs#L864) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:865](../crates/atelier-app/src/infrastructure/portable_import.rs#L865) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/portable_import.rs:877](../crates/atelier-app/src/infrastructure/portable_import.rs#L877) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:59](../crates/atelier-app/src/infrastructure/portable_import.rs#L59) | <code>&amp;&amp; (matches!(name.to_str(), Some("local-session" \| "local-browser.html"))</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:76](../crates/atelier-app/src/infrastructure/portable_import.rs#L76) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:221](../crates/atelier-app/src/infrastructure/portable_import.rs#L221) | <code>let selected = CheckedFile::open_in(source, Path::new("kanban.sqlite"))?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:226](../crates/atelier-app/src/infrastructure/portable_import.rs#L226) | <code>super::checked_file::Identity::sqlite_source(source, Path::new("kanban.sqlite"))?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:241](../crates/atelier-app/src/infrastructure/portable_import.rs#L241) | <code>match source.symlink_metadata("kanban.sqlite-journal") {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:246](../crates/atelier-app/src/infrastructure/portable_import.rs#L246) | <code>let wal = match source.symlink_metadata("kanban.sqlite-wal") {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:249](../crates/atelier-app/src/infrastructure/portable_import.rs#L249) | <code>Path::new("kanban.sqlite-wal"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:255](../crates/atelier-app/src/infrastructure/portable_import.rs#L255) | <code>.symlink_metadata("kanban.sqlite-wal")</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:260](../crates/atelier-app/src/infrastructure/portable_import.rs#L260) | <code>for (name, input) in [("kanban.sqlite", None), ("kanban.sqlite-wal", wal.as_ref())] {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:261](../crates/atelier-app/src/infrastructure/portable_import.rs#L261) | <code>if name == "kanban.sqlite" \|\| input.is_some() {</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:295](../crates/atelier-app/src/infrastructure/portable_import.rs#L295) | <code>let database = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:377](../crates/atelier-app/src/infrastructure/portable_import.rs#L377) | <code>snapshot.path().join("kanban.sqlite"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:390](../crates/atelier-app/src/infrastructure/portable_import.rs#L390) | <code>Store::new(&amp;connection).backup_in(&amp;stage, Path::new("kanban.sqlite"))?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:408](../crates/atelier-app/src/infrastructure/portable_import.rs#L408) | <code>CheckedFile::open_in(&amp;stage, Path::new("kanban.sqlite"))?.copy_to(&amp;mut output)?;</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:464](../crates/atelier-app/src/infrastructure/portable_import.rs#L464) | <code>super::super::store::open(&amp;source.join("kanban.sqlite"))</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:524](../crates/atelier-app/src/infrastructure/portable_import.rs#L524) | <code>let database = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:549](../crates/atelier-app/src/infrastructure/portable_import.rs#L549) | <code>let path = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:618](../crates/atelier-app/src/infrastructure/portable_import.rs#L618) | <code>store::open(&amp;source.join("kanban.sqlite"))</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:622](../crates/atelier-app/src/infrastructure/portable_import.rs#L622) | <code>let before = fs::read(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:624](../crates/atelier-app/src/infrastructure/portable_import.rs#L624) | <code>source.join("kanban.sqlite-journal"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:629](../crates/atelier-app/src/infrastructure/portable_import.rs#L629) | <code>assert_eq!(fs::read(source.join("kanban.sqlite")).unwrap(), before);</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:631](../crates/atelier-app/src/infrastructure/portable_import.rs#L631) | <code>fs::read(source.join("kanban.sqlite-journal")).unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:644](../crates/atelier-app/src/infrastructure/portable_import.rs#L644) | <code>let database = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:657](../crates/atelier-app/src/infrastructure/portable_import.rs#L657) | <code>outside.join("kanban.sqlite-wal"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:662](../crates/atelier-app/src/infrastructure/portable_import.rs#L662) | <code>let selected = CheckedFile::open_in(&amp;opened, Path::new("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:676](../crates/atelier-app/src/infrastructure/portable_import.rs#L676) | <code>let recovered = Connection::open(copied.path().join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:685](../crates/atelier-app/src/infrastructure/portable_import.rs#L685) | <code>fs::read(outside.join("kanban.sqlite-wal")).unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:699](../crates/atelier-app/src/infrastructure/portable_import.rs#L699) | <code>let connection = store::open(&amp;path.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:708](../crates/atelier-app/src/infrastructure/portable_import.rs#L708) | <code>&amp;other.join("kanban.sqlite"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:721](../crates/atelier-app/src/infrastructure/portable_import.rs#L721) | <code>&amp;source.join("kanban.sqlite"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:732](../crates/atelier-app/src/infrastructure/portable_import.rs#L732) | <code>&amp;root_path.join("alias/kanban.sqlite"),</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>let untouched = store::open(&amp;other.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:766](../crates/atelier-app/src/infrastructure/portable_import.rs#L766) | <code>let database = source.join("kanban.sqlite");</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:796](../crates/atelier-app/src/infrastructure/portable_import.rs#L796) | <code>let copied = store::open(&amp;actual.join("data/kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:908](../crates/atelier-app/src/infrastructure/portable_import.rs#L908) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:913](../crates/atelier-app/src/infrastructure/portable_import.rs#L913) | <code>fs::write(source.join("local-session"), "expired").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:914](../crates/atelier-app/src/infrastructure/portable_import.rs#L914) | <code>fs::write(source.join("local-browser.html"), "expired").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:940](../crates/atelier-app/src/infrastructure/portable_import.rs#L940) | <code>let originals: Vec&lt;_&gt; = ["kanban.sqlite", "kanban.sqlite-wal", "kanban.sqlite-shm"]</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:947](../crates/atelier-app/src/infrastructure/portable_import.rs#L947) | <code>fs::copy(source.join("kanban.sqlite"), &amp;main_only).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:964](../crates/atelier-app/src/infrastructure/portable_import.rs#L964) | <code>let copied = store::open(&amp;destination.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:975](../crates/atelier-app/src/infrastructure/portable_import.rs#L975) | <code>assert!(!destination.join("local-session").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:976](../crates/atelier-app/src/infrastructure/portable_import.rs#L976) | <code>assert!(!destination.join("local-browser.html").exists());</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1011](../crates/atelier-app/src/infrastructure/portable_import.rs#L1011) | <code>fs::write(source.join("kanban.sqlite"), "corrupt").unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1015](../crates/atelier-app/src/infrastructure/portable_import.rs#L1015) | <code>fs::remove_file(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1016](../crates/atelier-app/src/infrastructure/portable_import.rs#L1016) | <code>fs::create_dir(source.join("kanban.sqlite")).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/portable_import.rs:1028](../crates/atelier-app/src/infrastructure/portable_import.rs#L1028) | <code>let connection = store::open(&amp;source.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:15](../crates/atelier-app/src/infrastructure/process_tree.rs#L15) | <code>async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &amp;str) -&gt; Result&lt;Vec&lt;u8&gt;&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/process_tree.rs:20](../crates/atelier-app/src/infrastructure/process_tree.rs#L20) | <code>return Err(format!("Limite de sortie {stream} dépassée.").into());</code> |
 | [crates/atelier-app/src/infrastructure/prototype.rs:45](../crates/atelier-app/src/infrastructure/prototype.rs#L45) | <code>self.path.join("kanban.sqlite"),</code> |

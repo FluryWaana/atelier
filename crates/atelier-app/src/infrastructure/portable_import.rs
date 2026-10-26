@@ -34,6 +34,19 @@ fn private_directory(parent: &Dir, name: &Path) -> Result<Dir> {
 }
 
 fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
+    copy_tree_bounded(source, destination, root, 0, &mut (0usize, 0u64))
+}
+fn copy_tree_bounded(
+    source: &Dir,
+    destination: &Dir,
+    root: bool,
+    depth: usize,
+    budget: &mut (usize, u64),
+) -> Result<()> {
+    use std::io::Write;
+    if depth > 32 {
+        return Err("Transfert portable trop profond.".into());
+    }
     require_plain(&source.dir_metadata()?)?;
     require_plain(&destination.dir_metadata()?)?;
     for entry in source.entries()? {
@@ -42,11 +55,21 @@ fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
         if root && name.to_str().is_some_and(super::data_lock::is_lock_file) {
             continue;
         }
-        if root && matches!(name.to_str(), Some("local-session" | "local-browser.html")) {
+        if root
+            && (matches!(name.to_str(), Some("local-session" | "local-browser.html"))
+                || name.to_str() == Some(super::repository_access::FILE))
+        {
             continue;
         }
         let metadata = source.symlink_metadata(&name)?;
         require_plain(&metadata)?;
+        budget.0 = budget
+            .0
+            .checked_add(1)
+            .ok_or("Transfert portable trop volumineux.")?;
+        if budget.0 > 100_000 {
+            return Err("Transfert portable limité à 100 000 entrées.".into());
+        }
         if root
             && matches!(
                 name.to_str(),
@@ -57,13 +80,23 @@ fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
         }
         if metadata.is_dir() {
             let child = source.open_dir_nofollow(&name)?;
-            copy_tree(
+            copy_tree_bounded(
                 &child,
                 &private_directory(destination, Path::new(&name))?,
                 false,
+                depth + 1,
+                budget,
             )?;
         } else if metadata.is_file() {
             let checked = CheckedFile::open_in(source, Path::new(&name))?;
+            let bytes = checked.read(128 * 1024 * 1024)?;
+            budget.1 = budget
+                .1
+                .checked_add(bytes.len() as u64)
+                .ok_or("Transfert portable trop volumineux.")?;
+            if budget.1 > 1024 * 1024 * 1024 {
+                return Err("Transfert portable limité à 1 Gio hors base.".into());
+            }
             let mut options = cap_std::fs::OpenOptions::new();
             options.write(true).create_new(true);
             #[cfg(unix)]
@@ -72,7 +105,7 @@ fn copy_tree(source: &Dir, destination: &Dir, root: bool) -> Result<()> {
                 options.mode(0o600);
             }
             let mut output = destination.open_with(&name, &options)?;
-            checked.copy_to(&mut output)?;
+            output.write_all(&bytes)?;
             output.sync_all()?;
         } else {
             return Err("Fichier spécial interdit dans les données importées.".into());
@@ -154,7 +187,9 @@ impl SourceLock {
         let read = methods.xRead.ok_or("Lecture SQLite indisponible.")?;
         let mut length = 0;
         // The VFS initializes length; the guard retains the file throughout every read.
-        if unsafe { size(self.file, &mut length) } != ffi::SQLITE_OK || length < 0 {
+        if unsafe { size(self.file, &mut length) } != ffi::SQLITE_OK
+            || !(0..=1024 * 1024 * 1024).contains(&length)
+        {
             return Err("Taille de la source SQLite invalide.".into());
         }
         let mut buffer = [0u8; 64 * 1024];
@@ -189,7 +224,7 @@ fn snapshot_source(database: &Path, source: &Dir) -> Result<tempfile::TempDir> {
     #[cfg(unix)]
     let selected =
         super::checked_file::Identity::sqlite_source(source, Path::new("kanban.sqlite"))?;
-    // shortcut: POSIX exclusive locks need write access; qualify read-only media before M08.
+    // shortcut: POSIX source locks need write access; qualify read-only media before enabling it.
     let connection = Connection::open_with_flags(
         database,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NOFOLLOW,
@@ -202,7 +237,7 @@ fn snapshot_source(database: &Path, source: &Dir) -> Result<tempfile::TempDir> {
 fn copy_snapshot(source: &Dir, lock: &SourceLock) -> Result<tempfile::TempDir> {
     let snapshot = super::store::temporary_directory()?;
     let target = Dir::open_ambient_dir(snapshot.path(), ambient_authority())?;
-    // shortcut: refuse rollback journals until isolated recovery is qualified before M08.
+    // shortcut: refuse rollback journals until isolated recovery is qualified.
     match source.symlink_metadata("kanban.sqlite-journal") {
         Ok(_) => return Err("Journal de récupération présent : ouvrez puis fermez la version source avant l’import.".into()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -216,6 +251,12 @@ fn copy_snapshot(source: &Dir, lock: &SourceLock) -> Result<tempfile::TempDir> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
         Err(error) => return Err(error.into()),
     };
+    if source
+        .symlink_metadata("kanban.sqlite-wal")
+        .is_ok_and(|metadata| metadata.len() > 1024 * 1024 * 1024)
+    {
+        return Err("Journal portable limité à 1 Gio.".into());
+    }
     for (name, input) in [("kanban.sqlite", None), ("kanban.sqlite-wal", wal.as_ref())] {
         if name == "kanban.sqlite" || input.is_some() {
             let mut options = cap_std::fs::OpenOptions::new();
@@ -286,8 +327,48 @@ pub fn import(source: &Path, destination: &Path) -> Result<()> {
     )
 }
 
+fn arguments(
+    args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<(std::path::PathBuf, std::path::PathBuf)> {
+    let mut args = args;
+    let mut source = None;
+    let mut destination = None;
+    let mut confirmed = false;
+    while let Some(argument) = args.next() {
+        match argument.to_str() {
+            Some("--source") if source.is_none()=>source=Some(std::path::PathBuf::from(args.next().ok_or("Dossier source requis.")?)),
+            Some("--destination") if destination.is_none()=>destination=Some(std::path::PathBuf::from(args.next().ok_or("Dossier de destination requis.")?)),
+            Some("--confirm") if !confirmed=>confirmed=true,
+            _=>return Err("Usage : atelier import-data --source DONNEES_RUST --destination DOSSIER_VIDE --confirm".into())
+        }
+    }
+    if !confirmed {
+        return Err(
+            "Confirme la copie vers un dossier vide ; les données sources seront conservées."
+                .into(),
+        );
+    }
+    let source = source.ok_or("Dossier source requis.")?;
+    let destination = destination.ok_or("Dossier de destination requis.")?;
+    if !source.is_absolute() || !destination.is_absolute() {
+        return Err("Les dossiers du transfert doivent être absolus.".into());
+    }
+    Ok((source, destination))
+}
+pub fn command(args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
+    let (source, destination) = arguments(args)?;
+    import(&source, &destination)?;
+    println!(
+        "Transfert Rust terminé. Les données sources sont conservées ; réautorise les dépôts locaux sur la destination."
+    );
+    Ok(())
+}
 fn import_into(database: &Path, source: &Dir, parent: &Dir, destination: &Path) -> Result<()> {
     require_empty_in(parent, destination)?;
+    let _source_lock = super::data_lock::DataLock::acquire_in(
+        database.parent().ok_or("Dossier source absent.")?,
+        source,
+    )?;
     let stage_name = format!(".atelier-import-{}", uuid::Uuid::new_v4());
     let stage = private_directory(parent, Path::new(&stage_name))?;
     let prepared = (|| -> Result<()> {
@@ -373,6 +454,64 @@ fn require_empty(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn excessive_depth_leaves_no_published_destination_and_cli_requires_explicit_paths_and_confirmation()
+     {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let destination = root.path().join("destination");
+        fs::create_dir(&source).unwrap();
+        super::super::store::open(&source.join("kanban.sqlite"))
+            .unwrap()
+            .close()
+            .unwrap();
+        let mut nested = source.clone();
+        for _ in 0..34 {
+            nested.push("d");
+            fs::create_dir(&nested).unwrap();
+        }
+        fs::write(nested.join("synthetic-note"), "preserve").unwrap();
+        assert!(import(&source, &destination).is_err());
+        assert!(!destination.exists());
+        assert_eq!(
+            fs::read(nested.join("synthetic-note")).unwrap(),
+            b"preserve"
+        );
+        assert!(!fs::read_dir(root.path()).unwrap().any(|entry| {
+            entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".atelier-import-")
+        }));
+        let args = vec![
+            std::ffi::OsString::from("--source"),
+            source.into_os_string(),
+            std::ffi::OsString::from("--destination"),
+            destination.into_os_string(),
+        ];
+        assert!(arguments(args.clone().into_iter()).is_err());
+        let mut approved = args.clone();
+        approved.push("--confirm".into());
+        assert!(arguments(approved.into_iter()).is_ok());
+        let mut unknown = args;
+        unknown.extend(["--confirm".into(), "--replace".into()]);
+        assert!(arguments(unknown.into_iter()).is_err());
+        assert!(
+            arguments(
+                [
+                    "--source",
+                    "relative",
+                    "--destination",
+                    "relative",
+                    "--confirm"
+                ]
+                .into_iter()
+                .map(Into::into)
+            )
+            .is_err()
+        );
+    }
     use crate::infrastructure::store::{self, Documents};
     use serde_json::json;
 
@@ -773,6 +912,11 @@ mod tests {
         fs::write(source.join("attachment.txt"), "document").unwrap();
         fs::write(source.join("local-session"), "expired").unwrap();
         fs::write(source.join("local-browser.html"), "expired").unwrap();
+        fs::write(
+            source.join(super::super::repository_access::FILE),
+            "local authorization must not transfer",
+        )
+        .unwrap();
         let destination = root.path().join("user/data");
         assert!(import(&source, &destination).is_err());
         assert!(!destination.exists());
@@ -791,6 +935,8 @@ mod tests {
             )
             .unwrap();
         connection.close().unwrap();
+        assert!(import(&source, &destination).is_err());
+        drop(_lock);
         let originals: Vec<_> = ["kanban.sqlite", "kanban.sqlite-wal", "kanban.sqlite-shm"]
             .into_iter()
             .map(|name| (name, fs::read(source.join(name)).ok()))
@@ -828,6 +974,11 @@ mod tests {
         );
         assert!(!destination.join("local-session").exists());
         assert!(!destination.join("local-browser.html").exists());
+        assert!(
+            !destination
+                .join(super::super::repository_access::FILE)
+                .exists()
+        );
         assert!(
             !destination
                 .join(crate::infrastructure::data_lock::LOCK_NAME)

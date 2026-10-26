@@ -8,7 +8,7 @@ use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
 use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
-const FILE: &str = ".atelier-repositories.json";
+pub(super) const FILE: &str = ".atelier-repositories.json";
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Registry {
