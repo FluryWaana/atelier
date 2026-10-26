@@ -35,6 +35,7 @@ mod connector_effects;
 mod connectors;
 mod events;
 mod files;
+mod folders;
 mod forge;
 mod forge_draft;
 mod forge_publication;
@@ -203,6 +204,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/automation")
             || path == "/api/queue"
             || path == "/api/repositories"
+            || path == "/api/folders/choose"
             || (path.starts_with("/api/extensions/") && path.contains("/operations"))
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
@@ -619,6 +621,7 @@ async fn serve_mode(
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route("/api/extensions", get(connectors::get))
+        .route("/api/folders/choose", post(folders::choose))
         .route("/api/extensions/pending", get(connector_effects::pending))
         .route(
             "/api/extensions/{module}/operations",

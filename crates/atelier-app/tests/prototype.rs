@@ -37,6 +37,48 @@ async fn start(
 }
 
 #[tokio::test]
+async fn folder_selection_requires_the_local_session_and_a_native_launcher() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let url = format!("{address}/api/folders/choose");
+    assert_eq!(
+        client
+            .post(&url)
+            .json(&json!({"confirmed":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    assert_eq!(
+        client
+            .post(&url)
+            .bearer_auth(&token)
+            .json(&json!({"confirmed":true}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        403
+    );
+    let result = client
+        .post(&url)
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"confirmed":true}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(result.status(), 409);
+    assert!(result.text().await.unwrap().contains("lanceur natif"));
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn general_settings_reject_stale_fields_and_preserve_independent_edits_after_restart() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

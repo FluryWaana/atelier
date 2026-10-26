@@ -1929,5 +1929,16 @@
   "Identifiant d’opération Azure requis.": "Azure operation identifier required.",
   "Rapprochement Azure hors périmètre.": "Azure reconciliation is outside the confirmed scope.",
   "Observation du connecteur invalide.": "Invalid connector observation.",
-  "L’observation ne correspond pas à l’opération d’origine.": "The observation does not match the original operation."
+  "L’observation ne correspond pas à l’opération d’origine.": "The observation does not match the original operation.",
+  "Choisir un dossier…": "Choose a folder…",
+  "Le sélecteur a retourné un chemin invalide.": "The folder picker returned an invalid path.",
+  "Le sélecteur est indisponible. Saisis le chemin du dossier ; sous Linux, vérifie Zenity.": "The folder picker is unavailable. Enter the folder path; on Linux, check Zenity.",
+  "Réponse du sélecteur invalide.": "Invalid folder picker reply.",
+  "Initialisation du sélecteur impossible.": "Unable to initialize the folder picker.",
+  "Chemin de dossier trop long.": "Folder path is too long.",
+  "Chemin du dossier non Unicode.": "The folder path is not valid Unicode.",
+  "Sélecteur de dossiers indisponible.": "Folder picker unavailable.",
+  "Le sélecteur est disponible depuis le lanceur natif.": "The folder picker is available through the native launcher.",
+  "Confirme l’ouverture du sélecteur de dossiers.": "Confirm opening the folder picker.",
+  "Sélecteur interrompu par l’arrêt d’Atelier.": "Folder picker interrupted by Atelier shutdown."
 }

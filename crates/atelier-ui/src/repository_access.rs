@@ -10,6 +10,10 @@ struct Registry {
     repositories: Vec<String>,
     available: bool,
 }
+#[derive(Deserialize)]
+struct FolderSelection {
+    path: Option<String>,
+}
 #[component]
 pub fn RepositoryAccess(
     token: StoredValue<Result<String, String>>,
@@ -74,6 +78,52 @@ pub fn RepositoryAccess(
         });
     });
     Effect::new(move |_| load.with_value(|load| load()));
+    let choosing = alive.clone();
+    let choose = move |_| {
+        if pending.get_untracked() || loading.get_untracked() {
+            return;
+        }
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(message) => {
+                error.set(message);
+                return;
+            }
+        };
+        let original = path.get_untracked();
+        pending.set(true);
+        error.set(String::new());
+        approved.set(String::new());
+        let alive = choosing.clone();
+        spawn_local(async move {
+            let result = async {
+                write(
+                    &credential,
+                    Method::POST,
+                    "/api/folders/choose",
+                    &serde_json::json!({"confirmed":true}),
+                )
+                .await?
+                .json::<FolderSelection>()
+                .await
+                .map_err(|_| "Réponse du serveur invalide.".to_owned())
+            }
+            .await;
+            if alive.get() {
+                pending.set(false);
+                match result {
+                    Ok(value) => {
+                        if let Some(value) = value.path
+                            && path.get_untracked() == original
+                        {
+                            path.set(value);
+                        }
+                    }
+                    Err(message) => error.set(message),
+                }
+            }
+        });
+    };
     let revoking = alive.clone();
     let revoke = StoredValue::new_local(move |selected: String| {
         if pending.get_untracked()
@@ -172,6 +222,7 @@ pub fn RepositoryAccess(
         <p hidden=move||registry.get().is_none_or(|registry|registry.available)>{move||i18n.text("Autorise les dépôts depuis le lanceur natif.")}</p>
         <fieldset disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available)>
             <label for="repository-access-path">{move||i18n.text("Dossier du dépôt à autoriser")}</label><input id="repository-access-path" maxlength="2000" spellcheck="false" prop:value=move||path.get() on:input=move|event|path.set(event_target_value(&event))/>
+            <button id="choose-repository-folder" type="button" on:click=choose>{move||i18n.text("Choisir un dossier…")}</button>
             <label><input id="confirm-repository-access" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()})/>{move||i18n.text("Autoriser Atelier à utiliser ce dépôt et ses futurs worktrees après mes confirmations.")}</label>
             <button id="save-repository-access" type="button" disabled=move||path.get().is_empty()||key.get().is_none_or(|key|key!=approved.get()) on:click=save>{move||i18n.text("Autoriser ce dépôt")}</button>
         </fieldset>

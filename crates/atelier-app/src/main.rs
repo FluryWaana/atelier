@@ -130,6 +130,12 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
 async fn main() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
+    if first.as_deref() == Some(std::ffi::OsStr::new("choose-folder")) {
+        if command.next().is_some() {
+            return Err("Le sélecteur ne reçoit aucun argument ni dossier de données.".into());
+        }
+        return atelier_app::infrastructure::folders::command().await;
+    }
     if first.as_deref() == Some(std::ffi::OsStr::new("connector-azure")) {
         if command.next().is_some() {
             return Err("Le connecteur Azure reçoit uniquement sa requête sur stdin.".into());

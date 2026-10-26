@@ -2,6 +2,20 @@ use atelier_app::infrastructure::{launcher, local_http::LocalHttp, session};
 use serde_json::json;
 use std::{path::Path, time::Duration};
 
+#[test]
+fn the_folder_helper_rejects_arguments_before_opening_a_dialog_or_data_directory() {
+    let synthetic = tempfile::tempdir().unwrap();
+    let forbidden = synthetic.path().join("must-not-be-created");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_atelier"))
+        .args(["choose-folder", "--data-dir"])
+        .arg(&forbidden)
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(!forbidden.exists());
+}
+
 struct Instance {
     data: tempfile::TempDir,
     port: u16,

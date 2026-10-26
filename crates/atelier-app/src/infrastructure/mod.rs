@@ -22,6 +22,7 @@ mod directory_link;
 #[cfg(windows)]
 pub mod extensions;
 pub mod files;
+pub mod folders;
 pub mod forge;
 pub mod forge_association;
 pub mod forge_draft;
