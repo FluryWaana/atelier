@@ -95,6 +95,18 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
             "Les recherches distantes sont occupées. Réessaie dans un instant.",
         );
     };
+    response(perform(&state, id, input, reconcile).await)
+}
+
+pub(super) async fn perform(
+    state: &Shared,
+    id: String,
+    input: ForgePublicationRequest,
+    reconcile: bool,
+) -> crate::Result<Card> {
+    if id != input.expected.id || !input.confirmed {
+        return Err("Confirme les branches et le contenu de la PR/MR à créer.".into());
+    }
     let prepared = input.clone();
     let operation = uuid::Uuid::new_v4().to_string();
     let card = state
@@ -125,23 +137,11 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
             }
             Ok(card)
         })
-        .await;
-    let card = match card {
-        Ok(card) => card,
-        Err(error) => return response::<Card>(Err(error)),
-    };
-    let intent = match card
+        .await?;
+    let intent = card
         .fields
-        .get::<ForgePublicationIntent>("forgePublication")
-    {
-        Ok(Some(intent)) => intent,
-        _ => {
-            return failure(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Intention de publication absente.",
-            );
-        }
-    };
+        .get::<ForgePublicationIntent>("forgePublication")?
+        .ok_or("Intention de publication absente.")?;
     let _ = state.changed.send(());
     let mut stopped = state.shutdown.subscribe();
     let work = async {
@@ -223,5 +223,5 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
         result => result,
     };
     let _ = state.changed.send(());
-    response(result)
+    result
 }

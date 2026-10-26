@@ -122,8 +122,20 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
             "Confirme les fichiers et le message du commit.",
         );
     }
+    response(perform(&state, id, input, reconcile).await)
+}
+
+pub(super) async fn perform(
+    state: &Shared,
+    id: String,
+    input: LocalCommitRequest,
+    reconcile: bool,
+) -> Result<Card> {
+    if id != input.expected.id || !input.confirmed {
+        return Err("Confirme les fichiers et le message du commit.".into());
+    }
     let operation_id = uuid::Uuid::new_v4().to_string();
-    let card: Result<Card> = state
+    let card = state
         .database
         .call(move |store| {
             if !reconcile {
@@ -142,20 +154,11 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
             }
             Ok(card)
         })
-        .await;
-    let card = match card {
-        Ok(card) => card,
-        Err(error) => return response::<Card>(Err(error)),
-    };
-    let intent = match card.fields.get::<LocalCommitIntent>("localCommit") {
-        Ok(Some(intent)) => intent,
-        _ => {
-            return failure(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Intention de commit absente.",
-            );
-        }
-    };
+        .await?;
+    let intent = card
+        .fields
+        .get::<LocalCommitIntent>("localCommit")?
+        .ok_or("Intention de commit absente.")?;
     let _ = state.changed.send(());
     let work = async {
         // Reconciliation verifies the original managed worktree, never an arbitrary path.
@@ -221,5 +224,5 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
         result => result,
     };
     let _ = state.changed.send(());
-    response(result)
+    result
 }

@@ -31,6 +31,65 @@ async fn git(path: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 #[tokio::test]
+async fn committed_disk_can_be_reviewed_while_preserving_a_partially_staged_human_index() {
+    let home = tempfile::tempdir().unwrap();
+    let source = home.path().join("repo");
+    std::fs::create_dir(&source).unwrap();
+    git(&source, &["init", "-b", "main"]).await;
+    std::fs::write(source.join("file.txt"), "baseline\n").unwrap();
+    git(&source, &["add", "."]).await;
+    git(&source, &["commit", "-m", "Synthetic baseline"]).await;
+    std::fs::write(source.join("file.txt"), "human staged content\n").unwrap();
+    git(&source, &["add", "file.txt"]).await;
+    std::fs::write(source.join("file.txt"), "selected disk content\n").unwrap();
+    let index = std::fs::read(source.join(".git/index")).unwrap();
+    std::fs::write(source.join(".git/FETCH_HEAD"), "synthetic fetch marker").unwrap();
+    let root = Dir::open_ambient_dir(home.path(), ambient_authority()).unwrap();
+    let repository = Repository::synthetic(
+        &root,
+        &[home.path().to_owned()],
+        &JsonString::from(source.to_string_lossy().replace('\\', "/")),
+    )
+    .unwrap();
+    let preview = local_commit::preview(&repository, vec!["file.txt".into()])
+        .await
+        .unwrap();
+    let commit = local_commit::prepare(
+        &repository,
+        &preview.snapshot,
+        "Synthetic",
+        "synthetic@example.invalid",
+        "Synthetic selected content",
+    )
+    .await
+    .unwrap();
+    local_commit::publish(&repository, &preview.snapshot, &commit)
+        .await
+        .unwrap();
+    assert!(
+        local_commit::disk_matches_commit(&repository, &commit)
+            .await
+            .unwrap()
+    );
+    assert_eq!(std::fs::read(source.join(".git/index")).unwrap(), index);
+    std::fs::write(source.join("file.txt"), "unpublished human change\n").unwrap();
+    assert!(
+        !local_commit::disk_matches_commit(&repository, &commit)
+            .await
+            .unwrap()
+    );
+    assert_eq!(std::fs::read(source.join(".git/index")).unwrap(), index);
+    assert_eq!(
+        std::fs::read_to_string(source.join(".git/FETCH_HEAD")).unwrap(),
+        "synthetic fetch marker"
+    );
+    assert_eq!(
+        local_commit::current(&repository, "main").await.unwrap(),
+        commit
+    );
+}
+
+#[tokio::test]
 async fn selected_snapshot_preserves_human_index_disk_and_fetch_head_and_rejects_stale_preview() {
     let home = tempfile::tempdir().unwrap();
     let source = home.path().join("repo");

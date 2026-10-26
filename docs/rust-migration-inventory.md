@@ -1712,11 +1712,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/local_commit.rs:36](../crates/atelier-app/src/infrastructure/local_commit.rs#L36) | <code>pub fn identity(name: &amp;str, email: &amp;str, message: &amp;str) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:127](../crates/atelier-app/src/infrastructure/local_commit.rs#L127) | <code>pub async fn current(repository: &amp;Repository, branch: &amp;str) -&gt; Result&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:203](../crates/atelier-app/src/infrastructure/local_commit.rs#L203) | <code>pub async fn preview(repository: &amp;Repository, selected: Vec&lt;String&gt;) -&gt; Result&lt;Preview&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:260](../crates/atelier-app/src/infrastructure/local_commit.rs#L260) | <code>pub async fn prepare(</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:294](../crates/atelier-app/src/infrastructure/local_commit.rs#L294) | <code>pub async fn publish(repository: &amp;Repository, expected: &amp;Snapshot, commit: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:332](../crates/atelier-app/src/infrastructure/local_commit.rs#L332) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:333](../crates/atelier-app/src/infrastructure/local_commit.rs#L333) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:334](../crates/atelier-app/src/infrastructure/local_commit.rs#L334) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:260](../crates/atelier-app/src/infrastructure/local_commit.rs#L260) | <code>pub async fn disk_matches_commit(repository: &amp;Repository, source: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:305](../crates/atelier-app/src/infrastructure/local_commit.rs#L305) | <code>pub async fn prepare(</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:339](../crates/atelier-app/src/infrastructure/local_commit.rs#L339) | <code>pub async fn publish(repository: &amp;Repository, expected: &amp;Snapshot, commit: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:377](../crates/atelier-app/src/infrastructure/local_commit.rs#L377) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:378](../crates/atelier-app/src/infrastructure/local_commit.rs#L378) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:379](../crates/atelier-app/src/infrastructure/local_commit.rs#L379) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:1](../crates/atelier-app/src/infrastructure/local_http.rs#L1) | <code>use super::session;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:2](../crates/atelier-app/src/infrastructure/local_http.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_http.rs:3](../crates/atelier-app/src/infrastructure/local_http.rs#L3) | <code>use reqwest::{</code> |
@@ -1945,14 +1946,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/reviews.rs:14](../crates/atelier-app/src/infrastructure/reviews.rs#L14) | <code>use cap_std::fs::Dir;</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:15](../crates/atelier-app/src/infrastructure/reviews.rs#L15) | <code>use std::path::PathBuf;</code> |
 | [crates/atelier-app/src/infrastructure/reviews.rs:17](../crates/atelier-app/src/infrastructure/reviews.rs#L17) | <code>pub const UNCHECKED: &amp;str =</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:45](../crates/atelier-app/src/infrastructure/reviews.rs#L45) | <code>pub async fn prepare(</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:125](../crates/atelier-app/src/infrastructure/reviews.rs#L125) | <code>pub fn matches(store: &amp;Store&lt;'_&gt;, card: &amp;Card, context: &amp;Context) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:148](../crates/atelier-app/src/infrastructure/reviews.rs#L148) | <code>pub fn validate(</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:175](../crates/atelier-app/src/infrastructure/reviews.rs#L175) | <code>pub fn correction(</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:205](../crates/atelier-app/src/infrastructure/reviews.rs#L205) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:206](../crates/atelier-app/src/infrastructure/reviews.rs#L206) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:207](../crates/atelier-app/src/infrastructure/reviews.rs#L207) | <code>use cap_std::ambient_authority;</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:234](../crates/atelier-app/src/infrastructure/reviews.rs#L234) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:43](../crates/atelier-app/src/infrastructure/reviews.rs#L43) | <code>pub async fn prepare(</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:123](../crates/atelier-app/src/infrastructure/reviews.rs#L123) | <code>pub fn matches(store: &amp;Store&lt;'_&gt;, card: &amp;Card, context: &amp;Context) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:146](../crates/atelier-app/src/infrastructure/reviews.rs#L146) | <code>pub fn validate(</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:173](../crates/atelier-app/src/infrastructure/reviews.rs#L173) | <code>pub fn correction(</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:203](../crates/atelier-app/src/infrastructure/reviews.rs#L203) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:204](../crates/atelier-app/src/infrastructure/reviews.rs#L204) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:205](../crates/atelier-app/src/infrastructure/reviews.rs#L205) | <code>use cap_std::ambient_authority;</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:232](../crates/atelier-app/src/infrastructure/reviews.rs#L232) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/runs.rs:1](../crates/atelier-app/src/infrastructure/runs.rs#L1) | <code>use super::store::{Documents, Store};</code> |
 | [crates/atelier-app/src/infrastructure/runs.rs:2](../crates/atelier-app/src/infrastructure/runs.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/runs.rs:3](../crates/atelier-app/src/infrastructure/runs.rs#L3) | <code>use atelier_core::{contracts::Card, document::Document};</code> |
@@ -2373,6 +2374,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/local-commit.rs:4](../crates/atelier-app/tests/local-commit.rs#L4) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/tests/local-commit.rs:5](../crates/atelier-app/tests/local-commit.rs#L5) | <code>use std::{path::Path, time::Duration};</code> |
 | [crates/atelier-app/tests/local-commit.rs:33](../crates/atelier-app/tests/local-commit.rs#L33) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/local-commit.rs:92](../crates/atelier-app/tests/local-commit.rs#L92) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/local-http.rs:1](../crates/atelier-app/tests/local-http.rs#L1) | <code>use atelier_app::infrastructure::{local_http::LocalHttp, session};</code> |
 | [crates/atelier-app/tests/local-http.rs:2](../crates/atelier-app/tests/local-http.rs#L2) | <code>use axum::{</code> |
 | [crates/atelier-app/tests/local-http.rs:9](../crates/atelier-app/tests/local-http.rs#L9) | <code>use serde_json::json;</code> |
@@ -4662,12 +4664,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/local_commit.rs:217](../crates/atelier-app/src/infrastructure/local_commit.rs#L217) | <code>let mut args = vec!["add", "--all", "--"];</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:218](../crates/atelier-app/src/infrastructure/local_commit.rs#L218) | <code>args.extend(selected.iter().map(String::as_str));</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:219](../crates/atelier-app/src/infrastructure/local_commit.rs#L219) | <code>run(repository, &amp;index, &amp;args, &amp;[]).await?;</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:279](../crates/atelier-app/src/infrastructure/local_commit.rs#L279) | <code>.args(["commit-tree", &amp;expected.tree, "-p", &amp;expected.head]);</code> |
-| [crates/atelier-app/src/infrastructure/local_commit.rs:314](../crates/atelier-app/src/infrastructure/local_commit.rs#L314) | <code>command.args([</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:324](../crates/atelier-app/src/infrastructure/local_commit.rs#L324) | <code>.args(["commit-tree", &amp;expected.tree, "-p", &amp;expected.head]);</code> |
+| [crates/atelier-app/src/infrastructure/local_commit.rs:359](../crates/atelier-app/src/infrastructure/local_commit.rs#L359) | <code>command.args([</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:417](../crates/atelier-app/src/infrastructure/portable_import.rs#L417) | <code>command.args(["--exact", "infrastructure::portable_import::tests::source_writer_remains_locked_to_other_processes_after_import_refusal", "--nocapture"])</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:748](../crates/atelier-app/src/infrastructure/portable_import.rs#L748) | <code>.args(["/D", "/C"])</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:214](../crates/atelier-app/src/infrastructure/reviews.rs#L214) | <code>.args([</code> |
-| [crates/atelier-app/src/infrastructure/reviews.rs:222](../crates/atelier-app/src/infrastructure/reviews.rs#L222) | <code>.args(arguments);</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:212](../crates/atelier-app/src/infrastructure/reviews.rs#L212) | <code>.args([</code> |
+| [crates/atelier-app/src/infrastructure/reviews.rs:220](../crates/atelier-app/src/infrastructure/reviews.rs#L220) | <code>.args(arguments);</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:240](../crates/atelier-app/src/infrastructure/token_vault.rs#L240) | <code>args: &amp;[&amp;str],</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:245](../crates/atelier-app/src/infrastructure/token_vault.rs#L245) | <code>.args(args)</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:365](../crates/atelier-app/src/infrastructure/token_vault.rs#L365) | <code>async \|_: &amp;str, args: &amp;[&amp;str], input: Option&lt;&amp;str&gt;\| -&gt; Result&lt;(i32, String)&gt; {</code> |

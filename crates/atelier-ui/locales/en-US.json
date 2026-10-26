@@ -1709,5 +1709,7 @@
   "Parcours suspendu pendant la maintenance. Vérifie le résultat avant de reprendre.": "Workflow suspended during maintenance. Check its result before resuming.",
   "Arrête les parcours automatiques avant une restauration.": "Stop automatic workflows before restoring a backup.",
   "Profil du parcours introuvable.": "Workflow profile not found.",
-  "Parcours actif sans identifiant : examine les processus avant de poursuivre.": "Active workflow has no identifier: inspect processes before continuing."
+  "Parcours actif sans identifiant : examine les processus avant de poursuivre.": "Active workflow has no identifier: inspect processes before continuing.",
+  "Les sources ont changé pendant leur comparaison au commit. Relance la review.": "Sources changed while they were being compared with the commit. Start the review again.",
+  "La comparaison native des sources de review n’est pas disponible sur cette plateforme.": "Native review source comparison is unavailable on this platform."
 }

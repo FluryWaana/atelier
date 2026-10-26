@@ -130,6 +130,19 @@ async fn execute(
             "Les recherches distantes sont occupées. Réessaie dans un instant.",
         );
     };
+    response(perform(&state, id, input, reconcile, publication).await)
+}
+
+pub(super) async fn perform(
+    state: &Shared,
+    id: String,
+    input: GitPushRequest,
+    reconcile: bool,
+    publication: Option<ForgePublicationRequest>,
+) -> crate::Result<Card> {
+    if id != input.expected.id || !input.confirmed {
+        return Err("Confirme le commit et la branche à pousser.".into());
+    }
     let requested = input.clone();
     let operation = uuid::Uuid::new_v4().to_string();
     let card = state
@@ -167,20 +180,11 @@ async fn execute(
             }
             Ok(card)
         })
-        .await;
-    let card = match card {
-        Ok(card) => card,
-        Err(error) => return response::<Card>(Err(error)),
-    };
-    let intent = match card.fields.get::<GitPushIntent>("gitPush") {
-        Ok(Some(intent)) => intent,
-        _ => {
-            return failure(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Intention de push absente.",
-            );
-        }
-    };
+        .await?;
+    let intent = card
+        .fields
+        .get::<GitPushIntent>("gitPush")?
+        .ok_or("Intention de push absente.")?;
     let _ = state.changed.send(());
     let mut stopped = state.shutdown.subscribe();
     let work = async {
@@ -262,5 +266,5 @@ async fn execute(
         result => result,
     };
     let _ = state.changed.send(());
-    response(result)
+    result
 }

@@ -25,20 +25,18 @@ fn commit(value: Option<&str>) -> Result<&str> {
         .ok_or_else(|| "Commits de PR/MR indisponibles. Actualise la PR/MR avant la review.".into())
 }
 async fn clean(repository: &Repository, source: &str) -> Result<()> {
-    let head = String::from_utf8(
-        repository
-            .git(&["rev-parse", "--verify", "HEAD^{commit}"])
-            .await?,
-    )?;
-    if head.trim() != source
-        || !repository
-            .without_programs(&["status", "--porcelain=v1", "--untracked-files=all"])
-            .await?
-            .is_empty()
+    #[cfg(windows)]
     {
-        return Err("Publie les changements et garde le worktree propre sur le commit de la PR/MR avant la review.".into());
+        if !super::local_commit::disk_matches_commit(repository, source).await? {
+            return Err("Publie les changements et garde le worktree propre sur le commit de la PR/MR avant la review.".into());
+        }
+        Ok(())
     }
-    Ok(())
+    #[cfg(not(windows))]
+    {
+        let _ = (repository, source);
+        Err("La comparaison native des sources de review n’est pas disponible sur cette plateforme.".into())
+    }
 }
 
 /// The caller owns the exclusive mutation reservation throughout network and Git operations.
@@ -232,8 +230,7 @@ mod tests {
         output.stdout
     }
     #[tokio::test]
-    async fn review_refuses_staged_unstaged_untracked_changes_and_wrong_head_without_discarding_them()
-     {
+    async fn review_compares_disk_to_commit_and_preserves_a_different_human_index() {
         let fixture = tempfile::tempdir().unwrap();
         let root_path = fixture.path().canonicalize().unwrap();
         let path = root_path.join("repositories/review");
@@ -267,6 +264,8 @@ mod tests {
             "human unstaged"
         );
         std::fs::write(path.join("tracked"), "original").unwrap();
+        clean(&repository, &head).await.unwrap();
+        assert_eq!(std::fs::read(path.join(".git/index")).unwrap(), index);
         git(&path, &["add", "tracked"]).await;
         clean(&repository, &head).await.unwrap();
         std::fs::write(path.join("untracked"), "human untracked").unwrap();

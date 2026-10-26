@@ -256,6 +256,51 @@ pub async fn preview(repository: &Repository, selected: Vec<String>) -> Result<P
     })
 }
 
+/// Compare the files agents can read with the reviewed commit without consuming a human index.
+pub async fn disk_matches_commit(repository: &Repository, source: &str) -> Result<bool> {
+    validate_commit(source)?;
+    let before = repository.fingerprint().await?;
+    let (branch_name, head) = branch(repository).await?;
+    if head != source {
+        return Ok(false);
+    }
+    let selected = repository
+        .changes(None)
+        .await?
+        .files
+        .into_iter()
+        .map(|entry| entry.path)
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let same = if selected.is_empty() {
+        true
+    } else {
+        paths(&selected)?;
+        check_paths(repository, &selected)?;
+        let home = tempfile::tempdir()?;
+        let index = home.path().join("index");
+        run(repository, &index, &["read-tree", source], &[]).await?;
+        let mut arguments = vec!["add", "--all", "--"];
+        arguments.extend(selected.iter().map(String::as_str));
+        run(repository, &index, &arguments, &[]).await?;
+        check_paths(repository, &selected)?;
+        let actual = oid(run(repository, &index, &["write-tree"], &[]).await?)?;
+        let expected = oid(repository
+            .git(&["rev-parse", "--verify", &format!("{source}^{{tree}}")])
+            .await?)?;
+        home.close()?;
+        actual == expected
+    };
+    if branch(repository).await? != (branch_name, head) || repository.fingerprint().await? != before
+    {
+        return Err(
+            "Les sources ont changé pendant leur comparaison au commit. Relance la review.".into(),
+        );
+    }
+    Ok(same)
+}
+
 /// Creates an unreachable object only. Callers persist its ID before publishing the ref.
 pub async fn prepare(
     repository: &Repository,

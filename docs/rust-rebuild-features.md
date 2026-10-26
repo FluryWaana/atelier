@@ -42,6 +42,8 @@ Cycle R06 candidat raccordé : installation CLI sans écrasement, confiance stoc
 
 ## Points de contrôle
 
+- Correction candidate R05 : la review compare désormais le disque au commit source via un index privé et peut conserver un index humain différent après commit. Fichiers réellement non publiés, commit différent et modification pendant comparaison refusés ; scénarios Git et conservation index/FETCH_HEAD écrits, **non compilés/non exécutés**. Exécutions typées des intentions commit/push/PR partagées par les handlers ; orchestration et POSIX restent ouverts.
+
 - R05, parcours de projet candidat : autorisation/commande/cible/corrections configurables avec concurrence typée ; développement→vérification, attente de publication explicite, revérification→review revalidée et deux corrections P0/P1 au maximum via le superviseur commun. Identifiants de réservation protégeant l’arrêt avant lancement, récupération sans rejeu, gardes incompatibles et panneau bilingue raccordés. Scénarios de stockage et WebDriver uniquement écrits, **non compilés/non exécutés**. Publication entièrement orchestrée, file par projet, parcours heureux de forge et POSIX encore ouverts ; [suivi précis](rust-workflows.md). Aucun lot ni case finale validé.
 
 - R04, rafraîchissement des tickets d’extension candidat : panneau de carte, lecture/aperçu et application sélective confirmée ; portée/révision/rapport daté/instantané exacts, gardes communes, conservation des champs humains et invalidation atomique des reviews. Compteur d’import limité au tenant/configuration courants. Scénarios de conflit, expiration, rollback et brouillon navigateur écrits, **non compilés/non exécutés**. Écritures/reprise et autres capacités/POSIX restent à livrer ; aucun lot validé.
