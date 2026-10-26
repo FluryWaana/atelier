@@ -71,7 +71,7 @@ impl Tempo {
         if !super::BASES.contains(&base) {
             return Err("Site Tempo non autorisé.".into());
         }
-        Self::prepare(Url::parse(base)?, token, false)
+        Self::prepare(Url::parse(base)?, token, false, None)
     }
     /// Local synthetic HTTP doubles only; the application never uses this constructor.
     pub fn synthetic(base: &str, token: String) -> Result<Self> {
@@ -93,9 +93,20 @@ impl Tempo {
         {
             return Err("Serveur Tempo synthétique loopback requis.".into());
         }
-        Self::prepare(base, token, true)
+        Self::prepare(base, token, true, None)
     }
-    fn prepare(base: Url, token: String, synthetic: bool) -> Result<Self> {
+    /// HTTPS loopback with one explicit synthetic CA; never selected by application routes.
+    pub fn synthetic_tls(base: &str, token: String, authority: &[u8]) -> Result<Self> {
+        let client = super::super::synthetic_tls::client(base, &token, authority)?;
+        let base = Url::parse(base)?;
+        Self::prepare(base, token, false, Some(client))
+    }
+    fn prepare(
+        base: Url,
+        token: String,
+        synthetic: bool,
+        trusted_client: Option<reqwest::Client>,
+    ) -> Result<Self> {
         if token.is_empty()
             || token.len() > 4000
             || token.chars().any(|c| c.is_whitespace() || c.is_control())
@@ -105,14 +116,17 @@ impl Tempo {
         let mut authorization = HeaderValue::from_str(&format!("Bearer {token}"))
             .map_err(|_| "Jeton Tempo invalide.")?;
         authorization.set_sensitive(true);
-        let client = reqwest::Client::builder()
+        let builder = reqwest::Client::builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .https_only(!synthetic)
             .connect_timeout(Duration::from_secs(5))
-            .timeout(Duration::from_secs(20))
-            .build()?;
+            .timeout(Duration::from_secs(20));
+        let client = match trusted_client {
+            Some(client) => client,
+            None => builder.build()?,
+        };
         Ok(Self {
             client,
             base,

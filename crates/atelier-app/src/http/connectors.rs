@@ -262,6 +262,13 @@ pub(super) async fn invoke(
         )
         .await?;
         let action = request.action.clone();
+        let transitions_source = if request.method
+            == atelier_core::application::extensions::Method::TicketsTransitions
+        {
+            Some(request.input.clone())
+        } else {
+            None
+        };
         let time_source =
             if request.method == atelier_core::application::extensions::Method::TimePreview {
                 Some(request.input.clone())
@@ -285,6 +292,16 @@ pub(super) async fn invoke(
             )? != source
         {
             return Err("Le module a changé la saisie demandée dans son aperçu de temps.".into());
+        }
+        if let Some(source) = transitions_source
+            && serde_json::to_value(
+                crate::infrastructure::connector_ticket_transitions::report(&reply.output)?.ticket,
+            )? != source
+        {
+            return Err(
+                "Le module a répondu pour un autre ticket pendant la lecture des transitions."
+                    .into(),
+            );
         }
         let report = Report {
             id: uuid::Uuid::new_v4().to_string(),

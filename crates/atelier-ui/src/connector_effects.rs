@@ -1,7 +1,8 @@
 use crate::{connectors::translated, i18n::I18n, read, write};
 use atelier_core::{
     application::extensions::{
-        self as protocol, Connection, Effect as RemoteEffect, Method, RemoteOperation as Operation,
+        self as protocol, Connection, Effect as RemoteEffect, Method, Registry,
+        RemoteOperation as Operation,
     },
     contracts::ForgeWriteState as Phase,
 };
@@ -29,6 +30,7 @@ pub fn ConnectorEffects(
     pending: RwSignal<bool>,
     blocked: Memo<bool>,
     dirty: RwSignal<bool>,
+    #[prop(optional)] card_id: String,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let operations = RwSignal::new(Vec::<Operation>::new());
@@ -39,6 +41,18 @@ pub fn ConnectorEffects(
     let ticket_title = RwSignal::new(String::new());
     let ticket_description = RwSignal::new(String::new());
     let time_dirty = RwSignal::new(false);
+    let scoped = !card_id.is_empty();
+    let heading = if scoped {
+        format!("connector-effects-heading-{card_id}")
+    } else {
+        "connector-effects-heading".into()
+    };
+    let reload_id = if scoped {
+        format!("reload-connector-effects-{card_id}")
+    } else {
+        "reload-connector-effects".into()
+    };
+    let card_id = StoredValue::new(card_id);
     let page = RwSignal::new(0usize);
     let generation = RwSignal::new(0u64);
     let alive = Rc::new(Cell::new(true));
@@ -114,6 +128,14 @@ pub fn ConnectorEffects(
                 if context.get_untracked() == Some(expected_again) {
                     match result {
                         Ok(mut values) => {
+                            let selected = card_id.get_value();
+                            if !selected.is_empty() {
+                                values.retain(|operation| {
+                                    operation.method == Method::TicketsTransition
+                                        && operation.input["cardId"].as_str()
+                                            == Some(selected.as_str())
+                                });
+                            }
                             values.reverse();
                             operations.set(values);
                             page.set(0);
@@ -133,12 +155,17 @@ pub fn ConnectorEffects(
     let writing = alive.clone();
     let execute = StoredValue::new_local(
         move |(action, operation): (String, Option<Operation>)| {
-            if pending.get_untracked() || loading.get_untracked() || blocked.get_untracked() {
+            if pending.get_untracked()
+                || loading.get_untracked()
+                || (blocked.get_untracked()
+                    && !(operation.is_some() && matches!(action.as_str(), "reconcile" | "cancel")))
+            {
                 return;
             }
             let Some(connection) = connection.get_untracked() else {
                 return;
             };
+            let reconciling = action == "reconcile" && operation.is_some();
             let profile = connection.installed;
             let credential = match token.get_value() {
                 Ok(value) => value,
@@ -178,8 +205,23 @@ pub fn ConnectorEffects(
             approved.set(String::new());
             error.set(String::new());
             let alive = writing.clone();
+            let module = profile.manifest.id;
             spawn_local(async move {
                 let result = async {
+                    let mut body = body;
+                    if reconciling {
+                        let registry = read(&credential, "/api/extensions")
+                            .await?
+                            .json::<Registry>()
+                            .await
+                            .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        let current = registry
+                            .modules
+                            .into_iter()
+                            .find(|connection| connection.installed.manifest.id == module)
+                            .ok_or("Réinstalle ce module pour rapprocher son opération.")?;
+                        body["expectedRevision"] = serde_json::json!(current.installed.revision);
+                    }
                     write(&credential, Http::POST, &path, &body)
                         .await?
                         .json::<Operation>()
@@ -218,8 +260,9 @@ pub fn ConnectorEffects(
             });
         },
     );
-    view! {<section class="task-files" hidden=move||connection.get().is_none() aria-labelledby="connector-effects-heading" aria-busy=move||(loading.get()||pending.get()).to_string()>
-        <h4 id="connector-effects-heading">{move||i18n.text("Écritures distantes du connecteur")}</h4>
+    view! {<section class="task-files" data-connector-journal-card=card_id.get_value() hidden=move||connection.get().is_none() aria-labelledby=heading.clone() aria-busy=move||(loading.get()||pending.get()).to_string()>
+        <h4 id=heading>{move||i18n.text("Écritures distantes du connecteur")}</h4>
+        <Show when=move||!scoped>
         <connector_time::ConnectorTime connection board token pending dirty=time_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
         <fieldset hidden=move||connection.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&Method::TicketsCreate)) disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|rows|rows.iter().any(|row|matches!(row.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))>
             <legend>{move||i18n.text("Créer un ticket distant")}</legend>
@@ -230,17 +273,24 @@ pub fn ConnectorEffects(
         </fieldset>
         <p class="field-help">{move||i18n.text("Prépare une action déclarée, vérifie sa portée puis confirme son envoi unique. Une réponse perdue impose un rapprochement en lecture seule. L’aperçu réserve l’application jusqu’à son envoi ou son annulation.")}</p>
         <div><For each=move||connection.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==RemoteEffect::Remote).collect::<Vec<_>>()).unwrap_or_default() key=|action|action.id.clone() children=move|action|{let selected=StoredValue::new(action.id);let label=action.label;view!{<button class="prepare-connector-effect" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))) on:click=move |_|execute.with_value(|execute|execute((selected.get_value(),None)))>{move||connection.get().map(|connection|translated(i18n,&connection.installed.manifest,&label))}</button>}}/></div>
-        <button id="reload-connector-effects" type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("Relire l’historique des opérations")}</button>
+        </Show>
+        <button id=reload_id type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("Relire l’historique des opérations")}</button>
         <p hidden=move||loading.get()||!operations.with(Vec::is_empty)>{move||i18n.text("Aucune opération enregistrée pour ce connecteur.")}</p>
         <For each=move||{let _=i18n.code();operations.with(|operations|operations.iter().skip(page.get()*20).take(20).cloned().collect::<Vec<_>>())} key=move|operation|(operation.id.clone(),operation.version,i18n.code()) children=move|operation|{
             let current=StoredValue::new(operation.clone());
             let key=move||context.get().map(|(_,revision)|format!("{}:{}:{revision}",current.with_value(|operation|operation.id.clone()),current.with_value(|operation|operation.version))).unwrap_or_default();
-            let label=if operation.method==Method::TimeSend {i18n.text("Exporter une saisie de temps")}else if operation.method==Method::TicketsCreate {i18n.text("Créer un ticket distant")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
+            let label=if operation.method==Method::TicketsTransition{i18n.text("Modifier le statut d’un ticket distant")}else if operation.method==Method::TimeSend {i18n.text("Exporter une saisie de temps")}else if operation.method==Method::TicketsCreate {i18n.text("Créer un ticket distant")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
             let report=operation.reply.as_ref().map(|reply|protocol::Report{id:operation.id.clone(),method:operation.method,action:if operation.method==Method::Action {Some(operation.action.clone())}else{None},message:reply.message.clone(),output:reply.output.clone(),observed_at:operation.updated_at.clone()});
             let items=report.as_ref().map(protocol::report_items).transpose().unwrap_or_default().unwrap_or_default();
             view!{<article class="task-files" data-connector-operation=operation.id.clone()>
                 <h5>{translated(i18n,&operation.manifest,&label)}</h5><p class="connector-effect-state">{i18n.text(state(operation.state))}</p><code>{operation.id.clone()}</code><p>{operation.updated_at.clone()}</p>
+                <p class="field-help">{translated(i18n,&operation.manifest,&operation.manifest.name)}</p>
                 <p hidden=operation.method!=Method::Action>{i18n.text("Tickets locaux dans cette portée : {0}").replace("{0}",&operation.input["importedCount"].as_u64().unwrap_or(0).to_string())}</p>
+                {if operation.method==Method::TicketsTransition{protocol::ticket_transition_payload(&operation.input).ok().map(|payload|view!{<dl>
+                    <dt>{i18n.text("Tâche")}</dt><dd>{payload.card_title}</dd><dt>{i18n.text("Ticket")}</dt><dd>{payload.ticket_key}</dd><dt>{i18n.text("Instance")}</dt><dd>{payload.ticket.instance}</dd>
+                    <dt>{i18n.text("Statut distant de départ")}</dt><dd>{payload.from_status}</dd><dt>{i18n.text("Transition")}</dt><dd>{payload.transition.name}</dd><dt>{i18n.text("Statut distant demandé")}</dt><dd>{payload.transition.status}</dd>
+                    <dt>{i18n.text("Limite de concurrence distante")}</dt><dd>{i18n.text("Un autre acteur peut modifier le ticket entre la relecture et l’envoi. Le rapprochement constate la déclaration du module, sans attribuer l’effet à Atelier.")}</dd>
+                </dl>})}else{None}}
                 {if operation.method==Method::TicketsCreate {Some(view!{<dl><dt>{i18n.text("Type de ticket")}</dt><dd>{operation.input["kind"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Titre")}</dt><dd>{operation.input["title"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Description")}</dt><dd class="pre-wrap">{operation.input["description"].as_str().unwrap_or_default().to_owned()}</dd></dl>})}else{None}}
                 {if operation.method==Method::TimeSend {protocol::time_proposal(&operation.input).ok().map(|proposal|view!{<dl>
                     <dt>{i18n.text("Tâche")}</dt><dd>{proposal.source.card_title}</dd><dt>{i18n.text("Saisie de temps")}</dt><dd>{proposal.source.id}</dd>
@@ -252,9 +302,9 @@ pub fn ConnectorEffects(
                 <p>{operation.reply.as_ref().map(|reply|translated(i18n,&operation.manifest,&reply.message)).unwrap_or_default()}</p>
                 {operation.reply.as_ref().and_then(|reply|protocol::remote_receipt(&reply.output,&operation.id).ok().flatten()).map(|receipt|view!{<p>{i18n.text(match receipt.outcome{protocol::RemoteOutcome::Applied=>"Effet déclaré appliqué",protocol::RemoteOutcome::NotAttempted=>"Envoi déclaré non tenté",protocol::RemoteOutcome::Unknown=>"Résultat déclaré inconnu"})}" · "{i18n.text("Référence déclarée par le module : ")}<code>{receipt.reference}</code>" · "{receipt.observed_at}</p>})}
                 <dl>{items.into_iter().map(|item|view!{<dt>{translated(i18n,&operation.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view()}</dl>
-                <div hidden=!matches!(operation.state,Phase::Preparing|Phase::Uncertain)><label><input class="confirm-connector-effect" type="checkbox" disabled=move||pending.get()||loading.get()||blocked.get() prop:checked=move||approved.get()==key() on:change=move|event|approved.set(if event_target_checked(&event){key()}else{String::new()})/>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"Rapprocher cette opération sans renvoyer son action."}else{"Envoyer une seule fois cette action dans la portée affichée."})}</label>
-                    <button class="send-connector-effect" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||approved.get()!=key() on:click=move |_|execute.with_value(|execute|execute(((if current.with_value(|operation|operation.state)==Phase::Uncertain{"reconcile"}else{"send"}).into(),Some(current.get_value()))))>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"Rapprocher l’effet distant"}else{"Confirmer l’envoi unique"})}</button>
-                    <button class="cancel-connector-effect" hidden=operation.state!=Phase::Preparing type="button" disabled=move||pending.get()||loading.get()||blocked.get() on:click=move |_|execute.with_value(|execute|execute(("cancel".into(),Some(current.get_value()))))>{move||i18n.text("Annuler cet aperçu non envoyé")}</button>
+                <div hidden=!matches!(operation.state,Phase::Preparing|Phase::Uncertain)><label><input class="confirm-connector-effect" type="checkbox" disabled=move||pending.get()||loading.get()||(blocked.get()&&current.with_value(|operation|operation.state)!=Phase::Uncertain) prop:checked=move||approved.get()==key() on:change=move|event|approved.set(if event_target_checked(&event){key()}else{String::new()})/>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"Rapprocher cette opération sans renvoyer son action."}else{"Envoyer une seule fois cette action dans la portée affichée."})}</label>
+                    <button class="send-connector-effect" type="button" disabled=move||pending.get()||loading.get()||(blocked.get()&&current.with_value(|operation|operation.state)!=Phase::Uncertain)||approved.get()!=key() on:click=move |_|execute.with_value(|execute|execute(((if current.with_value(|operation|operation.state)==Phase::Uncertain{"reconcile"}else{"send"}).into(),Some(current.get_value()))))>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"Rapprocher l’effet distant"}else{"Confirmer l’envoi unique"})}</button>
+                    <button class="cancel-connector-effect" hidden=operation.state!=Phase::Preparing type="button" disabled=move||pending.get()||loading.get() on:click=move |_|execute.with_value(|execute|execute(("cancel".into(),Some(current.get_value()))))>{move||i18n.text("Annuler cet aperçu non envoyé")}</button>
                 </div>
             </article>}
         }/>

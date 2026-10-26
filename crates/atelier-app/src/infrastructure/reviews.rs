@@ -43,14 +43,42 @@ pub async fn prepare(
         .fields
         .get::<PullRequest>("pullRequest")?
         .ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
+    let forge = forge::Forge::new(configuration.clone(), token.clone(), linked.revision)?;
+    let authentication =
+        HttpsAuthentication::new(configuration.clone(), linked.repository.clone(), token)?;
+    prepare_with_adapters(root, roots, card, configuration, &forge, &authentication).await
+}
+
+/// Explicit adapter composition, retaining the same worktree, remote and commit checks.
+/// The caller owns the exclusive mutation reservation throughout this operation.
+pub async fn prepare_with_adapters(
+    root: &Dir,
+    roots: &[PathBuf],
+    card: &Card,
+    configuration: ForgeConfiguration,
+    forge: &forge::Forge,
+    authentication: &HttpsAuthentication,
+) -> Result<Context> {
+    let linked = card
+        .fields
+        .get::<PullRequest>("pullRequest")?
+        .ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
     if configuration.kind != linked.kind || configuration.base != linked.base_url {
         return Err("La connexion de PR/MR a changé. Actualise sa liaison avant la review.".into());
     }
     let repository =
         forge_association::verify(root, roots, card, &configuration, &linked.repository).await?;
-    let remote = forge::Forge::new(configuration.clone(), token.clone(), linked.revision)?
+    let remote = forge
         .pull_request(&linked.repository, linked.number)
         .await?;
+    if remote.kind != configuration.kind
+        || remote.base_url != configuration.base
+        || remote.revision != linked.revision
+        || remote.repository != linked.repository
+        || remote.number != linked.number
+    {
+        return Err("La portée de la connexion de review a changé.".into());
+    }
     if remote.fork
         || remote.status != "active"
         || remote.source_branch
@@ -72,15 +100,13 @@ pub async fn prepare(
     let principal =
         Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
     principal.verify_root().await?;
-    let authentication =
-        HttpsAuthentication::new(configuration.clone(), linked.repository.clone(), token)?;
     // The target is fetched by branch and must equal the forge's advertised commit.
     let fetched = worktrees::fetch_origin_commit(
         root,
         roots,
         &principal,
         &format!("refs/heads/{}", remote.target_branch),
-        Some(&authentication),
+        Some(authentication),
     )
     .await?;
     if fetched != target {

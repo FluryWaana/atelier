@@ -40,6 +40,9 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             Method::TimeSend if operation.action.is_empty() => {
                 super::connector_time::proposal(&operation.input)?;
             }
+            Method::TicketsTransition if operation.action.is_empty() => {
+                super::connector_ticket_transitions::payload(&operation.input)?;
+            }
             _ => return Err("Opération distante de connecteur non prise en charge.".into()),
         }
         if operation.module != operation.manifest.id
@@ -129,6 +132,11 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             {
                 return Err("Résultat d’écriture de connecteur invalide.".into());
             }
+            if operation.method == Method::TicketsTransition
+                && matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
+            {
+                super::connector_ticket_transitions::observed_ticket(operation)?;
+            }
         } else if matches!(operation.state, Phase::Confirmed | Phase::Reconciled) {
             return Err("Une écriture confirmée exige une observation positive du module.".into());
         }
@@ -194,6 +202,7 @@ pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result
             Method::Action if input.input.is_null()=>serde_json::json!({"importedCount":super::connector_tickets::imported_count(store,&profile)?}),
             Method::TicketsCreate if input.action.is_empty()=>serde_json::to_value(protocol::ticket_creation(&input.input)?)?,
             Method::TimeSend if input.action.is_empty()=>super::connector_time::prepare_preview(store,&profile,&input.input)?,
+            Method::TicketsTransition if input.action.is_empty()=>super::connector_ticket_transitions::prepare_preview(store,&profile,&input.input)?,
             _=>return Err("Opération distante de connecteur non prise en charge.".into())
         };
         let timestamp=now()?;
@@ -308,6 +317,7 @@ fn change(
             .ok_or("L’opération de connecteur a changé. Recharge son aperçu.")?;
         action(operation)?;
         super::connector_time::synchronize(store, operation)?;
+        super::connector_ticket_transitions::synchronize(store, operation)?;
         touch(operation)?;
         let result = operation.clone();
         save(store, &operations)?;
@@ -335,6 +345,7 @@ pub fn sending(
             return Err("Identité de requête de connecteur invalide.".into());
         }
         super::connector_time::before_send(store, operation)?;
+        super::connector_ticket_transitions::before_send(store, &profile, operation)?;
         operation.state = Phase::Sending;
         operation.request_id = Some(request_id.into());
         Ok(())

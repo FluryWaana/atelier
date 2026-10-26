@@ -17,7 +17,7 @@ use atelier_core::{
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
-fn scope(profile: &Installed) -> Result<String> {
+pub(super) fn scope(profile: &Installed) -> Result<String> {
     let fields: BTreeMap<_, _> = profile
         .manifest
         .fields
@@ -68,7 +68,7 @@ pub fn page(report: &Report) -> Result<TicketPage> {
     Ok(page)
 }
 
-fn linked(profile: &Installed, card: &Card) -> Result<Document> {
+pub(super) fn linked(profile: &Installed, card: &Card) -> Result<Document> {
     let ticket = card
         .fields
         .get::<Document>("ticket")?

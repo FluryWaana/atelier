@@ -121,6 +121,23 @@ async fn execute(
     let mut version = input.expected_version;
     let mut stopped = state.shutdown.subscribe();
     let work = async {
+        if let Some(read) =
+            crate::infrastructure::connector_ticket_transitions::preflight(&request)?
+        {
+            let executable = Executable::open(
+                std::path::PathBuf::from(&profile.binary.path),
+                Some(profile.binary.sha256.clone()),
+            )
+            .await?;
+            let reply = executable
+                .prepare(&profile.manifest, read, std::time::Duration::from_secs(20))?
+                .dispatch()
+                .await?;
+            crate::infrastructure::connector_ticket_transitions::validate_preflight(
+                &request.input,
+                &reply,
+            )?;
+        }
         let executable = Executable::open(
             std::path::PathBuf::from(&profile.binary.path),
             Some(profile.binary.sha256.clone()),

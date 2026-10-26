@@ -357,6 +357,7 @@ pub fn invocation(
             protocol::Method::Check,
             protocol::Method::TicketsSearch,
             protocol::Method::TicketsRead,
+            protocol::Method::TicketsTransitions,
             protocol::Method::TimePreview,
             protocol::Method::Action,
         ]
@@ -366,6 +367,10 @@ pub fn invocation(
     }
     if request.method == protocol::Method::TimePreview {
         request.input = super::connector_time::preview_input(store, &request.input)?;
+    }
+    if request.method == protocol::Method::TicketsTransitions {
+        request.input =
+            super::connector_ticket_transitions::read_input(store, &profile, &request.input)?;
     }
     let tokens = settings::load(store, protect)?;
     for field in profile
@@ -394,6 +399,9 @@ pub fn record(store: &Store<'_>, id: &str, expected: u64, report: Report) -> Res
     }
     if report.method == protocol::Method::TimePreview {
         super::connector_time::validate_report(store, &report)?;
+    }
+    if report.method == protocol::Method::TicketsTransitions {
+        super::connector_ticket_transitions::report(&report.output)?;
     }
     store.transaction(|store| {
         profile(store, id, expected)?;

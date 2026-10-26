@@ -68,6 +68,7 @@ pub struct HttpsAuthentication {
     repository: String,
     synthetic: bool,
     authorization: String,
+    synthetic_authority: Option<Vec<u8>>,
 }
 pub struct PreparedPush {
     home: tempfile::TempDir,
@@ -78,6 +79,19 @@ pub struct PreparedPush {
 }
 
 impl HttpsAuthentication {
+    /// Explicit loopback TLS fixture composition; production routes never select this adapter.
+    pub fn synthetic_tls(
+        configuration: ForgeConfiguration,
+        repository: String,
+        token: String,
+        authority: &[u8],
+    ) -> Result<Self> {
+        // Reuse the strict HTTPS/IP/token/explicit-authority boundary of the HTTP adapters.
+        let _ = super::synthetic_tls::client(&configuration.base, &token, authority)?;
+        let mut authentication = Self::prepare(configuration, repository, token, false)?;
+        authentication.synthetic_authority = Some(authority.to_vec());
+        Ok(authentication)
+    }
     pub fn new(
         configuration: ForgeConfiguration,
         repository: String,
@@ -131,6 +145,7 @@ impl HttpsAuthentication {
             configuration,
             repository,
             synthetic,
+            synthetic_authority: None,
             authorization: format!(
                 "Authorization: Basic {}",
                 STANDARD.encode(format!("atelier:{token}"))
@@ -261,6 +276,31 @@ impl HttpsAuthentication {
     ) -> Result<String> {
         let scope = self.origin(origin)?;
         Self::isolate(command, home);
+        if let Some(authority) = &self.synthetic_authority {
+            // Only the public CA is written; the token remains solely in the scoped environment.
+            let path = home.join("synthetic-authority.pem");
+            std::fs::write(&path, authority)?;
+            let empty = home.join("synthetic-empty-authorities");
+            std::fs::create_dir_all(&empty)?;
+            command.arg("-c").arg(format!(
+                "http.{scope}.sslCAInfo={}",
+                path.to_str()
+                    .ok_or("Chemin d’autorité synthétique invalide.")?
+            ));
+            command.arg("-c").arg(format!(
+                "http.{scope}.sslCAPath={}",
+                empty
+                    .to_str()
+                    .ok_or("Chemin d’autorité synthétique invalide.")?
+            ));
+            // Request OpenSSL explicitly; the final fixture also requires the provisioned Git backend.
+            command.args([
+                "-c",
+                "http.sslBackend=openssl",
+                "-c",
+                "http.schannelUseSSLCAInfo=true",
+            ]);
+        }
         command
             .env("GIT_CONFIG_COUNT", "1")
             .env("GIT_CONFIG_KEY_0", format!("http.{scope}.extraHeader"))

@@ -56,6 +56,23 @@ pub async fn preview(
     configuration: ForgeConfiguration,
     token: String,
 ) -> Result<ForgePublicationPreview> {
+    let authentication = HttpsAuthentication::new(
+        configuration.clone(),
+        input.repository.clone(),
+        token.clone(),
+    )?;
+    let forge = forge::Forge::new(configuration.clone(), token, input.revision)?;
+    preview_with_adapters(root, roots, input, configuration, &forge, &authentication).await
+}
+/// Explicit composition for native fixtures; all worktree, scope and remote checks are retained.
+pub async fn preview_with_adapters(
+    root: &Dir,
+    roots: &[PathBuf],
+    input: &ForgePublicationRequest,
+    configuration: ForgeConfiguration,
+    forge: &forge::Forge,
+    authentication: &HttpsAuthentication,
+) -> Result<ForgePublicationPreview> {
     let title = validate(input)?;
     let worktree = input
         .expected
@@ -97,11 +114,6 @@ pub async fn preview(
             ])
             .await?,
     )?;
-    let authentication = HttpsAuthentication::new(
-        configuration.clone(),
-        input.repository.clone(),
-        token.clone(),
-    )?;
     let origin = authentication.origin(&origin)?;
     let remote_source = authentication
         .remote_head_optional(&origin, &format!("refs/heads/{}", worktree.branch))
@@ -140,7 +152,7 @@ pub async fn preview(
         draft: input.draft,
     };
     // The same adapter preflight is repeated immediately before dispatch, without writing here.
-    forge::Forge::new(configuration, token, input.revision)?
+    forge
         .prepare_publication(&preview, &uuid::Uuid::new_v4().to_string())
         .await?;
     if String::from_utf8(

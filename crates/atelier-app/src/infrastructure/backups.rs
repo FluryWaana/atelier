@@ -316,6 +316,7 @@ fn restore_checked(
             "gitPushEffect",
             "forgePublicationEffect",
             "localCommitEffect",
+            "connectorTicketEffect",
         ] {
             if let Some(effect) = current.get::<serde_json::Value>(key)? {
                 let id = current
@@ -328,7 +329,7 @@ fn restore_checked(
                     .transpose()?
                     .flatten();
                 if saved != Some(effect) {
-                    return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge.").into());
+                    return Err(BackupFailure::Invalid(if key=="connectorTicketEffect" {"Restauration refusée : cette sauvegarde ne conserve pas la dernière transition du connecteur."} else {"Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge."}).into());
                 }
             }
         }
@@ -511,6 +512,33 @@ fn restore_checked(
 mod tests {
     use super::*;
     use crate::infrastructure::store::open;
+
+    #[test]
+    fn restore_cannot_erase_the_last_module_ticket_transition() {
+        let directory = tempfile::tempdir().unwrap();
+        let current = open(&directory.path().join("current.sqlite")).unwrap();
+        let store = Store::new(&current);
+        let mut card: Document = serde_json::from_str(
+            r#"{"id":"synthetic-card","title":"Human title","description":"Human description"}"#,
+        )
+        .unwrap();
+        store.put(Documents::Cards, &card).unwrap();
+        let saved = directory.path().join("before-transition.sqlite");
+        store.backup(&saved).unwrap();
+        card.set("connectorTicketEffect",&serde_json::json!({"operationId":"effect-synthetic","ticket":{"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket"},"status":"Closed"})).unwrap();
+        store.put(Documents::Cards, &card).unwrap();
+        let rescue = directory.path().join("must-not-be-created.sqlite");
+        assert!(restore(&store, &saved, &rescue).is_err());
+        assert!(!rescue.exists());
+        assert!(
+            store
+                .document::<Document>(Documents::Cards, "synthetic-card")
+                .unwrap()
+                .unwrap()
+                .raw("connectorTicketEffect")
+                .is_some()
+        );
+    }
 
     #[test]
     fn restore_cannot_remove_the_module_export_link_while_retaining_an_exported_label() {

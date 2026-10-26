@@ -10,6 +10,8 @@ use leptos::prelude::*;
 use serde_json::json;
 use std::{cell::Cell, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
+#[path = "connector_ticket_transitions.rs"]
+mod connector_ticket_transitions;
 
 #[derive(Clone)]
 struct Preview {
@@ -57,7 +59,8 @@ pub fn ConnectorTicket(
     let approved = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
-    Effect::new(move |_| dirty.set(preview.get().is_some()));
+    let transition_dirty = RwSignal::new(false);
+    Effect::new(move |_| dirty.set(preview.get().is_some() || transition_dirty.get()));
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || mounted.with_value(|alive| alive.set(false)));
@@ -168,7 +171,7 @@ pub fn ConnectorTicket(
     };
     view! { <section class="task-files" hidden=move||module.get().is_empty() aria-labelledby="connector-ticket-heading">
         <h3 id="connector-ticket-heading">{move||i18n.text("Synchronisation du ticket de connecteur")}</h3>
-        <button id="read-connector-ticket" type="button" disabled=move||pending.get()||blocked.get() on:click=load>{move||i18n.text("Lire le ticket distant")}</button>
+        <button id="read-connector-ticket" type="button" disabled=move||pending.get()||blocked.get()||transition_dirty.get() on:click=load>{move||i18n.text("Lire le ticket distant")}</button>
         <Show when=move||preview.get().is_some()>
             <p>{move||preview.get().map(|preview|format!("{} · {}",preview.ticket.key,preview.report.observed_at)).unwrap_or_default()}</p>
             <p class="field-help">{move||i18n.text("Choisis les textes à remplacer. Le statut du ticket sera actualisé ; la colonne, les critères, les instructions et le worktree seront conservés.")}</p>
@@ -183,5 +186,6 @@ pub fn ConnectorTicket(
             <button id="cancel-connector-ticket-refresh" type="button" disabled=move||pending.get() on:click=move|_|{preview.set(None);approved.set(false);error.set(String::new());}>{move||i18n.text("Annuler l’aperçu")}</button>
         </Show>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p><p role="status">{move||i18n.text(&notice.get())}</p>
+        <connector_ticket_transitions::ConnectorTicketTransitions card_id=id.get_value() card module board token pending dirty=transition_dirty blocked=Memo::new(move |_|blocked.get()||preview.get().is_some())/>
     </section> }
 }

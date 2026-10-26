@@ -2635,6 +2635,12 @@ async fn connectors_scenario(
     data: &Path,
 ) -> Result<()> {
     use atelier_core::application::extensions::Registry;
+    let effects = data.join("connector-effects-ui-fixture");
+    std::fs::create_dir(&effects)?;
+    std::fs::write(
+        effects.join(".extension-fixture"),
+        "atelier-r04-synthetic-only",
+    )?;
     click(client, "#settings-tab-connectors").await?;
     wait_dom(client,"return document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     let fixture = root()
@@ -2677,6 +2683,11 @@ async fn connectors_scenario(
     click(client, "#install-connector").await?;
     wait_dom(client,"return !!document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "[data-connector=synthetic-extension]").await?;
+    client
+        .find(Locator::Css("#connector-field-fixtureRoot"))
+        .await?
+        .send_keys(effects.to_str().ok_or("Chemin synthétique non Unicode")?)
+        .await?;
     client
         .find(Locator::Css("#connector-field-token"))
         .await?
@@ -2824,9 +2835,11 @@ async fn connectors_scenario(
         return Err("La synchronisation a modifié des champs non sélectionnés.".into());
     }
     imported = updated;
+    imported = connector_transition_scenario(client, http, address, token, data, &imported).await?;
     click(client, "#close-editor").await?;
     click(client, "#manage-settings").await?;
     click(client, "#settings-tab-connectors").await?;
+    click(client, "#reload-connectors").await?;
     wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
     click(client, "[data-connector=synthetic-extension]").await?;
     connector_time_scenario(client, http, address, token, data, &imported).await?;
@@ -2861,6 +2874,154 @@ async fn connectors_scenario(
     Ok(())
 }
 
+async fn connector_fixture_fault(
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    fault: &str,
+) -> Result<()> {
+    let registry: atelier_core::application::extensions::Registry = http
+        .get(format!("{address}/api/extensions"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let module = registry
+        .modules
+        .into_iter()
+        .find(|module| module.installed.manifest.id == "synthetic-extension")
+        .ok_or("Module synthétique absent")?;
+    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1")
+        .json(&json!({"expectedRevision":module.installed.revision,"values":{"fault":fault},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+    Ok(())
+}
+
+async fn connector_transition_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    data: &Path,
+    card: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    connector_fixture_fault(http, address, token, "lost-write").await?;
+    click(client, "#read-connector-transitions").await?;
+    wait_dom(client,"return document.querySelector('#connector-ticket-transition option[value=close]') !== null && document.querySelector('#read-connector-transitions')?.disabled === false;",vec![]).await?;
+    click(client, "#connector-ticket-transition option[value=close]").await?;
+    click(client, "#prepare-connector-transition").await?;
+    let id = card["id"].as_str().ok_or("Carte synthétique absente")?;
+    wait_dom(client,"return document.querySelector('[data-connector-journal-card=\"'+arguments[0]+'\"] .connector-effect-state')?.textContent === 'Aperçu non envoyé';",vec![json!(id)]).await?;
+    let operations: Vec<atelier_core::application::extensions::RemoteOperation> = http
+        .get(format!(
+            "{address}/api/extensions/synthetic-extension/operations"
+        ))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let operation = operations
+        .into_iter()
+        .find(|operation| {
+            operation.method == atelier_core::application::extensions::Method::TicketsTransition
+                && operation.input["cardId"] == id
+        })
+        .ok_or("Aperçu de transition absent")?;
+    let scope = format!(
+        "[data-connector-journal-card=\"{id}\"] [data-connector-operation=\"{}\"]",
+        operation.id
+    );
+    click(client, &format!("{scope} .confirm-connector-effect")).await?;
+    click(client, &format!("{scope} .send-connector-effect")).await?;
+    wait_dom(client,"return document.querySelector('[data-connector-journal-card=\"'+arguments[0]+'\"] .connector-effect-state')?.textContent === 'Effet distant incertain';",vec![json!(id)]).await?;
+    let marker = data
+        .join("connector-effects-ui-fixture")
+        .join(format!("{}.ticket-effect", operation.id));
+    let content = std::fs::read(&marker)?;
+    let modified = std::fs::metadata(&marker)?.modified()?;
+    client
+        .find(Locator::Css("#edit-instructions"))
+        .await?
+        .send_keys(" · unsaved human draft")
+        .await?;
+    let registry: atelier_core::application::extensions::Registry = http
+        .get(format!("{address}/api/extensions"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let profile = registry
+        .modules
+        .into_iter()
+        .find(|profile| profile.installed.manifest.id == "synthetic-extension")
+        .ok_or("Module synthétique absent")?;
+    let configured=http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1")
+        .json(&json!({"expectedRevision":profile.installed.revision,"values":{},"forgetValues":[],"secrets":{"token":"synthetic-rotated-transition-token"},"forgetSecrets":[]})).send().await?.error_for_status()?.text().await?;
+    if configured.contains("synthetic-rotated-transition-token") {
+        return Err("Le nouveau secret du connecteur a été exposé.".into());
+    }
+    click(client, &format!("{scope} .confirm-connector-effect")).await?;
+    click(client, &format!("{scope} .send-connector-effect")).await?;
+    wait_dom(client,"return document.querySelector('[data-connector-journal-card=\"'+arguments[0]+'\"] .connector-effect-state')?.textContent === 'Rapproché par le module' && document.querySelector('#edit-instructions')?.value.endsWith(' · unsaved human draft');",vec![json!(id)]).await?;
+    if std::fs::read(&marker)? != content || std::fs::metadata(&marker)?.modified()? != modified {
+        return Err("La relecture a modifié l’effet de transition synthétique.".into());
+    }
+    let count = std::fs::read_dir(data.join("connector-effects-ui-fixture"))?
+        .collect::<std::io::Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "ticket-effect")
+        })
+        .count();
+    if count != 1 {
+        return Err("La transition synthétique a été rejouée.".into());
+    }
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let saved = state["cards"]
+        .as_array()
+        .and_then(|cards| cards.iter().find(|saved| saved["id"] == id))
+        .cloned()
+        .ok_or("Carte après transition absente")?;
+    for key in [
+        "title",
+        "description",
+        "instructions",
+        "checklist",
+        "status",
+    ] {
+        if saved[key] != card[key] {
+            return Err("La transition a écrasé le contenu humain ou la colonne locale.".into());
+        }
+    }
+    if saved["ticket"]["status"] != "Closed"
+        || saved["connectorTicketEffect"]["operationId"] != operation.id
+    {
+        return Err("L’observation de transition n’a pas été conservée.".into());
+    }
+    let instructions = client.find(Locator::Css("#edit-instructions")).await?;
+    instructions.clear().await?;
+    instructions
+        .send_keys(card["instructions"].as_str().unwrap_or_default())
+        .await?;
+    connector_fixture_fault(http, address, token, "success").await?;
+    Ok(saved)
+}
+
 async fn connector_time_scenario(
     client: &Client,
     http: &reqwest::Client,
@@ -2869,17 +3030,15 @@ async fn connector_time_scenario(
     data: &Path,
     card: &serde_json::Value,
 ) -> Result<()> {
-    let effects = data.join("connector-time-ui-fixture");
-    std::fs::create_dir(&effects)?;
-    std::fs::write(
-        effects.join(".extension-fixture"),
-        "atelier-r04-synthetic-only",
-    )?;
-    client
-        .find(Locator::Css("#connector-field-fixtureRoot"))
-        .await?
-        .send_keys(effects.to_str().ok_or("Chemin synthétique non Unicode")?)
-        .await?;
+    let effects = data.join("connector-effects-ui-fixture");
+    wait_dom(
+        client,
+        "return document.querySelector('#connector-field-fixtureRoot')?.value === arguments[0];",
+        vec![json!(
+            effects.to_str().ok_or("Chemin synthétique non Unicode")?
+        )],
+    )
+    .await?;
     let fault = client.find(Locator::Css("#connector-field-fault")).await?;
     fault.clear().await?;
     fault.send_keys("lost-write").await?;

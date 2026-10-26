@@ -552,7 +552,7 @@ impl Forge {
     }
     pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -> Result<Self> {
         let normalized = normalize(&configuration)?;
-        Self::prepare(normalized, token, revision, false)
+        Self::prepare(normalized, token, revision, false, None)
     }
     /// Loopback doubles only; the HTTP application never calls this constructor.
     pub fn synthetic(
@@ -578,13 +578,24 @@ impl Forge {
         {
             return Err("Forge synthétique loopback requise.".into());
         }
-        Self::prepare(configuration, token, revision, true)
+        Self::prepare(configuration, token, revision, true, None)
+    }
+    /// HTTPS loopback with one explicit synthetic CA; never selected by application routes.
+    pub fn synthetic_tls(
+        configuration: ForgeConfiguration,
+        token: String,
+        revision: u64,
+        authority: &[u8],
+    ) -> Result<Self> {
+        let client = super::synthetic_tls::client(&configuration.base, &token, authority)?;
+        Self::prepare(configuration, token, revision, false, Some(client))
     }
     fn prepare(
         configuration: ForgeConfiguration,
         token: String,
         revision: u64,
         synthetic: bool,
+        trusted_client: Option<reqwest::Client>,
     ) -> Result<Self> {
         if token.is_empty()
             || token.len() > 4000
@@ -610,7 +621,10 @@ impl Forge {
             client = client.no_proxy();
         }
         Ok(Self {
-            client: client.build()?,
+            client: match trusted_client {
+                Some(client) => client,
+                None => client.build()?,
+            },
             base: Url::parse(&configuration.base)?,
             configuration,
             authorization,

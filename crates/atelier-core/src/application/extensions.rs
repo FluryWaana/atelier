@@ -235,6 +235,77 @@ pub struct TicketIdentity {
     pub instance: String,
     pub id: String,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketTransition {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+    pub requires_fields: bool,
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketTransitions {
+    pub ticket: TicketIdentity,
+    pub status: String,
+    pub transitions: Vec<TicketTransition>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketTransitionPayload {
+    pub card_id: String,
+    pub card_title: String,
+    pub card_revision: String,
+    pub ticket: TicketIdentity,
+    pub ticket_key: String,
+    pub from_status: String,
+    pub transition: TicketTransition,
+}
+pub fn ticket_transitions(value: &Value) -> Result<TicketTransitions> {
+    let report: TicketTransitions = serde_json::from_value(value.clone())
+        .map_err(|_| "Transitions du connecteur invalides.")?;
+    if !text(&report.ticket.instance, 2000, false)
+        || !text(&report.ticket.id, 200, false)
+        || !text(&report.status, 200, false)
+        || report.transitions.len() > 100
+    {
+        return Err("État ou portée des transitions invalide.");
+    }
+    let mut seen = BTreeSet::new();
+    for transition in &report.transitions {
+        if !text(&transition.id, 100, false)
+            || transition.id.chars().any(char::is_control)
+            || !text(&transition.name, 200, false)
+            || !text(&transition.status, 200, false)
+            || !seen.insert(&transition.id)
+        {
+            return Err("Transition du connecteur invalide ou dupliquée.");
+        }
+    }
+    Ok(report)
+}
+pub fn ticket_transition_payload(value: &Value) -> Result<TicketTransitionPayload> {
+    let payload: TicketTransitionPayload = serde_json::from_value(value.clone())
+        .map_err(|_| "Aperçu de transition du connecteur invalide.")?;
+    ticket_transitions(
+        &serde_json::json!({"ticket":payload.ticket,"status":payload.from_status,"transitions":[payload.transition]}),
+    )?;
+    if !text(&payload.card_id, 100, false)
+        || !text(&payload.card_title, 300, false)
+        || !text(&payload.ticket_key, 100, false)
+        || payload.card_revision.len() != 64
+        || !payload
+            .card_revision
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || payload.transition.requires_fields
+    {
+        return Err(
+            "La transition exige des champs supplémentaires ou un nouvel instantané de carte.",
+        );
+    }
+    Ok(payload)
+}
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Ticket {
@@ -530,6 +601,11 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
     }
     if methods.contains(&Method::TimeSend) && !methods.contains(&Method::TimePreview) {
         return Err("Un export de temps exige un aperçu de destination avant envoi.");
+    }
+    if methods.contains(&Method::TicketsTransition)
+        && !methods.contains(&Method::TicketsTransitions)
+    {
+        return Err("Une transition de ticket exige la lecture préalable des choix disponibles.");
     }
     let mut ids = BTreeSet::new();
     for field in &manifest.fields {

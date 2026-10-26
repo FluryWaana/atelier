@@ -55,6 +55,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_slice()
     {
         [] => fake_extension::run(),
+        ["review-json"] => {
+            no_inherited_credentials()?;
+            if std::fs::read_to_string(".review-fixture")?
+                != "atelier-review-synthetic-only"
+            {
+                return Err("Synthetic review scope marker missing".into());
+            }
+            let source = std::fs::read_to_string("src/lib.rs")?;
+            if source != "pub fn synthetic_answer() -> u8 { 42 }\n" {
+                return Err("Synthetic review input changed".into());
+            }
+            serde_json::to_writer(io::stdout().lock(), &serde_json::json!({
+                "summary":"Lecture du fichier synthétique ; aucun test ni interface exécuté par cet agent.",
+                "findings":[],
+                "criteria":[{"index":0,"status":"covered","evidence":"src/lib.rs:1 définit synthetic_answer et retourne la constante 42 ; fichier effectivement lu par le processus synthétique."}]
+            }))?;
+            ready("")?;
+            Ok(())
+        }
         #[cfg(unix)]
         ["posix-detached-parent"] => {
             use std::io::{BufRead, BufReader};

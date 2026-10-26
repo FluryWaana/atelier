@@ -174,7 +174,7 @@ impl Jira {
     }
     pub fn new(configuration: JiraConfiguration, token: String) -> Result<Self> {
         let base = Url::parse(&normalize_url(&configuration.url)?)?;
-        Self::prepare(configuration, token, base, false)
+        Self::prepare(configuration, token, base, false, None)
     }
     /// Explicit constructor for loopback doubles; the HTTP application never calls this path.
     pub fn synthetic(configuration: JiraConfiguration, token: String) -> Result<Self> {
@@ -197,13 +197,24 @@ impl Jira {
         {
             return Err("Serveur de test Jira synthétique requis.".into());
         }
-        Self::prepare(configuration, token, base, true)
+        Self::prepare(configuration, token, base, true, None)
+    }
+    /// HTTPS loopback with one explicit synthetic CA; never selected by application routes.
+    pub fn synthetic_tls(
+        configuration: JiraConfiguration,
+        token: String,
+        authority: &[u8],
+    ) -> Result<Self> {
+        let base = Url::parse(&configuration.url)?;
+        let client = super::synthetic_tls::client(&configuration.url, &token, authority)?;
+        Self::prepare(configuration, token, base, false, Some(client))
     }
     fn prepare(
         configuration: JiraConfiguration,
         token: String,
         base: Url,
         synthetic: bool,
+        trusted_client: Option<reqwest::Client>,
     ) -> Result<Self> {
         if token.is_empty()
             || token.len() > 4000
@@ -229,6 +240,7 @@ impl Jira {
         authorization.set_sensitive(true);
         let mut builder = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
+            .retry(reqwest::retry::never())
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(20))
             .https_only(!synthetic);
@@ -236,7 +248,10 @@ impl Jira {
             builder = builder.no_proxy();
         }
         Ok(Self {
-            client: builder.build()?,
+            client: match trusted_client {
+                Some(client) => client,
+                None => builder.build()?,
+            },
             base,
             configuration,
             authorization,

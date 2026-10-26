@@ -7,6 +7,29 @@ use std::{
     time::Duration,
 };
 
+fn ticket_status(request: &Request) -> Result<String, Box<dyn std::error::Error>> {
+    let Some(root) = request
+        .settings
+        .get("fixtureRoot")
+        .and_then(Value::as_str)
+        .filter(|root| !root.is_empty())
+    else {
+        return Ok("Done".into());
+    };
+    let root = std::fs::canonicalize(root)?;
+    if std::fs::read_to_string(root.join(".extension-fixture"))? != "atelier-r04-synthetic-only" {
+        return Err("Synthetic fixture marker required".into());
+    }
+    match std::fs::read_to_string(root.join("synthetic-ticket-state")) {
+        Ok(state) if state == "Closed" => Ok(state),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok("Done".into()),
+        _ => Err("Unexpected synthetic ticket state".into()),
+    }
+}
+fn ticket(status: &str) -> Value {
+    json!({"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Updated synthetic connector ticket","description":"Updated synthetic description.","url":"https://synthetic.example.test/tenant/tickets/1","status":status})
+}
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = Vec::new();
     std::io::stdin()
@@ -47,7 +70,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","ticketsTransitions","ticketsTransition","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -66,7 +89,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             {
                 return Err("Unexpected synthetic ticket scope".into());
             }
-            json!({"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Updated synthetic connector ticket","description":"Updated synthetic description.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Done"})
+            ticket(&ticket_status(&request)?)
+        } else if request.method == Method::TicketsTransitions {
+            if request.input["instance"] != "https://synthetic.example.test/tenant"
+                || request.input["id"] != "synthetic-ticket"
+            {
+                return Err("Unexpected synthetic transition scope".into());
+            }
+            let status = ticket_status(&request)?;
+            json!({"ticket":request.input,"status":status,"transitions":if status=="Done" {json!([{"id":"close","name":"Close synthetic ticket","status":"Closed","requiresFields":false}])}else{json!([])}})
         } else if request.method == Method::TimePreview {
             json!({"source":request.input,"instance":"https://synthetic.example.test/time","account":"synthetic-time-account","reference":"SYN-1"})
         } else {
@@ -76,7 +107,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     if request.method != Method::Describe {
         extensions::effect(&manifest, &request)?;
     }
-    if matches!(request.method, Method::Action | Method::Reconcile) {
+    if request.method == Method::Action
+        || (request.method == Method::Reconcile && request.input["method"] == "action")
+    {
         let root = request
             .settings
             .get("fixtureRoot")
@@ -116,6 +149,63 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         let applied = std::fs::read(&marker)? == b"one synthetic effect";
         reply.output = json!({"receipt":{"operationId":id,"outcome":if applied {"applied"} else {"unknown"},"reference":format!("synthetic:{id}"),"observedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}});
+    }
+    if request.method == Method::TicketsTransition
+        || request.method == Method::Reconcile && request.input["method"] == "ticketsTransition"
+    {
+        let root = request
+            .settings
+            .get("fixtureRoot")
+            .and_then(Value::as_str)
+            .ok_or("Marked synthetic root required")?;
+        let root = std::fs::canonicalize(root)?;
+        if std::fs::read_to_string(root.join(".extension-fixture"))? != "atelier-r04-synthetic-only"
+        {
+            return Err("Synthetic fixture marker required".into());
+        }
+        let id = request
+            .operation_id
+            .as_deref()
+            .filter(|id| extensions::identifier(id))
+            .ok_or("Synthetic operation ID required")?;
+        let input = if request.method == Method::TicketsTransition {
+            request.input.clone()
+        } else {
+            request.input["input"].clone()
+        };
+        let payload = extensions::ticket_transition_payload(&input)?;
+        if payload.ticket.instance != "https://synthetic.example.test/tenant"
+            || payload.ticket.id != "synthetic-ticket"
+            || payload.transition.id != "close"
+            || payload.transition.status != "Closed"
+        {
+            return Err("Unexpected synthetic transition payload".into());
+        }
+        let marker = root.join(format!("{id}.ticket-effect"));
+        if request.method == Method::TicketsTransition {
+            if ticket_status(&request)? != payload.from_status {
+                return Err("Synthetic transition changed before dispatch".into());
+            }
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&marker)?;
+            serde_json::to_writer(&mut file, &input)?;
+            file.sync_all()?;
+            let mut state = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(root.join("synthetic-ticket-state"))?;
+            state.write_all(b"Closed")?;
+            state.sync_all()?;
+            if fault == "lost-write" {
+                std::io::stdout().write_all(b"{lost synthetic transition response")?;
+                return Ok(());
+            }
+        }
+        let applied = serde_json::from_slice::<Value>(&std::fs::read(&marker)?)? == input
+            && ticket_status(&request)? == payload.transition.status;
+        reply.output = json!({"ticket":ticket(&ticket_status(&request)?),"receipt":{"operationId":id,"outcome":if applied {"applied"}else{"unknown"},"reference":format!("synthetic-transition:{id}"),"observedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}});
     }
     if matches!(request.method, Method::TimeSend | Method::TimeReconcile) {
         let root = request
