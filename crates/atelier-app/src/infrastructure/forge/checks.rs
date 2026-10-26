@@ -465,7 +465,75 @@ impl Forge {
                 });
             }
         }
-        Ok(ForgeChecks{pull_request:pr.clone(),checks:selected.into_values().map(|(_,check)|check).collect(),reviewers,reviewers_available:available,other_snapshot_count:other,limits:vec!["Les statuts Azure sans itération et les votes restent non attribués à un commit. Les politiques de branche ne sont pas qualifiées.".into()]})
+        let mut checks = selected
+            .into_values()
+            .map(|(_, check)| check)
+            .collect::<Vec<_>>();
+        checks.extend(self.azure_policies(pr, raw).await?);
+        Ok(ForgeChecks{pull_request:pr.clone(),checks,reviewers,reviewers_available:available,other_snapshot_count:other,limits:vec!["Les statuts Azure sans itération, les votes et les politiques restent non attribués à un commit. Les politiques décrivent la PR au moment de la lecture, sans autoriser sa fusion.".into()]})
+    }
+    async fn azure_policies(&self, pr: &PullRequest, raw: &Value) -> Result<Vec<ForgeCheck>> {
+        let project = self.text(&raw["repository"]["project"]["id"], 100)?;
+        let project = uuid::Uuid::parse_str(project)
+            .map_err(|_| "Projet des politiques Azure invalide.")?
+            .to_string();
+        let artifact = format!("vstfs:///CodeReview/CodeReviewId/{project}/{}", pr.number);
+        let mut checks = Vec::new();
+        let mut seen = BTreeSet::new();
+        let mut bytes = 0usize;
+        for page in 0..100 {
+            let mut url = self.endpoint(true, &[&project, "_apis", "policy", "evaluations"])?;
+            url.query_pairs_mut()
+                .append_pair("api-version", "7.1-preview.1")
+                .append_pair("artifactId", &artifact)
+                .append_pair("includeNotApplicable", "true")
+                .append_pair("$top", "100")
+                .append_pair("$skip", &(page * 100).to_string());
+            let value = self.get_unpaged(url).await?;
+            bytes = bytes.saturating_add(serde_json::to_vec(&value)?.len());
+            if bytes > 4 * 1024 * 1024 {
+                return Err("Politiques Azure trop volumineuses.".into());
+            }
+            let rows = azure_rows(&value)?;
+            if rows.len() > 100 {
+                return Err("Pagination des politiques Azure invalide.".into());
+            }
+            if rows.is_empty() {
+                return Ok(checks);
+            }
+            for row in rows {
+                let evaluation = self.text(&row["evaluationId"], 100)?;
+                let evaluation = uuid::Uuid::parse_str(evaluation)
+                    .map_err(|_| "Évaluation Azure invalide.")?
+                    .to_string();
+                if !seen.insert(evaluation.clone())
+                    || self.text(&row["artifactId"], 500)? != artifact
+                {
+                    return Err(
+                        "Les politiques Azure ne correspondent pas à cette PR ou se répètent."
+                            .into(),
+                    );
+                }
+                let enabled = row["configuration"]["isEnabled"]
+                    .as_bool()
+                    .ok_or("État de politique Azure absent.")?;
+                let blocking = row["configuration"]["isBlocking"]
+                    .as_bool()
+                    .ok_or("Portée de politique Azure absente.")?;
+                let state = match self.text(&row["status"], 100)? {
+                    "queued" | "running" => State::Pending,
+                    "approved" => State::Succeeded,
+                    "rejected" | "broken" => State::Failed,
+                    "notApplicable" => State::Skipped,
+                    _ => State::Unknown,
+                };
+                checks.push(ForgeCheck{id:format!("policy:{evaluation}"),name:self.text(&row["configuration"]["type"]["displayName"],1000)?.into(),state:if enabled{state}else{State::Skipped},scope:Scope::Unscoped,commit:None,description:match(enabled,blocking){(false,_)=>"Politique désactivée ; aucune obligation déduite.",(true,true)=>"Politique bloquante active ; résultat relatif à la PR, commit non fourni.",(true,false)=>"Politique indicative active ; résultat relatif à la PR, commit non fourni."}.into()});
+            }
+        }
+        Err(
+            "Lecture des politiques Azure limitée à 100 pages. Aucun résultat partiel affiché."
+                .into(),
+        )
     }
 }
 fn azure_rows(value: &Value) -> Result<&[Value]> {

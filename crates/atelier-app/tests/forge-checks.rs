@@ -51,12 +51,36 @@ async fn serve(AppState(remote): AppState<Remote>, request: Request) -> Response
                 json!({"iid":7,"title":"Synthetic PR","draft":true,"state":"opened","source_branch":"task","target_branch":"main","sha":head,"diff_refs":{"head_sha":"c".repeat(40),"start_sha":target},"source_project_id":1,"target_project_id":1})
             }
             ForgeKind::Azure => {
-                json!({"pullRequestId":7,"title":"Synthetic PR","isDraft":true,"status":"active","sourceRefName":"refs/heads/task","targetRefName":"refs/heads/main","lastMergeSourceCommit":{"commitId":head},"lastMergeTargetCommit":{"commitId":target},"repository":{"id":"synthetic-repository"},"reviewers":if remote.fault=="reviewers"{Value::Null}else{json!([{"id":"synthetic-user","displayName":"Synthetic reviewer","vote":10}])}})
+                json!({"pullRequestId":7,"title":"Synthetic PR","isDraft":true,"status":"active","sourceRefName":"refs/heads/task","targetRefName":"refs/heads/main","lastMergeSourceCommit":{"commitId":head},"lastMergeTargetCommit":{"commitId":target},"repository":{"id":"synthetic-repository","project":{"id":"00000000-0000-4000-8000-000000000001"}},"reviewers":if remote.fault=="reviewers"{Value::Null}else{json!([{"id":"synthetic-user","displayName":"Synthetic reviewer","vote":10}])}})
             }
         };
         return Json(row).into_response();
     }
     if remote.kind == ForgeKind::Azure {
+        if path.ends_with("/policy/evaluations") {
+            let url = reqwest::Url::parse(&format!("http://127.0.0.1{}", request.uri())).unwrap();
+            let query = url
+                .query_pairs()
+                .collect::<std::collections::BTreeMap<_, _>>();
+            assert_eq!(
+                query.get("api-version").map(|value| value.as_ref()),
+                Some("7.1-preview.1")
+            );
+            let artifact =
+                "vstfs:///CodeReview/CodeReviewId/00000000-0000-4000-8000-000000000001/7";
+            assert_eq!(
+                query.get("artifactId").map(|value| value.as_ref()),
+                Some(artifact)
+            );
+            if query
+                .get("$skip")
+                .is_some_and(|value| value.as_ref() != "0")
+                && remote.fault != "policy-repeat"
+            {
+                return Json(json!({"count":0,"value":[]})).into_response();
+            }
+            return Json(json!({"count":1,"value":[{"evaluationId":"00000000-0000-4000-8000-000000000002","artifactId":if remote.fault=="policy-scope"{"wrong"}else{artifact},"configuration":{"isEnabled":true,"isBlocking":true,"type":{"displayName":"Synthetic branch policy"}},"status":"approved"}]})).into_response();
+        }
         if path.ends_with("/iterations") {
             let rows = json!([{"id":1,"sourceRefCommit":{"commitId":target}},{"id":2,"sourceRefCommit":{"commitId":if remote.fault=="scope"{target}else{source}}}]);
             return Json(json!({"count":2,"value":rows})).into_response();
@@ -161,6 +185,8 @@ async fn observed_checks_bind_commits_latest_decisions_and_explicit_unavailable_
                 "move",
                 "count",
                 "continuation",
+                "policy-repeat",
+                "policy-scope",
             ],
         };
         for fault in faults {
@@ -253,7 +279,16 @@ async fn observed_checks_bind_commits_latest_decisions_and_explicit_unavailable_
                             .all(|reviewer| reviewer.scope == Scope::Unscoped)
                     );
                 } else {
-                    assert_eq!(report.checks.len(), 2);
+                    assert_eq!(report.checks.len(), 3);
+                    let policy = report
+                        .checks
+                        .iter()
+                        .find(|check| check.id.starts_with("policy:"))
+                        .unwrap();
+                    assert_eq!(policy.scope, Scope::Unscoped);
+                    assert_eq!(policy.commit, None);
+                    assert_eq!(policy.state, State::Succeeded);
+                    assert!(policy.description.contains("bloquante"));
                     assert_eq!(report.other_snapshot_count, 1);
                     assert!(
                         report

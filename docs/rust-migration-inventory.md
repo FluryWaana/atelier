@@ -1461,13 +1461,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/forge.rs:334](../crates/atelier-app/src/infrastructure/forge.rs#L334) | <code>pub async fn list_pull_requests(</code> |
 | [crates/atelier-app/src/infrastructure/forge.rs:552](../crates/atelier-app/src/infrastructure/forge.rs#L552) | <code>pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -&gt; Result&lt;Self&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/forge.rs:557](../crates/atelier-app/src/infrastructure/forge.rs#L557) | <code>pub fn synthetic(</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:781](../crates/atelier-app/src/infrastructure/forge.rs#L781) | <code>pub async fn prepare_draft(</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:888](../crates/atelier-app/src/infrastructure/forge.rs#L888) | <code>pub async fn send_draft(&amp;self, prepared: PreparedDraft) -&gt; Result&lt;PullRequest&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:935](../crates/atelier-app/src/infrastructure/forge.rs#L935) | <code>pub async fn prepare_publication(</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:1036](../crates/atelier-app/src/infrastructure/forge.rs#L1036) | <code>pub async fn create_publication(&amp;self, prepared: PreparedPublication) -&gt; Result&lt;u64&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:1058](../crates/atelier-app/src/infrastructure/forge.rs#L1058) | <code>pub async fn reconcile_publication(</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:1121](../crates/atelier-app/src/infrastructure/forge.rs#L1121) | <code>pub async fn pull_request(&amp;self, repository: &amp;str, number: u64) -&gt; Result&lt;PullRequest&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/forge.rs:1346](../crates/atelier-app/src/infrastructure/forge.rs#L1346) | <code>pub fn publication_marker(operation: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:783](../crates/atelier-app/src/infrastructure/forge.rs#L783) | <code>pub async fn prepare_draft(</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:890](../crates/atelier-app/src/infrastructure/forge.rs#L890) | <code>pub async fn send_draft(&amp;self, prepared: PreparedDraft) -&gt; Result&lt;PullRequest&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:937](../crates/atelier-app/src/infrastructure/forge.rs#L937) | <code>pub async fn prepare_publication(</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:1038](../crates/atelier-app/src/infrastructure/forge.rs#L1038) | <code>pub async fn create_publication(&amp;self, prepared: PreparedPublication) -&gt; Result&lt;u64&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:1060](../crates/atelier-app/src/infrastructure/forge.rs#L1060) | <code>pub async fn reconcile_publication(</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:1123](../crates/atelier-app/src/infrastructure/forge.rs#L1123) | <code>pub async fn pull_request(&amp;self, repository: &amp;str, number: u64) -&gt; Result&lt;PullRequest&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/forge.rs:1348](../crates/atelier-app/src/infrastructure/forge.rs#L1348) | <code>pub fn publication_marker(operation: &amp;str) -&gt; Result&lt;String&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/forge/checks.rs:1](../crates/atelier-app/src/infrastructure/forge/checks.rs#L1) | <code>use super::{Duration, Forge, ForgeKind, Result, Url, Value, same_pull_request};</code> |
 | [crates/atelier-app/src/infrastructure/forge/checks.rs:2](../crates/atelier-app/src/infrastructure/forge/checks.rs#L2) | <code>use atelier_core::contracts::{</code> |
 | [crates/atelier-app/src/infrastructure/forge/checks.rs:6](../crates/atelier-app/src/infrastructure/forge/checks.rs#L6) | <code>use std::collections::{BTreeMap, BTreeSet};</code> |
@@ -2281,7 +2281,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/forge-checks.rs:6](../crates/atelier-app/tests/forge-checks.rs#L6) | <code>use axum::{</code> |
 | [crates/atelier-app/tests/forge-checks.rs:12](../crates/atelier-app/tests/forge-checks.rs#L12) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/tests/forge-checks.rs:13](../crates/atelier-app/tests/forge-checks.rs#L13) | <code>use std::sync::{</code> |
-| [crates/atelier-app/tests/forge-checks.rs:140](../crates/atelier-app/tests/forge-checks.rs#L140) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/forge-checks.rs:164](../crates/atelier-app/tests/forge-checks.rs#L164) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/forge-draft.rs:1](../crates/atelier-app/tests/forge-draft.rs#L1) | <code>use atelier_app::infrastructure::{</code> |
 | [crates/atelier-app/tests/forge-draft.rs:7](../crates/atelier-app/tests/forge-draft.rs#L7) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/forge-draft.rs:14](../crates/atelier-app/tests/forge-draft.rs#L14) | <code>use axum::{</code> |

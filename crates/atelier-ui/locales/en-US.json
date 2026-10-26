@@ -1774,5 +1774,17 @@
   "Effacer la sélection": "Clear selection",
   "Reprendre les aperçus existants": "Resume existing previews",
   "Correspondances Jira globales": "Global Jira mappings",
-  "Proposer les statuts Jira correspondants": "Suggest matching Jira statuses"
+  "Proposer les statuts Jira correspondants": "Suggest matching Jira statuses",
+  "Les statuts Azure sans itération, les votes et les politiques restent non attribués à un commit. Les politiques décrivent la PR au moment de la lecture, sans autoriser sa fusion.": "Azure statuses without an iteration, votes and policies are not attributed to a commit. Policies describe the PR at read time and do not authorize merging.",
+  "Politique désactivée ; aucune obligation déduite.": "Disabled policy; no requirement inferred.",
+  "Politique bloquante active ; résultat relatif à la PR, commit non fourni.": "Active blocking policy; PR result with no commit provided.",
+  "Politique indicative active ; résultat relatif à la PR, commit non fourni.": "Active advisory policy; PR result with no commit provided.",
+  "Projet des politiques Azure invalide.": "Invalid Azure policy project.",
+  "Politiques Azure trop volumineuses.": "Azure policies are too large.",
+  "Pagination des politiques Azure invalide.": "Invalid Azure policy pagination.",
+  "Évaluation Azure invalide.": "Invalid Azure evaluation.",
+  "Les politiques Azure ne correspondent pas à cette PR ou se répètent.": "Azure policies do not match this PR or are repeated.",
+  "État de politique Azure absent.": "Azure policy state missing.",
+  "Portée de politique Azure absente.": "Azure policy scope missing.",
+  "Lecture des politiques Azure limitée à 100 pages. Aucun résultat partiel affiché.": "Azure policy reading is limited to 100 pages. No partial result is shown."
 }

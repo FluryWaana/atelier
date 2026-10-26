@@ -692,7 +692,9 @@ impl Forge {
         unpaged: bool,
     ) -> Result<Value> {
         let creating = method == reqwest::Method::POST;
-        if self.configuration.kind == ForgeKind::Azure {
+        if self.configuration.kind == ForgeKind::Azure
+            && !url.query_pairs().any(|(key, _)| key == "api-version")
+        {
             url.query_pairs_mut().append_pair("api-version", "7.1");
         }
         let request = self
