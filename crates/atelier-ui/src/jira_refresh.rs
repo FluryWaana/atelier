@@ -60,6 +60,19 @@ pub fn JiraRefresh(
         })
     };
     let confirmed = RwSignal::new(String::new());
+    let apply_status = RwSignal::new(false);
+    let preview_context = Memo::new(move |_| {
+        (
+            preview.get().map(|preview| preview.id),
+            serde_json::to_string(&board.settings.get()).unwrap_or_default(),
+            serde_json::to_string(&board.projects.get()).unwrap_or_default(),
+        )
+    });
+    Effect::new(move |_| {
+        let _ = preview_context.get();
+        confirmed.set(String::new());
+        apply_status.set(false);
+    });
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let alive = Rc::new(Cell::new(true));
@@ -139,6 +152,7 @@ pub fn JiraRefresh(
             revision: revision(),
             expected: atelier_core::application::jira::card_snapshot(&expected),
             preview_id: preview.id,
+            apply_status: apply_status.get_untracked(),
         })
         .expect("Jira refresh apply serialization");
         pending.set(true);
@@ -179,6 +193,10 @@ pub fn JiraRefresh(
         <p role="status" hidden=move ||preview.with(|preview|preview.as_ref().is_none_or(|preview|preview.state!=Phase::Interrupted))>{move ||i18n.text("La lecture précédente a été interrompue. Tu peux relire le ticket.")}</p>
         {move ||preview.get().filter(|preview|preview.state==Phase::Ready).and_then(|preview|preview.detail.map(|detail|view!{<div><h4>{move ||i18n.text("Contenu actuel de la carte")}</h4><p>{String::from_utf16_lossy(&preview.expected.title.0)}</p><pre>{field(&preview.expected.fields,"description")}</pre><h4>{move ||i18n.text("Contenu relu depuis Jira")}</h4><p>{detail.issue.title}</p><pre>{detail.description}</pre></div>}))}
         <div hidden=move ||preview.with(|preview|preview.as_ref().is_none_or(|preview|preview.state!=Phase::Ready))><p class="field-help">{move ||i18n.text("L’aperçu expire après dix minutes. Une modification concurrente impose une nouvelle lecture.")}</p><label><input id="confirm-jira-refresh" type="checkbox" disabled=move ||pending.get()||blocked.get()||busy.get() prop:checked=move ||preview.with(|preview|preview.as_ref().is_some_and(|preview|preview.id==confirmed.get())) on:change=move |event|confirmed.set(if event_target_checked(&event){preview.with(|preview|preview.as_ref().map(|preview|preview.id.clone()).unwrap_or_default())}else{String::new()}) />{move ||i18n.text("Remplacer le titre et la description locaux par cet aperçu Jira.")}</label><button id="apply-jira-refresh" type="button" disabled=move ||pending.get()||blocked.get()||busy.get()||preview.with(|preview|preview.as_ref().is_none_or(|preview|preview.id!=confirmed.get())) on:click=apply>{move ||i18n.text("Appliquer cet aperçu à la carte")}</button></div>
+        {move||preview.get().filter(|preview|preview.state==Phase::Ready).and_then(|preview|preview.mapped_status).map(|status| {
+            let label=i18n.text(match status.as_str(){"todo"=>"À faire","doing"=>"En cours","review"=>"À vérifier","done"=>"Terminé",_=>"En attente"});
+            view!{<label><input id="jira-refresh-status" type="checkbox" disabled=move||pending.get()||blocked.get()||busy.get() prop:checked=move||apply_status.get() on:change=move|event|{apply_status.set(event_target_checked(&event));confirmed.set(String::new());}/>{move||i18n.text("Appliquer aussi la colonne proposée : ")}{label}</label>}
+        })}
         <p class="error" role="alert">{move ||i18n.text(&error.get())}</p><p role="status">{move ||i18n.text(&notice.get())}</p>
     </section>}
 }

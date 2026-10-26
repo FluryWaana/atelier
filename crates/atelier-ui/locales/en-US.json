@@ -1760,5 +1760,6 @@
   "Correspondances Jira du projet": "Project Jira mappings",
   "Désactivées": "Disabled",
   "Personnalisées": "Custom",
-  "Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.": "Target Jira status ID or name. Saving a mapping does not send any request."
+  "Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.": "Target Jira status ID or name. Saving a mapping does not send any request.",
+  "Appliquer aussi la colonne proposée : ": "Also apply the proposed column: "
 }

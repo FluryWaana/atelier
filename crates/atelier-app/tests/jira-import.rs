@@ -30,7 +30,7 @@ async fn batches_are_atomic_bounded_and_retries_preserve_existing_cards() {
             let mut invalid=input.clone();invalid.issue_ids=ids;assert!(jira_import::reserve_batch(store,invalid,"invalid".into()).is_err());
         }
         let mut unconfirmed=input.clone();unconfirmed.confirmed=false;assert!(jira_import::reserve_batch(store,unconfirmed,"unconfirmed".into()).is_err());
-        let details:Vec<_>=(1..=2).map(|id|JiraIssueDetail{connection_revision:1,description:format!("Synthetic description {id}"),issue:JiraIssue{id:id.to_string(),key:format!("SYN-{id}"),title:format!("Synthetic {id}"),status:"Open".into(),url:format!("https://synthetic.example.test/browse/SYN-{id}")}}).collect();
+        let details:Vec<_>=(1..=2).map(|id|JiraIssueDetail{connection_revision:1,description:format!("Synthetic description {id}"),issue:JiraIssue{id:id.to_string(),key:format!("SYN-{id}"),title:format!("Synthetic {id}"),status:"Open".into(),status_id:"1".into(),url:format!("https://synthetic.example.test/browse/SYN-{id}")}}).collect();
         jira_import::reserve_batch(store,input.clone(),"batch".into())?;
         assert!(jira_import::finish_batch(store,"batch",vec![details[0].clone()]).is_err());
         let mut invalid=details.clone();invalid[1].issue.title="x".repeat(301);
@@ -217,7 +217,7 @@ async fn attachment_preserves_local_content_and_refuses_stale_cards_duplicates_a
         store.put(Documents::Projects,&document(json!({"id":"project","repo":repo})))?;
         let card:Card=serde_json::from_str(&json!({"id":"local","title":"Local title","description":"Local description","repo":repo,"status":"todo","checklist":[]}).to_string())?;
         store.put(Documents::Cards,&card)?;
-        let detail=JiraIssueDetail {connection_revision:1,description:"Remote description".into(),issue:JiraIssue {id:"1".into(),key:"SYN-1".into(),title:"Remote title".into(),status:"Open".into(),url:"https://synthetic.example.test/browse/SYN-1".into()}};
+        let detail=JiraIssueDetail {connection_revision:1,description:"Remote description".into(),issue:JiraIssue {id:"1".into(),key:"SYN-1".into(),title:"Remote title".into(),status:"Open".into(),status_id:"1".into(),url:"https://synthetic.example.test/browse/SYN-1".into()}};
         let mut attach=input();attach.attach_to=Some(card.clone());
         jira_import::reserve(store,attach.clone(),"stale".into())?;
         let mut changed=card.clone();changed.fields.set("instructions",&"New instructions")?;store.put(Documents::Cards,&changed)?;

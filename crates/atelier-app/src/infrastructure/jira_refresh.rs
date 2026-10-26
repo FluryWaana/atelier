@@ -28,6 +28,19 @@ fn same_content(left: &Card, right: &Card) -> Result<bool> {
     Ok(serde_json::to_value(jira::card_snapshot(left))?
         == serde_json::to_value(jira::card_snapshot(right))?)
 }
+fn mapping(store: &Store<'_>, card: &Card) -> Result<serde_json::Value> {
+    let settings = store.settings::<serde_json::Value>()?;
+    let projects = store.documents::<serde_json::Value>(Documents::Projects)?;
+    let settings = atelier_core::domain::projects::settings_for_project(
+        &settings,
+        &projects,
+        &card.fields.get::<String>("repo")?.unwrap_or_default(),
+        cfg!(windows),
+    );
+    Ok(
+        serde_json::json!({"jiraAutoTransition":settings["jiraAutoTransition"],"jiraStatusMap":settings["jiraStatusMap"]}),
+    )
+}
 pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -> Result<String> {
     store.transaction(|store| {
         jira_transition::revalidate(store, &input.expected, input.revision)?;
@@ -55,6 +68,8 @@ pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -
             expected: jira::card_snapshot(&card),
             detail: None,
             created_at: Clock.format(Clock.now())?,
+            mapping: mapping(store, &card)?,
+            mapped_status: None,
         };
         card.fields.set("jiraRefresh", &preview)?;
         store.put(Documents::Cards, &card)?;
@@ -93,6 +108,14 @@ pub fn ready(
         {
             return Err(conflict());
         }
+        if mapping(store, &card)? != preview.mapping {
+            return Err(conflict());
+        }
+        preview.mapped_status = atelier_core::application::projects::mapped_jira_status(
+            &preview.mapping,
+            &detail.issue.status_id,
+            &detail.issue.status,
+        );
         preview.state = Phase::Ready;
         preview.detail = Some(detail);
         preview.created_at = Clock.format(Clock.now())?;
@@ -149,6 +172,13 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
                 return Err("Arrête l’exécution avant de synchroniser le ticket Jira.".into());
             }
         }
+        if input.apply_status {
+            if mapping(store, &card)? != preview.mapping {
+                return Err(conflict());
+            }
+            let status = preview.mapped_status.as_ref().ok_or_else(conflict)?;
+            card.fields.set("status", status)?;
+        }
         let detail = preview.detail.ok_or_else(conflict)?;
         if detail.issue.id != issue || detail.connection_revision != input.revision {
             return Err(conflict());
@@ -175,6 +205,7 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
         ticket.set("key", &detail.issue.key)?;
         ticket.set("url", &detail.issue.url)?;
         ticket.set("status", &detail.issue.status)?;
+        ticket.set("statusId", &detail.issue.status_id)?;
         card.fields.set("ticket", &ticket)?;
         card.fields.remove("jiraRefresh");
         card.fields

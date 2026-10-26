@@ -325,7 +325,11 @@ impl Jira {
             .as_str()
             .filter(|status| status.len() <= 400 && !status.chars().any(char::is_control))
             .ok_or("Statut Jira invalide.")?;
-        if [id, key, title, status]
+        let status_id = row["fields"]["status"]["id"]
+            .as_str()
+            .filter(|id| id.len() <= 100 && id.bytes().all(|byte| byte.is_ascii_digit()))
+            .unwrap_or_default();
+        if [id, key, title, status, status_id]
             .iter()
             .any(|value| value.contains(&self.token))
         {
@@ -336,6 +340,7 @@ impl Jira {
             key: key.into(),
             title: title.into(),
             status: status.into(),
+            status_id: status_id.into(),
             url: self.endpoint(&["browse", key])?.to_string(),
         };
         if issue.url.contains(&self.token) {
@@ -749,6 +754,7 @@ impl Jira {
             key: key.into(),
             title,
             status: String::new(),
+            status_id: String::new(),
             url: browse,
         })
     }

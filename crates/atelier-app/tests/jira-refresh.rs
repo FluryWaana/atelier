@@ -21,6 +21,7 @@ fn detail() -> JiraIssueDetail {
             key: "SYN-1".into(),
             title: "Remote title".into(),
             status: "Open".into(),
+            status_id: "1".into(),
             url: "https://synthetic.example.test/browse/SYN-1".into(),
         },
     }
@@ -53,6 +54,53 @@ fn ready(
         id,
     )?;
     workflow::ready(store, "card", id, detail())
+}
+
+#[tokio::test]
+async fn mapped_columns_require_explicit_approval_and_the_same_mapping_snapshot() {
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database
+        .call(|store| {
+            let initial = seed(store)?;
+            let mut settings = store.settings::<Document>()?;
+            settings.set("jiraAutoTransition", &true)?;
+            settings.set("jiraStatusMap", &json!({"doing":"1"}))?;
+            store.save_settings(&settings)?;
+            let card = ready(store, initial, "mapped")?;
+            let preview = card
+                .fields
+                .get::<JiraRefreshPreview>("jiraRefresh")?
+                .unwrap();
+            assert_eq!(preview.mapped_status.as_deref(), Some("doing"));
+            settings.set("jiraStatusMap", &json!({"todo":"1"}))?;
+            store.save_settings(&settings)?;
+            let request = JiraRefreshApply {
+                revision: 1,
+                expected: card.clone(),
+                preview_id: "mapped".into(),
+                apply_status: true,
+            };
+            assert!(workflow::apply(store, &request).is_err());
+            assert!(
+                store
+                    .document::<Card>(Documents::Cards, "card")?
+                    .unwrap()
+                    .fields
+                    .string_equals("status", "review")?
+            );
+            settings.set("jiraStatusMap", &json!({"doing":"1"}))?;
+            store.save_settings(&settings)?;
+            let applied = workflow::apply(store, &request)?;
+            assert!(applied.fields.string_equals("status", "doing")?);
+            assert!(
+                applied
+                    .fields
+                    .string_equals("instructions", "Keep instructions")?
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 #[tokio::test]
 async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria_and_instructions()
@@ -90,7 +138,8 @@ async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria
                     &JiraRefreshApply {
                         revision: 1,
                         expected: preview.clone(),
-                        preview_id: "wrong".into()
+                        preview_id: "wrong".into(),
+                        apply_status: false,
                     }
                 )
                 .is_err()
@@ -106,7 +155,8 @@ async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria
                     &JiraRefreshApply {
                         revision: 1,
                         expected: changed.clone(),
-                        preview_id: "preview".into()
+                        preview_id: "preview".into(),
+                        apply_status: false,
                     }
                 )
                 .is_err()
@@ -130,7 +180,8 @@ async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria
                     &JiraRefreshApply {
                         revision: 1,
                         expected: expired,
-                        preview_id: "preview".into()
+                        preview_id: "preview".into(),
+                        apply_status: false,
                     }
                 )
                 .is_err()
@@ -142,6 +193,7 @@ async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria
                     revision: 1,
                     expected: preview,
                     preview_id: "preview".into(),
+                    apply_status: false,
                 },
             )?;
             assert_eq!(applied.title.utf8().unwrap(), "Remote title");
@@ -218,7 +270,8 @@ async fn failing_review_invalidation_rolls_back_the_card_preview_and_review_toge
                     &JiraRefreshApply {
                         revision: 1,
                         expected,
-                        preview_id: "rollback".into()
+                        preview_id: "rollback".into(),
+                        apply_status: false,
                     }
                 )
                 .is_err()
@@ -270,6 +323,7 @@ async fn full_length_card_text_does_not_resend_the_nested_read_cache() {
                 revision: 1,
                 expected: snapshot,
                 preview_id: "large".into(),
+                apply_status: false,
             };
             assert!(serde_json::to_string(&preview)?.encode_utf16().count() > 100_000);
             assert!(serde_json::to_string(&body)?.encode_utf16().count() < 100_000);

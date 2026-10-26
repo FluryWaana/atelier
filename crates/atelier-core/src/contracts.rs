@@ -215,6 +215,8 @@ pub struct JiraIssue {
     pub key: String,
     pub title: String,
     pub status: String,
+    #[serde(default)]
+    pub status_id: String,
     pub url: String,
 }
 
@@ -502,6 +504,9 @@ pub struct JiraRefreshPreview {
     pub expected: Card,
     pub detail: Option<JiraIssueDetail>,
     pub created_at: String,
+    #[serde(default)]
+    pub mapping: serde_json::Value,
+    pub mapped_status: Option<String>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -515,6 +520,8 @@ pub struct JiraRefreshApply {
     pub revision: u64,
     pub expected: Card,
     pub preview_id: String,
+    #[serde(default)]
+    pub apply_status: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]

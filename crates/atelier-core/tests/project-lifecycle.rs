@@ -112,6 +112,23 @@ fn jira_mapping_only_suggests_one_available_unambiguous_transition() {
     );
 }
 
+#[test]
+fn inverse_jira_mapping_refuses_ambiguous_and_disabled_columns() {
+    let mut settings =
+        serde_json::json!({"jiraAutoTransition":true,"jiraStatusMap":{"doing":"31"}});
+    assert_eq!(
+        projects::mapped_jira_status(&settings, "31", "In Progress").as_deref(),
+        Some("doing")
+    );
+    settings["jiraStatusMap"]["todo"] = serde_json::json!("in progress");
+    assert_eq!(
+        projects::mapped_jira_status(&settings, "31", "In Progress"),
+        None
+    );
+    settings["jiraAutoTransition"] = serde_json::json!(false);
+    assert_eq!(projects::mapped_jira_status(&settings, "31", "Other"), None);
+}
+
 struct Context {
     scenario: Document,
     projects: RefCell<Vec<Document>>,

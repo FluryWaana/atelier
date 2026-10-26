@@ -57,6 +57,29 @@ pub fn mapped_jira_transition<'a>(
     }
 }
 
+pub fn mapped_jira_status(settings: &serde_json::Value, id: &str, name: &str) -> Option<String> {
+    if settings["jiraAutoTransition"].as_bool() != Some(true) {
+        return None;
+    }
+    let mut matches = ["todo", "doing", "review", "done", "standby"]
+        .into_iter()
+        .filter(|status| {
+            settings["jiraStatusMap"][*status]
+                .as_str()
+                .is_some_and(|target| {
+                    let target = target.trim();
+                    !target.is_empty()
+                        && ((!id.is_empty() && target == id) || target.eq_ignore_ascii_case(name))
+                })
+        });
+    let selected = matches.next()?;
+    if matches.next().is_some() {
+        None
+    } else {
+        Some(selected.into())
+    }
+}
+
 pub struct ProjectEdit {
     pub project: Document,
     pub cards: Vec<Document>,

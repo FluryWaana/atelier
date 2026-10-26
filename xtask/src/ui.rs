@@ -741,7 +741,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             card.fields.set("pullRequest",&json!({"revision":0,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic linked PR","url":"https://github-synthetic.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task/synthetic","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github-synthetic.example.test","checkedAt":"2026-10-25T10:00:00Z"}))?;
             store.put(Documents::Cards,&card)?;
             atelier_app::infrastructure::jira_refresh::reserve(store,&atelier_core::contracts::JiraRefreshRequest{revision:1,expected:card},"synthetic-preview")?;
-            atelier_app::infrastructure::jira_refresh::ready(store,"jira-refresh","synthetic-preview",atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Remote refresh description é😀".into(),issue:atelier_core::contracts::JiraIssue{id:"2".into(),key:"SYN-2".into(),title:"Remote refresh title".into(),status:"Open".into(),url:"https://synthetic-recovery.example.test/browse/SYN-2".into()}})?;
+            atelier_app::infrastructure::jira_refresh::ready(store,"jira-refresh","synthetic-preview",atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Remote refresh description é😀".into(),issue:atelier_core::contracts::JiraIssue{id:"2".into(),key:"SYN-2".into(),title:"Remote refresh title".into(),status:"Open".into(),status_id:"1".into(),url:"https://synthetic-recovery.example.test/browse/SYN-2".into()}})?;
             Ok(())
         }).await?;
         database.close().await?;
