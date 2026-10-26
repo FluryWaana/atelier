@@ -91,7 +91,14 @@ pub fn ForgePublication(
         });
     let original = RwSignal::new(initial.clone());
     let draft = RwSignal::new(initial);
-    let own_dirty = Memo::new(move |_| draft.get() != original.get());
+    let own_dirty = Memo::new(move |_| {
+        let saved = preview
+            .get()
+            .or_else(|| intent.get().map(|intent| intent.preview))
+            .map(Draft::from);
+        // A prepared preview already persists these fields; only newer edits are unsaved.
+        draft.get() != original.get() && saved.as_ref() != Some(&draft.get())
+    });
     Effect::new(move |_| dirty.set(own_dirty.get()));
     let approved = RwSignal::new(String::new());
     let push_approved = RwSignal::new(String::new());

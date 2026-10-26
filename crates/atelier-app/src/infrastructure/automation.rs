@@ -6,7 +6,7 @@ use super::{
 use crate::Result;
 use atelier_core::{
     application::{
-        automation::{Flow, State, Step},
+        automation::{Flow, PublicationPlan, State, Step},
         preparation,
         reviews::{Coverage, Priority, Review},
     },
@@ -84,7 +84,7 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 let profile = profile(store,&agent)?;
                 if body.get::<Document>("profile")?.as_ref().map(serde_json::to_value).transpose()?!=Some(serde_json::to_value(&profile)?) {return Err("Le profil du parcours a changé. Relis ses réglages avant de confirmer.".into());}
                 let stamp = now()?;
-                flow = Some(Flow {id:uuid::Uuid::new_v4().to_string(),state:State::Running,step:Step::Development,project,requirements:preparation::requirements(&card)?,worktree,agent,profile,model:card.fields.get::<String>("model")?.unwrap_or_default(),effort:card.fields.get::<String>("effort")?.unwrap_or_default(),instructions:card.fields.get::<String>("instructions")?.unwrap_or_default(),run_id:None,review_id:None,verification_id:None,review_requested:false,correction_indexes:Vec::new(),cycles:0,auto_fix,started_at:stamp.clone(),updated_at:stamp,message:String::new()});
+                flow = Some(Flow {id:uuid::Uuid::new_v4().to_string(),state:State::Running,step:Step::Development,project,requirements:preparation::requirements(&card)?,worktree,agent,profile,model:card.fields.get::<String>("model")?.unwrap_or_default(),effort:card.fields.get::<String>("effort")?.unwrap_or_default(),instructions:card.fields.get::<String>("instructions")?.unwrap_or_default(),run_id:None,review_id:None,verification_id:None,publication_plan:None,review_requested:false,correction_indexes:Vec::new(),cycles:0,auto_fix,started_at:stamp.clone(),updated_at:stamp,message:String::new()});
             },
             Some("resume") => {
                 let active = flow.as_mut().ok_or("Aucun parcours à reprendre.")?;
@@ -92,6 +92,7 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 current(store,&card,active)?;
                 // Repeating an interrupted local step requires this new explicit confirmation.
                 active.run_id = None; active.state = State::Running; active.message.clear();
+                active.publication_plan=None;
                 if matches!(active.step,Step::Publication|Step::Review) { active.step = Step::Tests; }
             },
             Some("review") => {
@@ -100,6 +101,25 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
                 let linked = card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
                 if active.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.source_branch != active.worktree.branch { return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into()); }
                 active.review_requested=true;active.step=Step::Tests;active.state=State::Running;active.run_id=None;active.message.clear();
+            },
+            Some("publish") => {
+                let active=flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
+                current(store,&card,active)?;
+                let target=active.project.get::<String>("prTarget")?.ok_or("Branche cible absente.")?;
+                let plan=if card.fields.raw("pullRequest").is_some() {
+                    let preview=card.fields.get::<atelier_core::contracts::GitPushPreview>("gitPushPreview")?.ok_or("Prépare l’aperçu du push avant d’autoriser son enchaînement.")?;
+                    let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("PR/MR absente.")?;
+                    if preview.worktree!=active.worktree || preview.pull_request.as_ref().is_none_or(|remote|!super::forge::same_pull_request(remote,&linked)) || linked.target_branch!=target {return Err("L’aperçu ne correspond pas aux branches du parcours.".into());}
+                    super::forge::configuration(store,preview.configuration.kind,preview.revision)?;
+                    PublicationPlan::Push(Box::new(preview))
+                } else {
+                    let preview=card.fields.get::<atelier_core::contracts::ForgePublicationPreview>("forgePublicationPreview")?.ok_or("Prépare l’aperçu de publication avant d’autoriser son enchaînement.")?;
+                    if preview.worktree!=active.worktree || preview.target!=target || !preview.draft {return Err("Le parcours exige les branches prévues et une publication en brouillon.".into());}
+                    if preview.remote_source.is_none() && body.get::<bool>("allowCreateBranch")?!=Some(true) {return Err("Confirme séparément la création de la branche distante absente.".into());}
+                    super::forge::configuration(store,preview.configuration.kind,preview.revision)?;
+                    PublicationPlan::Create(Box::new(preview))
+                };
+                active.publication_plan=Some(plan);active.review_requested=false;active.step=Step::Tests;active.state=State::Running;active.run_id=None;active.message.clear();
             },
             _ => return Err("Action de parcours inconnue.".into()),
         }
@@ -208,6 +228,48 @@ pub fn fail(store: &Store<'_>, id: &str, operation: &str, message: &str) -> Resu
     })
 }
 
+pub fn publication(
+    store: &Store<'_>,
+    id: &str,
+    operation: &str,
+) -> Result<(Card, Flow, PublicationPlan)> {
+    let card = store
+        .document::<Card>(Documents::Cards, id)?
+        .ok_or("Carte introuvable.")?;
+    let card = super::forge_association::snapshot(store, &card)?;
+    let flow = read(&card)?
+        .filter(|flow| {
+            flow.id == operation
+                && flow.state == State::Running
+                && flow.step == Step::Publication
+                && flow.run_id.is_none()
+        })
+        .ok_or("La publication du parcours a été arrêtée ou remplacée.")?;
+    current(store, &card, &flow)?;
+    let plan = flow
+        .publication_plan
+        .clone()
+        .ok_or("Aperçu de publication du parcours absent.")?;
+    Ok((card, flow, plan))
+}
+
+pub fn publication_complete(store: &Store<'_>, expected: &Card, operation: &str) -> Result<()> {
+    store.transaction(|store| {
+        super::forge_association::snapshot(store,expected)?;
+        let (mut card,mut flow,plan)=publication(store,&expected.id,operation)?;
+        let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("PR/MR publiée absente.")?;
+        let (kind,revision,repository,commit,target_commit)=match &plan {
+            PublicationPlan::Create(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.source_commit,Some(preview.target_commit.as_str())),
+            PublicationPlan::Push(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.commit,preview.pull_request.as_ref().and_then(|remote|remote.target_commit.as_deref())),
+        };
+        if linked.kind!=kind || linked.revision!=revision || linked.repository!=*repository || linked.source_commit.as_ref()!=Some(commit) || linked.target_commit.as_deref()!=target_commit || linked.source_branch!=flow.worktree.branch || flow.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.status!="active" || linked.fork {
+            return Err("La PR/MR observée ne correspond pas à la publication approuvée. Relis ses commits avant de poursuivre.".into());
+        }
+        flow.publication_plan=None;flow.review_requested=true;flow.step=Step::Review;flow.run_id=None;flow.message="Publication observée. La review va examiner les commits vérifiés.".into();
+        save(store,&mut card,&mut flow)
+    })
+}
+
 pub fn claim(
     store: &Store<'_>,
     id: &str,
@@ -274,11 +336,12 @@ pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
         if runs::active(&run)? {return Ok(());}
         if !run.string_equals("automationId",operation)? || !run.string_equals("cardId",id)? || !run.string_equals("status","completed")? || run.get::<i32>("exitCode")?!=Some(0) || run.truthy("attention")? {return Err("L’étape du parcours n’a pas abouti. Consulte le journal avant de reprendre.".into());}
         match flow.step {
-            Step::Development|Step::Correction => {flow.step=Step::Tests;flow.review_requested=false;},
+            Step::Development|Step::Correction => {flow.step=Step::Tests;flow.review_requested=false;flow.publication_plan=None;},
             Step::Tests => {
                 if !run.string_equals("purpose","verification")? || !run.string_equals("verificationState","passed")? {return Err("La vérification du parcours a échoué ou ses sources ont changé.".into());}
                 flow.verification_id=Some(run_id.clone());
-                if flow.review_requested { flow.step=Step::Review; }
+                if flow.publication_plan.is_some() {flow.step=Step::Publication;}
+                else if flow.review_requested { flow.step=Step::Review; }
                 else {flow.step=Step::Publication;flow.state=State::Waiting;flow.message="Vérification réussie. Contrôle le commit, le push et la PR/MR avant de poursuivre la review.".into();}
             },
             Step::Review => {
@@ -474,6 +537,100 @@ mod tests {
                 .unwrap()
                 .unwrap()[0]["done"],
             false
+        );
+    }
+
+    #[test]
+    fn publication_freezes_the_preview_requires_separate_branch_consent_and_never_replays_after_recovery()
+     {
+        let home = tempfile::tempdir().unwrap();
+        let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        store.save_settings(&doc(json!({"forgeRevision":1,"forgeConnections":{"github":{"kind":"github","base":"https://github-synthetic.example.test"}}}))).unwrap();
+        let (initial, project) = seed(&store);
+        let started = change(&store, "task", &body(&initial, &project, "start")).unwrap();
+        let mut flow = read(&started).unwrap().unwrap();
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "publication-development",
+            json!({"purpose":"work"}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        flow = read(&card(&store)).unwrap().unwrap();
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "publication-tests",
+            json!({"purpose":"verification","verificationState":"passed"}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        assert!(change(&store, "task", &body(&card(&store), &project, "publish")).is_err());
+        let mut ready = card(&store);
+        let preview:atelier_core::contracts::ForgePublicationPreview=serde_json::from_str(&json!({"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":1,"repository":"owner/repo","worktree":flow.worktree,"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":false,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic approved title","body":"Synthetic approved body","draft":true}).to_string()).unwrap();
+        ready
+            .fields
+            .set("forgePublicationPreview", &preview)
+            .unwrap();
+        store.put(Documents::Cards, &ready).unwrap();
+        assert!(change(&store, "task", &body(&ready, &project, "publish")).is_err());
+        let mut input = body(&ready, &project, "publish");
+        input.set("allowCreateBranch", &true).unwrap();
+        let authorized = change(&store, "task", &input).unwrap();
+        flow = read(&authorized).unwrap().unwrap();
+        assert!(
+            flow.state == State::Running
+                && flow.step == Step::Tests
+                && flow.publication_plan.is_some()
+        );
+        assert!(publication(&store, "task", &flow.id).is_err());
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "publication-reverification",
+            json!({"purpose":"verification","verificationState":"passed"}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        let (_, _, frozen) = publication(&store, "task", &flow.id).unwrap();
+        assert_eq!(
+            serde_json::to_value(frozen).unwrap(),
+            serde_json::to_value(PublicationPlan::Create(Box::new(preview))).unwrap()
+        );
+        let original = card(&store);
+        let mut changed = original.clone();
+        changed.fields.set("pullRequest",&json!({"revision":1,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic approved title","url":"https://github-synthetic.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"c".repeat(40),"fork":false,"baseUrl":"https://github-synthetic.example.test","checkedAt":"synthetic"})).unwrap();
+        store.put(Documents::Cards, &changed).unwrap();
+        assert!(publication_complete(&store, &changed, &flow.id).is_err());
+        assert!(read(&card(&store)).unwrap().unwrap().step == Step::Publication);
+        store.put(Documents::Cards, &original).unwrap();
+        let before = store.documents::<Document>(Documents::Runs).unwrap().len();
+        recover(&store).unwrap();
+        assert!(publication(&store, "task", &flow.id).is_err());
+        assert!(running(&store).unwrap().is_none());
+        let resumed = change(&store, "task", &body(&card(&store), &project, "resume")).unwrap();
+        let flow = read(&resumed).unwrap().unwrap();
+        assert!(flow.step == Step::Tests && flow.publication_plan.is_none());
+        assert_eq!(
+            store.documents::<Document>(Documents::Runs).unwrap().len(),
+            before
+        );
+        cancel(&store, "task", &flow.id).unwrap();
+        assert!(publication(&store, "task", &flow.id).is_err());
+        assert!(
+            store
+                .document::<Document>(Documents::Cards, "task")
+                .unwrap()
+                .unwrap()
+                .raw("gitPush")
+                .is_none()
+        );
+        assert!(
+            store
+                .document::<Document>(Documents::Cards, "task")
+                .unwrap()
+                .unwrap()
+                .raw("forgePublication")
+                .is_none()
         );
     }
 }

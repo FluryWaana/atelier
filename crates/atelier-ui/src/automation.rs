@@ -1,5 +1,5 @@
 use crate::{field, i18n::I18n, live::BoardState, write};
-use atelier_core::application::automation::{Flow, State};
+use atelier_core::application::automation::{Flow, PublicationPlan, State};
 use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -49,6 +49,38 @@ pub fn Automation(
         serde_json::to_string(&(card.get(), project.get(), profile.get())).unwrap_or_default()
     });
     let approved = RwSignal::new(None::<String>);
+    let branch_approved = RwSignal::new(None::<String>);
+    Effect::new(move |_| {
+        let _ = snapshot.get();
+        approved.set(None);
+        branch_approved.set(None);
+    });
+    Effect::new(move |_| {
+        if blocked.get() {
+            approved.set(None);
+            branch_approved.set(None);
+        }
+    });
+    let publication = Signal::derive(move || {
+        card.get().and_then(|card| {
+            if card.fields.raw("pullRequest").is_some() {
+                card.fields
+                    .get("gitPushPreview")
+                    .ok()
+                    .flatten()
+                    .map(|preview| PublicationPlan::Push(Box::new(preview)))
+            } else {
+                card.fields
+                    .get("forgePublicationPreview")
+                    .ok()
+                    .flatten()
+                    .map(|preview| PublicationPlan::Create(Box::new(preview)))
+            }
+        })
+    });
+    let needs_branch = Memo::new(
+        move |_| matches!(publication.get(),Some(PublicationPlan::Create(preview)) if preview.remote_source.is_none()),
+    );
     let error = RwSignal::new(String::new());
     let active = Memo::new(move |_| flow.get().is_some_and(|flow| flow.state == State::Running));
     let action = Signal::derive(move || match flow.get().map(|flow| flow.state) {
@@ -59,7 +91,8 @@ pub fn Automation(
         }
         _ => Some(("start", "Démarrer le parcours")),
     });
-    let execute = StoredValue::new_local(move |stop: bool| {
+    let execute = StoredValue::new_local(move |command: &str| {
+        let stop = command == "stop";
         if pending.get_untracked()
             || (!stop
                 && (blocked.get_untracked()
@@ -82,10 +115,15 @@ pub fn Automation(
         let body = if stop {
             serde_json::json!({"id":flow.get_untracked().map(|flow|flow.id),"confirmed":true})
         } else {
-            let Some((action, _)) = action.get_untracked() else {
-                return;
+            let selected = if command == "publish" {
+                "publish"
+            } else {
+                let Some((selected, _)) = action.get_untracked() else {
+                    return;
+                };
+                selected
             };
-            serde_json::json!({"action":action,"expected":expected,"project":project.get_untracked(),"profile":profile.get_untracked(),"confirmed":true})
+            serde_json::json!({"action":selected,"expected":expected,"project":project.get_untracked(),"profile":profile.get_untracked(),"allowCreateBranch":branch_approved.get_untracked().as_deref()==Some(snapshot.get_untracked().as_str()),"confirmed":true})
         };
         pending.set(true);
         approved.set(None);
@@ -110,8 +148,15 @@ pub fn Automation(
         <p role="status">{move||flow.get().map(|flow|i18n.text(&flow.message)).unwrap_or_default()}</p>
         <p class="field-help" hidden=move||project.get().is_some_and(|project|project.get::<bool>("automationEnabled").ok().flatten()==Some(true))>{move||i18n.text("Active le parcours dans les réglages du projet pour démarrer une tâche.")}</p>
         <label hidden=move||active.get()><input id="approve-automation" type="checkbox" prop:checked=move||approved.get().as_deref()==Some(snapshot.get().as_str()) disabled=move||pending.get()||blocked.get() on:change=move|event|approved.set(event_target_checked(&event).then(||snapshot.get_untracked()))/>{move||i18n.text("Autoriser cette étape avec le besoin, le profil et les réglages affichés. Après interruption, j’ai vérifié le worktree et les effets distants avant reprise.")}</label>
-        <button id="start-automation" type="button" hidden=move||active.get() disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str()) on:click=move|_|execute.with_value(|execute|execute(false))>{move||i18n.text(action.get().map(|(_,label)|label).unwrap_or("Démarrer le parcours"))}</button>
-        <button id="stop-automation" type="button" hidden=move||flow.get().is_none_or(|flow|!matches!(flow.state,State::Running|State::Waiting)) disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("Arrêter le parcours")}</button>
+        <button id="start-automation" type="button" hidden=move||active.get() disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str()) on:click=move|_|execute.with_value(|execute|execute("step"))>{move||i18n.text(action.get().map(|(_,label)|label).unwrap_or("Démarrer le parcours"))}</button>
+        <div hidden=move||flow.get().is_none_or(|flow|flow.state!=State::Waiting)||publication.get().is_none()>
+            <h4>{move||i18n.text("Enchaîner la publication approuvée")}</h4>
+            <p class="field-help">{move||i18n.text("Prépare d’abord le commit et l’aperçu de push ou de PR/MR dans les panneaux ci-dessous. Cette action revérifie le commit affiché, pousse avec protection de la branche distante, crée la PR/MR brouillon si nécessaire, puis lance la review. Une incertitude suspend le parcours sans renvoi.")}</p>
+            {move||publication.get().map(|plan| {let (repository,origin,branch,commit,title,body)=match plan {PublicationPlan::Create(preview)=>(preview.repository,preview.origin,format!("{} → {}",preview.worktree.branch,preview.target),preview.source_commit,preview.title,preview.body),PublicationPlan::Push(preview)=>(preview.repository,preview.origin,preview.worktree.branch,preview.commit,String::new(),String::new())};view!{<p>{repository}" · "{origin}</p><p>{branch}</p><code>{commit}</code><p>{title}</p><p class="task-description">{body}</p>}})}
+            <label hidden=move||!needs_branch.get()><input id="approve-workflow-branch" type="checkbox" disabled=move||pending.get()||blocked.get() prop:checked=move||branch_approved.get().as_deref()==Some(snapshot.get().as_str()) on:change=move|event|branch_approved.set(event_target_checked(&event).then(||snapshot.get_untracked()))/>{move||i18n.text("Autoriser séparément la création de cette branche distante absente.")}</label>
+            <button id="publish-workflow" type="button" disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str())||(needs_branch.get()&&branch_approved.get().as_deref()!=Some(snapshot.get().as_str())) on:click=move|_|execute.with_value(|execute|execute("publish"))>{move||i18n.text("Revérifier, publier cet aperçu et lancer la review")}</button>
+        </div>
+        <button id="stop-automation" type="button" hidden=move||flow.get().is_none_or(|flow|!matches!(flow.state,State::Running|State::Waiting)) disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute("stop"))>{move||i18n.text("Arrêter le parcours")}</button>
         <p id="automation-error" class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </section>}
 }

@@ -199,6 +199,12 @@ pub(super) async fn perform(
                 })
             })
             .await?;
+        if !reconcile && let Some(linked) = intent.preview.pull_request.as_ref() {
+            let remote = forge::Forge::new(configuration.clone(), token.clone(), revision)?
+                .pull_request(&intent.preview.repository, linked.number)
+                .await?;
+            workflow::require_pull_request(&intent.preview, &remote)?;
+        }
         let authentication = HttpsAuthentication::new(
             configuration.clone(),
             intent.preview.repository.clone(),

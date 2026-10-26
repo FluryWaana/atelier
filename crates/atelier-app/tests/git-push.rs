@@ -22,6 +22,49 @@ use std::{
     time::Duration,
 };
 
+#[test]
+fn push_refuses_retargeted_or_changed_pull_requests_before_git_dispatch() {
+    use atelier_app::infrastructure::git_push;
+    use atelier_core::contracts::{GitPushPreview, PullRequest};
+    use serde_json::json;
+    let remote:PullRequest=serde_json::from_str(&json!({"revision":1,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic title","url":"https://github-synthetic.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github-synthetic.example.test","checkedAt":"synthetic"}).to_string()).unwrap();
+    let preview:GitPushPreview=serde_json::from_str(&json!({"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":1,"repository":"owner/repo","worktree":{"source":"synthetic/source","path":"synthetic/work","branch":"task","base":"main","baseCommit":"b".repeat(40),"state":"ready"},"pullRequest":remote,"origin":"https://github-synthetic.example.test/owner/repo.git","commit":"c".repeat(40),"previous":"a".repeat(40),"localChanges":false}).to_string()).unwrap();
+    git_push::require_pull_request(&preview, &remote).unwrap();
+    assert!(git_push::require_pushed_pull_request(&preview, &remote).is_err());
+    let mut pushed = remote.clone();
+    pushed.source_commit = Some(preview.commit.clone());
+    git_push::require_pushed_pull_request(&preview, &pushed).unwrap();
+    assert!(git_push::require_pull_request(&preview, &pushed).is_err());
+    pushed.target_commit = Some("d".repeat(40));
+    assert!(git_push::require_pushed_pull_request(&preview, &pushed).is_err());
+    let original = serde_json::to_value(&remote).unwrap();
+    for (field, value) in [
+        ("sourceBranch", json!("other")),
+        ("targetBranch", json!("release")),
+        ("sourceCommit", json!("d".repeat(40))),
+        ("targetCommit", json!("d".repeat(40))),
+        ("status", json!("completed")),
+        ("draft", json!(false)),
+        ("title", json!("Changed human title")),
+        ("repository", json!("owner/other")),
+        ("baseUrl", json!("https://other-synthetic.example.test")),
+        ("number", json!(8)),
+        ("revision", json!(2)),
+        ("fork", json!(true)),
+    ] {
+        let mut changed = original.clone();
+        changed[field] = value;
+        let changed: PullRequest = serde_json::from_value(changed).unwrap();
+        assert!(
+            git_push::require_pull_request(&preview, &changed).is_err(),
+            "{field}"
+        );
+    }
+    let mut unrelated = preview.clone();
+    unrelated.worktree.branch = "other".into();
+    assert!(git_push::require_pull_request(&unrelated, &remote).is_err());
+}
+
 async fn git(directory: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command

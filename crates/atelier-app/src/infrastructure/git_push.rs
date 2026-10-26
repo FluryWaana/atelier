@@ -66,6 +66,14 @@ pub async fn preview(
         .fields
         .get::<Worktree>("worktree")?
         .ok_or("Worktree de push absent.")?;
+    if remote.source_branch != worktree.branch
+        || remote.source_branch != linked.source_branch
+        || remote.target_branch != linked.target_branch
+    {
+        return Err(
+            "Les branches de la PR/MR ont changé. Relis sa liaison avant de pousser.".into(),
+        );
+    }
     let previous = remote
         .source_commit
         .clone()
@@ -178,6 +186,37 @@ pub(super) fn reserve_preview(
         Ok(card)
     })
 }
+pub fn require_pull_request(preview: &GitPushPreview, remote: &PullRequest) -> Result<()> {
+    let expected = preview
+        .pull_request
+        .as_ref()
+        .ok_or("PR/MR du push absente.")?;
+    if !forge::same_pull_request(expected, remote)
+        || remote.revision != preview.revision
+        || remote.source_branch != preview.worktree.branch
+        || remote.source_commit != preview.previous
+        || remote.status != "active"
+        || remote.fork
+    {
+        return Err(
+            "La PR/MR ou ses commits ont changé depuis l’aperçu. Relis-la avant de pousser.".into(),
+        );
+    }
+    Ok(())
+}
+
+pub fn require_pushed_pull_request(preview: &GitPushPreview, remote: &PullRequest) -> Result<()> {
+    let mut comparable = remote.clone();
+    comparable.source_commit = preview.previous.clone();
+    require_pull_request(preview, &comparable)?;
+    if remote.source_commit.as_deref() != Some(preview.commit.as_str()) {
+        return Err(
+            "La PR/MR n’expose pas le commit poussé. Relis ses commits avant de reprendre.".into(),
+        );
+    }
+    Ok(())
+}
+
 pub async fn prepare(
     root: &Dir,
     roots: &[PathBuf],

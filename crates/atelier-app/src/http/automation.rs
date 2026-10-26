@@ -68,7 +68,7 @@ pub(super) async fn stop(
     response(result)
 }
 
-async fn tested_sources(state: &Shared, card: &Card, flow: &Flow) -> Result<()> {
+pub(super) async fn tested_sources(state: &Shared, card: &Card, flow: &Flow) -> Result<()> {
     let id = flow
         .verification_id
         .clone()
@@ -160,6 +160,9 @@ pub(super) async fn tick(state: &Shared) -> Result<bool> {
                 "Parcours suspendu pendant la maintenance. Vérifie le résultat avant de reprendre."
                     .into(),
             );
+        }
+        if flow.step == Step::Publication && flow.publication_plan.is_some() {
+            return super::workflow_publication::perform(state, &card.id, &flow.id).await;
         }
         if flow.run_id.is_some() {
             if flow.step == Step::Review {

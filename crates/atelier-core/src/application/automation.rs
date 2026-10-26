@@ -21,6 +21,13 @@ pub enum Step {
     Review,
     Correction,
 }
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(tag = "operation", content = "preview", rename_all = "camelCase")]
+pub enum PublicationPlan {
+    Create(Box<crate::contracts::ForgePublicationPreview>),
+    Push(Box<crate::contracts::GitPushPreview>),
+}
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Flow {
@@ -38,6 +45,7 @@ pub struct Flow {
     pub run_id: Option<String>,
     pub review_id: Option<String>,
     pub verification_id: Option<String>,
+    pub publication_plan: Option<PublicationPlan>,
     pub review_requested: bool,
     pub correction_indexes: Vec<usize>,
     pub cycles: u8,

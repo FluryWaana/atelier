@@ -65,6 +65,8 @@ mod tempo;
 mod tempo_export;
 mod time_tracking;
 mod updates;
+#[cfg(windows)]
+mod workflow_publication;
 mod worktrees;
 
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
