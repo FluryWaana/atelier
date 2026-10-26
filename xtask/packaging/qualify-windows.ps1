@@ -51,7 +51,8 @@ try {
   if ($uninstallers.Count -ne 1) { throw 'Native uninstaller missing or ambiguous.' }
   Invoke-Owned $uninstallers[0].FullName ($silent + @("/LOG=$(Join-Path $deliveryRoot 'uninstall-running-refusal.log')")) $false
   Invoke-Owned $setups[0].FullName ($silent + @("/DIR=$app", "/LOG=$(Join-Path $deliveryRoot 'setup-running-refusal.log')")) $false
-  Invoke-Owned $binary @('stop', '--data-dir', $data, '--port', "$port")
+  $nativePowerShell = Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell/v1.0/powershell.exe'
+  Invoke-Owned $nativePowerShell @('-NoLogo', '-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'qualify-tray-windows.ps1'), '-LockFile', (Join-Path $data '.atelier-data-lock.sqlite'), '-Port', "$port")
   $launched = $false
   $database = Join-Path $data 'kanban.sqlite'
   if (-not (Test-Path -LiteralPath $database)) { throw 'Synthetic database missing after native launch.' }
@@ -77,7 +78,7 @@ try {
   $secondUninstaller = @(Get-ChildItem -LiteralPath $reinstalled -Filter 'unins*.exe' -File)
   if ($secondUninstaller.Count -ne 1) { throw 'Reinstalled native uninstaller missing.' }
   Invoke-Owned $secondUninstaller[0].FullName $silent
-  $report = [ordered]@{format='atelier-rust-native-installer-qualification/1';platform='windows-x64';setupInstalled=$true;launcherExecuted=$true;activeServerRemovalRefused=$true;activeServerInstallRefused=$true;modifiedCodePreserved=$true;partialRootPreserved=$true;uninstallExecuted=$true;untrackedFilePreserved=$true;databasePreserved=$true;reinstallExecuted=$true;fixture=$fixture;published=$false}
+  $report = [ordered]@{format='atelier-rust-native-installer-qualification/1';platform='windows-x64';setupInstalled=$true;launcherExecuted=$true;activeServerRemovalRefused=$true;activeServerInstallRefused=$true;nativeTrayMenuOpened=$true;nativeTrayOpenCommandCompleted=$true;nativeTrayBrowserSessionPrepared=$true;nativeTrayQuitInvoked=$true;nativeTrayRemoved=$true;dataLockReleasedBeforeRestart=$true;modifiedCodePreserved=$true;partialRootPreserved=$true;uninstallExecuted=$true;untrackedFilePreserved=$true;databasePreserved=$true;reinstallExecuted=$true;fixture=$fixture;published=$false}
   [IO.File]::WriteAllText((Join-Path $deliveryRoot 'native-installer-qualification.json'), ($report | ConvertTo-Json -Depth 5))
 } finally {
   if ($launched) {

@@ -187,7 +187,7 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
             status.set_text(message);
             open.set_enabled(true);
             stop.set_enabled(true);
-            let _ = tray.set_tooltip(Some(message));
+            let _ = tray.set_tooltip(Some(format!("Atelier Kanban — {message}")));
         }
         while let Ok(event) = MenuEvent::receiver().try_recv() {
             if active.is_some() {
