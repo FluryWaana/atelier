@@ -111,6 +111,17 @@ pub fn describe(
         revision: revision(&settings)?,
         native_available: cfg!(windows),
         modules,
+        builtin_azure_path: if cfg!(windows) {
+            std::env::current_exe()
+                .ok()
+                .filter(|path| {
+                    path.file_name().and_then(|name| name.to_str()) == Some("atelier.exe")
+                })
+                .map(|path| super::task_creation::path_string(&path).utf8())
+                .transpose()?
+        } else {
+            None
+        },
     })
 }
 pub fn require_registry(store: &Store<'_>, expected: u64) -> Result<()> {

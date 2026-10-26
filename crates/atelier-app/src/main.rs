@@ -130,6 +130,12 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
 async fn main() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
+    if first.as_deref() == Some(std::ffi::OsStr::new("connector-azure")) {
+        if command.next().is_some() {
+            return Err("Le connecteur Azure reçoit uniquement sa requête sur stdin.".into());
+        }
+        return atelier_app::infrastructure::azure_tickets::command().await;
+    }
     if let Some(name) = first
         .as_ref()
         .and_then(|value| value.to_str())

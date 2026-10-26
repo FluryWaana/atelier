@@ -198,6 +198,7 @@ dependencies = [
  "futures-util",
  "getrandom 0.4.3",
  "hmac",
+ "html-escape",
  "hyper",
  "icu_collator",
  "icu_locale_core",

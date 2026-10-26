@@ -437,6 +437,8 @@ pub fn Connectors(
         </div>
         <h4>{move||i18n.text("Ajouter un connecteur")}</h4>
         <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
+            <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("Préparer Azure Work Items intégré")}</button>
+            <p class="field-help">{move||i18n.text("Le connecteur Azure utilise le programme Atelier livré. Lis son manifeste et confirme son installation ; le PAT sera demandé ensuite, sans connexion implicite.")}</p>
             <label for="connector-module">{move||i18n.text("Identifiant du module")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>
             <label for="connector-path">{move||i18n.text("Programme du connecteur")}</label><input id="connector-path" maxlength="32000" spellcheck="false" prop:value=move||path.get() on:input=move|event|{path.set(event_target_value(&event));invalidate();}/>
             <label><input id="connector-trusted" type="checkbox" prop:checked=move||trusted.get() on:change=move|event|{trusted.set(event_target_checked(&event));candidate.set(None);approved.set(false);}/>{move||i18n.text("Je fais confiance à ce programme et autorise sa lecture de manifeste.")}</label>

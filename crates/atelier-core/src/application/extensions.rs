@@ -45,6 +45,7 @@ pub struct Registry {
     pub revision: u64,
     pub native_available: bool,
     pub modules: Vec<Connection>,
+    pub builtin_azure_path: Option<String>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

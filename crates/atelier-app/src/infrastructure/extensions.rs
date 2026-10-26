@@ -277,6 +277,9 @@ impl PreparedCall {
         )?;
         let mut command = super::agent_diagnostics::command(&profile).await?;
         isolate(&mut command, home.path());
+        if request.module == "azure-tickets" {
+            command.arg("connector-azure");
+        }
         let output=process_tree::capture(&mut command,&input,timeout,protocol::OUTPUT_LIMIT).await.map_err(|_|"Appel de connecteur interrompu, trop long ou trop volumineux. Vérifie son état avant de réessayer.")?;
         if !output.status.success() {
             return Err(

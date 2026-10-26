@@ -66,6 +66,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/agent_diagnostics.rs](../crates/atelier-app/src/infrastructure/agent_diagnostics.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/agent_providers.rs](../crates/atelier-app/src/infrastructure/agent_providers.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/automation.rs](../crates/atelier-app/src/infrastructure/automation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs](../crates/atelier-app/src/infrastructure/azure_tickets.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/backups.rs](../crates/atelier-app/src/infrastructure/backups.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/brainstorm.rs](../crates/atelier-app/src/infrastructure/brainstorm.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/checked_file.rs](../crates/atelier-app/src/infrastructure/checked_file.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -135,6 +136,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/worktrees.rs](../crates/atelier-app/src/infrastructure/worktrees.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/lib.rs](../crates/atelier-app/src/lib.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/main.rs](../crates/atelier-app/src/main.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/azure-tickets.rs](../crates/atelier-app/tests/azure-tickets.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/brainstorm.rs](../crates/atelier-app/tests/brainstorm.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/document-storage.rs](../crates/atelier-app/tests/document-storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/files.rs](../crates/atelier-app/tests/files.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -906,13 +908,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:18](../crates/atelier-app/Cargo.toml#L18) | <code>reqwest.workspace = true</code> |
 | [crates/atelier-app/Cargo.toml:21](../crates/atelier-app/Cargo.toml#L21) | <code>futures-util = { version = "=0.3.34", default-features = false, features = ["std"] }</code> |
 | [crates/atelier-app/Cargo.toml:22](../crates/atelier-app/Cargo.toml#L22) | <code>rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }</code> |
-| [crates/atelier-app/Cargo.toml:34](../crates/atelier-app/Cargo.toml#L34) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
-| [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
-| [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }</code> |
-| [crates/atelier-app/Cargo.toml:37](../crates/atelier-app/Cargo.toml#L37) | <code>zip = { version = "=8.6.0", default-features = false }</code> |
-| [crates/atelier-app/Cargo.toml:39](../crates/atelier-app/Cargo.toml#L39) | <code>[target.'cfg(windows)'.dependencies]</code> |
-| [crates/atelier-app/Cargo.toml:40](../crates/atelier-app/Cargo.toml#L40) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }</code> |
-| [crates/atelier-app/Cargo.toml:42](../crates/atelier-app/Cargo.toml#L42) | <code>[target.'cfg(unix)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:35](../crates/atelier-app/Cargo.toml#L35) | <code>uuid = { version = "=1.29.0", features = ["v4"] }</code> |
+| [crates/atelier-app/Cargo.toml:36](../crates/atelier-app/Cargo.toml#L36) | <code>tower-http = { version = "=0.7.1", features = ["fs"] }</code> |
+| [crates/atelier-app/Cargo.toml:37](../crates/atelier-app/Cargo.toml#L37) | <code>time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }</code> |
+| [crates/atelier-app/Cargo.toml:38](../crates/atelier-app/Cargo.toml#L38) | <code>zip = { version = "=8.6.0", default-features = false }</code> |
+| [crates/atelier-app/Cargo.toml:40](../crates/atelier-app/Cargo.toml#L40) | <code>[target.'cfg(windows)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:41](../crates/atelier-app/Cargo.toml#L41) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }</code> |
+| [crates/atelier-app/Cargo.toml:43](../crates/atelier-app/Cargo.toml#L43) | <code>[target.'cfg(unix)'.dependencies]</code> |
 | [crates/atelier-app/examples/connector-demo.rs:2](../crates/atelier-app/examples/connector-demo.rs#L2) | <code>use atelier_core::application::extensions::{</code> |
 | [crates/atelier-app/examples/connector-demo.rs:5](../crates/atelier-app/examples/connector-demo.rs#L5) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/examples/connector-demo.rs:6](../crates/atelier-app/examples/connector-demo.rs#L6) | <code>use std::io::{Read, Write};</code> |
@@ -1208,6 +1210,22 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/automation.rs:787](../crates/atelier-app/src/infrastructure/automation.rs#L787) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:881](../crates/atelier-app/src/infrastructure/automation.rs#L881) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:968](../crates/atelier-app/src/infrastructure/automation.rs#L968) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:1](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:2](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L2) | <code>use atelier_core::application::extensions::{</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:5](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L5) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:6](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L6) | <code>use reqwest::{</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:10](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L10) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:11](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L11) | <code>use std::{collections::BTreeSet, sync::LazyLock, time::Duration};</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:14](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L14) | <code>pub fn manifest() -&gt; Manifest {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:18](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L18) | <code>pub struct Azure {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:26](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L26) | <code>pub fn new(base: &amp;str, project: &amp;str, token: String) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:29](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L29) | <code>pub fn synthetic(base: &amp;str, project: &amp;str, token: String) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:147](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L147) | <code>pub async fn project_name(&amp;self) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:226](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L226) | <code>pub async fn read(&amp;self, instance: &amp;str, id: &amp;str) -&gt; Result&lt;Ticket&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:239](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L239) | <code>pub async fn search(&amp;self, filter: &amp;str, cursor: Option&lt;&amp;str&gt;) -&gt; Result&lt;TicketPage&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:363](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L363) | <code>pub async fn execute(request: Request) -&gt; Result&lt;Reply&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:420](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L420) | <code>pub async fn command() -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/azure_tickets.rs:421](../crates/atelier-app/src/infrastructure/azure_tickets.rs#L421) | <code>use std::io::{Read, Write};</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:1](../crates/atelier-app/src/infrastructure/backups.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:5](../crates/atelier-app/src/infrastructure/backups.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:6](../crates/atelier-app/src/infrastructure/backups.rs#L6) | <code>use atelier_core::{application::backups::BackupFailure, document::Document};</code> |
@@ -1340,18 +1358,18 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/connectors.rs:3](../crates/atelier-app/src/infrastructure/connectors.rs#L3) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/connectors.rs:12](../crates/atelier-app/src/infrastructure/connectors.rs#L12) | <code>use std::collections::{BTreeMap, BTreeSet};</code> |
 | [crates/atelier-app/src/infrastructure/connectors.rs:82](../crates/atelier-app/src/infrastructure/connectors.rs#L82) | <code>pub fn describe(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:116](../crates/atelier-app/src/infrastructure/connectors.rs#L116) | <code>pub fn require_registry(store: &amp;Store&lt;'_&gt;, expected: u64) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:122](../crates/atelier-app/src/infrastructure/connectors.rs#L122) | <code>pub fn profile(store: &amp;Store&lt;'_&gt;, id: &amp;str, expected: u64) -&gt; Result&lt;Installed&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:130](../crates/atelier-app/src/infrastructure/connectors.rs#L130) | <code>pub fn install(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:184](../crates/atelier-app/src/infrastructure/connectors.rs#L184) | <code>pub fn configure(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:288](../crates/atelier-app/src/infrastructure/connectors.rs#L288) | <code>pub fn remove(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:318](../crates/atelier-app/src/infrastructure/connectors.rs#L318) | <code>pub fn invocation(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:368](../crates/atelier-app/src/infrastructure/connectors.rs#L368) | <code>pub fn record(store: &amp;Store&lt;'_&gt;, id: &amp;str, expected: u64, report: Report) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:408](../crates/atelier-app/src/infrastructure/connectors.rs#L408) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:409](../crates/atelier-app/src/infrastructure/connectors.rs#L409) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:410](../crates/atelier-app/src/infrastructure/connectors.rs#L410) | <code>use serde_json::json;</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:424](../crates/atelier-app/src/infrastructure/connectors.rs#L424) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:503](../crates/atelier-app/src/infrastructure/connectors.rs#L503) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:127](../crates/atelier-app/src/infrastructure/connectors.rs#L127) | <code>pub fn require_registry(store: &amp;Store&lt;'_&gt;, expected: u64) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:133](../crates/atelier-app/src/infrastructure/connectors.rs#L133) | <code>pub fn profile(store: &amp;Store&lt;'_&gt;, id: &amp;str, expected: u64) -&gt; Result&lt;Installed&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:141](../crates/atelier-app/src/infrastructure/connectors.rs#L141) | <code>pub fn install(</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:195](../crates/atelier-app/src/infrastructure/connectors.rs#L195) | <code>pub fn configure(</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:299](../crates/atelier-app/src/infrastructure/connectors.rs#L299) | <code>pub fn remove(</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:329](../crates/atelier-app/src/infrastructure/connectors.rs#L329) | <code>pub fn invocation(</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:379](../crates/atelier-app/src/infrastructure/connectors.rs#L379) | <code>pub fn record(store: &amp;Store&lt;'_&gt;, id: &amp;str, expected: u64, report: Report) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:419](../crates/atelier-app/src/infrastructure/connectors.rs#L419) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:420](../crates/atelier-app/src/infrastructure/connectors.rs#L420) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:421](../crates/atelier-app/src/infrastructure/connectors.rs#L421) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:435](../crates/atelier-app/src/infrastructure/connectors.rs#L435) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:514](../crates/atelier-app/src/infrastructure/connectors.rs#L514) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:1](../crates/atelier-app/src/infrastructure/data_lock.rs#L1) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:2](../crates/atelier-app/src/infrastructure/data_lock.rs#L2) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:3](../crates/atelier-app/src/infrastructure/data_lock.rs#L3) | <code>use rusqlite::Connection;</code> |
@@ -1434,9 +1452,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/extensions.rs:170](../crates/atelier-app/src/infrastructure/extensions.rs#L170) | <code>pub fn prepare(</code> |
 | [crates/atelier-app/src/infrastructure/extensions.rs:202](../crates/atelier-app/src/infrastructure/extensions.rs#L202) | <code>pub async fn describe(self, module: &amp;str) -&gt; Result&lt;(Binary, Manifest)&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/extensions.rs:264](../crates/atelier-app/src/infrastructure/extensions.rs#L264) | <code>pub async fn dispatch(self) -&gt; Result&lt;Reply&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/extensions.rs:302](../crates/atelier-app/src/infrastructure/extensions.rs#L302) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/extensions.rs:303](../crates/atelier-app/src/infrastructure/extensions.rs#L303) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/extensions.rs:304](../crates/atelier-app/src/infrastructure/extensions.rs#L304) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/extensions.rs:305](../crates/atelier-app/src/infrastructure/extensions.rs#L305) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/extensions.rs:306](../crates/atelier-app/src/infrastructure/extensions.rs#L306) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/extensions.rs:307](../crates/atelier-app/src/infrastructure/extensions.rs#L307) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:1](../crates/atelier-app/src/infrastructure/files.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:6](../crates/atelier-app/src/infrastructure/files.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:7](../crates/atelier-app/src/infrastructure/files.rs#L7) | <code>use atelier_core::{</code> |
@@ -1767,67 +1785,68 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:3](../crates/atelier-app/src/infrastructure/mod.rs#L3) | <code>pub mod agent_diagnostics;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:4](../crates/atelier-app/src/infrastructure/mod.rs#L4) | <code>pub mod agent_providers;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:5](../crates/atelier-app/src/infrastructure/mod.rs#L5) | <code>pub mod automation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod backups;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod brainstorm;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod checked_file;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:10](../crates/atelier-app/src/infrastructure/mod.rs#L10) | <code>pub mod command_runs;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod commits;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:12](../crates/atelier-app/src/infrastructure/mod.rs#L12) | <code>pub mod connector_tickets;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:13](../crates/atelier-app/src/infrastructure/mod.rs#L13) | <code>pub mod connectors;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:14](../crates/atelier-app/src/infrastructure/mod.rs#L14) | <code>pub mod data_lock;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:15](../crates/atelier-app/src/infrastructure/mod.rs#L15) | <code>pub mod database;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:16](../crates/atelier-app/src/infrastructure/mod.rs#L16) | <code>mod dependencies;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:18](../crates/atelier-app/src/infrastructure/mod.rs#L18) | <code>pub mod dev_servers;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:19](../crates/atelier-app/src/infrastructure/mod.rs#L19) | <code>mod directory_link;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:21](../crates/atelier-app/src/infrastructure/mod.rs#L21) | <code>pub mod extensions;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:22](../crates/atelier-app/src/infrastructure/mod.rs#L22) | <code>pub mod files;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:23](../crates/atelier-app/src/infrastructure/mod.rs#L23) | <code>pub mod forge;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:24](../crates/atelier-app/src/infrastructure/mod.rs#L24) | <code>pub mod forge_association;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:25](../crates/atelier-app/src/infrastructure/mod.rs#L25) | <code>pub mod forge_draft;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:26](../crates/atelier-app/src/infrastructure/mod.rs#L26) | <code>pub mod forge_publication;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:27](../crates/atelier-app/src/infrastructure/mod.rs#L27) | <code>pub mod git_push;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:28](../crates/atelier-app/src/infrastructure/mod.rs#L28) | <code>pub mod git_transport;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:29](../crates/atelier-app/src/infrastructure/mod.rs#L29) | <code>pub mod installation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:30](../crates/atelier-app/src/infrastructure/mod.rs#L30) | <code>pub mod installed;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:32](../crates/atelier-app/src/infrastructure/mod.rs#L32) | <code>mod interactive_runs;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:33](../crates/atelier-app/src/infrastructure/mod.rs#L33) | <code>pub mod jira;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:34](../crates/atelier-app/src/infrastructure/mod.rs#L34) | <code>pub mod jira_creation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:35](../crates/atelier-app/src/infrastructure/mod.rs#L35) | <code>pub mod jira_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:36](../crates/atelier-app/src/infrastructure/mod.rs#L36) | <code>pub mod jira_refresh;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:37](../crates/atelier-app/src/infrastructure/mod.rs#L37) | <code>pub mod jira_transition;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:38](../crates/atelier-app/src/infrastructure/mod.rs#L38) | <code>pub mod launch_detection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:39](../crates/atelier-app/src/infrastructure/mod.rs#L39) | <code>pub mod launch_ports;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:40](../crates/atelier-app/src/infrastructure/mod.rs#L40) | <code>pub mod launcher;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:41](../crates/atelier-app/src/infrastructure/mod.rs#L41) | <code>pub mod local_commit;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod local_http;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod package;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:44](../crates/atelier-app/src/infrastructure/mod.rs#L44) | <code>pub mod package_archive;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:45](../crates/atelier-app/src/infrastructure/mod.rs#L45) | <code>pub mod portable_import;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:46](../crates/atelier-app/src/infrastructure/mod.rs#L46) | <code>pub mod preparation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:48](../crates/atelier-app/src/infrastructure/mod.rs#L48) | <code>mod process_inspection;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:49](../crates/atelier-app/src/infrastructure/mod.rs#L49) | <code>pub mod process_tree;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:50](../crates/atelier-app/src/infrastructure/mod.rs#L50) | <code>pub mod projects;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:51](../crates/atelier-app/src/infrastructure/mod.rs#L51) | <code>pub mod prototype;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:52](../crates/atelier-app/src/infrastructure/mod.rs#L52) | <code>mod publish;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:53](../crates/atelier-app/src/infrastructure/mod.rs#L53) | <code>pub mod queue;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:54](../crates/atelier-app/src/infrastructure/mod.rs#L54) | <code>pub mod repository_access;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:55](../crates/atelier-app/src/infrastructure/mod.rs#L55) | <code>pub mod reviews;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:56](../crates/atelier-app/src/infrastructure/mod.rs#L56) | <code>pub mod runs;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:57](../crates/atelier-app/src/infrastructure/mod.rs#L57) | <code>pub mod service_launch;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:58](../crates/atelier-app/src/infrastructure/mod.rs#L58) | <code>pub mod session;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:59](../crates/atelier-app/src/infrastructure/mod.rs#L59) | <code>pub mod settings;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:60](../crates/atelier-app/src/infrastructure/mod.rs#L60) | <code>pub mod store;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:61](../crates/atelier-app/src/infrastructure/mod.rs#L61) | <code>pub mod task_creation;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:62](../crates/atelier-app/src/infrastructure/mod.rs#L62) | <code>pub mod task_editing;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:63](../crates/atelier-app/src/infrastructure/mod.rs#L63) | <code>pub mod task_templates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:64](../crates/atelier-app/src/infrastructure/mod.rs#L64) | <code>pub mod tempo;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:65](../crates/atelier-app/src/infrastructure/mod.rs#L65) | <code>pub mod tempo_export;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:66](../crates/atelier-app/src/infrastructure/mod.rs#L66) | <code>pub mod time_tracking;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:67](../crates/atelier-app/src/infrastructure/mod.rs#L67) | <code>pub mod token_vault;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod update_package;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:69](../crates/atelier-app/src/infrastructure/mod.rs#L69) | <code>pub mod updates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:70](../crates/atelier-app/src/infrastructure/mod.rs#L70) | <code>pub mod verification;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:71](../crates/atelier-app/src/infrastructure/mod.rs#L71) | <code>pub mod worktrees;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:6](../crates/atelier-app/src/infrastructure/mod.rs#L6) | <code>pub mod azure_tickets;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:7](../crates/atelier-app/src/infrastructure/mod.rs#L7) | <code>pub mod backups;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:8](../crates/atelier-app/src/infrastructure/mod.rs#L8) | <code>pub mod brainstorm;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:9](../crates/atelier-app/src/infrastructure/mod.rs#L9) | <code>pub mod checked_file;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:11](../crates/atelier-app/src/infrastructure/mod.rs#L11) | <code>pub mod command_runs;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:12](../crates/atelier-app/src/infrastructure/mod.rs#L12) | <code>pub mod commits;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:13](../crates/atelier-app/src/infrastructure/mod.rs#L13) | <code>pub mod connector_tickets;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:14](../crates/atelier-app/src/infrastructure/mod.rs#L14) | <code>pub mod connectors;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:15](../crates/atelier-app/src/infrastructure/mod.rs#L15) | <code>pub mod data_lock;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:16](../crates/atelier-app/src/infrastructure/mod.rs#L16) | <code>pub mod database;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:17](../crates/atelier-app/src/infrastructure/mod.rs#L17) | <code>mod dependencies;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:19](../crates/atelier-app/src/infrastructure/mod.rs#L19) | <code>pub mod dev_servers;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:20](../crates/atelier-app/src/infrastructure/mod.rs#L20) | <code>mod directory_link;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:22](../crates/atelier-app/src/infrastructure/mod.rs#L22) | <code>pub mod extensions;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:23](../crates/atelier-app/src/infrastructure/mod.rs#L23) | <code>pub mod files;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:24](../crates/atelier-app/src/infrastructure/mod.rs#L24) | <code>pub mod forge;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:25](../crates/atelier-app/src/infrastructure/mod.rs#L25) | <code>pub mod forge_association;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:26](../crates/atelier-app/src/infrastructure/mod.rs#L26) | <code>pub mod forge_draft;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:27](../crates/atelier-app/src/infrastructure/mod.rs#L27) | <code>pub mod forge_publication;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:28](../crates/atelier-app/src/infrastructure/mod.rs#L28) | <code>pub mod git_push;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:29](../crates/atelier-app/src/infrastructure/mod.rs#L29) | <code>pub mod git_transport;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:30](../crates/atelier-app/src/infrastructure/mod.rs#L30) | <code>pub mod installation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:31](../crates/atelier-app/src/infrastructure/mod.rs#L31) | <code>pub mod installed;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:33](../crates/atelier-app/src/infrastructure/mod.rs#L33) | <code>mod interactive_runs;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:34](../crates/atelier-app/src/infrastructure/mod.rs#L34) | <code>pub mod jira;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:35](../crates/atelier-app/src/infrastructure/mod.rs#L35) | <code>pub mod jira_creation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:36](../crates/atelier-app/src/infrastructure/mod.rs#L36) | <code>pub mod jira_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:37](../crates/atelier-app/src/infrastructure/mod.rs#L37) | <code>pub mod jira_refresh;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:38](../crates/atelier-app/src/infrastructure/mod.rs#L38) | <code>pub mod jira_transition;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:39](../crates/atelier-app/src/infrastructure/mod.rs#L39) | <code>pub mod launch_detection;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:40](../crates/atelier-app/src/infrastructure/mod.rs#L40) | <code>pub mod launch_ports;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:41](../crates/atelier-app/src/infrastructure/mod.rs#L41) | <code>pub mod launcher;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:42](../crates/atelier-app/src/infrastructure/mod.rs#L42) | <code>pub mod local_commit;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:43](../crates/atelier-app/src/infrastructure/mod.rs#L43) | <code>pub mod local_http;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:44](../crates/atelier-app/src/infrastructure/mod.rs#L44) | <code>pub mod package;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:45](../crates/atelier-app/src/infrastructure/mod.rs#L45) | <code>pub mod package_archive;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:46](../crates/atelier-app/src/infrastructure/mod.rs#L46) | <code>pub mod portable_import;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:47](../crates/atelier-app/src/infrastructure/mod.rs#L47) | <code>pub mod preparation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:49](../crates/atelier-app/src/infrastructure/mod.rs#L49) | <code>mod process_inspection;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:50](../crates/atelier-app/src/infrastructure/mod.rs#L50) | <code>pub mod process_tree;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:51](../crates/atelier-app/src/infrastructure/mod.rs#L51) | <code>pub mod projects;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:52](../crates/atelier-app/src/infrastructure/mod.rs#L52) | <code>pub mod prototype;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:53](../crates/atelier-app/src/infrastructure/mod.rs#L53) | <code>mod publish;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:54](../crates/atelier-app/src/infrastructure/mod.rs#L54) | <code>pub mod queue;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:55](../crates/atelier-app/src/infrastructure/mod.rs#L55) | <code>pub mod repository_access;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:56](../crates/atelier-app/src/infrastructure/mod.rs#L56) | <code>pub mod reviews;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:57](../crates/atelier-app/src/infrastructure/mod.rs#L57) | <code>pub mod runs;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:58](../crates/atelier-app/src/infrastructure/mod.rs#L58) | <code>pub mod service_launch;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:59](../crates/atelier-app/src/infrastructure/mod.rs#L59) | <code>pub mod session;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:60](../crates/atelier-app/src/infrastructure/mod.rs#L60) | <code>pub mod settings;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:61](../crates/atelier-app/src/infrastructure/mod.rs#L61) | <code>pub mod store;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:62](../crates/atelier-app/src/infrastructure/mod.rs#L62) | <code>pub mod task_creation;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:63](../crates/atelier-app/src/infrastructure/mod.rs#L63) | <code>pub mod task_editing;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:64](../crates/atelier-app/src/infrastructure/mod.rs#L64) | <code>pub mod task_templates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:65](../crates/atelier-app/src/infrastructure/mod.rs#L65) | <code>pub mod tempo;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:66](../crates/atelier-app/src/infrastructure/mod.rs#L66) | <code>pub mod tempo_export;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:67](../crates/atelier-app/src/infrastructure/mod.rs#L67) | <code>pub mod time_tracking;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:69](../crates/atelier-app/src/infrastructure/mod.rs#L69) | <code>pub mod update_package;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:70](../crates/atelier-app/src/infrastructure/mod.rs#L70) | <code>pub mod updates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:71](../crates/atelier-app/src/infrastructure/mod.rs#L71) | <code>pub mod verification;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:72](../crates/atelier-app/src/infrastructure/mod.rs#L72) | <code>pub mod worktrees;</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:1](../crates/atelier-app/src/infrastructure/package.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:6](../crates/atelier-app/src/infrastructure/package.rs#L6) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:7](../crates/atelier-app/src/infrastructure/package.rs#L7) | <code>use sha2::{Digest, Sha256};</code> |
@@ -2302,9 +2321,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/lib.rs:5](../crates/atelier-app/src/lib.rs#L5) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Error&gt;;</code> |
 | [crates/atelier-app/src/main.rs:1](../crates/atelier-app/src/main.rs#L1) | <code>use atelier_app::{</code> |
 | [crates/atelier-app/src/main.rs:8](../crates/atelier-app/src/main.rs#L8) | <code>use std::{</code> |
-| [crates/atelier-app/src/main.rs:241](../crates/atelier-app/src/main.rs#L241) | <code>mod tests {</code> |
-| [crates/atelier-app/src/main.rs:242](../crates/atelier-app/src/main.rs#L242) | <code>use super::*;</code> |
-| [crates/atelier-app/src/main.rs:246](../crates/atelier-app/src/main.rs#L246) | <code>#[test]</code> |
+| [crates/atelier-app/src/main.rs:247](../crates/atelier-app/src/main.rs#L247) | <code>mod tests {</code> |
+| [crates/atelier-app/src/main.rs:248](../crates/atelier-app/src/main.rs#L248) | <code>use super::*;</code> |
+| [crates/atelier-app/src/main.rs:252](../crates/atelier-app/src/main.rs#L252) | <code>#[test]</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:1](../crates/atelier-app/tests/azure-tickets.rs#L1) | <code>use atelier_app::infrastructure::azure_tickets::{Azure, manifest};</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:2](../crates/atelier-app/tests/azure-tickets.rs#L2) | <code>use atelier_core::application::extensions as protocol;</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:3](../crates/atelier-app/tests/azure-tickets.rs#L3) | <code>use axum::{</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:8](../crates/atelier-app/tests/azure-tickets.rs#L8) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:9](../crates/atelier-app/tests/azure-tickets.rs#L9) | <code>use serde_json::{Value, json};</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:10](../crates/atelier-app/tests/azure-tickets.rs#L10) | <code>use std::sync::{</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:65](../crates/atelier-app/tests/azure-tickets.rs#L65) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/azure-tickets.rs:129](../crates/atelier-app/tests/azure-tickets.rs#L129) | <code>#[test]</code> |
 | [crates/atelier-app/tests/brainstorm.rs:1](../crates/atelier-app/tests/brainstorm.rs#L1) | <code>use atelier_app::infrastructure::{</code> |
 | [crates/atelier-app/tests/brainstorm.rs:7](../crates/atelier-app/tests/brainstorm.rs#L7) | <code>use atelier_core::{application::brainstorm::Answer, contracts::Card, document::Document};</code> |
 | [crates/atelier-app/tests/brainstorm.rs:8](../crates/atelier-app/tests/brainstorm.rs#L8) | <code>use serde_json::json;</code> |
@@ -2788,121 +2815,122 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/extensions.rs:45](../crates/atelier-core/src/application/extensions.rs#L45) | <code>pub revision: u64,</code> |
 | [crates/atelier-core/src/application/extensions.rs:46](../crates/atelier-core/src/application/extensions.rs#L46) | <code>pub native_available: bool,</code> |
 | [crates/atelier-core/src/application/extensions.rs:47](../crates/atelier-core/src/application/extensions.rs#L47) | <code>pub modules: Vec&lt;Connection&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:51](../crates/atelier-core/src/application/extensions.rs#L51) | <code>pub struct Candidate {</code> |
-| [crates/atelier-core/src/application/extensions.rs:52](../crates/atelier-core/src/application/extensions.rs#L52) | <code>pub binary: Binary,</code> |
-| [crates/atelier-core/src/application/extensions.rs:53](../crates/atelier-core/src/application/extensions.rs#L53) | <code>pub manifest: Manifest,</code> |
-| [crates/atelier-core/src/application/extensions.rs:57](../crates/atelier-core/src/application/extensions.rs#L57) | <code>pub struct Installation {</code> |
-| [crates/atelier-core/src/application/extensions.rs:58](../crates/atelier-core/src/application/extensions.rs#L58) | <code>pub expected_revision: u64,</code> |
-| [crates/atelier-core/src/application/extensions.rs:59](../crates/atelier-core/src/application/extensions.rs#L59) | <code>pub candidate: Candidate,</code> |
-| [crates/atelier-core/src/application/extensions.rs:60](../crates/atelier-core/src/application/extensions.rs#L60) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:64](../crates/atelier-core/src/application/extensions.rs#L64) | <code>pub struct Configuration {</code> |
-| [crates/atelier-core/src/application/extensions.rs:65](../crates/atelier-core/src/application/extensions.rs#L65) | <code>pub expected_revision: u64,</code> |
-| [crates/atelier-core/src/application/extensions.rs:66](../crates/atelier-core/src/application/extensions.rs#L66) | <code>pub values: BTreeMap&lt;String, Value&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:68](../crates/atelier-core/src/application/extensions.rs#L68) | <code>pub forget_values: BTreeSet&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:69](../crates/atelier-core/src/application/extensions.rs#L69) | <code>pub secrets: BTreeMap&lt;String, String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:70](../crates/atelier-core/src/application/extensions.rs#L70) | <code>pub forget_secrets: BTreeSet&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:74](../crates/atelier-core/src/application/extensions.rs#L74) | <code>pub struct Invocation {</code> |
-| [crates/atelier-core/src/application/extensions.rs:75](../crates/atelier-core/src/application/extensions.rs#L75) | <code>pub expected_revision: u64,</code> |
-| [crates/atelier-core/src/application/extensions.rs:76](../crates/atelier-core/src/application/extensions.rs#L76) | <code>pub method: Method,</code> |
-| [crates/atelier-core/src/application/extensions.rs:77](../crates/atelier-core/src/application/extensions.rs#L77) | <code>pub action: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:78](../crates/atelier-core/src/application/extensions.rs#L78) | <code>pub input: Value,</code> |
-| [crates/atelier-core/src/application/extensions.rs:79](../crates/atelier-core/src/application/extensions.rs#L79) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:84](../crates/atelier-core/src/application/extensions.rs#L84) | <code>pub struct TicketIdentity {</code> |
-| [crates/atelier-core/src/application/extensions.rs:85](../crates/atelier-core/src/application/extensions.rs#L85) | <code>pub instance: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:86](../crates/atelier-core/src/application/extensions.rs#L86) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:90](../crates/atelier-core/src/application/extensions.rs#L90) | <code>pub struct Ticket {</code> |
-| [crates/atelier-core/src/application/extensions.rs:91](../crates/atelier-core/src/application/extensions.rs#L91) | <code>pub instance: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:92](../crates/atelier-core/src/application/extensions.rs#L92) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:93](../crates/atelier-core/src/application/extensions.rs#L93) | <code>pub key: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:94](../crates/atelier-core/src/application/extensions.rs#L94) | <code>pub title: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:95](../crates/atelier-core/src/application/extensions.rs#L95) | <code>pub description: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:96](../crates/atelier-core/src/application/extensions.rs#L96) | <code>pub url: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:97](../crates/atelier-core/src/application/extensions.rs#L97) | <code>pub status: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:100](../crates/atelier-core/src/application/extensions.rs#L100) | <code>pub fn identity(&amp;self) -&gt; TicketIdentity {</code> |
-| [crates/atelier-core/src/application/extensions.rs:109](../crates/atelier-core/src/application/extensions.rs#L109) | <code>pub struct TicketPage {</code> |
-| [crates/atelier-core/src/application/extensions.rs:110](../crates/atelier-core/src/application/extensions.rs#L110) | <code>pub items: Vec&lt;Ticket&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:111](../crates/atelier-core/src/application/extensions.rs#L111) | <code>pub next: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:115](../crates/atelier-core/src/application/extensions.rs#L115) | <code>pub struct TicketImport {</code> |
-| [crates/atelier-core/src/application/extensions.rs:116](../crates/atelier-core/src/application/extensions.rs#L116) | <code>pub expected_revision: u64,</code> |
-| [crates/atelier-core/src/application/extensions.rs:117](../crates/atelier-core/src/application/extensions.rs#L117) | <code>pub report_id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:118](../crates/atelier-core/src/application/extensions.rs#L118) | <code>pub project: crate::document::Document,</code> |
-| [crates/atelier-core/src/application/extensions.rs:119](../crates/atelier-core/src/application/extensions.rs#L119) | <code>pub tickets: Vec&lt;TicketIdentity&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:120](../crates/atelier-core/src/application/extensions.rs#L120) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:124](../crates/atelier-core/src/application/extensions.rs#L124) | <code>pub struct ImportedTicket {</code> |
-| [crates/atelier-core/src/application/extensions.rs:125](../crates/atelier-core/src/application/extensions.rs#L125) | <code>pub card: crate::contracts::Card,</code> |
-| [crates/atelier-core/src/application/extensions.rs:126](../crates/atelier-core/src/application/extensions.rs#L126) | <code>pub created: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:131](../crates/atelier-core/src/application/extensions.rs#L131) | <code>pub struct TicketRefresh {</code> |
-| [crates/atelier-core/src/application/extensions.rs:132](../crates/atelier-core/src/application/extensions.rs#L132) | <code>pub expected_revision: u64,</code> |
-| [crates/atelier-core/src/application/extensions.rs:133](../crates/atelier-core/src/application/extensions.rs#L133) | <code>pub report_id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:134](../crates/atelier-core/src/application/extensions.rs#L134) | <code>pub expected: crate::contracts::Card,</code> |
-| [crates/atelier-core/src/application/extensions.rs:135](../crates/atelier-core/src/application/extensions.rs#L135) | <code>pub replace_title: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:136](../crates/atelier-core/src/application/extensions.rs#L136) | <code>pub replace_description: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:137](../crates/atelier-core/src/application/extensions.rs#L137) | <code>pub confirmed: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:142](../crates/atelier-core/src/application/extensions.rs#L142) | <code>pub struct ReportItem {</code> |
-| [crates/atelier-core/src/application/extensions.rs:143](../crates/atelier-core/src/application/extensions.rs#L143) | <code>pub label: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:144](../crates/atelier-core/src/application/extensions.rs#L144) | <code>pub value: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:146](../crates/atelier-core/src/application/extensions.rs#L146) | <code>pub fn report_items(report: &amp;Report) -&gt; Result&lt;Vec&lt;ReportItem&gt;&gt; {</code> |
-| [crates/atelier-core/src/application/extensions.rs:165](../crates/atelier-core/src/application/extensions.rs#L165) | <code>pub fn ticket_page(method: Method, output: &amp;Value) -&gt; Result&lt;TicketPage&gt; {</code> |
-| [crates/atelier-core/src/application/extensions.rs:206](../crates/atelier-core/src/application/extensions.rs#L206) | <code>pub enum Method {</code> |
-| [crates/atelier-core/src/application/extensions.rs:227](../crates/atelier-core/src/application/extensions.rs#L227) | <code>pub enum Effect {</code> |
-| [crates/atelier-core/src/application/extensions.rs:233](../crates/atelier-core/src/application/extensions.rs#L233) | <code>pub fn effect(self) -&gt; Effect {</code> |
-| [crates/atelier-core/src/application/extensions.rs:246](../crates/atelier-core/src/application/extensions.rs#L246) | <code>pub enum FieldKind {</code> |
-| [crates/atelier-core/src/application/extensions.rs:256](../crates/atelier-core/src/application/extensions.rs#L256) | <code>pub struct Choice {</code> |
-| [crates/atelier-core/src/application/extensions.rs:257](../crates/atelier-core/src/application/extensions.rs#L257) | <code>pub value: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:258](../crates/atelier-core/src/application/extensions.rs#L258) | <code>pub label: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:262](../crates/atelier-core/src/application/extensions.rs#L262) | <code>pub struct Field {</code> |
-| [crates/atelier-core/src/application/extensions.rs:263](../crates/atelier-core/src/application/extensions.rs#L263) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:264](../crates/atelier-core/src/application/extensions.rs#L264) | <code>pub label: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:265](../crates/atelier-core/src/application/extensions.rs#L265) | <code>pub kind: FieldKind,</code> |
-| [crates/atelier-core/src/application/extensions.rs:267](../crates/atelier-core/src/application/extensions.rs#L267) | <code>pub options: Vec&lt;Choice&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:269](../crates/atelier-core/src/application/extensions.rs#L269) | <code>pub credential_scope: bool,</code> |
-| [crates/atelier-core/src/application/extensions.rs:273](../crates/atelier-core/src/application/extensions.rs#L273) | <code>pub struct Action {</code> |
-| [crates/atelier-core/src/application/extensions.rs:274](../crates/atelier-core/src/application/extensions.rs#L274) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:275](../crates/atelier-core/src/application/extensions.rs#L275) | <code>pub label: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:276](../crates/atelier-core/src/application/extensions.rs#L276) | <code>pub effect: Effect,</code> |
-| [crates/atelier-core/src/application/extensions.rs:280](../crates/atelier-core/src/application/extensions.rs#L280) | <code>pub struct Tab {</code> |
-| [crates/atelier-core/src/application/extensions.rs:281](../crates/atelier-core/src/application/extensions.rs#L281) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:282](../crates/atelier-core/src/application/extensions.rs#L282) | <code>pub label: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:283](../crates/atelier-core/src/application/extensions.rs#L283) | <code>pub description: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:284](../crates/atelier-core/src/application/extensions.rs#L284) | <code>pub actions: Vec&lt;Action&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:288](../crates/atelier-core/src/application/extensions.rs#L288) | <code>pub struct Manifest {</code> |
-| [crates/atelier-core/src/application/extensions.rs:289](../crates/atelier-core/src/application/extensions.rs#L289) | <code>pub id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:290](../crates/atelier-core/src/application/extensions.rs#L290) | <code>pub name: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:291](../crates/atelier-core/src/application/extensions.rs#L291) | <code>pub description: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:292](../crates/atelier-core/src/application/extensions.rs#L292) | <code>pub source_locale: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:293](../crates/atelier-core/src/application/extensions.rs#L293) | <code>pub methods: Vec&lt;Method&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:294](../crates/atelier-core/src/application/extensions.rs#L294) | <code>pub fields: Vec&lt;Field&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:295](../crates/atelier-core/src/application/extensions.rs#L295) | <code>pub tabs: Vec&lt;Tab&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:297](../crates/atelier-core/src/application/extensions.rs#L297) | <code>pub translations: BTreeMap&lt;String, BTreeMap&lt;String, String&gt;&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:301](../crates/atelier-core/src/application/extensions.rs#L301) | <code>pub struct Request {</code> |
-| [crates/atelier-core/src/application/extensions.rs:302](../crates/atelier-core/src/application/extensions.rs#L302) | <code>pub protocol: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:303](../crates/atelier-core/src/application/extensions.rs#L303) | <code>pub request_id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:304](../crates/atelier-core/src/application/extensions.rs#L304) | <code>pub module: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:305](../crates/atelier-core/src/application/extensions.rs#L305) | <code>pub method: Method,</code> |
-| [crates/atelier-core/src/application/extensions.rs:306](../crates/atelier-core/src/application/extensions.rs#L306) | <code>pub operation_id: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:307](../crates/atelier-core/src/application/extensions.rs#L307) | <code>pub action: Option&lt;String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:308](../crates/atelier-core/src/application/extensions.rs#L308) | <code>pub settings: BTreeMap&lt;String, Value&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:309](../crates/atelier-core/src/application/extensions.rs#L309) | <code>pub secrets: BTreeMap&lt;String, String&gt;,</code> |
-| [crates/atelier-core/src/application/extensions.rs:310](../crates/atelier-core/src/application/extensions.rs#L310) | <code>pub input: Value,</code> |
-| [crates/atelier-core/src/application/extensions.rs:314](../crates/atelier-core/src/application/extensions.rs#L314) | <code>pub enum Status {</code> |
-| [crates/atelier-core/src/application/extensions.rs:321](../crates/atelier-core/src/application/extensions.rs#L321) | <code>pub struct Reply {</code> |
-| [crates/atelier-core/src/application/extensions.rs:322](../crates/atelier-core/src/application/extensions.rs#L322) | <code>pub protocol: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:323](../crates/atelier-core/src/application/extensions.rs#L323) | <code>pub request_id: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:324](../crates/atelier-core/src/application/extensions.rs#L324) | <code>pub module: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:325](../crates/atelier-core/src/application/extensions.rs#L325) | <code>pub method: Method,</code> |
-| [crates/atelier-core/src/application/extensions.rs:326](../crates/atelier-core/src/application/extensions.rs#L326) | <code>pub status: Status,</code> |
-| [crates/atelier-core/src/application/extensions.rs:327](../crates/atelier-core/src/application/extensions.rs#L327) | <code>pub message: String,</code> |
-| [crates/atelier-core/src/application/extensions.rs:328](../crates/atelier-core/src/application/extensions.rs#L328) | <code>pub output: Value,</code> |
-| [crates/atelier-core/src/application/extensions.rs:331](../crates/atelier-core/src/application/extensions.rs#L331) | <code>pub fn identifier(value: &amp;str) -&gt; bool {</code> |
-| [crates/atelier-core/src/application/extensions.rs:346](../crates/atelier-core/src/application/extensions.rs#L346) | <code>pub fn validate_manifest(manifest: &amp;Manifest) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-core/src/application/extensions.rs:451](../crates/atelier-core/src/application/extensions.rs#L451) | <code>pub fn effect(manifest: &amp;Manifest, request: &amp;Request) -&gt; Result&lt;Effect&gt; {</code> |
-| [crates/atelier-core/src/application/extensions.rs:542](../crates/atelier-core/src/application/extensions.rs#L542) | <code>pub fn decode_reply(bytes: &amp;[u8], request: &amp;Request) -&gt; Result&lt;Reply&gt; {</code> |
-| [crates/atelier-core/src/application/extensions.rs:560](../crates/atelier-core/src/application/extensions.rs#L560) | <code>mod tests {</code> |
-| [crates/atelier-core/src/application/extensions.rs:561](../crates/atelier-core/src/application/extensions.rs#L561) | <code>use super::*;</code> |
-| [crates/atelier-core/src/application/extensions.rs:562](../crates/atelier-core/src/application/extensions.rs#L562) | <code>#[test]</code> |
-| [crates/atelier-core/src/application/extensions.rs:605](../crates/atelier-core/src/application/extensions.rs#L605) | <code>#[test]</code> |
-| [crates/atelier-core/src/application/extensions.rs:646](../crates/atelier-core/src/application/extensions.rs#L646) | <code>#[test]</code> |
-| [crates/atelier-core/src/application/extensions.rs:678](../crates/atelier-core/src/application/extensions.rs#L678) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/extensions.rs:48](../crates/atelier-core/src/application/extensions.rs#L48) | <code>pub builtin_azure_path: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:52](../crates/atelier-core/src/application/extensions.rs#L52) | <code>pub struct Candidate {</code> |
+| [crates/atelier-core/src/application/extensions.rs:53](../crates/atelier-core/src/application/extensions.rs#L53) | <code>pub binary: Binary,</code> |
+| [crates/atelier-core/src/application/extensions.rs:54](../crates/atelier-core/src/application/extensions.rs#L54) | <code>pub manifest: Manifest,</code> |
+| [crates/atelier-core/src/application/extensions.rs:58](../crates/atelier-core/src/application/extensions.rs#L58) | <code>pub struct Installation {</code> |
+| [crates/atelier-core/src/application/extensions.rs:59](../crates/atelier-core/src/application/extensions.rs#L59) | <code>pub expected_revision: u64,</code> |
+| [crates/atelier-core/src/application/extensions.rs:60](../crates/atelier-core/src/application/extensions.rs#L60) | <code>pub candidate: Candidate,</code> |
+| [crates/atelier-core/src/application/extensions.rs:61](../crates/atelier-core/src/application/extensions.rs#L61) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:65](../crates/atelier-core/src/application/extensions.rs#L65) | <code>pub struct Configuration {</code> |
+| [crates/atelier-core/src/application/extensions.rs:66](../crates/atelier-core/src/application/extensions.rs#L66) | <code>pub expected_revision: u64,</code> |
+| [crates/atelier-core/src/application/extensions.rs:67](../crates/atelier-core/src/application/extensions.rs#L67) | <code>pub values: BTreeMap&lt;String, Value&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:69](../crates/atelier-core/src/application/extensions.rs#L69) | <code>pub forget_values: BTreeSet&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:70](../crates/atelier-core/src/application/extensions.rs#L70) | <code>pub secrets: BTreeMap&lt;String, String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:71](../crates/atelier-core/src/application/extensions.rs#L71) | <code>pub forget_secrets: BTreeSet&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:75](../crates/atelier-core/src/application/extensions.rs#L75) | <code>pub struct Invocation {</code> |
+| [crates/atelier-core/src/application/extensions.rs:76](../crates/atelier-core/src/application/extensions.rs#L76) | <code>pub expected_revision: u64,</code> |
+| [crates/atelier-core/src/application/extensions.rs:77](../crates/atelier-core/src/application/extensions.rs#L77) | <code>pub method: Method,</code> |
+| [crates/atelier-core/src/application/extensions.rs:78](../crates/atelier-core/src/application/extensions.rs#L78) | <code>pub action: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:79](../crates/atelier-core/src/application/extensions.rs#L79) | <code>pub input: Value,</code> |
+| [crates/atelier-core/src/application/extensions.rs:80](../crates/atelier-core/src/application/extensions.rs#L80) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:85](../crates/atelier-core/src/application/extensions.rs#L85) | <code>pub struct TicketIdentity {</code> |
+| [crates/atelier-core/src/application/extensions.rs:86](../crates/atelier-core/src/application/extensions.rs#L86) | <code>pub instance: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:87](../crates/atelier-core/src/application/extensions.rs#L87) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:91](../crates/atelier-core/src/application/extensions.rs#L91) | <code>pub struct Ticket {</code> |
+| [crates/atelier-core/src/application/extensions.rs:92](../crates/atelier-core/src/application/extensions.rs#L92) | <code>pub instance: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:93](../crates/atelier-core/src/application/extensions.rs#L93) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:94](../crates/atelier-core/src/application/extensions.rs#L94) | <code>pub key: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:95](../crates/atelier-core/src/application/extensions.rs#L95) | <code>pub title: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:96](../crates/atelier-core/src/application/extensions.rs#L96) | <code>pub description: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:97](../crates/atelier-core/src/application/extensions.rs#L97) | <code>pub url: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:98](../crates/atelier-core/src/application/extensions.rs#L98) | <code>pub status: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:101](../crates/atelier-core/src/application/extensions.rs#L101) | <code>pub fn identity(&amp;self) -&gt; TicketIdentity {</code> |
+| [crates/atelier-core/src/application/extensions.rs:110](../crates/atelier-core/src/application/extensions.rs#L110) | <code>pub struct TicketPage {</code> |
+| [crates/atelier-core/src/application/extensions.rs:111](../crates/atelier-core/src/application/extensions.rs#L111) | <code>pub items: Vec&lt;Ticket&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:112](../crates/atelier-core/src/application/extensions.rs#L112) | <code>pub next: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:116](../crates/atelier-core/src/application/extensions.rs#L116) | <code>pub struct TicketImport {</code> |
+| [crates/atelier-core/src/application/extensions.rs:117](../crates/atelier-core/src/application/extensions.rs#L117) | <code>pub expected_revision: u64,</code> |
+| [crates/atelier-core/src/application/extensions.rs:118](../crates/atelier-core/src/application/extensions.rs#L118) | <code>pub report_id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:119](../crates/atelier-core/src/application/extensions.rs#L119) | <code>pub project: crate::document::Document,</code> |
+| [crates/atelier-core/src/application/extensions.rs:120](../crates/atelier-core/src/application/extensions.rs#L120) | <code>pub tickets: Vec&lt;TicketIdentity&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:121](../crates/atelier-core/src/application/extensions.rs#L121) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:125](../crates/atelier-core/src/application/extensions.rs#L125) | <code>pub struct ImportedTicket {</code> |
+| [crates/atelier-core/src/application/extensions.rs:126](../crates/atelier-core/src/application/extensions.rs#L126) | <code>pub card: crate::contracts::Card,</code> |
+| [crates/atelier-core/src/application/extensions.rs:127](../crates/atelier-core/src/application/extensions.rs#L127) | <code>pub created: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:132](../crates/atelier-core/src/application/extensions.rs#L132) | <code>pub struct TicketRefresh {</code> |
+| [crates/atelier-core/src/application/extensions.rs:133](../crates/atelier-core/src/application/extensions.rs#L133) | <code>pub expected_revision: u64,</code> |
+| [crates/atelier-core/src/application/extensions.rs:134](../crates/atelier-core/src/application/extensions.rs#L134) | <code>pub report_id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:135](../crates/atelier-core/src/application/extensions.rs#L135) | <code>pub expected: crate::contracts::Card,</code> |
+| [crates/atelier-core/src/application/extensions.rs:136](../crates/atelier-core/src/application/extensions.rs#L136) | <code>pub replace_title: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:137](../crates/atelier-core/src/application/extensions.rs#L137) | <code>pub replace_description: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:138](../crates/atelier-core/src/application/extensions.rs#L138) | <code>pub confirmed: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:143](../crates/atelier-core/src/application/extensions.rs#L143) | <code>pub struct ReportItem {</code> |
+| [crates/atelier-core/src/application/extensions.rs:144](../crates/atelier-core/src/application/extensions.rs#L144) | <code>pub label: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:145](../crates/atelier-core/src/application/extensions.rs#L145) | <code>pub value: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:147](../crates/atelier-core/src/application/extensions.rs#L147) | <code>pub fn report_items(report: &amp;Report) -&gt; Result&lt;Vec&lt;ReportItem&gt;&gt; {</code> |
+| [crates/atelier-core/src/application/extensions.rs:166](../crates/atelier-core/src/application/extensions.rs#L166) | <code>pub fn ticket_page(method: Method, output: &amp;Value) -&gt; Result&lt;TicketPage&gt; {</code> |
+| [crates/atelier-core/src/application/extensions.rs:207](../crates/atelier-core/src/application/extensions.rs#L207) | <code>pub enum Method {</code> |
+| [crates/atelier-core/src/application/extensions.rs:228](../crates/atelier-core/src/application/extensions.rs#L228) | <code>pub enum Effect {</code> |
+| [crates/atelier-core/src/application/extensions.rs:234](../crates/atelier-core/src/application/extensions.rs#L234) | <code>pub fn effect(self) -&gt; Effect {</code> |
+| [crates/atelier-core/src/application/extensions.rs:247](../crates/atelier-core/src/application/extensions.rs#L247) | <code>pub enum FieldKind {</code> |
+| [crates/atelier-core/src/application/extensions.rs:257](../crates/atelier-core/src/application/extensions.rs#L257) | <code>pub struct Choice {</code> |
+| [crates/atelier-core/src/application/extensions.rs:258](../crates/atelier-core/src/application/extensions.rs#L258) | <code>pub value: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:259](../crates/atelier-core/src/application/extensions.rs#L259) | <code>pub label: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:263](../crates/atelier-core/src/application/extensions.rs#L263) | <code>pub struct Field {</code> |
+| [crates/atelier-core/src/application/extensions.rs:264](../crates/atelier-core/src/application/extensions.rs#L264) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:265](../crates/atelier-core/src/application/extensions.rs#L265) | <code>pub label: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:266](../crates/atelier-core/src/application/extensions.rs#L266) | <code>pub kind: FieldKind,</code> |
+| [crates/atelier-core/src/application/extensions.rs:268](../crates/atelier-core/src/application/extensions.rs#L268) | <code>pub options: Vec&lt;Choice&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:270](../crates/atelier-core/src/application/extensions.rs#L270) | <code>pub credential_scope: bool,</code> |
+| [crates/atelier-core/src/application/extensions.rs:274](../crates/atelier-core/src/application/extensions.rs#L274) | <code>pub struct Action {</code> |
+| [crates/atelier-core/src/application/extensions.rs:275](../crates/atelier-core/src/application/extensions.rs#L275) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:276](../crates/atelier-core/src/application/extensions.rs#L276) | <code>pub label: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:277](../crates/atelier-core/src/application/extensions.rs#L277) | <code>pub effect: Effect,</code> |
+| [crates/atelier-core/src/application/extensions.rs:281](../crates/atelier-core/src/application/extensions.rs#L281) | <code>pub struct Tab {</code> |
+| [crates/atelier-core/src/application/extensions.rs:282](../crates/atelier-core/src/application/extensions.rs#L282) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:283](../crates/atelier-core/src/application/extensions.rs#L283) | <code>pub label: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:284](../crates/atelier-core/src/application/extensions.rs#L284) | <code>pub description: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:285](../crates/atelier-core/src/application/extensions.rs#L285) | <code>pub actions: Vec&lt;Action&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:289](../crates/atelier-core/src/application/extensions.rs#L289) | <code>pub struct Manifest {</code> |
+| [crates/atelier-core/src/application/extensions.rs:290](../crates/atelier-core/src/application/extensions.rs#L290) | <code>pub id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:291](../crates/atelier-core/src/application/extensions.rs#L291) | <code>pub name: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:292](../crates/atelier-core/src/application/extensions.rs#L292) | <code>pub description: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:293](../crates/atelier-core/src/application/extensions.rs#L293) | <code>pub source_locale: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:294](../crates/atelier-core/src/application/extensions.rs#L294) | <code>pub methods: Vec&lt;Method&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:295](../crates/atelier-core/src/application/extensions.rs#L295) | <code>pub fields: Vec&lt;Field&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:296](../crates/atelier-core/src/application/extensions.rs#L296) | <code>pub tabs: Vec&lt;Tab&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:298](../crates/atelier-core/src/application/extensions.rs#L298) | <code>pub translations: BTreeMap&lt;String, BTreeMap&lt;String, String&gt;&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:302](../crates/atelier-core/src/application/extensions.rs#L302) | <code>pub struct Request {</code> |
+| [crates/atelier-core/src/application/extensions.rs:303](../crates/atelier-core/src/application/extensions.rs#L303) | <code>pub protocol: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:304](../crates/atelier-core/src/application/extensions.rs#L304) | <code>pub request_id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:305](../crates/atelier-core/src/application/extensions.rs#L305) | <code>pub module: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:306](../crates/atelier-core/src/application/extensions.rs#L306) | <code>pub method: Method,</code> |
+| [crates/atelier-core/src/application/extensions.rs:307](../crates/atelier-core/src/application/extensions.rs#L307) | <code>pub operation_id: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:308](../crates/atelier-core/src/application/extensions.rs#L308) | <code>pub action: Option&lt;String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:309](../crates/atelier-core/src/application/extensions.rs#L309) | <code>pub settings: BTreeMap&lt;String, Value&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:310](../crates/atelier-core/src/application/extensions.rs#L310) | <code>pub secrets: BTreeMap&lt;String, String&gt;,</code> |
+| [crates/atelier-core/src/application/extensions.rs:311](../crates/atelier-core/src/application/extensions.rs#L311) | <code>pub input: Value,</code> |
+| [crates/atelier-core/src/application/extensions.rs:315](../crates/atelier-core/src/application/extensions.rs#L315) | <code>pub enum Status {</code> |
+| [crates/atelier-core/src/application/extensions.rs:322](../crates/atelier-core/src/application/extensions.rs#L322) | <code>pub struct Reply {</code> |
+| [crates/atelier-core/src/application/extensions.rs:323](../crates/atelier-core/src/application/extensions.rs#L323) | <code>pub protocol: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:324](../crates/atelier-core/src/application/extensions.rs#L324) | <code>pub request_id: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:325](../crates/atelier-core/src/application/extensions.rs#L325) | <code>pub module: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:326](../crates/atelier-core/src/application/extensions.rs#L326) | <code>pub method: Method,</code> |
+| [crates/atelier-core/src/application/extensions.rs:327](../crates/atelier-core/src/application/extensions.rs#L327) | <code>pub status: Status,</code> |
+| [crates/atelier-core/src/application/extensions.rs:328](../crates/atelier-core/src/application/extensions.rs#L328) | <code>pub message: String,</code> |
+| [crates/atelier-core/src/application/extensions.rs:329](../crates/atelier-core/src/application/extensions.rs#L329) | <code>pub output: Value,</code> |
+| [crates/atelier-core/src/application/extensions.rs:332](../crates/atelier-core/src/application/extensions.rs#L332) | <code>pub fn identifier(value: &amp;str) -&gt; bool {</code> |
+| [crates/atelier-core/src/application/extensions.rs:347](../crates/atelier-core/src/application/extensions.rs#L347) | <code>pub fn validate_manifest(manifest: &amp;Manifest) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-core/src/application/extensions.rs:452](../crates/atelier-core/src/application/extensions.rs#L452) | <code>pub fn effect(manifest: &amp;Manifest, request: &amp;Request) -&gt; Result&lt;Effect&gt; {</code> |
+| [crates/atelier-core/src/application/extensions.rs:543](../crates/atelier-core/src/application/extensions.rs#L543) | <code>pub fn decode_reply(bytes: &amp;[u8], request: &amp;Request) -&gt; Result&lt;Reply&gt; {</code> |
+| [crates/atelier-core/src/application/extensions.rs:561](../crates/atelier-core/src/application/extensions.rs#L561) | <code>mod tests {</code> |
+| [crates/atelier-core/src/application/extensions.rs:562](../crates/atelier-core/src/application/extensions.rs#L562) | <code>use super::*;</code> |
+| [crates/atelier-core/src/application/extensions.rs:563](../crates/atelier-core/src/application/extensions.rs#L563) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/extensions.rs:606](../crates/atelier-core/src/application/extensions.rs#L606) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/extensions.rs:647](../crates/atelier-core/src/application/extensions.rs#L647) | <code>#[test]</code> |
+| [crates/atelier-core/src/application/extensions.rs:679](../crates/atelier-core/src/application/extensions.rs#L679) | <code>#[test]</code> |
 | [crates/atelier-core/src/application/forge.rs:1](../crates/atelier-core/src/application/forge.rs#L1) | <code>use crate::contracts::ForgeKind;</code> |
 | [crates/atelier-core/src/application/forge.rs:3](../crates/atelier-core/src/application/forge.rs#L3) | <code>pub enum ForgeFailure {</code> |
 | [crates/atelier-core/src/application/forge.rs:18](../crates/atelier-core/src/application/forge.rs#L18) | <code>pub fn same_pull_request(</code> |
@@ -4771,8 +4799,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/agent_diagnostics.rs:352](../crates/atelier-app/src/infrastructure/agent_diagnostics.rs#L352) | <code>if !args.is_empty() {</code> |
 | [crates/atelier-app/src/infrastructure/agent_diagnostics.rs:354](../crates/atelier-app/src/infrastructure/agent_diagnostics.rs#L354) | <code>let success = match capture(&amp;binary, &amp;args, &amp;environment).await {</code> |
 | [crates/atelier-app/src/infrastructure/checked_file.rs:487](../crates/atelier-app/src/infrastructure/checked_file.rs#L487) | <code>.args(["/D", "/C"])</code> |
-| [crates/atelier-app/src/infrastructure/extensions.rs:324](../crates/atelier-app/src/infrastructure/extensions.rs#L324) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new("LANG")));</code> |
-| [crates/atelier-app/src/infrastructure/extensions.rs:332](../crates/atelier-app/src/infrastructure/extensions.rs#L332) | <code>environment.get(std::ffi::OsStr::new(key)),</code> |
+| [crates/atelier-app/src/infrastructure/extensions.rs:327](../crates/atelier-app/src/infrastructure/extensions.rs#L327) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new("LANG")));</code> |
+| [crates/atelier-app/src/infrastructure/extensions.rs:335](../crates/atelier-app/src/infrastructure/extensions.rs#L335) | <code>environment.get(std::ffi::OsStr::new(key)),</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:282](../crates/atelier-app/src/infrastructure/files.rs#L282) | <code>let mut args = vec![</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:291](../crates/atelier-app/src/infrastructure/files.rs#L291) | <code>args.extend_from_slice(arguments);</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:292](../crates/atelier-app/src/infrastructure/files.rs#L292) | <code>self.without_programs(&amp;args).await</code> |
@@ -4853,10 +4881,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:57](../crates/atelier-app/src/main.rs#L57) | <code>args.next();</code> |
 | [crates/atelier-app/src/main.rs:75](../crates/atelier-app/src/main.rs#L75) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:84](../crates/atelier-app/src/main.rs#L84) | <code>let value = args</code> |
-| [crates/atelier-app/src/main.rs:243](../crates/atelier-app/src/main.rs#L243) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
-| [crates/atelier-app/src/main.rs:244](../crates/atelier-app/src/main.rs#L244) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
-| [crates/atelier-app/src/main.rs:279](../crates/atelier-app/src/main.rs#L279) | <code>for args in [</code> |
-| [crates/atelier-app/src/main.rs:290](../crates/atelier-app/src/main.rs#L290) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
+| [crates/atelier-app/src/main.rs:249](../crates/atelier-app/src/main.rs#L249) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
+| [crates/atelier-app/src/main.rs:250](../crates/atelier-app/src/main.rs#L250) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
+| [crates/atelier-app/src/main.rs:285](../crates/atelier-app/src/main.rs#L285) | <code>for args in [</code> |
+| [crates/atelier-app/src/main.rs:296](../crates/atelier-app/src/main.rs#L296) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
 | [crates/atelier-app/tests/files.rs:19](../crates/atelier-app/tests/files.rs#L19) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
 | [crates/atelier-app/tests/files.rs:25](../crates/atelier-app/tests/files.rs#L25) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
 | [crates/atelier-app/tests/files.rs:26](../crates/atelier-app/tests/files.rs#L26) | <code>.args(args);</code> |
@@ -6079,15 +6107,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/command_runs.rs:338](../crates/atelier-app/src/infrastructure/command_runs.rs#L338) | <code>while let Some((stream, text)) = receiver.recv().await {</code> |
 | [crates/atelier-app/src/infrastructure/command_runs.rs:341](../crates/atelier-app/src/infrastructure/command_runs.rs#L341) | <code>.call(move \|store\| runs::append(store, &amp;id, stream, &amp;text))</code> |
 | [crates/atelier-app/src/infrastructure/command_runs.rs:359](../crates/atelier-app/src/infrastructure/command_runs.rs#L359) | <code>// Preserve the actual root exit status separately from successful stream draining.</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:508](../crates/atelier-app/src/infrastructure/connectors.rs#L508) | <code>super::super::token_vault::save_encrypted(</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:612](../crates/atelier-app/src/infrastructure/connectors.rs#L612) | <code>let encrypted = super::super::token_vault::read_encrypted(&amp;store).unwrap();</code> |
-| [crates/atelier-app/src/infrastructure/connectors.rs:635](../crates/atelier-app/src/infrastructure/connectors.rs#L635) | <code>super::super::token_vault::read_encrypted(&amp;store).unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:519](../crates/atelier-app/src/infrastructure/connectors.rs#L519) | <code>super::super::token_vault::save_encrypted(</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:623](../crates/atelier-app/src/infrastructure/connectors.rs#L623) | <code>let encrypted = super::super::token_vault::read_encrypted(&amp;store).unwrap();</code> |
+| [crates/atelier-app/src/infrastructure/connectors.rs:646](../crates/atelier-app/src/infrastructure/connectors.rs#L646) | <code>super::super::token_vault::read_encrypted(&amp;store).unwrap(),</code> |
 | [crates/atelier-app/src/infrastructure/data_lock.rs:63](../crates/atelier-app/src/infrastructure/data_lock.rs#L63) | <code>assert!(!root.path().join("kanban.sqlite").exists());</code> |
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:297](../crates/atelier-app/src/infrastructure/dev_servers.rs#L297) | <code>let streams = child.child.stdout.take().zip(child.child.stderr.take());</code> |
 | [crates/atelier-app/src/infrastructure/dev_servers.rs:298](../crates/atelier-app/src/infrastructure/dev_servers.rs#L298) | <code>let Some((stdout, stderr)) = streams else {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:162](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L162) | <code>if let Some((stream,line))=message {</code> |
 | [crates/atelier-app/src/infrastructure/interactive_runs.rs:164](../crates/atelier-app/src/infrastructure/interactive_runs.rs#L164) | <code>let mut effects=if stream=="stdout" {</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:67](../crates/atelier-app/src/infrastructure/mod.rs#L67) | <code>pub mod token_vault;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:68](../crates/atelier-app/src/infrastructure/mod.rs#L68) | <code>pub mod token_vault;</code> |
 | [crates/atelier-app/src/infrastructure/package_archive.rs:271](../crates/atelier-app/src/infrastructure/package_archive.rs#L271) | <code>"data/kanban.sqlite",</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:45](../crates/atelier-app/src/infrastructure/portable_import.rs#L45) | <code>if root &amp;&amp; matches!(name.to_str(), Some("local-session" \| "local-browser.html")) {</code> |
 | [crates/atelier-app/src/infrastructure/portable_import.rs:53](../crates/atelier-app/src/infrastructure/portable_import.rs#L53) | <code>Some("kanban.sqlite" \| "kanban.sqlite-wal" \| "kanban.sqlite-shm")</code> |
@@ -6378,4 +6406,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 580 fichiers ; 97 fichiers de tests Node.
+Total : 582 fichiers ; 97 fichiers de tests Node.
