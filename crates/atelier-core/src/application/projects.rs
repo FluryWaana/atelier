@@ -32,13 +32,38 @@ pub trait ProjectRepository: CreationContext {
 pub const LOCATION_CHANGE_REASON: &str =
     "Emplacement du projet modifié : relancez les vérifications et la review.";
 
+pub fn mapped_jira_transition<'a>(
+    settings: &serde_json::Value,
+    status: &str,
+    transitions: &'a [crate::contracts::JiraTransition],
+) -> Option<&'a str> {
+    if settings["jiraAutoTransition"].as_bool() != Some(true) {
+        return None;
+    }
+    let target = settings["jiraStatusMap"][status].as_str()?.trim();
+    if target.is_empty() {
+        return None;
+    }
+    let mut matches = transitions.iter().filter(|transition| {
+        !transition.requires_fields
+            && (transition.target.id == target
+                || transition.target.name.eq_ignore_ascii_case(target))
+    });
+    let selected = matches.next()?;
+    if matches.next().is_some() {
+        None
+    } else {
+        Some(&selected.id)
+    }
+}
+
 pub struct ProjectEdit {
     pub project: Document,
     pub cards: Vec<Document>,
     pub moved: bool,
 }
 
-pub const EDITABLE_FIELDS: [&str; 18] = [
+pub const EDITABLE_FIELDS: [&str; 20] = [
     "name",
     "repo",
     "baseBranch",
@@ -57,6 +82,8 @@ pub const EDITABLE_FIELDS: [&str; 18] = [
     "automationEnabled",
     "autoFix",
     "prTarget",
+    "jiraMode",
+    "jiraStatusMap",
 ];
 
 pub fn detect(
@@ -169,7 +196,23 @@ pub fn prepare_update(
             return Err(invalid().into());
         }
         for (key, value) in expected {
-            let current = if matches!(key.as_str(), "automationEnabled" | "autoFix") {
+            let current = if key == "jiraStatusMap" {
+                if !value.is_object() {
+                    return Err(invalid().into());
+                }
+                project
+                    .get::<serde_json::Value>(&key)?
+                    .unwrap_or_else(|| serde_json::json!({}))
+            } else if key == "jiraMode" {
+                if !value.is_string() {
+                    return Err(invalid().into());
+                }
+                serde_json::json!(
+                    project
+                        .get::<String>(&key)?
+                        .unwrap_or_else(|| "inherit".into())
+                )
+            } else if matches!(key.as_str(), "automationEnabled" | "autoFix") {
                 if !value.is_boolean() {
                     return Err(invalid().into());
                 }

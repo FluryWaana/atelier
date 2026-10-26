@@ -69,6 +69,16 @@ pub fn JiraTask(
     let loading = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
+    let mapping_context = Memo::new(move |_| {
+        (
+            serde_json::to_string(&board.settings.get()).unwrap_or_default(),
+            serde_json::to_string(&board.projects.get()).unwrap_or_default(),
+        )
+    });
+    Effect::new(move |_| {
+        let _ = mapping_context.get();
+        confirm.set(false);
+    });
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || mounted.with_value(|alive| alive.set(false)));
@@ -117,7 +127,32 @@ pub fn JiraTask(
             if alive.get() {
                 loading.set(false);
                 match result {
-                    Ok(value) => choices.set(Some((expected, value))),
+                    Ok(value) => {
+                        let settings = serde_json::to_value(board.settings.get_untracked())
+                            .unwrap_or_default();
+                        let projects = board
+                            .projects
+                            .get_untracked()
+                            .iter()
+                            .filter_map(|project| serde_json::to_value(project).ok())
+                            .collect::<Vec<_>>();
+                        let settings = atelier_core::domain::projects::settings_for_project(
+                            &settings,
+                            &projects,
+                            &field(&expected.fields, "repo"),
+                            false,
+                        );
+                        if let Some(transition) =
+                            atelier_core::application::projects::mapped_jira_transition(
+                                &settings,
+                                &field(&expected.fields, "status"),
+                                &value.transitions,
+                            )
+                        {
+                            selected.set(transition.to_owned());
+                        }
+                        choices.set(Some((expected, value)));
+                    }
                     Err(message) => error.set(message),
                 }
             }

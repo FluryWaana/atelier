@@ -2867,16 +2867,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/projects.rs:8](../crates/atelier-core/src/application/projects.rs#L8) | <code>pub enum ProjectFailure {</code> |
 | [crates/atelier-core/src/application/projects.rs:23](../crates/atelier-core/src/application/projects.rs#L23) | <code>pub trait ProjectRepository: CreationContext {</code> |
 | [crates/atelier-core/src/application/projects.rs:32](../crates/atelier-core/src/application/projects.rs#L32) | <code>pub const LOCATION_CHANGE_REASON: &amp;str =</code> |
-| [crates/atelier-core/src/application/projects.rs:35](../crates/atelier-core/src/application/projects.rs#L35) | <code>pub struct ProjectEdit {</code> |
-| [crates/atelier-core/src/application/projects.rs:36](../crates/atelier-core/src/application/projects.rs#L36) | <code>pub project: Document,</code> |
-| [crates/atelier-core/src/application/projects.rs:37](../crates/atelier-core/src/application/projects.rs#L37) | <code>pub cards: Vec&lt;Document&gt;,</code> |
-| [crates/atelier-core/src/application/projects.rs:38](../crates/atelier-core/src/application/projects.rs#L38) | <code>pub moved: bool,</code> |
-| [crates/atelier-core/src/application/projects.rs:41](../crates/atelier-core/src/application/projects.rs#L41) | <code>pub const EDITABLE_FIELDS: [&amp;str; 18] = [</code> |
-| [crates/atelier-core/src/application/projects.rs:62](../crates/atelier-core/src/application/projects.rs#L62) | <code>pub fn detect(</code> |
-| [crates/atelier-core/src/application/projects.rs:143](../crates/atelier-core/src/application/projects.rs#L143) | <code>pub fn prepare_update(</code> |
-| [crates/atelier-core/src/application/projects.rs:315](../crates/atelier-core/src/application/projects.rs#L315) | <code>pub fn create(</code> |
-| [crates/atelier-core/src/application/projects.rs:385](../crates/atelier-core/src/application/projects.rs#L385) | <code>pub fn archive_tasks(</code> |
-| [crates/atelier-core/src/application/projects.rs:398](../crates/atelier-core/src/application/projects.rs#L398) | <code>pub fn remove(</code> |
+| [crates/atelier-core/src/application/projects.rs:35](../crates/atelier-core/src/application/projects.rs#L35) | <code>pub fn mapped_jira_transition&lt;'a&gt;(</code> |
+| [crates/atelier-core/src/application/projects.rs:60](../crates/atelier-core/src/application/projects.rs#L60) | <code>pub struct ProjectEdit {</code> |
+| [crates/atelier-core/src/application/projects.rs:61](../crates/atelier-core/src/application/projects.rs#L61) | <code>pub project: Document,</code> |
+| [crates/atelier-core/src/application/projects.rs:62](../crates/atelier-core/src/application/projects.rs#L62) | <code>pub cards: Vec&lt;Document&gt;,</code> |
+| [crates/atelier-core/src/application/projects.rs:63](../crates/atelier-core/src/application/projects.rs#L63) | <code>pub moved: bool,</code> |
+| [crates/atelier-core/src/application/projects.rs:66](../crates/atelier-core/src/application/projects.rs#L66) | <code>pub const EDITABLE_FIELDS: [&amp;str; 20] = [</code> |
+| [crates/atelier-core/src/application/projects.rs:89](../crates/atelier-core/src/application/projects.rs#L89) | <code>pub fn detect(</code> |
+| [crates/atelier-core/src/application/projects.rs:170](../crates/atelier-core/src/application/projects.rs#L170) | <code>pub fn prepare_update(</code> |
+| [crates/atelier-core/src/application/projects.rs:358](../crates/atelier-core/src/application/projects.rs#L358) | <code>pub fn create(</code> |
+| [crates/atelier-core/src/application/projects.rs:428](../crates/atelier-core/src/application/projects.rs#L428) | <code>pub fn archive_tasks(</code> |
+| [crates/atelier-core/src/application/projects.rs:441](../crates/atelier-core/src/application/projects.rs#L441) | <code>pub fn remove(</code> |
 | [crates/atelier-core/src/application/reviews.rs:1](../crates/atelier-core/src/application/reviews.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/reviews.rs:5](../crates/atelier-core/src/application/reviews.rs#L5) | <code>use serde::{Deserialize, Serialize};</code> |
 | [crates/atelier-core/src/application/reviews.rs:6](../crates/atelier-core/src/application/reviews.rs#L6) | <code>use serde_json::Value;</code> |
@@ -3644,10 +3645,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/project-lifecycle.rs:1](../crates/atelier-core/tests/project-lifecycle.rs#L1) | <code>use atelier_core::{</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:9](../crates/atelier-core/tests/project-lifecycle.rs#L9) | <code>use serde_json::value::RawValue;</code> |
 | [crates/atelier-core/tests/project-lifecycle.rs:10](../crates/atelier-core/tests/project-lifecycle.rs#L10) | <code>use std::cell::RefCell;</code> |
-| [crates/atelier-core/tests/project-lifecycle.rs:12](../crates/atelier-core/tests/project-lifecycle.rs#L12) | <code>mod json;</code> |
-| [crates/atelier-core/tests/project-lifecycle.rs:99](../crates/atelier-core/tests/project-lifecycle.rs#L99) | <code>#[test]</code> |
-| [crates/atelier-core/tests/project-lifecycle.rs:225](../crates/atelier-core/tests/project-lifecycle.rs#L225) | <code>#[test]</code> |
-| [crates/atelier-core/tests/project-lifecycle.rs:273](../crates/atelier-core/tests/project-lifecycle.rs#L273) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:12](../crates/atelier-core/tests/project-lifecycle.rs#L12) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:76](../crates/atelier-core/tests/project-lifecycle.rs#L76) | <code>mod json;</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:78](../crates/atelier-core/tests/project-lifecycle.rs#L78) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:80](../crates/atelier-core/tests/project-lifecycle.rs#L80) | <code>use atelier_core::contracts::{JiraStatus, JiraTransition};</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:200](../crates/atelier-core/tests/project-lifecycle.rs#L200) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:326](../crates/atelier-core/tests/project-lifecycle.rs#L326) | <code>#[test]</code> |
+| [crates/atelier-core/tests/project-lifecycle.rs:374](../crates/atelier-core/tests/project-lifecycle.rs#L374) | <code>#[test]</code> |
 | [crates/atelier-core/tests/project-settings.rs:1](../crates/atelier-core/tests/project-settings.rs#L1) | <code>use atelier_core::{document::Document, domain::projects::project_settings};</code> |
 | [crates/atelier-core/tests/project-settings.rs:3](../crates/atelier-core/tests/project-settings.rs#L3) | <code>mod json;</code> |
 | [crates/atelier-core/tests/project-settings.rs:5](../crates/atelier-core/tests/project-settings.rs#L5) | <code>#[test]</code> |
@@ -3899,7 +3903,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/projects.rs:6](../crates/atelier-ui/src/projects.rs#L6) | <code>use gloo_net::http::Method;</code> |
 | [crates/atelier-ui/src/projects.rs:7](../crates/atelier-ui/src/projects.rs#L7) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/projects.rs:8](../crates/atelier-ui/src/projects.rs#L8) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/projects.rs:103](../crates/atelier-ui/src/projects.rs#L103) | <code>pub fn Projects(</code> |
+| [crates/atelier-ui/src/projects.rs:117](../crates/atelier-ui/src/projects.rs#L117) | <code>pub fn Projects(</code> |
 | [crates/atelier-ui/src/queue.rs:1](../crates/atelier-ui/src/queue.rs#L1) | <code>use crate::{i18n::I18n, live::BoardState, write};</code> |
 | [crates/atelier-ui/src/queue.rs:2](../crates/atelier-ui/src/queue.rs#L2) | <code>use atelier_core::contracts::RunQueue;</code> |
 | [crates/atelier-ui/src/queue.rs:3](../crates/atelier-ui/src/queue.rs#L3) | <code>use gloo_net::http::Method;</code> |

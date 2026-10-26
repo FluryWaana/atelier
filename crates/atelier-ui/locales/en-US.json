@@ -1756,5 +1756,9 @@
   "Ajouter le parcours du projet à la file": "Add the project workflow to the queue",
   "Les tâches simples et les parcours suivent l’ordre affiché avec leurs réglages enregistrés au démarrage. Le parcours actif peut attendre tes validations de commit et publication. Après redémarrage, la file reste en pause ; les effets incertains ne sont jamais rejoués.": "Tasks and workflows follow the displayed order using their settings saved at launch. The active workflow may wait for your commit and publication approvals. After restart the queue stays paused; uncertain effects are never replayed.",
   "Autoriser les lancements et reprises locaux avec les réglages enregistrés, après vérification des tâches. Les publications restent à confirmer.": "Authorize local launches and resumptions with the saved settings after checking the tasks. Publications still require confirmation.",
-  "Recommencer un parcours avec les réglages actuels": "Start a new workflow with the current settings"
+  "Recommencer un parcours avec les réglages actuels": "Start a new workflow with the current settings",
+  "Correspondances Jira du projet": "Project Jira mappings",
+  "Désactivées": "Disabled",
+  "Personnalisées": "Custom",
+  "Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.": "Target Jira status ID or name. Saving a mapping does not send any request."
 }

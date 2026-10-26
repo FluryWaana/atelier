@@ -8,8 +8,109 @@ use atelier_core::{
 };
 use serde_json::value::RawValue;
 use std::cell::RefCell;
+
+#[test]
+fn jira_mapping_edits_preserve_unrelated_fields_and_reject_stale_snapshots() {
+    let context = Context {
+        scenario: Document::default(),
+        projects: RefCell::new(vec![serde_json::from_str(r#"{"id":"project","name":"Synthetic","repo":"checked:repo","projectRules":"human rules"}"#).unwrap()]),
+        cards: RefCell::new(vec![]),
+        events: RefCell::default(),
+    };
+    let body: Document = serde_json::from_str(r#"{"jiraMode":"custom","jiraStatusMap":{"doing":"31"},"expected":{"jiraMode":"inherit","jiraStatusMap":{}}}"#).unwrap();
+    let edit = projects::prepare_update(
+        &context,
+        "project",
+        &body,
+        false,
+        |_| false,
+        |_| false,
+        false,
+    )
+    .unwrap();
+    assert!(
+        edit.project
+            .string_equals("projectRules", "human rules")
+            .unwrap()
+    );
+    assert!(edit.project.string_equals("jiraMode", "custom").unwrap());
+    assert_eq!(
+        edit.project
+            .get::<serde_json::Value>("jiraStatusMap")
+            .unwrap()
+            .unwrap()["doing"],
+        "31"
+    );
+    context.projects.borrow_mut()[0] = edit.project;
+    assert!(
+        projects::prepare_update(
+            &context,
+            "project",
+            &body,
+            false,
+            |_| false,
+            |_| false,
+            false
+        )
+        .is_err()
+    );
+    for invalid in [
+        r#"{"jiraMode":"custom","jiraStatusMap":{}}"#,
+        r#"{"jiraStatusMap":{"unknown":"31"}}"#,
+    ] {
+        assert!(
+            projects::prepare_update(
+                &context,
+                "project",
+                &serde_json::from_str(invalid).unwrap(),
+                false,
+                |_| false,
+                |_| false,
+                false
+            )
+            .is_err()
+        );
+    }
+}
 #[path = "support/json.rs"]
 mod json;
+
+#[test]
+fn jira_mapping_only_suggests_one_available_unambiguous_transition() {
+    use atelier_core::contracts::{JiraStatus, JiraTransition};
+    let mut options = vec![JiraTransition {
+        id: "transition".into(),
+        name: "Begin".into(),
+        target: JiraStatus {
+            id: "31".into(),
+            name: "In Progress".into(),
+        },
+        requires_fields: false,
+    }];
+    let mut settings =
+        serde_json::json!({"jiraAutoTransition":true,"jiraStatusMap":{"doing":"in progress"}});
+    assert_eq!(
+        projects::mapped_jira_transition(&settings, "doing", &options),
+        Some("transition")
+    );
+    options.push(options[0].clone());
+    assert_eq!(
+        projects::mapped_jira_transition(&settings, "doing", &options),
+        None
+    );
+    options.pop();
+    options[0].requires_fields = true;
+    assert_eq!(
+        projects::mapped_jira_transition(&settings, "doing", &options),
+        None
+    );
+    options[0].requires_fields = false;
+    settings["jiraAutoTransition"] = serde_json::json!(false);
+    assert_eq!(
+        projects::mapped_jira_transition(&settings, "doing", &options),
+        None
+    );
+}
 
 struct Context {
     scenario: Document,

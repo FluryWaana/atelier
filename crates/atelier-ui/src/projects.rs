@@ -29,6 +29,8 @@ struct Draft {
     automation: bool,
     auto_fix: bool,
     target: String,
+    jira_mode: String,
+    jira_mapping: std::collections::BTreeMap<String, String>,
 }
 impl Draft {
     fn from_document(project: &Document) -> Self {
@@ -63,12 +65,24 @@ impl Draft {
                 .flatten()
                 .unwrap_or(true),
             target: field(project, "prTarget"),
+            jira_mode: project
+                .get::<String>("jiraMode")
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "inherit".into()),
+            jira_mapping: project
+                .get("jiraStatusMap")
+                .ok()
+                .flatten()
+                .unwrap_or_default(),
         }
     }
 
     fn patch(&self, previous: &Self) -> serde_json::Value {
         let fields = |value: &Self| {
             let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked,"testCommand":value.verification,"automationEnabled":value.automation,"autoFix":value.auto_fix,"prTarget":value.target});
+            fields["jiraMode"] = serde_json::json!(value.jira_mode);
+            fields["jiraStatusMap"] = serde_json::json!(value.jira_mapping);
             for (index, role) in ["front", "back"].into_iter().enumerate() {
                 let service = &value.services[index];
                 for (suffix, text) in [
@@ -240,6 +254,19 @@ pub fn Projects(
                     <label for="project-rules">{move || i18n.text("Consignes du projet")}</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
                     <label for="project-agent">{move || i18n.text("Agent préféré")}</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">{move || i18n.text("Hériter du réglage global")}</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select>
                     <ProjectServices draft=draft pending=pending token=token />
+                    <label for="project-jira-mode">{move||i18n.text("Correspondances Jira du projet")}</label>
+                    <select id="project-jira-mode" prop:value=move||draft.get().jira_mode on:change=move|event|draft.update(|draft|draft.jira_mode=event_target_value(&event))>
+                        <option value="inherit">{move||i18n.text("Hériter du réglage global")}</option>
+                        <option value="off">{move||i18n.text("Désactivées")}</option>
+                        <option value="custom">{move||i18n.text("Personnalisées")}</option>
+                    </select>
+                    <div hidden=move||draft.get().jira_mode!="custom">
+                        <For each=||["todo","doing","review","done","standby"] key=|status|*status children=move|status|view!{
+                            <label for=format!("project-jira-{status}")>{move||i18n.text(match status {"todo"=>"À faire","doing"=>"En cours","review"=>"À vérifier","done"=>"Terminé",_=>"En attente"})}</label>
+                            <input id=format!("project-jira-{status}") maxlength="100" prop:value=move||draft.get().jira_mapping.get(status).cloned().unwrap_or_default() on:input=move|event|draft.update(|draft|{draft.jira_mapping.insert(status.into(),event_target_value(&event));})/>
+                        }/>
+                        <p class="field-help">{move||i18n.text("Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.")}</p>
+                    </div>
                     <label for="project-test-command">{move||i18n.text("Commande de vérification")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
                     <p class="field-help">{move||i18n.text("Cette commande sera exécutée explicitement dans le worktree de la tâche, avec les permissions de ton compte. L’enregistrement ne la lance pas.")}</p>
                     <label for="project-pr-target">{move||i18n.text("Branche cible du parcours")}</label><input id="project-pr-target" maxlength="180" spellcheck="false" prop:value=move||draft.get().target on:input=move|event|draft.update(|draft|draft.target=event_target_value(&event))/>
