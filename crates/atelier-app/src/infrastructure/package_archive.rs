@@ -11,7 +11,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 pub const ARCHIVE_LIMIT: usize = 260 * 1024 * 1024;
 const CONTENT_LIMIT: u64 = 257 * 1024 * 1024;
-const ENTRY_LIMIT: usize = 132;
+const ENTRY_LIMIT: usize = 133;
 
 pub struct StagedPackage {
     directory: tempfile::TempDir,
@@ -53,7 +53,10 @@ fn footer(bytes: &[u8]) -> Result<(usize, u64)> {
 
 fn name_allowed(name: &str, binary: &str) -> bool {
     name == binary
-        || matches!(name, "LICENSE" | "README.txt" | "atelier-package.json")
+        || matches!(
+            name,
+            "LICENSE" | "README.txt" | "atelier-package.json" | "THIRD-PARTY-NOTICES.txt"
+        )
         || name
             .strip_prefix("ui/")
             .is_some_and(crate::http::wasm_asset_name)
@@ -75,6 +78,8 @@ pub fn unpack(bytes: &[u8], target: &str, parent: &Path) -> Result<StagedPackage
             || matches!(entry.name(), "LICENSE" | "README.txt")
         {
             1024 * 1024
+        } else if entry.name() == "THIRD-PARTY-NOTICES.txt" {
+            32 * 1024 * 1024
         } else if entry.name().starts_with("ui/") {
             64 * 1024 * 1024
         } else {

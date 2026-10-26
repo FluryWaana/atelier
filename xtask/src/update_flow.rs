@@ -142,7 +142,13 @@ pub(super) fn archive(
 ) -> Result<(PathBuf, PathBuf)> {
     let target = payload::native_target()?;
     let directory = temporary.join(name);
-    package::stage(target, binary, assets, &directory)?;
+    package::stage(
+        target,
+        binary,
+        assets,
+        &temporary.join("third-party-notices.txt"),
+        &directory,
+    )?;
     std::fs::write(
         directory.join("atelier-package.json"),
         serde_json::to_vec_pretty(&payload::manifest(&directory, target, version)?)?,
@@ -182,6 +188,7 @@ pub(super) async fn test() -> Result<()> {
     }
     run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
     let temporary = tempfile::tempdir()?;
+    crate::notices::generate(&temporary.path().join("third-party-notices.txt")).await?;
     let assets = root().join(".artifacts/rust-ui");
     let current = env!("CARGO_PKG_VERSION");
     let mut parts = payload::version_parts(current)?;

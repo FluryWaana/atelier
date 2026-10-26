@@ -6,6 +6,7 @@ use std::{
 
 mod keyring;
 mod launch_detection;
+mod notices;
 mod package;
 mod storage;
 mod ui;
@@ -116,7 +117,8 @@ async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["build-ui"] => build_ui(),
-        ["stage-package", target, binary, assets, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(output)),
+        ["third-party-notices", output] => notices::generate(Path::new(output)).await,
+        ["stage-package", target, binary, assets, notices, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(notices),Path::new(output)),
         ["verify-package", directory] => package::verify(Path::new(directory)),
         ["archive-package", directory, output] => atelier_app::infrastructure::package_archive::create(Path::new(directory),Path::new(output)),
         ["verify-archive", archive, target] => atelier_app::infrastructure::package_archive::verify(Path::new(archive),target),
@@ -163,7 +165,7 @@ async fn main() -> Result<()> {
         ["test-ui"] => { build_ui()?; ui::test(false).await },
         ["test-updates"] => update_flow::test().await,
         ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
-        _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives, signature et lanceur sont candidats non qualifiés ; installateurs, tray et mise à jour récupérable R06 restent à livrer.".into()),
+        _ => Err("Usage : cargo xtask build-ui | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives, signature et lanceur sont candidats non qualifiés ; installateurs, tray et mise à jour récupérable R06 restent à livrer.".into()),
     }
 }
 

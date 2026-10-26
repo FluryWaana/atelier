@@ -5,7 +5,8 @@ Le staging, les archives ZIP et le lanceur natif sont candidats **non compilés 
 Après construction lors de la campagne finale, utiliser :
 
 ```text
-cargo xtask stage-package TARGET BINARY ASSETS OUTPUT
+cargo xtask third-party-notices NOTICES.txt
+cargo xtask stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT
 cargo xtask verify-package OUTPUT
 cargo xtask archive-package OUTPUT ARCHIVE.zip
 cargo xtask verify-archive ARCHIVE.zip TARGET
@@ -77,3 +78,7 @@ L’écran bilingue Mises à jour est le sixième onglet des paramètres : chemi
 | Windows Setup, DEB/RPM, intégration bureau/tray, désinstallation, avis complets de licences | Incomplet | À compléter | Aucune qualification |
 
 `test-updates` exige CI et `ATELIER_RUST_FINAL_CAMPAIGN=1`. Il copie uniquement les sources Rust suivies par Git dans un temporaire, y incrémente les versions du workspace/verrouillage et construit un second binaire hors source de travail. Dossiers, clés, données et port restent synthétiques ; aucun agent ni compte distant. **Ce code de scénario n’a pas été exécuté : aucun second binaire, aucune clé et aucun paquet n’ont été produits sur le PC.** Le workflow manuel et la campagne unique n’ont pas été lancés ; R06/R07 restent non validés.
+
+Point candidat — avis des dépendances : third-party-notices lit les métadonnées Cargo --locked --offline et les textes locaux des crates, sans compilation ni réseau. Inventaire déterministe de toutes les plateformes et outils de fabrication, expression de licence déclarée, fichiers de licence/notice bornés ; refus explicite des sources non recensées, textes manquants, chemins extérieurs et sorties existantes. Ce recensement ne remplace pas l’examen final des obligations de distribution et des composants natifs éventuellement embarqués par les crates.
+
+stage-package exige maintenant le fichier d’avis en argument et embarque THIRD-PARTY-NOTICES.txt dans l’inventaire signé, les ZIP et les versions installées. La limite dédiée est de 32 Mio ; aucun dossier/runtime Node autorisé. Les fixtures d’archive des cinq cibles conservent un avis explicitement synthétique et vérifient sa conservation ; les parcours de mise à jour génèrent les vrais avis avant leur packaging. Générateur et scénarios écrits seulement ; aucun inventaire Cargo ni paquet généré/exécuté sur le PC. La collecte réelle peut révéler des licences manquantes à compléter ; cette ligne reste non qualifiée.

@@ -6,12 +6,22 @@ use atelier_app::{
 #[cfg(test)]
 use atelier_app::{http::wasm_asset_name, infrastructure::package::TARGETS};
 use std::{fs, path::Path};
-pub(super) fn stage(target: &str, binary: &Path, ui: &Path, output: &Path) -> Result<()> {
+pub(super) fn stage(
+    target: &str,
+    binary: &Path,
+    ui: &Path,
+    notices: &Path,
+    output: &Path,
+) -> Result<()> {
     let name = binary_name(target)?;
     if binary.file_name().and_then(|name| name.to_str()) != Some(name) {
         return Err("Le staging exige le binaire applicatif nommé atelier, jamais un exécutable de faisabilité.".into());
     }
     let binary = read(binary, 128 * 1024 * 1024)?;
+    let notices = read(notices, super::notices::LIMIT)?;
+    if !notices.starts_with(b"Atelier Rust third-party notices\n") {
+        return Err("Avis de licences Rust générés requis avant le paquet.".into());
+    }
     executable(target, &binary)?;
     if output.try_exists()? {
         return Err("Le dossier de paquet existe déjà. Aucun fichier remplacé.".into());
@@ -28,6 +38,7 @@ pub(super) fn stage(target: &str, binary: &Path, ui: &Path, output: &Path) -> Re
         .prefix(".atelier-package-")
         .tempdir_in(parent)?;
     write(&temporary.path().join(name), &binary)?;
+    write(&temporary.path().join("THIRD-PARTY-NOTICES.txt"), &notices)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -94,7 +105,14 @@ mod tests {
             }
             fs::write(&binary, &image).unwrap();
             let payload = root.path().join(format!("payload-{index}"));
-            stage(target, &binary, &ui, &payload).unwrap();
+            stage(
+                target,
+                &binary,
+                &ui,
+                &root.path().join("notices.txt"),
+                &payload,
+            )
+            .unwrap();
             let archive = root.path().join(format!("payload-{index}.zip"));
             package_archive::create(&payload, &archive).unwrap();
             package_archive::verify(&archive, target).unwrap();
@@ -106,6 +124,10 @@ mod tests {
                 image
             );
             assert_eq!(staged.manifest()["target"], *target);
+            assert_eq!(
+                fs::read(staged.path().join("THIRD-PARTY-NOTICES.txt")).unwrap(),
+                fs::read(root.path().join("notices.txt")).unwrap()
+            );
             assert!(
                 package_archive::unpack(&bytes, TARGETS[(index + 1) % TARGETS.len()], root.path())
                     .is_err()
@@ -126,6 +148,11 @@ mod tests {
     }
     fn fixture() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
         let root = tempfile::tempdir().unwrap();
+        fs::write(
+            root.path().join("notices.txt"),
+            "Atelier Rust third-party notices\nSynthetic notice fixture only.\n",
+        )
+        .unwrap();
         let binary = root.path().join("atelier");
         let mut bytes = vec![0; 64];
         bytes[..6].copy_from_slice(b"\x7fELF\x02\x01");
@@ -149,13 +176,47 @@ mod tests {
         let (root, binary, ui) = fixture();
         let output = root.path().join("package");
         fs::write(ui.join("node.exe"), "never package").unwrap();
-        assert!(stage(TARGETS[1], &binary, &ui, &output).is_err());
+        assert!(
+            stage(
+                TARGETS[1],
+                &binary,
+                &ui,
+                &root.path().join("notices.txt"),
+                &output
+            )
+            .is_err()
+        );
         assert!(!output.exists());
         fs::remove_file(ui.join("node.exe")).unwrap();
-        assert!(stage(TARGETS[2], &binary, &ui, &output).is_err());
-        stage(TARGETS[1], &binary, &ui, &output).unwrap();
+        assert!(
+            stage(
+                TARGETS[2],
+                &binary,
+                &ui,
+                &root.path().join("notices.txt"),
+                &output
+            )
+            .is_err()
+        );
+        stage(
+            TARGETS[1],
+            &binary,
+            &ui,
+            &root.path().join("notices.txt"),
+            &output,
+        )
+        .unwrap();
         verify(&output).unwrap();
-        assert!(stage(TARGETS[1], &binary, &ui, &output).is_err());
+        assert!(
+            stage(
+                TARGETS[1],
+                &binary,
+                &ui,
+                &root.path().join("notices.txt"),
+                &output
+            )
+            .is_err()
+        );
         fs::write(output.join("ui/style-test.css"), "changed").unwrap();
         assert!(verify(&output).is_err());
         for name in [

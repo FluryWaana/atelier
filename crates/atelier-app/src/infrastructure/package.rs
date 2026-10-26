@@ -149,6 +149,7 @@ pub fn manifest(directory: &Path, target: &str, version: &str) -> Result<Value> 
         "ui",
         "LICENSE",
         "README.txt",
+        "THIRD-PARTY-NOTICES.txt",
         "atelier-package.json",
     ]);
     for entry in fs::read_dir(directory)? {
@@ -160,6 +161,11 @@ pub fn manifest(directory: &Path, target: &str, version: &str) -> Result<Value> 
         }
     }
     let mut files = vec![binary.to_owned(), "LICENSE".into(), "README.txt".into()];
+    match fs::symlink_metadata(directory.join("THIRD-PARTY-NOTICES.txt")) {
+        Ok(_) => files.push("THIRD-PARTY-NOTICES.txt".into()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
     files.extend(
         assets(&directory.join("ui"))?
             .into_iter()
@@ -171,6 +177,8 @@ pub fn manifest(directory: &Path, target: &str, version: &str) -> Result<Value> 
     for path in files {
         let limit = if path == binary {
             128 * 1024 * 1024
+        } else if path == "THIRD-PARTY-NOTICES.txt" {
+            32 * 1024 * 1024
         } else if path.starts_with("ui/") {
             64 * 1024 * 1024
         } else {

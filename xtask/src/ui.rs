@@ -595,6 +595,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
             .checked_add(1)
             .ok_or("Version de fixture excessive.")?
     );
+    crate::notices::generate(&temporary.path().join("third-party-notices.txt")).await?;
     let (original, original_signature) =
         crate::update_flow::archive(temporary.path(), "original", &binary, &assets, current)?;
     let (candidate, candidate_signature) = crate::update_flow::archive(
