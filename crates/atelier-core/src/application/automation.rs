@@ -58,6 +58,13 @@ pub struct Flow {
 }
 
 impl State {
+    pub fn card_status(self) -> &'static str {
+        match self {
+            Self::Running => "doing",
+            Self::Ready => "review",
+            _ => "standby",
+        }
+    }
     pub fn label(self) -> &'static str {
         match self {
             Self::Running => "Parcours en cours",

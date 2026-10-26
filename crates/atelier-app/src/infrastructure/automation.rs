@@ -41,7 +41,19 @@ pub fn read(card: &Card) -> Result<Option<Flow>> {
     Ok(card.fields.get("automation")?)
 }
 fn save(store: &Store<'_>, card: &mut Card, flow: &mut Flow) -> Result<()> {
+    let previous = card
+        .fields
+        .get::<Document>("automation")?
+        .and_then(|value| value.get::<State>("state").ok().flatten());
+    let status = card.fields.get::<String>("status")?;
+    if !card.fields.truthy("archived")?
+        && status.as_deref() != Some("done")
+        && previous.is_some_and(|previous| status.as_deref() == Some(previous.card_status()))
+    {
+        card.fields.set("status", &flow.state.card_status())?;
+    }
     flow.updated_at = now()?;
+    card.fields.set("updatedAt", &flow.updated_at)?;
     card.fields.set("automation", flow)?;
     store.put(Documents::Cards, card)
 }
@@ -291,6 +303,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
         }
         _ => return Err("Action de parcours inconnue.".into()),
     }
+    card.fields.set("status", &"doing")?;
     save(store, &mut card, flow.as_mut().ok_or("Parcours absent.")?)?;
     Ok(card)
 }
@@ -624,6 +637,7 @@ mod tests {
         assert!(change(&store, "task", &request).is_err());
         request.set("confirmed", &true).unwrap();
         let started = change(&store, "task", &request).unwrap();
+        assert!(started.fields.string_equals("status", "doing").unwrap());
         let flow = read(&started).unwrap().unwrap();
         assert!(blocks(&store, "/api/backups/restore").unwrap());
         assert!(blocks(&store, "/api/projects/project").unwrap());
@@ -633,6 +647,12 @@ mod tests {
         assert!(require_run(&store, &reserved, "manual", None).is_err());
         assert!(require_run(&store, &reserved, "late-run", Some(&flow.id)).is_ok());
         cancel(&store, "task", &flow.id).unwrap();
+        assert!(
+            card(&store)
+                .fields
+                .string_equals("status", "standby")
+                .unwrap()
+        );
         assert!(require_run(&store, &card(&store), "late-run", Some(&flow.id)).is_err());
         let late = doc(
             json!({"id":"late-run","cardId":"task","automationId":flow.id,"repo":"synthetic/work","status":"starting"}),
@@ -648,6 +668,12 @@ mod tests {
         recover(&store).unwrap();
         assert!(running(&store).unwrap().is_none());
         let interrupted = card(&store);
+        assert!(
+            interrupted
+                .fields
+                .string_equals("status", "standby")
+                .unwrap()
+        );
         assert!(read(&interrupted).unwrap().unwrap().state == State::Interrupted);
         assert!(
             store
@@ -740,6 +766,12 @@ mod tests {
                 settle(&store, "task", &flow.id).unwrap();
             } else {
                 assert!(flow.state == State::Blocked && flow.cycles == 2);
+                assert!(
+                    card(&store)
+                        .fields
+                        .string_equals("status", "standby")
+                        .unwrap()
+                );
             }
         }
         assert_eq!(
@@ -931,5 +963,48 @@ mod tests {
         assert!(flow.step == Step::Tests && flow.commit_plan.is_none());
         cancel(&store, "task", &flow.id).unwrap();
         assert!(commit(&store, "task", &flow.id).is_err());
+    }
+
+    #[test]
+    fn workflow_board_statuses_never_accept_criteria_or_overwrite_a_newer_human_status() {
+        let home = tempfile::tempdir().unwrap();
+        let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        let (initial, project) = seed(&store);
+        let mut started = change(&store, "task", &body(&initial, &project, "start")).unwrap();
+        let mut flow = read(&started).unwrap().unwrap();
+        // Validated-result fixture only; no real review or native proof is represented.
+        flow.step = Step::Review;
+        started.fields.set("automation", &flow).unwrap();
+        store.put(Documents::Cards, &started).unwrap();
+        synthetic_stage_result(
+            &store,
+            &flow,
+            "ready-board-status",
+            json!({"purpose":"review","reviewValidatedAt":"synthetic","review":{"summary":"Synthetic state fixture only","findings":[],"criteria":[{"index":0,"status":"covered","evidence":"Synthetic state fixture only"}]}}),
+        );
+        settle(&store, "task", &flow.id).unwrap();
+        let mut ready = card(&store);
+        assert!(read(&ready).unwrap().unwrap().state == State::Ready);
+        assert!(ready.fields.string_equals("status", "review").unwrap());
+        assert_eq!(
+            ready
+                .fields
+                .get::<Vec<serde_json::Value>>("checklist")
+                .unwrap()
+                .unwrap()[0]["done"],
+            false
+        );
+        ready.fields.set("status", &"done").unwrap();
+        store.put(Documents::Cards, &ready).unwrap();
+        let restarted = change(&store, "task", &body(&ready, &project, "start")).unwrap();
+        assert!(restarted.fields.string_equals("status", "doing").unwrap());
+        let flow = read(&restarted).unwrap().unwrap();
+        let mut human = restarted;
+        human.fields.set("status", &"done").unwrap();
+        store.put(Documents::Cards, &human).unwrap();
+        cancel(&store, "task", &flow.id).unwrap();
+        assert!(card(&store).fields.string_equals("status", "done").unwrap());
+        assert_eq!(card(&store).title, initial.title);
     }
 }

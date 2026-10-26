@@ -1338,7 +1338,7 @@ async fn brainstorm_scenario(
     wait_dom(client,"return document.querySelector('#approve-automation')?.disabled === false && document.querySelector('#automation')?.textContent.includes('Synthetic queued command');",vec![]).await?;
     click(client, "#approve-automation").await?;
     click(client, "#start-automation").await?;
-    wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#edit-status')?.value === 'standby' && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     click(client, "#approve-automation").await?;
     click(client, "#start-automation").await?;
     wait_dom(client,"return document.querySelector('#automation-error')?.textContent.includes('Publie ou lie une PR/MR') && document.querySelector('#approve-automation')?.checked === false;",vec![]).await?;
@@ -1413,7 +1413,7 @@ async fn brainstorm_scenario(
     wait_dom(client,"return document.querySelector('#confirm-local-commit')?.disabled === false && document.querySelector('#workflow-local-commit')?.offsetParent !== null;",vec![]).await?;
     click(client, "#confirm-local-commit").await?;
     click(client, "#workflow-local-commit").await?;
-    wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#commit-author-name')?.value === '' && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#edit-status')?.value === 'standby' && document.querySelector('#commit-author-name')?.value === '' && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     let committed: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
         .bearer_auth(token)

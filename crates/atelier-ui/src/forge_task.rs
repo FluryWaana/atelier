@@ -43,6 +43,19 @@ pub fn ForgeTask(
     let detach_ack = RwSignal::new(String::new());
     let draft_ack = RwSignal::new(String::new());
     let publication_dirty = RwSignal::new(false);
+    Effect::new(move |_| {
+        let next = linked
+            .get()
+            .map(|pr| (pr.kind, pr.repository, pr.number.to_string()))
+            .unwrap_or((ForgeKind::Github, String::new(), String::new()));
+        if draft.get_untracked() == original.get_untracked() && original.get_untracked() != next {
+            original.set(next.clone());
+            draft.set(next);
+            approved.set(None);
+            detach_ack.set(String::new());
+            draft_ack.set(String::new());
+        }
+    });
     let intent = Signal::derive(move || {
         card.get().and_then(|card| {
             card.fields

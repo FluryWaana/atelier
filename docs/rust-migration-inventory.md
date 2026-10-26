@@ -1171,27 +1171,28 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/automation.rs:6](../crates/atelier-app/src/infrastructure/automation.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:7](../crates/atelier-app/src/infrastructure/automation.rs#L7) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/src/infrastructure/automation.rs:28](../crates/atelier-app/src/infrastructure/automation.rs#L28) | <code>pub fn read(card: &amp;Card) -&gt; Result&lt;Option&lt;Flow&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:69](../crates/atelier-app/src/infrastructure/automation.rs#L69) | <code>pub fn change(store: &amp;Store&lt;'_&gt;, id: &amp;str, body: &amp;Document) -&gt; Result&lt;Card&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:298](../crates/atelier-app/src/infrastructure/automation.rs#L298) | <code>pub fn cancel(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:318](../crates/atelier-app/src/infrastructure/automation.rs#L318) | <code>pub fn recover_in_transaction(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:330](../crates/atelier-app/src/infrastructure/automation.rs#L330) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:333](../crates/atelier-app/src/infrastructure/automation.rs#L333) | <code>pub fn require_run(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:354](../crates/atelier-app/src/infrastructure/automation.rs#L354) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:372](../crates/atelier-app/src/infrastructure/automation.rs#L372) | <code>pub fn running(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;(Card, Flow)&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:382](../crates/atelier-app/src/infrastructure/automation.rs#L382) | <code>pub fn fail(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str, message: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:398](../crates/atelier-app/src/infrastructure/automation.rs#L398) | <code>pub fn commit(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:423](../crates/atelier-app/src/infrastructure/automation.rs#L423) | <code>pub fn commit_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:437](../crates/atelier-app/src/infrastructure/automation.rs#L437) | <code>pub fn publication(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:462](../crates/atelier-app/src/infrastructure/automation.rs#L462) | <code>pub fn publication_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:479](../crates/atelier-app/src/infrastructure/automation.rs#L479) | <code>pub fn claim(</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:536](../crates/atelier-app/src/infrastructure/automation.rs#L536) | <code>pub fn settle(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:574](../crates/atelier-app/src/infrastructure/automation.rs#L574) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:575](../crates/atelier-app/src/infrastructure/automation.rs#L575) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:576](../crates/atelier-app/src/infrastructure/automation.rs#L576) | <code>use serde_json::json;</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:615](../crates/atelier-app/src/infrastructure/automation.rs#L615) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:672](../crates/atelier-app/src/infrastructure/automation.rs#L672) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:755](../crates/atelier-app/src/infrastructure/automation.rs#L755) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/automation.rs:849](../crates/atelier-app/src/infrastructure/automation.rs#L849) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:81](../crates/atelier-app/src/infrastructure/automation.rs#L81) | <code>pub fn change(store: &amp;Store&lt;'_&gt;, id: &amp;str, body: &amp;Document) -&gt; Result&lt;Card&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:311](../crates/atelier-app/src/infrastructure/automation.rs#L311) | <code>pub fn cancel(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;Option&lt;String&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:331](../crates/atelier-app/src/infrastructure/automation.rs#L331) | <code>pub fn recover_in_transaction(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:343](../crates/atelier-app/src/infrastructure/automation.rs#L343) | <code>pub fn recover(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:346](../crates/atelier-app/src/infrastructure/automation.rs#L346) | <code>pub fn require_run(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:367](../crates/atelier-app/src/infrastructure/automation.rs#L367) | <code>pub fn blocks(store: &amp;Store&lt;'_&gt;, path: &amp;str) -&gt; Result&lt;bool&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:385](../crates/atelier-app/src/infrastructure/automation.rs#L385) | <code>pub fn running(store: &amp;Store&lt;'_&gt;) -&gt; Result&lt;Option&lt;(Card, Flow)&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:395](../crates/atelier-app/src/infrastructure/automation.rs#L395) | <code>pub fn fail(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str, message: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:411](../crates/atelier-app/src/infrastructure/automation.rs#L411) | <code>pub fn commit(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:436](../crates/atelier-app/src/infrastructure/automation.rs#L436) | <code>pub fn commit_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:450](../crates/atelier-app/src/infrastructure/automation.rs#L450) | <code>pub fn publication(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:475](../crates/atelier-app/src/infrastructure/automation.rs#L475) | <code>pub fn publication_complete(store: &amp;Store&lt;'_&gt;, expected: &amp;Card, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:492](../crates/atelier-app/src/infrastructure/automation.rs#L492) | <code>pub fn claim(</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:549](../crates/atelier-app/src/infrastructure/automation.rs#L549) | <code>pub fn settle(store: &amp;Store&lt;'_&gt;, id: &amp;str, operation: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:587](../crates/atelier-app/src/infrastructure/automation.rs#L587) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:588](../crates/atelier-app/src/infrastructure/automation.rs#L588) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:589](../crates/atelier-app/src/infrastructure/automation.rs#L589) | <code>use serde_json::json;</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:628](../crates/atelier-app/src/infrastructure/automation.rs#L628) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:698](../crates/atelier-app/src/infrastructure/automation.rs#L698) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:787](../crates/atelier-app/src/infrastructure/automation.rs#L787) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:881](../crates/atelier-app/src/infrastructure/automation.rs#L881) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/automation.rs:968](../crates/atelier-app/src/infrastructure/automation.rs#L968) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:1](../crates/atelier-app/src/infrastructure/backups.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:5](../crates/atelier-app/src/infrastructure/backups.rs#L5) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/backups.rs:6](../crates/atelier-app/src/infrastructure/backups.rs#L6) | <code>use atelier_core::{application::backups::BackupFailure, document::Document};</code> |
@@ -2639,8 +2640,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/automation.rs:55](../crates/atelier-core/src/application/automation.rs#L55) | <code>pub started_at: String,</code> |
 | [crates/atelier-core/src/application/automation.rs:56](../crates/atelier-core/src/application/automation.rs#L56) | <code>pub updated_at: String,</code> |
 | [crates/atelier-core/src/application/automation.rs:57](../crates/atelier-core/src/application/automation.rs#L57) | <code>pub message: String,</code> |
-| [crates/atelier-core/src/application/automation.rs:61](../crates/atelier-core/src/application/automation.rs#L61) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
-| [crates/atelier-core/src/application/automation.rs:74](../crates/atelier-core/src/application/automation.rs#L74) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-core/src/application/automation.rs:61](../crates/atelier-core/src/application/automation.rs#L61) | <code>pub fn card_status(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-core/src/application/automation.rs:68](../crates/atelier-core/src/application/automation.rs#L68) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
+| [crates/atelier-core/src/application/automation.rs:81](../crates/atelier-core/src/application/automation.rs#L81) | <code>pub fn label(self) -&gt; &amp;'static str {</code> |
 | [crates/atelier-core/src/application/backups.rs:1](../crates/atelier-core/src/application/backups.rs#L1) | <code>use super::task_creation::Result;</code> |
 | [crates/atelier-core/src/application/backups.rs:2](../crates/atelier-core/src/application/backups.rs#L2) | <code>use crate::document::Document;</code> |
 | [crates/atelier-core/src/application/backups.rs:5](../crates/atelier-core/src/application/backups.rs#L5) | <code>pub enum BackupFailure {</code> |
@@ -3705,6 +3707,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/automation.rs:4](../crates/atelier-ui/src/automation.rs#L4) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/automation.rs:5](../crates/atelier-ui/src/automation.rs#L5) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/automation.rs:8](../crates/atelier-ui/src/automation.rs#L8) | <code>pub fn Automation(</code> |
+| [crates/atelier-ui/src/automation.rs:29](../crates/atelier-ui/src/automation.rs#L29) | <code>let version = flow.get().map(\|flow\| {</code> |
 | [crates/atelier-ui/src/backups.rs:1](../crates/atelier-ui/src/backups.rs#L1) | <code>use crate::i18n::I18n;</code> |
 | [crates/atelier-ui/src/backups.rs:2](../crates/atelier-ui/src/backups.rs#L2) | <code>use crate::{field, live::BoardState, read, write};</code> |
 | [crates/atelier-ui/src/backups.rs:3](../crates/atelier-ui/src/backups.rs#L3) | <code>use atelier_core::document::Document;</code> |

@@ -42,6 +42,8 @@ Cycle R06 candidat raccordé : installation CLI sans écrasement, confiance stoc
 
 ## Points de contrôle
 
+- R05, statuts des parcours raccordés au tableau candidats : lancement en cours, attente des validations/erreurs, contrôle humain à l’issue ; conservation d’un statut humain différent/terminé et des critères non validés. Éditeur propre synchronisé, brouillon modifié conservé. Régressions de stockage et assertions navigateur étendues, **non compilées/non exécutées** ; aucune qualification nouvelle.
+
 - R05, file de parcours par projet candidate : choix explicite tâche simple/parcours, création et réservation atomiques, liaison à l’identifiant persistant, attente des validations et reprise sans nouvel agent pour un parcours déjà prêt. Pause sur blocage/erreur/arrêt, récupération/restauration ordonnées, remplacement refusé sans retrait/réajout ; scénarios SQLite/rollback et WebDriver écrits. Nouveau départ explicite disponible après changement de réglages incompatible avec une reprise. **Non compilé/non exécuté**, TLS complet/POSIX/qualification restent ouverts ; aucune case finale validée.
 
 - R05, commit intégré au parcours candidat : aperçu confirmé auteur/message/fichiers/arbre réservé, commit natif commun avec index humain conservé, observation exacte puis nouvelles vérifications ; arrêt/reprise sans recréation automatique. Formulaire raccordé et scénarios de stockage/WebDriver étendus avec fichier marqué synthétique, comparaison d’index et contrôle du résultat après commit. **Non compilés/non exécutés** ; TLS de bout en bout, file par projet, POSIX et qualification restent ouverts.

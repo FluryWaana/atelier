@@ -11,6 +11,7 @@ pub fn Automation(
     token: StoredValue<Result<String, String>>,
     pending: RwSignal<bool>,
     blocked: Memo<bool>,
+    on_applied: Callback<atelier_core::contracts::Card>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let id = StoredValue::new(card_id);
@@ -23,6 +24,27 @@ pub fn Automation(
         card.get()
             .and_then(|card| card.fields.get::<Flow>("automation").ok().flatten())
     });
+    Effect::new(
+        move |previous: Option<Option<(String, String, State, String)>>| {
+            let version = flow.get().map(|flow| {
+                (
+                    flow.id,
+                    flow.updated_at,
+                    flow.state,
+                    card.get()
+                        .map(|card| field(&card.fields, "status"))
+                        .unwrap_or_default(),
+                )
+            });
+            if previous.as_ref() != Some(&version)
+                && version.is_some()
+                && let Some(current) = card.get()
+            {
+                on_applied.run(current);
+            }
+            version
+        },
+    );
     let project = Signal::derive(move || {
         card.get().and_then(|card| {
             let repo = field(&card.fields, "repo");
