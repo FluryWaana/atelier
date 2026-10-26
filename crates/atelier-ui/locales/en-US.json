@@ -1761,5 +1761,16 @@
   "Désactivées": "Disabled",
   "Personnalisées": "Custom",
   "Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.": "Target Jira status ID or name. Saving a mapping does not send any request.",
-  "Appliquer aussi la colonne proposée : ": "Also apply the proposed column: "
+  "Appliquer aussi la colonne proposée : ": "Also apply the proposed column: ",
+  "Synchroniser plusieurs cartes Jira": "Synchronize several Jira cards",
+  "Sélectionne au plus vingt cartes, relis leurs aperçus puis choisis lesquels appliquer. Chaque carte est vérifiée et enregistrée séparément ; les erreurs restent visibles et ne sont pas rejouées.": "Select up to twenty cards, read their previews, then choose which ones to apply. Each card is checked and saved separately; errors remain visible and are not replayed.",
+  "La sélection Jira a changé. Vérifie les cartes.": "The Jira selection changed. Check the cards.",
+  "Aperçu Jira absent.": "Jira preview missing.",
+  "Aperçu appliqué.": "Preview applied.",
+  "Relire la sélection Jira": "Read the Jira selection again",
+  "Appliquer les aperçus cochés, avec les changements de colonne sélectionnés.": "Apply the checked previews with the selected column changes.",
+  "Appliquer la sélection Jira": "Apply the Jira selection",
+  "Arrêter après la carte en cours": "Stop after the current card",
+  "Effacer la sélection": "Clear selection",
+  "Reprendre les aperçus existants": "Resume existing previews"
 }

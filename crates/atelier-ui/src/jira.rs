@@ -49,11 +49,16 @@ pub fn JiraSettings(
     let attach_to = RwSignal::new(None::<atelier_core::contracts::Card>);
     let selected = RwSignal::new(std::collections::BTreeSet::<String>::new());
     let batch_approved = RwSignal::new(false);
+    let sync_dirty = RwSignal::new(false);
     let alive = Rc::new(Cell::new(true));
     let own_dirty =
         Memo::new(move |_| original.get() != draft.get() || !key.get().is_empty() || clear.get());
     Effect::new(move |_| {
-        dirty.set(own_dirty.get() || !selected.with(std::collections::BTreeSet::is_empty))
+        dirty.set(
+            own_dirty.get()
+                || sync_dirty.get()
+                || !selected.with(std::collections::BTreeSet::is_empty),
+        )
     });
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || {
@@ -368,6 +373,7 @@ pub fn JiraSettings(
     view! {
         <section class="task-files" aria-labelledby="jira-heading" aria-busy=move || (loading.get() || pending.get() || searching.get() || inspecting.get()).to_string()>
             <h3 id="jira-heading">"Jira"</h3><p class="field-help">{move || i18n.text("Configure la connexion, puis lance une recherche explicite. Les résultats sont en lecture seule ; aucun ticket distant n’est modifié.")}</p>
+            <crate::jira_batch::JiraBatch board token pending dirty=sync_dirty blocked=own_dirty/>
             <p role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement de la connexion Jira…")}</p>
             <form on:submit=save><fieldset disabled=move || !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get() || loading.get() || pending.get() || searching.get() || inspecting.get()>
                 <label for="jira-mode">{move || i18n.text("Version de Jira")}</label><select id="jira-mode" prop:value=move || if draft.get().mode==JiraMode::Cloud{"cloud"}else{"dataCenter"} on:change=move |event| draft.update(|draft| draft.mode=if event_target_value(&event)=="cloud"{JiraMode::Cloud}else{JiraMode::DataCenter})><option value="cloud">"Jira Cloud"</option><option value="dataCenter">"Jira Data Center"</option></select>

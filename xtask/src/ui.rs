@@ -742,6 +742,15 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             store.put(Documents::Cards,&card)?;
             atelier_app::infrastructure::jira_refresh::reserve(store,&atelier_core::contracts::JiraRefreshRequest{revision:1,expected:card},"synthetic-preview")?;
             atelier_app::infrastructure::jira_refresh::ready(store,"jira-refresh","synthetic-preview",atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Remote refresh description é😀".into(),issue:atelier_core::contracts::JiraIssue{id:"2".into(),key:"SYN-2".into(),title:"Remote refresh title".into(),status:"Open".into(),status_id:"1".into(),url:"https://synthetic-recovery.example.test/browse/SYN-2".into()}})?;
+            // Prebuilt read snapshots exercise local batch approval, not a successful remote read.
+            for index in 1..=2 {
+                let id=format!("jira-batch-{index}");
+                let issue=format!("{}",index+20);
+                let card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":id,"title":format!("Local batch {index}"),"description":"Keep batch description","instructions":"Keep batch instructions","status":"review","checklist":[{"text":"Keep batch criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":issue,"key":format!("SYN-{}",index+20)}}).to_string())?;
+                store.put(Documents::Cards,&card)?;
+                atelier_app::infrastructure::jira_refresh::reserve(store,&atelier_core::contracts::JiraRefreshRequest{revision:1,expected:card},&id)?;
+                atelier_app::infrastructure::jira_refresh::ready(store,&id,&id,atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Batch remote description".into(),issue:atelier_core::contracts::JiraIssue{id:issue,key:format!("SYN-{}",index+20),title:format!("Remote batch {index}"),status:"Open".into(),status_id:"1".into(),url:format!("https://synthetic-recovery.example.test/browse/SYN-{}",index+20)}})?;
+            }
             Ok(())
         }).await?;
         database.close().await?;
@@ -848,6 +857,88 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#confirm-jira-refresh").await?;
     click(client, "#apply-jira-refresh").await?;
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#manage-settings").await?;
+    click(client, "#settings-tab-jira").await?;
+    wait_dom(client,"return document.querySelector('.jira-batch-select[data-jira-card=\"jira-batch-1\"]')?.disabled === false;",vec![]).await?;
+    for index in 1..=2 {
+        click(
+            client,
+            &format!(".jira-batch-select[data-jira-card='jira-batch-{index}']"),
+        )
+        .await?;
+    }
+    click(client, "#recover-jira-batch").await?;
+    for index in 1..=2 {
+        click(
+            client,
+            &format!("article[data-jira-card='jira-batch-{index}'] .jira-batch-apply"),
+        )
+        .await?;
+    }
+    click(client, "#confirm-jira-batch").await?;
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#confirm-jira-batch')?.checked === true;",
+        vec![],
+    )
+    .await?;
+    let response=http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"description":"Human concurrent edit","expected":{"description":"Keep batch description"}})).send().await?;
+    response.error_for_status()?;
+    wait_dom(
+        client,
+        "return document.querySelector('#confirm-jira-batch')?.checked === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#confirm-jira-batch").await?;
+    click(client, "#apply-jira-batch").await?;
+    wait_dom(client,"return document.querySelector('article[data-jira-card=\"jira-batch-1\"]')?.textContent.includes('Aperçu appliqué.') && document.querySelector('article[data-jira-card=\"jira-batch-2\"]')?.textContent.includes('changé') && document.querySelector('#clear-jira-batch')?.disabled === false;",vec![]).await?;
+    let batch: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let first = batch
+        .cards
+        .iter()
+        .find(|card| card.id == "jira-batch-1")
+        .ok_or("Batch card absent")?;
+    let second = batch
+        .cards
+        .iter()
+        .find(|card| card.id == "jira-batch-2")
+        .ok_or("Batch card absent")?;
+    if first.title != atelier_core::document::JsonString::from("Remote batch 1")
+        || !first.fields.string_equals("status", "review")?
+        || !first
+            .fields
+            .string_equals("instructions", "Keep batch instructions")?
+        || !second
+            .fields
+            .string_equals("description", "Human concurrent edit")?
+        || second.title != atelier_core::document::JsonString::from("Local batch 2")
+    {
+        return Err(
+            "La synchronisation en lot a perdu une modification humaine ou masqué un échec.".into(),
+        );
+    }
+    click(client, "#clear-jira-batch").await?;
+    click(client, "#close-settings").await?;
+    client
+        .goto(&format!("{address}/?task=jira-refresh"))
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#edit-title')?.value === 'Remote refresh title';",
+        vec![],
+    )
+    .await?;
     time_task_scenario(client, http, &address, &token).await?;
     forge_task_scenario(client, &address).await?;
     brainstorm_scenario(client, http, &address, &token, data.path()).await?;

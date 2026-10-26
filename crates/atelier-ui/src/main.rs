@@ -21,6 +21,7 @@ mod forge_task;
 mod git_push;
 mod i18n;
 mod jira;
+mod jira_batch;
 mod jira_creation;
 mod jira_refresh;
 mod jira_task;

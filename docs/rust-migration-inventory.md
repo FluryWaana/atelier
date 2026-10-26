@@ -236,6 +236,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/git_push.rs](../crates/atelier-ui/src/git_push.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/i18n.rs](../crates/atelier-ui/src/i18n.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira.rs](../crates/atelier-ui/src/jira.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-ui/src/jira_batch.rs](../crates/atelier-ui/src/jira_batch.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira_creation.rs](../crates/atelier-ui/src/jira_creation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira_refresh.rs](../crates/atelier-ui/src/jira_refresh.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/jira_task.rs](../crates/atelier-ui/src/jira_task.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -3809,6 +3810,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/jira.rs:9](../crates/atelier-ui/src/jira.rs#L9) | <code>use wasm_bindgen::JsCast;</code> |
 | [crates/atelier-ui/src/jira.rs:10](../crates/atelier-ui/src/jira.rs#L10) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/jira.rs:25](../crates/atelier-ui/src/jira.rs#L25) | <code>pub fn JiraSettings(</code> |
+| [crates/atelier-ui/src/jira_batch.rs:1](../crates/atelier-ui/src/jira_batch.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, write};</code> |
+| [crates/atelier-ui/src/jira_batch.rs:2](../crates/atelier-ui/src/jira_batch.rs#L2) | <code>use atelier_core::contracts::{</code> |
+| [crates/atelier-ui/src/jira_batch.rs:6](../crates/atelier-ui/src/jira_batch.rs#L6) | <code>use gloo_net::http::Method;</code> |
+| [crates/atelier-ui/src/jira_batch.rs:7](../crates/atelier-ui/src/jira_batch.rs#L7) | <code>use leptos::prelude::*;</code> |
+| [crates/atelier-ui/src/jira_batch.rs:8](../crates/atelier-ui/src/jira_batch.rs#L8) | <code>use std::{cell::Cell, collections::BTreeSet, rc::Rc};</code> |
+| [crates/atelier-ui/src/jira_batch.rs:9](../crates/atelier-ui/src/jira_batch.rs#L9) | <code>use wasm_bindgen_futures::spawn_local;</code> |
+| [crates/atelier-ui/src/jira_batch.rs:21](../crates/atelier-ui/src/jira_batch.rs#L21) | <code>pub fn JiraBatch(</code> |
 | [crates/atelier-ui/src/jira_creation.rs:1](../crates/atelier-ui/src/jira_creation.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, read, replace_card, write};</code> |
 | [crates/atelier-ui/src/jira_creation.rs:2](../crates/atelier-ui/src/jira_creation.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/jira_creation.rs:10](../crates/atelier-ui/src/jira_creation.rs#L10) | <code>use gloo_net::http::Method;</code> |
@@ -3871,30 +3879,31 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/main.rs:21](../crates/atelier-ui/src/main.rs#L21) | <code>mod git_push;</code> |
 | [crates/atelier-ui/src/main.rs:22](../crates/atelier-ui/src/main.rs#L22) | <code>mod i18n;</code> |
 | [crates/atelier-ui/src/main.rs:23](../crates/atelier-ui/src/main.rs#L23) | <code>mod jira;</code> |
-| [crates/atelier-ui/src/main.rs:24](../crates/atelier-ui/src/main.rs#L24) | <code>mod jira_creation;</code> |
-| [crates/atelier-ui/src/main.rs:25](../crates/atelier-ui/src/main.rs#L25) | <code>mod jira_refresh;</code> |
-| [crates/atelier-ui/src/main.rs:26](../crates/atelier-ui/src/main.rs#L26) | <code>mod jira_task;</code> |
-| [crates/atelier-ui/src/main.rs:27](../crates/atelier-ui/src/main.rs#L27) | <code>mod live;</code> |
-| [crates/atelier-ui/src/main.rs:28](../crates/atelier-ui/src/main.rs#L28) | <code>mod preparation;</code> |
-| [crates/atelier-ui/src/main.rs:29](../crates/atelier-ui/src/main.rs#L29) | <code>mod projects;</code> |
-| [crates/atelier-ui/src/main.rs:30](../crates/atelier-ui/src/main.rs#L30) | <code>mod queue;</code> |
-| [crates/atelier-ui/src/main.rs:31](../crates/atelier-ui/src/main.rs#L31) | <code>mod review;</code> |
-| [crates/atelier-ui/src/main.rs:32](../crates/atelier-ui/src/main.rs#L32) | <code>mod runs;</code> |
-| [crates/atelier-ui/src/main.rs:33](../crates/atelier-ui/src/main.rs#L33) | <code>mod services;</code> |
-| [crates/atelier-ui/src/main.rs:34](../crates/atelier-ui/src/main.rs#L34) | <code>mod settings;</code> |
-| [crates/atelier-ui/src/main.rs:35](../crates/atelier-ui/src/main.rs#L35) | <code>mod task_editor;</code> |
-| [crates/atelier-ui/src/main.rs:36](../crates/atelier-ui/src/main.rs#L36) | <code>mod tempo;</code> |
-| [crates/atelier-ui/src/main.rs:37](../crates/atelier-ui/src/main.rs#L37) | <code>mod tempo_export;</code> |
-| [crates/atelier-ui/src/main.rs:38](../crates/atelier-ui/src/main.rs#L38) | <code>mod time;</code> |
-| [crates/atelier-ui/src/main.rs:39](../crates/atelier-ui/src/main.rs#L39) | <code>mod time_report;</code> |
-| [crates/atelier-ui/src/main.rs:40](../crates/atelier-ui/src/main.rs#L40) | <code>mod updates;</code> |
-| [crates/atelier-ui/src/main.rs:41](../crates/atelier-ui/src/main.rs#L41) | <code>mod worktree;</code> |
-| [crates/atelier-ui/src/main.rs:42](../crates/atelier-ui/src/main.rs#L42) | <code>use agent_profiles::AgentProfiles;</code> |
-| [crates/atelier-ui/src/main.rs:43](../crates/atelier-ui/src/main.rs#L43) | <code>use backups::Backups;</code> |
-| [crates/atelier-ui/src/main.rs:44](../crates/atelier-ui/src/main.rs#L44) | <code>use live::BoardState;</code> |
-| [crates/atelier-ui/src/main.rs:45](../crates/atelier-ui/src/main.rs#L45) | <code>use projects::Projects;</code> |
-| [crates/atelier-ui/src/main.rs:46](../crates/atelier-ui/src/main.rs#L46) | <code>use settings::Settings;</code> |
-| [crates/atelier-ui/src/main.rs:47](../crates/atelier-ui/src/main.rs#L47) | <code>use task_editor::TaskEditor;</code> |
+| [crates/atelier-ui/src/main.rs:24](../crates/atelier-ui/src/main.rs#L24) | <code>mod jira_batch;</code> |
+| [crates/atelier-ui/src/main.rs:25](../crates/atelier-ui/src/main.rs#L25) | <code>mod jira_creation;</code> |
+| [crates/atelier-ui/src/main.rs:26](../crates/atelier-ui/src/main.rs#L26) | <code>mod jira_refresh;</code> |
+| [crates/atelier-ui/src/main.rs:27](../crates/atelier-ui/src/main.rs#L27) | <code>mod jira_task;</code> |
+| [crates/atelier-ui/src/main.rs:28](../crates/atelier-ui/src/main.rs#L28) | <code>mod live;</code> |
+| [crates/atelier-ui/src/main.rs:29](../crates/atelier-ui/src/main.rs#L29) | <code>mod preparation;</code> |
+| [crates/atelier-ui/src/main.rs:30](../crates/atelier-ui/src/main.rs#L30) | <code>mod projects;</code> |
+| [crates/atelier-ui/src/main.rs:31](../crates/atelier-ui/src/main.rs#L31) | <code>mod queue;</code> |
+| [crates/atelier-ui/src/main.rs:32](../crates/atelier-ui/src/main.rs#L32) | <code>mod review;</code> |
+| [crates/atelier-ui/src/main.rs:33](../crates/atelier-ui/src/main.rs#L33) | <code>mod runs;</code> |
+| [crates/atelier-ui/src/main.rs:34](../crates/atelier-ui/src/main.rs#L34) | <code>mod services;</code> |
+| [crates/atelier-ui/src/main.rs:35](../crates/atelier-ui/src/main.rs#L35) | <code>mod settings;</code> |
+| [crates/atelier-ui/src/main.rs:36](../crates/atelier-ui/src/main.rs#L36) | <code>mod task_editor;</code> |
+| [crates/atelier-ui/src/main.rs:37](../crates/atelier-ui/src/main.rs#L37) | <code>mod tempo;</code> |
+| [crates/atelier-ui/src/main.rs:38](../crates/atelier-ui/src/main.rs#L38) | <code>mod tempo_export;</code> |
+| [crates/atelier-ui/src/main.rs:39](../crates/atelier-ui/src/main.rs#L39) | <code>mod time;</code> |
+| [crates/atelier-ui/src/main.rs:40](../crates/atelier-ui/src/main.rs#L40) | <code>mod time_report;</code> |
+| [crates/atelier-ui/src/main.rs:41](../crates/atelier-ui/src/main.rs#L41) | <code>mod updates;</code> |
+| [crates/atelier-ui/src/main.rs:42](../crates/atelier-ui/src/main.rs#L42) | <code>mod worktree;</code> |
+| [crates/atelier-ui/src/main.rs:43](../crates/atelier-ui/src/main.rs#L43) | <code>use agent_profiles::AgentProfiles;</code> |
+| [crates/atelier-ui/src/main.rs:44](../crates/atelier-ui/src/main.rs#L44) | <code>use backups::Backups;</code> |
+| [crates/atelier-ui/src/main.rs:45](../crates/atelier-ui/src/main.rs#L45) | <code>use live::BoardState;</code> |
+| [crates/atelier-ui/src/main.rs:46](../crates/atelier-ui/src/main.rs#L46) | <code>use projects::Projects;</code> |
+| [crates/atelier-ui/src/main.rs:47](../crates/atelier-ui/src/main.rs#L47) | <code>use settings::Settings;</code> |
+| [crates/atelier-ui/src/main.rs:48](../crates/atelier-ui/src/main.rs#L48) | <code>use task_editor::TaskEditor;</code> |
 | [crates/atelier-ui/src/preparation.rs:1](../crates/atelier-ui/src/preparation.rs#L1) | <code>use crate::{field, i18n::I18n, live::BoardState, replace_card, write};</code> |
 | [crates/atelier-ui/src/preparation.rs:2](../crates/atelier-ui/src/preparation.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/preparation.rs:7](../crates/atelier-ui/src/preparation.rs#L7) | <code>use gloo_net::http::Method;</code> |
@@ -4112,8 +4121,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:579](../xtask/src/ui.rs#L579) | <code>use atelier_core::application::updates::Phase;</code> |
 | [xtask/src/ui.rs:668](../xtask/src/ui.rs#L668) | <code>use atelier_app::infrastructure::{prototype::PrototypeDirectory, store::Documents};</code> |
 | [xtask/src/ui.rs:669](../xtask/src/ui.rs#L669) | <code>use atelier_core::document::Document;</code> |
-| [xtask/src/ui.rs:1386](../xtask/src/ui.rs#L1386) | <code>use std::io::Write;</code> |
-| [xtask/src/ui.rs:2514](../xtask/src/ui.rs#L2514) | <code>use atelier_core::application::extensions::Registry;</code> |
+| [xtask/src/ui.rs:1477](../xtask/src/ui.rs#L1477) | <code>use std::io::Write;</code> |
+| [xtask/src/ui.rs:2605](../xtask/src/ui.rs#L2605) | <code>use atelier_core::application::extensions::Registry;</code> |
 | [xtask/src/update_flow.rs:1](../xtask/src/update_flow.rs#L1) | <code>use crate::{Result, command, package, root, run};</code> |
 | [xtask/src/update_flow.rs:2](../xtask/src/update_flow.rs#L2) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/update_flow.rs:6](../xtask/src/update_flow.rs#L6) | <code>use atelier_core::application::updates::Phase;</code> |
@@ -4997,12 +5006,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:680](../xtask/src/ui.rs#L680) | <code>.args(["init", "-b", "main"]))?;</code> |
 | [xtask/src/ui.rs:689](../xtask/src/ui.rs#L689) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
 | [xtask/src/ui.rs:694](../xtask/src/ui.rs#L694) | <code>.args([</code> |
-| [xtask/src/ui.rs:2895](../xtask/src/ui.rs#L2895) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:2907](../xtask/src/ui.rs#L2907) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:2912](../xtask/src/ui.rs#L2912) | <code>.args([</code> |
-| [xtask/src/ui.rs:2927](../xtask/src/ui.rs#L2927) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:2933](../xtask/src/ui.rs#L2933) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
-| [xtask/src/ui.rs:3438](../xtask/src/ui.rs#L3438) | <code>.args([</code> |
+| [xtask/src/ui.rs:2986](../xtask/src/ui.rs#L2986) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:2998](../xtask/src/ui.rs#L2998) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:3003](../xtask/src/ui.rs#L3003) | <code>.args([</code> |
+| [xtask/src/ui.rs:3018](../xtask/src/ui.rs#L3018) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:3024](../xtask/src/ui.rs#L3024) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:3529](../xtask/src/ui.rs#L3529) | <code>.args([</code> |
 | [xtask/src/update_flow.rs:58](../xtask/src/update_flow.rs#L58) | <code>.args([</code> |
 | [xtask/src/update_flow.rs:129](../xtask/src/update_flow.rs#L129) | <code>.args(["build", "--locked", "--offline", "-p", "atelier-app"]))?;</code> |
 | [xtask/src/update_flow.rs:183](../xtask/src/update_flow.rs#L183) | <code>run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;</code> |
@@ -6269,4 +6278,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 570 fichiers ; 97 fichiers de tests Node.
+Total : 571 fichiers ; 97 fichiers de tests Node.
