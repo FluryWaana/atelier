@@ -29,9 +29,32 @@ pub fn reserve(store: &Store<'_>, input: &ForgeDraftRequest, id: &str) -> Result
             || expected.revision != input.revision
             || expected.status != "active"
             || expected.fork
-            || expected.draft == input.draft
+            || if let Some(content) = &input.content {
+                !expected.draft
+                    || input.draft != expected.draft
+                    || (content.title == expected.title && content.body == expected.body)
+            } else {
+                expected.draft == input.draft
+            }
         {
             return Err("Relis une PR/MR ouverte avant de modifier son état brouillon.".into());
+        }
+        if let Some(content) = &input.content {
+            if !atelier_core::application::forge::valid_content(expected.kind, content) {
+                return Err("Titre ou description de PR/MR invalide.".into());
+            }
+            if let Some(ticket) = card.fields.get::<Document>("ticket")? {
+                let key = ticket.get::<String>("key")?.unwrap_or_default();
+                let url = ticket.get::<String>("url")?.unwrap_or_default();
+                if (!key.is_empty() && !content.title.contains(&key))
+                    || (!url.is_empty() && !content.body.contains(&url))
+                {
+                    return Err(
+                        "Conserve la clé du ticket dans le titre et son lien dans la description."
+                            .into(),
+                    );
+                }
+            }
         }
         card.fields.set(
             "forgeDraft",
@@ -43,6 +66,7 @@ pub fn reserve(store: &Store<'_>, input: &ForgeDraftRequest, id: &str) -> Result
                 started_at: time::OffsetDateTime::now_utc()
                     .format(&time::format_description::well_known::Rfc3339)?,
                 observed: None,
+                content: input.content.clone(),
             },
         )?;
         store.put(Documents::Cards, &card)?;
@@ -113,7 +137,11 @@ pub fn record(
             return Err("La PR/MR relue ne correspond pas à l’opération incertaine.".into());
         }
         // A contrary read cannot prove a timed-out request will never be applied later.
-        if observed.draft == intent.draft {
+        if observed.draft == intent.draft
+            && intent.content.as_ref().is_none_or(|content| {
+                observed.title == content.title && observed.body == content.body
+            })
+        {
             intent.state = if reconciled {
                 Phase::Reconciled
             } else {

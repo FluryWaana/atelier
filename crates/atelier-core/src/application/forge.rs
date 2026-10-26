@@ -31,6 +31,22 @@ pub fn same_pull_request(
         && left.draft == right.draft
         && left.fork == right.fork
         && left.title == right.title
+        && left.body == right.body
+}
+pub fn valid_content(kind: ForgeKind, content: &crate::contracts::ForgeContent) -> bool {
+    !content.title.trim().is_empty()
+        && content.title.encode_utf16().count() <= 255
+        && content.body.encode_utf16().count()
+            <= if kind == ForgeKind::Azure {
+                4_000
+            } else {
+                20_000
+            }
+        && !content.title.chars().any(char::is_control)
+        && !content
+            .body
+            .chars()
+            .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
 }
 pub fn unresolved(fields: &crate::document::Document) -> Result<bool, serde_json::Error> {
     use crate::contracts::{ForgeDraftIntent, ForgeWriteState};

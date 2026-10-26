@@ -16,6 +16,7 @@ mod connectors;
 mod files;
 mod forge;
 mod forge_checks;
+mod forge_content;
 mod forge_publication;
 mod forge_task;
 mod git_push;

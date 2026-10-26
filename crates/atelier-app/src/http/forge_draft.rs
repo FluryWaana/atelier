@@ -62,7 +62,9 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
                     .fields
                     .get::<ForgeDraftIntent>("forgeDraft")?
                     .filter(|intent| {
-                        intent.state == ForgeWriteState::Uncertain && intent.draft == prepared.draft
+                        intent.state == ForgeWriteState::Uncertain
+                            && intent.draft == prepared.draft
+                            && intent.content == prepared.content
                     })
                     .ok_or("Aucune écriture de forge incertaine à vérifier.")?;
                 let configuration =
@@ -123,9 +125,15 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
                 .pull_request(&intent.expected.repository, intent.expected.number)
                 .await?
         } else {
-            let prepared = client
-                .prepare_draft(&intent.expected, intent.draft, &intent.id)
-                .await?;
+            let prepared = if let Some(content) = &intent.content {
+                client
+                    .prepare_content(&intent.expected, content, &intent.id)
+                    .await?
+            } else {
+                client
+                    .prepare_draft(&intent.expected, intent.draft, &intent.id)
+                    .await?
+            };
             let expected = card.clone();
             let operation = intent.id.clone();
             state

@@ -187,6 +187,30 @@ async fn draft_writes_are_single_attempt_and_lost_responses_can_be_observed_with
         }
     }
 }
+
+#[tokio::test]
+async fn content_recovery_requires_the_requested_text_and_preserves_human_card_fields() {
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database.call(|store| {
+        store.save_settings(&document(json!({"forgeRevision":1,"forgeConnections":{"github":{"kind":"github","base":"https://github.example.test"}}})))?;
+        let pr=serde_json::from_value::<atelier_core::contracts::PullRequest>(json!({"revision":1,"kind":"github","repository":"owner/repo","number":7,"title":"Old title","body":"Human body","url":"https://github.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github.example.test","checkedAt":"2026-10-25T10:00:00Z"}))?;
+        let card:Card=serde_json::from_str(&json!({"id":"task","title":"Human local title","description":"Human local description","pullRequest":pr}).to_string())?;
+        store.put(Documents::Cards,&card)?;
+        let input=ForgeDraftRequest{expected:card,revision:1,draft:true,confirmed:true,content:Some(atelier_core::contracts::ForgeContent{title:"New title".into(),body:"Human body".into()})};
+        let id=uuid::Uuid::new_v4().to_string();
+        let reserved=workflow::reserve(store,&input,&id)?;
+        workflow::sending(store,&reserved,&id)?;
+        workflow::recover(store)?;
+        let unchanged=workflow::record(store,"task",&id,pr.clone(),true)?;
+        assert_eq!(unchanged.fields.get::<ForgeDraftIntent>("forgeDraft")?.unwrap().state,Phase::Uncertain);
+        let mut observed=pr;observed.title="New title".into();
+        let result=workflow::record(store,"task",&id,observed,true)?;
+        assert_eq!(result.fields.get::<ForgeDraftIntent>("forgeDraft")?.unwrap().state,Phase::Reconciled);
+        assert_eq!(result.title,atelier_core::document::JsonString::from("Human local title"));
+        assert!(result.fields.string_equals("description","Human local description")?);
+        Ok(())
+    }).await.unwrap();
+}
 fn document(value: Value) -> Document {
     serde_json::from_str(&value.to_string()).unwrap()
 }
@@ -203,7 +227,7 @@ async fn persistent_intents_protect_work_recover_uncertainty_and_never_repeat_a_
         store.put(Documents::Cards,&card)?;
         let old_backup=backups.create(store)?;
         store.put(Documents::Runs,&document(json!({"id":"review","cardId":"task","kind":"pr-review","status":"completed"})))?;
-        let mut input=ForgeDraftRequest{expected:card,revision:1,draft:false,confirmed:false};
+        let mut input=ForgeDraftRequest{expected:card,revision:1,draft:false,confirmed:false,content:None};
         let operation=uuid::Uuid::new_v4().to_string();
         assert!(workflow::reserve(store,&input,&operation).is_err());input.confirmed=true;
         workflow::reserve(store,&input,&operation)?;

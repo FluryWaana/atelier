@@ -638,6 +638,8 @@ pub struct PullRequest {
     pub repository: String,
     pub number: u64,
     pub title: String,
+    #[serde(default)]
+    pub body: String,
     pub url: String,
     pub status: String,
     pub draft: bool,
@@ -715,6 +717,13 @@ pub struct ForgeDraftRequest {
     pub revision: u64,
     pub draft: bool,
     pub confirmed: bool,
+    pub content: Option<ForgeContent>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ForgeContent {
+    pub title: String,
+    pub body: String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -735,6 +744,7 @@ pub struct ForgeDraftIntent {
     pub draft: bool,
     pub started_at: String,
     pub observed: Option<PullRequest>,
+    pub content: Option<ForgeContent>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

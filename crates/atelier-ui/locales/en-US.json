@@ -1786,5 +1786,17 @@
   "Les politiques Azure ne correspondent pas à cette PR ou se répètent.": "Azure policies do not match this PR or are repeated.",
   "État de politique Azure absent.": "Azure policy state missing.",
   "Portée de politique Azure absente.": "Azure policy scope missing.",
-  "Lecture des politiques Azure limitée à 100 pages. Aucun résultat partiel affiché.": "Azure policy reading is limited to 100 pages. No partial result is shown."
+  "Lecture des politiques Azure limitée à 100 pages. Aucun résultat partiel affiché.": "Azure policy reading is limited to 100 pages. No partial result is shown.",
+  "Contenu de la PR/MR en brouillon": "Draft PR/MR content",
+  "Compare le contenu relu, puis confirme les champs modifiés. Une édition distante intervenant entre la comparaison et l’envoi peut être remplacée par la forge ; évite les éditions simultanées de ces champs.": "Compare the retrieved content, then confirm the edited fields. A remote edit made between comparison and sending can be replaced by the forge; avoid simultaneous edits to these fields.",
+  "Contenu distant relu": "Retrieved remote content",
+  "Envoyer les modifications de contenu à cette PR/MR en brouillon.": "Send content changes to this draft PR/MR.",
+  "Mettre à jour le contenu distant": "Update remote content",
+  "Annuler les modifications de contenu": "Cancel content changes",
+  "Contenu distant relu après envoi.": "Remote content read again after sending.",
+  "Titre ou description de PR/MR invalide.": "Invalid PR/MR title or description.",
+  "Conserve la clé du ticket dans le titre et son lien dans la description.": "Keep the ticket key in the title and its link in the description.",
+  "La PR/MR a changé. Relis-la avant de modifier son contenu.": "The PR/MR changed. Read it again before editing its content.",
+  "Aucun changement de contenu à envoyer.": "No content changes to send.",
+  "Contenu demandé par l’écriture incertaine": "Content requested by the uncertain write"
 }

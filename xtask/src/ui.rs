@@ -1030,6 +1030,15 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .goto(&format!("{address}/?task=jira-refresh"))
         .await?;
     wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true;",vec![]).await?;
+    client
+        .find(Locator::Css("#forge-content-title"))
+        .await?
+        .send_keys(" Human content draft")
+        .await?;
+    click(client, "#close-editor").await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(client,"return document.querySelector('#forge-content-title')?.value.endsWith(' Human content draft') && document.querySelector('#save-forge-content')?.disabled === true;",vec![]).await?;
+    click(client, "#reset-forge-content").await?;
     let description = client
         .find(Locator::Css("#edit-description"))
         .await?

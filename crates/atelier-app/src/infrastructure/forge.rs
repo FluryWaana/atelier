@@ -323,6 +323,7 @@ pub struct PreparedDraft {
     url: Url,
     body: Value,
     mutation: Option<&'static str>,
+    content: Option<atelier_core::contracts::ForgeContent>,
 }
 pub struct PreparedPublication {
     configuration: ForgeConfiguration,
@@ -884,6 +885,95 @@ impl Forge {
             url,
             body,
             mutation,
+            content: None,
+        })
+    }
+    pub async fn prepare_content(
+        &self,
+        expected: &PullRequest,
+        content: &atelier_core::contracts::ForgeContent,
+        operation: &str,
+    ) -> Result<PreparedDraft> {
+        if expected.kind != self.configuration.kind
+            || expected.base_url != self.configuration.base
+            || expected.revision != self.revision
+            || uuid::Uuid::parse_str(operation).is_err()
+            || content.title.contains(&self.token)
+            || content.body.contains(&self.token)
+        {
+            return Err("Intention de forge incohérente.".into());
+        }
+        if !atelier_core::application::forge::valid_content(expected.kind, content) {
+            return Err("Titre ou description de PR/MR invalide.".into());
+        }
+        let current = self
+            .pull_request(&expected.repository, expected.number)
+            .await?;
+        if !same_pull_request(expected, &current)
+            || !current.draft
+            || current.status != "active"
+            || current.fork
+        {
+            return Err("La PR/MR a changé. Relis-la avant de modifier son contenu.".into());
+        }
+        let parts = atelier_core::application::forge::repository(
+            current.kind,
+            &current.repository,
+            current.number,
+        )?;
+        let number = current.number.to_string();
+        let (method, url) = match current.kind {
+            ForgeKind::Github => (
+                reqwest::Method::PATCH,
+                self.endpoint(true, &["repos", parts[0], parts[1], "pulls", &number])?,
+            ),
+            ForgeKind::Gitlab => (
+                reqwest::Method::PUT,
+                self.endpoint(
+                    true,
+                    &["projects", &current.repository, "merge_requests", &number],
+                )?,
+            ),
+            ForgeKind::Azure => (
+                reqwest::Method::PATCH,
+                self.endpoint(
+                    true,
+                    &[
+                        parts[0],
+                        "_apis",
+                        "git",
+                        "repositories",
+                        parts[1],
+                        "pullrequests",
+                        &number,
+                    ],
+                )?,
+            ),
+        };
+        let mut body = serde_json::json!({});
+        if content.title != current.title {
+            body["title"] = serde_json::json!(content.title);
+        }
+        if content.body != current.body {
+            body[if current.kind == ForgeKind::Github {
+                "body"
+            } else {
+                "description"
+            }] = serde_json::json!(content.body);
+        }
+        if body.as_object().is_none_or(|body| body.is_empty()) {
+            return Err("Aucun changement de contenu à envoyer.".into());
+        }
+        // shortcut: remote APIs lack an atomic comparison of edited fields; recheck immediately before sending when they gain one.
+        Ok(PreparedDraft {
+            draft: current.draft,
+            expected: current,
+            operation: operation.into(),
+            method,
+            url,
+            body,
+            mutation: None,
+            content: Some(content.clone()),
         })
     }
     /// Consumed once; no retry, redirection or compensating remote write.
@@ -896,6 +986,7 @@ impl Forge {
             url,
             body,
             mutation,
+            content,
         } = prepared;
         if current.kind != self.configuration.kind
             || current.base_url != self.configuration.base
@@ -927,7 +1018,11 @@ impl Forge {
         let observed = self
             .pull_request(&current.repository, current.number)
             .await?;
-        if observed.draft != draft {
+        if observed.draft != draft
+            || content.as_ref().is_some_and(|content| {
+                observed.title != content.title || observed.body != content.body
+            })
+        {
             return Err(
                 "Écriture de forge incertaine. Relis l’état distant sans réenvoyer.".into(),
             );
@@ -1133,7 +1228,7 @@ impl Forge {
         &self,
         repository: &str,
         number: u64,
-        include_body: bool,
+        _include_body: bool,
     ) -> Result<(PullRequest, String, Value)> {
         let parts = atelier_core::application::forge::repository(
             self.configuration.kind,
@@ -1297,7 +1392,7 @@ impl Forge {
                 Ok(value.into())
             }
         };
-        let body = if include_body {
+        let body = {
             let value = if self.configuration.kind == ForgeKind::Github {
                 &row["body"]
             } else {
@@ -1317,8 +1412,6 @@ impl Forge {
                 return Err("Contenu de PR/MR invalide ou confidentiel.".into());
             }
             text.to_owned()
-        } else {
-            String::new()
         };
         Ok((
             PullRequest {
@@ -1327,6 +1420,7 @@ impl Forge {
                 repository: repository.into(),
                 number,
                 title: self.text(title, 8000)?.into(),
+                body: body.clone(),
                 url: browser_link(&self.configuration, repository, number)?,
                 status: status.into(),
                 draft: draft.ok_or("État brouillon de PR absent.")?,

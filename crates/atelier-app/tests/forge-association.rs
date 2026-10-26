@@ -24,6 +24,7 @@ fn pr() -> PullRequest {
         repository: "owner/repo".into(),
         number: 7,
         title: "Synthetic PR".into(),
+        body: String::new(),
         url: "https://github.example.test/owner/repo/pull/7".into(),
         status: "active".into(),
         draft: true,
