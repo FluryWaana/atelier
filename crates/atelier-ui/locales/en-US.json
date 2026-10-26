@@ -1941,5 +1941,18 @@
   "Le sélecteur est disponible depuis le lanceur natif.": "The folder picker is available through the native launcher.",
   "Confirme l’ouverture du sélecteur de dossiers.": "Confirm opening the folder picker.",
   "Sélecteur interrompu par l’arrêt d’Atelier.": "Folder picker interrupted by Atelier shutdown.",
-  "Estimation déclarée par Claude : {0} USD. Peut inclure une session reprise ; ce montant n’est pas une facture et n’est pas additionné aux autres exécutions.": "Estimate reported by Claude: {0} USD. May include a resumed session; this amount is not an invoice and is not added to other runs."
+  "Estimation déclarée par Claude : {0} USD. Peut inclure une session reprise ; ce montant n’est pas une facture et n’est pas additionné aux autres exécutions.": "Estimate reported by Claude: {0} USD. May include a resumed session; this amount is not an invoice and is not added to other runs.",
+  "Dernier relevé des quotas": "Last quota report",
+  "Limites déclarées par le service ; aucun accès à un modèle n’en est déduit.": "Limits reported by the service; they do not establish access to a model.",
+  "Les limites API sont distinctes des quotas d’abonnement.": "API limits are separate from subscription quotas.",
+  "Connecte le CLI puis relance la vérification.": "Sign in through the CLI, then check again.",
+  "Quotas indisponibles. Aucune valeur n’est déduite.": "Quotas unavailable. No values are inferred.",
+  "Actualise avec le contrôle du profil. Le relevé expire après dix minutes ou à la réinitialisation ; aucune lecture automatique du compte.": "Refresh through the profile check. The report expires after ten minutes or at reset; the account is never read automatically.",
+  "Fenêtre secondaire": "Secondary window",
+  "Fenêtre principale": "Primary window",
+  "À actualiser": "Refresh required",
+  "Réinitialisation : {0}": "Resets: {0}",
+  "Réinitialisation non communiquée": "Reset time not reported",
+  "{0} % restants": "{0}% remaining",
+  "Abonnement": "Subscription"
 }

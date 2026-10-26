@@ -1,3 +1,5 @@
+#[cfg(windows)]
+mod agent_account;
 mod agent_context;
 #[cfg(windows)]
 pub mod agent_diagnostics;

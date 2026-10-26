@@ -255,6 +255,8 @@ pub struct AgentDiagnostic {
     pub authentication_error: Option<String>,
     pub account: Option<String>,
     pub auth_method: Option<String>,
+    #[serde(default)]
+    pub account_report: Option<crate::application::agent_account::Report>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]

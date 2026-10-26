@@ -1826,9 +1826,17 @@ async fn profiles_scenario(
     token: &str,
     data: &Path,
 ) -> Result<()> {
-    let fixture = root()
+    let source = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    let native = data.join("agents-ui-native");
+    std::fs::create_dir(&native)?;
+    let fixture = native.join(format!("synthetic-agent{}", std::env::consts::EXE_SUFFIX));
+    std::fs::copy(source, &fixture)?;
+    std::fs::write(
+        native.join(".agent-run-fixture"),
+        "atelier-r03-synthetic-only",
+    )?;
     let config = data.join("agents-ui-config");
     std::fs::create_dir_all(&config)?;
     let request = |method, path: &str| {
@@ -1939,6 +1947,20 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && !document.querySelector('#agents-dialog')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#agent-account-quotas')?.textContent.includes('synthetic-plan') && document.querySelector('.agent-quota-value')?.textContent === '75.0 % restants' && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-account-output') && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-quota-output');",vec![]).await?;
+    client
+        .execute(
+            "window.__atelierQuotaClock=Date.now;const now=Date.now();Date.now=()=>now+601000;",
+            vec![],
+        )
+        .await?;
+    wait_dom(client,"return document.querySelector('.agent-quota-value')?.textContent === 'À actualiser' && document.querySelector('.agent-quota-window progress')?.hidden;",vec![]).await?;
+    client
+        .execute(
+            "Date.now=window.__atelierQuotaClock;delete window.__atelierQuotaClock;",
+            vec![],
+        )
+        .await?;
     let board: atelier_core::contracts::Board = request(reqwest::Method::GET, "/api/state")
         .send()
         .await?

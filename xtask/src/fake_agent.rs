@@ -33,6 +33,31 @@ pub fn run(codex: bool) -> Result<(), Box<dyn std::error::Error>> {
         if first["method"] != "initialize" {
             return Err("Missing synthetic Codex handshake".into());
         }
+        if first["id"] == "account-initialize" {
+            send(json!({"id":"account-initialize","result":{}}))?;
+            if receive(&mut input)?["method"] != "initialized" {
+                return Err("Missing read-only initialization".into());
+            }
+            let request = receive(&mut input)?;
+            if request["method"] != "account/read" || request["params"]["refreshToken"] != false {
+                return Err("Only a non-refreshing account read is allowed".into());
+            }
+            if mode == "atelier-r03-synthetic-failure" {
+                send(json!({"id":"account-read","result":{"account":null}}))?;
+                return Ok(());
+            }
+            send(
+                json!({"id":"account-read","result":{"account":{"type":"chatgpt","email":"synthetic@example.invalid","planType":"synthetic-plan","accessToken":"private-account-output"}}}),
+            )?;
+            let request = receive(&mut input)?;
+            if request["method"] != "account/rateLimits/read" {
+                return Err("Only quota reads are allowed".into());
+            }
+            send(
+                json!({"id":"account-quotas","result":{"rateLimits":{"limitId":"synthetic","primary":{"usedPercent":if mode=="atelier-r03-synthetic-malformed"{-1}else{25},"windowDurationMins":60,"resetsAt":2000000000}},"private":"private-quota-output"}}),
+            )?;
+            return Ok(());
+        }
         send(json!({"id":"initialize","result":{}}))?;
         if receive(&mut input)?["method"] != "initialized" {
             return Err("Missing initialized notification".into());

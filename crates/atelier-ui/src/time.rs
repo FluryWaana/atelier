@@ -8,7 +8,7 @@ use leptos::prelude::*;
 use std::{cell::Cell, rc::Rc};
 use wasm_bindgen::{JsCast, closure::Closure};
 use wasm_bindgen_futures::spawn_local;
-fn clock() -> RwSignal<f64> {
+pub(super) fn clock() -> RwSignal<f64> {
     let now = RwSignal::new(js_sys::Date::now());
     let tick = Closure::<dyn FnMut()>::new(move || now.set(js_sys::Date::now()));
     let interval = web_sys::window().and_then(|window| {

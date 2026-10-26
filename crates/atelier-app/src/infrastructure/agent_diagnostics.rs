@@ -320,6 +320,7 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         authentication_error: None,
         account: None,
         auth_method: None,
+        account_report: None,
     };
     let args = if kind == "command" {
         profile
@@ -359,6 +360,25 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
                 result.authentication_error = Some("Diagnostic de connexion indisponible.".into());
             }
         }
+    }
+    use atelier_core::application::agent_account::{Report, State};
+    if kind == "codex" {
+        let mut report = if api {
+            Report::unavailable(State::Api)
+        } else if result.authentication == AgentAuthentication::Absent {
+            Report::unavailable(State::Disconnected)
+        } else if result.authentication == AgentAuthentication::Present
+            && result.version_error.is_none()
+        {
+            super::agent_account::read(&binary, &environment(&profile, &inherited, true)?)
+                .await
+                .unwrap_or_else(|_| Report::unavailable(State::Unavailable))
+        } else {
+            Report::unavailable(State::Unavailable)
+        };
+        report.observed_at = time::OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)?;
+        result.account_report = Some(report);
     }
     Ok(result)
 }
@@ -427,6 +447,7 @@ mod tests {
             authentication_error: None,
             account: None,
             auth_method: None,
+            account_report: None,
         };
         let mut output = std::process::Output { status:std::process::ExitStatus::from_raw(0), stdout:br#"{"loggedIn":true,"email":"synthetic@example.invalid","authMethod":"api_key","accessToken":"never expose this"}"#.to_vec(), stderr:b"secret stderr".to_vec() };
         authentication(&mut diagnostic, "claude", &output, &Environment::new()).unwrap();

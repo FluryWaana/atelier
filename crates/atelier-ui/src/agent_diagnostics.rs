@@ -56,7 +56,35 @@ pub fn AgentDiagnostics(
                 <p class="error">{diagnostic.authentication_error.map(|message| i18n.text(&message))}</p>
                 {diagnostic.account.map(|account| view! { <p><strong>{move || i18n.text("Compte")}</strong>" : "{account}</p> })}
                 {diagnostic.auth_method.map(|method| view! { <p><strong>{move || i18n.text("Authentification")}</strong>" : "{method}</p> })}
+                {diagnostic.account_report.map(|report|view!{<AccountQuotas report/>})}
             })}</div>
         </section>
     }
+}
+
+#[component]
+fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> impl IntoView {
+    use atelier_core::application::agent_account::State;
+    let i18n = expect_context::<I18n>();
+    let now = crate::time::clock();
+    let observed = js_sys::Date::parse(&report.observed_at);
+    view! {<section id="agent-account-quotas" class="task-files" aria-label=move||i18n.text("Dernier relevé des quotas")>
+        <h4>{move||i18n.text("Dernier relevé des quotas")}</h4>
+        <p>{report.observed_at}</p>
+        <p>{i18n.text(match report.state{State::Available=>"Limites déclarées par le service ; aucun accès à un modèle n’en est déduit.",State::Api=>"Les limites API sont distinctes des quotas d’abonnement.",State::Disconnected=>"Connecte le CLI puis relance la vérification.",State::Unsupported=>"Ce mode de connexion ne fournit pas ces quotas.",State::Unavailable=>"Quotas indisponibles. Aucune valeur n’est déduite."})}</p>
+        {report.account.map(|account|view!{<p>{i18n.text("Compte")}" : "{account}</p>})}
+        {report.subscription.map(|plan|view!{<p>{i18n.text("Abonnement")}" : "{plan}</p>})}
+        <p class="field-help">{move||i18n.text("Actualise avec le contrôle du profil. Le relevé expire après dix minutes ou à la réinitialisation ; aucune lecture automatique du compte.")}</p>
+        <For each=move||report.windows.clone() key=|window|format!("{}:{}:{:?}:{:?}",window.name,window.kind,window.window_minutes,window.resets_at) children=move|window|{
+            let stale=move||!observed.is_finite()||now.get()-observed>=600_000.0||window.resets_at.is_some_and(|date|date as f64*1000.0<=now.get());
+            let label=if window.kind=="secondary"{"Fenêtre secondaire"}else{"Fenêtre principale"};
+            let minutes=window.window_minutes;let amount=f64::from(window.remaining_tenths)/10.0;
+            let reset=window.resets_at.map(|date|String::from(js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(date as f64*1000.0)).to_iso_string()));
+            view!{<article class="task-files agent-quota-window"><h5>{window.name}</h5><p>{move||i18n.text(label)}{minutes.map(|minutes|format!(" · {minutes} min"))}</p>
+                <p class="agent-quota-value">{move||if stale(){i18n.text("À actualiser")}else{i18n.text("{0} % restants").replace("{0}",&format!("{amount:.1}"))}}</p>
+                <progress max="100" value=amount hidden=stale aria-label=move||i18n.text(label)></progress>
+                <p>{reset.map(|reset|i18n.text("Réinitialisation : {0}").replace("{0}",&reset)).unwrap_or_else(||i18n.text("Réinitialisation non communiquée"))}</p>
+            </article>}
+        }/>
+    </section>}
 }

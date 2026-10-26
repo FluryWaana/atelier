@@ -3,6 +3,7 @@ use crate::{
     document::{Document, JsonString},
 };
 
+pub mod agent_account;
 pub mod agent_protocol;
 pub mod agent_providers;
 pub mod agent_usage;
