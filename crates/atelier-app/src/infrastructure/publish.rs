@@ -2,6 +2,45 @@ use crate::Result;
 use cap_std::fs::Dir;
 use std::path::{Component, Path};
 
+#[cfg(target_os = "linux")]
+pub(super) fn rename_new_between(
+    source: &Dir,
+    name: &std::ffi::OsStr,
+    destination: &Dir,
+    next: &std::ffi::OsStr,
+) -> Result<()> {
+    use std::{
+        ffi::CString,
+        os::{fd::AsRawFd, unix::ffi::OsStrExt},
+    };
+    for name in [name, next] {
+        if !matches!(
+            Path::new(name).components().collect::<Vec<_>>().as_slice(),
+            [Component::Normal(_)]
+        ) {
+            return Err("Nom de publication système invalide.".into());
+        }
+    }
+    let name = CString::new(name.as_bytes())?;
+    let next = CString::new(next.as_bytes())?;
+    // The verified source and destination handles remain live, and existing names are never replaced.
+    if unsafe {
+        libc::renameat2(
+            source.as_raw_fd(),
+            name.as_ptr(),
+            destination.as_raw_fd(),
+            next.as_ptr(),
+            libc::RENAME_NOREPLACE,
+        )
+    } != 0
+    {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    source.try_clone()?.into_std_file().sync_all()?;
+    destination.try_clone()?.into_std_file().sync_all()?;
+    Ok(())
+}
+
 pub(super) fn write_private(
     directory: &Dir,
     name: &Path,

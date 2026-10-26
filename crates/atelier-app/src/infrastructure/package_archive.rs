@@ -24,6 +24,10 @@ impl StagedPackage {
     pub fn manifest(&self) -> &Value {
         &self.manifest
     }
+    #[cfg(target_os = "linux")]
+    pub(super) fn keep(self) -> std::path::PathBuf {
+        self.directory.keep()
+    }
 }
 
 fn footer(bytes: &[u8]) -> Result<(usize, u64)> {

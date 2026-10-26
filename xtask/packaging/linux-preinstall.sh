@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
-if [ -e /opt/atelier-kanban-rust ] || [ -L /opt/atelier-kanban-rust ]; then
-  echo 'Existing Atelier Rust installation preserved. Use signed updates or uninstall the stopped package first.' >&2
-  exit 1
+root=/opt/atelier-kanban-rust
+tool=/usr/lib/atelier-kanban-rust/package-tool
+if [ -e "$root" ] || [ -L "$root" ]; then
+  if [ ! -x "$tool" ] || [ -L "$tool" ]; then
+    echo 'Existing foreign installation preserved; administrator review required.' >&2
+    exit 1
+  fi
+  "$tool" system-package reserve --root "$root" --confirm
 fi

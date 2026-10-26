@@ -54,10 +54,19 @@ try {
   $nativePowerShell = Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell/v1.0/powershell.exe'
   Invoke-Owned $nativePowerShell @('-NoLogo', '-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'qualify-tray-windows.ps1'), '-LockFile', (Join-Path $data '.atelier-data-lock.sqlite'), '-Port', "$port")
   $launched = $false
+  # Reuse the signed successor and existing updater on the actual Setup installation.
+  # The helper reads the synthetic DPAPI session internally; no token enters PowerShell.
+  Invoke-Owned 'cargo' @('xtask', 'qualify-installed-update', $app, $data, "$port", $deliveryRoot)
+  $upgradeReport = Get-Content -LiteralPath (Join-Path $deliveryRoot 'native-installed-upgrade-qualification.json') -Raw | ConvertFrom-Json
+  if (-not $upgradeReport.runtimeVersionObserved -or -not $upgradeReport.conversationPreserved -or -not $upgradeReport.previousSlotRetained -or -not $upgradeReport.stopped) { throw 'Installed upgrade qualification incomplete.' }
   $database = Join-Path $data 'kanban.sqlite'
   if (-not (Test-Path -LiteralPath $database)) { throw 'Synthetic database missing after native launch.' }
   $databaseHash = (Get-FileHash -LiteralPath $database -Algorithm SHA256).Hash
   $current = Get-Content -LiteralPath (Join-Path $app 'current.json') -Raw | ConvertFrom-Json
+  if ($current.active.version -ne $upgradeReport.toVersion -or $current.previous.version -ne $upgradeReport.fromVersion) { throw 'Installed upgrade history changed before uninstall.' }
+  $upgradedSlot = Join-Path (Join-Path $app 'versions') $current.active.id
+  $upgradedReceipt = Join-Path (Join-Path $app 'receipts') ($current.active.id + '.json')
+  if (-not (Test-Path -LiteralPath $upgradedReceipt)) { throw 'Upgraded signed receipt missing.' }
   $signedReadme = Join-Path (Join-Path (Join-Path $app 'versions') $current.active.id) 'README.txt'
   $original = [IO.File]::ReadAllBytes($signedReadme)
   [IO.File]::AppendAllText($signedReadme, 'synthetic human modification')
@@ -71,6 +80,8 @@ try {
   if ([IO.File]::ReadAllText($humanNote) -ne 'preserve-untracked') { throw 'Untracked file was removed.' }
   if ((Get-FileHash -LiteralPath $database -Algorithm SHA256).Hash -ne $databaseHash) { throw 'Uninstall changed the synthetic database.' }
   if (Test-Path -LiteralPath $registration) { throw 'Native uninstall registration remained.' }
+  # Inno never owned slots created by the Rust updater; retain their inactive signed code.
+  if (-not (Test-Path -LiteralPath $upgradedSlot) -or -not (Test-Path -LiteralPath $upgradedReceipt)) { throw 'Updater-created signed history was removed unexpectedly.' }
   # The retained human root remains protected; reinstall into a fresh explicit destination.
   $reinstalled = Join-Path $fixture 'reinstalled'
   Invoke-Owned $setups[0].FullName ($silent + @("/DIR=$reinstalled", "/LOG=$(Join-Path $deliveryRoot 'setup-reinstall.log')"))
@@ -78,7 +89,7 @@ try {
   $secondUninstaller = @(Get-ChildItem -LiteralPath $reinstalled -Filter 'unins*.exe' -File)
   if ($secondUninstaller.Count -ne 1) { throw 'Reinstalled native uninstaller missing.' }
   Invoke-Owned $secondUninstaller[0].FullName $silent
-  $report = [ordered]@{format='atelier-rust-native-installer-qualification/1';platform='windows-x64';setupInstalled=$true;launcherExecuted=$true;activeServerRemovalRefused=$true;activeServerInstallRefused=$true;nativeTrayMenuOpened=$true;nativeTrayOpenCommandCompleted=$true;nativeTrayBrowserSessionPrepared=$true;nativeTrayQuitInvoked=$true;nativeTrayRemoved=$true;dataLockReleasedBeforeRestart=$true;modifiedCodePreserved=$true;partialRootPreserved=$true;uninstallExecuted=$true;untrackedFilePreserved=$true;databasePreserved=$true;reinstallExecuted=$true;fixture=$fixture;published=$false}
+  $report = [ordered]@{format='atelier-rust-native-installer-qualification/1';platform='windows-x64';setupInstalled=$true;launcherExecuted=$true;activeServerRemovalRefused=$true;activeServerInstallRefused=$true;nativeTrayMenuOpened=$true;nativeTrayOpenCommandCompleted=$true;nativeTrayBrowserSessionPrepared=$true;nativeTrayQuitInvoked=$true;nativeTrayRemoved=$true;dataLockReleasedBeforeRestart=$true;installedUpgradeExecuted=$true;newRuntimeVersionObserved=$true;conversationPreserved=$true;updaterCreatedCodeRetainedInactive=$true;modifiedCodePreserved=$true;partialRootPreserved=$true;uninstallExecuted=$true;untrackedFilePreserved=$true;databasePreserved=$true;reinstallExecuted=$true;fixture=$fixture;published=$false}
   [IO.File]::WriteAllText((Join-Path $deliveryRoot 'native-installer-qualification.json'), ($report | ConvertTo-Json -Depth 5))
 } finally {
   if ($launched) {

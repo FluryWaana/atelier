@@ -5,7 +5,11 @@ use atelier_app::infrastructure::{
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use std::{path::Path, process::Stdio, time::Duration};
+use std::{
+    path::Path,
+    process::Stdio,
+    time::{Duration, Instant},
+};
 
 fn campaign() -> Result<()> {
     if std::env::var("CI").as_deref() != Ok("true")
@@ -34,7 +38,12 @@ async fn cli(binary: &Path, args: &[std::ffi::OsString]) -> Result<()> {
     Ok(())
 }
 
-async fn portable(archive: &Path, signature: &Path, trust: &Path, temporary: &Path) -> Result<()> {
+async fn portable(
+    archive: &Path,
+    signature: &Path,
+    trust: &Path,
+    temporary: &Path,
+) -> Result<serde_json::Value> {
     let target = payload::native_target()?;
     let installation = temporary.join("portable");
     installed::install(
@@ -71,13 +80,15 @@ async fn portable(archive: &Path, signature: &Path, trust: &Path, temporary: &Pa
         port.to_string().into(),
         "--no-browser".into(),
     ];
-    let result: Result<()> = async {
+    let result: Result<serde_json::Value> = async {
+        let started=Instant::now();
         cli(&binary, &args).await?;
         let address = format!("http://127.0.0.1:{port}");
         let observed = LocalHttp::new()?
             .authenticated_health(&address, || session::read_optional(&data))
             .await?
             .ok_or("Le paquet n’a pas démarré.")?;
+        let startup_ms=started.elapsed().as_millis();
         if observed["version"] != env!("CARGO_PKG_VERSION")
             || observed["protocol"] != "atelier-local/1"
         {
@@ -99,6 +110,7 @@ async fn portable(archive: &Path, signature: &Path, trust: &Path, temporary: &Pa
             .error_for_status()?
             .json()
             .await?;
+        let stopping=Instant::now();
         cli(
             &binary,
             &[
@@ -110,11 +122,15 @@ async fn portable(archive: &Path, signature: &Path, trust: &Path, temporary: &Pa
             ],
         )
         .await?;
+        let initial_stop_ms=stopping.elapsed().as_millis();
+        let restarting=Instant::now();
         cli(&binary, &args).await?;
+        let restart_ms=restarting.elapsed().as_millis();
         let token = session::read(&data)?;
         if token == first_token {
             return Err("Le paquet n’a pas renouvelé sa session au redémarrage.".into());
         }
+        let reading=Instant::now();
         let state: serde_json::Value = http
             .get(format!("{address}/api/state"))
             .bearer_auth(&token)
@@ -123,20 +139,23 @@ async fn portable(archive: &Path, signature: &Path, trust: &Path, temporary: &Pa
             .error_for_status()?
             .json()
             .await?;
+        let state_read_ms=reading.elapsed().as_millis();
         if state["cards"]
             .as_array()
             .is_none_or(|cards| !cards.contains(&card))
         {
             return Err("Le paquet a perdu une conversation après redémarrage.".into());
         }
-        Ok(())
+        Ok(json!({"startupMs":startup_ms,"initialStopMs":initial_stop_ms,"restartMs":restart_ms,"stateReadMs":state_read_ms,"scope":"single synthetic journey on this native runner","baseline":null,"speedupClaimed":false}))
     }
     .await;
+    let stopping_at = Instant::now();
     let stopping = launcher::stop(&data, port).await;
-    result?;
+    let mut observations = result?;
     stopping?;
+    observations["finalStopMs"] = json!(stopping_at.elapsed().as_millis());
     installed::verify_all(&installation, target)?;
-    Ok(())
+    Ok(observations)
 }
 
 pub(super) async fn qualify(output: &Path) -> Result<()> {
@@ -160,7 +179,7 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
         .join("target/release")
         .join(payload::binary_name(target)?);
     let assets = root().join(".artifacts/rust-ui");
-    let notices = work.path().join("THIRD-PARTY-NOTICES.txt");
+    let notices = work.path().join("third-party-notices.txt");
     crate::notices::generate(&notices).await?;
     let staging = work.path().join("payload");
     crate::package::stage(target, &binary, &assets, &notices, &staging)?;
@@ -169,18 +188,67 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
         env!("CARGO_PKG_VERSION")
     ));
     let signature = delivery.join("signed-package.json");
-    let keys = work.path().join("synthetic-keys-not-for-delivery");
+    let keys = work.path().join("keys");
     update_package::generate_synthetic(&keys)?;
     package_archive::create(&staging, &archive)?;
     update_package::sign(&archive, target, &keys, &signature)?;
     let trust = delivery.join(update_package::PUBLIC_KEY);
     std::fs::copy(keys.join(update_package::PUBLIC_KEY), &trust)?;
-    portable(&archive, &signature, &trust, work.path()).await?;
+    let observations = portable(&archive, &signature, &trust, work.path()).await?;
+    let mut parts = payload::version_parts(env!("CARGO_PKG_VERSION"))?;
+    parts[2] = parts[2]
+        .checked_add(1)
+        .ok_or("Version de fixture excessive.")?;
+    let next = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
+    let successor = crate::update_flow::next_binary(work.path(), &next)?;
+    let (next_archive, next_signature) =
+        crate::update_flow::archive(work.path(), "next", &successor, &assets, &next)?;
+    let future = delivery.join("successor");
+    std::fs::create_dir(&future)?;
+    payload::write(
+        &future.join("next.zip"),
+        &payload::read(&next_archive, package_archive::ARCHIVE_LIMIT)?,
+    )?;
+    payload::write(
+        &future.join("next.json"),
+        &payload::read(&next_signature, 16 * 1024)?,
+    )?;
     if !target.contains("apple") {
         crate::installers::build(&archive, &signature, &trust, &delivery.join("installers"))
             .await?;
     }
+    if target.contains("linux") {
+        crate::installers::build(
+            &next_archive,
+            &next_signature,
+            &trust,
+            &future.join("installers"),
+        )
+        .await?;
+        let (bad, bad_signature) =
+            crate::update_flow::archive(work.path(), "wrong-runtime", &binary, &assets, &next)?;
+        crate::installers::build(
+            &bad,
+            &bad_signature,
+            &trust,
+            &delivery.join("negative-installers"),
+        )
+        .await?;
+        let foreign = work.path().join("foreign-keys");
+        update_package::generate_synthetic(&foreign)?;
+        update_package::sign(
+            &next_archive,
+            target,
+            &foreign,
+            &delivery.join("foreign-signed-package.json"),
+        )?;
+        payload::write(
+            &delivery.join("foreign-update-public.json"),
+            &payload::read(&foreign.join(update_package::PUBLIC_KEY), 4096)?,
+        )?;
+    }
     let bytes = payload::read(&archive, 512 * 1024 * 1024)?;
+    let archive_size = bytes.len();
     let checksum = format!("{:x}", Sha256::digest(bytes));
     payload::write(
         &delivery.join("portable.sha256"),
@@ -201,6 +269,8 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
         "format":"atelier-rust-package-qualification/1",
         "commit":std::str::from_utf8(&revision.stdout)?.trim(),
         "target":target,"version":env!("CARGO_PKG_VERSION"),
+        "archiveBytes":archive_size,"observations":observations,
+        "nativeUpdateRollbackQualification":"pending explicit test-updates stage","syntheticSuccessorVersion":next,
         "portable":{"sha256":checksum,"signatureVerified":true,"installationVerified":true,"existingDestinationRefused":true,"nativeLauncherExecuted":true,"runtimeVersionObserved":true,"restartPersistenceObserved":true,"sessionRotated":true,"stopped":true},
         "nativeFormats":{"built":!target.contains("apple"),"qualification":"separate native manager scenario required"},
         "syntheticSignatureOnly":true,"published":false

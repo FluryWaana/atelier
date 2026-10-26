@@ -59,7 +59,11 @@ Le serveur Windows conserve un mutex global entre sessions ; Setup/désinstallat
 
 `verify-installation` contrôle bootstrap, slots et reçus sans ouvrir de données. Le retrait refuse code modifié, reçu étranger et historique nécessitant un examen. Les fichiers humains non suivis et données sont conservés. La récupération Linux exige verrou exclusif, marqueur exact et installation signée complète ; elle conserve le marqueur dans un reçu et ne répare pas silencieusement une installation partiellement effacée.
 
-**Limite encore ouverte :** les formats natifs acceptent une installation neuve ; les mises à jour du paquet système et la récupération d’une extraction partielle restent à compléter/qualifier. L’updater Rust utilisateur ne donne pas au serveur les droits d’écrire dans `/opt`. Aucun succès de mise à jour via dpkg/rpm n’est revendiqué par les scénarios ci-dessous.
+Les recettes DEB/RPM conservent leur outil et l’archive signée sous `/usr/lib/atelier-kanban-rust` ; le code actif sous `/opt/atelier-kanban-rust` appartient au cycle Rust. Avant remplacement, le gestionnaire réserve la maintenance sous verrou exclusif. Après extraction, `system-package apply` vérifie confiance, signature, cible et version réellement compilée, prépare un slot puis bascule le pointeur atomiquement. L’écran d’update système guide vers le gestionnaire ; il ne tente pas une écriture utilisateur dans `/opt`.
+
+`system-package recover --root /opt/atelier-kanban-rust --confirm` reprend hors ligne depuis le journal de code et la confiance installée. Le journal persistant bloque le démarrage même si le marqueur manque ; une récupération du marqueur historique ne peut pas lever ce blocage. Un échec garde le code précédent vérifié ou laisse l’opération explicitement incertaine. Aucun parcours ne lit, restaure ou rétrograde la base. Le retrait déplace seulement les fichiers suivis, inchangés, dans un dossier conservé ; les fichiers humains restent en place. Les préparations et retraits conservés sont bornés à deux chacun, les slots à seize et 1 Gio : la limite refuse l’opération sans effacement automatique. Un contenu humain modifié, une identité de dossier différente ou un effet ambigu impose une intervention explicite.
+
+Sous Windows, Inno retire les fichiers et inscriptions qu’il suit. Le scénario Setup applique d’abord l’archive successeur existante, vérifie version réellement servie, conversation et historique précédent, arrête puis désinstalle. Les slots/reçus créés ensuite par l’updater Rust restent inactifs après désinstallation ; aucune suppression récursive de ces fichiers ni du contenu humain n’est promise. Ces mécanismes et scénarios restent des candidats non exécutés.
 
 ## Lanceur, tray et transfert
 
@@ -73,18 +77,22 @@ Le transfert Rust portable explicite réutilise `import-data` et son choix de so
 
 ```text
 cargo xtask qualify-packages .artifacts/rust-delivery
-cargo xtask test-updates
+cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
 cargo test -p atelier-app --test native-tray --locked -- --ignored
 cargo test -p atelier-app --test native-import --locked -- --ignored
+cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
+cargo test -p xtask --test forge-review-tls --locked -- --ignored
 ```
 
 Le workflow manuel `rust.yml` prévoit la matrice native des cinq cibles et Edge/Chrome/Firefox/Safari. Le défaut `full_matrix=true` prépare la campagne complète ; une exécution partielle ne satisferait pas la checklist. Les paquets sont fabriqués seulement après les jobs natifs et navigateur réussis, avec assets WASM partagés. Aucun job ni commande ci-dessus n’a été exécuté ici.
 
-`qualify-packages` construit le vrai binaire release, génère avis/ZIP/signature synthétique, installe puis exécute le lanceur portable : version observée, destination existante refusée, conversation conservée au redémarrage, session renouvelée et arrêt. Il produit les formats natifs et un rapport des seules étapes achevées ; il ne les marque pas installés.
+`qualify-packages` construit le vrai binaire release et un successeur, génère avis/ZIP/signatures synthétiques, installe puis exécute le lanceur portable : version observée, destination existante refusée, conversation conservée au redémarrage, session renouvelée et arrêt. Il mesure les durées effectives de démarrage, redémarrage, arrêts et relecture d’état ainsi que la taille réelle de l’archive. Ce sont des observations du runner sans baseline ni gain de vitesse revendiqué. Il produit les formats natifs et un rapport des seules étapes achevées ; installation native et update/rollback restent explicitement en attente de leurs étapes distinctes.
 
-Les scénarios natifs distincts prévoient Setup/réinstallation/refus d’un serveur actif ou code humain sous Windows ; DEB/RPM via vrais gestionnaires dans conteneurs Ubuntu/Fedora jetables de l’architecture native, utilisateur synthétique distinct, retrait actif refusé, reprise du marqueur, code modifié et données/fichiers humains conservés. Les logs/JSON effectifs et archives restent des artifacts CI de préproduction, jamais une release. La clé privée et les données de fixture n’y sont pas incluses.
+Les scénarios natifs distincts prévoient Setup/réinstallation/refus d’un serveur actif ou code humain sous Windows ; DEB/RPM via vrais gestionnaires dans conteneurs Ubuntu/Fedora jetables de l’architecture native, utilisateur synthétique distinct, retrait et upgrade actifs refusés, confiance étrangère et version compilée incorrecte refusées, récupération hors ligne, upgrade réel puis conversation relue, code modifié et données/fichiers humains conservés. Les logs/JSON effectifs et archives restent des artifacts CI de préproduction, jamais une release. La clé privée et les données de fixture n’y sont pas incluses.
 
-`test-updates` compile une deuxième version depuis les sources Rust suivies, signe les deux paquets et vérifie update puis rollback après version réellement exécutée incorrecte, sans perdre la conversation. Les tests de desktop explicitement ignorés ne seront des preuves qu’après invocation réelle et lecture de leurs résultats. `native-import` concerne Windows ; les interactions POSIX du sélecteur restent à qualifier.
+Les trois étapes natives explicites `test-updates --prepared-delivery` vérifient et réutilisent les deux archives signées déjà fabriquées. Elles conservent les assertions de changement de version réellement exécutée, session et conversation, puis de rollback après version compilée incorrecte. Leur rapport n’est écrit qu’après réussite effective ; la commande sans option conserve le parcours autonome avec compilation. Les tests de desktop explicitement ignorés ne seront des preuves qu’après invocation réelle et lecture de leurs résultats. `native-import` concerne Windows ; les interactions POSIX du sélecteur restent à qualifier.
+
+Les parcours TLS natifs utilisent des CA et serveurs HTTPS temporaires synthétiques. Sur macOS, l’outillage de test compile un Git épinglé et vérifie son lien avec le curl Homebrew OpenSSL ; son chemin précède le Git système et reste transmis aux sous-processus isolés. Cet outil de qualification reste hors payload. Aucun repli de confiance vers le trousseau personnel n’est prévu.
 
 Linux utilise des sessions D-Bus/XDG et keyrings jetables. macOS crée un trousseau temporaire dédié/marqué et transmet son chemin sous garde CI/finale/jetable : lectures, écritures et suppressions de secrets lui sont explicitement liées, sans recherche dans le trousseau par défaut. Les probes de comptes/trousseaux déjà explicitement ciblés conservent leur scope. Les mots de passe/clés synthétiques restent hors arguments et journaux. Le backend refuse en CI un accès implicite au trousseau macOS par défaut.
 

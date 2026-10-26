@@ -139,6 +139,19 @@ fn main() -> Result<()> {
 async fn application() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
+    if first.as_deref() == Some(std::ffi::OsStr::new("inspect-runtime")) {
+        if command.next().is_some() {
+            return Err("Le contrôle du runtime ne reçoit aucun argument.".into());
+        }
+        println!(
+            "{}",
+            serde_json::json!({"protocol":"atelier-runtime/1","version":env!("CARGO_PKG_VERSION"),"target":package::native_target()?})
+        );
+        return Ok(());
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("system-package")) {
+        return atelier_app::infrastructure::system_package::command(command).await;
+    }
     if first.as_deref() == Some(std::ffi::OsStr::new("verify-installation")) {
         if command.next().is_some() {
             return Err("La vérification de l’installation ne reçoit aucun argument.".into());

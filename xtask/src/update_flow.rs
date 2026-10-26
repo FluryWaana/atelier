@@ -51,7 +51,7 @@ pub(super) async fn stop_fixture(root: &Path, data: &Path, port: u16) -> Result<
     }
     launcher::stop(data, port).await
 }
-fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
+pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
     let source = temporary.join("source");
     std::fs::create_dir(&source)?;
     let output = command("git")
@@ -126,8 +126,15 @@ fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
     run(command("cargo")
         .current_dir(&source)
         .env("CARGO_TARGET_DIR", &target)
-        .args(["build", "--locked", "--offline", "-p", "atelier-app"]))?;
-    Ok(target.join("debug").join(if cfg!(windows) {
+        .args([
+            "build",
+            "--release",
+            "--locked",
+            "--offline",
+            "-p",
+            "atelier-app",
+        ]))?;
+    Ok(target.join("release").join(if cfg!(windows) {
         "atelier.exe"
     } else {
         "atelier"
@@ -179,6 +186,179 @@ async fn terminal(root: &Path, id: &str) -> Result<Phase> {
 }
 
 pub(super) async fn test() -> Result<()> {
+    test_inner(None, None).await
+}
+
+pub(super) async fn test_prepared(original: &Path, successor: &Path) -> Result<()> {
+    test_inner(Some(original), Some(successor)).await
+}
+
+pub(super) async fn test_installed(
+    installation: &Path,
+    data: &Path,
+    port: u16,
+    delivery: &Path,
+) -> Result<()> {
+    if !cfg!(windows)
+        || std::env::var("CI").as_deref() != Ok("true")
+        || std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() != Ok("1")
+        || port == 0
+    {
+        return Err("Qualification Setup réservée à Windows CI final jetable.".into());
+    }
+    let base =
+        std::fs::canonicalize(std::env::var_os("RUNNER_TEMP").ok_or("Runner temporaire absent.")?)?;
+    let installation = std::fs::canonicalize(installation)?;
+    let data = std::fs::canonicalize(data)?;
+    if !installation.starts_with(&base)
+        || !data.starts_with(&base)
+        || installation == base
+        || data == base
+    {
+        return Err(
+            "Installation et données synthétiques doivent appartenir au temporaire du runner."
+                .into(),
+        );
+    }
+    installed::verify_all(&installation, payload::native_target()?)?;
+    let original = installed::open(&installation, payload::native_target()?)?
+        .ok_or("Installation Setup absente.")?;
+    let old = original.current().active.clone();
+    launcher::start(
+        &original.active_executable()?,
+        &data,
+        &original.slot_path(&old)?.join("ui"),
+        port,
+        false,
+    )
+    .await?;
+    let _stop = Stop {
+        root: installation.clone(),
+        data: data.clone(),
+        port,
+    };
+    let address = format!("http://127.0.0.1:{port}");
+    let http = reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(10))
+        .build()?;
+    let token = session::read(&data)?;
+    let card: serde_json::Value = http
+        .post(format!("{address}/api/brainstorms"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Synthetic Setup upgrade persistence"}))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let preview = updates::preview(
+        &installation,
+        &delivery.join("successor/next.zip"),
+        &delivery.join("successor/next.json"),
+        &data,
+        port,
+    )
+    .await?;
+    updates::apply(&installation, &preview.id, true).await?;
+    if terminal(&installation, &preview.id).await? != Phase::Committed {
+        return Err("Upgrade Setup non validé.".into());
+    }
+    let current = installed::open(&installation, payload::native_target()?)?
+        .ok_or("Installation mise à jour absente.")?;
+    if current.current().previous.as_ref() != Some(&old) || current.current().active.id == old.id {
+        return Err("Historique de code Setup non conservé.".into());
+    }
+    let health = LocalHttp::new()?
+        .authenticated_health(&address, || session::read_optional(&data))
+        .await?
+        .ok_or("Serveur mis à jour absent.")?;
+    if health["version"] != current.current().active.version {
+        return Err("Version réellement servie différente du slot activé.".into());
+    }
+    let next_token = session::read(&data)?;
+    if next_token == token {
+        return Err("Session Setup non renouvelée.".into());
+    }
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&next_token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    if state["cards"]
+        .as_array()
+        .is_none_or(|cards| !cards.contains(&card))
+    {
+        return Err("Conversation perdue pendant upgrade Setup.".into());
+    }
+    launcher::stop(&data, port).await?;
+    installed::verify_all(&installation, payload::native_target()?)?;
+    payload::write(
+        &delivery.join("native-installed-upgrade-qualification.json"),
+        &serde_json::to_vec_pretty(
+            &json!({"format":"atelier-rust-installed-upgrade-qualification/1","fromVersion":old.version,"toVersion":current.current().active.version,"runtimeVersionObserved":true,"conversationPreserved":true,"previousSlotRetained":true,"sessionRotated":true,"stopped":true,"published":false}),
+        )?,
+    )?;
+    Ok(())
+}
+
+pub(super) async fn test_delivery(delivery: &Path) -> Result<()> {
+    if std::env::var("CI").as_deref() != Ok("true")
+        || std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() != Ok("1")
+    {
+        return Err("Réutilisation de paquets réservée à la campagne finale CI.".into());
+    }
+    let target = payload::native_target()?;
+    let version = env!("CARGO_PKG_VERSION");
+    let trust = update_package::Trust::load(&delivery.join(update_package::PUBLIC_KEY))?;
+    let scratch = tempfile::tempdir()?;
+    let original = update_package::prepare(
+        &delivery.join(format!("atelier-kanban-{version}-{target}.zip")),
+        &delivery.join("signed-package.json"),
+        &trust,
+        target,
+        "0.0.0",
+        scratch.path(),
+    )?;
+    if original.payload().version != version {
+        return Err(
+            "La version du paquet original ne correspond pas au commit de qualification.".into(),
+        );
+    }
+    let successor = update_package::prepare(
+        &delivery.join("successor/next.zip"),
+        &delivery.join("successor/next.json"),
+        &trust,
+        target,
+        version,
+        scratch.path(),
+    )?;
+    test_prepared(
+        &original
+            .package()
+            .path()
+            .join(payload::binary_name(target)?),
+        &successor
+            .package()
+            .path()
+            .join(payload::binary_name(target)?),
+    )
+    .await?;
+    payload::write(
+        &delivery.join("update-rollback-qualification.json"),
+        &serde_json::to_vec_pretty(
+            &json!({"format":"atelier-rust-update-qualification/1","target":target,"fromVersion":version,"toVersion":successor.payload().version,"signedPreparedArtifactsReused":true,"realRuntimeVersionsObserved":true,"updateExecuted":true,"wrongRuntimeRollbackExecuted":true,"conversationPreserved":true,"sessionRotated":true,"published":false}),
+        )?,
+    )?;
+    Ok(())
+}
+
+async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) -> Result<()> {
     if std::env::var("CI").as_deref() != Ok("true")
         || std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() != Ok("1")
     {
@@ -186,7 +366,9 @@ pub(super) async fn test() -> Result<()> {
             "Ce parcours natif lourd est réservé à la campagne finale CI synthétique.".into(),
         );
     }
-    run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
+    if original.is_none() {
+        run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
+    }
     let temporary = tempfile::tempdir()?;
     crate::notices::generate(&temporary.path().join("third-party-notices.txt")).await?;
     let assets = root().join(".artifacts/rust-ui");
@@ -196,12 +378,17 @@ pub(super) async fn test() -> Result<()> {
         .checked_add(1)
         .ok_or("Version de fixture excessive.")?;
     let next = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
-    let binary = root().join("target/debug").join(if cfg!(windows) {
-        "atelier.exe"
-    } else {
-        "atelier"
+    let binary = original.map(Path::to_owned).unwrap_or_else(|| {
+        root().join("target/debug").join(if cfg!(windows) {
+            "atelier.exe"
+        } else {
+            "atelier"
+        })
     });
-    let successor = next_binary(temporary.path(), &next)?;
+    let successor = match prepared_successor {
+        Some(successor) => successor.to_owned(),
+        None => next_binary(temporary.path(), &next)?,
+    };
     update_package::generate_synthetic(&temporary.path().join("keys"))?;
     let (original, original_signature) =
         archive(temporary.path(), "original", &binary, &assets, current)?;
@@ -235,6 +422,13 @@ pub(super) async fn test() -> Result<()> {
     )
     .await?;
     let address = format!("http://127.0.0.1:{port}");
+    let observed_initial = LocalHttp::new()?
+        .authenticated_health(&address, || session::read_optional(&data))
+        .await?
+        .ok_or("Version initiale absente.")?;
+    if observed_initial["version"] != current {
+        return Err("La version initiale réellement exécutée ne correspond pas au paquet.".into());
+    }
     let http = reqwest::Client::builder()
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none())

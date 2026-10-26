@@ -54,6 +54,9 @@ fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path
     if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
         return Err("Arrête toutes les instances et opérations du gestionnaire de paquets avant la récupération.".into());
     }
+    if super::system_package::pending(root)? {
+        return Err("Une transaction système reste non résolue ; utilise la récupération du gestionnaire de paquets.".into());
+    }
     let marker =
         super::checked_file::CheckedFile::open_in(&directory, Path::new(MARKER))?.single_link()?;
     if marker.open_same(&root.join(MARKER))?.read(64)? != CONTENT {
@@ -68,6 +71,9 @@ fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path
         return Err("Le marqueur a été modifié ; récupération refusée, contenu conservé.".into());
     }
     let receipt = format!(".package-maintenance-recovered-{}", uuid::Uuid::new_v4());
+    if super::system_package::pending(root)? {
+        return Err("Le journal système a changé ; aucune maintenance levée.".into());
+    }
     directory.rename(MARKER, &directory, &receipt)?;
     if !matches!(marker.open_same(&root.join(&receipt)).and_then(|file| file.read(64)), Ok(bytes) if bytes == CONTENT)
     {
@@ -115,6 +121,12 @@ pub fn acquire(root: Option<&Path>) -> Result<Guard> {
         };
         let directory = super::repository_access::absolute(root)?;
         let marker = || -> Result<()> {
+            if super::system_package::pending(root)? {
+                return Err(
+                    "Une transaction de paquet système doit être récupérée avant le démarrage."
+                        .into(),
+                );
+            }
             match directory.symlink_metadata(".package-maintenance") {Ok(_)=>Err("Une installation ou désinstallation est en cours. Termine sa récupération avant de lancer Atelier.".into()),Err(error) if error.kind()==std::io::ErrorKind::NotFound=>Ok(()),Err(error)=>Err(error.into())}
         };
         marker()?;

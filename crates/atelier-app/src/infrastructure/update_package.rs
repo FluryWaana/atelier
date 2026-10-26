@@ -85,6 +85,10 @@ pub struct PreparedUpdate {
     receipt: Vec<u8>,
 }
 impl PreparedUpdate {
+    #[cfg(target_os = "linux")]
+    pub(super) fn keep_package(self) -> std::path::PathBuf {
+        self.package.keep()
+    }
     pub fn package(&self) -> &StagedPackage {
         &self.package
     }

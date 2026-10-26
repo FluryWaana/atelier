@@ -37,6 +37,9 @@ jobs:
             target
           key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: rustc -vV
+      - name: Provision the pinned macOS Git OpenSSL backend for synthetic TLS
+        if: runner.os == 'macOS'
+        run: bash xtask/packaging/install-macos-git.sh
       - name: Install isolated Linux native prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb xauth zenity
@@ -60,6 +63,10 @@ jobs:
           '
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+      - name: Synthetic native TLS integration journeys
+        run: cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
+      - name: Synthetic native forge publication and reviewed commits over TLS
+        run: cargo test -p xtask --test forge-review-tls --locked -- --ignored
       - name: Native DPAPI isolation between disposable Windows accounts
         if: runner.os == 'Windows'
         shell: pwsh
@@ -332,10 +339,10 @@ jobs:
           docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm
       - name: Compile and execute native Rust update and rollback journeys
         if: runner.os == 'Windows'
-        run: cargo xtask test-updates
+        run: cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
       - name: Compile and execute macOS update and rollback with a disposable keychain
         if: runner.os == 'macOS'
-        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-updates
+        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
       - name: Compile and execute Linux update and rollback in a disposable keyring session
         if: runner.os == 'Linux'
         shell: bash
@@ -345,7 +352,7 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-update-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo xtask test-updates
+            cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
           '
       - name: Preserve actual package evidence without publishing a release
         if: always()

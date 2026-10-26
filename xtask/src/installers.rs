@@ -7,6 +7,7 @@ use std::{fs, path::Path, time::Duration};
 const PRE: &str = include_str!("../packaging/linux-preinstall.sh");
 const REMOVE: &str = include_str!("../packaging/linux-preremove.sh");
 const POST: &str = include_str!("../packaging/linux-postremove.sh");
+const INSTALL: &str = include_str!("../packaging/linux-postinstall.sh");
 #[cfg(unix)]
 fn system_modes(root: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -24,7 +25,7 @@ fn system_modes(root: &Path) -> Result<()> {
             }
             0o755
         } else if metadata.is_file() {
-            if path.file_name().is_some_and(|name| name == "atelier") {
+            if metadata.permissions().mode() & 0o111 != 0 {
                 0o755
             } else {
                 0o644
@@ -138,11 +139,7 @@ pub(super) async fn build(
         .prefix("atelier-delivery-")
         .tempdir_in(parent)?;
     let result = fs::canonicalize(delivery.path())?;
-    let app = if cfg!(windows) {
-        scratch_path.join("app")
-    } else {
-        scratch_path.join("deb/opt/atelier-kanban-rust")
-    };
+    let app = scratch_path.join("app");
     fs::create_dir_all(app.parent().ok_or("Dossier de staging absent.")?)?;
     installed::install(
         archive,
@@ -159,6 +156,7 @@ pub(super) async fn build(
     installed::verify_all(&app, target)?;
     let installation = installed::open(&app, target)?.ok_or("Installation de staging absente.")?;
     let version = installation.current().active.version.clone();
+    let slot = installation.slot_path(&installation.current().active)?;
     drop(installation);
     if cfg!(windows) {
         let compiler = std::env::var_os("ATELIER_ISCC")
@@ -179,10 +177,47 @@ pub(super) async fn build(
         )
         .await?;
     } else {
-        put(&app, ".package-lock", b"", false)?;
-        #[cfg(unix)]
-        system_modes(&app)?;
         let deb = scratch_path.join("deb");
+        for (name, source, limit, executable) in [
+            (
+                "usr/lib/atelier-kanban-rust/package-tool",
+                app.join("atelier"),
+                128 * 1024 * 1024,
+                true,
+            ),
+            (
+                "usr/lib/atelier-kanban-rust/payload.zip",
+                archive.to_owned(),
+                atelier_app::infrastructure::package_archive::ARCHIVE_LIMIT,
+                false,
+            ),
+            (
+                "usr/lib/atelier-kanban-rust/signed-package.json",
+                signature.to_owned(),
+                16 * 1024,
+                false,
+            ),
+            (
+                "usr/lib/atelier-kanban-rust/trusted-update-key.json",
+                trust.to_owned(),
+                4096,
+                false,
+            ),
+            (
+                "usr/share/doc/atelier-kanban-rust/LICENSE",
+                slot.join("LICENSE"),
+                1024 * 1024,
+                false,
+            ),
+            (
+                "usr/share/doc/atelier-kanban-rust/THIRD-PARTY-NOTICES.txt",
+                slot.join("THIRD-PARTY-NOTICES.txt"),
+                32 * 1024 * 1024,
+                false,
+            ),
+        ] {
+            put(&deb, name, &package::read(&source, limit)?, executable)?;
+        }
         put(
             &deb,
             "usr/bin/atelier-kanban-rust",
@@ -205,8 +240,11 @@ pub(super) async fn build(
         );
         put(&deb, "DEBIAN/control", control.as_bytes(), false)?;
         put(&deb, "DEBIAN/preinst", PRE.as_bytes(), true)?;
+        put(&deb, "DEBIAN/postinst", INSTALL.as_bytes(), true)?;
         put(&deb, "DEBIAN/prerm", REMOVE.as_bytes(), true)?;
         put(&deb, "DEBIAN/postrm", POST.as_bytes(), true)?;
+        #[cfg(unix)]
+        system_modes(&deb)?;
         run(
             "desktop-file-validate",
             &[deb
@@ -237,8 +275,7 @@ pub(super) async fn build(
             fs::create_dir(rpm.join(name))?;
         }
         let spec = format!(
-            "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later AND MIT\nRequires: libsecret, xdg-utils, zenity, util-linux\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; user data is retained on removal.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/opt\" \"%{{buildroot}}/\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/opt/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n",
-            deb.display(),
+            "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later\nRequires: libsecret, xdg-utils, zenity, util-linux\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; signed runtime state and user data are retained safely.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%post\n{INSTALL}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/usr/lib/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n/usr/share/doc/atelier-kanban-rust\n",
             deb.display()
         );
         let spec_path = scratch_path.join("atelier.spec");

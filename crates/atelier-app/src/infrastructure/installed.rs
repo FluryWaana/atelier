@@ -283,6 +283,80 @@ impl Installation {
         let _ = temporary.keep();
         Ok(version)
     }
+    #[cfg(target_os = "linux")]
+    pub(super) fn stage_system_update(&self, prepared: PreparedUpdate) -> Result<Version> {
+        if super::installation::mode(&self.root)? != InstallationMode::System {
+            return Err("Installation système explicite requise.".into());
+        }
+        let payload = update_package::verify_installed_payload(
+            prepared.package().path(),
+            prepared.receipt(),
+            &self.trust,
+            &self.current.active.target,
+        )?;
+        if package::version_parts(&payload.version)?
+            <= package::version_parts(&self.current.active.version)?
+        {
+            return Err("Cette version système n’est pas plus récente.".into());
+        }
+        let next = Version::from_payload(&payload);
+        let versions = self.directory.open_dir_nofollow("versions")?;
+        if versions.symlink_metadata(&next.id).is_ok() {
+            self.verify_version(&next)?;
+            return Ok(next);
+        }
+        let mut count = 0;
+        let mut bytes = 0;
+        measure(&versions, 0, &mut count, &mut bytes)?;
+        let incoming_directory = super::repository_access::absolute(prepared.package().path())?;
+        let mut incoming_count = 0;
+        let mut incoming = 0;
+        measure(&incoming_directory, 0, &mut incoming_count, &mut incoming)?;
+        let slots = versions
+            .entries()?
+            .take(16)
+            .collect::<std::io::Result<Vec<_>>>()?;
+        if bytes
+            .checked_add(incoming)
+            .is_none_or(|total| total > 1024 * 1024 * 1024)
+            || slots.len() >= 16
+        {
+            return Err(
+                "Réserve système limitée à 1 Gio et seize versions ; aucun contenu supprimé."
+                    .into(),
+            );
+        }
+        let receipts = self.directory.open_dir_nofollow("receipts")?;
+        let name = format!("{}.json", next.id);
+        match receipts.symlink_metadata(&name) {
+            Ok(_) => {
+                if CheckedFile::open_in(&receipts, Path::new(&name))?.read(16 * 1024)?
+                    != prepared.receipt()
+                {
+                    return Err("Reçu système existant différent ; contenu conservé.".into());
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                publish::write_private(&receipts, Path::new(&name), prepared.receipt(), false)?
+            }
+            Err(error) => return Err(error.into()),
+        }
+        receipts.try_clone()?.into_std_file().sync_all()?;
+        let retained = prepared.keep_package();
+        let source = super::repository_access::absolute(
+            retained
+                .parent()
+                .ok_or("Parent de préparation système absent.")?,
+        )?;
+        publish::rename_new_between(
+            &source,
+            retained.file_name().ok_or("Préparation système absente.")?,
+            &versions,
+            std::ffi::OsStr::new(&next.id),
+        )?;
+        self.verify_version(&next)?;
+        Ok(next)
+    }
     fn verify_bootstrap(&self, target: &str) -> Result<()> {
         let receipt = CheckedFile::open_in(&self.directory, Path::new("bootstrap-receipt.json"))?
             .read(16 * 1024)?;
