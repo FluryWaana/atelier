@@ -162,6 +162,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
         let exclusive = path.ends_with("/jira/create")
+            || path.ends_with("/connector-refresh")
             || path.starts_with("/api/updates/")
             || path.starts_with("/api/extensions")
             || (path.starts_with("/api/time/")
@@ -599,6 +600,10 @@ async fn serve_mode(
         .route(
             "/api/extensions/{id}/tickets/import",
             post(connectors::import_tickets),
+        )
+        .route(
+            "/api/cards/{id}/connector-refresh",
+            post(connectors::refresh_ticket),
         )
         .route(
             "/api/cards/{id}/jira/transitions",

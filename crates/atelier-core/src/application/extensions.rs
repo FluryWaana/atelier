@@ -126,6 +126,17 @@ pub struct ImportedTicket {
     pub created: bool,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketRefresh {
+    pub expected_revision: u64,
+    pub report_id: String,
+    pub expected: crate::contracts::Card,
+    pub replace_title: bool,
+    pub replace_description: bool,
+    pub confirmed: bool,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReportItem {

@@ -2430,13 +2430,72 @@ async fn connectors_scenario(
         .error_for_status()?
         .json()
         .await?;
-    let imported = state["cards"]
+    let mut imported = state["cards"]
         .as_array()
         .ok_or("Cartes absentes")?
         .iter()
         .find(|card| card["ticket"]["connector"] == "extension:synthetic-extension")
         .cloned()
         .ok_or("Ticket synthétique non importé")?;
+    click(client, "#close-settings").await?;
+    client
+        .goto(&format!(
+            "{address}/?task={}",
+            imported["id"]
+                .as_str()
+                .ok_or("Carte importée sans identifiant")?
+        ))
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#read-connector-ticket')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#read-connector-ticket").await?;
+    wait_dom(client,"return document.querySelector('#connector-ticket-heading')?.parentElement.textContent.includes('Updated synthetic connector ticket') && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
+    click(client, "#replace-connector-ticket-title").await?;
+    click(client, "#approve-connector-ticket-refresh").await?;
+    click(client, "#replace-connector-ticket-description").await?;
+    wait_dom(client,"return document.querySelector('#approve-connector-ticket-refresh')?.checked === false && document.querySelector('#apply-connector-ticket-refresh')?.disabled === true;",vec![]).await?;
+    click(client, "#replace-connector-ticket-description").await?;
+    click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#cancel-confirmation')?.offsetParent !== null;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-confirmation").await?;
+    wait_dom(client,"return document.querySelector('#replace-connector-ticket-title')?.checked === true && document.querySelector('#replace-connector-ticket-description')?.checked === false;",vec![]).await?;
+    click(client, "#approve-connector-ticket-refresh").await?;
+    click(client, "#apply-connector-ticket-refresh").await?;
+    wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Updated synthetic connector ticket' && document.querySelector('#edit-description')?.value === 'No remote account or paid agent.' && document.querySelector('#connector-ticket-heading')?.parentElement.textContent.includes('Ticket synchronisé');",vec![]).await?;
+    let refreshed: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let updated = refreshed["cards"]
+        .as_array()
+        .and_then(|cards| cards.iter().find(|card| card["id"] == imported["id"]))
+        .cloned()
+        .ok_or("Carte synchronisée absente")?;
+    if updated["description"] != imported["description"]
+        || updated["status"] != imported["status"]
+        || updated["ticket"]["status"] != "Done"
+    {
+        return Err("La synchronisation a modifié des champs non sélectionnés.".into());
+    }
+    imported = updated;
+    click(client, "#close-editor").await?;
+    click(client, "#manage-settings").await?;
+    click(client, "#settings-tab-connectors").await?;
+    wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
+    click(client, "[data-connector=synthetic-extension]").await?;
     click(client, "#remove-connector").await?;
     click(client, "#confirm-remove-connector").await?;
     wait_dom(client,"return !document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;

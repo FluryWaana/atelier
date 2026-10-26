@@ -34,12 +34,43 @@ pub(super) async fn import_tickets(
     response(result)
 }
 
+pub(super) async fn refresh_ticket(
+    State(state): State<Shared>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    request: axum::extract::Request,
+) -> Response {
+    let input: atelier_core::application::extensions::TicketRefresh =
+        match super::jira_transitions::input(request).await {
+            Ok(input) => input,
+            Err(response) => return response,
+        };
+    response(
+        state
+            .database
+            .call(move |store| {
+                if input.expected.id != id {
+                    return Err("Carte de synchronisation incohérente.".into());
+                }
+                let link = input
+                    .expected
+                    .fields
+                    .get::<atelier_core::document::Document>("ticket")?
+                    .ok_or("Ticket de connecteur absent.")?;
+                let connector = link
+                    .get::<String>("connector")?
+                    .ok_or("Ticket de connecteur absent.")?;
+                let module = connector
+                    .strip_prefix("extension:")
+                    .ok_or("Ticket de connecteur absent.")?;
+                crate::infrastructure::connector_tickets::refresh(store, module, &input)
+            })
+            .await,
+    )
+}
+
 #[cfg(windows)]
 use {
-    crate::{
-        Result,
-        infrastructure::{extensions::Executable, store::Documents},
-    },
+    crate::{Result, infrastructure::extensions::Executable},
     atelier_core::{
         application::extensions::{
             Candidate, Configuration, Installation, Invocation, Report, Status,
@@ -219,21 +250,8 @@ pub(super) async fn invoke(
                         vault.protect(value, decrypt)
                     })?;
                 if request.method == atelier_core::application::extensions::Method::Action {
-                    let count = store
-                        .documents::<atelier_core::contracts::Card>(Documents::Cards)?
-                        .iter()
-                        .filter(|card| {
-                            card.fields
-                                .get::<Document>("ticket")
-                                .ok()
-                                .flatten()
-                                .is_some_and(|ticket| {
-                                    ticket
-                                        .string_equals("connector", &format!("extension:{module}"))
-                                        .unwrap_or(false)
-                                })
-                        })
-                        .count();
+                    let count =
+                        crate::infrastructure::connector_tickets::imported_count(store, &profile)?;
                     if request.input.is_null() {
                         request.input = serde_json::json!({});
                     }

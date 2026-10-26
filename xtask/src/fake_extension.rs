@@ -47,7 +47,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account or remote effect","sourceLocale":"en-US","methods":["check","ticketsSearch"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account or remote effect","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -60,6 +60,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             serde_json::to_value(&manifest)?
         } else if request.method == Method::TicketsSearch {
             json!({"items":[{"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Synthetic connector ticket","description":"No remote account or paid agent.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Open"}],"next":null})
+        } else if request.method == Method::TicketsRead {
+            if request.input["instance"] != "https://synthetic.example.test/tenant"
+                || request.input["id"] != "synthetic-ticket"
+            {
+                return Err("Unexpected synthetic ticket scope".into());
+            }
+            json!({"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Updated synthetic connector ticket","description":"Updated synthetic description.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Done"})
         } else {
             json!({"available":true,"privateHome":true})
         },

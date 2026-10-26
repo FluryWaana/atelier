@@ -68,6 +68,110 @@ pub fn page(report: &Report) -> Result<TicketPage> {
     Ok(page)
 }
 
+fn linked(profile: &Installed, card: &Card) -> Result<Document> {
+    let ticket = card
+        .fields
+        .get::<Document>("ticket")?
+        .ok_or("Ticket de connecteur absent.")?;
+    if !ticket.string_equals("connector", &format!("extension:{}", profile.manifest.id))?
+        || !ticket.string_equals("scope", &scope(profile)?)?
+    {
+        return Err("La portée du connecteur a changé. Rétablis sa configuration avant de synchroniser cette carte.".into());
+    }
+    Ok(ticket)
+}
+
+pub fn imported_count(store: &Store<'_>, profile: &Installed) -> Result<usize> {
+    let scope = scope(profile)?;
+    let connector = format!("extension:{}", profile.manifest.id);
+    let mut count = 0;
+    for card in store.documents::<Card>(Documents::Cards)? {
+        if let Some(ticket) = card.fields.get::<Document>("ticket")?
+            && ticket.string_equals("connector", &connector)?
+            && ticket.string_equals("scope", &scope)?
+        {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
+pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh) -> Result<Card> {
+    if !input.confirmed {
+        return Err("Confirme les champs du ticket à synchroniser.".into());
+    }
+    store.transaction(|store| {
+        let profile = connectors::profile(store, module, input.expected_revision)?;
+        if !profile
+            .manifest
+            .methods
+            .contains(&protocol::Method::TicketsRead)
+        {
+            return Err("Ce connecteur ne déclare pas la lecture des tickets.".into());
+        }
+        let report = profile
+            .report
+            .as_ref()
+            .filter(|report| {
+                report.id == input.report_id && report.method == protocol::Method::TicketsRead
+            })
+            .ok_or("Le rapport du connecteur a changé. Relis le ticket avant de confirmer.")?;
+        let observed = time::OffsetDateTime::parse(
+            &report.observed_at,
+            &time::format_description::well_known::Rfc3339,
+        )?;
+        if !(0..=600).contains(&(time::OffsetDateTime::now_utc() - observed).whole_seconds()) {
+            return Err(
+                "Cet aperçu de connecteur a expiré. Relis le ticket avant de confirmer.".into(),
+            );
+        }
+        let page = page(report)?;
+        let remote = &page.items[0];
+        let mut card = super::forge_association::snapshot(store, &input.expected)?;
+        let mut ticket = linked(&profile, &card)?;
+        if !ticket.string_equals("instance", &remote.instance)?
+            || !ticket.string_equals("id", &remote.id)?
+        {
+            return Err("Le rapport ne correspond pas au ticket lié à cette carte.".into());
+        }
+        let changed = (input.replace_title && card.title != remote.title.as_str().into())
+            || (input.replace_description
+                && card
+                    .fields
+                    .get::<String>("description")?
+                    .unwrap_or_default()
+                    != remote.description);
+        if input.replace_title {
+            card.title = remote.title.as_str().into();
+        }
+        if input.replace_description {
+            card.fields.set("description", &remote.description)?;
+        }
+        ticket.set("key", &remote.key)?;
+        ticket.set("url", &remote.url)?;
+        ticket.set("status", &remote.status)?;
+        ticket.set("reportId", &report.id)?;
+        card.fields.set("ticket", &ticket)?;
+        if changed {
+            let invalidation = atelier_core::application::task_editing::invalidate_reviews(
+                &card.id,
+                &mut card.fields,
+                store.documents(Documents::Runs)?,
+                atelier_core::application::task_editing::REVIEW_CHANGE_REASON,
+            )?;
+            for run in invalidation.runs {
+                store.put(Documents::Runs, &run)?;
+            }
+        }
+        card.fields.set(
+            "updatedAt",
+            &task_creation::CreationContext::timestamp(store)?,
+        )?;
+        store.put(Documents::Cards, &card)?;
+        Ok(card)
+    })
+}
+
 pub fn import(
     store: &Store<'_>,
     module: &str,
@@ -139,7 +243,7 @@ mod tests {
         }
     }
     fn profile() -> Installed {
-        Installed {manifest:serde_json::from_value::<Manifest>(json!({"id":"synthetic-tickets","name":"Synthetic","description":"No remote access","sourceLocale":"en-US","methods":["check","ticketsSearch"],"fields":[{"id":"tenant","label":"Tenant","kind":"text","credentialScope":true}],"tabs":[],"translations":{}})).unwrap(),binary:Binary{path:"C:/synthetic/module.exe".into(),sha256:"ab".repeat(32)},revision:1,values:BTreeMap::from([("tenant".into(),json!("first"))]),report:Some(report())}
+        Installed {manifest:serde_json::from_value::<Manifest>(json!({"id":"synthetic-tickets","name":"Synthetic","description":"No remote access","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead"],"fields":[{"id":"tenant","label":"Tenant","kind":"text","credentialScope":true}],"tabs":[],"translations":{}})).unwrap(),binary:Binary{path:"C:/synthetic/module.exe".into(),sha256:"ab".repeat(32)},revision:1,values:BTreeMap::from([("tenant".into(),json!("first"))]),report:Some(report())}
     }
     fn settings(store: &Store<'_>, profile: &Installed) {
         store.save_settings(&json!({"agent":"codex","connectorRevision":profile.revision,"processConnectors":[profile]})).unwrap();
@@ -217,6 +321,7 @@ mod tests {
         input.tickets.pop();
         let first = import(&store, "synthetic-tickets", &input).unwrap();
         assert!(first[0].created);
+        assert_eq!(imported_count(&store, &profile).unwrap(), 1);
         let mut human = first[0].card.clone();
         human.title = "Human title".into();
         human
@@ -240,10 +345,12 @@ mod tests {
         profile.revision = 2;
         profile.values.insert("tenant".into(), json!("second"));
         settings(&store, &profile);
+        assert_eq!(imported_count(&store, &profile).unwrap(), 0);
         assert!(import(&store, "synthetic-tickets", &input).is_err());
         input.expected_revision = 2;
         let second = import(&store, "synthetic-tickets", &input).unwrap();
         assert!(second[0].created);
+        assert_eq!(imported_count(&store, &profile).unwrap(), 1);
         assert_ne!(first[0].card.id, second[0].card.id);
         profile.revision = 3;
         profile.binary.sha256 = "cd".repeat(32);
@@ -260,6 +367,171 @@ mod tests {
             )
             .unwrap(),
             serde_json::to_value(human).unwrap()
+        );
+    }
+
+    #[test]
+    fn refresh_is_confirmed_scoped_selective_atomic_and_invalidates_reviews_only_for_changed_requirements()
+     {
+        let home = tempfile::tempdir().unwrap();
+        let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        let mut profile = profile();
+        settings(&store, &profile);
+        let project: Document = serde_json::from_str(&json!({"id":"synthetic-project","name":"Synthetic","repo":home.path().to_string_lossy()}).to_string()).unwrap();
+        store.put(Documents::Projects, &project).unwrap();
+        let imported = import(
+            &store,
+            "synthetic-tickets",
+            &TicketImport {
+                expected_revision: 1,
+                report_id: "synthetic-report".into(),
+                project,
+                tickets: vec![TicketIdentity {
+                    instance: "https://synthetic.example.test/tenant".into(),
+                    id: "1".into(),
+                }],
+                confirmed: true,
+            },
+        )
+        .unwrap();
+        let mut human = imported[0].card.clone();
+        human.title = "Human title".into();
+        human
+            .fields
+            .set("description", &"Human description")
+            .unwrap();
+        human.fields.set("status", &"review").unwrap();
+        human
+            .fields
+            .set("instructions", &"Keep human instructions")
+            .unwrap();
+        human
+            .fields
+            .set(
+                "checklist",
+                &json!([{"text":"Human criterion","done":true}]),
+            )
+            .unwrap();
+        store.put(Documents::Cards, &human).unwrap();
+        let review: Document = serde_json::from_str(
+            &json!({"id":"review","cardId":human.id,"kind":"pr-review","status":"completed"})
+                .to_string(),
+        )
+        .unwrap();
+        store.put(Documents::Runs, &review).unwrap();
+        let mut report = report();
+        report.method = Method::TicketsRead;
+        report.output = report.output["items"][0].clone();
+        report.output["title"] = json!("Remote title");
+        report.output["status"] = json!("Done");
+        report.observed_at = time::OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap();
+        profile.report = Some(report.clone());
+        settings(&store, &profile);
+        let mut input = protocol::TicketRefresh {
+            expected_revision: 1,
+            report_id: report.id.clone(),
+            expected: human.clone(),
+            replace_title: false,
+            replace_description: false,
+            confirmed: false,
+        };
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        input.confirmed = true;
+        let active: Document = serde_json::from_str(
+            &json!({"id":"active","cardId":human.id,"status":"running"}).to_string(),
+        )
+        .unwrap();
+        store.put(Documents::Runs, &active).unwrap();
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        store.delete(Documents::Runs, "active").unwrap();
+        let export: Document = serde_json::from_str(
+            &json!({"id":"export","cardId":human.id,"exportState":"uncertain"}).to_string(),
+        )
+        .unwrap();
+        store.put(Documents::Times, &export).unwrap();
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        store.delete(Documents::Times, "export").unwrap();
+        profile.report.as_mut().unwrap().output["id"] = json!("other");
+        settings(&store, &profile);
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        profile.report = Some(report.clone());
+        settings(&store, &profile);
+        let metadata = refresh(&store, "synthetic-tickets", &input).unwrap();
+        assert_eq!(metadata.title, human.title);
+        assert_eq!(
+            metadata
+                .fields
+                .get::<String>("description")
+                .unwrap()
+                .unwrap(),
+            "Human description"
+        );
+        assert!(
+            store
+                .document::<Document>(Documents::Runs, "review")
+                .unwrap()
+                .unwrap()
+                .raw("reviewStaleReason")
+                .is_none()
+        );
+        input.expected = metadata;
+        input.replace_title = true;
+        profile.values.insert("tenant".into(), json!("other"));
+        settings(&store, &profile);
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        profile.values.insert("tenant".into(), json!("first"));
+        profile.report.as_mut().unwrap().id = "new-report".into();
+        settings(&store, &profile);
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        profile.report = Some(report.clone());
+        profile.report.as_mut().unwrap().observed_at = "2000-01-01T00:00:00Z".into();
+        settings(&store, &profile);
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        profile.report = Some(report);
+        settings(&store, &profile);
+        connection.execute_batch("CREATE TRIGGER refuse_refresh BEFORE UPDATE ON cards BEGIN SELECT RAISE(ABORT,'synthetic rollback'); END;").unwrap();
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        assert!(
+            store
+                .document::<Document>(Documents::Runs, "review")
+                .unwrap()
+                .unwrap()
+                .raw("reviewStaleReason")
+                .is_none()
+        );
+        connection
+            .execute_batch("DROP TRIGGER refuse_refresh;")
+            .unwrap();
+        let result = refresh(&store, "synthetic-tickets", &input).unwrap();
+        assert_eq!(result.title, "Remote title".into());
+        for key in ["description", "status", "instructions", "checklist", "repo"] {
+            assert_eq!(
+                serde_json::to_value(result.fields.get::<serde_json::Value>(key).unwrap()).unwrap(),
+                serde_json::to_value(human.fields.get::<serde_json::Value>(key).unwrap()).unwrap()
+            );
+        }
+        assert!(
+            store
+                .document::<Document>(Documents::Runs, "review")
+                .unwrap()
+                .unwrap()
+                .raw("reviewStaleReason")
+                .is_some()
+        );
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        input.expected = result.clone();
+        input.expected.title = "Stale human edit".into();
+        assert!(refresh(&store, "synthetic-tickets", &input).is_err());
+        assert_eq!(
+            store
+                .document::<Card>(Documents::Cards, &result.id)
+                .unwrap()
+                .unwrap()
+                .title,
+            result.title
         );
     }
 }

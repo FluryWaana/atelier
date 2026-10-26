@@ -10,6 +10,7 @@ mod agent_usage;
 mod backups;
 mod brainstorm;
 mod commits;
+mod connector_ticket;
 mod connectors;
 mod files;
 mod forge;
