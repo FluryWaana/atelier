@@ -5,7 +5,7 @@ use super::{
     process_tree,
 };
 use crate::Result;
-use atelier_core::{document::Document, domain::files::validate_path};
+use atelier_core::domain::files::validate_path;
 use cap_fs_ext::DirExt;
 use std::{path::Path, time::Duration};
 
@@ -25,7 +25,7 @@ fn paths(paths: &[String]) -> Result<()> {
     }
     let mut seen = std::collections::BTreeSet::new();
     for path in paths {
-        validate_path(path, true)?;
+        validate_path(path, cfg!(windows))?;
         if !seen.insert(path) || path.chars().any(char::is_control) {
             return Err("Liste de fichiers invalide ou répétée.".into());
         }
@@ -60,12 +60,27 @@ pub fn identity(name: &str, email: &str, message: &str) -> Result<()> {
 }
 
 async fn command(repository: &Repository) -> Result<tokio::process::Command> {
-    let profile: Document = serde_json::from_str(r#"{"type":"command","command":"git"}"#)?;
-    let mut command = super::agent_diagnostics::command(&profile).await?;
+    let mut command = super::git_transport::git_command().await?;
+    let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
+    #[cfg(unix)]
+    {
+        use std::os::{fd::AsRawFd, unix::process::CommandExt};
+        let descriptor = repository.directory.as_raw_fd();
+        // The caller retains repository through capture; fchdir is async-signal-safe after fork.
+        unsafe {
+            command.as_std_mut().pre_exec(move || {
+                if libc::fchdir(descriptor) == 0 {
+                    Ok(())
+                } else {
+                    Err(std::io::Error::last_os_error())
+                }
+            });
+        }
+    }
     command
         .current_dir(&repository.path)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null)
+        .env("GIT_CONFIG_SYSTEM", null)
         .env("GIT_TERMINAL_PROMPT", "0")
         .args([
             "--no-pager",
@@ -89,7 +104,7 @@ async fn command(repository: &Repository) -> Result<tokio::process::Command> {
         "index.sparse=false",
         "pack.threads=1",
     ] {
-        command.args(["-c", option]);
+        command.args(["-c", &option.replace("NUL", null)]);
     }
     command.args(repository.program_options().await?);
     Ok(command)

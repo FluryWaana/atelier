@@ -1,18 +1,20 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::{files::Repository, local_commit, process_tree};
 use atelier_core::document::JsonString;
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
+fn null() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
 async fn git(path: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(path)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null())
+        .env("GIT_CONFIG_SYSTEM", null())
         .args([
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "-c",
             "user.name=Synthetic",
             "-c",

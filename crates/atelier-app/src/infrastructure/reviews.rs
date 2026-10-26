@@ -25,18 +25,10 @@ fn commit(value: Option<&str>) -> Result<&str> {
         .ok_or_else(|| "Commits de PR/MR indisponibles. Actualise la PR/MR avant la review.".into())
 }
 async fn clean(repository: &Repository, source: &str) -> Result<()> {
-    #[cfg(windows)]
-    {
-        if !super::local_commit::disk_matches_commit(repository, source).await? {
-            return Err("Publie les changements et garde le worktree propre sur le commit de la PR/MR avant la review.".into());
-        }
-        Ok(())
+    if !super::local_commit::disk_matches_commit(repository, source).await? {
+        return Err("Publie les changements et garde le worktree propre sur le commit de la PR/MR avant la review.".into());
     }
-    #[cfg(not(windows))]
-    {
-        let _ = (repository, source);
-        Err("La comparaison native des sources de review n’est pas disponible sur cette plateforme.".into())
-    }
+    Ok(())
 }
 
 /// The caller owns the exclusive mutation reservation throughout network and Git operations.

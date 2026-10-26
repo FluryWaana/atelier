@@ -40,7 +40,6 @@ pub mod jira_transition;
 pub mod launch_detection;
 pub mod launch_ports;
 pub mod launcher;
-#[cfg(windows)]
 pub mod local_commit;
 pub mod local_http;
 pub mod package;

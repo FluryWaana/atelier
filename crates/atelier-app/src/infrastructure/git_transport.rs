@@ -10,7 +10,7 @@ fn null() -> &'static str {
 }
 
 #[cfg(unix)]
-async fn git_command() -> Result<tokio::process::Command> {
+pub(super) async fn git_command() -> Result<tokio::process::Command> {
     let mut command = tokio::process::Command::new("git");
     command.env_clear().env(
         "PATH",
@@ -559,7 +559,7 @@ impl HttpsAuthentication {
     }
 }
 #[cfg(windows)]
-async fn git_command() -> Result<tokio::process::Command> {
+pub(super) async fn git_command() -> Result<tokio::process::Command> {
     let mut profile = Document::default();
     profile.set("type", &"command")?;
     profile.set("command", &"git")?;

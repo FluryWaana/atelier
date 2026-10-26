@@ -30,7 +30,6 @@ pub use assets::wasm_asset_name;
 mod backups;
 mod brainstorm;
 mod card_lifecycle;
-#[cfg(windows)]
 mod commits;
 mod connectors;
 mod events;
@@ -555,10 +554,6 @@ async fn serve_mode(
             axum::routing::put(connectors::configure).delete(connectors::remove),
         )
         .route("/api/extensions/{id}/invoke", post(connectors::invoke))
-        .route("/api/cards/{id}/commit/preview", post(commits::preview))
-        .route("/api/cards/{id}/commit/changes", get(commits::changes))
-        .route("/api/cards/{id}/commit/create", post(commits::create))
-        .route("/api/cards/{id}/commit/reconcile", post(commits::reconcile))
         .route(
             "/api/cards/{id}/forge/publication-push",
             post(git_push::publication_branch),
@@ -602,6 +597,10 @@ async fn serve_mode(
         .route("/api/cards/{id}/services/stop", post(services::stop));
     let app = app
         .route("/api/health", get(health))
+        .route("/api/cards/{id}/commit/preview", post(commits::preview))
+        .route("/api/cards/{id}/commit/changes", get(commits::changes))
+        .route("/api/cards/{id}/commit/create", post(commits::create))
+        .route("/api/cards/{id}/commit/reconcile", post(commits::reconcile))
         .route("/api/events", get(events))
         .route("/api/time", any(time_tracking::create))
         .route("/api/time/{id}", any(time_tracking::entry))
