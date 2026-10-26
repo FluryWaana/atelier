@@ -47,6 +47,7 @@ pub(super) async fn run(state: Shared) -> Result<()> {
             if state.database.call(queue::settle).await? {
                 let _ = state.changed.send(());
             }
+            if super::automation::tick(&state).await? { return Ok(()); }
             // The worker bypasses HTTP middleware but must honor its update reservation.
             if super::updates::guard(state.installation_root.as_deref()).is_some() {
                 let changed = state.database.call(|store| {

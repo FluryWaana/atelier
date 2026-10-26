@@ -38,7 +38,7 @@ pub struct ProjectEdit {
     pub moved: bool,
 }
 
-pub const EDITABLE_FIELDS: [&str; 15] = [
+pub const EDITABLE_FIELDS: [&str; 18] = [
     "name",
     "repo",
     "baseBranch",
@@ -54,6 +54,9 @@ pub const EDITABLE_FIELDS: [&str; 15] = [
     "backPort",
     "linkedProjectId",
     "testCommand",
+    "automationEnabled",
+    "autoFix",
+    "prTarget",
 ];
 
 pub fn detect(
@@ -153,7 +156,7 @@ pub fn prepare_update(
         .ok_or(ProjectFailure::Missing)?;
     if let Some(raw) = body.raw("expected") {
         let invalid = || ProjectFailure::Invalid("Condition de modification invalide.");
-        let expected: std::collections::BTreeMap<String, String> =
+        let expected: std::collections::BTreeMap<String, serde_json::Value> =
             serde_json::from_str(raw.get()).map_err(|_| invalid())?;
         let fields = EDITABLE_FIELDS;
         if expected
@@ -166,10 +169,18 @@ pub fn prepare_update(
             return Err(invalid().into());
         }
         for (key, value) in expected {
-            let current = if matches!(key.as_str(), "frontPort" | "backPort") {
-                project.get::<u16>(&key)?.unwrap_or(0).to_string()
+            let current = if matches!(key.as_str(), "automationEnabled" | "autoFix") {
+                if !value.is_boolean() {
+                    return Err(invalid().into());
+                }
+                serde_json::json!(project.get::<bool>(&key)?.unwrap_or(key == "autoFix"))
+            } else if matches!(key.as_str(), "frontPort" | "backPort") {
+                serde_json::json!(project.get::<u16>(&key)?.unwrap_or(0).to_string())
             } else {
-                project.get::<String>(&key)?.unwrap_or_default()
+                if !value.is_string() {
+                    return Err(invalid().into());
+                }
+                serde_json::json!(project.get::<String>(&key)?.unwrap_or_default())
             };
             if current != value {
                 return Err(ProjectFailure::Conflict("Ce projet a changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les projets pour charger la dernière version.").into());

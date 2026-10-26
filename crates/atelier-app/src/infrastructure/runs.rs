@@ -35,6 +35,12 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if card.fields.truthy("archived")? {
             return Err("Restaure cette tâche avant de lancer un agent.".into());
         }
+        super::automation::require_run(
+            store,
+            &card,
+            &id,
+            run.get::<String>("automationId")?.as_deref(),
+        )?;
         if atelier_core::application::jira::unresolved(&card.fields)? {
             return Err(
                 "Termine ou vérifie l’opération Jira avant de lancer une exécution.".into(),

@@ -7,6 +7,7 @@ use wasm_bindgen_futures::spawn_local;
 mod agent_diagnostics;
 mod agent_profiles;
 mod agent_usage;
+mod automation;
 mod backups;
 mod brainstorm;
 mod commits;

@@ -26,6 +26,9 @@ struct Draft {
     services: [ServiceDraft; 2],
     linked: String,
     verification: String,
+    automation: bool,
+    auto_fix: bool,
+    target: String,
 }
 impl Draft {
     fn from_document(project: &Document) -> Self {
@@ -49,12 +52,23 @@ impl Draft {
             }),
             linked: field(project, "linkedProjectId"),
             verification: field(project, "testCommand"),
+            automation: project
+                .get::<bool>("automationEnabled")
+                .ok()
+                .flatten()
+                .unwrap_or(false),
+            auto_fix: project
+                .get::<bool>("autoFix")
+                .ok()
+                .flatten()
+                .unwrap_or(true),
+            target: field(project, "prTarget"),
         }
     }
 
     fn patch(&self, previous: &Self) -> serde_json::Value {
         let fields = |value: &Self| {
-            let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked,"testCommand":value.verification});
+            let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked,"testCommand":value.verification,"automationEnabled":value.automation,"autoFix":value.auto_fix,"prTarget":value.target});
             for (index, role) in ["front", "back"].into_iter().enumerate() {
                 let service = &value.services[index];
                 for (suffix, text) in [
@@ -228,6 +242,10 @@ pub fn Projects(
                     <ProjectServices draft=draft pending=pending token=token />
                     <label for="project-test-command">{move||i18n.text("Commande de vérification")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
                     <p class="field-help">{move||i18n.text("Cette commande sera exécutée explicitement dans le worktree de la tâche, avec les permissions de ton compte. L’enregistrement ne la lance pas.")}</p>
+                    <label for="project-pr-target">{move||i18n.text("Branche cible du parcours")}</label><input id="project-pr-target" maxlength="180" spellcheck="false" prop:value=move||draft.get().target on:input=move|event|draft.update(|draft|draft.target=event_target_value(&event))/>
+                    <label><input id="project-automation" type="checkbox" prop:checked=move||draft.get().automation on:change=move|event|draft.update(|draft|draft.automation=event_target_checked(&event))/>{move||i18n.text("Autoriser les parcours automatiques de ce projet")}</label>
+                    <label><input id="project-auto-fix" type="checkbox" prop:checked=move||draft.get().auto_fix on:change=move|event|draft.update(|draft|draft.auto_fix=event_target_checked(&event))/>{move||i18n.text("Corriger les constats P0/P1, au plus deux cycles")}</label>
+                    <p class="field-help">{move||i18n.text("Le parcours lance les agents et vérifications après confirmation sur la tâche. Commit, push et publication restent à contrôler explicitement.")}</p>
                     <label for="project-linked">{move || i18n.text("Projet lié pour les tests")}</label>
                     <select id="project-linked" prop:value=move || draft.get().linked on:change=move |event| draft.update(|draft| draft.linked = event_target_value(&event))><option value="">{move || i18n.text("Aucun projet lié")}</option><For each={move || projects.get().into_iter().filter(|project| field(project,"id") != draft.get().id).collect::<Vec<_>>()} key=|project| field(project,"id") children=move |project| { let id = field(&project,"id"); view! { <option value=id.clone()>{move || projects.with(|projects| projects.iter().find(|project| field(project,"id") == id).map(|project| field(project,"name")).unwrap_or_default())}</option> } } /></select>
                     <p class="field-help">{move || i18n.text("Les commandes et le projet lié sont enregistrés pour les futurs lancements. Aucun service n’est démarré par cet écran.")}</p></div>

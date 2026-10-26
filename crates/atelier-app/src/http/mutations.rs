@@ -47,8 +47,9 @@ pub(super) fn is_cancellation(path: &str) -> bool {
                 .is_some_and(|(id, action)| !id.is_empty() && action == "stop")
         })
         || path.strip_prefix("/api/cards/").is_some_and(|tail| {
-            tail.split_once('/')
-                .is_some_and(|(id, action)| !id.is_empty() && action == "services/stop")
+            tail.split_once('/').is_some_and(|(id, action)| {
+                !id.is_empty() && matches!(action, "services/stop" | "automation/stop")
+            })
         })
 }
 
@@ -80,6 +81,7 @@ mod tests {
             "/api/time/entry/stop",
             "/api/runs/run/stop",
             "/api/cards/card/services/stop",
+            "/api/cards/card/automation/stop",
         ] {
             assert!(is_cancellation(path));
         }

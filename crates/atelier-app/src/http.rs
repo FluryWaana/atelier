@@ -23,6 +23,8 @@ use tokio::{net::TcpListener, sync::watch};
 
 mod agent_providers;
 mod assets;
+#[cfg(windows)]
+mod automation;
 pub use assets::LEGACY_ASSETS;
 pub use assets::wasm_asset_name;
 mod backups;
@@ -196,6 +198,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/services/restart")
             || path.ends_with("/runs/start")
             || path.ends_with("/verification/start")
+            || path.ends_with("/automation")
             || path == "/api/queue"
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
@@ -233,7 +236,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                                 || crate::infrastructure::forge_draft::blocks(
                                     store,
                                     &guarded_path,
-                                )?,
+                                )?
+                                || crate::infrastructure::automation::blocks(store, &guarded_path)?,
                         )
                     })
                     .await
@@ -502,6 +506,7 @@ async fn serve_mode(
             crate::infrastructure::jira_transition::recover(store)?;
             crate::infrastructure::forge_draft::recover(store)?;
             crate::infrastructure::runs::recover(store, &now)?;
+            crate::infrastructure::automation::recover(store)?;
             crate::infrastructure::queue::recover(store)
         })
         .await?;
@@ -569,6 +574,8 @@ async fn serve_mode(
             post(git_push::reconcile),
         )
         .route("/api/queue", get(queue::get).post(queue::change))
+        .route("/api/cards/{id}/automation", post(automation::change))
+        .route("/api/cards/{id}/automation/stop", post(automation::stop))
         .route("/api/queue/pause", post(queue::pause))
         .route("/api/cards/{id}/verification/start", post(runs::verify))
         .route(

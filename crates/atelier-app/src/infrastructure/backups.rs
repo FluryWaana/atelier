@@ -191,6 +191,14 @@ fn restore_checked(
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
     for card in store.documents::<Document>(Documents::Cards)? {
+        if let Some(flow) = card.get::<Document>("automation")?
+            && flow.string_equals("state", "running")?
+        {
+            return Err(BackupFailure::Conflict(
+                "Arrête les parcours automatiques avant une restauration.",
+            )
+            .into());
+        }
         if atelier_core::application::forge::unresolved(&card)? {
             return Err(BackupFailure::Conflict(
                 "Vérifie les écritures de forge incertaines avant une restauration.",

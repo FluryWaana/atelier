@@ -177,6 +177,8 @@ pub(super) async fn launch(
         }
         let mut run = Document::default();
         run.set("id", &run_id)?; run.set("queued",&queued)?;
+        run.set("purpose", &purpose)?;
+        if let Some(operation)=body.get::<String>("automationId")? { run.set("automationId",&operation)?; }
         run.set("cardId", &card.id)?;
         run.set("agent", &profile.get::<String>("id")?)?;
         run.set("agentType", &kind)?;
@@ -238,6 +240,17 @@ pub(super) async fn verify(
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
     };
+    super::responses::response(
+        launch_verification(&state, id, body, uuid::Uuid::new_v4().to_string()).await,
+    )
+}
+
+pub(super) async fn launch_verification(
+    state: &Shared,
+    id: String,
+    body: Document,
+    run_id: String,
+) -> Result<Document> {
     let result: Result<Document> = async {
         if body.get::<bool>("confirmed")? != Some(true) {
             return Err("Confirme la commande de vérification enregistrée dans le projet.".into());
@@ -283,7 +296,10 @@ pub(super) async fn verify(
         let mut process = crate::infrastructure::service_launch::shell(&command).await?;
         process.current_dir(directory.path());
         let mut run = Document::default();
-        run.set("id", &uuid::Uuid::new_v4().to_string())?;
+        run.set("id", &run_id)?;
+        if let Some(operation) = body.get::<String>("automationId")? {
+            run.set("automationId", &operation)?;
+        }
         run.set("cardId", &card.id)?;
         run.set("status", &"starting")?;
         run.set("agentType", &"verification")?;
@@ -318,7 +334,7 @@ pub(super) async fn verify(
             .await
     }
     .await;
-    super::responses::response(result)
+    result
 }
 
 pub(super) async fn stop(

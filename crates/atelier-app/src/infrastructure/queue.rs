@@ -140,6 +140,13 @@ pub fn claim(store: &Store<'_>, run_id: String) -> Result<Option<(Card, Document
             .document::<Card>(Documents::Cards, &queue.ids[0])?
             .ok_or("Carte introuvable.")?;
         super::forge_association::snapshot(store, &card)?;
+        if super::automation::read(&card)?
+            .is_some_and(|flow| flow.state == atelier_core::application::automation::State::Running)
+        {
+            return Err(
+                "Le parcours réserve cette tâche. Arrête-le avant un lancement manuel.".into(),
+            );
+        }
         let agent = card
             .fields
             .get::<String>("agent")?
