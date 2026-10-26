@@ -92,12 +92,14 @@ pub fn Settings(
     let tempo_dirty = RwSignal::new(false);
     let connectors_dirty = RwSignal::new(false);
     let updates_dirty = RwSignal::new(false);
+    let repositories_dirty = RwSignal::new(false);
     let updates_blocked = Memo::new(move |_| {
         dirty.get()
             || jira_dirty.get()
             || forge_dirty.get()
             || tempo_dirty.get()
             || connectors_dirty.get()
+            || repositories_dirty.get()
     });
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
@@ -122,6 +124,7 @@ pub fn Settings(
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
+            || repositories_dirty.get_untracked()
         {
             discard.set(true);
         } else {
@@ -135,6 +138,7 @@ pub fn Settings(
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
+            || repositories_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -197,6 +201,7 @@ pub fn Settings(
                 <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
                 <div class="editor-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button></div>
             </form>
+            <crate::repository_access::RepositoryAccess token pending dirty=repositories_dirty/>
             </section>
             <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
             <section id="settings-panel-jira" role="tabpanel" aria-labelledby="settings-tab-jira" hidden=move || tab.get()!=1><crate::jira::JiraSettings board token pending dirty=jira_dirty /></section>

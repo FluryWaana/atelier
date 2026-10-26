@@ -1,0 +1,57 @@
+use super::{Shared, failure, responses::response};
+use crate::infrastructure::repository_access;
+use axum::{
+    extract::{Request, State},
+    http::StatusCode,
+    response::Response,
+};
+use serde::Deserialize;
+fn public(registry: repository_access::Registry, available: bool) -> serde_json::Value {
+    serde_json::json!({"revision":registry.revision,"repositories":registry.repositories.into_iter().map(|entry|entry.path).collect::<Vec<_>>(),"available":available})
+}
+pub(super) async fn read(State(state): State<Shared>) -> Response {
+    let root = state.prototype_directory.clone();
+    let native = state.native;
+    response(
+        state
+            .database
+            .call(move |_| Ok(public(repository_access::read(&root)?, native)))
+            .await,
+    )
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Input {
+    path: String,
+    expected_revision: u64,
+    confirmed: bool,
+}
+pub(super) async fn register(State(state): State<Shared>, request: Request) -> Response {
+    if !state.native {
+        return failure(
+            StatusCode::CONFLICT,
+            "Autorise les dépôts depuis le lanceur natif.",
+        );
+    }
+    let input: Input = match super::jira_transitions::input(request).await {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let root = state.prototype_directory.clone();
+    response(
+        state
+            .database
+            .call(move |_| {
+                Ok(public(
+                    repository_access::register(
+                        &root,
+                        &input.path,
+                        input.expected_revision,
+                        input.confirmed,
+                    )?,
+                    true,
+                ))
+            })
+            .await,
+    )
+}

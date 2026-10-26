@@ -50,6 +50,7 @@ mod preparation;
 mod projects;
 #[cfg(windows)]
 mod queue;
+mod repository_access;
 mod responses;
 #[cfg(windows)]
 mod reviews;
@@ -72,6 +73,7 @@ mod worktrees;
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 struct AppState {
+    native: bool,
     installation_root: Option<PathBuf>,
     database: Arc<Database>,
     prototype_paths: [PathBuf; 2],
@@ -202,6 +204,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/verification/start")
             || path.ends_with("/automation")
             || path == "/api/queue"
+            || path == "/api/repositories"
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
@@ -217,15 +220,20 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                 if let Some(response) = updates::guard(state.installation_root.as_deref()) {
                     return response;
                 }
+                let guard_path = if request.uri().path() == "/api/repositories" {
+                    "/api/projects"
+                } else {
+                    request.uri().path()
+                };
                 #[cfg(windows)]
-                if let Some(response) = services::guard(&services, request.uri().path()) {
+                if let Some(response) = services::guard(&services, guard_path) {
                     return response;
                 }
                 #[cfg(windows)]
-                if let Some(response) = runs::guard(&runs, request.uri().path()) {
+                if let Some(response) = runs::guard(&runs, guard_path) {
                     return response;
                 }
-                let guarded_path = request.uri().path().to_owned();
+                let guarded_path = guard_path.to_owned();
                 match state
                     .database
                     .call(move |store| {
@@ -518,6 +526,7 @@ async fn serve_mode(
     let (shutdown, mut stopped) = watch::channel(false);
     let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
+        native: !legacy,
         installation_root,
         database: Arc::new(database),
         prototype_paths: [directory.path.clone(), original_directory],
@@ -678,6 +687,10 @@ async fn serve_mode(
             axum::routing::delete(settings::remove_token),
         )
         .route("/api/projects", post(projects::create))
+        .route(
+            "/api/repositories",
+            get(repository_access::read).post(repository_access::register),
+        )
         .route("/api/projects/archive-tasks", post(projects::archive))
         .route(
             "/api/projects/{id}",

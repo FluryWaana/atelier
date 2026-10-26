@@ -1,4 +1,6 @@
-use super::{checked_file::require_plain, launch_detection, task_creation::path_string, worktrees};
+#[cfg(any(windows, test))]
+use super::task_creation::path_string;
+use super::{checked_file::require_plain, launch_detection, worktrees};
 use crate::Result;
 use atelier_core::{application::services::LaunchPlan, document::JsonString};
 use cap_fs_ext::DirExt;
@@ -49,10 +51,7 @@ pub async fn prepare(root: &Dir, roots: &[PathBuf], plan: LaunchPlan) -> Result<
                 &serde_json::value::to_raw_value(&JsonString::from(service.repository.as_str()))?,
             )?;
             let path = PathBuf::from(selected.utf8()?);
-            let base = PathBuf::from(
-                path_string(roots.first().ok_or("Racine synthétique absente.")?).utf8()?,
-            );
-            let directory = root.open_dir_nofollow(path.strip_prefix(base)?)?;
+            let directory = launch_detection::open_repository(root, roots, &selected)?;
             (path, directory)
         };
         let relative = atelier_core::application::services::directory(&service.directory)?;

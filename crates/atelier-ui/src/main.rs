@@ -30,6 +30,7 @@ mod live;
 mod preparation;
 mod projects;
 mod queue;
+mod repository_access;
 mod review;
 mod runs;
 mod services;

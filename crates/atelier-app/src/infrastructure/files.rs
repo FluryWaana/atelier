@@ -108,9 +108,7 @@ impl Repository {
             &serde_json::value::to_raw_value(repo)?,
         )?;
         let path = PathBuf::from(path.utf8()?);
-        let base =
-            PathBuf::from(path_string(roots.first().ok_or("Racine synthétique absente.")?).utf8()?);
-        let directory = root.open_dir_nofollow(path.strip_prefix(base)?)?;
+        let directory = launch_detection::open_repository(root, roots, repo)?;
         let metadata = directory
             .symlink_metadata(".git")
             .map_err(|_| "Ce dossier n’est pas une racine Git accessible.")?;

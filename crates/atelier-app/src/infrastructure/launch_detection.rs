@@ -171,8 +171,18 @@ pub fn detect_synthetic(
     repo: &JsonString,
 ) -> Result<Document> {
     // The HTTP prototype must never scan a caller-supplied directory outside its synthetic data root.
-    let relative = synthetic_relative(roots, repo)?;
-    detect_opened(&root.open_dir_nofollow(relative)?)
+    detect_opened(&open_repository(root, roots, repo)?)
+}
+
+pub(super) fn open_repository(
+    root: &Dir,
+    roots: &[std::path::PathBuf],
+    repo: &JsonString,
+) -> Result<Dir> {
+    match synthetic_relative(roots, repo) {
+        Ok(relative) => Ok(root.open_dir_nofollow(relative)?),
+        Err(_) => super::repository_access::open(root, Path::new(&repo.utf8()?)),
+    }
 }
 
 pub fn synthetic_repository(
@@ -183,7 +193,13 @@ pub fn synthetic_repository(
     let input: JsonString =
         serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
     let repo = atelier_core::domain::text_units(&input, 2000)?;
-    let relative = synthetic_relative(roots, &repo)?;
+    let relative = match synthetic_relative(roots, &repo) {
+        Ok(relative) => relative,
+        Err(_) => {
+            let _ = super::repository_access::open(root, Path::new(&repo.utf8()?))?;
+            return Ok(repo);
+        }
+    };
     root.open_dir_nofollow(&relative)?;
     Ok(super::task_creation::path_string(
         &roots

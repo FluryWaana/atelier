@@ -55,6 +55,7 @@ pub mod projects;
 pub mod prototype;
 mod publish;
 pub mod queue;
+pub mod repository_access;
 pub mod reviews;
 pub mod runs;
 pub mod service_launch;
