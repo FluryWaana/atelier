@@ -614,6 +614,16 @@ impl Protocol {
                     &event["usage"],
                     &["input_tokens", "cache_read_input_tokens", "output_tokens"],
                 );
+                if let Some(amount) = event["total_cost_usd"].as_f64().filter(|amount| {
+                    amount.is_finite()
+                        && (0.0..=1_000_000.0).contains(amount)
+                        && !(*amount == 0.0 && event["subtype"] == "error_during_execution")
+                }) {
+                    let usage = out.usage.get_or_insert_with(|| json!({}));
+                    usage["estimatedCostUsd"] = json!(amount);
+                    usage["costSource"] = json!("claude-cli");
+                    usage["costScope"] = json!("cli-session");
+                }
                 out.complete = Some(
                     event["is_error"] == false
                         && event["subtype"] == "success"

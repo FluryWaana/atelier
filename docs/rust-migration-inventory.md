@@ -2775,7 +2775,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/application/agent_protocol.rs:173](../crates/atelier-core/src/application/agent_protocol.rs#L173) | <code>pub fn ready(&amp;self) -&gt; bool {</code> |
 | [crates/atelier-core/src/application/agent_protocol.rs:196](../crates/atelier-core/src/application/agent_protocol.rs#L196) | <code>pub fn start(&amp;mut self) -&gt; Result&lt;Effects&gt; {</code> |
 | [crates/atelier-core/src/application/agent_protocol.rs:307](../crates/atelier-core/src/application/agent_protocol.rs#L307) | <code>pub fn receive(&amp;mut self, event: Value) -&gt; Result&lt;Effects&gt; {</code> |
-| [crates/atelier-core/src/application/agent_protocol.rs:629](../crates/atelier-core/src/application/agent_protocol.rs#L629) | <code>pub fn reply(&amp;mut self, answer: AgentAnswer) -&gt; Result&lt;Effects&gt; {</code> |
+| [crates/atelier-core/src/application/agent_protocol.rs:639](../crates/atelier-core/src/application/agent_protocol.rs#L639) | <code>pub fn reply(&amp;mut self, answer: AgentAnswer) -&gt; Result&lt;Effects&gt; {</code> |
 | [crates/atelier-core/src/application/agent_providers.rs:1](../crates/atelier-core/src/application/agent_providers.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-core/src/application/agent_providers.rs:5](../crates/atelier-core/src/application/agent_providers.rs#L5) | <code>use crate::{</code> |
 | [crates/atelier-core/src/application/agent_providers.rs:11](../crates/atelier-core/src/application/agent_providers.rs#L11) | <code>pub enum ProviderFailure {</code> |
@@ -3852,12 +3852,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/agent-protocol.rs:1](../crates/atelier-core/tests/agent-protocol.rs#L1) | <code>use atelier_core::{</code> |
 | [crates/atelier-core/tests/agent-protocol.rs:5](../crates/atelier-core/tests/agent-protocol.rs#L5) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-core/tests/agent-protocol.rs:6](../crates/atelier-core/tests/agent-protocol.rs#L6) | <code>use std::collections::BTreeMap;</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:60](../crates/atelier-core/tests/agent-protocol.rs#L60) | <code>#[test]</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:93](../crates/atelier-core/tests/agent-protocol.rs#L93) | <code>#[test]</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:127](../crates/atelier-core/tests/agent-protocol.rs#L127) | <code>#[test]</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:162](../crates/atelier-core/tests/agent-protocol.rs#L162) | <code>#[test]</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:184](../crates/atelier-core/tests/agent-protocol.rs#L184) | <code>#[test]</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:198](../crates/atelier-core/tests/agent-protocol.rs#L198) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:8](../crates/atelier-core/tests/agent-protocol.rs#L8) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:92](../crates/atelier-core/tests/agent-protocol.rs#L92) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:125](../crates/atelier-core/tests/agent-protocol.rs#L125) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:159](../crates/atelier-core/tests/agent-protocol.rs#L159) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:194](../crates/atelier-core/tests/agent-protocol.rs#L194) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:216](../crates/atelier-core/tests/agent-protocol.rs#L216) | <code>#[test]</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:230](../crates/atelier-core/tests/agent-protocol.rs#L230) | <code>#[test]</code> |
 | [crates/atelier-core/tests/agent-usage.rs:1](../crates/atelier-core/tests/agent-usage.rs#L1) | <code>use atelier_core::{application::agent_usage::summarize, document::Document};</code> |
 | [crates/atelier-core/tests/agent-usage.rs:2](../crates/atelier-core/tests/agent-usage.rs#L2) | <code>use serde_json::json;</code> |
 | [crates/atelier-core/tests/agent-usage.rs:6](../crates/atelier-core/tests/agent-usage.rs#L6) | <code>#[test]</code> |
@@ -4204,7 +4205,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/runs.rs:10](../crates/atelier-ui/src/runs.rs#L10) | <code>use wasm_bindgen_futures::spawn_local;</code> |
 | [crates/atelier-ui/src/runs.rs:19](../crates/atelier-ui/src/runs.rs#L19) | <code>use atelier_core::contracts::RunLog as Log;</code> |
 | [crates/atelier-ui/src/runs.rs:22](../crates/atelier-ui/src/runs.rs#L22) | <code>pub fn Runs(</code> |
-| [crates/atelier-ui/src/runs.rs:413](../crates/atelier-ui/src/runs.rs#L413) | <code>use std::collections::BTreeMap;</code> |
+| [crates/atelier-ui/src/runs.rs:414](../crates/atelier-ui/src/runs.rs#L414) | <code>use std::collections::BTreeMap;</code> |
 | [crates/atelier-ui/src/services.rs:1](../crates/atelier-ui/src/services.rs#L1) | <code>use crate::{i18n::I18n, live::BoardState, read, write};</code> |
 | [crates/atelier-ui/src/services.rs:2](../crates/atelier-ui/src/services.rs#L2) | <code>use atelier_core::contracts::{ServiceSession, ServiceStatus, Worktree, WorktreeState};</code> |
 | [crates/atelier-ui/src/services.rs:3](../crates/atelier-ui/src/services.rs#L3) | <code>use gloo_net::http::Method;</code> |
@@ -6477,7 +6478,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/src/domain/files.rs:40](../crates/atelier-core/src/domain/files.rs#L40) | <code>fn preview_paths_reject_traversal_metadata_streams_and_windows_devices() {</code> |
 | [crates/atelier-core/src/domain/files.rs:52](../crates/atelier-core/src/domain/files.rs#L52) | <code>"a:stream",</code> |
 | [crates/atelier-core/src/domain/files.rs:61](../crates/atelier-core/src/domain/files.rs#L61) | <code>"sub/lpt1.log",</code> |
-| [crates/atelier-core/tests/agent-protocol.rs:185](../crates/atelier-core/tests/agent-protocol.rs#L185) | <code>fn streaming_preview_withholds_incomplete_secrets_and_masks_before_truncation() {</code> |
+| [crates/atelier-core/tests/agent-protocol.rs:217](../crates/atelier-core/tests/agent-protocol.rs#L217) | <code>fn streaming_preview_withholds_incomplete_secrets_and_masks_before_truncation() {</code> |
 | [crates/atelier-ui/src/runs.rs:321](../crates/atelier-ui/src/runs.rs#L321) | <code>text.push_str(&amp;format!("[{}] {}", entry.stream, entry.text));</code> |
 | [launcher.mjs:11](../launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
 | [launcher.mjs:33](../launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |

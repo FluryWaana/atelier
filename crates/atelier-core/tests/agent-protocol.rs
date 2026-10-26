@@ -5,6 +5,38 @@ use atelier_core::{
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
+#[test]
+fn claude_cost_estimates_keep_their_session_scope_and_invalid_or_crash_zeroes_stay_unknown() {
+    for (amount, subtype, expected) in [
+        (json!(0.012345), "success", Some(0.012345)),
+        (json!(0), "success", Some(0.0)),
+        (json!(0), "error_during_execution", None),
+        (json!(-1), "success", None),
+        (json!("0.1"), "success", None),
+        (json!(1e100), "success", None),
+    ] {
+        let mut protocol = ready(Kind::Claude, false);
+        let effects=protocol.receive(json!({"type":"result","subtype":subtype,"is_error":subtype!="success","total_cost_usd":amount,"usage":{"input_tokens":3,"output_tokens":2}})).unwrap();
+        let usage = effects.usage.unwrap();
+        assert_eq!(usage["estimatedCostUsd"].as_f64(), expected);
+        assert_eq!(usage["inputTokens"], 3);
+        if expected.is_some() {
+            assert_eq!(usage["costSource"], "claude-cli");
+            assert_eq!(usage["costScope"], "cli-session");
+        } else {
+            assert!(usage.get("costScope").is_none());
+        }
+    }
+    let mut protocol = ready(Kind::Claude, false);
+    let usage = protocol
+        .receive(json!({"type":"result","subtype":"success","is_error":false,"total_cost_usd":0.5}))
+        .unwrap()
+        .usage
+        .unwrap();
+    assert!(usage.get("inputTokens").is_none());
+    assert_eq!(usage["estimatedCostUsd"], 0.5);
+}
+
 fn protocol(kind: Kind, edit: bool) -> Protocol {
     Protocol::new(ProtocolConfig {
         kind,

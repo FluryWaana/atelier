@@ -1940,5 +1940,6 @@
   "Sélecteur de dossiers indisponible.": "Folder picker unavailable.",
   "Le sélecteur est disponible depuis le lanceur natif.": "The folder picker is available through the native launcher.",
   "Confirme l’ouverture du sélecteur de dossiers.": "Confirm opening the folder picker.",
-  "Sélecteur interrompu par l’arrêt d’Atelier.": "Folder picker interrupted by Atelier shutdown."
+  "Sélecteur interrompu par l’arrêt d’Atelier.": "Folder picker interrupted by Atelier shutdown.",
+  "Estimation déclarée par Claude : {0} USD. Peut inclure une session reprise ; ce montant n’est pas une facture et n’est pas additionné aux autres exécutions.": "Estimate reported by Claude: {0} USD. May include a resumed session; this amount is not an invoice and is not added to other runs."
 }
