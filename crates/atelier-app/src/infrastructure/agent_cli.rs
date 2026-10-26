@@ -513,6 +513,28 @@ pub(super) async fn prepare(
     Ok((command, pin, lock))
 }
 
+pub(super) async fn observed_version(profile: &Document, info: &UpdateInfo) -> Result<String> {
+    let (binary, environment) = super::agent_diagnostics::resolve(profile).await?;
+    let kind = profile
+        .get::<String>("type")?
+        .ok_or("Type d’agent absent.")?;
+    if managed_root(&binary, &kind, &environment)? != info.managed_root {
+        return Err("L’installation CLI a changé de portée. Aucun succès déduit.".into());
+    }
+    let output = super::agent_diagnostics::capture(
+        &binary,
+        &["--version".into()],
+        &super::agent_diagnostics::environment(profile, &environment, false)?,
+    )
+    .await?;
+    if !output.status.success() {
+        return Err("La version CLI ne peut pas être relue.".into());
+    }
+    super::agent_diagnostics::version(&output.stdout)
+        .filter(|version| super::package::version_parts(version).is_ok())
+        .ok_or_else(|| "La version CLI relue n’est pas reconnue.".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -617,25 +639,4 @@ mod tests {
             b"synthetic image, never executable"
         );
     }
-}
-pub(super) async fn observed_version(profile: &Document, info: &UpdateInfo) -> Result<String> {
-    let (binary, environment) = super::agent_diagnostics::resolve(profile).await?;
-    let kind = profile
-        .get::<String>("type")?
-        .ok_or("Type d’agent absent.")?;
-    if managed_root(&binary, &kind, &environment)? != info.managed_root {
-        return Err("L’installation CLI a changé de portée. Aucun succès déduit.".into());
-    }
-    let output = super::agent_diagnostics::capture(
-        &binary,
-        &["--version".into()],
-        &super::agent_diagnostics::environment(profile, &environment, false)?,
-    )
-    .await?;
-    if !output.status.success() {
-        return Err("La version CLI ne peut pas être relue.".into());
-    }
-    super::agent_diagnostics::version(&output.stdout)
-        .filter(|version| super::package::version_parts(version).is_ok())
-        .ok_or_else(|| "La version CLI relue n’est pas reconnue.".into())
 }

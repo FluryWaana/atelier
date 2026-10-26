@@ -786,6 +786,20 @@ async fn serve_mode(
     let clock = tokio::spawn(time_tracking::run(state.clone()));
     #[cfg(windows)]
     let queue_worker = tokio::spawn(queue::run(state.clone()));
+    let tray = if legacy {
+        None
+    } else {
+        match crate::infrastructure::tray::Owner::start(&state.prototype_paths[0], state.port).await
+        {
+            Ok(tray) => tray,
+            Err(_) => {
+                eprintln!(
+                    "Icône système indisponible ; Atelier reste accessible dans le navigateur."
+                );
+                None
+            }
+        }
+    };
     let result = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             tokio::select! { _ = stopped.changed() => {}, _ = tokio::signal::ctrl_c() => {} }
@@ -793,6 +807,10 @@ async fn serve_mode(
         })
         .await;
     let _ = state.shutdown.send(true);
+    let tray_result = match tray {
+        Some(tray) => tray.close().await,
+        None => Ok(()),
+    };
     let clock_result = clock.await;
     #[cfg(windows)]
     let queue_result = queue_worker.await;
@@ -822,6 +840,7 @@ async fn serve_mode(
     queue_result??;
     clock_result??;
     timers?;
+    tray_result?;
     result?;
     Ok(())
 }

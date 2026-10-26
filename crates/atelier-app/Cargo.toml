@@ -42,3 +42,11 @@ windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", 
 
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.191"
+
+[target.'cfg(any(windows, target_os = "linux", target_os = "macos"))'.dependencies]
+tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.5"
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication"] }
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSDate", "NSRunLoop"] }

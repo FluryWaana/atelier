@@ -9,9 +9,15 @@ use std::{path::Path, process::Stdio, time::Duration};
 use tokio::{process::Command, time::Instant};
 
 pub(super) async fn health(http: &LocalHttp, data: &Path, port: u16) -> Result<Option<Value>> {
+    Ok(identity(http, data, port).await?.map(|(value, _)| value))
+}
+
+async fn identity(http: &LocalHttp, data: &Path, port: u16) -> Result<Option<(Value, String)>> {
+    let mut token = None;
     let observed = http
         .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
-            session::read_optional(data)
+            token = session::read_optional(data)?;
+            Ok(token.clone())
         })
         .await?;
     if let Some(value) = &observed {
@@ -25,7 +31,9 @@ pub(super) async fn health(http: &LocalHttp, data: &Path, port: u16) -> Result<O
             return Err("Ce port appartient à une autre instance d’Atelier.".into());
         }
     }
-    Ok(observed)
+    observed
+        .map(|value| Ok((value, token.ok_or("Session vérifiée absente.")?)))
+        .transpose()
 }
 
 pub async fn start(
@@ -76,26 +84,42 @@ pub async fn start(
         }
     }
     if browser {
-        let token = session::read(data)?;
-        let address = session::browser_address(data, &format!("http://127.0.0.1:{port}"), &token)?;
-        open_browser(&address).await?;
+        open(data, port).await?;
     }
     Ok(())
 }
 
+pub async fn open(data: &Path, port: u16) -> Result<()> {
+    open_owned(data, port, None).await
+}
+
+pub(super) async fn open_owned(data: &Path, port: u16, owner: Option<u32>) -> Result<()> {
+    if port == 0 {
+        return Err("L’instance Atelier n’est plus disponible.".into());
+    }
+    let (observed, token) = identity(&LocalHttp::new()?, data, port)
+        .await?
+        .ok_or("L’instance Atelier n’est plus disponible.")?;
+    require_owner(&observed, owner)?;
+    let address = session::browser_address(data, &format!("http://127.0.0.1:{port}"), &token)?;
+    open_browser(&address).await
+}
+
 pub async fn stop(data: &Path, port: u16) -> Result<()> {
+    stop_owned(data, port, None).await
+}
+
+pub(super) async fn stop_owned(data: &Path, port: u16, owner: Option<u32>) -> Result<()> {
     if port == 0 {
         return Err("Port du lanceur invalide.".into());
     }
     let http = LocalHttp::new()?;
-    if health(&http, data, port).await?.is_none() {
+    let Some((observed, token)) = identity(&http, data, port).await? else {
         return Ok(());
-    }
+    };
+    require_owner(&observed, owner)?;
     let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        format!("Bearer {}", session::read(data)?).parse()?,
-    );
+    headers.insert(AUTHORIZATION, format!("Bearer {token}").parse()?);
     headers.insert(CONTENT_TYPE, "application/json".parse()?);
     headers.insert("x-local-request", "1".parse()?);
     let response = http
@@ -120,6 +144,16 @@ pub async fn stop(data: &Path, port: u16) -> Result<()> {
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
+}
+
+fn require_owner(observed: &Value, owner: Option<u32>) -> Result<()> {
+    if owner.is_some_and(|owner| observed["pid"].as_u64() != Some(u64::from(owner))) {
+        return Err(
+            "L’instance propriétaire de cette icône a changé. Rouvre Atelier avec son lanceur."
+                .into(),
+        );
+    }
+    Ok(())
 }
 
 async fn open_browser(address: &str) -> Result<()> {
@@ -168,5 +202,18 @@ async fn open_browser(address: &str) -> Result<()> {
                 Err("Le navigateur n’a pas pu ouvrir Atelier. Le serveur reste disponible.".into())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn a_stale_tray_cannot_control_another_server_on_the_same_port() {
+        let observed = serde_json::json!({"pid":42});
+        assert!(require_owner(&observed, Some(42)).is_ok());
+        assert!(require_owner(&observed, Some(7)).is_err());
+        assert!(require_owner(&serde_json::json!({}), Some(42)).is_err());
+        assert!(require_owner(&observed, None).is_ok());
     }
 }

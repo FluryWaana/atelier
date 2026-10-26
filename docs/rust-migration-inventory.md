@@ -138,6 +138,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/tempo_export.rs](../crates/atelier-app/src/infrastructure/tempo_export.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/time_tracking.rs](../crates/atelier-app/src/infrastructure/time_tracking.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/token_vault.rs](../crates/atelier-app/src/infrastructure/token_vault.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/src/infrastructure/tray.rs](../crates/atelier-app/src/infrastructure/tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/update_package.rs](../crates/atelier-app/src/infrastructure/update_package.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/updates.rs](../crates/atelier-app/src/infrastructure/updates.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/infrastructure/verification.rs](../crates/atelier-app/src/infrastructure/verification.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -172,6 +173,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/local-commit-storage.rs](../crates/atelier-app/tests/local-commit-storage.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/local-commit.rs](../crates/atelier-app/tests/local-commit.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/local-http.rs](../crates/atelier-app/tests/local-http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [crates/atelier-app/tests/native-tray.rs](../crates/atelier-app/tests/native-tray.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/preparation.rs](../crates/atelier-app/tests/preparation.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/process-tools-unix.rs](../crates/atelier-app/tests/process-tools-unix.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/tests/prototype.rs](../crates/atelier-app/tests/prototype.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -942,6 +944,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/Cargo.toml:40](../crates/atelier-app/Cargo.toml#L40) | <code>[target.'cfg(windows)'.dependencies]</code> |
 | [crates/atelier-app/Cargo.toml:41](../crates/atelier-app/Cargo.toml#L41) | <code>windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography", "Win32_System_Memory", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_IO", "Win32_System_Ioctl", "Win32_NetworkManagement_IpHelper", "Win32_Security_Authorization", "Win32_System_Com", "Win32_UI_Shell_Common", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }</code> |
 | [crates/atelier-app/Cargo.toml:43](../crates/atelier-app/Cargo.toml#L43) | <code>[target.'cfg(unix)'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:46](../crates/atelier-app/Cargo.toml#L46) | <code>[target.'cfg(any(windows, target_os = "linux", target_os = "macos"))'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:47](../crates/atelier-app/Cargo.toml#L47) | <code>tray-icon = { version = "=0.26.1", default-features = false, features = ["ksni"] }</code> |
+| [crates/atelier-app/Cargo.toml:49](../crates/atelier-app/Cargo.toml#L49) | <code>[target.'cfg(target_os = "macos")'.dependencies]</code> |
+| [crates/atelier-app/Cargo.toml:51](../crates/atelier-app/Cargo.toml#L51) | <code>objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication"] }</code> |
+| [crates/atelier-app/Cargo.toml:52](../crates/atelier-app/Cargo.toml#L52) | <code>objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSDate", "NSRunLoop"] }</code> |
 | [crates/atelier-app/examples/connector-demo.rs:2](../crates/atelier-app/examples/connector-demo.rs#L2) | <code>use atelier_core::application::extensions::{</code> |
 | [crates/atelier-app/examples/connector-demo.rs:5](../crates/atelier-app/examples/connector-demo.rs#L5) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/examples/connector-demo.rs:6](../crates/atelier-app/examples/connector-demo.rs#L6) | <code>use std::io::{Read, Write};</code> |
@@ -1224,12 +1231,12 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/agent_cli.rs:409](../crates/atelier-app/src/infrastructure/agent_cli.rs#L409) | <code>operation.actual_version = actual;</code> |
 | [crates/atelier-app/src/infrastructure/agent_cli.rs:426](../crates/atelier-app/src/infrastructure/agent_cli.rs#L426) | <code>use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};</code> |
 | [crates/atelier-app/src/infrastructure/agent_cli.rs:427](../crates/atelier-app/src/infrastructure/agent_cli.rs#L427) | <code>use cap_std::fs::OpenOptionsExt;</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:517](../crates/atelier-app/src/infrastructure/agent_cli.rs#L517) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:518](../crates/atelier-app/src/infrastructure/agent_cli.rs#L518) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:519](../crates/atelier-app/src/infrastructure/agent_cli.rs#L519) | <code>use atelier_core::application::agent_cli::Phase;</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:538](../crates/atelier-app/src/infrastructure/agent_cli.rs#L538) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:591](../crates/atelier-app/src/infrastructure/agent_cli.rs#L591) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/agent_cli.rs:605](../crates/atelier-app/src/infrastructure/agent_cli.rs#L605) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:539](../crates/atelier-app/src/infrastructure/agent_cli.rs#L539) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:540](../crates/atelier-app/src/infrastructure/agent_cli.rs#L540) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:541](../crates/atelier-app/src/infrastructure/agent_cli.rs#L541) | <code>use atelier_core::application::agent_cli::Phase;</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:560](../crates/atelier-app/src/infrastructure/agent_cli.rs#L560) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:613](../crates/atelier-app/src/infrastructure/agent_cli.rs#L613) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/agent_cli.rs:627](../crates/atelier-app/src/infrastructure/agent_cli.rs#L627) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/agent_context.rs:1](../crates/atelier-app/src/infrastructure/agent_context.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/agent_context.rs:6](../crates/atelier-app/src/infrastructure/agent_context.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/agent_context.rs:7](../crates/atelier-app/src/infrastructure/agent_context.rs#L7) | <code>use atelier_core::{</code> |
@@ -1874,10 +1881,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/launcher.rs:7](../crates/atelier-app/src/infrastructure/launcher.rs#L7) | <code>use serde_json::Value;</code> |
 | [crates/atelier-app/src/infrastructure/launcher.rs:8](../crates/atelier-app/src/infrastructure/launcher.rs#L8) | <code>use std::{path::Path, process::Stdio, time::Duration};</code> |
 | [crates/atelier-app/src/infrastructure/launcher.rs:9](../crates/atelier-app/src/infrastructure/launcher.rs#L9) | <code>use tokio::{process::Command, time::Instant};</code> |
-| [crates/atelier-app/src/infrastructure/launcher.rs:31](../crates/atelier-app/src/infrastructure/launcher.rs#L31) | <code>pub async fn start(</code> |
-| [crates/atelier-app/src/infrastructure/launcher.rs:59](../crates/atelier-app/src/infrastructure/launcher.rs#L59) | <code>use std::os::unix::process::CommandExt;</code> |
-| [crates/atelier-app/src/infrastructure/launcher.rs:86](../crates/atelier-app/src/infrastructure/launcher.rs#L86) | <code>pub async fn stop(data: &amp;Path, port: u16) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/launcher.rs:128](../crates/atelier-app/src/infrastructure/launcher.rs#L128) | <code>use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:39](../crates/atelier-app/src/infrastructure/launcher.rs#L39) | <code>pub async fn start(</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:67](../crates/atelier-app/src/infrastructure/launcher.rs#L67) | <code>use std::os::unix::process::CommandExt;</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:92](../crates/atelier-app/src/infrastructure/launcher.rs#L92) | <code>pub async fn open(data: &amp;Path, port: u16) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:108](../crates/atelier-app/src/infrastructure/launcher.rs#L108) | <code>pub async fn stop(data: &amp;Path, port: u16) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:162](../crates/atelier-app/src/infrastructure/launcher.rs#L162) | <code>use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:209](../crates/atelier-app/src/infrastructure/launcher.rs#L209) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:210](../crates/atelier-app/src/infrastructure/launcher.rs#L210) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/launcher.rs:211](../crates/atelier-app/src/infrastructure/launcher.rs#L211) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:2](../crates/atelier-app/src/infrastructure/local_commit.rs#L2) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:7](../crates/atelier-app/src/infrastructure/local_commit.rs#L7) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/local_commit.rs:8](../crates/atelier-app/src/infrastructure/local_commit.rs#L8) | <code>use atelier_core::domain::files::validate_path;</code> |
@@ -1978,10 +1989,11 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/mod.rs:75](../crates/atelier-app/src/infrastructure/mod.rs#L75) | <code>pub mod tempo_export;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:76](../crates/atelier-app/src/infrastructure/mod.rs#L76) | <code>pub mod time_tracking;</code> |
 | [crates/atelier-app/src/infrastructure/mod.rs:77](../crates/atelier-app/src/infrastructure/mod.rs#L77) | <code>pub mod token_vault;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:78](../crates/atelier-app/src/infrastructure/mod.rs#L78) | <code>pub mod update_package;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:79](../crates/atelier-app/src/infrastructure/mod.rs#L79) | <code>pub mod updates;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:80](../crates/atelier-app/src/infrastructure/mod.rs#L80) | <code>pub mod verification;</code> |
-| [crates/atelier-app/src/infrastructure/mod.rs:81](../crates/atelier-app/src/infrastructure/mod.rs#L81) | <code>pub mod worktrees;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:78](../crates/atelier-app/src/infrastructure/mod.rs#L78) | <code>pub mod tray;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:79](../crates/atelier-app/src/infrastructure/mod.rs#L79) | <code>pub mod update_package;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:80](../crates/atelier-app/src/infrastructure/mod.rs#L80) | <code>pub mod updates;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:81](../crates/atelier-app/src/infrastructure/mod.rs#L81) | <code>pub mod verification;</code> |
+| [crates/atelier-app/src/infrastructure/mod.rs:82](../crates/atelier-app/src/infrastructure/mod.rs#L82) | <code>pub mod worktrees;</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:1](../crates/atelier-app/src/infrastructure/package.rs#L1) | <code>use crate::{</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:6](../crates/atelier-app/src/infrastructure/package.rs#L6) | <code>use serde_json::{Value, json};</code> |
 | [crates/atelier-app/src/infrastructure/package.rs:7](../crates/atelier-app/src/infrastructure/package.rs#L7) | <code>use sha2::{Digest, Sha256};</code> |
@@ -2382,6 +2394,21 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:490](../crates/atelier-app/src/infrastructure/token_vault.rs#L490) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:604](../crates/atelier-app/src/infrastructure/token_vault.rs#L604) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:665](../crates/atelier-app/src/infrastructure/token_vault.rs#L665) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:1](../crates/atelier-app/src/infrastructure/tray.rs#L1) | <code>use crate::Result;</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:2](../crates/atelier-app/src/infrastructure/tray.rs#L2) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:8](../crates/atelier-app/src/infrastructure/tray.rs#L8) | <code>use tokio::{</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:15](../crates/atelier-app/src/infrastructure/tray.rs#L15) | <code>pub struct Owner(Child);</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:18](../crates/atelier-app/src/infrastructure/tray.rs#L18) | <code>pub async fn start(data: &amp;Path, port: u16) -&gt; Result&lt;Option&lt;Self&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:77](../crates/atelier-app/src/infrastructure/tray.rs#L77) | <code>pub async fn close(mut self) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:117](../crates/atelier-app/src/infrastructure/tray.rs#L117) | <code>pub fn command(args: impl IntoIterator&lt;Item = OsString&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:126](../crates/atelier-app/src/infrastructure/tray.rs#L126) | <code>use std::{</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:134](../crates/atelier-app/src/infrastructure/tray.rs#L134) | <code>use tray_icon::{</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:141](../crates/atelier-app/src/infrastructure/tray.rs#L141) | <code>use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:249](../crates/atelier-app/src/infrastructure/tray.rs#L249) | <code>use windows_sys::Win32::UI::WindowsAndMessaging::{</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:270](../crates/atelier-app/src/infrastructure/tray.rs#L270) | <code>use objc2_foundation::{NSDate, NSRunLoop};</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:277](../crates/atelier-app/src/infrastructure/tray.rs#L277) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:278](../crates/atelier-app/src/infrastructure/tray.rs#L278) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:279](../crates/atelier-app/src/infrastructure/tray.rs#L279) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/update_package.rs:1](../crates/atelier-app/src/infrastructure/update_package.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/update_package.rs:6](../crates/atelier-app/src/infrastructure/update_package.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/update_package.rs:7](../crates/atelier-app/src/infrastructure/update_package.rs#L7) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
@@ -2478,9 +2505,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/lib.rs:5](../crates/atelier-app/src/lib.rs#L5) | <code>pub type Result&lt;T&gt; = std::result::Result&lt;T, Error&gt;;</code> |
 | [crates/atelier-app/src/main.rs:1](../crates/atelier-app/src/main.rs#L1) | <code>use atelier_app::{</code> |
 | [crates/atelier-app/src/main.rs:8](../crates/atelier-app/src/main.rs#L8) | <code>use std::{</code> |
-| [crates/atelier-app/src/main.rs:266](../crates/atelier-app/src/main.rs#L266) | <code>mod tests {</code> |
-| [crates/atelier-app/src/main.rs:267](../crates/atelier-app/src/main.rs#L267) | <code>use super::*;</code> |
-| [crates/atelier-app/src/main.rs:271](../crates/atelier-app/src/main.rs#L271) | <code>#[test]</code> |
+| [crates/atelier-app/src/main.rs:275](../crates/atelier-app/src/main.rs#L275) | <code>mod tests {</code> |
+| [crates/atelier-app/src/main.rs:276](../crates/atelier-app/src/main.rs#L276) | <code>use super::*;</code> |
+| [crates/atelier-app/src/main.rs:280](../crates/atelier-app/src/main.rs#L280) | <code>#[test]</code> |
 | [crates/atelier-app/tests/agent-cli-catalog.rs:2](../crates/atelier-app/tests/agent-cli-catalog.rs#L2) | <code>use atelier_app::infrastructure::agent_cli::Catalog;</code> |
 | [crates/atelier-app/tests/agent-cli-catalog.rs:3](../crates/atelier-app/tests/agent-cli-catalog.rs#L3) | <code>use axum::{</code> |
 | [crates/atelier-app/tests/agent-cli-catalog.rs:29](../crates/atelier-app/tests/agent-cli-catalog.rs#L29) | <code>#[tokio::test]</code> |
@@ -2665,6 +2692,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/local-http.rs:191](../crates/atelier-app/tests/local-http.rs#L191) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/local-http.rs:210](../crates/atelier-app/tests/local-http.rs#L210) | <code>#[test]</code> |
 | [crates/atelier-app/tests/local-http.rs:226](../crates/atelier-app/tests/local-http.rs#L226) | <code>use std::os::unix::fs::PermissionsExt;</code> |
+| [crates/atelier-app/tests/native-tray.rs:1](../crates/atelier-app/tests/native-tray.rs#L1) | <code>use std::{process::Stdio, time::Duration};</code> |
+| [crates/atelier-app/tests/native-tray.rs:2](../crates/atelier-app/tests/native-tray.rs#L2) | <code>use tokio::{io::AsyncReadExt, process::Command};</code> |
+| [crates/atelier-app/tests/native-tray.rs:4](../crates/atelier-app/tests/native-tray.rs#L4) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/native-tray.rs:52](../crates/atelier-app/tests/native-tray.rs#L52) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/preparation.rs:1](../crates/atelier-app/tests/preparation.rs#L1) | <code>use atelier_app::infrastructure::{database::Database, preparation, runs, store::Documents};</code> |
 | [crates/atelier-app/tests/preparation.rs:2](../crates/atelier-app/tests/preparation.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/preparation.rs:7](../crates/atelier-app/tests/preparation.rs#L7) | <code>use serde_json::json;</code> |
@@ -5193,6 +5224,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/token_vault.rs:495](../crates/atelier-app/src/infrastructure/token_vault.rs#L495) | <code>args: &amp;[&amp;str],</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:507](../crates/atelier-app/src/infrastructure/token_vault.rs#L507) | <code>stored = if args == ["-i"] {</code> |
 | [crates/atelier-app/src/infrastructure/token_vault.rs:512](../crates/atelier-app/src/infrastructure/token_vault.rs#L512) | <code>assert!(!args.join(" ").contains(&amp;stored));</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:90](../crates/atelier-app/src/infrastructure/tray.rs#L90) | <code>fn arguments(args: impl IntoIterator&lt;Item = OsString&gt;) -&gt; Result&lt;(PathBuf, u16, u32)&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:91](../crates/atelier-app/src/infrastructure/tray.rs#L91) | <code>let mut args = args.into_iter();</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:92](../crates/atelier-app/src/infrastructure/tray.rs#L92) | <code>let data = args</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:96](../crates/atelier-app/src/infrastructure/tray.rs#L96) | <code>let port = args</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:101](../crates/atelier-app/src/infrastructure/tray.rs#L101) | <code>let owner = args</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:110](../crates/atelier-app/src/infrastructure/tray.rs#L110) | <code>\|\| args.next().is_some()</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:117](../crates/atelier-app/src/infrastructure/tray.rs#L117) | <code>pub fn command(args: impl IntoIterator&lt;Item = OsString&gt;) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:118](../crates/atelier-app/src/infrastructure/tray.rs#L118) | <code>let (data, port, owner) = arguments(args)?;</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:288](../crates/atelier-app/src/infrastructure/tray.rs#L288) | <code>for args in [</code> |
+| [crates/atelier-app/src/infrastructure/tray.rs:294](../crates/atelier-app/src/infrastructure/tray.rs#L294) | <code>assert!(arguments(args).is_err());</code> |
 | [crates/atelier-app/src/infrastructure/updates.rs:658](../crates/atelier-app/src/infrastructure/updates.rs#L658) | <code>args: impl Iterator&lt;Item = std::ffi::OsString&gt;,</code> |
 | [crates/atelier-app/src/infrastructure/updates.rs:662](../crates/atelier-app/src/infrastructure/updates.rs#L662) | <code>let mut args = args;</code> |
 | [crates/atelier-app/src/infrastructure/updates.rs:663](../crates/atelier-app/src/infrastructure/updates.rs#L663) | <code>while let Some(name) = args.next() {</code> |
@@ -5220,10 +5261,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:57](../crates/atelier-app/src/main.rs#L57) | <code>args.next();</code> |
 | [crates/atelier-app/src/main.rs:75](../crates/atelier-app/src/main.rs#L75) | <code>while let Some(arg) = args.next() {</code> |
 | [crates/atelier-app/src/main.rs:84](../crates/atelier-app/src/main.rs#L84) | <code>let value = args</code> |
-| [crates/atelier-app/src/main.rs:268](../crates/atelier-app/src/main.rs#L268) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
-| [crates/atelier-app/src/main.rs:269](../crates/atelier-app/src/main.rs#L269) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
-| [crates/atelier-app/src/main.rs:304](../crates/atelier-app/src/main.rs#L304) | <code>for args in [</code> |
-| [crates/atelier-app/src/main.rs:315](../crates/atelier-app/src/main.rs#L315) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
+| [crates/atelier-app/src/main.rs:277](../crates/atelier-app/src/main.rs#L277) | <code>fn options(args: &amp;[&amp;str]) -&gt; Result&lt;Options&gt; {</code> |
+| [crates/atelier-app/src/main.rs:278](../crates/atelier-app/src/main.rs#L278) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
+| [crates/atelier-app/src/main.rs:313](../crates/atelier-app/src/main.rs#L313) | <code>for args in [</code> |
+| [crates/atelier-app/src/main.rs:324](../crates/atelier-app/src/main.rs#L324) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
 | [crates/atelier-app/tests/files.rs:19](../crates/atelier-app/tests/files.rs#L19) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
 | [crates/atelier-app/tests/files.rs:25](../crates/atelier-app/tests/files.rs#L25) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
 | [crates/atelier-app/tests/files.rs:26](../crates/atelier-app/tests/files.rs#L26) | <code>.args(args);</code> |
@@ -5238,6 +5279,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/local-commit.rs:9](../crates/atelier-app/tests/local-commit.rs#L9) | <code>async fn git(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
 | [crates/atelier-app/tests/local-commit.rs:15](../crates/atelier-app/tests/local-commit.rs#L15) | <code>.args([</code> |
 | [crates/atelier-app/tests/local-commit.rs:23](../crates/atelier-app/tests/local-commit.rs#L23) | <code>.args(args);</code> |
+| [crates/atelier-app/tests/native-tray.rs:55](../crates/atelier-app/tests/native-tray.rs#L55) | <code>for args in [</code> |
+| [crates/atelier-app/tests/native-tray.rs:63](../crates/atelier-app/tests/native-tray.rs#L63) | <code>.args(args)</code> |
 | [crates/atelier-app/tests/process-tools-unix.rs:8](../crates/atelier-app/tests/process-tools-unix.rs#L8) | <code>command.args([</code> |
 | [crates/atelier-app/tests/process-tools-unix.rs:22](../crates/atelier-app/tests/process-tools-unix.rs#L22) | <code>command.args(["-c", "sleep 30 &amp; wait"]);</code> |
 | [crates/atelier-app/tests/process-tools-unix.rs:32](../crates/atelier-app/tests/process-tools-unix.rs#L32) | <code>command.args(["-c", "while :; do printf synthetic-output; done"]);</code> |
@@ -6756,4 +6799,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 609 fichiers ; 97 fichiers de tests Node.
+Total : 611 fichiers ; 97 fichiers de tests Node.

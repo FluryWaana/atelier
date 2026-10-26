@@ -75,6 +75,7 @@ pub mod tempo;
 pub mod tempo_export;
 pub mod time_tracking;
 pub mod token_vault;
+pub mod tray;
 pub mod update_package;
 pub mod updates;
 pub mod verification;

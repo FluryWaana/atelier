@@ -126,8 +126,17 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
     installation::data_directory(root, platform, &home, local.as_deref(), xdg.as_deref())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("tray-helper")) {
+        return atelier_app::infrastructure::tray::command(std::env::args_os().skip(2));
+    }
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(application())
+}
+
+async fn application() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
     if first.as_deref() == Some(std::ffi::OsStr::new("verify-installation")) {
