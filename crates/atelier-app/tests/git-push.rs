@@ -1,4 +1,7 @@
-#![cfg(windows)]
+fn null() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
+
 use atelier_app::infrastructure::{
     files::Repository, git_transport::HttpsAuthentication, process_tree,
 };
@@ -69,11 +72,11 @@ async fn git(directory: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(directory)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null())
+        .env("GIT_CONFIG_SYSTEM", null())
         .args([
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "-c",
             "user.name=Synthetic",
             "-c",
@@ -172,8 +175,8 @@ async fn serve(State(remote): State<Remote>, request: Request) -> Response {
         .current_dir(&remote.root)
         .env("HOME", &remote.root)
         .env("USERPROFILE", &remote.root)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null())
+        .env("GIT_CONFIG_SYSTEM", null())
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_PROJECT_ROOT", &remote.root)
         .env("GIT_HTTP_EXPORT_ALL", "1")

@@ -36,9 +36,7 @@ mod events;
 mod files;
 mod forge;
 mod forge_draft;
-#[cfg(windows)]
 mod forge_publication;
-#[cfg(windows)]
 mod git_push;
 mod jira;
 mod jira_creation;
@@ -554,6 +552,24 @@ async fn serve_mode(
             axum::routing::put(connectors::configure).delete(connectors::remove),
         )
         .route("/api/extensions/{id}/invoke", post(connectors::invoke))
+        .route("/api/queue", get(queue::get).post(queue::change))
+        .route("/api/cards/{id}/automation", post(automation::change))
+        .route("/api/cards/{id}/automation/stop", post(automation::stop))
+        .route("/api/queue/pause", post(queue::pause))
+        .route("/api/cards/{id}/verification/start", post(runs::verify))
+        .route(
+            "/api/cards/{id}/runs/{run}/review/validate",
+            post(reviews::validate),
+        )
+        .route("/api/runs/{id}/stop", post(runs::stop))
+        .route("/api/runs/{id}/reply", post(runs::reply))
+        .route("/api/runs/{id}/logs", get(runs::logs))
+        .route("/api/cards/{id}/services", get(services::get))
+        .route("/api/cards/{id}/services/start", post(services::start))
+        .route("/api/cards/{id}/services/restart", post(services::restart))
+        .route("/api/cards/{id}/services/stop", post(services::stop));
+    let app = app
+        .route("/api/health", get(health))
         .route(
             "/api/cards/{id}/forge/publication-push",
             post(git_push::publication_branch),
@@ -579,24 +595,6 @@ async fn serve_mode(
             "/api/cards/{id}/forge/push-reconcile",
             post(git_push::reconcile),
         )
-        .route("/api/queue", get(queue::get).post(queue::change))
-        .route("/api/cards/{id}/automation", post(automation::change))
-        .route("/api/cards/{id}/automation/stop", post(automation::stop))
-        .route("/api/queue/pause", post(queue::pause))
-        .route("/api/cards/{id}/verification/start", post(runs::verify))
-        .route(
-            "/api/cards/{id}/runs/{run}/review/validate",
-            post(reviews::validate),
-        )
-        .route("/api/runs/{id}/stop", post(runs::stop))
-        .route("/api/runs/{id}/reply", post(runs::reply))
-        .route("/api/runs/{id}/logs", get(runs::logs))
-        .route("/api/cards/{id}/services", get(services::get))
-        .route("/api/cards/{id}/services/start", post(services::start))
-        .route("/api/cards/{id}/services/restart", post(services::restart))
-        .route("/api/cards/{id}/services/stop", post(services::stop));
-    let app = app
-        .route("/api/health", get(health))
         .route("/api/cards/{id}/commit/preview", post(commits::preview))
         .route("/api/cards/{id}/commit/changes", get(commits::changes))
         .route("/api/cards/{id}/commit/create", post(commits::create))
