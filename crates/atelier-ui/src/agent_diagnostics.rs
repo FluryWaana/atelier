@@ -71,7 +71,8 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
     view! {<section id="agent-account-quotas" class="task-files" aria-label=move||i18n.text("Dernier relevé des quotas")>
         <h4>{move||i18n.text("Dernier relevé des quotas")}</h4>
         <p>{report.observed_at}</p>
-        <p>{i18n.text(match report.state{State::Available=>"Limites déclarées par le service ; aucun accès à un modèle n’en est déduit.",State::Api=>"Les limites API sont distinctes des quotas d’abonnement.",State::Disconnected=>"Connecte le CLI puis relance la vérification.",State::Unsupported=>"Ce mode de connexion ne fournit pas ces quotas.",State::Unavailable=>"Quotas indisponibles. Aucune valeur n’est déduite."})}</p>
+        <p>{i18n.text(match report.state{State::Available=>"Limites déclarées par le service ; aucun accès à un modèle n’en est déduit.",State::Api=>"Les limites API sont distinctes des quotas d’abonnement.",State::Disconnected=>"Connecte le CLI puis relance la vérification.",State::Unsupported=>"Ce mode de connexion ne fournit pas ces quotas.",State::Unavailable=>"Quotas indisponibles. Aucune valeur n’est déduite.",State::RateLimited=>"Le service limite les lectures. Attends la prochaine tentative autorisée."})}</p>
+        {report.retry_at.map(|date|view!{<p>{i18n.text("Prochaine tentative : {0}").replace("{0}",&date)}</p>})}
         {report.account.map(|account|view!{<p>{i18n.text("Compte")}" : "{account}</p>})}
         {report.subscription.map(|plan|view!{<p>{i18n.text("Abonnement")}" : "{plan}</p>})}
         <p class="field-help">{move||i18n.text("Actualise avec le contrôle du profil. Le relevé expire après dix minutes ou à la réinitialisation ; aucune lecture automatique du compte.")}</p>

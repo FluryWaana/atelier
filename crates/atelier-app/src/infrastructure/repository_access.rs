@@ -47,7 +47,7 @@ pub fn read(root: &Dir) -> Result<Registry> {
         }
     }
 }
-fn absolute(path: &Path) -> Result<Dir> {
+pub(super) fn absolute(path: &Path) -> Result<Dir> {
     let mut components = path.components();
     let mut anchor = PathBuf::new();
     #[cfg(windows)]

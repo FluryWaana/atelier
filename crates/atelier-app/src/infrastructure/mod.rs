@@ -10,6 +10,8 @@ pub mod backups;
 pub mod brainstorm;
 pub mod checked_file;
 #[cfg(windows)]
+pub mod claude_account;
+#[cfg(windows)]
 pub mod command_runs;
 pub mod commits;
 pub mod connector_effects;

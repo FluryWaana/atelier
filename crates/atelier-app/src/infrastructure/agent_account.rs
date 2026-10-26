@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::{collections::BTreeMap, ffi::OsString, path::Path, process::Stdio, time::Duration};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 const LIMIT: usize = 1024 * 1024;
-fn reflected(value: &Value, secrets: &[String]) -> bool {
+pub(super) fn reflected(value: &Value, secrets: &[String]) -> bool {
     let contains = |text: &str| {
         secrets
             .iter()

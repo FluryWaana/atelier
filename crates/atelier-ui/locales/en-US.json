@@ -1954,5 +1954,7 @@
   "Réinitialisation : {0}": "Resets: {0}",
   "Réinitialisation non communiquée": "Reset time not reported",
   "{0} % restants": "{0}% remaining",
-  "Abonnement": "Subscription"
+  "Abonnement": "Subscription",
+  "Le service limite les lectures. Attends la prochaine tentative autorisée.": "The service is limiting reads. Wait until the next permitted attempt.",
+  "Prochaine tentative : {0}": "Next attempt: {0}"
 }

@@ -17,6 +17,7 @@ pub enum State {
     Api,
     Disconnected,
     Unsupported,
+    RateLimited,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +27,8 @@ pub struct Report {
     pub subscription: Option<String>,
     pub windows: Vec<Window>,
     pub observed_at: String,
+    #[serde(default)]
+    pub retry_at: Option<String>,
 }
 impl Report {
     pub fn unavailable(state: State) -> Self {
@@ -35,6 +38,7 @@ impl Report {
             subscription: None,
             windows: Vec::new(),
             observed_at: String::new(),
+            retry_at: None,
         }
     }
 }

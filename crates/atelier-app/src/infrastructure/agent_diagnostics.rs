@@ -240,6 +240,24 @@ fn authentication(
                 .contains(method)
             })
             .map(str::to_owned);
+        let mut report = atelier_core::application::agent_account::Report::unavailable(
+            atelier_core::application::agent_account::State::Unavailable,
+        );
+        report.subscription = value["subscriptionType"]
+            .as_str()
+            .filter(|value| {
+                !value.is_empty() && value.len() <= 80 && !value.chars().any(char::is_control)
+            })
+            .filter(|value| {
+                !environment.iter().any(|(key, secret)| {
+                    (key.contains("KEY") || key.contains("TOKEN"))
+                        && secret
+                            .to_str()
+                            .is_some_and(|secret| !secret.is_empty() && value.contains(secret))
+                })
+            })
+            .map(str::to_owned);
+        result.account_report = Some(report);
     }
     Ok(())
 }
@@ -362,7 +380,8 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         }
     }
     use atelier_core::application::agent_account::{Report, State};
-    if kind == "codex" {
+    if matches!(kind.as_str(), "codex" | "claude") {
+        let metadata = result.account_report.take();
         let mut report = if api {
             Report::unavailable(State::Api)
         } else if result.authentication == AgentAuthentication::Absent {
@@ -370,14 +389,26 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         } else if result.authentication == AgentAuthentication::Present
             && result.version_error.is_none()
         {
-            super::agent_account::read(&binary, &environment(&profile, &inherited, true)?)
-                .await
-                .unwrap_or_else(|_| Report::unavailable(State::Unavailable))
+            let environment = environment(&profile, &inherited, true)?;
+            let read = if kind == "codex" {
+                super::agent_account::read(&binary, &environment).await
+            } else {
+                super::claude_account::from_profile(&profile, environment).await
+            };
+            read.unwrap_or_else(|_| Report::unavailable(State::Unavailable))
         } else {
             Report::unavailable(State::Unavailable)
         };
-        report.observed_at = time::OffsetDateTime::now_utc()
-            .format(&time::format_description::well_known::Rfc3339)?;
+        if report.account.is_none() {
+            report.account = result.account.clone();
+        }
+        if report.subscription.is_none() {
+            report.subscription = metadata.and_then(|report| report.subscription);
+        }
+        if report.observed_at.is_empty() {
+            report.observed_at = time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)?;
+        }
         result.account_report = Some(report);
     }
     Ok(result)
