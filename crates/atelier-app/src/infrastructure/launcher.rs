@@ -114,8 +114,9 @@ pub(super) async fn stop_owned(data: &Path, port: u16, owner: Option<u32>) -> Re
         return Err("Port du lanceur invalide.".into());
     }
     let http = LocalHttp::new()?;
+    let deadline = Instant::now() + Duration::from_secs(30);
     let Some((observed, token)) = identity(&http, data, port).await? else {
-        return Ok(());
+        return wait_for_data_close(data, deadline).await;
     };
     require_owner(&observed, owner)?;
     let mut headers = HeaderMap::new();
@@ -134,16 +135,41 @@ pub(super) async fn stop_owned(data: &Path, port: u16, owner: Option<u32>) -> Re
     if !response.status.is_success() {
         return Err("Arrêt d’Atelier refusé ; les opérations en cours sont conservées.".into());
     }
-    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         if health(&http, data, port).await?.is_none() {
-            return Ok(());
+            return wait_for_data_close(data, deadline).await;
         }
         if Instant::now() >= deadline {
             return Err("Le serveur Atelier n’a pas confirmé son arrêt.".into());
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
+}
+
+async fn wait_for_data_close(data: &Path, deadline: Instant) -> Result<()> {
+    let data = data.to_owned();
+    tokio::task::spawn_blocking(move || {
+        let directory = match cap_std::fs::Dir::open_ambient_dir(&data, cap_std::ambient_authority()) {
+            Ok(directory) => directory,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error.into()),
+        };
+        match directory.symlink_metadata(super::data_lock::LOCK_NAME) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error.into()),
+            Ok(metadata) => super::checked_file::require_plain(&metadata)?,
+        }
+        loop {
+            if let Ok(lock) = super::data_lock::DataLock::acquire_in(&data, &directory) {
+                drop(lock);
+                return Ok(());
+            }
+            if Instant::now() >= deadline {
+                return Err("Le dossier Atelier est encore ouvert ou son verrou a changé. Aucun redémarrage confirmé.".into());
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }).await?
 }
 
 fn require_owner(observed: &Value, owner: Option<u32>) -> Result<()> {
@@ -208,6 +234,23 @@ async fn open_browser(address: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn shutdown_waits_for_data_lock_release_without_touching_business_data() {
+        let root = tempfile::tempdir().unwrap();
+        let lock = super::super::data_lock::DataLock::acquire(root.path()).unwrap();
+        let data = root.path().to_owned();
+        let waiting = tokio::spawn(async move {
+            wait_for_data_close(&data, Instant::now() + Duration::from_secs(2)).await
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!waiting.is_finished());
+        drop(lock);
+        waiting.await.unwrap().unwrap();
+        assert!(!root.path().join("kanban.sqlite").exists());
+        let absent = root.path().join("never-created");
+        wait_for_data_close(&absent, Instant::now()).await.unwrap();
+        assert!(!absent.exists());
+    }
     #[test]
     fn a_stale_tray_cannot_control_another_server_on_the_same_port() {
         let observed = serde_json::json!({"pid":42});
