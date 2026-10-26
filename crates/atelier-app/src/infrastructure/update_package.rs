@@ -45,7 +45,13 @@ impl Trust {
         Ok(bytes)
     }
     pub fn load(path: &Path) -> Result<Self> {
-        let value: Self = serde_json::from_slice(&package::read(path, 4096)?)?;
+        Self::from_bytes(&package::read(path, 4096)?)
+    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() > 4096 {
+            return Err("Clé de confiance trop volumineuse.".into());
+        }
+        let value: Self = serde_json::from_slice(bytes)?;
         value.key()?;
         Ok(value)
     }
@@ -63,6 +69,7 @@ pub struct Payload {
     pub version: String,
     pub archive_size: u64,
     pub archive_sha256: String,
+    pub manifest_sha256: String,
     pub key_id: String,
 }
 #[derive(Serialize, Deserialize)]
@@ -75,6 +82,7 @@ struct Signed {
 pub struct PreparedUpdate {
     package: StagedPackage,
     payload: Payload,
+    receipt: Vec<u8>,
 }
 impl PreparedUpdate {
     pub fn package(&self) -> &StagedPackage {
@@ -82,6 +90,9 @@ impl PreparedUpdate {
     }
     pub fn payload(&self) -> &Payload {
         &self.payload
+    }
+    pub fn receipt(&self) -> &[u8] {
+        &self.receipt
     }
 }
 fn key_id(key: &[u8]) -> String {
@@ -164,6 +175,13 @@ pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<
             .into(),
         archive_size: bytes.len() as u64,
         archive_sha256: format!("{:x}", Sha256::digest(&bytes)),
+        manifest_sha256: format!(
+            "{:x}",
+            Sha256::digest(package::read(
+                &staged.path().join("atelier-package.json"),
+                1024 * 1024
+            )?)
+        ),
         key_id: trust.key_id.clone(),
     };
     let signature = STANDARD.encode(pair.sign(&serde_json::to_vec(&payload)?).as_ref());
@@ -171,7 +189,7 @@ pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<
     package::write(output, &serde_json::to_vec_pretty(&signed)?)
 }
 
-fn authenticate(metadata: &[u8], trust: &Trust, target: &str, current: &str) -> Result<Payload> {
+pub fn authenticated_payload(metadata: &[u8], trust: &Trust, target: &str) -> Result<Payload> {
     if metadata.len() > 16 * 1024 {
         return Err("Manifeste signé trop volumineux.".into());
     }
@@ -188,6 +206,11 @@ fn authenticate(metadata: &[u8], trust: &Trust, target: &str, current: &str) -> 
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
         || signed.signature.len() != 88
+        || payload.manifest_sha256.len() != 64
+        || !payload
+            .manifest_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     {
         return Err("Contrat du manifeste signé invalide.".into());
     }
@@ -205,10 +228,35 @@ fn authenticate(metadata: &[u8], trust: &Trust, target: &str, current: &str) -> 
     if payload.target != target {
         return Err("Cette mise à jour cible une autre plateforme ou architecture.".into());
     }
+    package::version_parts(&payload.version)?;
+    Ok(signed.payload)
+}
+
+fn authenticate(metadata: &[u8], trust: &Trust, target: &str, current: &str) -> Result<Payload> {
+    let payload = authenticated_payload(metadata, trust, target)?;
     if package::version_parts(&payload.version)? <= package::version_parts(current)? {
         return Err("La mise à jour doit être strictement plus récente ; version identique et retour arrière refusés.".into());
     }
-    Ok(signed.payload)
+    Ok(payload)
+}
+
+pub fn verify_installed_payload(
+    directory: &Path,
+    receipt: &[u8],
+    trust: &Trust,
+    target: &str,
+) -> Result<Payload> {
+    let payload = authenticated_payload(receipt, trust, target)?;
+    package::verify(directory)?;
+    let bytes = package::read(&directory.join("atelier-package.json"), 1024 * 1024)?;
+    let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
+    if format!("{:x}", Sha256::digest(&bytes)) != payload.manifest_sha256
+        || manifest["version"] != payload.version
+        || manifest["target"] != payload.target
+    {
+        return Err("La version installée ne correspond pas à son manifeste signé.".into());
+    }
+    Ok(payload)
 }
 
 pub fn prepare(
@@ -230,19 +278,30 @@ pub fn prepare(
     let package = package_archive::unpack(&bytes, target, parent)?;
     if package.manifest()["version"] != payload.version
         || package.manifest()["target"] != payload.target
+        || format!(
+            "{:x}",
+            Sha256::digest(super::package::read(
+                &package.path().join("atelier-package.json"),
+                1024 * 1024
+            )?)
+        ) != payload.manifest_sha256
     {
         return Err(
             "Le contenu du paquet ne correspond pas à la version et à la cible signées.".into(),
         );
     }
-    Ok(PreparedUpdate { package, payload })
+    Ok(PreparedUpdate {
+        package,
+        payload,
+        receipt: metadata,
+    })
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use serde_json::json;
-    fn fixture() -> (tempfile::TempDir, Trust) {
+    pub(crate) fn fixture() -> (tempfile::TempDir, Trust) {
         let root = tempfile::tempdir().unwrap();
         let payload = root.path().join("payload");
         fs::create_dir(&payload).unwrap();
@@ -374,5 +433,88 @@ mod tests {
         .to_string();
         assert!(error.contains("empreinte signées"));
         assert_eq!(fs::read_dir(&staging).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn installation_publishes_only_a_verified_new_root_and_preserves_existing_data() {
+        use super::super::{
+            installation::{self, InstallationMode},
+            installed,
+        };
+        let (root, _) = fixture();
+        let destination = root.path().join("installed");
+        let archive = root.path().join("update.zip");
+        let metadata = root.path().join("update.json");
+        let trust = root.path().join("keys").join(PUBLIC_KEY);
+        installed::install(
+            &archive,
+            &metadata,
+            &trust,
+            &destination,
+            InstallationMode::Portable,
+            package::TARGETS[1],
+        )
+        .unwrap();
+        assert_eq!(
+            installation::mode(&destination).unwrap(),
+            InstallationMode::Portable
+        );
+        let installation = installed::open(&destination, package::TARGETS[1])
+            .unwrap()
+            .unwrap();
+        assert_eq!(installation.current().active.version, "0.2.0");
+        assert!(
+            installed::locate(&destination.join("atelier"), package::TARGETS[1])
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            installed::locate(
+                &installation.active_executable().unwrap(),
+                package::TARGETS[1]
+            )
+            .unwrap()
+            .is_some()
+        );
+        fs::create_dir(destination.join("data")).unwrap();
+        fs::write(
+            destination.join("data/human-synthetic"),
+            "Preserve this synthetic data",
+        )
+        .unwrap();
+        assert!(
+            installed::install(
+                &archive,
+                &metadata,
+                &trust,
+                &destination,
+                InstallationMode::User,
+                package::TARGETS[1]
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read_to_string(destination.join("data/human-synthetic")).unwrap(),
+            "Preserve this synthetic data"
+        );
+        let slot = installation
+            .slot_path(&installation.current().active)
+            .unwrap();
+        fs::write(slot.join("ui/style-test.css"), "Human edit").unwrap();
+        let changed = package::manifest(&slot, package::TARGETS[1], "0.2.0").unwrap();
+        fs::write(
+            slot.join("atelier-package.json"),
+            serde_json::to_vec(&changed).unwrap(),
+        )
+        .unwrap();
+        assert!(installed::open(&destination, package::TARGETS[1]).is_err());
+        assert_eq!(
+            fs::read_to_string(slot.join("ui/style-test.css")).unwrap(),
+            "Human edit"
+        );
+        assert_eq!(
+            fs::read_to_string(destination.join("data/human-synthetic")).unwrap(),
+            "Preserve this synthetic data"
+        );
     }
 }

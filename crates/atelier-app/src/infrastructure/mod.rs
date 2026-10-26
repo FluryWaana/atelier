@@ -28,6 +28,7 @@ pub mod forge_publication;
 pub mod git_push;
 pub mod git_transport;
 pub mod installation;
+pub mod installed;
 #[cfg(windows)]
 mod interactive_runs;
 pub mod jira;
@@ -67,5 +68,6 @@ pub mod tempo_export;
 pub mod time_tracking;
 pub mod token_vault;
 pub mod update_package;
+pub mod updates;
 pub mod verification;
 pub mod worktrees;

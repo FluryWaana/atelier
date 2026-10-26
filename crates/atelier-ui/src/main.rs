@@ -35,6 +35,7 @@ mod tempo;
 mod tempo_export;
 mod time;
 mod time_report;
+mod updates;
 mod worktree;
 use agent_profiles::AgentProfiles;
 use backups::Backups;

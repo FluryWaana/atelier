@@ -567,6 +567,100 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
     jira_recovery_scenario(client, http).await?;
+    updates_scenario(client, http).await?;
+    Ok(())
+}
+
+async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+    use atelier_app::infrastructure::{
+        installation::InstallationMode, installed, launcher, package, session, update_package,
+        updates,
+    };
+    use atelier_core::application::updates::Phase;
+    let temporary = tempfile::tempdir()?;
+    let assets = root().join(".artifacts/rust-ui");
+    let binary = root().join("target/debug").join(if cfg!(windows) {
+        "atelier.exe"
+    } else {
+        "atelier"
+    });
+    update_package::generate_synthetic(&temporary.path().join("keys"))?;
+    let current = env!("CARGO_PKG_VERSION");
+    let parts = package::version_parts(current)?;
+    let proposed = format!(
+        "{}.{}.{}",
+        parts[0],
+        parts[1],
+        parts[2]
+            .checked_add(1)
+            .ok_or("Version de fixture excessive.")?
+    );
+    let (original, original_signature) =
+        crate::update_flow::archive(temporary.path(), "original", &binary, &assets, current)?;
+    let (candidate, candidate_signature) = crate::update_flow::archive(
+        temporary.path(),
+        "version-mismatch",
+        &binary,
+        &assets,
+        &proposed,
+    )?;
+    let installation = temporary.path().join("installed");
+    installed::install(
+        &original,
+        &original_signature,
+        &temporary.path().join("keys/synthetic-update-public.json"),
+        &installation,
+        InstallationMode::Portable,
+        package::native_target()?,
+    )?;
+    let installed = installed::open(&installation, package::native_target()?)?
+        .ok_or("Installation navigateur absente.")?;
+    let data = temporary.path().join("synthetic-data");
+    let port = free_port()?;
+    let address = format!("http://127.0.0.1:{port}");
+    launcher::start(
+        &installed.active_executable()?,
+        &data,
+        &installed.slot_path(&installed.current().active)?.join("ui"),
+        port,
+        false,
+    )
+    .await?;
+    let result=async {
+        let token=session::read(&data)?;
+        client.goto(&format!("{address}/#session={token}")).await?;
+        wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
+        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.disabled === false;",vec![]).await?;
+        client.find(Locator::Css("#update-archive")).await?.send_keys(&candidate.to_string_lossy()).await?;
+        client.find(Locator::Css("#update-signature")).await?.send_keys(&candidate_signature.to_string_lossy()).await?;
+        click(client,"#close-settings").await?;click(client,"#keep-settings").await?;
+        wait_dom(client,"return document.querySelector('#update-archive')?.value === arguments[0];",vec![json!(candidate)]).await?;
+        click(client,"#preview-update").await?;
+        wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#approve-update").await?;click(client,"#settings-tab-general").await?;
+        client.find(Locator::Css("#settings-branch")).await?.clear().await?;client.find(Locator::Css("#settings-branch")).await?.send_keys("synthetic-unsaved-update-draft").await?;
+        click(client,"#settings-tab-updates").await?;
+        if client.execute("return document.querySelector('#apply-update')?.matches(':disabled');",vec![]).await?!=json!(true){return Err("La mise à jour n’a pas protégé l’autre brouillon.".into());}
+        click(client,"#settings-tab-general").await?;click(client,"#save-settings").await?;
+        wait_dom(client,"return document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;click(client,"#settings-tab-updates").await?;
+        click(client,"#reload-updates").await?;
+        wait_dom(client,"return document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#approve-update").await?;click(client,"#apply-update").await?;
+        let deadline=Instant::now()+Duration::from_secs(120);
+        loop {let state=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?.state;if state==Phase::RolledBack{break;}if !state.pending(){return Err("La mauvaise version n’a pas déclenché une récupération navigateur.".into());}if Instant::now()>=deadline{return Err("Récupération navigateur trop longue.".into());}tokio::time::sleep(Duration::from_millis(100)).await;}
+        let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
+        client.goto(&format!("{address}/#session={next}")).await?;wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
+        wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        let state:serde_json::Value=http.get(format!("{address}/api/state")).bearer_auth(&next).send().await?.error_for_status()?.json().await?;
+        if state["settings"]["baseBranch"]!="synthetic-unsaved-update-draft"{return Err("La récupération a perdu le réglage enregistré.".into());}
+        std::fs::write(root().join(".artifacts/rust-ui-update-recovered.png"),client.screenshot().await?)?;
+        Ok::<(),Box<dyn std::error::Error+Send+Sync>>(())
+    }.await;
+    let stopped = crate::update_flow::stop_fixture(&installation, &data, port).await;
+    result?;
+    stopped?;
     Ok(())
 }
 

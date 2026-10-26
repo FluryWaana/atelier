@@ -6,12 +6,13 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
-const TABS: [(&str, &str); 5] = [
+const TABS: [(&str, &str); 6] = [
     ("general", "Général"),
     ("jira", "Jira"),
     ("forges", "Forges"),
     ("tempo", "Tempo"),
     ("connectors", "Connecteurs"),
+    ("updates", "Mises à jour"),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -62,6 +63,14 @@ pub fn Settings(
     let forge_dirty = RwSignal::new(false);
     let tempo_dirty = RwSignal::new(false);
     let connectors_dirty = RwSignal::new(false);
+    let updates_dirty = RwSignal::new(false);
+    let updates_blocked = Memo::new(move |_| {
+        dirty.get()
+            || jira_dirty.get()
+            || forge_dirty.get()
+            || tempo_dirty.get()
+            || connectors_dirty.get()
+    });
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     let discard = RwSignal::new(false);
@@ -84,6 +93,7 @@ pub fn Settings(
             || forge_dirty.get_untracked()
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
+            || updates_dirty.get_untracked()
         {
             discard.set(true);
         } else {
@@ -96,6 +106,7 @@ pub fn Settings(
             || forge_dirty.get_untracked()
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
+            || updates_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -156,6 +167,7 @@ pub fn Settings(
             <section id="settings-panel-jira" role="tabpanel" aria-labelledby="settings-tab-jira" hidden=move || tab.get()!=1><crate::jira::JiraSettings board token pending dirty=jira_dirty /></section>
             <section id="settings-panel-tempo" role="tabpanel" aria-labelledby="settings-tab-tempo" hidden=move || tab.get()!=3><crate::tempo::TempoSettings token pending dirty=tempo_dirty /></section>
             <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors board token pending dirty=connectors_dirty /></section>
+            <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| discard.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
         </dialog>

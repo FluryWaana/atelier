@@ -22,6 +22,7 @@ pub mod task_editing;
 pub mod task_templates;
 pub mod time_reports;
 pub mod time_tracking;
+pub mod updates;
 pub mod worktrees;
 
 pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json::Result<Card> {

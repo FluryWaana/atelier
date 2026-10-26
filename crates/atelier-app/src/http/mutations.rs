@@ -36,6 +36,7 @@ pub(super) async fn run(
 pub(super) fn is_cancellation(path: &str) -> bool {
     path == "/api/prototype/stop"
         || path == "/api/shutdown"
+        || path == "/api/updates/recover"
         || path == "/api/queue/pause"
         || path.strip_prefix("/api/time/").is_some_and(|tail| {
             tail.split_once('/')
@@ -74,6 +75,7 @@ mod tests {
         for path in [
             "/api/prototype/stop",
             "/api/shutdown",
+            "/api/updates/recover",
             "/api/queue/pause",
             "/api/time/entry/stop",
             "/api/runs/run/stop",

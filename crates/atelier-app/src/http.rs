@@ -62,11 +62,13 @@ mod task_templates;
 mod tempo;
 mod tempo_export;
 mod time_tracking;
+mod updates;
 mod worktrees;
 
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 struct AppState {
+    installation_root: Option<PathBuf>,
     database: Arc<Database>,
     prototype_paths: [PathBuf; 2],
     prototype_directory: Arc<cap_std::fs::Dir>,
@@ -160,6 +162,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
         let exclusive = path.ends_with("/jira/create")
+            || path.starts_with("/api/updates/")
             || path.starts_with("/api/extensions")
             || (path.starts_with("/api/time/")
                 && ["/export-preview", "/export", "/reconcile", "/reset-export"]
@@ -205,6 +208,23 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         let runs = state.runs.clone();
         let operation = async move {
             if !cancellation {
+                if let Some(root) = &state.installation_root {
+                    match crate::infrastructure::updates::maintenance(root) {
+                        Ok(true) => {
+                            return failure(
+                                StatusCode::CONFLICT,
+                                "Mise à jour en cours. Les modifications sont suspendues jusqu’à sa validation ou sa récupération.",
+                            );
+                        }
+                        Err(_) => {
+                            return failure(
+                                StatusCode::CONFLICT,
+                                "Le journal de mise à jour doit être examiné avant de modifier les données.",
+                            );
+                        }
+                        Ok(false) => {}
+                    }
+                }
                 #[cfg(windows)]
                 if let Some(response) = services::guard(&services, request.uri().path()) {
                     return response;
@@ -433,7 +453,7 @@ async fn unavailable(request: Request) -> Response {
 }
 
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
-    serve_mode(listener, directory, assets, true).await
+    serve_mode(listener, directory, assets, true, None).await
 }
 
 pub async fn serve_native(
@@ -441,7 +461,16 @@ pub async fn serve_native(
     directory: PathBuf,
     assets: PathBuf,
 ) -> Result<()> {
-    serve_mode(listener, directory, assets, false).await
+    serve_mode(listener, directory, assets, false, None).await
+}
+
+pub async fn serve_installed(
+    listener: TcpListener,
+    directory: PathBuf,
+    assets: PathBuf,
+    root: PathBuf,
+) -> Result<()> {
+    serve_mode(listener, directory, assets, false, Some(root)).await
 }
 
 async fn serve_mode(
@@ -449,15 +478,30 @@ async fn serve_mode(
     directory: PathBuf,
     assets: PathBuf,
     legacy: bool,
+    installation_root: Option<PathBuf>,
 ) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
     }
     let app = assets::router(&assets, legacy)?;
+    let expected_identity = installation_root
+        .as_ref()
+        .map(|root| crate::infrastructure::updates::expected_data_identity(root, &directory))
+        .transpose()?
+        .flatten();
     let original_directory = std::path::absolute(&directory)?;
     let directory = PrototypeDirectory::open(&directory)?;
-    let vault =
-        crate::infrastructure::token_vault::PrototypeVault::new(directory.vault_service()?)?;
+    let service = directory.vault_service()?;
+    if expected_identity.is_some_and(|expected| {
+        service
+            != format!(
+                "{}{expected}",
+                crate::infrastructure::token_vault::PROTOTYPE_SERVICE_PREFIX
+            )
+    }) {
+        return Err("Le dossier de données a changé avant le démarrage de la version.".into());
+    }
+    let vault = crate::infrastructure::token_vault::PrototypeVault::new(service)?;
     let token = session::new_token()?;
     directory.write_session(&token)?;
     let database = directory.database()?;
@@ -480,6 +524,7 @@ async fn serve_mode(
     let (shutdown, mut stopped) = watch::channel(false);
     let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
+        installation_root,
         database: Arc::new(database),
         prototype_paths: [directory.path.clone(), original_directory],
         prototype_directory: Arc::new(directory.opened_directory()?),
@@ -560,6 +605,11 @@ async fn serve_mode(
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route("/api/extensions", get(connectors::get))
+        .route("/api/updates", get(updates::get))
+        .route("/api/updates/preview", post(updates::action))
+        .route("/api/updates/apply", post(updates::action))
+        .route("/api/updates/cancel", post(updates::action))
+        .route("/api/updates/recover", post(updates::action))
         .route(
             "/api/extensions/{id}/tickets/import",
             post(connectors::import_tickets),

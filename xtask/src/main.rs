@@ -9,6 +9,7 @@ mod launch_detection;
 mod package;
 mod storage;
 mod ui;
+mod update_flow;
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -160,6 +161,7 @@ async fn main() -> Result<()> {
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
         ["test-ui"] => { build_ui()?; ui::test(false).await },
+        ["test-updates"] => update_flow::test().await,
         ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
         _ => Err("Usage : cargo xtask build-ui | stage-package TARGET BINARY ASSETS OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Payloads, archives, signature et lanceur sont candidats non qualifiés ; installateurs, tray et mise à jour récupérable R06 restent à livrer.".into()),
     }

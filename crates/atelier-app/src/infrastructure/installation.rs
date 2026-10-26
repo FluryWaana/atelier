@@ -18,7 +18,8 @@ pub fn update_installed_version(root: &Path, version: &str) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum InstallationMode {
     Portable,
     User,
@@ -50,6 +51,9 @@ pub fn mode(root: &Path) -> Result<InstallationMode> {
         &CheckedFile::open_in(&directory, Path::new("installation.json"))?.read(65_536)?,
     )?;
     match value.get("mode").and_then(Value::as_str) {
+        Some("portable") if value["format"] == "atelier-rust-installation/1" => {
+            Ok(InstallationMode::Portable)
+        }
         Some("user") => Ok(InstallationMode::User),
         Some("system") => Ok(InstallationMode::System),
         _ => Err("Mode d’installation invalide.".into()),

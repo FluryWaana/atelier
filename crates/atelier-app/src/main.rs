@@ -2,7 +2,7 @@ use atelier_app::{
     Result, http,
     infrastructure::{
         installation::{self, InstallationMode, Platform},
-        launcher,
+        installed, launcher, package, updates,
     },
 };
 use std::{
@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
+const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -128,19 +128,72 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let mut command = std::env::args_os().skip(1);
+    let first = command.next();
+    if let Some(name) = first
+        .as_ref()
+        .and_then(|value| value.to_str())
+        .filter(|name| {
+            [
+                "update-preview",
+                "update-status",
+                "update-apply",
+                "update-cancel",
+                "update-recover",
+            ]
+            .contains(name)
+        })
+    {
+        return updates::command(name, command).await;
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("update-worker")) {
+        return updates::worker_command(command, false).await;
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("recover-update")) {
+        return updates::worker_command(command, true).await;
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("install")) {
+        installed::install_command(command)?;
+        println!("Installation Rust créée. Aucun dossier de données importé.");
+        return Ok(());
+    }
     let options = parse(std::env::args_os().skip(1))?;
     if options.action == Action::Help {
         println!("{USAGE}");
         return Ok(());
     }
+    let executable = std::env::current_exe()?;
+    if options.action == Action::Launch {
+        updates::recover_if_needed(&executable).await?;
+    }
+    let installation = installed::locate(&executable, package::native_target()?)?;
     if options.action == Action::Version {
-        println!("Atelier Kanban Rust {}", env!("CARGO_PKG_VERSION"));
+        println!(
+            "Atelier Kanban Rust {}",
+            installation
+                .as_ref()
+                .map(|installation| installation.current().active.version.as_str())
+                .unwrap_or(env!("CARGO_PKG_VERSION"))
+        );
         return Ok(());
     }
-    let executable = std::env::current_exe()?;
-    let root = executable
-        .parent()
-        .ok_or("Dossier applicatif introuvable.")?;
+    let root = if let Some(installation) = &installation {
+        installation.root()
+    } else {
+        executable
+            .parent()
+            .ok_or("Dossier applicatif introuvable.")?
+    };
+    let effective = if let Some(installation) = &installation {
+        installation.active_executable()?
+    } else {
+        executable.clone()
+    };
+    if matches!(options.action, Action::Serve | Action::Prototype)
+        && std::fs::canonicalize(&effective)? != std::fs::canonicalize(&executable)?
+    {
+        return Err("Le service doit être lancé depuis la version active vérifiée.".into());
+    }
     let data = match options.data {
         Some(path) => std::path::absolute(path)?,
         None => data_directory(root)?,
@@ -153,12 +206,19 @@ async fn main() -> Result<()> {
         println!("Atelier est arrêté.");
         return Ok(());
     }
-    let assets = std::path::absolute(options.assets.unwrap_or_else(|| root.join("ui")))?;
+    let default_assets = if let Some(installation) = &installation {
+        installation
+            .slot_path(&installation.current().active)?
+            .join("ui")
+    } else {
+        root.join("ui")
+    };
+    let assets = std::path::absolute(options.assets.unwrap_or(default_assets))?;
     if !assets.join("index.html").is_file() {
         return Err("Interface Rust absente. Utilise un paquet complet ou construis les assets avec cargo xtask build-ui.".into());
     }
     if options.action == Action::Launch {
-        launcher::start(&executable, &data, &assets, options.port, options.browser).await?;
+        launcher::start(&effective, &data, &assets, options.port, options.browser).await?;
         println!(
             "Atelier Kanban : http://127.0.0.1:{}\nUtilise atelier stop avec le même port et dossier pour arrêter le serveur.",
             options.port
@@ -170,6 +230,8 @@ async fn main() -> Result<()> {
     println!("Atelier Kanban Rust sur http://{}", listener.local_addr()?);
     if options.action == Action::Prototype {
         http::serve(listener, data, assets).await
+    } else if installation.is_some() {
+        http::serve_installed(listener, data, assets, root.to_owned()).await
     } else {
         http::serve_native(listener, data, assets).await
     }
