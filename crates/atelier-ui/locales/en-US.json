@@ -1745,5 +1745,16 @@
   "Le commit du parcours n’est pas confirmé sur son aperçu. Relis la branche avant de poursuivre.": "The workflow commit is not confirmed against its preview. Read the branch before continuing.",
   "Commit observé. Les sources vont être revérifiées avant toute publication.": "Commit observed. Sources will be checked again before publication.",
   "Commit réservé dans le parcours. Les vérifications suivront avant toute publication.": "Commit reserved in the workflow. Verification will follow before publication.",
-  "Créer ce commit dans le parcours puis vérifier": "Create this commit in the workflow, then verify"
+  "Créer ce commit dans le parcours puis vérifier": "Create this commit in the workflow, then verify",
+  "Configure et active le parcours du projet avant de l’ajouter à la file.": "Configure and enable the project workflow before adding it to the queue.",
+  "Vérifie le parcours bloqué avant de le remettre dans la file.": "Check the blocked workflow before adding it to the queue again.",
+  "Retire la tâche de la file avant de changer son mode d’exécution.": "Remove the task from the queue before changing its execution mode.",
+  "Le parcours lié à la file a été remplacé. Retire puis ajoute à nouveau la tâche.": "The queued workflow was replaced. Remove and add the task again.",
+  "Vérifie le parcours bloqué avant de reprendre la file.": "Check the blocked workflow before resuming the queue.",
+  "Parcours de file absent.": "Queued workflow missing.",
+  "Parcours arrêté, bloqué ou interrompu. Vérifie la tâche avant de reprendre la file.": "Workflow stopped, blocked or interrupted. Check the task before resuming the queue.",
+  "Ajouter le parcours du projet à la file": "Add the project workflow to the queue",
+  "Les tâches simples et les parcours suivent l’ordre affiché avec leurs réglages enregistrés au démarrage. Le parcours actif peut attendre tes validations de commit et publication. Après redémarrage, la file reste en pause ; les effets incertains ne sont jamais rejoués.": "Tasks and workflows follow the displayed order using their settings saved at launch. The active workflow may wait for your commit and publication approvals. After restart the queue stays paused; uncertain effects are never replayed.",
+  "Autoriser les lancements et reprises locaux avec les réglages enregistrés, après vérification des tâches. Les publications restent à confirmer.": "Authorize local launches and resumptions with the saved settings after checking the tasks. Publications still require confirmation.",
+  "Recommencer un parcours avec les réglages actuels": "Start a new workflow with the current settings"
 }

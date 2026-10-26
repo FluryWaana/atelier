@@ -117,6 +117,8 @@ pub fn Automation(
         } else {
             let selected = if command == "publish" {
                 "publish"
+            } else if command == "restart" {
+                "start"
             } else {
                 let Some((selected, _)) = action.get_untracked() else {
                     return;
@@ -149,6 +151,7 @@ pub fn Automation(
         <p class="field-help" hidden=move||project.get().is_some_and(|project|project.get::<bool>("automationEnabled").ok().flatten()==Some(true))>{move||i18n.text("Active le parcours dans les réglages du projet pour démarrer une tâche.")}</p>
         <label hidden=move||active.get()><input id="approve-automation" type="checkbox" prop:checked=move||approved.get().as_deref()==Some(snapshot.get().as_str()) disabled=move||pending.get()||blocked.get() on:change=move|event|approved.set(event_target_checked(&event).then(||snapshot.get_untracked()))/>{move||i18n.text("Autoriser cette étape avec le besoin, le profil et les réglages affichés. Après interruption, j’ai vérifié le worktree et les effets distants avant reprise.")}</label>
         <button id="start-automation" type="button" hidden=move||active.get() disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str()) on:click=move|_|execute.with_value(|execute|execute("step"))>{move||i18n.text(action.get().map(|(_,label)|label).unwrap_or("Démarrer le parcours"))}</button>
+        <button id="restart-automation" type="button" hidden=move||flow.get().is_none_or(|flow|!matches!(flow.state,State::Interrupted|State::Error|State::Cancelled)) disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str()) on:click=move|_|execute.with_value(|execute|execute("restart"))>{move||i18n.text("Recommencer un parcours avec les réglages actuels")}</button>
         <div hidden=move||flow.get().is_none_or(|flow|flow.state!=State::Waiting)||publication.get().is_none()>
             <h4>{move||i18n.text("Enchaîner la publication approuvée")}</h4>
             <p class="field-help">{move||i18n.text("Prépare d’abord le commit et l’aperçu de push ou de PR/MR dans les panneaux ci-dessous. Cette action revérifie le commit affiché, pousse avec protection de la branche distante, crée la PR/MR brouillon si nécessaire, puis lance la review. Une incertitude suspend le parcours sans renvoi.")}</p>

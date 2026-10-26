@@ -396,7 +396,6 @@ fn restore_checked(
         super::connectors::invalidate(&mut settings,&previous_settings)?;
         settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
-        super::queue::recover_in_transaction(store)?;
         for mut run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("purpose","verification")? {
                 run.set("verificationState",&"stale")?;
@@ -418,6 +417,7 @@ fn restore_checked(
                 store.put(Documents::Cards, &card)?;
             }
         }
+        super::queue::recover_in_transaction(store)?;
         after(store)
     })
 }

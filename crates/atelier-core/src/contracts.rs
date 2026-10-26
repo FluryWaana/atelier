@@ -662,6 +662,8 @@ pub struct RunQueue {
     pub paused: bool,
     pub active: Option<QueuedRun>,
     pub message: String,
+    #[serde(default)]
+    pub workflows: std::collections::BTreeMap<String, Option<String>>,
 }
 impl Default for RunQueue {
     fn default() -> Self {
@@ -671,6 +673,7 @@ impl Default for RunQueue {
             paused: true,
             active: None,
             message: String::new(),
+            workflows: std::collections::BTreeMap::new(),
         }
     }
 }

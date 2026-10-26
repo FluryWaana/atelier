@@ -17,7 +17,7 @@ use atelier_core::{
 fn now() -> Result<String> {
     Ok(time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?)
 }
-fn profile(store: &Store<'_>, id: &str) -> Result<Document> {
+pub(super) fn profile(store: &Store<'_>, id: &str) -> Result<Document> {
     atelier_core::domain::agent_options::providers(&atelier_core::application::settings::config(
         &store.settings::<Document>()?,
     )?)?
@@ -67,73 +67,232 @@ fn current(store: &Store<'_>, card: &Card, flow: &Flow) -> Result<()> {
 }
 
 pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
-    store.transaction(|store| {
-        if body.get::<bool>("confirmed")? != Some(true) { return Err("Confirme l’étape du parcours automatique.".into()); }
-        let expected = body.get::<Card>("expected")?.filter(|card|card.id==id).ok_or("Instantané de tâche requis.")?;
-        let mut card = super::forge_association::snapshot(store,&expected)?;
-        let mut flow = read(&card)?;
-        match body.get::<String>("action")?.as_deref() {
-            Some("start") => {
-                if flow.as_ref().is_some_and(|flow| matches!(flow.state,State::Running|State::Waiting)) { return Err("Arrête le parcours précédent avant d’en démarrer un autre.".into()); }
-                let project = verification::project(store,&card)?;
-                if body.get::<Document>("project")?.as_ref().map(serde_json::to_value).transpose()? != Some(serde_json::to_value(&project)?) {return Err("Les réglages du parcours ont changé. Recharge le projet avant de confirmer.".into());}
-                if project.get::<bool>("automationEnabled")? != Some(true) || project.get::<String>("testCommand")?.is_none_or(|value|value.trim().is_empty()) || project.get::<String>("prTarget")?.is_none_or(|value|value.trim().is_empty()) { return Err("Active le parcours et renseigne la commande de vérification et la cible dans le projet.".into()); }
-                let worktree = card.fields.get::<Worktree>("worktree")?.filter(|worktree|worktree.state==WorktreeState::Ready).ok_or("Prépare le worktree avant le parcours automatique.")?;
-                let agent = card.fields.get::<String>("agent")?.filter(|value|!value.is_empty()).ok_or("Profil requis.")?;
-                let auto_fix = project.get::<bool>("autoFix")?.unwrap_or(true);
-                let profile = profile(store,&agent)?;
-                if body.get::<Document>("profile")?.as_ref().map(serde_json::to_value).transpose()?!=Some(serde_json::to_value(&profile)?) {return Err("Le profil du parcours a changé. Relis ses réglages avant de confirmer.".into());}
-                let stamp = now()?;
-                flow = Some(Flow {id:uuid::Uuid::new_v4().to_string(),state:State::Running,step:Step::Development,project,requirements:preparation::requirements(&card)?,worktree,agent,profile,model:card.fields.get::<String>("model")?.unwrap_or_default(),effort:card.fields.get::<String>("effort")?.unwrap_or_default(),instructions:card.fields.get::<String>("instructions")?.unwrap_or_default(),run_id:None,review_id:None,verification_id:None,publication_plan:None,commit_plan:None,review_requested:false,correction_indexes:Vec::new(),cycles:0,auto_fix,started_at:stamp.clone(),updated_at:stamp,message:String::new()});
-            },
-            Some("resume") => {
-                let active = flow.as_mut().ok_or("Aucun parcours à reprendre.")?;
-                if !matches!(active.state,State::Interrupted|State::Error|State::Cancelled) { return Err("Ce parcours ne peut pas être repris à cette étape.".into()); }
-                current(store,&card,active)?;
-                // Repeating an interrupted local step requires this new explicit confirmation.
-                active.run_id = None; active.state = State::Running; active.message.clear();
-                active.publication_plan=None;
-                active.commit_plan=None;
-                if matches!(active.step,Step::Commit|Step::Publication|Step::Review) { active.step = Step::Tests; }
-            },
-            Some("review") => {
-                let active = flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
-                current(store,&card,active)?;
-                let linked = card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
-                if active.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.source_branch != active.worktree.branch { return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into()); }
-                active.review_requested=true;active.step=Step::Tests;active.state=State::Running;active.run_id=None;active.message.clear();
-            },
-            Some("commit") => {
-                let active=flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
-                current(store,&card,active)?;
-                let preview=card.fields.get::<atelier_core::contracts::LocalCommitPreview>("localCommitPreview")?.ok_or("Prépare l’aperçu du commit avant d’autoriser son enchaînement.")?;
-                if preview.worktree!=active.worktree || preview.snapshot.branch!=active.worktree.branch {return Err("Le commit ne correspond pas au worktree du parcours.".into());}
-                active.commit_plan=Some(Box::new(preview));active.publication_plan=None;active.review_requested=false;active.step=Step::Commit;active.state=State::Running;active.run_id=None;active.message.clear();
-            },
-            Some("publish") => {
-                let active=flow.as_mut().filter(|flow|flow.state==State::Waiting && flow.step==Step::Publication).ok_or("Le parcours n’attend pas de publication.")?;
-                current(store,&card,active)?;
-                let target=active.project.get::<String>("prTarget")?.ok_or("Branche cible absente.")?;
-                let plan=if card.fields.raw("pullRequest").is_some() {
-                    let preview=card.fields.get::<atelier_core::contracts::GitPushPreview>("gitPushPreview")?.ok_or("Prépare l’aperçu du push avant d’autoriser son enchaînement.")?;
-                    let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("PR/MR absente.")?;
-                    if preview.worktree!=active.worktree || preview.pull_request.as_ref().is_none_or(|remote|!super::forge::same_pull_request(remote,&linked)) || linked.target_branch!=target {return Err("L’aperçu ne correspond pas aux branches du parcours.".into());}
-                    super::forge::configuration(store,preview.configuration.kind,preview.revision)?;
-                    PublicationPlan::Push(Box::new(preview))
-                } else {
-                    let preview=card.fields.get::<atelier_core::contracts::ForgePublicationPreview>("forgePublicationPreview")?.ok_or("Prépare l’aperçu de publication avant d’autoriser son enchaînement.")?;
-                    if preview.worktree!=active.worktree || preview.target!=target || !preview.draft {return Err("Le parcours exige les branches prévues et une publication en brouillon.".into());}
-                    if preview.remote_source.is_none() && body.get::<bool>("allowCreateBranch")?!=Some(true) {return Err("Confirme séparément la création de la branche distante absente.".into());}
-                    super::forge::configuration(store,preview.configuration.kind,preview.revision)?;
-                    PublicationPlan::Create(Box::new(preview))
-                };
-                active.publication_plan=Some(plan);active.review_requested=false;active.step=Step::Tests;active.state=State::Running;active.run_id=None;active.message.clear();
-            },
-            _ => return Err("Action de parcours inconnue.".into()),
+    store.transaction(|store| change_in_transaction(store, id, body))
+}
+
+pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
+    if body.get::<bool>("confirmed")? != Some(true) {
+        return Err("Confirme l’étape du parcours automatique.".into());
+    }
+    let expected = body
+        .get::<Card>("expected")?
+        .filter(|card| card.id == id)
+        .ok_or("Instantané de tâche requis.")?;
+    let mut card = super::forge_association::snapshot(store, &expected)?;
+    let mut flow = read(&card)?;
+    match body.get::<String>("action")?.as_deref() {
+        Some("start") => {
+            if flow
+                .as_ref()
+                .is_some_and(|flow| matches!(flow.state, State::Running | State::Waiting))
+            {
+                return Err("Arrête le parcours précédent avant d’en démarrer un autre.".into());
+            }
+            let project = verification::project(store, &card)?;
+            if body
+                .get::<Document>("project")?
+                .as_ref()
+                .map(serde_json::to_value)
+                .transpose()?
+                != Some(serde_json::to_value(&project)?)
+            {
+                return Err(
+                    "Les réglages du parcours ont changé. Recharge le projet avant de confirmer."
+                        .into(),
+                );
+            }
+            if project.get::<bool>("automationEnabled")? != Some(true)
+                || project
+                    .get::<String>("testCommand")?
+                    .is_none_or(|value| value.trim().is_empty())
+                || project
+                    .get::<String>("prTarget")?
+                    .is_none_or(|value| value.trim().is_empty())
+            {
+                return Err("Active le parcours et renseigne la commande de vérification et la cible dans le projet.".into());
+            }
+            let worktree = card
+                .fields
+                .get::<Worktree>("worktree")?
+                .filter(|worktree| worktree.state == WorktreeState::Ready)
+                .ok_or("Prépare le worktree avant le parcours automatique.")?;
+            let agent = card
+                .fields
+                .get::<String>("agent")?
+                .filter(|value| !value.is_empty())
+                .ok_or("Profil requis.")?;
+            let auto_fix = project.get::<bool>("autoFix")?.unwrap_or(true);
+            let profile = profile(store, &agent)?;
+            if body
+                .get::<Document>("profile")?
+                .as_ref()
+                .map(serde_json::to_value)
+                .transpose()?
+                != Some(serde_json::to_value(&profile)?)
+            {
+                return Err(
+                    "Le profil du parcours a changé. Relis ses réglages avant de confirmer.".into(),
+                );
+            }
+            let stamp = now()?;
+            flow = Some(Flow {
+                id: uuid::Uuid::new_v4().to_string(),
+                state: State::Running,
+                step: Step::Development,
+                project,
+                requirements: preparation::requirements(&card)?,
+                worktree,
+                agent,
+                profile,
+                model: card.fields.get::<String>("model")?.unwrap_or_default(),
+                effort: card.fields.get::<String>("effort")?.unwrap_or_default(),
+                instructions: card
+                    .fields
+                    .get::<String>("instructions")?
+                    .unwrap_or_default(),
+                run_id: None,
+                review_id: None,
+                verification_id: None,
+                publication_plan: None,
+                commit_plan: None,
+                review_requested: false,
+                correction_indexes: Vec::new(),
+                cycles: 0,
+                auto_fix,
+                started_at: stamp.clone(),
+                updated_at: stamp,
+                message: String::new(),
+            });
         }
-        save(store,&mut card,flow.as_mut().ok_or("Parcours absent.")?)?;
-        Ok(card)
-    })
+        Some("resume") => {
+            let active = flow.as_mut().ok_or("Aucun parcours à reprendre.")?;
+            if !matches!(
+                active.state,
+                State::Interrupted | State::Error | State::Cancelled
+            ) {
+                return Err("Ce parcours ne peut pas être repris à cette étape.".into());
+            }
+            current(store, &card, active)?;
+            // Repeating an interrupted local step requires this new explicit confirmation.
+            active.run_id = None;
+            active.state = State::Running;
+            active.message.clear();
+            active.publication_plan = None;
+            active.commit_plan = None;
+            if matches!(active.step, Step::Commit | Step::Publication | Step::Review) {
+                active.step = Step::Tests;
+            }
+        }
+        Some("review") => {
+            let active = flow
+                .as_mut()
+                .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
+                .ok_or("Le parcours n’attend pas de publication.")?;
+            current(store, &card, active)?;
+            let linked = card
+                .fields
+                .get::<atelier_core::contracts::PullRequest>("pullRequest")?
+                .ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
+            if active.project.get::<String>("prTarget")?.as_deref()
+                != Some(linked.target_branch.as_str())
+                || linked.source_branch != active.worktree.branch
+            {
+                return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into());
+            }
+            active.review_requested = true;
+            active.step = Step::Tests;
+            active.state = State::Running;
+            active.run_id = None;
+            active.message.clear();
+        }
+        Some("commit") => {
+            let active = flow
+                .as_mut()
+                .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
+                .ok_or("Le parcours n’attend pas de publication.")?;
+            current(store, &card, active)?;
+            let preview = card
+                .fields
+                .get::<atelier_core::contracts::LocalCommitPreview>("localCommitPreview")?
+                .ok_or("Prépare l’aperçu du commit avant d’autoriser son enchaînement.")?;
+            if preview.worktree != active.worktree
+                || preview.snapshot.branch != active.worktree.branch
+            {
+                return Err("Le commit ne correspond pas au worktree du parcours.".into());
+            }
+            active.commit_plan = Some(Box::new(preview));
+            active.publication_plan = None;
+            active.review_requested = false;
+            active.step = Step::Commit;
+            active.state = State::Running;
+            active.run_id = None;
+            active.message.clear();
+        }
+        Some("publish") => {
+            let active = flow
+                .as_mut()
+                .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
+                .ok_or("Le parcours n’attend pas de publication.")?;
+            current(store, &card, active)?;
+            let target = active
+                .project
+                .get::<String>("prTarget")?
+                .ok_or("Branche cible absente.")?;
+            let plan = if card.fields.raw("pullRequest").is_some() {
+                let preview = card
+                    .fields
+                    .get::<atelier_core::contracts::GitPushPreview>("gitPushPreview")?
+                    .ok_or("Prépare l’aperçu du push avant d’autoriser son enchaînement.")?;
+                let linked = card
+                    .fields
+                    .get::<atelier_core::contracts::PullRequest>("pullRequest")?
+                    .ok_or("PR/MR absente.")?;
+                if preview.worktree != active.worktree
+                    || preview
+                        .pull_request
+                        .as_ref()
+                        .is_none_or(|remote| !super::forge::same_pull_request(remote, &linked))
+                    || linked.target_branch != target
+                {
+                    return Err("L’aperçu ne correspond pas aux branches du parcours.".into());
+                }
+                super::forge::configuration(store, preview.configuration.kind, preview.revision)?;
+                PublicationPlan::Push(Box::new(preview))
+            } else {
+                let preview = card
+                    .fields
+                    .get::<atelier_core::contracts::ForgePublicationPreview>(
+                        "forgePublicationPreview",
+                    )?
+                    .ok_or("Prépare l’aperçu de publication avant d’autoriser son enchaînement.")?;
+                if preview.worktree != active.worktree || preview.target != target || !preview.draft
+                {
+                    return Err(
+                        "Le parcours exige les branches prévues et une publication en brouillon."
+                            .into(),
+                    );
+                }
+                if preview.remote_source.is_none()
+                    && body.get::<bool>("allowCreateBranch")? != Some(true)
+                {
+                    return Err(
+                        "Confirme séparément la création de la branche distante absente.".into(),
+                    );
+                }
+                super::forge::configuration(store, preview.configuration.kind, preview.revision)?;
+                PublicationPlan::Create(Box::new(preview))
+            };
+            active.publication_plan = Some(plan);
+            active.review_requested = false;
+            active.step = Step::Tests;
+            active.state = State::Running;
+            active.run_id = None;
+            active.message.clear();
+        }
+        _ => return Err("Action de parcours inconnue.".into()),
+    }
+    save(store, &mut card, flow.as_mut().ok_or("Parcours absent.")?)?;
+    Ok(card)
 }
 
 pub fn cancel(store: &Store<'_>, id: &str, operation: &str) -> Result<Option<String>> {
@@ -504,6 +663,10 @@ mod tests {
             serde_json::to_value(card(&store)).unwrap(),
             serde_json::to_value(interrupted).unwrap()
         );
+        let replacement = change(&store, "task", &body(&card(&store), &changed, "start")).unwrap();
+        let replacement = read(&replacement).unwrap().unwrap();
+        assert_ne!(replacement.id, flow.id);
+        assert!(replacement.step == Step::Development && replacement.state == State::Running);
     }
 
     #[test]

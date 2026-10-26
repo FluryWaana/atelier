@@ -1445,17 +1445,51 @@ async fn brainstorm_scenario(
         || effect.observed != effect.commit
         || !verified.string_equals("verificationState", "passed")?
         || std::fs::read(git_dir.join("index"))? != index
-        || std::fs::read(directory.join("workflow-synthetic-change.txt"))?
+        || std::fs::read(directory.join("workflow-synthetic-change.txt"))?.as_slice()
             != b"Synthetic workflow commit, no user data.\n"
     {
         return Err(
             "Synthetic workflow commit or verification incomplete, or human index changed".into(),
         );
     }
+    click(client, "#enqueue-workflow").await?;
+    wait_dom(client,"return document.querySelector('#run-queue summary')?.textContent.includes('(1)') && document.querySelector('#run-queue .remove-queued-task')?.disabled === true;",vec![]).await?;
+    let queued: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let queue = queued
+        .settings
+        .get::<atelier_core::contracts::RunQueue>("runQueue")?
+        .ok_or("Workflow queue missing")?;
+    if queue.active.as_ref().map(|active| active.run_id.as_str()) != Some(flow.id.as_str())
+        || queued.runs.len() != committed.runs.len()
+    {
+        return Err("Queue replaced or relaunched the waiting workflow".into());
+    }
     click(client, "#stop-automation").await?;
     wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Parcours arrêté') && document.querySelector('#stop-automation')?.hidden === true;",vec![]).await?;
     client.refresh().await?;
     wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Parcours arrêté') && document.querySelector('#approve-automation')?.checked === false;",vec![]).await?;
+    click(client, "#close-editor").await?;
+    click(client, "#run-queue summary").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#run-queue .remove-queued-task')?.disabled === false;",
+        vec![],
+    )
+    .await?;
+    click(client, "#run-queue .remove-queued-task").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#run-queue summary')?.textContent.includes('(0)');",
+        vec![],
+    )
+    .await?;
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
     http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
         .bearer_auth(token)

@@ -66,7 +66,7 @@ pub(super) async fn run(state: Shared) -> Result<()> {
                 .await?
             {
                 let _ = state.changed.send(());
-                super::runs::launch(&state, card.id, body, run_id, true).await?;
+                if body.get::<bool>("workflow")?!=Some(true) {super::runs::launch(&state, card.id, body, run_id, true).await?;}
                 let _ = state.changed.send(());
             }
             Ok::<(), crate::Error>(())
