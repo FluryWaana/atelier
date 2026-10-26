@@ -3,6 +3,74 @@ use atelier_core::{
     contracts::AgentAnswer,
 };
 use serde_json::{Value, json};
+
+fn priced_codex(model: &str) -> Protocol {
+    let mut protocol = Protocol::new(ProtocolConfig {
+        kind: Kind::Codex,
+        edit: false,
+        repo: "synthetic/worktree".into(),
+        prompt: "Synthetic pricing only".into(),
+        model: model.into(),
+        effort: String::new(),
+        api_key: String::new(),
+        secrets: vec![],
+    });
+    protocol.start().unwrap();
+    protocol
+        .receive(json!({"id":"initialize","result":{}}))
+        .unwrap();
+    protocol
+        .receive(json!({"id":"thread","result":{"thread":{"id":"priced-thread"}}}))
+        .unwrap();
+    protocol
+}
+
+#[test]
+fn codex_estimates_are_dated_requested_model_equivalents_and_snapshots_are_not_added() {
+    let mut protocol = priced_codex("gpt-6.1-sol");
+    let event = json!({"method":"thread/tokenUsage/updated","params":{"threadId":"priced-thread","tokenUsage":{"total":{"inputTokens":1000,"cachedInputTokens":200,"outputTokens":500}}}});
+    for _ in 0..2 {
+        let usage = protocol.receive(event.clone()).unwrap().usage.unwrap();
+        assert!((usage["estimatedCostUsd"].as_f64().unwrap() - 0.00662).abs() < 1e-12);
+        assert_eq!(usage["inputTokens"], 1000);
+        assert_eq!(usage["pricingModel"], "gpt-6.1-sol");
+        assert_eq!(usage["pricingDate"], "2026-10-26");
+        assert_eq!(usage["costScope"], "requested-model-thread");
+    }
+    let mut foreign = event.clone();
+    foreign["params"]["threadId"] = json!("another-thread");
+    assert!(protocol.receive(foreign).unwrap().usage.is_none());
+    assert!(protocol.receive(json!({"method":"model/rerouted","params":{"threadId":"another-thread","toModel":"gpt-6-astra"}})).unwrap().usage.is_none());
+    let invalidated = protocol.receive(json!({"method":"model/rerouted","params":{"threadId":"priced-thread","toModel":"gpt-6-astra"}})).unwrap().usage.unwrap();
+    assert!(invalidated.get("estimatedCostUsd").is_none());
+    assert_eq!(invalidated["inputTokens"], 1000);
+    assert!(
+        protocol
+            .receive(event)
+            .unwrap()
+            .usage
+            .unwrap()
+            .get("estimatedCostUsd")
+            .is_none()
+    );
+}
+
+#[test]
+fn unknown_models_and_missing_or_inconsistent_cache_counters_never_become_zero_cost() {
+    for (model, cached) in [
+        ("synthetic-unknown", json!(0)),
+        ("gpt-6.1-sol", Value::Null),
+        ("gpt-6.1-sol", json!(11)),
+    ] {
+        let mut protocol = priced_codex(model);
+        let usage = protocol.receive(json!({"method":"thread/tokenUsage/updated","params":{"threadId":"priced-thread","tokenUsage":{"total":{"inputTokens":10,"cachedInputTokens":cached,"outputTokens":2}}}})).unwrap().usage.unwrap();
+        assert!(usage.get("estimatedCostUsd").is_none());
+        assert_eq!(usage["inputTokens"], 10);
+    }
+    let mut protocol = priced_codex("gpt-6.1-sol");
+    let usage = protocol.receive(json!({"method":"thread/tokenUsage/updated","params":{"threadId":"priced-thread","tokenUsage":{"total":{"inputTokens":1_000_000,"cachedInputTokens":1_000_000,"outputTokens":0}}}})).unwrap().usage.unwrap();
+    assert_eq!(usage["estimatedCostUsd"], json!(0.1));
+}
 use std::collections::BTreeMap;
 
 #[test]

@@ -1985,5 +1985,7 @@
   "Version CLI relue après la commande. Consulte la cible et la version réellement observée.": "CLI version read after the command. Check the target and actually observed version.",
   "Préflight CLI refusé ; commande non envoyée.": "CLI preflight refused; command not sent.",
   "Résultat de mise à jour CLI incertain. Relis le diagnostic avant toute nouvelle confirmation.": "CLI update outcome uncertain. Run diagnostics again before confirming another update.",
-  "Version relue après interruption ; l’issue de la commande précédente n’est pas vérifiée.": "Version read after interruption; the previous command's outcome has not been verified."
+  "Version relue après interruption ; l’issue de la commande précédente n’est pas vérifiée.": "Version read after interruption; the previous command's outcome has not been verified.",
+  "Équivalent API standard estimé : {0} USD ; modèle demandé {1}, tarifs du {2}. Hypothèse de contexte court, hors options et frais. Ce n’est pas une facture ni le coût de ton abonnement ; montant non additionné aux autres exécutions.": "Estimated standard API equivalent: USD {0}; requested model {1}, prices dated {2}. Assumes short context, excluding options and fees. This is neither a bill nor your subscription cost; the amount is not added to other runs.",
+  "Estimation Codex indisponible pour ce modèle ou ces compteurs, ou après un changement de modèle.": "Codex estimate unavailable for this model or these counters, or after a model change."
 }

@@ -56,6 +56,8 @@ pub struct Protocol {
     failed: bool,
     finished: bool,
     preview: String,
+    codex_usage: Option<Value>,
+    cost_eligible: bool,
 }
 
 pub struct ProtocolConfig {
@@ -118,6 +120,8 @@ impl Protocol {
             failed: false,
             finished: false,
             preview: String::new(),
+            codex_usage: None,
+            cost_eligible: true,
         };
         for secret in secrets
             .into_iter()
@@ -504,10 +508,50 @@ impl Protocol {
                 self.items.remove(id);
             }
         } else if method == "thread/tokenUsage/updated" {
+            if !self
+                .thread
+                .as_ref()
+                .is_some_and(|thread| p["threadId"].as_str() == Some(thread.as_str()))
+            {
+                return Ok(out);
+            }
             out.usage = usage(
                 &p["tokenUsage"]["total"],
                 &["inputTokens", "cachedInputTokens", "outputTokens"],
             );
+            if self.cost_eligible
+                && let Some(usage) = &mut out.usage
+                && let Some(amount) = codex_cost(&self.model, usage)
+            {
+                usage["estimatedCostUsd"] = json!(amount);
+                usage["costSource"] = json!("openai-standard-api");
+                usage["costScope"] = json!("requested-model-thread");
+                usage["pricingModel"] = json!(self.model);
+                usage["pricingDate"] = json!("2026-10-26");
+            }
+            self.codex_usage = out.usage.clone();
+        } else if method == "model/rerouted"
+            && self
+                .thread
+                .as_ref()
+                .is_some_and(|thread| p["threadId"].as_str() == Some(thread.as_str()))
+        {
+            self.cost_eligible = false;
+            if let Some(mut usage) = self.codex_usage.clone() {
+                if let Some(fields) = usage.as_object_mut() {
+                    for key in [
+                        "estimatedCostUsd",
+                        "costSource",
+                        "costScope",
+                        "pricingModel",
+                        "pricingDate",
+                    ] {
+                        fields.remove(key);
+                    }
+                }
+                self.codex_usage = Some(usage.clone());
+                out.usage = Some(usage);
+            }
         } else if method == "error" && p["willRetry"] != true {
             self.failed = true;
             out.text.push("Erreur signalée par Codex.".into());
@@ -784,4 +828,27 @@ fn usage(value: &Value, keys: &[&str; 3]) -> Option<Value> {
     Some(
         json!({"inputTokens":value[keys[0]].as_u64()?,"cachedInputTokens":value[keys[1]].as_u64(),"cacheCreationInputTokens":value["cache_creation_input_tokens"].as_u64(),"outputTokens":value[keys[2]].as_u64()?}),
     )
+}
+
+fn codex_cost(model: &str, usage: &Value) -> Option<f64> {
+    // shortcut: dated standard short-context API equivalent, excluding tier/context/region/tool charges; revisit when CLI reports them.
+    // Official snapshot: https://developers.openai.com/api/docs/pricing (2026-10-26), milli-USD per million tokens.
+    let [input_price, cached_price, output_price]: [u128; 3] = match model {
+        "gpt-6.1-sol" => [2000, 100, 10000],
+        "gpt-6.1-terra" => [1000, 50, 5000],
+        "gpt-6-astra" => [10000, 1000, 50000],
+        "gpt-6-luna" => [100, 10, 500],
+        "gpt-5.6-sol" => [4000, 400, 20000],
+        "gpt-5.3-codex" => [1750, 175, 14000],
+        _ => return None,
+    };
+    let input = usage["inputTokens"].as_u64()?;
+    let cached = usage["cachedInputTokens"].as_u64()?;
+    let output = usage["outputTokens"].as_u64()?;
+    let uncached = input.checked_sub(cached)?;
+    let amount = (u128::from(uncached) * input_price
+        + u128::from(cached) * cached_price
+        + u128::from(output) * output_price) as f64
+        / 1_000_000_000.0;
+    (amount.is_finite() && amount <= 1_000_000.0).then_some(amount)
 }

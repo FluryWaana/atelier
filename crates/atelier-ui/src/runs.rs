@@ -396,6 +396,19 @@ pub fn Runs(
             <details hidden=move || latest.get().is_none_or(|run| field(&run,"summary").is_empty())><summary>{move || i18n.text("Résumé de l’exécution")}</summary><p>{move || latest.get().map(|run| field(&run,"summary")).unwrap_or_default()}</p></details>
             <p hidden=move || latest.get().is_none_or(|run| run.raw("usage").is_none())>{move || latest.get().and_then(|run| run.get::<serde_json::Value>("usage").ok().flatten()).map(|usage| format!("{} {} / {} / {}",i18n.text("Jetons entrée/cache/sortie :"),usage["inputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()),usage["cachedInputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()),usage["outputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()))).unwrap_or_default()}</p>
             <p>{move||latest.get().and_then(|run|run.get::<serde_json::Value>("usage").ok().flatten()).filter(|usage|usage["costSource"]=="claude-cli"&&usage["costScope"]=="cli-session").and_then(|usage|usage["estimatedCostUsd"].as_f64()).filter(|amount|amount.is_finite()&&(0.0..=1_000_000.0).contains(amount)).map(|amount|i18n.text("Estimation déclarée par Claude : {0} USD. Peut inclure une session reprise ; ce montant n’est pas une facture et n’est pas additionné aux autres exécutions.").replace("{0}",&format!("{amount:.6}"))).unwrap_or_default()}</p>
+            <p>{move || {
+                let Some(run) = latest.get().filter(|run| field(run,"agentType")=="codex") else { return String::new(); };
+                let Some(usage) = run.get::<serde_json::Value>("usage").ok().flatten() else { return String::new(); };
+                let amount = usage["estimatedCostUsd"].as_f64().filter(|amount|amount.is_finite()&&(0.0..=1_000_000.0).contains(amount));
+                if usage["costSource"]=="openai-standard-api" && usage["costScope"]=="requested-model-thread" && let Some(amount)=amount {
+                    i18n.text("Équivalent API standard estimé : {0} USD ; modèle demandé {1}, tarifs du {2}. Hypothèse de contexte court, hors options et frais. Ce n’est pas une facture ni le coût de ton abonnement ; montant non additionné aux autres exécutions.")
+                        .replace("{0}",&format!("{amount:.6}"))
+                        .replace("{1}",usage["pricingModel"].as_str().unwrap_or("—"))
+                        .replace("{2}",usage["pricingDate"].as_str().unwrap_or("—"))
+                } else {
+                    i18n.text("Estimation Codex indisponible pour ce modèle ou ces compteurs, ou après un changement de modèle.")
+                }
+            }}</p>
             <p hidden=move || latest.get().is_none_or(|run| run.raw("activeMilliseconds").is_none())>{move || latest.get().and_then(|run| run.get::<u64>("activeMilliseconds").ok().flatten()).map(|milliseconds| format!("{} {} s",i18n.text("Durée active :"),milliseconds/1000)).unwrap_or_default()}</p>
             <details><summary>{move || i18n.text("Journal de la dernière exécution")}</summary><p role="status" hidden=move || !log_busy.get() || !log.get().is_empty()>{move || i18n.text("Chargement du journal…")}</p><pre class="service-log" tabindex="0" aria-busy=move || log_busy.get().to_string()><code>{move || log.get()}</code></pre></details>
             <p class="field-help">{move || i18n.text("Affichage limité aux derniers 64 Kio. Les commandes utilisent leurs propres permissions ; le mode Analyse ne constitue pas une isolation du système.")}</p>
