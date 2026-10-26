@@ -92,9 +92,19 @@ async fn jira_settings_and_vault_commit_together_without_returning_the_secret() 
             );
             assert!(!jira::describe(store, &mut protector)?.token_set);
             let mut moved = input(4, None);
+            let mut mapped = store.settings::<Document>()?;
+            mapped.set("jiraAutoTransition", &true)?;
+            mapped.set("jiraStatusMap", &serde_json::json!({"doing":"31"}))?;
+            store.save_settings(&mapped)?;
             moved.url = "https://another.example.test".into();
             let saved = jira::configure(store, moved, &mut protector)?;
             assert!(!saved.token_set);
+            let settings = store.settings::<Document>()?;
+            assert_eq!(settings.get::<bool>("jiraAutoTransition")?, Some(false));
+            assert_eq!(
+                settings.get::<serde_json::Value>("jiraStatusMap")?.unwrap()["doing"],
+                "31"
+            );
             assert!(jira::credentials(store, 1, &mut protector).is_err());
             assert!(store.documents::<Document>(Documents::Cards)?.is_empty());
             Ok(())

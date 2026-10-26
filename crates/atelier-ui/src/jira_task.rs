@@ -140,7 +140,7 @@ pub fn JiraTask(
                             &settings,
                             &projects,
                             &field(&expected.fields, "repo"),
-                            false,
+                            settings["platform"].as_str() == Some("win32"),
                         );
                         if let Some(transition) =
                             atelier_core::application::projects::mapped_jira_transition(

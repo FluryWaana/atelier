@@ -1772,5 +1772,7 @@
   "Appliquer la sélection Jira": "Apply the Jira selection",
   "Arrêter après la carte en cours": "Stop after the current card",
   "Effacer la sélection": "Clear selection",
-  "Reprendre les aperçus existants": "Resume existing previews"
+  "Reprendre les aperçus existants": "Resume existing previews",
+  "Correspondances Jira globales": "Global Jira mappings",
+  "Proposer les statuts Jira correspondants": "Suggest matching Jira statuses"
 }

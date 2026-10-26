@@ -7,6 +7,38 @@ use atelier_core::{
 mod json;
 
 #[test]
+fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {
+    let stored:Document=serde_json::from_str(r#"{"jiraConnection":{"mode":"cloud","url":"https://synthetic.example.test","email":"synthetic@example.test","query":"","revision":7}}"#).unwrap();
+    let body:Document=serde_json::from_str(r#"{"jiraAutoTransition":true,"jiraStatusMap":{"doing":"31"},"expected":{"jiraAutoTransition":false,"jiraStatusMap":{}},"expectedJiraRevision":7}"#).unwrap();
+    let prepare = |stored: &Document, body: &Document| {
+        prepare_update(
+            stored,
+            &Document::default(),
+            body,
+            |_| Err("No repository access expected".into()),
+            |value| Ok(value.clone()),
+        )
+    };
+    let saved = prepare(&stored, &body).unwrap();
+    assert_eq!(
+        saved.settings.get::<bool>("jiraAutoTransition").unwrap(),
+        Some(true)
+    );
+    assert!(prepare(&saved.settings, &body).is_err());
+    let mut stale = body.clone();
+    stale.set("expectedJiraRevision", &6).unwrap();
+    assert!(prepare(&stored, &stale).is_err());
+    let mut invalid = body.clone();
+    invalid
+        .set(
+            "expected",
+            &serde_json::json!({"jiraAutoTransition":"false","jiraStatusMap":{}}),
+        )
+        .unwrap();
+    assert!(prepare(&stored, &invalid).is_err());
+}
+
+#[test]
 fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() {
     let reference: Document = serde_json::from_str(include_str!(
         "../../../test/fixtures/rust-settings-reference.json"

@@ -20,6 +20,9 @@ struct Draft {
     repo: String,
     branch: String,
     agent: String,
+    jira_enabled: bool,
+    jira_mapping: std::collections::BTreeMap<String, String>,
+    jira_revision: u64,
 }
 impl Draft {
     fn from_document(settings: &Document) -> Self {
@@ -27,21 +30,46 @@ impl Draft {
             repo: field(settings, "repo"),
             branch: field(settings, "baseBranch"),
             agent: field(settings, "agent"),
+            jira_enabled: settings
+                .get::<bool>("jiraAutoTransition")
+                .ok()
+                .flatten()
+                .unwrap_or(false),
+            jira_mapping: settings
+                .get("jiraStatusMap")
+                .ok()
+                .flatten()
+                .unwrap_or_default(),
+            jira_revision: settings
+                .get::<atelier_core::contracts::JiraConfiguration>("jiraConnection")
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+                .revision,
         }
     }
 
     fn fields(&self) -> serde_json::Value {
-        serde_json::json!({"repo":self.repo, "baseBranch":self.branch, "agent":self.agent})
+        serde_json::json!({"repo":self.repo, "baseBranch":self.branch, "agent":self.agent,"jiraAutoTransition":self.jira_enabled,"jiraStatusMap":self.jira_mapping})
     }
 
     fn patch(&self, previous: &Self) -> serde_json::Value {
         let (next, previous) = (self.fields(), previous.fields());
         let mut patch = serde_json::json!({"expected":{}});
-        for field in ["repo", "baseBranch", "agent"] {
+        for field in [
+            "repo",
+            "baseBranch",
+            "agent",
+            "jiraAutoTransition",
+            "jiraStatusMap",
+        ] {
             if next[field] != previous[field] {
                 patch[field] = next[field].clone();
                 patch["expected"][field] = previous[field].clone();
             }
+        }
+        if patch.get("jiraAutoTransition").is_some() || patch.get("jiraStatusMap").is_some() {
+            patch["expectedJiraRevision"] = serde_json::json!(self.jira_revision);
         }
         patch
     }
@@ -158,6 +186,13 @@ pub fn Settings(
                     <label for="settings-repo">{move || i18n.text("Dépôt Git source par défaut")}</label><input id="settings-repo" maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|value| value.repo = event_target_value(&event)) />
                     <p class="field-help">{move || i18n.text("Chemin complet d’un dossier existant. Laisser vide pour choisir le projet à chaque création.")}</p>
                     <label for="settings-branch">{move || i18n.text("Référence Git de départ par défaut")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />
+                    <h3>{move||i18n.text("Correspondances Jira globales")}</h3>
+                    <label><input id="settings-jira-enabled" type="checkbox" prop:checked=move||draft.get().jira_enabled on:change=move|event|draft.update(|draft|draft.jira_enabled=event_target_checked(&event))/>{move||i18n.text("Proposer les statuts Jira correspondants")}</label>
+                    <For each=||crate::STATUSES key=|(status,_)|*status children=move|(status,label)|view!{
+                        <label for=format!("settings-jira-{status}")>{move||i18n.text(label)}</label>
+                        <input id=format!("settings-jira-{status}") maxlength="100" prop:value=move||draft.get().jira_mapping.get(status).cloned().unwrap_or_default() on:input=move|event|draft.update(|draft|{draft.jira_mapping.insert(status.into(),event_target_value(&event));})/>
+                    }/>
+                    <p class="field-help">{move||i18n.text("Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.")}</p>
                 </fieldset>
                 <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
                 <div class="editor-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button></div>

@@ -103,9 +103,15 @@ pub fn prepare_update(
     let previous = config(stored)?;
     if let Some(raw) = supplied.raw("expected") {
         let invalid = || SettingsFailure::Invalid("Condition de modification invalide.");
-        let expected: std::collections::BTreeMap<String, String> =
+        let expected: std::collections::BTreeMap<String, serde_json::Value> =
             serde_json::from_str(raw.get()).map_err(|_| invalid())?;
-        let fields = ["repo", "baseBranch", "agent"];
+        let fields = [
+            "repo",
+            "baseBranch",
+            "agent",
+            "jiraAutoTransition",
+            "jiraStatusMap",
+        ];
         if expected
             .keys()
             .any(|key| !fields.contains(&key.as_str()) || supplied.raw(key).is_none())
@@ -116,9 +122,25 @@ pub fn prepare_update(
             return Err(invalid().into());
         }
         for (key, value) in expected {
-            if previous.get::<String>(&key)?.as_deref() != Some(value.as_str()) {
+            if (key == "jiraAutoTransition" && !value.is_boolean())
+                || (key == "jiraStatusMap" && !value.is_object())
+                || (!matches!(key.as_str(), "jiraAutoTransition" | "jiraStatusMap")
+                    && !value.is_string())
+            {
+                return Err(invalid().into());
+            }
+            if previous.get::<serde_json::Value>(&key)?.as_ref() != Some(&value) {
                 return Err(SettingsFailure::Conflict.into());
             }
+        }
+    }
+    if let Some(expected) = supplied.get::<u64>("expectedJiraRevision")? {
+        let revision = previous
+            .get::<crate::contracts::JiraConfiguration>("jiraConnection")?
+            .unwrap_or_default()
+            .revision;
+        if expected != revision {
+            return Err(SettingsFailure::Conflict.into());
         }
     }
     let old_mapping = previous

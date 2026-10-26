@@ -1613,30 +1613,30 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/jira.rs:20](../crates/atelier-app/src/infrastructure/jira.rs#L20) | <code>pub fn normalize_url(value: &amp;str) -&gt; std::result::Result&lt;String, &amp;'static str&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/jira.rs:37](../crates/atelier-app/src/infrastructure/jira.rs#L37) | <code>pub fn describe(</code> |
 | [crates/atelier-app/src/infrastructure/jira.rs:54](../crates/atelier-app/src/infrastructure/jira.rs#L54) | <code>pub fn configure(</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:93](../crates/atelier-app/src/infrastructure/jira.rs#L93) | <code>pub fn credentials(</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:115](../crates/atelier-app/src/infrastructure/jira.rs#L115) | <code>pub fn require_revision(store: &amp;Store&lt;'_&gt;, expected: u64) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:146](../crates/atelier-app/src/infrastructure/jira.rs#L146) | <code>pub struct Jira {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:156](../crates/atelier-app/src/infrastructure/jira.rs#L156) | <code>pub async fn account_id(&amp;self) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:174](../crates/atelier-app/src/infrastructure/jira.rs#L174) | <code>pub fn new(configuration: JiraConfiguration, token: String) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:179](../crates/atelier-app/src/infrastructure/jira.rs#L179) | <code>pub fn synthetic(configuration: JiraConfiguration, token: String) -&gt; Result&lt;Self&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:351](../crates/atelier-app/src/infrastructure/jira.rs#L351) | <code>pub async fn detail(&amp;self, id: &amp;str) -&gt; Result&lt;JiraIssueDetail&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:355](../crates/atelier-app/src/infrastructure/jira.rs#L355) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:388](../crates/atelier-app/src/infrastructure/jira.rs#L388) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:422](../crates/atelier-app/src/infrastructure/jira.rs#L422) | <code>pub async fn status(&amp;self, id: &amp;str) -&gt; Result&lt;JiraStatus&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:431](../crates/atelier-app/src/infrastructure/jira.rs#L431) | <code>pub async fn transitions(&amp;self, id: &amp;str) -&gt; Result&lt;JiraTransitions&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:484](../crates/atelier-app/src/infrastructure/jira.rs#L484) | <code>pub async fn send_transition(&amp;self, issue: &amp;str, transition: &amp;JiraTransition) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:512](../crates/atelier-app/src/infrastructure/jira.rs#L512) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:600](../crates/atelier-app/src/infrastructure/jira.rs#L600) | <code>pub async fn issue_types(&amp;self, project: &amp;str) -&gt; Result&lt;Vec&lt;JiraIssueType&gt;&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:627](../crates/atelier-app/src/infrastructure/jira.rs#L627) | <code>pub async fn creation_metadata(</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:702](../crates/atelier-app/src/infrastructure/jira.rs#L702) | <code>pub async fn create_issue(</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:723](../crates/atelier-app/src/infrastructure/jira.rs#L723) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:761](../crates/atelier-app/src/infrastructure/jira.rs#L761) | <code>pub async fn issue_by_id(&amp;self, id: &amp;str) -&gt; Result&lt;JiraIssue&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:772](../crates/atelier-app/src/infrastructure/jira.rs#L772) | <code>pub async fn issue_by_key(&amp;self, key: &amp;str) -&gt; Result&lt;JiraIssue&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:776](../crates/atelier-app/src/infrastructure/jira.rs#L776) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:791](../crates/atelier-app/src/infrastructure/jira.rs#L791) | <code>pub async fn search(&amp;self) -&gt; Result&lt;JiraSearch&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:978](../crates/atelier-app/src/infrastructure/jira.rs#L978) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:979](../crates/atelier-app/src/infrastructure/jira.rs#L979) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/jira.rs:980](../crates/atelier-app/src/infrastructure/jira.rs#L980) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:94](../crates/atelier-app/src/infrastructure/jira.rs#L94) | <code>pub fn credentials(</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:116](../crates/atelier-app/src/infrastructure/jira.rs#L116) | <code>pub fn require_revision(store: &amp;Store&lt;'_&gt;, expected: u64) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:147](../crates/atelier-app/src/infrastructure/jira.rs#L147) | <code>pub struct Jira {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:157](../crates/atelier-app/src/infrastructure/jira.rs#L157) | <code>pub async fn account_id(&amp;self) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:175](../crates/atelier-app/src/infrastructure/jira.rs#L175) | <code>pub fn new(configuration: JiraConfiguration, token: String) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:180](../crates/atelier-app/src/infrastructure/jira.rs#L180) | <code>pub fn synthetic(configuration: JiraConfiguration, token: String) -&gt; Result&lt;Self&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:352](../crates/atelier-app/src/infrastructure/jira.rs#L352) | <code>pub async fn detail(&amp;self, id: &amp;str) -&gt; Result&lt;JiraIssueDetail&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:356](../crates/atelier-app/src/infrastructure/jira.rs#L356) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:389](../crates/atelier-app/src/infrastructure/jira.rs#L389) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:423](../crates/atelier-app/src/infrastructure/jira.rs#L423) | <code>pub async fn status(&amp;self, id: &amp;str) -&gt; Result&lt;JiraStatus&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:432](../crates/atelier-app/src/infrastructure/jira.rs#L432) | <code>pub async fn transitions(&amp;self, id: &amp;str) -&gt; Result&lt;JiraTransitions&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:485](../crates/atelier-app/src/infrastructure/jira.rs#L485) | <code>pub async fn send_transition(&amp;self, issue: &amp;str, transition: &amp;JiraTransition) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:513](../crates/atelier-app/src/infrastructure/jira.rs#L513) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:601](../crates/atelier-app/src/infrastructure/jira.rs#L601) | <code>pub async fn issue_types(&amp;self, project: &amp;str) -&gt; Result&lt;Vec&lt;JiraIssueType&gt;&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:628](../crates/atelier-app/src/infrastructure/jira.rs#L628) | <code>pub async fn creation_metadata(</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:703](../crates/atelier-app/src/infrastructure/jira.rs#L703) | <code>pub async fn create_issue(</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:724](../crates/atelier-app/src/infrastructure/jira.rs#L724) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:762](../crates/atelier-app/src/infrastructure/jira.rs#L762) | <code>pub async fn issue_by_id(&amp;self, id: &amp;str) -&gt; Result&lt;JiraIssue&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:773](../crates/atelier-app/src/infrastructure/jira.rs#L773) | <code>pub async fn issue_by_key(&amp;self, key: &amp;str) -&gt; Result&lt;JiraIssue&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:777](../crates/atelier-app/src/infrastructure/jira.rs#L777) | <code>let version = if self.configuration.mode == JiraMode::Cloud {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:792](../crates/atelier-app/src/infrastructure/jira.rs#L792) | <code>pub async fn search(&amp;self) -&gt; Result&lt;JiraSearch&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:979](../crates/atelier-app/src/infrastructure/jira.rs#L979) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:980](../crates/atelier-app/src/infrastructure/jira.rs#L980) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/jira.rs:981](../crates/atelier-app/src/infrastructure/jira.rs#L981) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/jira_creation.rs:1](../crates/atelier-app/src/infrastructure/jira_creation.rs#L1) | <code>use super::{</code> |
 | [crates/atelier-app/src/infrastructure/jira_creation.rs:6](../crates/atelier-app/src/infrastructure/jira_creation.rs#L6) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/jira_creation.rs:7](../crates/atelier-app/src/infrastructure/jira_creation.rs#L7) | <code>use atelier_core::{</code> |
@@ -3669,7 +3669,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/settings.rs:1](../crates/atelier-core/tests/settings.rs#L1) | <code>use atelier_core::{</code> |
 | [crates/atelier-core/tests/settings.rs:7](../crates/atelier-core/tests/settings.rs#L7) | <code>mod json;</code> |
 | [crates/atelier-core/tests/settings.rs:9](../crates/atelier-core/tests/settings.rs#L9) | <code>#[test]</code> |
-| [crates/atelier-core/tests/settings.rs:85](../crates/atelier-core/tests/settings.rs#L85) | <code>#[test]</code> |
+| [crates/atelier-core/tests/settings.rs:41](../crates/atelier-core/tests/settings.rs#L41) | <code>#[test]</code> |
+| [crates/atelier-core/tests/settings.rs:117](../crates/atelier-core/tests/settings.rs#L117) | <code>#[test]</code> |
 | [crates/atelier-core/tests/support/json.rs:1](../crates/atelier-core/tests/support/json.rs#L1) | <code>use atelier_core::document::{Document, JsonString};</code> |
 | [crates/atelier-core/tests/support/json.rs:2](../crates/atelier-core/tests/support/json.rs#L2) | <code>use serde_json::{Value, value::RawValue};</code> |
 | [crates/atelier-core/tests/support/json.rs:4](../crates/atelier-core/tests/support/json.rs#L4) | <code>pub fn equivalent(actual: &amp;RawValue, expected: &amp;RawValue) -&gt; bool {</code> |
@@ -3958,7 +3959,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/settings.rs:5](../crates/atelier-ui/src/settings.rs#L5) | <code>use leptos::prelude::*;</code> |
 | [crates/atelier-ui/src/settings.rs:6](../crates/atelier-ui/src/settings.rs#L6) | <code>use wasm_bindgen::JsCast;</code> |
 | [crates/atelier-ui/src/settings.rs:7](../crates/atelier-ui/src/settings.rs#L7) | <code>use wasm_bindgen_futures::spawn_local;</code> |
-| [crates/atelier-ui/src/settings.rs:51](../crates/atelier-ui/src/settings.rs#L51) | <code>pub fn Settings(</code> |
+| [crates/atelier-ui/src/settings.rs:79](../crates/atelier-ui/src/settings.rs#L79) | <code>pub fn Settings(</code> |
 | [crates/atelier-ui/src/task_editor.rs:1](../crates/atelier-ui/src/task_editor.rs#L1) | <code>use crate::files::Files;</code> |
 | [crates/atelier-ui/src/task_editor.rs:2](../crates/atelier-ui/src/task_editor.rs#L2) | <code>use crate::i18n::I18n;</code> |
 | [crates/atelier-ui/src/task_editor.rs:3](../crates/atelier-ui/src/task_editor.rs#L3) | <code>use crate::worktree::Workspace;</code> |
