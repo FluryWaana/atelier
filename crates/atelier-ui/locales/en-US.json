@@ -1825,5 +1825,8 @@
   "Ce dépôt est encore référencé par les réglages, projets ou tâches. Conserve son autorisation ou retire ces références explicitement.": "This repository is still referenced by settings, projects or tasks. Keep its authorization or explicitly remove those references.",
   "Autorisation de dépôt introuvable.": "Repository authorization not found.",
   "Retirer seulement cette autorisation locale, sans supprimer le dépôt.": "Remove only this local authorization, without deleting the repository.",
-  "Retirer l’autorisation": "Remove authorization"
+  "Retirer l’autorisation": "Remove authorization",
+  "Dépôt local autorisé": "Authorized local repository",
+  "Origin doit désigner un dépôt local autorisé ou une connexion HTTPS de forge explicitement choisie.": "Origin must identify an authorized local repository or an explicitly selected HTTPS forge connection.",
+  "Le propriétaire du groupe de processus est absent.": "The process group owner is missing."
 }

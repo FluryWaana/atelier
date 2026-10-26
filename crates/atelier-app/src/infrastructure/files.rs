@@ -390,13 +390,28 @@ impl Repository {
             .ok_or_else(|| "Git n’a produit aucun résultat.".into())
     }
 
-    #[cfg(windows)]
     pub(super) async fn git_optional(
         &self,
         arguments: &[&str],
         allow_no_match: bool,
     ) -> Result<Option<Vec<u8>>> {
         let mut command = tokio::process::Command::new("git");
+        let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
+        #[cfg(unix)]
+        {
+            use std::os::{fd::AsRawFd, unix::process::CommandExt};
+            let descriptor = self.directory.as_raw_fd();
+            // fchdir is async-signal-safe; self retains the anchored directory until capture returns.
+            unsafe {
+                command.as_std_mut().pre_exec(move || {
+                    if libc::fchdir(descriptor) == 0 {
+                        Ok(())
+                    } else {
+                        Err(std::io::Error::last_os_error())
+                    }
+                });
+            }
+        }
         for (key, _) in std::env::vars_os() {
             if key
                 .to_string_lossy()
@@ -409,8 +424,8 @@ impl Repository {
         // Synthetic inspection never loads personal Git configuration or fetches missing objects.
         command
             .current_dir(&self.path)
-            .env("GIT_CONFIG_SYSTEM", "NUL")
-            .env("GIT_CONFIG_GLOBAL", "NUL")
+            .env("GIT_CONFIG_SYSTEM", null)
+            .env("GIT_CONFIG_GLOBAL", null)
             .env("GIT_TERMINAL_PROMPT", "0")
             .args([
                 "--no-pager",
@@ -422,8 +437,13 @@ impl Repository {
                 "core.fsmonitor=false",
                 "-c",
                 "core.longpaths=true",
+            ])
+            .args(["-c", &format!("core.excludesFile={null}")])
+            .args([
                 "-c",
-                "core.excludesFile=NUL",
+                &format!("core.hooksPath={null}"),
+                "-c",
+                &format!("core.askPass={null}"),
             ])
             .args(arguments);
         let output = super::process_tree::capture(
@@ -442,15 +462,6 @@ impl Repository {
             );
         }
         Ok(Some(output.stdout))
-    }
-
-    #[cfg(not(windows))]
-    pub(super) async fn git_optional(
-        &self,
-        _arguments: &[&str],
-        _allow_no_match: bool,
-    ) -> Result<Option<Vec<u8>>> {
-        Err("L’explorateur Git natif attend sa qualification sur ce système.".into())
     }
 }
 

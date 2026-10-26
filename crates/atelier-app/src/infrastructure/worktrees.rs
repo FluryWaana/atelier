@@ -241,7 +241,7 @@ pub(super) async fn fetch_origin_commit(
     let remote_path = if let Some(authentication) = authentication {
         authentication.origin(origin)?
     } else {
-        let remote=Repository::synthetic(root,roots,&JsonString::from(origin)).map_err(|_|"Origin doit désigner un dépôt synthétique local ou une connexion HTTPS de forge explicitement choisie.")?;
+        let remote=Repository::synthetic(root,roots,&JsonString::from(origin)).map_err(|_|"Origin doit désigner un dépôt local autorisé ou une connexion HTTPS de forge explicitement choisie.")?;
         remote.verify_root().await?;
         path_string(&remote.path).utf8()?
     };

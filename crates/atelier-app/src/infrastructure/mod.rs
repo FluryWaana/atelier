@@ -49,7 +49,6 @@ pub mod portable_import;
 pub mod preparation;
 #[cfg(windows)]
 mod process_inspection;
-#[cfg(windows)]
 pub mod process_tree;
 pub mod projects;
 pub mod prototype;
