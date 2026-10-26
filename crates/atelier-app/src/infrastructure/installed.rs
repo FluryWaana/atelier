@@ -352,6 +352,58 @@ pub fn open(root: &Path, target: &str) -> Result<Option<Installation>> {
     open_mode(root, target, true)
 }
 
+pub fn verify_all(root: &Path, target: &str) -> Result<()> {
+    let installation = open(root, target)?.ok_or("Installation Rust absente.")?;
+    let mut ids = std::collections::BTreeSet::new();
+    for entry in fs::read_dir(root.join("versions"))? {
+        let entry = entry?;
+        let id = entry
+            .file_name()
+            .into_string()
+            .map_err(|_| "Version installée non reconnue.")?;
+        if id.len() != 64
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            || !plain_metadata(&entry.path())?.is_dir()
+        {
+            return Err("Contenu conservé : une version modifiée ou retirée exige un examen avant désinstallation.".into());
+        }
+        if !ids.insert(id.clone()) || ids.len() > 16 {
+            return Err(
+                "Trop de versions pour une désinstallation automatique. Aucun contenu supprimé."
+                    .into(),
+            );
+        }
+        let receipt = package::read(&root.join("receipts").join(format!("{id}.json")), 16 * 1024)?;
+        let payload = update_package::verify_installed_payload(
+            &entry.path(),
+            &receipt,
+            installation.trust(),
+            target,
+        )?;
+        if payload.archive_sha256 != id {
+            return Err("Identité de version installée incohérente.".into());
+        }
+    }
+    if !ids.contains(&installation.current().active.id) {
+        return Err("Version active absente de l’inventaire installé.".into());
+    }
+    for entry in fs::read_dir(root.join("receipts"))? {
+        let entry = entry?;
+        let name = entry.file_name();
+        let name = name.to_str().ok_or("Nom de reçu invalide.")?;
+        if !name
+            .strip_suffix(".json")
+            .is_some_and(|id| ids.contains(id))
+            || !plain_metadata(&entry.path())?.is_file()
+        {
+            return Err("Reçu sans version conservé : examen requis avant désinstallation.".into());
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn open_recovery(root: &Path, target: &str) -> Result<Option<Installation>> {
     open_mode(root, target, false)
 }

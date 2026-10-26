@@ -463,6 +463,7 @@ pub(super) mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(installation.current().active.version, "0.2.0");
+        installed::verify_all(&destination, package::TARGETS[1]).unwrap();
         assert!(
             installed::locate(&destination.join("atelier"), package::TARGETS[1])
                 .unwrap()
@@ -508,6 +509,7 @@ pub(super) mod tests {
         )
         .unwrap();
         assert!(installed::open(&destination, package::TARGETS[1]).is_err());
+        assert!(installed::verify_all(&destination, package::TARGETS[1]).is_err());
         assert_eq!(
             fs::read_to_string(slot.join("ui/style-test.css")).unwrap(),
             "Human edit"

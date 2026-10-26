@@ -15,7 +15,7 @@ use windows_sys::Win32::{
     },
 };
 
-const REGISTRATION: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B1FD8B3A-76DE-4DF8-96B2-502E5F10C99F}_is1";
+const REGISTRATION: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{1E47A40D-620A-4815-AED7-B4CB019B4BB9}_is1";
 
 struct Key(HKEY);
 impl Drop for Key {

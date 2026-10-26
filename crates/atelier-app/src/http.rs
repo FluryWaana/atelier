@@ -487,6 +487,13 @@ async fn serve_mode(
         return Err("Écoute distante interdite.".into());
     }
     let app = assets::router(&assets, legacy)?;
+    let _package_guard = if legacy {
+        None
+    } else {
+        Some(crate::infrastructure::package_maintenance::acquire(
+            installation_root.as_deref(),
+        )?)
+    };
     let expected_identity = installation_root
         .as_ref()
         .map(|root| crate::infrastructure::updates::expected_data_identity(root, &directory))

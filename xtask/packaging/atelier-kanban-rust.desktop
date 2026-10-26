@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Atelier Kanban
+Comment=Local Kanban workspace
+Exec=atelier-kanban-rust
+Icon=applications-development
+Terminal=false
+Categories=Development;ProjectManagement;
+Actions=Stop;
+
+[Desktop Action Stop]
+Name=Stop Atelier Kanban
+Exec=atelier-kanban-rust stop

@@ -68,13 +68,29 @@ pub(super) fn stage(
     if output.try_exists()? {
         return Err("Le dossier de paquet existe déjà. Aucun fichier remplacé.".into());
     }
-    fs::rename(temporary.path(), output)?;
+    atelier_app::infrastructure::package::publish_directory(temporary.path(), output)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn publication_never_replaces_a_destination_created_after_staging() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("staged");
+        let target = root.path().join("delivery");
+        fs::create_dir(&source).unwrap();
+        fs::write(source.join("artifact"), "synthetic artifact").unwrap();
+        fs::create_dir(&target).unwrap();
+        fs::write(target.join("human-note"), "preserve").unwrap();
+        assert!(atelier_app::infrastructure::package::publish_directory(&source, &target).is_err());
+        assert_eq!(
+            fs::read_to_string(target.join("human-note")).unwrap(),
+            "preserve"
+        );
+        assert!(source.join("artifact").exists());
+    }
     #[test]
     fn archives_round_trip_all_five_target_payloads_without_overwrite() {
         use atelier_app::infrastructure::package_archive;

@@ -130,6 +130,16 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
 async fn main() -> Result<()> {
     let mut command = std::env::args_os().skip(1);
     let first = command.next();
+    if first.as_deref() == Some(std::ffi::OsStr::new("verify-installation")) {
+        if command.next().is_some() {
+            return Err("La vérification de l’installation ne reçoit aucun argument.".into());
+        }
+        let executable = std::env::current_exe()?;
+        let target = atelier_app::infrastructure::package::native_target()?;
+        let installation =
+            installed::locate(&executable, target)?.ok_or("Installation Rust absente.")?;
+        return installed::verify_all(installation.root(), target);
+    }
     if first.as_deref() == Some(std::ffi::OsStr::new("import-data")) {
         return atelier_app::infrastructure::portable_import::command(command);
     }

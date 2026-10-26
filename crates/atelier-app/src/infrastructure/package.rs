@@ -76,6 +76,25 @@ pub fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     file.sync_all()?;
     Ok(())
 }
+pub fn publish_directory(source: &Path, destination: &Path) -> Result<()> {
+    let parent = |path: &Path| {
+        fs::canonicalize(
+            path.parent()
+                .filter(|path| !path.as_os_str().is_empty())
+                .unwrap_or(Path::new(".")),
+        )
+    };
+    let directory = parent(source)?;
+    if directory != parent(destination)? || !plain_metadata(source)?.is_dir() {
+        return Err("La publication exige un dossier de staging voisin de la destination.".into());
+    }
+    let directory = cap_std::fs::Dir::open_ambient_dir(directory, cap_std::ambient_authority())?;
+    super::publish::rename_new(
+        &directory,
+        Path::new(source.file_name().ok_or("Nom de staging absent.")?),
+        Path::new(destination.file_name().ok_or("Nom de livraison absent.")?),
+    )
+}
 pub fn assets(directory: &Path) -> Result<Vec<String>> {
     if !plain_metadata(directory)?.is_dir() {
         return Err("Dossier d’assets ordinaire requis.".into());
