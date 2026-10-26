@@ -115,6 +115,12 @@ impl BackupDirectory {
     }
 
     pub fn create(&self, store: &Store<'_>) -> Result<CreatedBackup> {
+        if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
+            return Err(BackupFailure::Conflict(
+                "Termine la mise à jour du CLI avant une sauvegarde.",
+            )
+            .into());
+        }
         if super::connector_effects::read(&store.settings::<Document>()?)?
             .iter()
             .any(super::connector_effects::pending)
@@ -200,6 +206,12 @@ fn restore_checked(
     after: impl FnOnce(&Store<'_>) -> Result<()>,
 ) -> Result<()> {
     let current_effects = super::connector_effects::read(&store.settings::<Document>()?)?;
+    if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
+        return Err(BackupFailure::Conflict(
+            "Termine la mise à jour du CLI avant une restauration.",
+        )
+        .into());
+    }
     if current_effects
         .iter()
         .any(super::connector_effects::pending)
@@ -261,6 +273,12 @@ fn restore_checked(
     }
     if let Some(settings) = source_settings {
         let settings: Document = serde_json::from_str(&settings)?;
+        if atelier_core::application::agent_cli::busy(&settings)? {
+            return Err(BackupFailure::Invalid(
+                "Cette sauvegarde contient une mise à jour CLI inachevée.",
+            )
+            .into());
+        }
         let saved_effects = super::connector_effects::read(&settings)?;
         if saved_effects.iter().any(super::connector_effects::pending) {
             return Err(BackupFailure::Invalid(

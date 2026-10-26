@@ -193,6 +193,12 @@ impl ContainedChild {
     }
 
     pub async fn spawn(command: &mut Command) -> Result<Self> {
+        Self::spawn_ready(command, || Ok(())).await
+    }
+    pub(crate) async fn spawn_ready(
+        command: &mut Command,
+        ready: impl FnOnce() -> Result<()>,
+    ) -> Result<Self> {
         let job = Job::new()?;
         command
             .creation_flags(CREATE_NO_WINDOW | CREATE_SUSPENDED)
@@ -202,6 +208,7 @@ impl ContainedChild {
             let pid = child.id().ok_or("Processus de démarrage absent.")?;
             job.attach(child.raw_handle().ok_or("Handle de démarrage absent.")?)?;
             let thread = primary_thread(pid)?;
+            ready()?;
             // Resume only after assignment; all children inherit the non-breakaway job.
             if unsafe { ResumeThread(thread.as_raw_handle()) } != 1 {
                 return Err("Suspension initiale du processus non confirmée.".into());

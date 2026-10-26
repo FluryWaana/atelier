@@ -29,6 +29,18 @@ fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
         }
     }
 }
+pub(super) async fn cli_status(State(state): State<Shared>) -> Response {
+    response(
+        state
+            .database
+            .call(|store| {
+                Ok(atelier_core::application::agent_cli::operation(
+                    &store.settings::<atelier_core::document::Document>()?,
+                )?)
+            })
+            .await,
+    )
+}
 
 #[cfg(windows)]
 pub(super) async fn diagnose(
@@ -47,6 +59,7 @@ pub(super) async fn diagnose(
         );
     }
     let vault = state.vault.clone();
+    let provider = id.clone();
     let profile = state
         .database
         .call(move |store| {
@@ -55,10 +68,28 @@ pub(super) async fn diagnose(
             })
         })
         .await;
-    response(match profile {
+    let result = match profile {
         Ok(profile) => crate::infrastructure::agent_diagnostics::diagnose(profile).await,
         Err(error) => Err(error),
-    })
+    };
+    if let Ok(diagnostic) = &result
+        && let Some(info) = &diagnostic.update_info
+        && let Some(actual) = info
+            .installed_version
+            .clone()
+            .filter(|version| crate::infrastructure::package::version_parts(version).is_ok())
+    {
+        let root = info.managed_root.clone();
+        let observed=state.database.call(move|store|{
+            if let Some(operation)=crate::infrastructure::agent_cli::read(store)?.filter(|operation|operation.provider==provider&&operation.phase==atelier_core::application::agent_cli::Phase::Uncertain&&operation.info.managed_root==root&&root.is_some()) {
+                crate::infrastructure::agent_cli::change(store,&operation.id,atelier_core::application::agent_cli::Phase::Observed,Some(actual),"Version relue après interruption ; l’issue de la commande précédente n’est pas vérifiée.")?;
+            }Ok(())
+        }).await;
+        if let Err(error) = observed {
+            return response::<atelier_core::contracts::AgentDiagnostic>(Err(error));
+        }
+    }
+    response(result)
 }
 
 #[cfg(not(windows))]

@@ -34,6 +34,7 @@ pub fn public_config(stored: &Document, tokens: &Document, platform: &str) -> Re
     let mut config = config(stored)?;
     config.remove("jiraImportReservation");
     config.remove("connectorEffects");
+    config.remove("agentCliUpdate");
     config.set("platform", &platform)?;
     for (service, flag) in [
         ("jira", "tokenSet"),

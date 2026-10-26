@@ -43,7 +43,45 @@ pub async fn capture_guarded(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    let mut child = ContainedChild::spawn(command).await?;
+    let child = ContainedChild::spawn(command).await?;
+    capture_child(child, input, timeout, limit, guard).await
+}
+#[cfg(windows)]
+pub(crate) async fn capture_pinned(
+    command: &mut Command,
+    pin: super::checked_file::CheckedFile,
+    timeout: Duration,
+    limit: usize,
+    guard: impl std::future::Future<Output = crate::Error>,
+) -> Result<std::process::Output> {
+    use std::process::Stdio;
+    let program = std::path::PathBuf::from(
+        super::task_creation::path_string(std::path::Path::new(command.as_std().get_program()))
+            .utf8()?,
+    );
+    let parent = super::repository_access::absolute(
+        program.parent().ok_or("Dossier du programme absent.")?,
+    )?;
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let child = ContainedChild::spawn_ready(command, move || {
+        pin.open_same(&program)?;
+        drop(pin);
+        drop(parent);
+        Ok(())
+    })
+    .await?;
+    capture_child(child, &[], timeout, limit, guard).await
+}
+async fn capture_child(
+    mut child: ContainedChild,
+    input: &[u8],
+    timeout: Duration,
+    limit: usize,
+    guard: impl std::future::Future<Output = crate::Error>,
+) -> Result<std::process::Output> {
     let mut stdin = child
         .child
         .stdin

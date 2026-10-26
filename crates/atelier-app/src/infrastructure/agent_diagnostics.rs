@@ -11,7 +11,7 @@ use std::{
     time::Duration,
 };
 
-type Environment = BTreeMap<String, OsString>;
+pub(super) type Environment = BTreeMap<String, OsString>;
 
 fn local_path(path: &Path) -> bool {
     matches!(path.components().next(), Some(Component::Prefix(prefix)) if matches!(prefix.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)))
@@ -80,7 +80,7 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
     Err("Exécutable local introuvable. Renseignez son chemin absolu.".into())
 }
 
-fn environment(
+pub(super) fn environment(
     profile: &Document,
     inherited: &Environment,
     authentication: bool,
@@ -149,7 +149,7 @@ fn environment(
     Ok(selected)
 }
 
-async fn capture(
+pub(super) async fn capture(
     binary: &Path,
     args: &[String],
     environment: &Environment,
@@ -163,7 +163,7 @@ async fn capture(
     process_tree::capture(&mut command, &[], Duration::from_secs(10), 65_536).await
 }
 
-fn version(output: &[u8]) -> Option<String> {
+pub(super) fn version(output: &[u8]) -> Option<String> {
     use std::sync::OnceLock;
     static VERSION: OnceLock<regex::Regex> = OnceLock::new();
     let expression = VERSION.get_or_init(|| {
@@ -262,7 +262,7 @@ fn authentication(
     Ok(())
 }
 
-async fn resolve(profile: &Document) -> Result<(PathBuf, Environment)> {
+pub(super) async fn resolve(profile: &Document) -> Result<(PathBuf, Environment)> {
     static LOOKUPS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
     let permit = LOOKUPS
         .try_acquire()
@@ -339,6 +339,7 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         account: None,
         auth_method: None,
         account_report: None,
+        update_info: None,
     };
     let args = if kind == "command" {
         profile
@@ -411,6 +412,10 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         }
         result.account_report = Some(report);
     }
+    result.update_info = Some(
+        super::agent_cli::describe(&profile, &binary, result.version.as_deref(), &inherited)
+            .await?,
+    );
     Ok(result)
 }
 
@@ -479,6 +484,7 @@ mod tests {
             account: None,
             auth_method: None,
             account_report: None,
+            update_info: None,
         };
         let mut output = std::process::Output { status:std::process::ExitStatus::from_raw(0), stdout:br#"{"loggedIn":true,"email":"synthetic@example.invalid","authMethod":"api_key","accessToken":"never expose this"}"#.to_vec(), stderr:b"secret stderr".to_vec() };
         authentication(&mut diagnostic, "claude", &output, &Environment::new()).unwrap();

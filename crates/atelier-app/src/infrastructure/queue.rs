@@ -174,6 +174,7 @@ pub(super) fn recover_in_transaction(store: &Store<'_>) -> Result<()> {
 }
 pub fn claim(store: &Store<'_>, run_id: String) -> Result<Option<(Card, Document)>> {
     store.transaction(|store| {
+        if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)?{return Ok(None);}
         let mut queue = read(store)?;
         if queue.paused || queue.active.is_some() || queue.ids.is_empty() {
             return Ok(None);

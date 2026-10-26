@@ -14,6 +14,9 @@ pub fn active(run: &Document) -> Result<bool> {
 /// The caller reserves HTTP mutations before preparing the external launch.
 pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
     store.transaction(|store| {
+        if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
+            return Err("Une mise à jour CLI est en cours. Aucun agent lancé.".into());
+        }
         let id = run
             .get::<String>("id")?
             .filter(|id| !id.is_empty())

@@ -58,6 +58,7 @@ pub fn AgentDiagnostics(
                 {diagnostic.auth_method.map(|method| view! { <p><strong>{move || i18n.text("Authentification")}</strong>" : "{method}</p> })}
                 {diagnostic.account_report.map(|report|view!{<AccountQuotas report/>})}
             })}</div>
+            <crate::agent_cli::AgentCliUpdate profile diagnostic=Signal::derive(move||result.get()) token pending blocked on_attempt=Callback::new(move |_|result.set(None))/>
         </section>
     }
 }

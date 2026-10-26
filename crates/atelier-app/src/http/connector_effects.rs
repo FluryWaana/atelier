@@ -27,7 +27,7 @@ pub(super) async fn list(State(state): State<Shared>, Path(module): Path<String>
     )
 }
 pub(super) async fn pending(State(state): State<Shared>) -> Response {
-    response(state.database.call(|store|Ok(serde_json::json!({"pending":workflow::read(&store.settings::<Document>()?)?.iter().any(workflow::pending)}))).await)
+    response(state.database.call(|store|Ok(serde_json::json!({"pending":workflow::read(&store.settings::<Document>()?)?.iter().any(workflow::pending)||atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)?}))).await)
 }
 pub(super) async fn preview(
     State(state): State<Shared>,

@@ -21,6 +21,8 @@ use serde_json::json;
 use std::{path::PathBuf, sync::Arc};
 use tokio::{net::TcpListener, sync::watch};
 
+#[cfg(windows)]
+mod agent_cli;
 mod agent_providers;
 mod assets;
 #[cfg(windows)]
@@ -209,6 +211,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
             || path.ends_with("/review/validate")
             || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
+        let exclusive = exclusive
+            || (path.starts_with("/api/agent-providers/") && path.ends_with("/cli-update"));
         let cancellation = request.method() == Method::POST && mutations::is_cancellation(&path);
         let gate = state.mutations.clone();
         let changed = state.changed.clone();
@@ -222,6 +226,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     return response;
                 }
                 let guard_path = if request.uri().path() == "/api/repositories"
+                    || (request.uri().path().starts_with("/api/agent-providers/")
+                        && request.uri().path().ends_with("/cli-update"))
                     || (request.uri().path().starts_with("/api/extensions/")
                         && request.uri().path().contains("/operations"))
                 {
@@ -245,6 +251,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                         Ok(crate::infrastructure::connector_effects::blocks(
                             store,
                             &operation_path,
+                        )? || atelier_core::application::agent_cli::busy(
+                            &store.settings::<atelier_core::document::Document>()?,
                         )? || crate::infrastructure::jira_transition::blocks(
                             store,
                             &guarded_path,
@@ -525,6 +533,10 @@ async fn serve_mode(
             crate::infrastructure::jira_transition::recover(store)?;
             crate::infrastructure::forge_draft::recover(store)?;
             crate::infrastructure::connector_effects::recover(store)?;
+            let mut settings = store.settings::<atelier_core::document::Document>()?;
+            if atelier_core::application::agent_cli::recover(&mut settings, &now)? {
+                store.save_settings(&settings)?;
+            }
             crate::infrastructure::runs::recover(store, &now)?;
             crate::infrastructure::automation::recover(store)?;
             crate::infrastructure::queue::recover(store)
@@ -557,6 +569,10 @@ async fn serve_mode(
     });
     #[cfg(windows)]
     let app = app
+        .route(
+            "/api/agent-providers/{id}/cli-update",
+            post(agent_cli::update),
+        )
         .route(
             "/api/extensions/{module}/operations/{id}/send",
             post(connector_effects::send),
@@ -628,6 +644,10 @@ async fn serve_mode(
         .route("/api/jira/config", get(jira::get).put(jira::save))
         .route("/api/tempo/config", get(tempo::get).put(tempo::save))
         .route("/api/extensions", get(connectors::get))
+        .route(
+            "/api/agent-providers/cli-update",
+            get(agent_providers::cli_status),
+        )
         .route("/api/folders/choose", post(folders::choose))
         .route("/api/extensions/pending", get(connector_effects::pending))
         .route(

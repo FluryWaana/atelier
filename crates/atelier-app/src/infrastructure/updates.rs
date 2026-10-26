@@ -155,6 +155,11 @@ async fn require_connector_idle(journal: &Journal) -> Result<()> {
     let database = super::database::Database::open_in(data.join("kanban.sqlite"), directory)?;
     let result = database
         .call(|store| {
+            if atelier_core::application::agent_cli::busy(
+                &store.settings::<atelier_core::document::Document>()?,
+            )? {
+                return Err("Termine la mise à jour du CLI avant de modifier Atelier.".into());
+            }
             if super::connector_effects::read(
                 &store.settings::<atelier_core::document::Document>()?,
             )?
