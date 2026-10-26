@@ -32,6 +32,13 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
     let mut seen = std::collections::BTreeSet::new();
     for operation in &operations {
         protocol::validate_manifest(&operation.manifest)?;
+        match operation.method {
+            Method::Action => {}
+            Method::TicketsCreate if operation.action.is_empty() => {
+                protocol::ticket_creation(&operation.input)?;
+            }
+            _ => return Err("Opération distante de connecteur non prise en charge.".into()),
+        }
         if operation.module != operation.manifest.id
             || !protocol::identifier(&operation.id)
             || operation.version == 0
@@ -61,7 +68,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
         if let Some(reply) = &operation.reply {
             if reply.protocol != protocol::PROTOCOL
                 || reply.module != operation.module
-                || !matches!(reply.method, Method::Action | Method::Reconcile)
+                || !(reply.method == operation.method || reply.method == Method::Reconcile)
                 || serde_json::to_vec(reply)?.len() > protocol::OUTPUT_LIMIT
                 || matches!(operation.state, Phase::Preparing | Phase::Sending)
                 || matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
@@ -72,7 +79,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             }
             protocol::report_items(&protocol::Report {
                 id: operation.id.clone(),
-                method: Method::Action,
+                method: operation.method,
                 action: Some(operation.action.clone()),
                 message: reply.message.clone(),
                 output: reply.output.clone(),
@@ -165,8 +172,13 @@ pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result
         if operations.iter().any(pending){return Err("Termine ou rapproche l’écriture de connecteur en cours.".into());}
         if operations.len()>=1024{return Err("Historique des écritures de connecteurs plein.".into());}
         let profile=connectors::profile(store,module,input.expected_revision)?;
+        let payload=match input.method {
+            Method::Action if input.input.is_null()=>serde_json::json!({"importedCount":super::connector_tickets::imported_count(store,&profile)?}),
+            Method::TicketsCreate if input.action.is_empty()=>serde_json::to_value(protocol::ticket_creation(&input.input)?)?,
+            _=>return Err("Opération distante de connecteur non prise en charge.".into())
+        };
         let timestamp=now()?;
-        let operation=Operation{id:format!("effect-{}",uuid::Uuid::new_v4()),module:module.into(),version:1,revision:profile.revision,manifest:profile.manifest.clone(),binary:profile.binary.clone(),values:profile.values.clone(),action:input.action.clone(),input:serde_json::json!({"importedCount":super::connector_tickets::imported_count(store,&profile)?}),state:Phase::Preparing,started_at:timestamp.clone(),updated_at:timestamp,reply:None,request_id:None};
+        let operation=Operation{id:format!("effect-{}",uuid::Uuid::new_v4()),module:module.into(),version:1,revision:profile.revision,manifest:profile.manifest.clone(),binary:profile.binary.clone(),values:profile.values.clone(),method:input.method,action:input.action.clone(),input:payload,state:Phase::Preparing,started_at:timestamp.clone(),updated_at:timestamp,reply:None,request_id:None};
         let request=request(&operation,false);
         if protocol::effect(&profile.manifest,&request)?!=Effect::Remote{return Err("Cette action n’est pas une écriture distante déclarée.".into());}
         operations.push(operation.clone());
@@ -196,10 +208,10 @@ fn request(operation: &Operation, reconcile: bool) -> Request {
         method: if reconcile {
             Method::Reconcile
         } else {
-            Method::Action
+            operation.method
         },
         operation_id: Some(operation.id.clone()),
-        action: if reconcile {
+        action: if reconcile || operation.method != Method::Action {
             None
         } else {
             Some(operation.action.clone())
@@ -207,7 +219,7 @@ fn request(operation: &Operation, reconcile: bool) -> Request {
         settings: operation.values.clone(),
         secrets: BTreeMap::new(),
         input: if reconcile {
-            serde_json::json!({"method":"action","action":operation.action,"input":operation.input})
+            serde_json::json!({"method":operation.method,"action":if operation.method==Method::Action {Some(&operation.action)}else{None},"input":operation.input})
         } else {
             operation.input.clone()
         },
@@ -370,14 +382,14 @@ pub fn record(
                 != if reconcile {
                     Method::Reconcile
                 } else {
-                    Method::Action
+                    operation.method
                 }
         {
             return Err("Le résultat ne correspond pas à cette écriture de connecteur.".into());
         }
         let report = protocol::Report {
             id: operation.id.clone(),
-            method: Method::Action,
+            method: operation.method,
             action: Some(operation.action.clone()),
             message: reply.message.clone(),
             output: reply.output.clone(),

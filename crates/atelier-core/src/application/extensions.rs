@@ -90,6 +90,8 @@ pub struct RemoteOperation {
     pub manifest: Manifest,
     pub binary: Binary,
     pub values: BTreeMap<String, Value>,
+    #[serde(default = "action_method")]
+    pub method: Method,
     pub action: String,
     pub input: Value,
     pub state: crate::contracts::ForgeWriteState,
@@ -102,7 +104,37 @@ pub struct RemoteOperation {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RemotePreview {
     pub expected_revision: u64,
+    #[serde(default = "action_method")]
+    pub method: Method,
+    #[serde(default)]
     pub action: String,
+    #[serde(default)]
+    pub input: Value,
+}
+fn action_method() -> Method {
+    Method::Action
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TicketCreation {
+    pub kind: String,
+    pub title: String,
+    pub description: String,
+}
+pub fn ticket_creation(input: &Value) -> Result<TicketCreation> {
+    let input: TicketCreation =
+        serde_json::from_value(input.clone()).map_err(|_| "Création de ticket invalide.")?;
+    if !text(&input.kind, 100, false)
+        || input
+            .kind
+            .chars()
+            .any(|c| c.is_control() || matches!(c, '/' | '\\' | '$'))
+        || !text(&input.title, 255, false)
+        || !text(&input.description, 20_000, true)
+    {
+        return Err("Type, titre ou description de ticket invalide.");
+    }
+    Ok(input)
 }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -207,7 +239,10 @@ pub struct ReportItem {
     pub value: String,
 }
 pub fn report_items(report: &Report) -> Result<Vec<ReportItem>> {
-    if !matches!(report.method, Method::Check | Method::Action) {
+    if !matches!(
+        report.method,
+        Method::Check | Method::Action | Method::TicketsCreate
+    ) {
         return Ok(Vec::new());
     }
     let Some(items) = report.output.get("items") else {

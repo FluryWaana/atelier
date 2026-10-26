@@ -12,7 +12,7 @@ use std::{collections::BTreeSet, sync::LazyLock, time::Duration};
 const PAGE: usize = 8; // Eight maximum-size UTF-8 descriptions fit the bounded connector reply.
 
 pub fn manifest() -> Manifest {
-    serde_json::from_value(json!({"id":"azure-tickets","name":"Azure Work Items","description":"Recherche et lecture de tickets Azure DevOps avec import local confirmé.","sourceLocale":"fr-FR","methods":["check","ticketsSearch","ticketsRead"],"fields":[{"id":"url","label":"Organisation Azure (https://dev.azure.com/organisation)","kind":"url","options":[],"credentialScope":true},{"id":"project","label":"Identifiant UUID du projet Azure","kind":"text","options":[],"credentialScope":true},{"id":"filter","label":"Titre contenant (facultatif)","kind":"text","options":[],"credentialScope":false},{"id":"token","label":"PAT Azure avec lecture des work items","kind":"password","options":[],"credentialScope":false}],"tabs":[],"translations":{"en-US":{"Recherche et lecture de tickets Azure DevOps avec import local confirmé.":"Search and read Azure DevOps tickets with confirmed local import.","Organisation Azure (https://dev.azure.com/organisation)":"Azure organization (https://dev.azure.com/organization)","Identifiant UUID du projet Azure":"Azure project UUID","Titre contenant (facultatif)":"Title containing (optional)","PAT Azure avec lecture des work items":"Azure PAT with work item read access","Projet Azure":"Azure project","Lecture Azure terminée ; aucune écriture distante.":"Azure read complete; no remote write."}}})).expect("static Azure connector manifest")
+    serde_json::from_value(json!({"id":"azure-tickets","name":"Azure Work Items","description":"Recherche, lecture et création confirmée de tickets Azure DevOps.","sourceLocale":"fr-FR","methods":["check","ticketsSearch","ticketsRead","ticketsCreate","reconcile"],"fields":[{"id":"url","label":"Organisation Azure (https://dev.azure.com/organisation)","kind":"url","options":[],"credentialScope":true},{"id":"project","label":"Identifiant UUID du projet Azure","kind":"text","options":[],"credentialScope":true},{"id":"filter","label":"Titre contenant (facultatif)","kind":"text","options":[],"credentialScope":false},{"id":"token","label":"PAT Azure avec lecture ; écriture requise pour créer","kind":"password","options":[],"credentialScope":false}],"tabs":[],"translations":{"en-US":{"Recherche, lecture et création confirmée de tickets Azure DevOps.":"Search, read and confirm creation of Azure DevOps tickets.","Organisation Azure (https://dev.azure.com/organisation)":"Azure organization (https://dev.azure.com/organization)","Identifiant UUID du projet Azure":"Azure project UUID","Titre contenant (facultatif)":"Title containing (optional)","PAT Azure avec lecture ; écriture requise pour créer":"Azure PAT with read access; write access required to create","Projet Azure":"Azure project","Lecture Azure terminée ; aucune écriture distante.":"Azure read complete; no remote write.","Résultat de création Azure observé.":"Azure creation result observed.","Ticket Azure":"Azure ticket","Titre":"Title","Adresse du ticket":"Ticket address"}}})).expect("static Azure connector manifest")
 }
 
 pub struct Azure {
@@ -109,6 +109,9 @@ impl Azure {
         } else {
             self.client.get(url)
         };
+        self.response(request).await
+    }
+    async fn response(&self, request: reqwest::RequestBuilder) -> Result<Value> {
         let mut response = request
             .header(AUTHORIZATION, self.authorization.clone())
             .send()
@@ -143,6 +146,89 @@ impl Azure {
             );
         }
         Ok(value)
+    }
+    pub async fn create(&self, operation: &str, input: &Value, reconcile: bool) -> Result<Value> {
+        if !protocol::identifier(operation) {
+            return Err("Identifiant d’opération Azure invalide.".into());
+        }
+        let creation = protocol::ticket_creation(input)?;
+        if exposes(input, &self.token) {
+            return Err("Le ticket ne peut pas contenir le jeton Azure.".into());
+        }
+        let name = self.project_name().await?;
+        let tag = format!("atelier-{operation}");
+        let mut query_url = self.endpoint(true, &["_apis", "wit", "wiql"])?;
+        query_url.query_pairs_mut().append_pair("$top", "2");
+        let query = format!(
+            "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.Tags] CONTAINS '{tag}' ORDER BY [System.Id] ASC"
+        );
+        let found = self
+            .request(query_url, Some(json!({"query":query})))
+            .await?;
+        if found["queryType"] != "flat" {
+            return Err("Recherche de l’effet Azure invalide.".into());
+        }
+        let rows = found["workItems"]
+            .as_array()
+            .ok_or("Recherche de l’effet Azure invalide.")?;
+        if rows.len() > 1 {
+            return Err("Plusieurs tickets portent l’identité de cette opération Azure.".into());
+        }
+        let html = format!(
+            "<div>{}</div>",
+            html_escape::encode_text(&creation.description).replace('\n', "<br>")
+        );
+        let expected_description = plain_description(&html)?;
+        let id = if let Some(row) = rows.first() {
+            Some(number(&row["id"])?)
+        } else if reconcile {
+            None
+        } else {
+            let kind = format!("${}", creation.kind);
+            let value = self
+                .response(
+                    self.client
+                        .post(self.endpoint(true, &["_apis", "wit", "workitems", &kind])?)
+                        .header(reqwest::header::CONTENT_TYPE, "application/json-patch+json")
+                        .json(&json!([
+                            {"op":"add","path":"/fields/System.Title","value":creation.title},
+                            {"op":"add","path":"/fields/System.Description","value":html},
+                            {"op":"add","path":"/fields/System.Tags","value":tag}
+                        ])),
+                )
+                .await?;
+            Some(number(&value["id"])?)
+        };
+        let observed_at = time::OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)?;
+        let Some(id) = id else {
+            return Ok(
+                json!({"receipt":{"operationId":operation,"outcome":"unknown","reference":operation,"observedAt":observed_at},"items":[]}),
+            );
+        };
+        let value=self.request(self.endpoint(true,&["_apis","wit","workitemsbatch"])?,Some(json!({"ids":[id],"fields":["System.Id","System.Title","System.Description","System.State","System.TeamProject","System.Tags","System.WorkItemType"],"errorPolicy":"Fail"}))).await?;
+        let rows = value["value"]
+            .as_array()
+            .ok_or("Observation du ticket Azure invalide.")?;
+        if value["count"] != 1 || rows.len() != 1 || number(&rows[0]["id"])? != id {
+            return Err("Observation du ticket Azure invalide.".into());
+        }
+        let row = &rows[0];
+        let ticket = self.ticket(row, &name)?;
+        if !row["fields"]["System.Tags"]
+            .as_str()
+            .is_some_and(|tags| tags.split(';').any(|value| value.trim() == tag))
+            || row["fields"]["System.WorkItemType"].as_str() != Some(creation.kind.as_str())
+            || ticket.title != creation.title
+            || ticket.description != expected_description
+        {
+            return Err(
+                "Le ticket Azure observé ne correspond pas à la création confirmée.".into(),
+            );
+        }
+        Ok(
+            json!({"receipt":{"operationId":operation,"outcome":"applied","reference":ticket.url,"observedAt":observed_at},"ticket":ticket,"items":[{"label":"Ticket Azure","value":ticket.key},{"label":"Titre","value":ticket.title},{"label":"Adresse du ticket","value":ticket.url}]}),
+        )
     }
     pub async fn project_name(&self) -> Result<String> {
         let value = self
@@ -380,6 +466,34 @@ pub async fn execute(request: Request) -> Result<Reply> {
             .ok_or("Renseigne un PAT Azure explicite.")?;
         let client = Azure::new(setting("url"), setting("project"), token)?;
         match request.method {
+            Method::TicketsCreate => {
+                client
+                    .create(
+                        request
+                            .operation_id
+                            .as_deref()
+                            .ok_or("Identifiant d’opération Azure requis.")?,
+                        &request.input,
+                        false,
+                    )
+                    .await?
+            }
+            Method::Reconcile => {
+                if request.input["method"] != "ticketsCreate" || !request.input["action"].is_null()
+                {
+                    return Err("Rapprochement Azure hors périmètre.".into());
+                }
+                client
+                    .create(
+                        request
+                            .operation_id
+                            .as_deref()
+                            .ok_or("Identifiant d’opération Azure requis.")?,
+                        &request.input["input"],
+                        true,
+                    )
+                    .await?
+            }
             Method::Check => {
                 json!({"items":[{"label":"Projet Azure","value":client.project_name().await?}]})
             }
@@ -412,7 +526,12 @@ pub async fn execute(request: Request) -> Result<Reply> {
         module: request.module,
         method: request.method,
         status: Status::Ok,
-        message: "Lecture Azure terminée ; aucune écriture distante.".into(),
+        message: if matches!(request.method, Method::TicketsCreate | Method::Reconcile) {
+            "Résultat de création Azure observé."
+        } else {
+            "Lecture Azure terminée ; aucune écriture distante."
+        }
+        .into(),
         output,
     })
 }

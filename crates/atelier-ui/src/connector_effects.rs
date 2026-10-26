@@ -32,6 +32,9 @@ pub fn ConnectorEffects(
     let loading = RwSignal::new(false);
     let approved = RwSignal::new(String::new());
     let error = RwSignal::new(String::new());
+    let ticket_kind = RwSignal::new(String::new());
+    let ticket_title = RwSignal::new(String::new());
+    let ticket_description = RwSignal::new(String::new());
     let page = RwSignal::new(0usize);
     let generation = RwSignal::new(0u64);
     let alive = Rc::new(Cell::new(true));
@@ -51,6 +54,9 @@ pub fn ConnectorEffects(
     Effect::new(move |_| {
         dirty.set(
             !approved.get().is_empty()
+                || !ticket_kind.get().is_empty()
+                || !ticket_title.get().is_empty()
+                || !ticket_description.get().is_empty()
                 || operations.with(|operations| {
                     operations
                         .iter()
@@ -156,7 +162,11 @@ pub fn ConnectorEffects(
             } else {
                 (
                     format!("/api/extensions/{}/operations", profile.manifest.id),
-                    serde_json::json!({"expectedRevision":profile.revision,"action":action}),
+                    if action == "@create-ticket" {
+                        serde_json::json!({"expectedRevision":profile.revision,"method":"ticketsCreate","input":{"kind":ticket_kind.get_untracked(),"title":ticket_title.get_untracked(),"description":ticket_description.get_untracked()}})
+                    } else {
+                        serde_json::json!({"expectedRevision":profile.revision,"action":action})
+                    },
                 )
             };
             pending.set(true);
@@ -176,6 +186,13 @@ pub fn ConnectorEffects(
                     pending.set(false);
                     match result {
                         Ok(operation) => {
+                            if operation.method == Method::TicketsCreate
+                                && operation.state == Phase::Preparing
+                            {
+                                ticket_kind.set(String::new());
+                                ticket_title.set(String::new());
+                                ticket_description.set(String::new());
+                            }
                             operations.update(|operations| {
                                 if let Some(existing) = operations
                                     .iter_mut()
@@ -198,6 +215,13 @@ pub fn ConnectorEffects(
     );
     view! {<section class="task-files" hidden=move||connection.get().is_none() aria-labelledby="connector-effects-heading" aria-busy=move||(loading.get()||pending.get()).to_string()>
         <h4 id="connector-effects-heading">{move||i18n.text("Écritures distantes du connecteur")}</h4>
+        <fieldset hidden=move||connection.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&Method::TicketsCreate)) disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|rows|rows.iter().any(|row|matches!(row.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))>
+            <legend>{move||i18n.text("Créer un ticket distant")}</legend>
+            <label for="connector-ticket-kind">{move||i18n.text("Type de ticket")}</label><input id="connector-ticket-kind" maxlength="100" prop:value=move||ticket_kind.get() on:input=move|event|ticket_kind.set(event_target_value(&event))/>
+            <label for="connector-ticket-title">{move||i18n.text("Titre")}</label><input id="connector-ticket-title" maxlength="255" prop:value=move||ticket_title.get() on:input=move|event|ticket_title.set(event_target_value(&event))/>
+            <label for="connector-ticket-description">{move||i18n.text("Description")}</label><textarea id="connector-ticket-description" maxlength="20000" prop:value=move||ticket_description.get() on:input=move|event|ticket_description.set(event_target_value(&event))></textarea>
+            <button type="button" disabled=move||ticket_kind.get().trim().is_empty()||ticket_title.get().trim().is_empty() on:click=move |_|execute.with_value(|execute|execute(("@create-ticket".into(),None)))>{move||i18n.text("Préparer la création du ticket")}</button>
+        </fieldset>
         <p class="field-help">{move||i18n.text("Prépare une action déclarée, vérifie sa portée puis confirme son envoi unique. Une réponse perdue impose un rapprochement en lecture seule. L’aperçu réserve l’application jusqu’à son envoi ou son annulation.")}</p>
         <div><For each=move||connection.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==RemoteEffect::Remote).collect::<Vec<_>>()).unwrap_or_default() key=|action|action.id.clone() children=move|action|{let selected=StoredValue::new(action.id);let label=action.label;view!{<button class="prepare-connector-effect" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))) on:click=move |_|execute.with_value(|execute|execute((selected.get_value(),None)))>{move||connection.get().map(|connection|translated(i18n,&connection.installed.manifest,&label))}</button>}}/></div>
         <button id="reload-connector-effects" type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("Relire l’historique des opérations")}</button>
@@ -205,12 +229,13 @@ pub fn ConnectorEffects(
         <For each=move||{let _=i18n.code();operations.with(|operations|operations.iter().skip(page.get()*20).take(20).cloned().collect::<Vec<_>>())} key=move|operation|(operation.id.clone(),operation.version,i18n.code()) children=move|operation|{
             let current=StoredValue::new(operation.clone());
             let key=move||context.get().map(|(_,revision)|format!("{}:{}:{revision}",current.with_value(|operation|operation.id.clone()),current.with_value(|operation|operation.version))).unwrap_or_default();
-            let label=operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default();
-            let report=operation.reply.as_ref().map(|reply|protocol::Report{id:operation.id.clone(),method:Method::Action,action:Some(operation.action.clone()),message:reply.message.clone(),output:reply.output.clone(),observed_at:operation.updated_at.clone()});
+            let label=if operation.method==Method::TicketsCreate {i18n.text("Créer un ticket distant")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
+            let report=operation.reply.as_ref().map(|reply|protocol::Report{id:operation.id.clone(),method:operation.method,action:if operation.method==Method::Action {Some(operation.action.clone())}else{None},message:reply.message.clone(),output:reply.output.clone(),observed_at:operation.updated_at.clone()});
             let items=report.as_ref().map(protocol::report_items).transpose().unwrap_or_default().unwrap_or_default();
             view!{<article class="task-files" data-connector-operation=operation.id.clone()>
                 <h5>{translated(i18n,&operation.manifest,&label)}</h5><p class="connector-effect-state">{i18n.text(state(operation.state))}</p><code>{operation.id.clone()}</code><p>{operation.updated_at.clone()}</p>
-                <p>{i18n.text("Tickets locaux dans cette portée : {0}").replace("{0}",&operation.input["importedCount"].as_u64().unwrap_or(0).to_string())}</p>
+                <p hidden=operation.method!=Method::Action>{i18n.text("Tickets locaux dans cette portée : {0}").replace("{0}",&operation.input["importedCount"].as_u64().unwrap_or(0).to_string())}</p>
+                {if operation.method==Method::TicketsCreate {Some(view!{<dl><dt>{i18n.text("Type de ticket")}</dt><dd>{operation.input["kind"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Titre")}</dt><dd>{operation.input["title"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Description")}</dt><dd class="pre-wrap">{operation.input["description"].as_str().unwrap_or_default().to_owned()}</dd></dl>})}else{None}}
                 <dl>{operation.manifest.fields.iter().filter(|field|field.kind!=protocol::FieldKind::Password).filter_map(|field|operation.values.get(&field.id).map(|value|(field,value))).map(|(field,value)|view!{<dt>{translated(i18n,&operation.manifest,&field.label)}</dt><dd>{value.as_str().map(str::to_owned).unwrap_or_else(||value.to_string())}</dd>}).collect_view()}</dl>
                 <p>{operation.reply.as_ref().map(|reply|translated(i18n,&operation.manifest,&reply.message)).unwrap_or_default()}</p>
                 {operation.reply.as_ref().and_then(|reply|protocol::remote_receipt(&reply.output,&operation.id).ok().flatten()).map(|receipt|view!{<p>{i18n.text(match receipt.outcome{protocol::RemoteOutcome::Applied=>"Effet déclaré appliqué",protocol::RemoteOutcome::NotAttempted=>"Envoi déclaré non tenté",protocol::RemoteOutcome::Unknown=>"Résultat déclaré inconnu"})}" · "{i18n.text("Référence déclarée par le module : ")}<code>{receipt.reference}</code>" · "{receipt.observed_at}</p>})}

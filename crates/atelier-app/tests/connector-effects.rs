@@ -12,6 +12,8 @@ fn doc(value: serde_json::Value) -> Document {
 fn preview() -> RemotePreview {
     RemotePreview {
         expected_revision: 1,
+        method: Method::Action,
+        input: serde_json::Value::Null,
         action: "write".into(),
     }
 }
@@ -20,9 +22,76 @@ fn reply(id: &str, nonce: &str, method: Method, outcome: Option<&str>) -> Reply 
 }
 fn settings() -> Document {
     doc(json!({"connectorRevision":1,"processConnectors":[{
-        "manifest":{"id":"synthetic-effect","name":"Synthetic effect","description":"Synthetic only","sourceLocale":"en-US","methods":["check","action","reconcile"],"fields":[],"tabs":[{"id":"actions","label":"Actions","description":"Synthetic only","actions":[{"id":"write","label":"Write","effect":"remote"}]}]},
+        "manifest":{"id":"synthetic-effect","name":"Synthetic effect","description":"Synthetic only","sourceLocale":"en-US","methods":["check","action","ticketsCreate","reconcile"],"fields":[],"tabs":[{"id":"actions","label":"Actions","description":"Synthetic only","actions":[{"id":"write","label":"Write","effect":"remote"}]}]},
         "binary":{"path":"/synthetic/never-executed","sha256":"a".repeat(64)},"revision":1,"values":{},"report":null
     }]}))
+}
+
+#[tokio::test]
+async fn ticket_creation_previews_are_typed_frozen_and_cannot_be_replaced_by_another_method() {
+    let db = Database::open(std::path::Path::new(":memory:")).unwrap();
+    db.call(|store| {
+        store.save_settings(&settings())?;
+        let mut input = RemotePreview {
+            expected_revision: 1,
+            method: Method::TicketsCreate,
+            action: String::new(),
+            input: json!({"kind":"Task","title":"Synthetic title","description":"Human text"}),
+        };
+        input.input["extra"] = json!(true);
+        assert!(effects::preview(store, "synthetic-effect", &input).is_err());
+        input.input.as_object_mut().unwrap().remove("extra");
+        input.method = Method::Check;
+        assert!(effects::preview(store, "synthetic-effect", &input).is_err());
+        input.method = Method::TicketsCreate;
+        let prepared = effects::preview(store, "synthetic-effect", &input)?;
+        let (_, request) = effects::prepare(
+            store,
+            "synthetic-effect",
+            &prepared.id,
+            prepared.version,
+            1,
+            false,
+            &mut |value, _| Ok(value.into()),
+        )?;
+        assert_eq!(request.method, Method::TicketsCreate);
+        assert!(request.action.is_none());
+        assert_eq!(request.input, input.input);
+        input.input["title"] = json!("Changed draft");
+        assert_ne!(
+            effects::current(store, "synthetic-effect", &prepared.id)?.input,
+            input.input
+        );
+        let sent = effects::sending(
+            store,
+            "synthetic-effect",
+            &prepared.id,
+            prepared.version,
+            1,
+            &request.request_id,
+        )?;
+        assert!(
+            effects::record(
+                store,
+                "synthetic-effect",
+                &sent.id,
+                sent.version,
+                1,
+                reply(
+                    &sent.id,
+                    &request.request_id,
+                    Method::Action,
+                    Some("applied")
+                ),
+                false
+            )
+            .is_err()
+        );
+        Ok(())
+    })
+    .await
+    .unwrap();
+    db.close().await.unwrap();
 }
 
 #[tokio::test]

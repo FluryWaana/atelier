@@ -30,6 +30,8 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
                 "synthetic-extension",
                 &RemotePreview {
                     expected_revision: 1,
+                    method: Method::Action,
+                    input: Value::Null,
                     action: "synthetic-write".into(),
                 },
             )

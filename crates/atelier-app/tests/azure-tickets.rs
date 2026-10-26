@@ -150,3 +150,108 @@ fn azure_organization_and_project_inputs_cannot_redirect_credentials() {
         .is_err()
     );
 }
+
+#[derive(Clone)]
+struct CreationRemote {
+    writes: Arc<AtomicUsize>,
+    fault: &'static str,
+}
+async fn creation_remote(State(remote): State<CreationRemote>, request: Request) -> Response {
+    assert_eq!(
+        request.headers()["authorization"],
+        format!("Basic {}", STANDARD.encode(":synthetic-azure-token"))
+    );
+    let path = request.uri().path().to_owned();
+    if path.ends_with(&format!("/_apis/projects/{PROJECT}")) {
+        return Json(json!({"id":PROJECT,"name":"Synthetic project"})).into_response();
+    }
+    assert_eq!(request.method(), axum::http::Method::POST);
+    let content_type = request
+        .headers()
+        .get("content-type")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
+    let body = axum::body::to_bytes(request.into_body(), 128 * 1024)
+        .await
+        .unwrap();
+    let body: Value = serde_json::from_slice(&body).unwrap();
+    assert!(!body.to_string().contains("synthetic-azure-token"));
+    if path.ends_with("/wiql") {
+        assert!(body["query"].as_str().unwrap().contains(
+            "[System.TeamProject] = @project AND [System.Tags] CONTAINS 'atelier-effect-synthetic'"
+        ));
+        let ids = if remote.fault == "duplicate" {
+            vec![json!({"id":1}), json!({"id":2})]
+        } else if remote.writes.load(Ordering::SeqCst) > 0 {
+            vec![json!({"id":1})]
+        } else {
+            vec![]
+        };
+        return Json(json!({"queryType":"flat","workItems":ids})).into_response();
+    }
+    if path.ends_with("/workitems/$Task") || path.ends_with("/workitems/%24Task") {
+        assert_eq!(content_type, "application/json-patch+json");
+        assert_eq!(
+            body,
+            json!([
+                {"op":"add","path":"/fields/System.Title","value":"Synthetic title"},
+                {"op":"add","path":"/fields/System.Description","value":"<div>Safe &lt;script&gt;<br>second line</div>"},
+                {"op":"add","path":"/fields/System.Tags","value":"atelier-effect-synthetic"}
+            ])
+        );
+        assert_eq!(remote.writes.fetch_add(1, Ordering::SeqCst), 0);
+        return ([("content-type", "application/json")], "{lost reply").into_response();
+    }
+    assert!(path.ends_with("/workitemsbatch"));
+    assert_eq!(body["ids"], json!([1]));
+    Json(json!({"count":1,"value":[{"id":1,"fields":{"System.Id":1,"System.TeamProject":if remote.fault=="foreign"{"Foreign project"}else{"Synthetic project"},"System.WorkItemType":"Task","System.Tags":if remote.fault=="tag"{"another-tag"}else{"atelier-effect-synthetic"},"System.Title":if remote.fault=="edited"{"Human edit"}else{"Synthetic title"},"System.Description":"<div>Safe &lt;script&gt;<br>second line</div>","System.State":"New"}}]})).into_response()
+}
+#[tokio::test]
+async fn lost_azure_creation_reply_is_observed_without_a_second_write_and_foreign_results_fail() {
+    for fault in ["none", "duplicate", "foreign", "tag", "edited"] {
+        let remote = CreationRemote {
+            writes: Arc::new(AtomicUsize::new(0)),
+            fault,
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}/org", listener.local_addr().unwrap());
+        let app = Router::new()
+            .fallback(axum::routing::any(creation_remote))
+            .with_state(remote.clone());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = Azure::synthetic(&base, PROJECT, "synthetic-azure-token".into()).unwrap();
+        let input = json!({"kind":"Task","title":"Synthetic title","description":"Safe <script>\nsecond line"});
+        if fault != "duplicate" {
+            assert_eq!(
+                client
+                    .create("effect-synthetic", &input, true)
+                    .await
+                    .unwrap()["receipt"]["outcome"],
+                "unknown"
+            );
+            assert_eq!(remote.writes.load(Ordering::SeqCst), 0);
+        }
+        assert!(
+            client
+                .create("effect-synthetic", &input, false)
+                .await
+                .is_err()
+        );
+        let result = client.create("effect-synthetic", &input, true).await;
+        if fault == "none" {
+            let result = result.unwrap();
+            assert_eq!(result["receipt"]["operationId"], "effect-synthetic");
+            assert_eq!(result["receipt"]["outcome"], "applied");
+            assert_eq!(result["ticket"]["id"], "1");
+        } else {
+            assert!(result.is_err());
+        }
+        assert_eq!(
+            remote.writes.load(Ordering::SeqCst),
+            usize::from(fault != "duplicate")
+        );
+        server.abort();
+    }
+}
