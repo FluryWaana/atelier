@@ -45,7 +45,7 @@ begin
   CreateMutex('Global\AtelierKanbanRustMaintenance');
   Result := not CheckForMutexes('Global\AtelierKanbanRustRunning');
   if not Result then
-    MsgBox('Arrêtez toutes les instances Atelier Rust avant de poursuivre. / Stop all Atelier Rust instances first.', mbError, MB_OK);
+    SuppressibleMsgBox('Arrêtez toutes les instances Atelier Rust avant de poursuivre. / Stop all Atelier Rust instances first.', mbError, MB_OK, IDOK);
 end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
@@ -62,5 +62,5 @@ begin
   if Result then
     Result := Exec(ExpandConstant('{app}\atelier.exe'), 'verify-installation', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
   if not Result then
-    MsgBox('Désinstallation refusée : instance ouverte, code modifié ou historique à examiner. Aucun effacement forcé. / Uninstall refused: running instance, modified code or history requiring review. No forced deletion.', mbError, MB_OK);
+    SuppressibleMsgBox('Désinstallation refusée : instance ouverte, code modifié ou historique à examiner. Aucun effacement forcé. / Uninstall refused: running instance, modified code or history requiring review. No forced deletion.', mbError, MB_OK, IDOK);
 end;

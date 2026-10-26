@@ -4,6 +4,8 @@
 *.command text eol=lf
 *.cmd text eol=crlf
 scripts/installers/*.sh text eol=lf
+xtask/packaging/*.sh text eol=lf
+xtask/packaging/atelier-kanban-rust text eol=lf
 scripts/rust-keyring-accounts.sh text eol=lf
 scripts/rust-keyring-macos-accounts.sh text eol=lf
 scripts/installers/atelier-kanban text eol=lf

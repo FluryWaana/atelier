@@ -6,9 +6,11 @@ on:
       full_matrix:
         description: 'Run all platforms and browsers for final qualification'
         type: boolean
-        default: false
+        default: true
 permissions:
   contents: read
+env:
+  ATELIER_RUST_FINAL_CAMPAIGN: '1'
 concurrency:
   group: rust-migration-${{ github.ref }}
   cancel-in-progress: true
@@ -19,7 +21,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]' || '["windows-latest"]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -35,9 +37,27 @@ jobs:
             target
           key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: rustc -vV
+      - name: Install isolated Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb xauth zenity
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
       - run: cargo test --workspace --exclude atelier-ui --locked
+        if: runner.os == 'Windows'
+      - name: Native Rust tests with an explicit disposable macOS keychain
+        if: runner.os == 'macOS'
+        run: bash xtask/packaging/with-macos-keychain.sh cargo test --workspace --exclude atelier-ui --locked
+      - name: Native Rust tests in a disposable Linux keyring session
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-final-tests-password | gnome-keyring-daemon --unlock --components=secrets
+            cargo test --workspace --exclude atelier-ui --locked
+          '
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
       - name: Native DPAPI isolation between disposable Windows accounts
@@ -84,9 +104,6 @@ jobs:
               Remove-Item -LiteralPath $resolved -Recurse -Force
             }
           }
-      - name: Install isolated Linux keyring prerequisites
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf xvfb
       - name: Native Linux keyring with a disposable data directory
         if: runner.os == 'Linux'
         shell: bash
@@ -106,10 +123,10 @@ jobs:
           ATELIER_TEST_DISPOSABLE_KEYRING: '1'
       - name: Native macOS keyring with a unique synthetic service
         if: runner.os == 'macOS'
-        run: cargo xtask test-keyring
+        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-keyring
       - name: Native macOS locked disposable keychain
         if: runner.os == 'macOS'
-        run: cargo xtask test-keyring-lock
+        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-keyring-lock
         env:
           ATELIER_TEST_DISPOSABLE_KEYRING: '1'
       - name: Native macOS keychain isolation between disposable accounts
@@ -133,10 +150,19 @@ jobs:
             panel_pid=$!
             trap "kill $panel_pid 2>/dev/null || true" EXIT
             cargo xtask test-tray
+            cargo test -p atelier-app --test native-tray --locked -- --ignored
           '
+      - name: Native Windows product tray lifecycle
+        if: runner.os == 'Windows'
+        run: cargo test -p atelier-app --test native-tray --locked -- --ignored
+      - name: Native Windows portable import chooser and confirmation
+        if: runner.os == 'Windows'
+        run: cargo test -p atelier-app --test native-import --locked -- --ignored
       - name: Native macOS tray on the main AppKit loop
         if: runner.os == 'macOS'
-        run: cargo xtask test-tray
+        run: |
+          cargo xtask test-tray
+          cargo test -p atelier-app --test native-tray --locked -- --ignored
   browser:
     strategy:
       fail-fast: false
@@ -172,6 +198,9 @@ jobs:
         if: runner.os == 'Windows'
         run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'
       - run: cargo fetch --locked
+      - name: Install disposable Linux browser keyring prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11
       - name: Edge WASM and restart scenario
         if: runner.os == 'Windows'
         shell: pwsh
@@ -189,13 +218,30 @@ jobs:
           path: .artifacts/rust-*.png
           include-hidden-files: true
           if-no-files-found: ignore
+      - name: Share the verified platform-independent WASM payload
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-wasm-ui
+          path: .artifacts/rust-ui/*
+          if-no-files-found: error
+          retention-days: 7
       - name: Record browser and driver versions
         if: runner.os == 'Linux'
         run: |
           google-chrome --version
           chromedriver --version
-      - run: cargo xtask test-ui
+      - name: Chrome journey in a disposable Linux keyring session
         if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-final-chrome-password | gnome-keyring-daemon --unlock --components=secrets
+            cargo xtask test-ui
+          '
         env:
           ATELIER_TEST_BROWSER: chrome
       - name: Firefox WASM and restart scenario
@@ -203,7 +249,14 @@ jobs:
         run: |
           firefox --version
           "$GECKOWEBDRIVER/geckodriver" --version
-          ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver" cargo xtask test-ui
+          export XDG_DATA_HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          export ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-final-firefox-password | gnome-keyring-daemon --unlock --components=secrets
+            cargo xtask test-ui
+          '
         env:
           ATELIER_TEST_BROWSER: firefox
       - name: Safari WASM and restart scenario
@@ -211,6 +264,95 @@ jobs:
         run: |
           sudo safaridriver --enable
           safaridriver --version
-          cargo xtask test-ui
+          bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui
         env:
           ATELIER_TEST_BROWSER: safari
+  delivery:
+    needs: [native, browser]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]' || '["windows-latest"]') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-delivery-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: rust-wasm-ui
+          path: .artifacts/rust-ui
+      - run: cargo fetch --locked
+      - name: Install native Linux packaging and synthetic keyring tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm cpio desktop-file-utils libsecret-tools gnome-keyring dbus-x11
+      - name: Select the native Inno Setup compiler
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'Inno Setup 6 compiler missing.' }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "ATELIER_ISCC=$compiler"
+      - name: Fabricate and exercise real signed portable packages and native installers
+        if: runner.os == 'Windows'
+        run: cargo xtask qualify-packages .artifacts/rust-delivery
+      - name: Fabricate and exercise macOS portable with a disposable keychain
+        if: runner.os == 'macOS'
+        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask qualify-packages .artifacts/rust-delivery
+      - name: Fabricate and exercise Linux packages in a disposable keyring session
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-final-package-password | gnome-keyring-daemon --unlock --components=secrets
+            cargo xtask qualify-packages .artifacts/rust-delivery
+          '
+      - name: Qualify the real Windows Setup and native uninstaller
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./xtask/packaging/qualify-windows.ps1 -Delivery .artifacts/rust-delivery
+      - name: Qualify DEB and RPM with native managers in disposable containers
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          delivery="$PWD/.artifacts/rust-delivery"
+          docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" ubuntu:24.04 sh /workspace/xtask/packaging/qualify-linux.sh deb
+          docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm
+      - name: Compile and execute native Rust update and rollback journeys
+        if: runner.os == 'Windows'
+        run: cargo xtask test-updates
+      - name: Compile and execute macOS update and rollback with a disposable keychain
+        if: runner.os == 'macOS'
+        run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-updates
+      - name: Compile and execute Linux update and rollback in a disposable keyring session
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-final-update-password | gnome-keyring-daemon --unlock --components=secrets
+            cargo xtask test-updates
+          '
+      - name: Preserve actual package evidence without publishing a release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-preproduction-${{ runner.os }}-${{ runner.arch }}
+          path: .artifacts/rust-delivery/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

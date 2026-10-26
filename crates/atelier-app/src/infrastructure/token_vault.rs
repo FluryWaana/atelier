@@ -240,6 +240,53 @@ pub async fn execute_keyring(
     args: &[&str],
     input: Option<&str>,
 ) -> Result<(i32, String)> {
+    #[cfg(target_os = "macos")]
+    let (scoped_args, scoped_input) = {
+        let configured = std::env::var("ATELIER_TEST_KEYCHAIN").ok();
+        let isolated = std::env::var("CI").as_deref() == Ok("true")
+            && std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() == Ok("1")
+            && std::env::var("ATELIER_TEST_DISPOSABLE_KEYRING").as_deref() == Ok("1");
+        if let Some(path) = &configured {
+            if !isolated {
+                return Err("Le trousseau de test exige la campagne CI jetable.".into());
+            }
+            let path = std::path::Path::new(path);
+            let parent = path.parent().ok_or("Trousseau synthétique invalide.")?;
+            if path
+                .file_name()
+                .is_none_or(|name| name != "fixture.keychain-db")
+                || !parent.file_name().is_some_and(|name| {
+                    name.to_str()
+                        .is_some_and(|name| name.starts_with(".atelier-final-keychain-"))
+                })
+            {
+                return Err("Trousseau synthétique non dédié.".into());
+            }
+            let directory = super::repository_access::absolute(parent)?;
+            let marker = super::checked_file::CheckedFile::open_in(
+                &directory,
+                std::path::Path::new(".keychain-fixture"),
+            )?
+            .single_link()?
+            .private()?
+            .read(64)?;
+            if marker != b"atelier-final-keychain/1\n" {
+                return Err("Marqueur de trousseau synthétique invalide.".into());
+            }
+        }
+        scope_macos_keyring(
+            command,
+            args,
+            input,
+            configured.as_deref(),
+            std::env::var("CI").as_deref() == Ok("true"),
+        )?
+    };
+    #[cfg(target_os = "macos")]
+    let (args, input) = (
+        scoped_args.iter().map(String::as_str).collect::<Vec<_>>(),
+        scoped_input.as_deref(),
+    );
     let mut command = tokio::process::Command::new(command);
     command
         .args(args)
@@ -271,6 +318,63 @@ pub async fn execute_keyring(
         let _ = child.kill().await;
     }
     result.map_err(|_| "Le trousseau système ne répond pas.")?
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn scope_macos_keyring(
+    command: &str,
+    args: &[&str],
+    input: Option<&str>,
+    keychain: Option<&str>,
+    ci: bool,
+) -> Result<(Vec<String>, Option<String>)> {
+    let mut args: Vec<String> = args.iter().map(|arg| (*arg).into()).collect();
+    let mut input = input.map(str::to_owned);
+    if command != "security" {
+        return Ok((args, input));
+    }
+    let read = matches!(
+        args.first().map(String::as_str),
+        Some("find-generic-password")
+    ) && args.len() == 6;
+    let delete = matches!(
+        args.first().map(String::as_str),
+        Some("delete-generic-password")
+    ) && args.len() == 5;
+    let write = args.len() == 1
+        && args[0] == "-i"
+        && input.as_ref().is_some_and(|input| {
+            let words: Vec<_> = input.split_ascii_whitespace().collect();
+            words.len() == 7
+                && words[0] == "add-generic-password"
+                && words[1] == "-s"
+                && words[3] == "-a"
+                && words[4] == "token-key"
+                && words[5] == "-w"
+        });
+    if read || delete || write {
+        if let Some(keychain) = keychain {
+            if !std::path::Path::new(keychain).is_absolute()
+                || keychain.chars().any(char::is_control)
+            {
+                return Err("Chemin absolu de trousseau synthétique requis.".into());
+            }
+            if write {
+                let quoted = format!(
+                    "\"{}\"",
+                    keychain.replace('\\', "\\\\").replace('"', "\\\"")
+                );
+                input = input.map(|input| format!("{} {quoted}\n", input.trim_end()));
+            } else {
+                args.push(keychain.into());
+            }
+        } else if ci {
+            return Err(
+                "Une commande de coffre CI sans trousseau temporaire explicite est refusée.".into(),
+            );
+        }
+    }
+    Ok((args, input))
 }
 
 pub async fn protect(value: &str, decrypt: bool) -> Result<String> {
@@ -355,6 +459,46 @@ mod tests {
     use super::*;
     use atelier_core::document::JsonString;
     use serde_json::{Value, json};
+
+    #[test]
+    fn ci_keyring_reads_writes_and_cleanup_never_fall_back_to_the_default_keychain() {
+        let path = std::env::temp_dir().join("fixture with spaces.keychain-db");
+        let path = path.to_str().unwrap();
+        let lookup = [
+            "find-generic-password",
+            "-s",
+            "synthetic-service",
+            "-a",
+            "token-key",
+            "-w",
+        ];
+        let delete = [
+            "delete-generic-password",
+            "-s",
+            "synthetic-service",
+            "-a",
+            "token-key",
+        ];
+        for args in [&lookup[..], &delete[..]] {
+            assert!(scope_macos_keyring("security", args, None, None, true).is_err());
+            let (scoped, _) =
+                scope_macos_keyring("security", args, None, Some(path), true).unwrap();
+            assert_eq!(scoped.last().unwrap(), path);
+            let explicit: Vec<_> = scoped.iter().map(String::as_str).collect();
+            let (unchanged, _) =
+                scope_macos_keyring("security", &explicit, None, Some(path), true).unwrap();
+            assert_eq!(scoped, unchanged);
+        }
+        let input = "add-generic-password -s synthetic-service -a token-key -w synthetic-key\n";
+        assert!(scope_macos_keyring("security", &["-i"], Some(input), None, true).is_err());
+        let (_, scoped) =
+            scope_macos_keyring("security", &["-i"], Some(input), Some(path), true).unwrap();
+        let (_, repeated) =
+            scope_macos_keyring("security", &["-i"], scoped.as_deref(), Some(path), true).unwrap();
+        assert_eq!(repeated, scoped);
+        assert!(scope_macos_keyring("security", &lookup, None, Some("relative"), true).is_err());
+        assert!(scope_macos_keyring("security", &lookup, None, None, false).is_ok());
+    }
 
     #[tokio::test]
     async fn prototype_keyrings_use_only_their_validated_service_and_keep_ciphertexts_isolated() {

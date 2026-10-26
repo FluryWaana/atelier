@@ -9,6 +9,7 @@ mod keyring;
 mod launch_detection;
 mod notices;
 mod package;
+mod package_delivery;
 mod storage;
 mod ui;
 mod update_flow;
@@ -118,6 +119,7 @@ async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["build-ui"] => build_ui(),
+        ["qualify-packages", output] => package_delivery::qualify(Path::new(output)).await,
         ["third-party-notices", output] => notices::generate(Path::new(output)).await,
         ["build-installers",archive,signature,trust,output]=>installers::build(Path::new(archive),Path::new(signature),Path::new(trust),Path::new(output)).await,
         ["stage-package", target, binary, assets, notices, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(notices),Path::new(output)),
