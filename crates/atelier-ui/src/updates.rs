@@ -51,8 +51,13 @@ pub fn Updates(
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || mounted.with_value(|alive| alive.set(false)));
     let operation = move || status.get().and_then(|status| status.operation);
+    let system = move || status.get().is_some_and(|status| status.system_managed);
     let execute = StoredValue::new_local(move |action: &'static str| {
         if pending.get_untracked() || loading.get_untracked() {
+            return;
+        }
+        if action != "reload" && system() {
+            error.set("Cette installation système se met à jour avec le gestionnaire de paquets, après l’arrêt de toutes les instances. Les données sont conservées.".into());
             return;
         }
         if matches!(action, "apply" | "recover") && uncertain.get_untracked() {
@@ -152,9 +157,10 @@ pub fn Updates(
         <h3 id="updates-heading">{move||i18n.text("Mises à jour")}</h3>
         <p>{move||i18n.text("La nouvelle version est vérifiée avant activation. La version précédente reste disponible pour la récupération. Aucune base de données n’est remplacée par ce retour de version.")}</p>
         <p>{move||i18n.text("Version actuelle :")}" "{move||status.get().map(|status|status.current_version)}</p>
+        <p id="system-package-update" hidden=move||!system()>{move||i18n.text("Cette installation système se met à jour avec le gestionnaire de paquets, après l’arrêt de toutes les instances. Les données sont conservées.")}</p>
         <p hidden=move||status.get().is_none_or(|status|status.installed)>{move||i18n.text("Installe d’abord le paquet Rust avec sa clé de confiance pour utiliser ce parcours de mise à jour.")}</p>
         <button id="reload-updates" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|execute.with_value(|execute|execute("reload"))>{move||i18n.text("Relire l’état de mise à jour")}</button>
-        <fieldset disabled=move||pending.get()||loading.get()||status.get().is_none_or(|status|!status.installed)||operation().is_some_and(|operation|operation.state.pending())>
+        <fieldset disabled=move||system()||pending.get()||loading.get()||status.get().is_none_or(|status|!status.installed)||operation().is_some_and(|operation|operation.state.pending())>
             <label for="update-archive">{move||i18n.text("Archive de mise à jour")}</label><input id="update-archive" maxlength="2000" spellcheck="false" prop:value=move||archive.get() on:input=move|event|{archive.set(event_target_value(&event));approved.set(false);}/>
             <label for="update-signature">{move||i18n.text("Signature fournie avec l’archive")}</label><input id="update-signature" maxlength="2000" spellcheck="false" prop:value=move||signature.get() on:input=move|event|{signature.set(event_target_value(&event));approved.set(false);}/>
             <p>{move||i18n.text("Indique les chemins complets des deux fichiers sur ce poste. Seule la clé de cette installation peut autoriser le paquet.")}</p>
@@ -168,14 +174,14 @@ pub fn Updates(
             <p>{move||i18n.text("Empreinte du paquet :")}" "{move||operation().map(|operation|operation.sha256)}</p>
             <details><summary>{move||i18n.text("Contenu du paquet préparé")}</summary><ul><For each=move||operation().map(|operation|operation.files).unwrap_or_default() key=|file|file.path.clone() children=move|file|view!{<li>{file.path}" · "{file.size}" "{move||i18n.text("octets")}</li>}/></ul></details>
             <p class="field-help" hidden=move||!blocked.get()>{move||i18n.text("Enregistre ou abandonne les autres brouillons avant de redémarrer Atelier.")}</p>
-            <fieldset hidden=move||operation().is_none_or(|operation|operation.state!=Phase::Prepared) disabled=move||pending.get()||loading.get()||blocked.get()||uncertain.get()>
+            <fieldset hidden=move||operation().is_none_or(|operation|operation.state!=Phase::Prepared) disabled=move||system()||pending.get()||loading.get()||blocked.get()||uncertain.get()>
                 <label><input id="approve-update" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("Arrêter les exécutions et services, puis activer cette version exacte et vérifier son démarrage.")}</label>
                 <button id="apply-update" class="primary" type="button" disabled=move||!approved.get() on:click=move|_|execute.with_value(|execute|execute("apply"))>{move||i18n.text("Mettre à jour et redémarrer")}</button>
             </fieldset>
-            <fieldset hidden=move||operation().is_none_or(|operation|!matches!(operation.state,Phase::Preparing|Phase::Prepared)) disabled=move||pending.get()||loading.get()>
+            <fieldset hidden=move||operation().is_none_or(|operation|!matches!(operation.state,Phase::Preparing|Phase::Prepared)) disabled=move||system()||pending.get()||loading.get()>
                 <label><input id="approve-cancel-update" type="checkbox" prop:checked=move||cancel.get() on:change=move|event|cancel.set(event_target_checked(&event))/>{move||i18n.text("Annuler cette préparation sans changer la version active.")}</label><button id="cancel-update" type="button" disabled=move||!cancel.get() on:click=move|_|execute.with_value(|execute|execute("cancel"))>{move||i18n.text("Annuler la préparation")}</button>
             </fieldset>
-            <fieldset hidden=move||operation().is_none_or(|operation|!operation.state.maintenance()) disabled=move||pending.get()||loading.get()||blocked.get()||uncertain.get()>
+            <fieldset hidden=move||operation().is_none_or(|operation|!operation.state.maintenance()) disabled=move||system()||pending.get()||loading.get()||blocked.get()||uncertain.get()>
                 <label><input id="approve-recover-update" type="checkbox" prop:checked=move||recovery.get() on:change=move|event|recovery.set(event_target_checked(&event))/>{move||i18n.text("Arrêter l’instance liée et tenter le retour à sa version précédente vérifiée, en conservant les données actuelles.")}</label><button id="recover-update" type="button" disabled=move||!recovery.get() on:click=move|_|execute.with_value(|execute|execute("recover"))>{move||i18n.text("Récupérer la version précédente")}</button>
             </fieldset>
         </div>

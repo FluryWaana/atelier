@@ -194,6 +194,7 @@ pub fn status(root: Option<&Path>) -> Result<Status> {
     let Some(root) = root else {
         return Ok(Status {
             installed: false,
+            system_managed: false,
             current_version: env!("CARGO_PKG_VERSION").into(),
             target,
             operation: None,
@@ -205,10 +206,23 @@ pub fn status(root: Option<&Path>) -> Result<Status> {
     )?;
     Ok(Status {
         installed: true,
+        system_managed: system_managed(root)?,
         current_version: current.active.version,
         target,
         operation: load(&directory)?.map(|journal| journal.operation),
     })
+}
+
+fn system_managed(root: &Path) -> Result<bool> {
+    Ok(cfg!(target_os = "linux")
+        && super::installation::mode(root)? == super::installation::InstallationMode::System)
+}
+
+fn require_user_update(root: &Path) -> Result<()> {
+    if system_managed(root)? {
+        return Err("Cette installation système se met à jour avec le gestionnaire de paquets, après l’arrêt de toutes les instances. Les données sont conservées.".into());
+    }
+    Ok(())
 }
 
 pub async fn preview(
@@ -218,6 +232,7 @@ pub async fn preview(
     data: &Path,
     port: u16,
 ) -> Result<Operation> {
+    require_user_update(root)?;
     if port == 0 {
         return Err("Port de mise à jour invalide.".into());
     }
@@ -338,6 +353,7 @@ pub async fn preview(
 }
 
 pub async fn apply(root: &Path, id: &str, confirmed: bool) -> Result<Operation> {
+    require_user_update(root)?;
     if !confirmed {
         return Err("Confirme la mise à jour de la version préparée.".into());
     }
@@ -426,6 +442,7 @@ pub async fn apply(root: &Path, id: &str, confirmed: bool) -> Result<Operation> 
 }
 
 pub fn cancel(root: &Path, id: &str, confirmed: bool) -> Result<Operation> {
+    require_user_update(root)?;
     if !confirmed {
         return Err("Confirme l’annulation de la préparation.".into());
     }
@@ -519,6 +536,7 @@ async fn rollback(
 }
 
 pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
+    require_user_update(root)?;
     let mut installation = installed::open_recovery(root, package::native_target()?)?
         .ok_or("Installation Rust absente.")?;
     let _lock = wait_lock(&installation).await?;
@@ -635,6 +653,12 @@ pub async fn recover_if_needed(executable: &Path) -> Result<()> {
     };
     let directory = Dir::open_ambient_dir(&root, ambient_authority())?;
     if let Some(mut journal) = load(&directory)? {
+        if system_managed(&root)? {
+            if journal.operation.state.pending() {
+                require_user_update(&root)?;
+            }
+            return Ok(());
+        }
         if journal.operation.state == Phase::Preparing {
             let installation = installed::open_recovery(&root, package::native_target()?)?
                 .ok_or("Installation Rust absente.")?;
@@ -679,6 +703,7 @@ pub async fn worker_command(
 }
 
 pub async fn request_recovery(root: &Path, id: &str, confirmed: bool) -> Result<Operation> {
+    require_user_update(root)?;
     if !confirmed {
         return Err("Confirme la récupération de cette mise à jour.".into());
     }
@@ -814,6 +839,44 @@ mod tests {
         update_package::tests::fixture,
     };
     use super::*;
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn system_packages_are_readable_but_user_update_paths_cannot_reserve_or_mutate_code() {
+        let root = tempfile::tempdir().unwrap();
+        let installation = root.path().join("system-installation");
+        std::fs::create_dir(&installation).unwrap();
+        std::fs::write(
+            installation.join("installation.json"),
+            br#"{"format":"atelier-rust-installation/1","mode":"system"}"#,
+        )
+        .unwrap();
+        let archive = root.path().join("archive-must-not-be-read.zip");
+        let data = root.path().join("data-must-not-be-opened");
+        assert!(system_managed(&installation).unwrap());
+        assert!(
+            preview(&installation, &archive, &archive, &data, 4317)
+                .await
+                .is_err()
+        );
+        assert!(apply(&installation, "synthetic", true).await.is_err());
+        assert!(cancel(&installation, "synthetic", true).is_err());
+        assert!(
+            request_recovery(&installation, "synthetic", true)
+                .await
+                .is_err()
+        );
+        assert!(worker(&installation, "synthetic", false).await.is_err());
+        assert_eq!(std::fs::read_dir(&installation).unwrap().count(), 1);
+        assert!(!data.exists());
+        assert!(!archive.exists());
+        let (_fixture, signed, _) = prepared_installation();
+        let path = signed.root().join("installation.json");
+        let mut mode: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        mode["mode"] = serde_json::json!("system");
+        std::fs::write(path, serde_json::to_vec(&mode).unwrap()).unwrap();
+        assert!(status(Some(signed.root())).unwrap().system_managed);
+    }
     fn prepared_installation() -> (tempfile::TempDir, Installation, Journal) {
         let (root, trust) = fixture();
         let destination = root.path().join("installed");

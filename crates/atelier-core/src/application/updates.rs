@@ -49,6 +49,8 @@ pub struct Operation {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Status {
     pub installed: bool,
+    #[serde(default)]
+    pub system_managed: bool,
     pub current_version: String,
     pub target: String,
     pub operation: Option<Operation>,
