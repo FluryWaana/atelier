@@ -14,9 +14,14 @@ fn selected(value: &str) -> Result<Option<String>> {
     }
     Ok(Some(value.into()))
 }
-pub async fn choose() -> Result<Option<String>> {
+async fn helper(name: &str, paths: &[&Path]) -> Result<std::process::Output> {
     let mut command = Command::new(std::env::current_exe()?);
-    command.arg("choose-folder").env_clear();
+    command.arg(name).args(paths);
+    environment(&mut command);
+    super::process_tree::capture(&mut command, &[], Duration::from_secs(300), 80 * 1024).await
+}
+fn environment(command: &mut Command) {
+    command.env_clear();
     for key in [
         "SystemRoot",
         "WINDIR",
@@ -38,9 +43,9 @@ pub async fn choose() -> Result<Option<String>> {
             command.env(key, value);
         }
     }
-    let output =
-        super::process_tree::capture(&mut command, &[], Duration::from_secs(300), 80 * 1024)
-            .await?;
+}
+pub async fn choose() -> Result<Option<String>> {
+    let output = helper("choose-folder", &[]).await?;
     if !output.status.success() {
         return Err("Le sélecteur est indisponible. Saisis le chemin du dossier ; sous Linux, vérifie Zenity.".into());
     }
@@ -49,6 +54,115 @@ pub async fn choose() -> Result<Option<String>> {
     path.map(|path| selected(&path))
         .transpose()
         .map(Option::flatten)
+}
+
+fn transfer_prompt(source: &Path, destination: &Path) -> Result<String> {
+    let source = source.to_str().ok_or("Chemin source Unicode requis.")?;
+    let destination = destination
+        .to_str()
+        .ok_or("Chemin de destination Unicode requis.")?;
+    if selected(source)?.is_none() || selected(destination)?.is_none() {
+        return Err("Les deux chemins du transfert doivent être absolus et non vides.".into());
+    }
+    Ok(format!(
+        "Copier les données Rust / Copy Rust data\n\nSource : {source}\nDestination : {destination}\n\nLa source sera conservée. La destination doit être vide. Les dépôts locaux devront être réautorisés.\nThe source is preserved. The destination must be empty. Local repositories must be authorized again."
+    ))
+}
+
+pub async fn confirm_transfer(source: &Path, destination: &Path) -> Result<bool> {
+    transfer_prompt(source, destination)?;
+    let output = helper("confirm-import", &[source, destination]).await?;
+    if !output.status.success() {
+        return Err("Confirmation graphique indisponible ; aucune copie effectuée.".into());
+    }
+    serde_json::from_slice(&output.stdout).map_err(|_| "Réponse de confirmation invalide.".into())
+}
+
+pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
+    let mut args = args;
+    let source = args
+        .next()
+        .map(std::path::PathBuf::from)
+        .ok_or("Source de confirmation absente.")?;
+    let destination = args
+        .next()
+        .map(std::path::PathBuf::from)
+        .ok_or("Destination de confirmation absente.")?;
+    if args.next().is_some() {
+        return Err("Arguments de confirmation inattendus.".into());
+    }
+    let prompt = transfer_prompt(&source, &destination)?;
+    #[cfg(windows)]
+    let confirmed = tokio::task::spawn_blocking(move || {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            IDCANCEL, IDNO, IDYES, MB_DEFBUTTON2, MB_ICONQUESTION, MB_SETFOREGROUND,
+            MB_YESNOCANCEL, MessageBoxW,
+        };
+        let prompt: Vec<u16> = prompt.encode_utf16().chain(Some(0)).collect();
+        // The helper owns this synchronous dialog; default No keeps keyboard cancellation safe.
+        match unsafe {
+            MessageBoxW(
+                std::ptr::null_mut(),
+                prompt.as_ptr(),
+                windows_sys::core::w!("Atelier Kanban — Import"),
+                MB_YESNOCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2 | MB_SETFOREGROUND,
+            )
+        } {
+            IDYES => Ok(true),
+            IDNO | IDCANCEL => Ok(false),
+            _ => Err(crate::Error::from("Confirmation graphique indisponible.")),
+        }
+    })
+    .await??;
+    #[cfg(unix)]
+    let confirmed = {
+        #[cfg(target_os = "macos")]
+        let mut command = {
+            let mut command = Command::new("/usr/bin/osascript");
+            command.args(["-e", "on run argv\ntry\ndisplay dialog (item 1 of argv) buttons {\"Annuler / Cancel\", \"Copier / Copy\"} default button 1 cancel button 1 with title \"Atelier Kanban\" with icon caution\nreturn true\non error number -128\nreturn false\nend try\nend run", "--", &prompt]);
+            command
+        };
+        #[cfg(not(target_os = "macos"))]
+        let mut command = {
+            let mut command = Command::new("/usr/bin/zenity");
+            command.args([
+                "--question",
+                "--default-cancel",
+                "--no-wrap",
+                "--title=Atelier Kanban",
+                "--ok-label=Copier / Copy",
+                "--cancel-label=Annuler / Cancel",
+                "--text",
+                &prompt,
+            ]);
+            command
+        };
+        environment(&mut command);
+        let output =
+            super::process_tree::capture(&mut command, &[], Duration::from_secs(290), 1024).await?;
+        #[cfg(target_os = "macos")]
+        {
+            if !output.status.success() {
+                return Err("Confirmation graphique indisponible.".into());
+            }
+            match output.stdout.as_slice() {
+                b"true\n" => true,
+                b"false\n" => false,
+                _ => return Err("Réponse graphique inattendue.".into()),
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            match output.status.code() {
+                Some(0) => true,
+                Some(1) => false,
+                _ => return Err("Confirmation graphique indisponible.".into()),
+            }
+        }
+    };
+    use std::io::Write;
+    std::io::stdout().write_all(&serde_json::to_vec(&confirmed)?)?;
+    Ok(())
 }
 pub async fn command() -> Result<()> {
     #[cfg(windows)]
@@ -64,8 +178,8 @@ fn native() -> Result<Option<String>> {
     use windows_sys::Win32::{
         System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoTaskMemFree, CoUninitialize},
         UI::Shell::{
-            BFFM_INITIALIZED, BIF_NEWDIALOGSTYLE, BIF_NONEWFOLDERBUTTON, BIF_RETURNONLYFSDIRS,
-            BROWSEINFOW, SHBrowseForFolderW, SHGetPathFromIDListEx,
+            BFFM_INITIALIZED, BIF_EDITBOX, BIF_NEWDIALOGSTYLE, BIF_NONEWFOLDERBUTTON,
+            BIF_RETURNONLYFSDIRS, BROWSEINFOW, SHBrowseForFolderW, SHGetPathFromIDListEx,
         },
     };
     unsafe extern "system" fn focus(
@@ -101,7 +215,7 @@ fn native() -> Result<Option<String>> {
     let info = BROWSEINFOW {
         pszDisplayName: display.as_mut_ptr(),
         lpszTitle: title.as_ptr(),
-        ulFlags: BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON,
+        ulFlags: BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_NONEWFOLDERBUTTON,
         lpfn: Some(focus),
         ..Default::default()
     };
@@ -151,6 +265,7 @@ async fn native() -> Result<Option<String>> {
         ]);
         command
     };
+    environment(&mut command);
     let output =
         super::process_tree::capture(&mut command, &[], Duration::from_secs(290), 64 * 1024)
             .await?;
@@ -167,6 +282,19 @@ async fn native() -> Result<Option<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn transfer_confirmation_names_both_exact_paths_and_rejects_empty_or_control_paths() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("synthetic source");
+        let destination = root.path().join("synthetic destination");
+        let prompt = transfer_prompt(&source, &destination).unwrap();
+        assert!(prompt.contains(source.to_str().unwrap()));
+        assert!(prompt.contains(destination.to_str().unwrap()));
+        assert!(transfer_prompt(Path::new(""), &destination).is_err());
+        assert!(transfer_prompt(Path::new("relative"), &destination).is_err());
+        assert!(transfer_prompt(&source, &root.path().join("control\npath")).is_err());
+        assert!(std::fs::read_dir(root.path()).unwrap().next().is_none());
+    }
     #[test]
     fn cancellation_and_invalid_native_output_never_authorize_a_path() {
         assert!(selected("").unwrap().is_none());

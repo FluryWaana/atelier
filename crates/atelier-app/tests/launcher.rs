@@ -16,6 +16,37 @@ fn the_folder_helper_rejects_arguments_before_opening_a_dialog_or_data_directory
     assert!(!forbidden.exists());
 }
 
+#[test]
+fn transfer_dialogs_reject_unconfirmed_or_invalid_paths_before_opening_native_ui() {
+    let synthetic = tempfile::tempdir().unwrap();
+    for args in [
+        vec!["confirm-import"],
+        vec!["confirm-import", "relative", "relative"],
+        vec!["import-data", "--choose-source"],
+        vec![
+            "import-data",
+            "--choose-source",
+            "--destination",
+            "relative",
+            "--confirm",
+        ],
+    ] {
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_atelier"))
+            .args(args)
+            .current_dir(synthetic.path())
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(output.stdout.is_empty());
+    }
+    assert!(
+        std::fs::read_dir(synthetic.path())
+            .unwrap()
+            .next()
+            .is_none()
+    );
+}
+
 struct Instance {
     data: tempfile::TempDir,
     port: u16,

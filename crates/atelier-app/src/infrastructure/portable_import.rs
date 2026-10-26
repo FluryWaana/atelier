@@ -329,14 +329,16 @@ pub fn import(source: &Path, destination: &Path) -> Result<()> {
 
 fn arguments(
     args: impl Iterator<Item = std::ffi::OsString>,
-) -> Result<(std::path::PathBuf, std::path::PathBuf)> {
+) -> Result<(Option<std::path::PathBuf>, std::path::PathBuf)> {
     let mut args = args;
     let mut source = None;
     let mut destination = None;
     let mut confirmed = false;
+    let mut choose = false;
     while let Some(argument) = args.next() {
         match argument.to_str() {
-            Some("--source") if source.is_none()=>source=Some(std::path::PathBuf::from(args.next().ok_or("Dossier source requis.")?)),
+            Some("--source") if source.is_none() && !choose=>source=Some(std::path::PathBuf::from(args.next().ok_or("Dossier source requis.")?)),
+            Some("--choose-source") if source.is_none() && !choose=>choose=true,
             Some("--destination") if destination.is_none()=>destination=Some(std::path::PathBuf::from(args.next().ok_or("Dossier de destination requis.")?)),
             Some("--confirm") if !confirmed=>confirmed=true,
             _=>return Err("Usage : atelier import-data --source DONNEES_RUST --destination DOSSIER_VIDE --confirm".into())
@@ -348,15 +350,40 @@ fn arguments(
                 .into(),
         );
     }
-    let source = source.ok_or("Dossier source requis.")?;
+    if source.is_none() && !choose {
+        return Err("Dossier source requis ou sélection explicite --choose-source.".into());
+    }
     let destination = destination.ok_or("Dossier de destination requis.")?;
-    if !source.is_absolute() || !destination.is_absolute() {
+    if source.as_ref().is_some_and(|source| !source.is_absolute()) || !destination.is_absolute() {
         return Err("Les dossiers du transfert doivent être absolus.".into());
+    }
+    for path in source.iter().chain(std::iter::once(&destination)) {
+        if path
+            .to_str()
+            .is_none_or(|path| path.len() > 32_000 || path.chars().any(char::is_control))
+        {
+            return Err("Les chemins du transfert doivent être des textes Unicode bornés sans caractères de contrôle.".into());
+        }
     }
     Ok((source, destination))
 }
-pub fn command(args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
+pub async fn command(args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
     let (source, destination) = arguments(args)?;
+    let source = match source {
+        Some(source) => source,
+        None => {
+            let Some(source) = super::folders::choose().await? else {
+                println!("Transfert annulé ; aucune copie effectuée.");
+                return Ok(());
+            };
+            let source = std::path::PathBuf::from(source);
+            if !super::folders::confirm_transfer(&source, &destination).await? {
+                println!("Transfert annulé ; aucune copie effectuée.");
+                return Ok(());
+            }
+            source
+        }
+    };
     import(&source, &destination)?;
     println!(
         "Transfert Rust terminé. Les données sources sont conservées ; réautorise les dépôts locaux sur la destination."
@@ -454,6 +481,27 @@ fn require_empty(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn choosing_a_source_is_explicit_exclusive_and_validated_before_native_ui() {
+        let root = tempfile::tempdir().unwrap();
+        let args = vec![
+            "--choose-source".into(),
+            "--destination".into(),
+            root.path().join("new").into_os_string(),
+            "--confirm".into(),
+        ];
+        assert!(arguments(args.clone().into_iter()).unwrap().0.is_none());
+        let mut missing = args.clone();
+        missing.pop();
+        assert!(arguments(missing.into_iter()).is_err());
+        let mut duplicate = args.clone();
+        duplicate.push("--choose-source".into());
+        assert!(arguments(duplicate.into_iter()).is_err());
+        let mut ambiguous = args;
+        ambiguous.extend(["--source".into(), root.path().as_os_str().to_owned()]);
+        assert!(arguments(ambiguous.into_iter()).is_err());
+        assert!(std::fs::read_dir(root.path()).unwrap().next().is_none());
+    }
     #[test]
     fn excessive_depth_leaves_no_published_destination_and_cli_requires_explicit_paths_and_confirmation()
      {

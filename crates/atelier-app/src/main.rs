@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data --source DONNEES_RUST --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
+const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -150,7 +150,7 @@ async fn application() -> Result<()> {
         return installed::verify_all(installation.root(), target);
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("import-data")) {
-        return atelier_app::infrastructure::portable_import::command(command);
+        return atelier_app::infrastructure::portable_import::command(command).await;
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("recover-package-maintenance")) {
         return atelier_app::infrastructure::package_maintenance::recover_command(command);
@@ -160,6 +160,9 @@ async fn application() -> Result<()> {
             return Err("Le sélecteur ne reçoit aucun argument ni dossier de données.".into());
         }
         return atelier_app::infrastructure::folders::command().await;
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("confirm-import")) {
+        return atelier_app::infrastructure::folders::confirmation_command(command).await;
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("connector-azure")) {
         if command.next().is_some() {
