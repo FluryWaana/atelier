@@ -3,14 +3,22 @@ use crate::Result;
 use atelier_core::contracts::ForgeConfiguration;
 #[cfg(windows)]
 use atelier_core::document::Document;
-#[cfg(windows)]
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::Url;
+fn null() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
 
-#[cfg(windows)]
+#[cfg(unix)]
+async fn git_command() -> Result<tokio::process::Command> {
+    let mut command = tokio::process::Command::new("git");
+    command.env_clear().env(
+        "PATH",
+        std::env::var_os("PATH").unwrap_or_else(|| "/usr/bin:/bin".into()),
+    );
+    Ok(command)
+}
 const DOWNLOAD_LIMIT: u64 = 512 * 1024 * 1024;
-
-#[cfg(windows)]
 fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
     let mut pending = vec![(path.to_owned(), 0usize)];
     let mut bytes = 0u64;
@@ -40,8 +48,6 @@ fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
     }
     Ok(())
 }
-
-#[cfg(windows)]
 async fn download_guard(path: std::path::PathBuf) -> crate::Error {
     // shortcut: polling can overshoot the temporary-storage threshold; use OS quotas for a hard disk cap.
     loop {
@@ -61,10 +67,8 @@ pub struct HttpsAuthentication {
     configuration: ForgeConfiguration,
     repository: String,
     synthetic: bool,
-    #[cfg(windows)]
     authorization: String,
 }
-#[cfg(windows)]
 pub struct PreparedPush {
     home: tempfile::TempDir,
     origin: String,
@@ -127,7 +131,6 @@ impl HttpsAuthentication {
             configuration,
             repository,
             synthetic,
-            #[cfg(windows)]
             authorization: format!(
                 "Authorization: Basic {}",
                 STANDARD.encode(format!("atelier:{token}"))
@@ -197,7 +200,6 @@ impl HttpsAuthentication {
         }
         Ok(())
     }
-    #[cfg(windows)]
     fn isolate(command: &mut tokio::process::Command, home: &std::path::Path) {
         command
             .current_dir(home)
@@ -206,16 +208,15 @@ impl HttpsAuthentication {
             .env("APPDATA", home)
             .env("LOCALAPPDATA", home)
             .env("XDG_CONFIG_HOME", home)
-            .env("GIT_CONFIG_GLOBAL", "NUL")
-            .env("GIT_CONFIG_SYSTEM", "NUL")
+            .env("GIT_CONFIG_GLOBAL", null())
+            .env("GIT_CONFIG_SYSTEM", null())
             .env("GIT_CONFIG_NOSYSTEM", "1")
             .env("GIT_TERMINAL_PROMPT", "0")
-            .env("GIT_ASKPASS", "NUL")
+            .env("GIT_ASKPASS", null())
             .env_remove("SSH_ASKPASS")
             .env("GCM_INTERACTIVE", "Never")
             .env("GIT_CONFIG_COUNT", "0");
     }
-    #[cfg(windows)]
     fn configure_command(
         &self,
         command: &mut tokio::process::Command,
@@ -252,7 +253,6 @@ impl HttpsAuthentication {
         ]);
         Ok(())
     }
-    #[cfg(windows)]
     fn configure_network(
         &self,
         command: &mut tokio::process::Command,
@@ -300,20 +300,18 @@ impl HttpsAuthentication {
             "pack.threads=1",
             "index.threads=1",
         ] {
-            command.args(["-c", option]);
+            command.args(["-c", &option.replace("NUL", null())]);
         }
         if self.synthetic {
             command.args(["-c", "protocol.http.allow=always"]);
         }
         Ok(scope)
     }
-    #[cfg(windows)]
     pub async fn remote_head(&self, origin: &str, reference: &str) -> Result<String> {
         self.remote_head_optional(origin, reference)
             .await?
             .ok_or_else(|| "Branche distante Git absente.".into())
     }
-    #[cfg(windows)]
     pub async fn remote_head_optional(
         &self,
         origin: &str,
@@ -344,7 +342,6 @@ impl HttpsAuthentication {
             .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
         result
     }
-    #[cfg(windows)]
     pub async fn prepare_push(
         &self,
         source: &Repository,
@@ -415,7 +412,7 @@ impl HttpsAuthentication {
             "--no-lazy-fetch",
             "--no-replace-objects",
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}",null()),
             "-c",
             "protocol.allow=never",
             "-c",
@@ -489,7 +486,6 @@ impl HttpsAuthentication {
             previous: previous.map(str::to_owned),
         })
     }
-    #[cfg(windows)]
     pub async fn push(&self, prepared: PreparedPush) -> Result<()> {
         let PreparedPush {
             home,
@@ -511,7 +507,6 @@ impl HttpsAuthentication {
             .map_err(|_| "Nettoyage de l’environnement Git temporaire impossible.")?;
         result
     }
-    #[cfg(windows)]
     pub(super) async fn fetch(
         &self,
         source: &Repository,
@@ -519,9 +514,6 @@ impl HttpsAuthentication {
         reference: &str,
         private_ref: &str,
     ) -> Result<()> {
-        let mut profile = Document::default();
-        profile.set("type", &"command")?;
-        profile.set("command", &"git")?;
         let home = tempfile::Builder::new()
             .prefix("atelier-git-home-")
             .tempdir()?;
@@ -533,7 +525,7 @@ impl HttpsAuthentication {
             if !["sha1", "sha256"].contains(&format) {
                 return Err("Format d’objets Git non pris en charge.".into());
             }
-            let mut initialize = super::agent_diagnostics::command(&profile).await?;
+            let mut initialize = git_command().await?;
             Self::isolate(&mut initialize, home.path());
             initialize.args(["init", "--bare", "--quiet", "--template=", &format!("--object-format={format}")]);
             let initialized = super::process_tree::capture(&mut initialize, &[], std::time::Duration::from_secs(15), 1024 * 1024)
@@ -541,7 +533,7 @@ impl HttpsAuthentication {
             if !initialized.status.success() {
                 return Err("Préparation du téléchargement Git isolé impossible.".into());
             }
-            let mut command = super::agent_diagnostics::command(&profile).await?;
+            let mut command = git_command().await?;
             self.configure_command(&mut command, home.path(), origin, reference, private_ref)?;
             let output = super::process_tree::capture_guarded(&mut command, &[], std::time::Duration::from_secs(120), 4 * 1024 * 1024, download_guard(home.path().to_owned()))
                 .await.map_err(|_| "Fetch HTTPS interrompu, trop long ou trop volumineux. Aucun détail d’authentification n’est affiché.")?;
@@ -565,18 +557,7 @@ impl HttpsAuthentication {
         }
         captured
     }
-    #[cfg(not(windows))]
-    pub(super) async fn fetch(
-        &self,
-        _source: &Repository,
-        _origin: &str,
-        _reference: &str,
-        _private_ref: &str,
-    ) -> Result<()> {
-        Err("Le fetch HTTPS natif attend sa qualification sur ce système.".into())
-    }
 }
-
 #[cfg(windows)]
 async fn git_command() -> Result<tokio::process::Command> {
     let mut profile = Document::default();
@@ -584,7 +565,6 @@ async fn git_command() -> Result<tokio::process::Command> {
     profile.set("command", &"git")?;
     super::agent_diagnostics::command(&profile).await
 }
-#[cfg(windows)]
 fn validate_commit(value: &str) -> Result<()> {
     if ![40, 64].contains(&value.len()) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err("Commit Git invalide.".into());
@@ -592,7 +572,7 @@ fn validate_commit(value: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(all(test, windows))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

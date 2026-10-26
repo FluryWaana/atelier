@@ -1,22 +1,33 @@
-#![cfg(windows)]
-
 use atelier_app::infrastructure::{process_tree, worktrees};
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
+fn null() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
+fn link_directory(target: &Path, link: impl AsRef<Path>) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link)
+    }
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+}
 async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(repo)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null())
+        .env("GIT_CONFIG_SYSTEM", null())
         .args([
             "-c",
             "core.fsmonitor=false",
             "-c",
             "core.longpaths=true",
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "-c",
             "filter.review.clean=",
             "-c",
@@ -655,7 +666,7 @@ async fn local_agent_context_refreshes_owned_files_preserves_task_edits_and_reje
         linked_path.join("saved-context"),
     )
     .unwrap();
-    std::os::windows::fs::symlink_dir(&outside, linked_path.join(".claude")).unwrap();
+    link_directory(&outside, linked_path.join(".claude")).unwrap();
     assert!(worktrees::create(&root, &roots, &linked).await.is_err());
     assert!(!outside.join("settings.local.json").exists());
     worktrees::remove(&root, &roots, &linked, true)

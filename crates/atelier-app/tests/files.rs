@@ -1,16 +1,27 @@
-#![cfg(windows)]
-
 use atelier_app::infrastructure::{files::Repository, process_tree};
 use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
+fn null() -> &'static str {
+    if cfg!(windows) { "NUL" } else { "/dev/null" }
+}
+fn link_directory(target: &Path, link: impl AsRef<Path>) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link)
+    }
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+}
 async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(repo)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env("GIT_CONFIG_GLOBAL", null())
+        .env("GIT_CONFIG_SYSTEM", null())
         .args(["-c", "core.fsmonitor=false"])
         .args(args);
     let output = process_tree::capture(&mut command, &[], Duration::from_secs(10), 1024 * 1024)
@@ -44,7 +55,7 @@ async fn source_fingerprints_detect_staging_disk_and_untracked_changes_but_prese
         &path,
         &[
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "commit",
             "-qm",
             "Synthetic baseline",
@@ -104,7 +115,7 @@ async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_program
         &repo,
         &[
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "commit",
             "-qm",
             "Synthetic baseline",
@@ -121,7 +132,7 @@ async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_program
         &repo,
         &[
             "-c",
-            "core.hooksPath=NUL",
+            &format!("core.hooksPath={}", null()),
             "commit",
             "-qm",
             "Synthetic task commit",
@@ -258,7 +269,7 @@ async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_program
     let outside = root_path.join("outside");
     std::fs::create_dir(&outside).unwrap();
     std::fs::write(outside.join("secret.txt"), "synthetic outside").unwrap();
-    std::os::windows::fs::symlink_dir(&outside, repo.join("linked")).unwrap();
+    link_directory(&outside, repo.join("linked")).unwrap();
     assert!(open().changes(None).await.is_err());
 }
 
@@ -277,13 +288,17 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
     std::fs::write(repo.join("large.txt"), vec![b'a'; PREVIEW_LIMIT + 1]).unwrap();
     std::fs::write(repo.join("binary.bin"), [1, 0, 2]).unwrap();
     std::fs::write(repo.join("legacy.txt"), [0xff, 0xfe]).unwrap();
-    let marker = root_path.join("must-not-run.txt");
+    let marker = repo.join("must-not-run.txt");
     git(
         &repo,
         &[
             "config",
             "core.fsmonitor",
-            &format!("cmd /c echo invoked>\"{}\"", marker.display()),
+            &if cfg!(windows) {
+                format!("cmd /c echo invoked>\"{}\"", marker.display())
+            } else {
+                "printf invoked > must-not-run.txt".into()
+            },
         ],
     )
     .await;
@@ -318,7 +333,7 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
     let outside = root_path.join("outside");
     std::fs::create_dir(&outside).unwrap();
     std::fs::write(outside.join("secret.txt"), "synthetic outside sentinel").unwrap();
-    std::os::windows::fs::symlink_dir(&outside, repo.join("linked")).unwrap();
+    link_directory(&outside, repo.join("linked")).unwrap();
     for path in [
         "ignored.txt",
         "../outside/secret.txt",

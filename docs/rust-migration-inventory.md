@@ -1541,22 +1541,22 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/git_transport.rs:2](../crates/atelier-app/src/infrastructure/git_transport.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:3](../crates/atelier-app/src/infrastructure/git_transport.rs#L3) | <code>use atelier_core::contracts::ForgeConfiguration;</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:5](../crates/atelier-app/src/infrastructure/git_transport.rs#L5) | <code>use atelier_core::document::Document;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:7](../crates/atelier-app/src/infrastructure/git_transport.rs#L7) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:8](../crates/atelier-app/src/infrastructure/git_transport.rs#L8) | <code>use reqwest::Url;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:60](../crates/atelier-app/src/infrastructure/git_transport.rs#L60) | <code>pub struct HttpsAuthentication {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:68](../crates/atelier-app/src/infrastructure/git_transport.rs#L68) | <code>pub struct PreparedPush {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:77](../crates/atelier-app/src/infrastructure/git_transport.rs#L77) | <code>pub fn new(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:86](../crates/atelier-app/src/infrastructure/git_transport.rs#L86) | <code>pub fn synthetic(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:137](../crates/atelier-app/src/infrastructure/git_transport.rs#L137) | <code>pub fn origin(&amp;self, origin: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:173](../crates/atelier-app/src/infrastructure/git_transport.rs#L173) | <code>pub fn validate_configuration(keys: &amp;str) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:311](../crates/atelier-app/src/infrastructure/git_transport.rs#L311) | <code>pub async fn remote_head(&amp;self, origin: &amp;str, reference: &amp;str) -&gt; Result&lt;String&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:317](../crates/atelier-app/src/infrastructure/git_transport.rs#L317) | <code>pub async fn remote_head_optional(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:348](../crates/atelier-app/src/infrastructure/git_transport.rs#L348) | <code>pub async fn prepare_push(</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:493](../crates/atelier-app/src/infrastructure/git_transport.rs#L493) | <code>pub async fn push(&amp;self, prepared: PreparedPush) -&gt; Result&lt;()&gt; {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:596](../crates/atelier-app/src/infrastructure/git_transport.rs#L596) | <code>mod tests {</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:597](../crates/atelier-app/src/infrastructure/git_transport.rs#L597) | <code>use super::*;</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:599](../crates/atelier-app/src/infrastructure/git_transport.rs#L599) | <code>#[test]</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:616](../crates/atelier-app/src/infrastructure/git_transport.rs#L616) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:6](../crates/atelier-app/src/infrastructure/git_transport.rs#L6) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:7](../crates/atelier-app/src/infrastructure/git_transport.rs#L7) | <code>use reqwest::Url;</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:66](../crates/atelier-app/src/infrastructure/git_transport.rs#L66) | <code>pub struct HttpsAuthentication {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:72](../crates/atelier-app/src/infrastructure/git_transport.rs#L72) | <code>pub struct PreparedPush {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:81](../crates/atelier-app/src/infrastructure/git_transport.rs#L81) | <code>pub fn new(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:90](../crates/atelier-app/src/infrastructure/git_transport.rs#L90) | <code>pub fn synthetic(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:140](../crates/atelier-app/src/infrastructure/git_transport.rs#L140) | <code>pub fn origin(&amp;self, origin: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:176](../crates/atelier-app/src/infrastructure/git_transport.rs#L176) | <code>pub fn validate_configuration(keys: &amp;str) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:310](../crates/atelier-app/src/infrastructure/git_transport.rs#L310) | <code>pub async fn remote_head(&amp;self, origin: &amp;str, reference: &amp;str) -&gt; Result&lt;String&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:315](../crates/atelier-app/src/infrastructure/git_transport.rs#L315) | <code>pub async fn remote_head_optional(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:345](../crates/atelier-app/src/infrastructure/git_transport.rs#L345) | <code>pub async fn prepare_push(</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:489](../crates/atelier-app/src/infrastructure/git_transport.rs#L489) | <code>pub async fn push(&amp;self, prepared: PreparedPush) -&gt; Result&lt;()&gt; {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:576](../crates/atelier-app/src/infrastructure/git_transport.rs#L576) | <code>mod tests {</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:577](../crates/atelier-app/src/infrastructure/git_transport.rs#L577) | <code>use super::*;</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:579](../crates/atelier-app/src/infrastructure/git_transport.rs#L579) | <code>#[test]</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:596](../crates/atelier-app/src/infrastructure/git_transport.rs#L596) | <code>#[test]</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:1](../crates/atelier-app/src/infrastructure/installation.rs#L1) | <code>use super::checked_file::CheckedFile;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:2](../crates/atelier-app/src/infrastructure/installation.rs#L2) | <code>use crate::Result;</code> |
 | [crates/atelier-app/src/infrastructure/installation.rs:3](../crates/atelier-app/src/infrastructure/installation.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
@@ -2312,13 +2312,13 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/document-storage.rs:1](../crates/atelier-app/tests/document-storage.rs#L1) | <code>use atelier_app::infrastructure::{backups, database::Database, store::Documents};</code> |
 | [crates/atelier-app/tests/document-storage.rs:2](../crates/atelier-app/tests/document-storage.rs#L2) | <code>use atelier_core::document::{Document, JsonString};</code> |
 | [crates/atelier-app/tests/document-storage.rs:4](../crates/atelier-app/tests/document-storage.rs#L4) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/files.rs:3](../crates/atelier-app/tests/files.rs#L3) | <code>use atelier_app::infrastructure::{files::Repository, process_tree};</code> |
-| [crates/atelier-app/tests/files.rs:4](../crates/atelier-app/tests/files.rs#L4) | <code>use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};</code> |
-| [crates/atelier-app/tests/files.rs:5](../crates/atelier-app/tests/files.rs#L5) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
-| [crates/atelier-app/tests/files.rs:6](../crates/atelier-app/tests/files.rs#L6) | <code>use std::{path::Path, time::Duration};</code> |
-| [crates/atelier-app/tests/files.rs:27](../crates/atelier-app/tests/files.rs#L27) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/files.rs:80](../crates/atelier-app/tests/files.rs#L80) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/files.rs:265](../crates/atelier-app/tests/files.rs#L265) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/files.rs:1](../crates/atelier-app/tests/files.rs#L1) | <code>use atelier_app::infrastructure::{files::Repository, process_tree};</code> |
+| [crates/atelier-app/tests/files.rs:2](../crates/atelier-app/tests/files.rs#L2) | <code>use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};</code> |
+| [crates/atelier-app/tests/files.rs:3](../crates/atelier-app/tests/files.rs#L3) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
+| [crates/atelier-app/tests/files.rs:4](../crates/atelier-app/tests/files.rs#L4) | <code>use std::{path::Path, time::Duration};</code> |
+| [crates/atelier-app/tests/files.rs:38](../crates/atelier-app/tests/files.rs#L38) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/files.rs:91](../crates/atelier-app/tests/files.rs#L91) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/files.rs:276](../crates/atelier-app/tests/files.rs#L276) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/forge-association.rs:1](../crates/atelier-app/tests/forge-association.rs#L1) | <code>use atelier_app::infrastructure::{</code> |
 | [crates/atelier-app/tests/forge-association.rs:4](../crates/atelier-app/tests/forge-association.rs#L4) | <code>use atelier_core::{</code> |
 | [crates/atelier-app/tests/forge-association.rs:10](../crates/atelier-app/tests/forge-association.rs#L10) | <code>use serde_json::json;</code> |
@@ -2573,19 +2573,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/verification.rs:2](../crates/atelier-app/tests/verification.rs#L2) | <code>use atelier_core::{contracts::Card, document::Document};</code> |
 | [crates/atelier-app/tests/verification.rs:3](../crates/atelier-app/tests/verification.rs#L3) | <code>use serde_json::json;</code> |
 | [crates/atelier-app/tests/verification.rs:7](../crates/atelier-app/tests/verification.rs#L7) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:3](../crates/atelier-app/tests/worktrees.rs#L3) | <code>use atelier_app::infrastructure::{process_tree, worktrees};</code> |
-| [crates/atelier-app/tests/worktrees.rs:4](../crates/atelier-app/tests/worktrees.rs#L4) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
-| [crates/atelier-app/tests/worktrees.rs:5](../crates/atelier-app/tests/worktrees.rs#L5) | <code>use std::{path::Path, time::Duration};</code> |
-| [crates/atelier-app/tests/worktrees.rs:45](../crates/atelier-app/tests/worktrees.rs#L45) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:47](../crates/atelier-app/tests/worktrees.rs#L47) | <code>use atelier_app::infrastructure::git_transport::HttpsAuthentication;</code> |
-| [crates/atelier-app/tests/worktrees.rs:48](../crates/atelier-app/tests/worktrees.rs#L48) | <code>use atelier_core::contracts::{ForgeConfiguration, ForgeKind};</code> |
-| [crates/atelier-app/tests/worktrees.rs:49](../crates/atelier-app/tests/worktrees.rs#L49) | <code>use axum::{</code> |
-| [crates/atelier-app/tests/worktrees.rs:55](../crates/atelier-app/tests/worktrees.rs#L55) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
-| [crates/atelier-app/tests/worktrees.rs:56](../crates/atelier-app/tests/worktrees.rs#L56) | <code>use std::sync::{</code> |
-| [crates/atelier-app/tests/worktrees.rs:237](../crates/atelier-app/tests/worktrees.rs#L237) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:407](../crates/atelier-app/tests/worktrees.rs#L407) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:514](../crates/atelier-app/tests/worktrees.rs#L514) | <code>#[tokio::test]</code> |
-| [crates/atelier-app/tests/worktrees.rs:670](../crates/atelier-app/tests/worktrees.rs#L670) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:1](../crates/atelier-app/tests/worktrees.rs#L1) | <code>use atelier_app::infrastructure::{process_tree, worktrees};</code> |
+| [crates/atelier-app/tests/worktrees.rs:2](../crates/atelier-app/tests/worktrees.rs#L2) | <code>use cap_std::{ambient_authority, fs::Dir};</code> |
+| [crates/atelier-app/tests/worktrees.rs:3](../crates/atelier-app/tests/worktrees.rs#L3) | <code>use std::{path::Path, time::Duration};</code> |
+| [crates/atelier-app/tests/worktrees.rs:56](../crates/atelier-app/tests/worktrees.rs#L56) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:58](../crates/atelier-app/tests/worktrees.rs#L58) | <code>use atelier_app::infrastructure::git_transport::HttpsAuthentication;</code> |
+| [crates/atelier-app/tests/worktrees.rs:59](../crates/atelier-app/tests/worktrees.rs#L59) | <code>use atelier_core::contracts::{ForgeConfiguration, ForgeKind};</code> |
+| [crates/atelier-app/tests/worktrees.rs:60](../crates/atelier-app/tests/worktrees.rs#L60) | <code>use axum::{</code> |
+| [crates/atelier-app/tests/worktrees.rs:66](../crates/atelier-app/tests/worktrees.rs#L66) | <code>use base64::{Engine, engine::general_purpose::STANDARD};</code> |
+| [crates/atelier-app/tests/worktrees.rs:67](../crates/atelier-app/tests/worktrees.rs#L67) | <code>use std::sync::{</code> |
+| [crates/atelier-app/tests/worktrees.rs:248](../crates/atelier-app/tests/worktrees.rs#L248) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:418](../crates/atelier-app/tests/worktrees.rs#L418) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:525](../crates/atelier-app/tests/worktrees.rs#L525) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/worktrees.rs:681](../crates/atelier-app/tests/worktrees.rs#L681) | <code>#[tokio::test]</code> |
 | [crates/atelier-core/Cargo.toml:3](../crates/atelier-core/Cargo.toml#L3) | <code>version.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:4](../crates/atelier-core/Cargo.toml#L4) | <code>edition.workspace = true</code> |
 | [crates/atelier-core/Cargo.toml:5](../crates/atelier-core/Cargo.toml#L5) | <code>rust-version.workspace = true</code> |
@@ -4782,19 +4782,19 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/files.rs:441](../crates/atelier-app/src/infrastructure/files.rs#L441) | <code>.args(["-c", &amp;format!("core.excludesFile={null}")])</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:442](../crates/atelier-app/src/infrastructure/files.rs#L442) | <code>.args([</code> |
 | [crates/atelier-app/src/infrastructure/files.rs:448](../crates/atelier-app/src/infrastructure/files.rs#L448) | <code>.args(arguments);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:241](../crates/atelier-app/src/infrastructure/git_transport.rs#L241) | <code>command.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:242](../crates/atelier-app/src/infrastructure/git_transport.rs#L242) | <code>command.args([</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:268](../crates/atelier-app/src/infrastructure/git_transport.rs#L268) | <code>.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:303](../crates/atelier-app/src/infrastructure/git_transport.rs#L303) | <code>command.args(["-c", option]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:303](../crates/atelier-app/src/infrastructure/git_transport.rs#L303) | <code>command.args(["-c", &amp;option.replace("NUL", null())]);</code> |
 | [crates/atelier-app/src/infrastructure/git_transport.rs:306](../crates/atelier-app/src/infrastructure/git_transport.rs#L306) | <code>command.args(["-c", "protocol.http.allow=always"]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:332](../crates/atelier-app/src/infrastructure/git_transport.rs#L332) | <code>command.args(["ls-remote","--refs","--exit-code","--",&amp;scope,reference]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:393](../crates/atelier-app/src/infrastructure/git_transport.rs#L393) | <code>initialize.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:414](../crates/atelier-app/src/infrastructure/git_transport.rs#L414) | <code>import.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:455](../crates/atelier-app/src/infrastructure/git_transport.rs#L455) | <code>ancestry.args([</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:504](../crates/atelier-app/src/infrastructure/git_transport.rs#L504) | <code>command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&amp;format!("--force-with-lease={reference}:{}",previous.as_deref().unwrap_or("")),"--",&amp;scope,&amp;format!("{commit}:{reference}")]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:538](../crates/atelier-app/src/infrastructure/git_transport.rs#L538) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:654](../crates/atelier-app/src/infrastructure/git_transport.rs#L654) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:658](../crates/atelier-app/src/infrastructure/git_transport.rs#L658) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
-| [crates/atelier-app/src/infrastructure/git_transport.rs:667](../crates/atelier-app/src/infrastructure/git_transport.rs#L667) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:330](../crates/atelier-app/src/infrastructure/git_transport.rs#L330) | <code>command.args(["ls-remote","--refs","--exit-code","--",&amp;scope,reference]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:390](../crates/atelier-app/src/infrastructure/git_transport.rs#L390) | <code>initialize.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:411](../crates/atelier-app/src/infrastructure/git_transport.rs#L411) | <code>import.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:452](../crates/atelier-app/src/infrastructure/git_transport.rs#L452) | <code>ancestry.args([</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:500](../crates/atelier-app/src/infrastructure/git_transport.rs#L500) | <code>command.args(["push","--porcelain","--no-verify","--recurse-submodules=no",&amp;format!("--force-with-lease={reference}:{}",previous.as_deref().unwrap_or("")),"--",&amp;scope,&amp;format!("{commit}:{reference}")]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:530](../crates/atelier-app/src/infrastructure/git_transport.rs#L530) | <code>initialize.args(["init", "--bare", "--quiet", "--template=", &amp;format!("--object-format={format}")]);</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:634](../crates/atelier-app/src/infrastructure/git_transport.rs#L634) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_KEY_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:638](../crates/atelier-app/src/infrastructure/git_transport.rs#L638) | <code>environment[std::ffi::OsStr::new("GIT_CONFIG_VALUE_0")].unwrap(),</code> |
+| [crates/atelier-app/src/infrastructure/git_transport.rs:647](../crates/atelier-app/src/infrastructure/git_transport.rs#L647) | <code>assert!(!environment.contains_key(std::ffi::OsStr::new(key)));</code> |
 | [crates/atelier-app/src/infrastructure/installed.rs:570](../crates/atelier-app/src/infrastructure/installed.rs#L570) | <code>pub fn install_command(args: impl Iterator&lt;Item = OsString&gt;) -&gt; Result&lt;()&gt; {</code> |
 | [crates/atelier-app/src/infrastructure/installed.rs:571](../crates/atelier-app/src/infrastructure/installed.rs#L571) | <code>let mut args = args;</code> |
 | [crates/atelier-app/src/infrastructure/installed.rs:573](../crates/atelier-app/src/infrastructure/installed.rs#L573) | <code>while let Some(flag) = args.next() {</code> |
@@ -4856,9 +4856,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/main.rs:244](../crates/atelier-app/src/main.rs#L244) | <code>parse(args.iter().map(\|arg\| OsString::from(*arg)))</code> |
 | [crates/atelier-app/src/main.rs:279](../crates/atelier-app/src/main.rs#L279) | <code>for args in [</code> |
 | [crates/atelier-app/src/main.rs:290](../crates/atelier-app/src/main.rs#L290) | <code>assert!(options(&amp;args).is_err(), "{args:?}");</code> |
-| [crates/atelier-app/tests/files.rs:8](../crates/atelier-app/tests/files.rs#L8) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
-| [crates/atelier-app/tests/files.rs:14](../crates/atelier-app/tests/files.rs#L14) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
-| [crates/atelier-app/tests/files.rs:15](../crates/atelier-app/tests/files.rs#L15) | <code>.args(args);</code> |
+| [crates/atelier-app/tests/files.rs:19](../crates/atelier-app/tests/files.rs#L19) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
+| [crates/atelier-app/tests/files.rs:25](../crates/atelier-app/tests/files.rs#L25) | <code>.args(["-c", "core.fsmonitor=false"])</code> |
+| [crates/atelier-app/tests/files.rs:26](../crates/atelier-app/tests/files.rs#L26) | <code>.args(args);</code> |
 | [crates/atelier-app/tests/forge-association.rs:144](../crates/atelier-app/tests/forge-association.rs#L144) | <code>async fn git(path: &amp;std::path::Path, args: &amp;[&amp;str]) {</code> |
 | [crates/atelier-app/tests/forge-association.rs:150](../crates/atelier-app/tests/forge-association.rs#L150) | <code>.args([</code> |
 | [crates/atelier-app/tests/forge-association.rs:160](../crates/atelier-app/tests/forge-association.rs#L160) | <code>.args(args);</code> |
@@ -4879,9 +4879,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/prototype.rs:1444](../crates/atelier-app/tests/prototype.rs#L1444) | <code>.args([</code> |
 | [crates/atelier-app/tests/prototype.rs:1764](../crates/atelier-app/tests/prototype.rs#L1764) | <code>.args(if denied {</code> |
 | [crates/atelier-app/tests/prototype.rs:3270](../crates/atelier-app/tests/prototype.rs#L3270) | <code>.args(["-NoProfile", "-NonInteractive", "-Command", &amp;script])</code> |
-| [crates/atelier-app/tests/worktrees.rs:7](../crates/atelier-app/tests/worktrees.rs#L7) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
-| [crates/atelier-app/tests/worktrees.rs:13](../crates/atelier-app/tests/worktrees.rs#L13) | <code>.args([</code> |
-| [crates/atelier-app/tests/worktrees.rs:33](../crates/atelier-app/tests/worktrees.rs#L33) | <code>.args(args);</code> |
+| [crates/atelier-app/tests/worktrees.rs:18](../crates/atelier-app/tests/worktrees.rs#L18) | <code>async fn git(repo: &amp;Path, args: &amp;[&amp;str]) -&gt; Vec&lt;u8&gt; {</code> |
+| [crates/atelier-app/tests/worktrees.rs:24](../crates/atelier-app/tests/worktrees.rs#L24) | <code>.args([</code> |
+| [crates/atelier-app/tests/worktrees.rs:44](../crates/atelier-app/tests/worktrees.rs#L44) | <code>.args(args);</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:12](../crates/atelier-core/tests/domain-contracts.rs#L12) | <code>let args = &amp;case["args"];</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:14](../crates/atelier-core/tests/domain-contracts.rs#L14) | <code>"text" =&gt; args[0]</code> |
 | [crates/atelier-core/tests/domain-contracts.rs:17](../crates/atelier-core/tests/domain-contracts.rs#L17) | <code>.and_then(\|value\| text(value, args[1].as_u64().unwrap() as usize))</code> |
@@ -6202,7 +6202,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/infrastructure/updates.rs:874](../crates/atelier-app/src/infrastructure/updates.rs#L874) | <code>assert!(std::fs::read(journal.data.join("kanban.sqlite")).unwrap() == bytes);</code> |
 | [crates/atelier-app/src/infrastructure/updates.rs:892](../crates/atelier-app/src/infrastructure/updates.rs#L892) | <code>let bytes = std::fs::read(journal.data.join("kanban.sqlite")).unwrap();</code> |
 | [crates/atelier-app/src/infrastructure/updates.rs:915](../crates/atelier-app/src/infrastructure/updates.rs#L915) | <code>assert!(std::fs::read(journal.data.join("kanban.sqlite")).unwrap() == bytes);</code> |
-| [crates/atelier-app/tests/files.rs:327](../crates/atelier-app/tests/files.rs#L327) | <code>"src/tracked.txt:stream",</code> |
+| [crates/atelier-app/tests/files.rs:342](../crates/atelier-app/tests/files.rs#L342) | <code>"src/tracked.txt:stream",</code> |
 | [crates/atelier-app/tests/jira-http.rs:77](../crates/atelier-app/tests/jira-http.rs#L77) | <code>let chunks = futures_util::stream::iter([</code> |
 | [crates/atelier-app/tests/jira-http.rs:83](../crates/atelier-app/tests/jira-http.rs#L83) | <code>Body::from_stream(chunks),</code> |
 | [crates/atelier-app/tests/prototype.rs:244](../crates/atelier-app/tests/prototype.rs#L244) | <code>let database = Database::open(&amp;data.path().join("kanban.sqlite")).unwrap();</code> |
