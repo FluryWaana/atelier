@@ -35,6 +35,11 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         if card.fields.truthy("archived")? {
             return Err("Restaure cette tâche avant de lancer un agent.".into());
         }
+        if atelier_core::application::jira::unresolved(&card.fields)? {
+            return Err(
+                "Termine ou vérifie l’opération Jira avant de lancer une exécution.".into(),
+            );
+        }
         if atelier_core::application::forge::unresolved(&card.fields)? {
             return Err("Vérifie l’opération de forge avant de lancer une exécution.".into());
         }

@@ -8,6 +8,41 @@ use axum::{
 use serde::Deserialize;
 use std::path::PathBuf;
 
+pub(super) fn guard(root: Option<&std::path::Path>) -> Option<Response> {
+    match root.map(updates::maintenance).transpose() {
+        Ok(Some(true)) => Some(failure(
+            StatusCode::CONFLICT,
+            "Mise à jour en cours. Les modifications sont suspendues jusqu’à sa validation ou sa récupération.",
+        )),
+        Err(_) => Some(failure(
+            StatusCode::CONFLICT,
+            "Le journal de mise à jour doit être examiné avant de modifier les données.",
+        )),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod guard_tests {
+    #[test]
+    fn absent_installation_is_allowed_but_unreadable_or_partial_journal_blocks_writes() {
+        assert!(super::guard(None).is_none());
+        let root = tempfile::tempdir().unwrap();
+        assert!(super::guard(Some(root.path())).is_none());
+        std::fs::write(
+            root.path().join("update-operation.json"),
+            b"partial synthetic journal",
+        )
+        .unwrap();
+        assert_eq!(
+            super::guard(Some(root.path())).unwrap().status(),
+            axum::http::StatusCode::CONFLICT
+        );
+        let blocked = super::guard(Some(&root.path().join("missing-installation"))).unwrap();
+        assert_eq!(blocked.status(), axum::http::StatusCode::CONFLICT);
+    }
+}
+
 pub(super) async fn get(State(state): State<Shared>) -> Response {
     response(updates::status(state.installation_root.as_deref()))
 }

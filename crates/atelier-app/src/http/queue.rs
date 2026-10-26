@@ -47,6 +47,16 @@ pub(super) async fn run(state: Shared) -> Result<()> {
             if state.database.call(queue::settle).await? {
                 let _ = state.changed.send(());
             }
+            // The worker bypasses HTTP middleware but must honor its update reservation.
+            if super::updates::guard(state.installation_root.as_deref()).is_some() {
+                let changed = state.database.call(|store| {
+                    if queue::read(store)?.paused { return Ok(false); }
+                    queue::pause(store, "File en pause pendant la mise à jour. Vérifie son résultat avant de reprendre.")?;
+                    Ok(true)
+                }).await?;
+                if changed { let _ = state.changed.send(()); }
+                return Ok(());
+            }
             let id = uuid::Uuid::new_v4().to_string();
             let run_id = id.clone();
             if let Some((card, body)) = state

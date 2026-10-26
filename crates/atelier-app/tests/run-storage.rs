@@ -6,6 +6,36 @@ fn document(json: &str) -> Document {
 }
 
 #[tokio::test]
+async fn jira_read_or_uncertain_write_prevents_reserving_any_agent() {
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database.call(|store| {
+        let run = document(r#"{"id":"run","cardId":"card","repo":"synthetic/worktree","status":"starting"}"#);
+        // An invalid intent also fails closed rather than discarding its unknown remote effect.
+        for (index, intent) in [
+            r#"{"jiraCreation":{"id":"create","state":"uncertain","revision":1,"base":"https://synthetic.example.test","projectKey":"SYN","issueType":{"id":"1","name":"Task","subtask":false},"startedAt":"synthetic"}}"#,
+            r#"{"jiraTransition":{"id":"transition","state":"sending","base":"https://synthetic.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"2","name":"Complete","target":{"id":"3","name":"Done"},"requiresFields":false},"startedAt":"synthetic"}}"#,
+            r#"{"jiraRefresh":{"id":"refresh","state":"reading","revision":1,"base":"https://synthetic.example.test","issueId":"1","expected":{"id":"card","title":"Synthetic"},"createdAt":"synthetic"}}"#,
+            r#"{"jiraCreation":{"state":"uncertain"}}"#,
+            r#"{"jiraTransition":{"state":"sending"}}"#,
+            r#"{"jiraRefresh":{"state":"reading"}}"#,
+        ].into_iter().enumerate() {
+            let mut card = document(intent);
+            if index < 3 { assert!(atelier_core::application::jira::unresolved(&card)?); }
+            card.set("id", &"card")?;
+            card.set("title", &"Synthetic")?;
+            store.put(Documents::Cards, &card)?;
+            assert!(runs::reserve(store, &run).is_err());
+            assert!(store.document::<Document>(Documents::Runs, "run")?.is_none());
+            assert_eq!(serde_json::to_value(store.document::<Document>(Documents::Cards, "card")?)?, serde_json::to_value(Some(&card))?);
+        }
+        store.put(Documents::Cards, &document(r#"{"id":"card","title":"Synthetic"}"#))?;
+        runs::reserve(store, &run)?;
+        Ok(())
+    }).await.unwrap();
+    database.close().await.unwrap();
+}
+
+#[tokio::test]
 async fn reservations_logs_and_interrupted_runs_survive_restart_without_relaunch() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("synthetic.sqlite");

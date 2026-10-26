@@ -208,22 +208,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         let runs = state.runs.clone();
         let operation = async move {
             if !cancellation {
-                if let Some(root) = &state.installation_root {
-                    match crate::infrastructure::updates::maintenance(root) {
-                        Ok(true) => {
-                            return failure(
-                                StatusCode::CONFLICT,
-                                "Mise à jour en cours. Les modifications sont suspendues jusqu’à sa validation ou sa récupération.",
-                            );
-                        }
-                        Err(_) => {
-                            return failure(
-                                StatusCode::CONFLICT,
-                                "Le journal de mise à jour doit être examiné avant de modifier les données.",
-                            );
-                        }
-                        Ok(false) => {}
-                    }
+                if let Some(response) = updates::guard(state.installation_root.as_deref()) {
+                    return response;
                 }
                 #[cfg(windows)]
                 if let Some(response) = services::guard(&services, request.uri().path()) {

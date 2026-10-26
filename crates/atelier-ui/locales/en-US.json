@@ -1627,5 +1627,7 @@
   "La version active a changé pendant la préparation.": "The active version changed during preparation.",
   "Cette mise à jour n’est pas plus récente que la version active.": "This update is not newer than the active version.",
   "La maintenance est liée à un autre dossier de données.": "Maintenance is linked to another data directory.",
-  "Le dossier de données a changé avant le démarrage de la version.": "The data directory changed before the version started."
+  "Le dossier de données a changé avant le démarrage de la version.": "The data directory changed before the version started.",
+  "File en pause pendant la mise à jour. Vérifie son résultat avant de reprendre.": "Queue paused during the update. Check its result before resuming.",
+  "Termine ou vérifie l’opération Jira avant de lancer une exécution.": "Complete or reconcile the Jira operation before starting a run."
 }

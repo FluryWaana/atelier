@@ -916,11 +916,22 @@ mod tests {
     }
     #[test]
     fn corrupted_journals_fail_closed_and_staging_never_changes_the_active_pointer() {
-        let (_root, installation, journal) = prepared_installation();
+        let (_root, installation, mut journal) = prepared_installation();
         assert!(installation.current() == &journal.expected);
         assert!(installation.verify_version(&journal.next).is_ok());
         save(&installation, &journal).unwrap();
         assert!(!maintenance(installation.root()).unwrap());
+        for phase in [
+            Phase::Waiting,
+            Phase::Activating,
+            Phase::Trying,
+            Phase::RollingBack,
+            Phase::Uncertain,
+        ] {
+            journal.operation.state = phase;
+            save(&installation, &journal).unwrap();
+            assert!(maintenance(installation.root()).unwrap());
+        }
         std::fs::write(
             installation.root().join(JOURNAL),
             b"partial synthetic journal",
