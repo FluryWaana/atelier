@@ -1,10 +1,13 @@
 use crate::Result;
 use atelier_core::contracts::ServiceEndpoint;
+#[cfg(any(windows, test))]
+use std::net::Ipv4Addr;
 use std::{
     collections::BTreeSet,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    net::{IpAddr, Ipv6Addr},
     sync::LazyLock,
 };
+#[cfg(windows)]
 use windows_sys::Win32::{
     Foundation::ERROR_INSUFFICIENT_BUFFER,
     NetworkManagement::IpHelper::{
@@ -14,11 +17,13 @@ use windows_sys::Win32::{
     Networking::WinSock::{AF_INET, AF_INET6},
 };
 
+#[cfg(windows)]
 const TABLE_LIMIT: usize = 16 * 1024 * 1024;
 static URL: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r#"https?://[^\s<>"'()]+"#).expect("constant URL expression")
 });
 
+#[cfg(windows)]
 fn table(family: u16) -> Result<(Vec<u64>, usize)> {
     let mut size = 8192u32;
     for _ in 0..6 {
@@ -51,6 +56,7 @@ fn table(family: u16) -> Result<(Vec<u64>, usize)> {
     Err("La table des ports change trop rapidement. Réessaie.".into())
 }
 
+#[cfg(windows)]
 fn rows<T: Copy>(data: &[u64], size: usize, offset: usize) -> Result<Vec<T>> {
     if size < 4 || size > std::mem::size_of_val(data) || offset < 4 || offset > size {
         return Err("Table des ports invalide.".into());
@@ -71,7 +77,8 @@ fn rows<T: Copy>(data: &[u64], size: usize, offset: usize) -> Result<Vec<T>> {
         .collect())
 }
 
-pub(super) fn listeners(owned: &BTreeSet<u32>) -> Result<Vec<ServiceEndpoint>> {
+#[cfg(windows)]
+fn windows_listeners(owned: &BTreeSet<u32>) -> Result<Vec<ServiceEndpoint>> {
     if owned.is_empty() {
         return Ok(Vec::new());
     }
@@ -119,6 +126,19 @@ pub(super) fn listeners(owned: &BTreeSet<u32>) -> Result<Vec<ServiceEndpoint>> {
     }
     Ok(endpoints)
 }
+
+pub(super) async fn listeners(owned: &BTreeSet<u32>) -> Result<Vec<ServiceEndpoint>> {
+    #[cfg(windows)]
+    {
+        let owned = owned.clone();
+        tokio::task::spawn_blocking(move || windows_listeners(&owned)).await?
+    }
+    #[cfg(unix)]
+    unix::listeners(owned).await
+}
+
+#[cfg(unix)]
+mod unix;
 
 pub(super) fn local_url(address: &str, port: u16, log: &str) -> Option<String> {
     let ip: IpAddr = address.parse().ok()?;
@@ -191,15 +211,18 @@ mod tests {
         );
         assert!(local_url("192.0.2.1", 80, "http://192.0.2.1/").is_none());
         assert!(local_url("::1%1", 80, "").is_none());
-        assert!(rows::<MIB_TCPROW_OWNER_PID>(&[u64::MAX], 8, 4).is_err());
-        assert!(rows::<MIB_TCPROW_OWNER_PID>(&[0], 9, 4).is_err());
+        #[cfg(windows)]
+        {
+            assert!(rows::<MIB_TCPROW_OWNER_PID>(&[u64::MAX], 8, 4).is_err());
+            assert!(rows::<MIB_TCPROW_OWNER_PID>(&[0], 9, 4).is_err());
+        }
     }
-    #[test]
-    fn native_table_finds_only_the_synthetic_owner_and_open_port() {
+    #[tokio::test]
+    async fn native_table_finds_only_the_synthetic_owner_and_open_port() {
         let socket = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         let port = socket.local_addr().unwrap().port();
         let owned = BTreeSet::from([std::process::id()]);
-        let found = listeners(&owned).unwrap();
+        let found = listeners(&owned).await.unwrap();
         assert!(
             found
                 .iter()
@@ -210,6 +233,6 @@ mod tests {
                 .iter()
                 .any(|endpoint| endpoint.port == port && endpoint.address == "127.0.0.1")
         );
-        assert!(listeners(&BTreeSet::new()).unwrap().is_empty());
+        assert!(listeners(&BTreeSet::new()).await.unwrap().is_empty());
     }
 }

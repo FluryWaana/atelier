@@ -294,12 +294,6 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
 }
 
 async fn mutate(state: Shared, id: String, request: Request, remove: bool) -> Response {
-    if !cfg!(windows) {
-        return failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Les worktrees natifs attendent leur qualification sur ce système.",
-        );
-    }
     let Ok(_readers) = state.file_reads.try_acquire_many(2) else {
         return failure(
             StatusCode::CONFLICT,

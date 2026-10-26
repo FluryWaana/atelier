@@ -153,8 +153,8 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
                 biased;
                 _=cancel.changed()=> { cancelled=true; break; },
                 _=tokio::time::sleep(delay)=>return Err("Durée maximale de la session ou délai d’arrêt dépassé.".into()),
-                status=child.child.wait(), if !exited=> {
-                    status?; child.wait().await?; exited=true;
+                status=child.wait(), if !exited=> {
+                    status?; exited=true;
                 },
                 result=&mut stdout_task, if !stdout_done=> { result??; stdout_done=true; },
                 result=&mut stderr_task, if !stderr_done=> { result??; stderr_done=true; },

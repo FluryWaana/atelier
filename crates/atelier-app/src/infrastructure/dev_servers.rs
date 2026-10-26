@@ -485,7 +485,8 @@ impl DevServers {
     async fn inspect(&self, card: &str, index: usize, child: &mut ContainedChild) {
         let result = async {
             let before = child
-                .process_ids()?
+                .process_ids()
+                .await?
                 .into_iter()
                 .collect::<std::collections::BTreeSet<_>>();
             let permit = tokio::time::timeout(
@@ -494,15 +495,15 @@ impl DevServers {
             )
             .await
             .map_err(|_| "Inspection des ports occupée.")??;
-            let query = tokio::task::spawn_blocking(move || {
+            let query = tokio::spawn(async move {
                 let _permit = permit;
-                super::process_inspection::listeners(&before)
+                super::process_inspection::listeners(&before).await
             });
             let queried = tokio::time::timeout(Duration::from_secs(2), query)
                 .await
                 .map_err(|_| "Inspection des ports trop lente.")?;
             let mut endpoints = queried??;
-            let after = child.process_ids()?;
+            let after = child.process_ids().await?;
             endpoints.retain(|endpoint| after.contains(&endpoint.pid));
             Ok::<_, crate::Error>((after, endpoints))
         }
@@ -620,6 +621,8 @@ async fn spawn(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    #[cfg(unix)]
+    super::service_launch::anchor(&mut child, &directory.directory)?;
     if let Some(port) = port {
         child.env("PORT", port.to_string()).env("HOST", "127.0.0.1");
     }
@@ -681,6 +684,7 @@ mod tests {
     use cap_std::{ambient_authority, fs::Dir};
 
     #[test]
+    #[ignore = "synthetic service child entrypoint, launched by the lifecycle scenario"]
     fn synthetic_service_fixture() {
         let Ok(port) = std::env::var("ATELIER_SERVICE_FIXTURE") else {
             return;
@@ -698,10 +702,18 @@ mod tests {
     async fn managed_services_release_ports_stop_independently_and_close_all_children() {
         let fixture = tempfile::tempdir().unwrap();
         let path = std::fs::canonicalize(fixture.path()).unwrap();
-        let command = format!(
-            "set \"ATELIER_SERVICE_FIXTURE={{port}}\" && \"{}\" --exact infrastructure::dev_servers::tests::synthetic_service_fixture --nocapture",
-            std::env::current_exe().unwrap().display()
-        );
+        let executable = std::env::current_exe().unwrap();
+        let command = if cfg!(windows) {
+            format!(
+                "set \"ATELIER_SERVICE_FIXTURE={{port}}\" && \"{}\" --exact infrastructure::dev_servers::tests::synthetic_service_fixture --ignored --nocapture",
+                executable.display()
+            )
+        } else {
+            format!(
+                "ATELIER_SERVICE_FIXTURE={{port}} '{}' --exact infrastructure::dev_servers::tests::synthetic_service_fixture --ignored --nocapture",
+                executable.to_string_lossy().replace('\'', "'\"'\"'")
+            )
+        };
         let plan = LaunchPlan {
             card_id: "synthetic-card".into(),
             project_ids: vec!["synthetic-project".into()],

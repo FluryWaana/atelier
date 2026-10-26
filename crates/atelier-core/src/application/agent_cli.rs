@@ -63,6 +63,15 @@ pub fn operation(settings: &crate::document::Document) -> Result<Option<Operatio
             || operation.provider.is_empty()
             || operation.provider.len() > 100
             || operation.provider.chars().any(char::is_control)
+            || if operation.phase == Phase::Observed {
+                operation.actual_version.as_ref().is_none_or(|version| {
+                    version.is_empty()
+                        || version.len() > 100
+                        || version.chars().any(char::is_control)
+                }) || operation.target_reached.is_none()
+            } else {
+                operation.actual_version.is_some() || operation.target_reached.is_some()
+            }
             || !matches!(
                 operation.info.package.as_str(),
                 "@openai/codex" | "@anthropic-ai/claude-code"

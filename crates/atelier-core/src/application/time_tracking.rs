@@ -173,9 +173,10 @@ pub fn execute(
             if action == "remove" {
                 if entry.raw("tempoExportHistory").is_some()
                     || entry.raw("tempoExportEffect").is_some()
+                    || entry.raw("connectorExport").is_some()
                 {
                     return Err(
-                        "Conserve cette saisie : elle contient l’historique d’effets Tempo.".into(),
+                        "Conserve cette saisie : elle contient l’historique d’exports.".into(),
                     );
                 }
                 repository.remove(&entry_id)?;
@@ -189,6 +190,12 @@ pub fn execute(
             entry.set("interrupted", &false)?;
         }
         "reset-export" => {
+            if entry.raw("connectorExport").is_some() {
+                return Err(
+                    "Rapproche cet export dans le journal du module ; aucun renvoi implicite."
+                        .into(),
+                );
+            }
             if entry.raw("tempoExport").is_some() {
                 return Err("Utilise la confirmation explicite avec historique pour débloquer cet export Tempo.".into());
             }

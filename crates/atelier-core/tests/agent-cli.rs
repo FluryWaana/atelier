@@ -11,8 +11,8 @@ fn settings(phase: &str) -> Document {
             "info":{"package":"@openai/codex","availability":"available",
                 "latestVersion":"2.0.0","installedVersion":"1.0.0",
                 "managedRoot":null,"image":null,"observedAt":"2026-10-26T00:00:00Z"},
-            "startedAt":"before","updatedAt":"before","actualVersion":null,
-            "targetReached":null,"message":"synthetic"
+            "startedAt":"before","updatedAt":"before","actualVersion":if phase=="observed"{json!("2.0.0")}else{json!(null)},
+            "targetReached":if phase=="observed"{json!(true)}else{json!(null)},"message":"synthetic"
         }})
         .to_string(),
     )
@@ -53,4 +53,22 @@ fn terminal_results_are_preserved_and_corruption_blocks_mutation() {
     assert!(agent_cli::busy(&settings).is_err());
     settings.set("agentCliUpdate", &"x".repeat(65_537)).unwrap();
     assert!(agent_cli::recover(&mut settings, "after").is_err());
+}
+
+#[test]
+fn an_observation_cannot_exist_without_its_actual_version_or_leak_into_a_running_state() {
+    for phase in ["observed", "running"] {
+        let mut settings = settings(phase);
+        let mut operation = agent_cli::operation(&settings).unwrap().unwrap();
+        if phase == "observed" {
+            operation.actual_version = None;
+        } else {
+            operation.actual_version = Some("2.0.0".into());
+            operation.target_reached = Some(true);
+        }
+        settings.set("agentCliUpdate", &operation).unwrap();
+        assert!(agent_cli::operation(&settings).is_err());
+        assert!(agent_cli::busy(&settings).is_err());
+        assert!(agent_cli::recover(&mut settings, "after").is_err());
+    }
 }

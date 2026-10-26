@@ -2829,6 +2829,7 @@ async fn connectors_scenario(
     click(client, "#settings-tab-connectors").await?;
     wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
     click(client, "[data-connector=synthetic-extension]").await?;
+    connector_time_scenario(client, http, address, token, data, &imported).await?;
     click(client, "#remove-connector").await?;
     click(client, "#confirm-remove-connector").await?;
     wait_dom(client,"return !document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
@@ -2856,6 +2857,111 @@ async fn connectors_scenario(
         .is_none_or(|cards| !cards.contains(&imported))
     {
         return Err("Le retrait du module a modifié la carte importée.".into());
+    }
+    Ok(())
+}
+
+async fn connector_time_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    data: &Path,
+    card: &serde_json::Value,
+) -> Result<()> {
+    let effects = data.join("connector-time-ui-fixture");
+    std::fs::create_dir(&effects)?;
+    std::fs::write(
+        effects.join(".extension-fixture"),
+        "atelier-r04-synthetic-only",
+    )?;
+    client
+        .find(Locator::Css("#connector-field-fixtureRoot"))
+        .await?
+        .send_keys(effects.to_str().ok_or("Chemin synthétique non Unicode")?)
+        .await?;
+    let fault = client.find(Locator::Css("#connector-field-fault")).await?;
+    fault.clear().await?;
+    fault.send_keys("lost-write").await?;
+    click(client, "#save-connector").await?;
+    wait_dom(client,"return document.querySelector('#save-connector')?.disabled === true && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    let entry:serde_json::Value=http.post(format!("{address}/api/time")).bearer_auth(token).header("x-local-request","1")
+        .json(&json!({"cardId":card["id"],"seconds":125,"date":"2026-10-26","startTime":"10:15:00","description":"Synthetic connector time UI","start":false})).send().await?.error_for_status()?.json().await?;
+    let id = entry["id"].as_str().ok_or("Saisie synthétique absente")?;
+    wait_dom(client,"return !!document.querySelector('#connector-time-entry option[value=\"'+arguments[0]+'\"]');",vec![json!(id)]).await?;
+    click(
+        client,
+        &format!("#connector-time-entry option[value=\"{id}\"]"),
+    )
+    .await?;
+    click(client, "#preview-connector-time").await?;
+    wait_dom(client,"return document.querySelector('#prepare-connector-time')?.disabled === false && document.querySelector('#connector-time-entry')?.parentElement.textContent.includes('synthetic-time-account');",vec![]).await?;
+    click(client, "#close-settings").await?;
+    click(client, "#keep-settings").await?;
+    wait_dom(client,"return document.querySelector('#connector-time-entry')?.value === arguments[0] && document.querySelector('#prepare-connector-time')?.disabled === false;",vec![json!(id)]).await?;
+    click(client, "#prepare-connector-time").await?;
+    wait_dom(client,"return document.querySelector('.send-connector-effect')?.disabled === true && document.querySelector('.connector-effect-state')?.textContent === 'Aperçu non envoyé';",vec![]).await?;
+    let operations: Vec<atelier_core::application::extensions::RemoteOperation> = http
+        .get(format!(
+            "{address}/api/extensions/synthetic-extension/operations"
+        ))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let operation = operations
+        .into_iter()
+        .find(|operation| {
+            operation.method == atelier_core::application::extensions::Method::TimeSend
+                && operation.input["source"]["id"] == id
+        })
+        .ok_or("Aperçu temps absent")?;
+    let scope = format!("[data-connector-operation=\"{}\"]", operation.id);
+    click(client, &format!("{scope} .confirm-connector-effect")).await?;
+    click(client, &format!("{scope} .send-connector-effect")).await?;
+    wait_dom(client,"return document.querySelector('[data-connector-operation=\"'+arguments[0]+'\"] .connector-effect-state')?.textContent === 'Effet distant incertain' && document.querySelector('[data-connector-operation=\"'+arguments[0]+'\"] .confirm-connector-effect')?.checked === false;",vec![json!(operation.id)]).await?;
+    let marker = effects.join(format!("{}.time-effect", operation.id));
+    let contents = std::fs::read(&marker)?;
+    let modified = std::fs::metadata(&marker)?.modified()?;
+    click(client, &format!("{scope} .confirm-connector-effect")).await?;
+    click(client, &format!("{scope} .send-connector-effect")).await?;
+    wait_dom(client,"return document.querySelector('[data-connector-operation=\"'+arguments[0]+'\"] .connector-effect-state')?.textContent === 'Rapproché par le module';",vec![json!(operation.id)]).await?;
+    if std::fs::read(&marker)? != contents
+        || std::fs::metadata(&marker)?.modified()? != modified
+        || std::fs::read_dir(&effects)?
+            .collect::<std::io::Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "time-effect")
+            })
+            .count()
+            != 1
+    {
+        return Err("Le rapprochement a rejoué ou modifié l’effet synthétique.".into());
+    }
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let saved = state["times"]
+        .as_array()
+        .and_then(|entries| entries.iter().find(|entry| entry["id"] == id))
+        .ok_or("Temps exporté absent")?;
+    if saved["exportState"] != "exported"
+        || saved["seconds"] != 125
+        || saved["description"] != "Synthetic connector time UI"
+        || saved["connectorExport"] != operation.id
+    {
+        return Err("La saisie réellement rapprochée n’a pas été conservée.".into());
     }
     Ok(())
 }

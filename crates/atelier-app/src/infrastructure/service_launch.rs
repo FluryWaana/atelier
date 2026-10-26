@@ -38,6 +38,37 @@ pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
     Ok(child)
 }
 
+#[cfg(unix)]
+pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
+    if command.trim().is_empty() || command.len() > 8000 || command.contains('\0') {
+        return Err("Commande de vérification invalide.".into());
+    }
+    let mut profile = atelier_core::document::Document::default();
+    profile.set("type", &"command")?;
+    profile.set("command", &"/bin/sh")?;
+    let mut child = super::agent_diagnostics::command(&profile).await?;
+    child.args(["-c", command]);
+    Ok(child)
+}
+
+#[cfg(unix)]
+pub(crate) fn anchor(command: &mut tokio::process::Command, directory: &Dir) -> Result<()> {
+    use std::os::{fd::AsRawFd, unix::process::CommandExt};
+    let opened = directory.try_clone()?;
+    command.current_dir("/");
+    // Only async-signal-safe fchdir runs after fork; the closure retains the approved directory FD.
+    unsafe {
+        command.as_std_mut().pre_exec(move || {
+            if libc::fchdir(opened.as_raw_fd()) == 0 {
+                Ok(())
+            } else {
+                Err(std::io::Error::last_os_error())
+            }
+        });
+    }
+    Ok(())
+}
+
 pub async fn prepare(root: &Dir, roots: &[PathBuf], plan: LaunchPlan) -> Result<PreparedLaunch> {
     let mut directories = Vec::new();
     for service in &plan.services {

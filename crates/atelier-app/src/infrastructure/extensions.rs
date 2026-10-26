@@ -11,7 +11,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
     io::Write,
-    path::{Component, Path, PathBuf, Prefix},
+    path::{Path, PathBuf},
     time::Duration,
 };
 
@@ -48,18 +48,28 @@ impl Write for HashWriter {
     }
 }
 fn local(path: &Path) -> bool {
-    path.is_absolute()
-        && matches!(path.components().next(),Some(Component::Prefix(prefix)) if matches!(prefix.kind(),Prefix::Disk(_)|Prefix::VerbatimDisk(_)))
-        && path
-            .extension()
-            .and_then(|extension| extension.to_str())
-            .is_some_and(|extension| {
-                extension.eq_ignore_ascii_case("exe") || extension.eq_ignore_ascii_case("com")
+    #[cfg(windows)]
+    {
+        use std::path::{Component, Prefix};
+        path.is_absolute()
+            && matches!(path.components().next(),Some(Component::Prefix(prefix)) if matches!(prefix.kind(),Prefix::Disk(_)|Prefix::VerbatimDisk(_)))
+            && path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| {
+                    extension.eq_ignore_ascii_case("exe") || extension.eq_ignore_ascii_case("com")
+                })
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        path.is_absolute()
+            && path.metadata().is_ok_and(|metadata| {
+                metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
             })
+    }
 }
 fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
-    use std::os::windows::fs::OpenOptionsExt;
-    use windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ;
     if !local(&path)
         || expected.as_ref().is_some_and(|hash| {
             hash.len() != 64
@@ -80,11 +90,20 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
     if !metadata.is_file() || metadata.len() > 128 * 1024 * 1024 {
         return Err("Exécutable de connecteur invalide ou supérieur à 128 Mio.".into());
     }
-    // Deny writes/deletion through every hard-link while the executable owns credentials.
-    let file = std::fs::OpenOptions::new()
-        .read(true)
-        .share_mode(FILE_SHARE_READ)
-        .open(&path)?;
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // Windows refuses writes/deletion through all aliases while the connector owns credentials.
+        options.share_mode(windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ);
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    let file = options.open(&path)?;
     if file.metadata()?.len() > 128 * 1024 * 1024 {
         return Err("Exécutable de connecteur invalide ou supérieur à 128 Mio.".into());
     }
@@ -161,6 +180,51 @@ pub(super) fn values(manifest: &Manifest, request: &Request) -> Result<()> {
     Ok(())
 }
 impl Executable {
+    #[cfg(unix)]
+    fn snapshot(&self, directory: &Path) -> Result<PathBuf> {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        struct Copy {
+            output: std::fs::File,
+            hash: HashWriter,
+        }
+        impl Write for Copy {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.hash.write_all(bytes)?;
+                self.output.write_all(bytes)?;
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                self.output.flush()
+            }
+        }
+        let path = directory.join("connector-image");
+        let mut copy = Copy {
+            output: std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW)
+                .open(&path)?,
+            hash: HashWriter {
+                hash: Sha256::new(),
+                size: 0,
+            },
+        };
+        self.file
+            .open_same(Path::new(&self.binary.path))?
+            .copy_to(&mut copy)?;
+        copy.output.sync_all()?;
+        if format!("{:x}", copy.hash.hash.finalize()) != self.binary.sha256 {
+            return Err(
+                "Le binaire du connecteur a changé avant sa copie privée. Aucun appel envoyé."
+                    .into(),
+            );
+        }
+        copy.output
+            .set_permissions(std::fs::Permissions::from_mode(0o500))?;
+        // POSIX permits renaming/writing an opened source; execute only the verified private snapshot.
+        Ok(path)
+    }
     pub async fn open(path: PathBuf, expected: Option<String>) -> Result<Self> {
         tokio::task::spawn_blocking(move || inspect(path, expected)).await?
     }
@@ -272,8 +336,19 @@ impl PreparedCall {
         executable
             .file
             .open_same(Path::new(&executable.binary.path))?;
+        #[cfg(windows)]
+        let binary = executable.binary.path.clone();
+        #[cfg(unix)]
+        let (executable, binary) = {
+            let folder = home.path().to_owned();
+            tokio::task::spawn_blocking(move || {
+                let binary = executable.snapshot(&folder)?;
+                Ok::<_, crate::Error>((executable, binary))
+            })
+            .await??
+        };
         let profile: Document = serde_json::from_str(
-            &serde_json::json!({"type":"command","command":executable.binary.path}).to_string(),
+            &serde_json::json!({"type":"command","command":binary}).to_string(),
         )?;
         let mut command = super::agent_diagnostics::command(&profile).await?;
         isolate(&mut command, home.path());
@@ -304,6 +379,37 @@ impl PreparedCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    #[test]
+    fn posix_snapshots_execute_only_the_approved_bytes_and_refuse_a_source_changed_after_probe() {
+        use std::os::unix::fs::PermissionsExt;
+        let source = tempfile::tempdir().unwrap();
+        let binary = source.path().join("synthetic-native");
+        std::fs::write(&binary, b"synthetic image, never executed").unwrap();
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let executable = inspect(binary.clone(), None).unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let copy = executable.snapshot(home.path()).unwrap();
+        assert_eq!(
+            std::fs::read(&copy).unwrap(),
+            b"synthetic image, never executed"
+        );
+        assert_eq!(
+            std::fs::metadata(&copy).unwrap().permissions().mode() & 0o777,
+            0o500
+        );
+        std::fs::write(&binary, b"human replacement preserved").unwrap();
+        assert_eq!(
+            std::fs::read(copy).unwrap(),
+            b"synthetic image, never executed"
+        );
+        let another = tempfile::tempdir().unwrap();
+        assert!(executable.snapshot(another.path()).is_err());
+        assert_eq!(
+            std::fs::read(binary).unwrap(),
+            b"human replacement preserved"
+        );
+    }
     #[test]
     fn connector_homes_and_locale_are_private_without_mutating_the_parent_environment() {
         let mut command = tokio::process::Command::new("synthetic-never-executed.exe");

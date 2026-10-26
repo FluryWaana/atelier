@@ -25,12 +25,6 @@ async fn inspect(
     selection: Option<Selection>,
     changes: bool,
 ) -> Response {
-    if !cfg!(windows) {
-        return failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "L’explorateur Git natif attend sa qualification sur ce système.",
-        );
-    }
     let Ok(_permit) = state.file_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,

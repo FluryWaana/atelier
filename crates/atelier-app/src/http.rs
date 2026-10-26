@@ -25,7 +25,6 @@ use tokio::{net::TcpListener, sync::watch};
 mod agent_cli;
 mod agent_providers;
 mod assets;
-#[cfg(windows)]
 mod automation;
 pub use assets::LEGACY_ASSETS;
 pub use assets::wasm_asset_name;
@@ -49,15 +48,11 @@ mod jira_transitions;
 mod mutations;
 mod preparation;
 mod projects;
-#[cfg(windows)]
 mod queue;
 mod repository_access;
 mod responses;
-#[cfg(windows)]
 mod reviews;
-#[cfg(windows)]
 mod runs;
-#[cfg(windows)]
 mod services;
 mod settings;
 mod task_creation;
@@ -67,7 +62,6 @@ mod tempo;
 mod tempo_export;
 mod time_tracking;
 mod updates;
-#[cfg(windows)]
 mod workflow_publication;
 mod worktrees;
 
@@ -88,9 +82,7 @@ struct AppState {
     file_reads: tokio::sync::Semaphore,
     integration_reads: tokio::sync::Semaphore,
     mutations: Arc<tokio::sync::RwLock<()>>,
-    #[cfg(windows)]
     services: Arc<crate::infrastructure::dev_servers::DevServers>,
-    #[cfg(windows)]
     runs: Arc<crate::infrastructure::command_runs::CommandRuns>,
 }
 type Shared = Arc<AppState>;
@@ -216,9 +208,7 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
         let cancellation = request.method() == Method::POST && mutations::is_cancellation(&path);
         let gate = state.mutations.clone();
         let changed = state.changed.clone();
-        #[cfg(windows)]
         let services = state.services.clone();
-        #[cfg(windows)]
         let runs = state.runs.clone();
         let operation = async move {
             if !cancellation {
@@ -235,11 +225,9 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                 } else {
                     request.uri().path()
                 };
-                #[cfg(windows)]
                 if let Some(response) = services::guard(&services, guard_path) {
                     return response;
                 }
-                #[cfg(windows)]
                 if let Some(response) = runs::guard(&runs, guard_path) {
                     return response;
                 }
@@ -558,9 +546,7 @@ async fn serve_mode(
         token,
         port: listener.local_addr()?.port(),
         shutdown,
-        #[cfg(windows)]
         services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
-        #[cfg(windows)]
         runs: crate::infrastructure::command_runs::CommandRuns::new(changed.clone()),
         changed,
         file_reads: tokio::sync::Semaphore::new(2),
@@ -568,11 +554,11 @@ async fn serve_mode(
         mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
     #[cfg(windows)]
+    let app = app.route(
+        "/api/agent-providers/{id}/cli-update",
+        post(agent_cli::update),
+    );
     let app = app
-        .route(
-            "/api/agent-providers/{id}/cli-update",
-            post(agent_cli::update),
-        )
         .route(
             "/api/extensions/{module}/operations/{id}/send",
             post(connector_effects::send),
@@ -784,7 +770,6 @@ async fn serve_mode(
         .with_state(state.clone());
     let stop_events = state.shutdown.clone();
     let clock = tokio::spawn(time_tracking::run(state.clone()));
-    #[cfg(windows)]
     let queue_worker = tokio::spawn(queue::run(state.clone()));
     let tray = if legacy {
         None
@@ -812,12 +797,9 @@ async fn serve_mode(
         None => Ok(()),
     };
     let clock_result = clock.await;
-    #[cfg(windows)]
     let queue_result = queue_worker.await;
     let _mutations = state.mutations.write().await;
-    #[cfg(windows)]
     let services_result = state.services.close().await;
-    #[cfg(windows)]
     let runs_result = state.runs.close().await;
     let timers = state
         .database
@@ -832,11 +814,8 @@ async fn serve_mode(
         .await;
     state.database.close().await?;
     drop(directory);
-    #[cfg(windows)]
     services_result?;
-    #[cfg(windows)]
     runs_result?;
-    #[cfg(windows)]
     queue_result??;
     clock_result??;
     timers?;

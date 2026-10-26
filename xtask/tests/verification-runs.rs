@@ -1,4 +1,3 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::{
     command_runs::{CommandRuns, RunDirectory, RunInput},
     database::Database,
@@ -14,11 +13,21 @@ async fn git(path: &Path, args: &[&str]) {
     let mut command = tokio::process::Command::new("git");
     command
         .current_dir(path)
-        .env("GIT_CONFIG_GLOBAL", "NUL")
-        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env(
+            "GIT_CONFIG_SYSTEM",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
         .args([
             "-c",
-            "core.hooksPath=NUL",
+            if cfg!(windows) {
+                "core.hooksPath=NUL"
+            } else {
+                "core.hooksPath=/dev/null"
+            },
             "-c",
             "user.name=Synthetic",
             "-c",

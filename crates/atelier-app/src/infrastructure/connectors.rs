@@ -109,18 +109,21 @@ pub fn describe(
     }
     Ok(Registry {
         revision: revision(&settings)?,
-        native_available: cfg!(windows),
+        native_available: true,
         modules,
-        builtin_azure_path: if cfg!(windows) {
+        builtin_azure_path: {
             std::env::current_exe()
                 .ok()
                 .filter(|path| {
-                    path.file_name().and_then(|name| name.to_str()) == Some("atelier.exe")
+                    path.file_name().and_then(|name| name.to_str())
+                        == Some(if cfg!(windows) {
+                            "atelier.exe"
+                        } else {
+                            "atelier"
+                        })
                 })
                 .map(|path| super::task_creation::path_string(&path).utf8())
                 .transpose()?
-        } else {
-            None
         },
     })
 }
@@ -191,7 +194,6 @@ pub fn install(
     describe(store, protect)
 }
 
-#[cfg(windows)]
 pub fn configure(
     store: &Store<'_>,
     id: &str,
@@ -355,11 +357,15 @@ pub fn invocation(
             protocol::Method::Check,
             protocol::Method::TicketsSearch,
             protocol::Method::TicketsRead,
+            protocol::Method::TimePreview,
             protocol::Method::Action,
         ]
         .contains(&request.method)
     {
         return Err("Cette opération de connecteur n’est pas disponible.".into());
+    }
+    if request.method == protocol::Method::TimePreview {
+        request.input = super::connector_time::preview_input(store, &request.input)?;
     }
     let tokens = settings::load(store, protect)?;
     for field in profile
@@ -385,6 +391,9 @@ pub fn record(store: &Store<'_>, id: &str, expected: u64, report: Report) -> Res
         protocol::Method::TicketsSearch | protocol::Method::TicketsRead
     ) {
         super::connector_tickets::page(&report)?;
+    }
+    if report.method == protocol::Method::TimePreview {
+        super::connector_time::validate_report(store, &report)?;
     }
     store.transaction(|store| {
         profile(store, id, expected)?;

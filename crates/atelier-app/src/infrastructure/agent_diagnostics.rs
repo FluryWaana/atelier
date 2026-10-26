@@ -7,23 +7,38 @@ use atelier_core::{
 use std::{
     collections::BTreeMap,
     ffi::OsString,
-    path::{Component, Path, PathBuf, Prefix},
+    path::{Path, PathBuf},
     time::Duration,
 };
 
 pub(super) type Environment = BTreeMap<String, OsString>;
 
 fn local_path(path: &Path) -> bool {
-    matches!(path.components().next(), Some(Component::Prefix(prefix)) if matches!(prefix.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)))
-        && path.is_absolute()
+    #[cfg(windows)]
+    {
+        use std::path::{Component, Prefix};
+        matches!(path.components().next(), Some(Component::Prefix(prefix)) if matches!(prefix.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_)))
+            && path.is_absolute()
+    }
+    #[cfg(unix)]
+    path.is_absolute()
 }
 
 fn native_extension(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            extension.eq_ignore_ascii_case("exe") || extension.eq_ignore_ascii_case("com")
-        })
+    #[cfg(windows)]
+    {
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| {
+                extension.eq_ignore_ascii_case("exe") || extension.eq_ignore_ascii_case("com")
+            })
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        path.metadata()
+            .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+    }
 }
 
 fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> {
@@ -32,6 +47,7 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
     let name = if command.is_empty() { &kind } else { &command };
     let mut candidates = Vec::new();
     if command.is_empty() {
+        #[cfg(windows)]
         match kind.as_str() {
             "codex" => {
                 if let Some(local) = environment.get("LOCALAPPDATA") {
@@ -46,12 +62,26 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
             }
             _ => return Err("Exécutable requis.".into()),
         }
+        #[cfg(unix)]
+        {
+            if !matches!(kind.as_str(), "codex" | "claude") {
+                return Err("Exécutable requis.".into());
+            }
+            if let Some(home) = environment.get("HOME") {
+                candidates.push(PathBuf::from(home).join(".local/bin").join(&kind));
+                candidates.push(PathBuf::from(home).join(".cargo/bin").join(&kind));
+            }
+            #[cfg(target_os = "macos")]
+            for root in ["/opt/homebrew/bin", "/usr/local/bin"] {
+                candidates.push(PathBuf::from(root).join(&kind));
+            }
+        }
     }
     let path = Path::new(name);
     if path.is_absolute() {
         candidates.push(path.to_owned());
     } else if !name.contains(['/', '\\', ':']) {
-        let filename = if path.extension().is_some() {
+        let filename = if !cfg!(windows) || path.extension().is_some() {
             name.clone()
         } else {
             format!("{name}.exe")
@@ -412,10 +442,31 @@ pub async fn diagnose(profile: Document) -> Result<AgentDiagnostic> {
         }
         result.account_report = Some(report);
     }
-    result.update_info = Some(
-        super::agent_cli::describe(&profile, &binary, result.version.as_deref(), &inherited)
-            .await?,
-    );
+    #[cfg(windows)]
+    {
+        result.update_info = Some(
+            super::agent_cli::describe(&profile, &binary, result.version.as_deref(), &inherited)
+                .await?,
+        );
+    }
+    #[cfg(unix)]
+    {
+        result.update_info = Some(atelier_core::application::agent_cli::UpdateInfo {
+            package: match kind.as_str() {
+                "codex" => "@openai/codex",
+                "claude" => "@anthropic-ai/claude-code",
+                _ => "",
+            }
+            .into(),
+            latest_version: None,
+            managed_root: None,
+            observed_at: time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)?,
+            availability: atelier_core::application::agent_cli::Availability::Managed,
+            installed_version: result.version.clone(),
+            image: None,
+        });
+    }
     Ok(result)
 }
 
@@ -465,6 +516,11 @@ mod tests {
         let fixture = tempfile::tempdir().unwrap();
         let binary = fixture.path().join("synthetic.EXE");
         std::fs::write(&binary, b"not executed").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
         profile.set("command", &binary.to_string_lossy()).unwrap();
         assert_eq!(
             executable(&profile, &inherited).unwrap(),
@@ -474,6 +530,9 @@ mod tests {
 
     #[test]
     fn login_status_is_not_a_network_check_and_unselected_output_is_never_returned() {
+        #[cfg(unix)]
+        use std::os::unix::process::ExitStatusExt;
+        #[cfg(windows)]
         use std::os::windows::process::ExitStatusExt;
         let mut diagnostic = AgentDiagnostic {
             executable: "synthetic.exe".into(),
@@ -505,7 +564,7 @@ mod tests {
         )]);
         authentication(&mut diagnostic, "claude", &output, &credentials).unwrap();
         assert!(diagnostic.account.is_none());
-        output.status = std::process::ExitStatus::from_raw(1);
+        output.status = std::process::ExitStatus::from_raw(if cfg!(windows) { 1 } else { 1 << 8 });
         assert!(authentication(&mut diagnostic, "claude", &output, &credentials).is_err());
         authentication(&mut diagnostic, "codex", &output, &credentials).unwrap();
         assert_eq!(diagnostic.authentication, AgentAuthentication::Absent);

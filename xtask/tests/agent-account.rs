@@ -1,4 +1,3 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::agent_diagnostics::diagnose;
 use atelier_core::{application::agent_account::State, document::Document};
 use serde_json::json;

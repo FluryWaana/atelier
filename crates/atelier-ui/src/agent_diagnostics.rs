@@ -26,6 +26,7 @@ pub fn AgentDiagnostics(
     view! {
         <section class="task-files" hidden=move || profile.get().is_none() aria-labelledby="agent-diagnostic-heading">
             <h3 id="agent-diagnostic-heading">{move || i18n.text("Installation et connexion")}</h3>
+            <p class="field-help">{move || i18n.text("Sous Linux/macOS, l’arrêt vise le groupe de processus. Un programme qui se détache peut lui échapper ; évite les commandes qui lancent des démons et vérifie leur fermeture avant une restauration ou une mise à jour.")}</p>
             <p class="field-help">{move || i18n.text("Contrôle explicite du profil enregistré : version et état de connexion du CLI. Aucun prompt envoyé et aucune requête payante de validation de clé.")}</p>
             <button id="diagnose-profile" type="button" disabled=move || pending.get() || blocked.get() || profile.get().is_none() on:click=move |_| {
                 if pending.get_untracked() || blocked.get_untracked() { return; }

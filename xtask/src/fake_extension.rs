@@ -47,7 +47,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -67,6 +67,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 return Err("Unexpected synthetic ticket scope".into());
             }
             json!({"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Updated synthetic connector ticket","description":"Updated synthetic description.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Done"})
+        } else if request.method == Method::TimePreview {
+            json!({"source":request.input,"instance":"https://synthetic.example.test/time","account":"synthetic-time-account","reference":"SYN-1"})
         } else {
             json!({"available":true,"privateHome":true})
         },
@@ -114,6 +116,47 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         let applied = std::fs::read(&marker)? == b"one synthetic effect";
         reply.output = json!({"receipt":{"operationId":id,"outcome":if applied {"applied"} else {"unknown"},"reference":format!("synthetic:{id}"),"observedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}});
+    }
+    if matches!(request.method, Method::TimeSend | Method::TimeReconcile) {
+        let root = request
+            .settings
+            .get("fixtureRoot")
+            .and_then(Value::as_str)
+            .ok_or("Marked synthetic root required")?;
+        let root = std::fs::canonicalize(root)?;
+        if std::fs::read_to_string(root.join(".extension-fixture"))? != "atelier-r04-synthetic-only"
+        {
+            return Err("Synthetic fixture marker required".into());
+        }
+        let id = request
+            .operation_id
+            .as_deref()
+            .filter(|id| extensions::identifier(id))
+            .ok_or("Synthetic operation ID required")?;
+        let marker = root.join(format!("{id}.time-effect"));
+        let proposal = if request.method == Method::TimeSend {
+            request.input.clone()
+        } else {
+            if request.input["method"] != "timeSend" || !request.input["action"].is_null() {
+                return Err("Unexpected synthetic time reconciliation scope".into());
+            }
+            request.input["input"].clone()
+        };
+        extensions::time_proposal(&proposal)?;
+        if request.method == Method::TimeSend {
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&marker)?;
+            serde_json::to_writer(&mut file, &proposal)?;
+            file.sync_all()?;
+            if fault == "lost-write" {
+                std::io::stdout().write_all(b"{lost synthetic time response")?;
+                return Ok(());
+            }
+        }
+        let observed: Value = serde_json::from_slice(&std::fs::read(&marker)?)?;
+        reply.output = json!({"time":observed,"receipt":{"operationId":id,"outcome":if observed==proposal {"applied"}else{"unknown"},"reference":format!("synthetic-time:{id}"),"observedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}});
     }
     match fault {
         "secret" => reply.output = json!({"nested":[{"value":request.secrets.get("token")}]}),

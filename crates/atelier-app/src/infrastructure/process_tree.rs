@@ -11,7 +11,7 @@ pub use windows::ContainedChild;
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-use unix::ContainedChild;
+pub use unix::ContainedChild;
 async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &str) -> Result<Vec<u8>> {
     let count = u64::try_from(limit.checked_add(1).ok_or("Limite de sortie invalide.")?)?;
     let mut bytes = Vec::new();
@@ -47,7 +47,7 @@ pub async fn capture_guarded(
     capture_child(child, input, timeout, limit, guard).await
 }
 #[cfg(windows)]
-pub(crate) async fn capture_pinned(
+pub async fn capture_pinned(
     command: &mut Command,
     pin: super::checked_file::CheckedFile,
     timeout: Duration,

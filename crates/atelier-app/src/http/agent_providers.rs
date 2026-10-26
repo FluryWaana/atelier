@@ -42,7 +42,6 @@ pub(super) async fn cli_status(State(state): State<Shared>) -> Response {
     )
 }
 
-#[cfg(windows)]
 pub(super) async fn diagnose(
     State(state): State<Shared>,
     Path(id): Path<String>,
@@ -59,6 +58,7 @@ pub(super) async fn diagnose(
         );
     }
     let vault = state.vault.clone();
+    #[cfg(windows)]
     let provider = id.clone();
     let profile = state
         .database
@@ -72,6 +72,7 @@ pub(super) async fn diagnose(
         Ok(profile) => crate::infrastructure::agent_diagnostics::diagnose(profile).await,
         Err(error) => Err(error),
     };
+    #[cfg(windows)]
     if let Ok(diagnostic) = &result
         && let Some(info) = &diagnostic.update_info
         && let Some(actual) = info
@@ -90,14 +91,6 @@ pub(super) async fn diagnose(
         }
     }
     response(result)
-}
-
-#[cfg(not(windows))]
-pub(super) async fn diagnose() -> Response {
-    failure(
-        StatusCode::SERVICE_UNAVAILABLE,
-        "Le diagnostic natif des agents attend sa qualification sur ce système.",
-    )
 }
 
 pub(super) async fn describe(State(state): State<Shared>) -> Response {

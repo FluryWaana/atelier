@@ -149,7 +149,7 @@ pub struct ContainedChild {
 }
 
 impl ContainedChild {
-    pub fn process_ids(&self) -> Result<Vec<u32>> {
+    pub async fn process_ids(&self) -> Result<Vec<u32>> {
         use windows_sys::Win32::{
             Foundation::ERROR_MORE_DATA,
             System::JobObjects::{JOBOBJECT_BASIC_PROCESS_ID_LIST, JobObjectBasicProcessIdList},

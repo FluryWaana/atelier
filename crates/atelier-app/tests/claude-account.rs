@@ -1,4 +1,3 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::claude_account::Client;
 use atelier_core::application::agent_account::State as AccountState;
 use axum::{

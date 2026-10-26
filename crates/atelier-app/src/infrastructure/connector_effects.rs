@@ -37,6 +37,9 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             Method::TicketsCreate if operation.action.is_empty() => {
                 protocol::ticket_creation(&operation.input)?;
             }
+            Method::TimeSend if operation.action.is_empty() => {
+                super::connector_time::proposal(&operation.input)?;
+            }
             _ => return Err("Opération distante de connecteur non prise en charge.".into()),
         }
         if operation.module != operation.manifest.id
@@ -68,7 +71,8 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
         if let Some(reply) = &operation.reply {
             if reply.protocol != protocol::PROTOCOL
                 || reply.module != operation.module
-                || !(reply.method == operation.method || reply.method == Method::Reconcile)
+                || !(reply.method == operation.method
+                    || reply.method == reconcile_method(operation.method))
                 || serde_json::to_vec(reply)?.len() > protocol::OUTPUT_LIMIT
                 || matches!(operation.state, Phase::Preparing | Phase::Sending)
                 || matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
@@ -100,6 +104,20 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             {
                 return Err(
                     "Une écriture confirmée exige une observation positive du module.".into(),
+                );
+            }
+            if operation.method == Method::TimeSend
+                && matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
+                && reply
+                    .output
+                    .get("time")
+                    .map(super::connector_time::proposal)
+                    .transpose()?
+                    .as_ref()
+                    != Some(&super::connector_time::proposal(&operation.input)?)
+            {
+                return Err(
+                    "Observation d’export de temps différente de la saisie confirmée.".into(),
                 );
             }
             if operation.state == Phase::Failed
@@ -175,6 +193,7 @@ pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result
         let payload=match input.method {
             Method::Action if input.input.is_null()=>serde_json::json!({"importedCount":super::connector_tickets::imported_count(store,&profile)?}),
             Method::TicketsCreate if input.action.is_empty()=>serde_json::to_value(protocol::ticket_creation(&input.input)?)?,
+            Method::TimeSend if input.action.is_empty()=>super::connector_time::prepare_preview(store,&profile,&input.input)?,
             _=>return Err("Opération distante de connecteur non prise en charge.".into())
         };
         let timestamp=now()?;
@@ -200,13 +219,20 @@ pub fn current(store: &Store<'_>, module: &str, id: &str) -> Result<Operation> {
         .find(|operation| operation.module == module && operation.id == id)
         .ok_or_else(|| "Opération de connecteur introuvable.".into())
 }
+fn reconcile_method(method: Method) -> Method {
+    if method == Method::TimeSend {
+        Method::TimeReconcile
+    } else {
+        Method::Reconcile
+    }
+}
 fn request(operation: &Operation, reconcile: bool) -> Request {
     Request {
         protocol: protocol::PROTOCOL.into(),
         request_id: "validate-effect".into(),
         module: operation.module.clone(),
         method: if reconcile {
-            Method::Reconcile
+            reconcile_method(operation.method)
         } else {
             operation.method
         },
@@ -281,6 +307,7 @@ fn change(
             .find(|operation| operation.id == id && operation.version == version)
             .ok_or("L’opération de connecteur a changé. Recharge son aperçu.")?;
         action(operation)?;
+        super::connector_time::synchronize(store, operation)?;
         touch(operation)?;
         let result = operation.clone();
         save(store, &operations)?;
@@ -307,6 +334,7 @@ pub fn sending(
         if !protocol::identifier(request_id) {
             return Err("Identité de requête de connecteur invalide.".into());
         }
+        super::connector_time::before_send(store, operation)?;
         operation.state = Phase::Sending;
         operation.request_id = Some(request_id.into());
         Ok(())
@@ -380,7 +408,7 @@ pub fn record(
             || reply.module != module
             || reply.method
                 != if reconcile {
-                    Method::Reconcile
+                    reconcile_method(operation.method)
                 } else {
                     operation.method
                 }
@@ -440,6 +468,7 @@ pub fn recover(store: &Store<'_>) -> Result<()> {
             };
             if let Some(next) = next {
                 operation.state = next;
+                super::connector_time::synchronize(store, operation)?;
                 touch(operation)?;
                 changed = true;
             }

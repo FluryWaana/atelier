@@ -364,7 +364,12 @@ fn restore_checked(
         .map(|row| (row.id.as_str(), &row.value))
         .collect();
     for current in store.documents::<Document>(Documents::Times)? {
-        for key in ["tempoExportHistory", "tempoExportEffect"] {
+        for key in [
+            "tempoExportHistory",
+            "tempoExportEffect",
+            "connectorExport",
+            "exportConnector",
+        ] {
             if let Some(effect) = current.get::<Value>(key)? {
                 let id = current
                     .get::<String>("id")?
@@ -377,7 +382,7 @@ fn restore_checked(
                     != Some(effect)
                 {
                     return Err(BackupFailure::Invalid(
-                        "Restauration refusée : l’historique des effets Tempo doit être conservé.",
+                        "Restauration refusée : l’historique des exports doit être conservé.",
                     )
                     .into());
                 }
@@ -396,7 +401,15 @@ fn restore_checked(
             false
         };
         if !same {
-            return Err(BackupFailure::Invalid("Restauration refusée : des envois Tempo plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.").into());
+            return Err(BackupFailure::Invalid("Restauration refusée : des envois plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.").into());
+        }
+        if current.raw("connectorExport").is_some() {
+            let saved = saved.ok_or("Saisie d’export du module absente de la sauvegarde.")?;
+            for key in ["cardId", "seconds", "date", "startTime", "description"] {
+                if saved.get::<Value>(key)? != current.get::<Value>(key)? {
+                    return Err(BackupFailure::Invalid("Restauration refusée : la saisie réellement exportée par le module doit être conservée.").into());
+                }
+            }
         }
     }
     let unfinished = "Cette sauvegarde contient des opérations inachevées.";
@@ -498,6 +511,31 @@ fn restore_checked(
 mod tests {
     use super::*;
     use crate::infrastructure::store::open;
+
+    #[test]
+    fn restore_cannot_remove_the_module_export_link_while_retaining_an_exported_label() {
+        let directory = tempfile::tempdir().unwrap();
+        let current = open(&directory.path().join("current.sqlite")).unwrap();
+        let store = Store::new(&current);
+        let mut entry:Document=serde_json::from_str(r#"{"id":"synthetic-time","cardId":"synthetic-card","seconds":120,"date":"2026-10-26","startTime":"10:00:00","description":"Synthetic human work","exportState":"exported"}"#).unwrap();
+        store.put(Documents::Times, &entry).unwrap();
+        let saved = directory.path().join("without-module-link.sqlite");
+        store.backup(&saved).unwrap();
+        entry.set("connectorExport", &"effect-synthetic").unwrap();
+        entry.set("exportConnector", &"synthetic-time").unwrap();
+        store.put(Documents::Times, &entry).unwrap();
+        let rescue = directory.path().join("must-not-be-created.sqlite");
+        assert!(restore(&store, &saved, &rescue).is_err());
+        assert!(!rescue.exists());
+        assert!(
+            store
+                .document::<Document>(Documents::Times, "synthetic-time")
+                .unwrap()
+                .unwrap()
+                .string_equals("connectorExport", "effect-synthetic")
+                .unwrap()
+        );
+    }
 
     #[test]
     fn incompatible_restore_preserves_current_data_and_creates_no_rescue() {

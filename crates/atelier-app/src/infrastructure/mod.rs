@@ -1,9 +1,7 @@
-#[cfg(windows)]
 mod agent_account;
 #[cfg(windows)]
 pub mod agent_cli;
 mod agent_context;
-#[cfg(windows)]
 pub mod agent_diagnostics;
 pub mod agent_providers;
 pub mod automation;
@@ -11,21 +9,18 @@ pub mod azure_tickets;
 pub mod backups;
 pub mod brainstorm;
 pub mod checked_file;
-#[cfg(windows)]
 pub mod claude_account;
-#[cfg(windows)]
 pub mod command_runs;
 pub mod commits;
 pub mod connector_effects;
 pub mod connector_tickets;
+pub mod connector_time;
 pub mod connectors;
 pub mod data_lock;
 pub mod database;
 mod dependencies;
-#[cfg(windows)]
 pub mod dev_servers;
 mod directory_link;
-#[cfg(windows)]
 pub mod extensions;
 pub mod files;
 pub mod folders;
@@ -37,7 +32,6 @@ pub mod git_push;
 pub mod git_transport;
 pub mod installation;
 pub mod installed;
-#[cfg(windows)]
 mod interactive_runs;
 pub mod jira;
 pub mod jira_creation;
@@ -54,7 +48,6 @@ pub mod package_archive;
 pub mod package_maintenance;
 pub mod portable_import;
 pub mod preparation;
-#[cfg(windows)]
 mod process_inspection;
 pub mod process_tree;
 pub mod projects;

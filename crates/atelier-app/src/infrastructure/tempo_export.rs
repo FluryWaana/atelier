@@ -41,6 +41,11 @@ pub fn selected(
     let entry = store
         .document::<Document>(Documents::Times, &id)?
         .ok_or("Entrée de temps introuvable.")?;
+    if entry.raw("connectorExport").is_some() {
+        return Err(
+            "Rapproche cet export dans le journal du module ; aucun envoi Tempo concurrent.".into(),
+        );
+    }
     if serde_json::to_value(&entry)? != serde_json::to_value(&input.expected)?
         || !entry.string_equals("cardId", &input.expected_card.id)?
     {

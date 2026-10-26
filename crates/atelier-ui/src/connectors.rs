@@ -375,6 +375,7 @@ pub fn Connectors(
     };
     view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
         <h3 id="connectors-heading">{move||i18n.text("Connecteurs locaux")}</h3>
+        <p class="field-help">{move||i18n.text("Sous Linux/macOS, l’arrêt vise le groupe de processus. Un programme qui se détache peut lui échapper ; évite les commandes qui lancent des démons et vérifie leur fermeture avant une restauration ou une mise à jour.")}</p>
         <fieldset disabled=move||loading.get()>
         <p>{move||i18n.text("Un connecteur est un programme de confiance exécuté avec les droits de ton compte. Ses secrets restent dans le coffre et lui sont transmis pour les opérations explicites.")}</p>
         <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("L’exécution de connecteurs n’est pas encore disponible sur cette plateforme.")}</p>
@@ -437,7 +438,7 @@ pub fn Connectors(
                 </div>
             </fieldset>
         </div>
-        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
+        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
         <h4>{move||i18n.text("Ajouter un connecteur")}</h4>
         <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
             <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("Préparer Azure Work Items intégré")}</button>

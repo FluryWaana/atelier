@@ -136,6 +136,61 @@ pub fn ticket_creation(input: &Value) -> Result<TicketCreation> {
     }
     Ok(input)
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimeTicket {
+    pub connector: String,
+    pub instance: String,
+    pub id: String,
+    pub key: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimeSource {
+    pub id: String,
+    pub card_id: String,
+    pub card_title: String,
+    pub ticket: Option<TimeTicket>,
+    pub seconds: u32,
+    pub date: String,
+    pub start_time: String,
+    pub description: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimeProposal {
+    pub source: TimeSource,
+    pub instance: String,
+    pub account: String,
+    pub reference: String,
+}
+pub fn time_proposal(value: &Value) -> Result<TimeProposal> {
+    let proposal: TimeProposal =
+        serde_json::from_value(value.clone()).map_err(|_| "Aperçu d’export de temps invalide.")?;
+    let source = &proposal.source;
+    if !text(&source.id, 100, false)
+        || !text(&source.card_id, 100, false)
+        || !text(&source.card_title, 300, false)
+        || !text(&source.description, 20_000, true)
+        || !text(&proposal.instance, 2000, false)
+        || !text(&proposal.account, 200, false)
+        || !text(&proposal.reference, 2000, false)
+        || source.ticket.as_ref().is_some_and(|ticket| {
+            !text(&ticket.connector, 100, false)
+                || !text(&ticket.instance, 2000, false)
+                || !text(&ticket.id, 200, false)
+                || !text(&ticket.key, 200, false)
+        })
+    {
+        return Err("Portée ou saisie de l’export de temps invalide.");
+    }
+    let entry = serde_json::json!({"seconds":source.seconds,"date":source.date,"startTime":source.start_time,"description":source.description});
+    let entry =
+        serde_json::from_str(&entry.to_string()).map_err(|_| "Saisie de temps invalide.")?;
+    crate::domain::time::time_fields(&entry)?;
+    Ok(proposal)
+}
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RemoteCommand {
@@ -463,12 +518,18 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
     {
         return Err("Méthodes du connecteur invalides ou répétées.");
     }
-    if methods
-        .iter()
-        .any(|method| method.effect() == Effect::Remote)
-        && !methods.contains(&Method::Reconcile)
-    {
+    if methods.iter().any(|method| {
+        method.effect() == Effect::Remote
+            && !methods.contains(&if *method == Method::TimeSend {
+                Method::TimeReconcile
+            } else {
+                Method::Reconcile
+            })
+    }) {
         return Err("Un connecteur qui écrit à distance doit proposer le rapprochement.");
+    }
+    if methods.contains(&Method::TimeSend) && !methods.contains(&Method::TimePreview) {
+        return Err("Un export de temps exige un aperçu de destination avant envoi.");
     }
     let mut ids = BTreeSet::new();
     for field in &manifest.fields {
@@ -707,7 +768,8 @@ mod tests {
         let mut bad = valid.clone();
         bad.methods.push(Method::TimeSend);
         assert!(validate_manifest(&bad).is_err());
-        bad.methods.push(Method::Reconcile);
+        bad.methods
+            .extend([Method::TimePreview, Method::TimeReconcile]);
         assert!(validate_manifest(&bad).is_ok());
         bad.methods.push(Method::Check);
         assert!(validate_manifest(&bad).is_err());
@@ -768,7 +830,7 @@ mod tests {
         let mut manifest = manifest();
         manifest
             .methods
-            .extend([Method::TimeSend, Method::Reconcile]);
+            .extend([Method::TimePreview, Method::TimeSend, Method::TimeReconcile]);
         assert!(effect(&manifest, &write).is_err());
         write.operation_id = Some("operation-synthetic".into());
         assert_eq!(effect(&manifest, &write), Ok(Effect::Remote));

@@ -243,7 +243,6 @@ impl CheckedFile {
         Ok(opened)
     }
 
-    #[cfg(any(windows, target_os = "linux", test))]
     pub(super) fn open_same(&self, path: &Path) -> Result<Self> {
         Self::open(path, &self.identity)
     }

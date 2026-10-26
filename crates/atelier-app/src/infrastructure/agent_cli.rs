@@ -82,6 +82,19 @@ impl Catalog {
         super::package::version_parts(version)?;
         Ok(version.into())
     }
+    pub async fn prepare_selected(
+        &self,
+        profile: &Document,
+        info: &UpdateInfo,
+        binary: std::path::PathBuf,
+        environment: BTreeMap<String, OsString>,
+    ) -> Result<(
+        tokio::process::Command,
+        super::checked_file::CheckedFile,
+        std::fs::File,
+    )> {
+        prepare_selected(profile, info, binary, environment, self).await
+    }
 }
 fn package(kind: &str) -> Result<&'static str> {
     match kind {
@@ -395,6 +408,9 @@ pub(super) fn change(
         if !allowed {
             return Err("Transition de mise à jour CLI invalide.".into());
         }
+        if (phase == Phase::Observed) != actual.is_some() {
+            return Err("Une observation CLI exige sa version réellement relue.".into());
+        }
         if let Some(version) = &actual {
             let actual = super::package::version_parts(version)?;
             let expected = super::package::version_parts(
@@ -423,6 +439,23 @@ pub(super) async fn prepare(
     super::checked_file::CheckedFile,
     std::fs::File,
 )> {
+    let (binary, environment) = super::agent_diagnostics::resolve(profile).await?;
+    Catalog::production()?
+        .prepare_selected(profile, info, binary, environment)
+        .await
+}
+
+async fn prepare_selected(
+    profile: &Document,
+    info: &UpdateInfo,
+    binary: std::path::PathBuf,
+    inherited: BTreeMap<String, OsString>,
+    catalog: &Catalog,
+) -> Result<(
+    tokio::process::Command,
+    super::checked_file::CheckedFile,
+    std::fs::File,
+)> {
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
     use cap_std::fs::OpenOptionsExt;
     let date = time::OffsetDateTime::parse(
@@ -443,7 +476,6 @@ pub(super) async fn prepare(
     let kind = profile
         .get::<String>("type")?
         .ok_or("Type d’agent absent.")?;
-    let (binary, inherited) = super::agent_diagnostics::resolve(profile).await?;
     let root = managed_root(&binary, &kind, &inherited)?
         .filter(|root| Some(root) == info.managed_root.as_ref())
         .ok_or("Cette installation doit être mise à jour avec son gestionnaire habituel.")?;
@@ -483,7 +515,7 @@ pub(super) async fn prepare(
     {
         return Err("La version installée a changé depuis le diagnostic.".into());
     }
-    if Catalog::production()?.latest(&kind).await?.as_str()
+    if catalog.latest(&kind).await?.as_str()
         != info
             .latest_version
             .as_deref()
@@ -585,6 +617,16 @@ mod tests {
                     None,
                     "synthetic sending",
                 )?;
+                assert!(
+                    change(
+                        store,
+                        &operation.id,
+                        Phase::Observed,
+                        None,
+                        "missing observation"
+                    )
+                    .is_err()
+                );
                 change(
                     store,
                     &operation.id,

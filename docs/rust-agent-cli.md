@@ -10,6 +10,8 @@ Le journal SQLite distingue préparation, commande en cours, version observée, 
 
 Runs, services, opérations distantes, file active, minuteurs, exports, sauvegardes/restaurations et mises à jour d’Atelier sont protégés contre le chevauchement. Les changements de profil ou de diagnostic retirent la confirmation dans l’interface bilingue.
 
-État : implémentation candidate Windows et scénarios purs/SQLite/HTTP locaux/fichier épinglé écrits. **Aucun build, test, scénario navigateur ou workflow exécuté.** Parcours positif de mise à jour d’un faux CLI, refus avant reprise du processus, interruption et interface réelle restent à qualifier dans la campagne finale. POSIX n’est pas pris en charge par cet incrément.
+État : implémentation candidate Windows et scénarios purs/SQLite/HTTP locaux/fichier épinglé écrits. `xtask/tests/agent-cli.rs` ajoute la préparation réelle contre un registre loopback et un faux CLI compilé dans un HOME synthétique : commande `update` unique, environnement filtré, version relue, verrou d’une autre instance, empreinte/version/date périmées, mauvais programme refusé avant reprise du thread et interruption des descendants. Aucun exécutable/compte réel n’est découvert par ces scénarios ; aucune configuration de test n’est ajoutée au produit.
+
+**Aucun build, test, scénario navigateur ou workflow exécuté.** Ces scénarios écrits ne constituent pas des preuves. Le parcours HTTP/navigateur complet et les mises à jour réelles des versions fournisseur restent à qualifier dans la campagne finale. POSIX n’est pas pris en charge par cet incrément.
 
 Référence : commande officielle Codex [`update`](https://learn.chatgpt.com/docs/cli/reference), et commandes natives de la référence fonctionnelle `lib/agent-updates.mjs`. Aucune installation initiale de CLI ni capacité Azure supplémentaire n’est ajoutée.

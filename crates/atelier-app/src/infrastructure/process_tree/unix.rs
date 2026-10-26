@@ -2,8 +2,8 @@ use crate::Result;
 use std::{io, process::ExitStatus, time::Duration};
 use tokio::process::{Child, Command};
 
-// Only bounded native tools use this adapter; process groups cannot contain agents that call setsid.
-pub(super) struct ContainedChild {
+// shortcut: process groups do not contain descendants using setsid/setpgid; use OS supervision if daemon isolation is required.
+pub struct ContainedChild {
     pub child: Child,
     group: Option<libc::pid_t>,
 }
@@ -16,6 +16,12 @@ impl ContainedChild {
             child,
             group: Some(group),
         })
+    }
+    pub async fn process_ids(&self) -> Result<Vec<u32>> {
+        let group = self
+            .group
+            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+        members(group).await
     }
     fn exited(&mut self) -> Result<bool> {
         let group = self
@@ -60,10 +66,22 @@ impl ContainedChild {
         Ok(())
     }
     pub async fn wait(&mut self) -> Result<ExitStatus> {
+        if self.group.is_none() {
+            return Ok(self.child.wait().await?);
+        }
         while !self.exited()? {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
         self.terminate()?;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        while !self.process_ids().await?.is_empty() {
+            if tokio::time::Instant::now() >= deadline {
+                return Err(
+                    "L’arrêt des membres du groupe de processus n’est pas confirmé.".into(),
+                );
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
         let status = self.child.wait().await?;
         self.group = None;
         Ok(status)
@@ -78,10 +96,141 @@ impl ContainedChild {
             .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
     }
 }
+
+async fn members(group: libc::pid_t) -> Result<Vec<u32>> {
+    use std::process::Stdio;
+    use tokio::io::AsyncReadExt;
+    let mut command = Command::new("/bin/ps");
+    command
+        .args(["-axo", "pid=,pgid=,stat="])
+        .env_clear()
+        .env("LC_ALL", "C")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .process_group(0)
+        .kill_on_drop(true);
+    let mut child = command.spawn()?;
+    let output = child.stdout.take().ok_or("Sortie d’inspection absente.")?;
+    let mut output = output.take(4 * 1024 * 1024 + 1);
+    let mut bytes = Vec::new();
+    let result = tokio::time::timeout(Duration::from_secs(2), async {
+        let (_, status) = tokio::try_join!(output.read_to_end(&mut bytes), child.wait())?;
+        if !status.success() || bytes.len() > 4 * 1024 * 1024 {
+            return Err("Inspection des processus indisponible ou excessive.".into());
+        }
+        parse_members(&bytes, group)
+    })
+    .await;
+    match result {
+        Ok(Ok(ids)) => Ok(ids),
+        result => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            match result {
+                Ok(Err(error)) => Err(error),
+                _ => Err("Délai d’inspection des processus dépassé.".into()),
+            }
+        }
+    }
+}
+
+fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
+    let text = std::str::from_utf8(bytes)?;
+    let mut members = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        if index >= 100_000 {
+            return Err("Trop de processus pour une inspection complète.".into());
+        }
+        let mut fields = line.split_whitespace();
+        let pid: u32 = fields.next().ok_or("PID absent.")?.parse()?;
+        let observed: libc::pid_t = fields.next().ok_or("Groupe absent.")?.parse()?;
+        let state = fields.next().ok_or("État du processus absent.")?;
+        if fields.next().is_some() || pid == 0 || state.is_empty() {
+            return Err("Réponse d’inspection des processus invalide.".into());
+        }
+        if observed == group && !state.starts_with('Z') {
+            // A reused PID or a member that moved groups cannot be attributed to this owner.
+            if unsafe { libc::getpgid(libc::pid_t::try_from(pid)?) } == group {
+                members.push(pid);
+            }
+        }
+    }
+    members.sort_unstable();
+    members.dedup();
+    if members.len() > 4096 {
+        return Err("Trop de processus dans le service (4 096 maximum).".into());
+    }
+    Ok(members)
+}
 impl Drop for ContainedChild {
     fn drop(&mut self) {
         if self.group.is_some() {
             let _ = self.terminate();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Stdio;
+    use tokio::io::AsyncReadExt;
+
+    fn shell(script: &str) -> Command {
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", script])
+            .env_clear()
+            .env("PATH", "/usr/bin:/bin")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        command
+    }
+
+    #[tokio::test]
+    async fn normal_descendants_are_stopped_before_the_leader_is_reaped() {
+        let mut command = shell("sleep 60 & printf '%s\\n' \"$!\"; exit 0");
+        let mut child = ContainedChild::spawn(&mut command).await.unwrap();
+        let group = child.group.unwrap();
+        let mut stdout = child.child.stdout.take().unwrap();
+        let status = tokio::time::timeout(Duration::from_secs(5), child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(status.success());
+        let mut bytes = Vec::new();
+        stdout.read_to_end(&mut bytes).await.unwrap();
+        let pid = std::str::from_utf8(&bytes)
+            .unwrap()
+            .trim()
+            .parse::<libc::pid_t>()
+            .unwrap();
+        assert_ne!(unsafe { libc::getpgid(pid) }, unsafe { libc::getpgrp() });
+        assert!(members(group).await.unwrap().is_empty());
+        assert!(child.group.is_none());
+        assert!(child.wait().await.unwrap().success());
+    }
+
+    #[tokio::test]
+    async fn explicit_stop_cleans_the_owned_group_and_does_not_signal_the_parent() {
+        let parent = unsafe { libc::getpgrp() };
+        let mut command = shell("sleep 60 & wait");
+        let mut child = ContainedChild::spawn(&mut command).await.unwrap();
+        let group = child.group.unwrap();
+        assert_ne!(group, parent);
+        let ids = child.process_ids().await.unwrap();
+        assert!(ids.contains(&u32::try_from(group).unwrap()));
+        child.stop().await.unwrap();
+        assert!(child.group.is_none());
+        assert_eq!(unsafe { libc::getpgrp() }, parent);
+    }
+
+    #[test]
+    fn malformed_or_overflowed_process_snapshots_are_never_partial_successes() {
+        assert!(parse_members(b"1 2 S unexpected\n", 2).is_err());
+        assert!(parse_members(b"4294967296 2 S\n", 2).is_err());
+        assert!(parse_members(b"1 2\n", 2).is_err());
     }
 }

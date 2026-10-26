@@ -68,7 +68,6 @@ pub(super) async fn refresh_ticket(
     )
 }
 
-#[cfg(windows)]
 use {
     crate::{Result, infrastructure::extensions::Executable},
     atelier_core::{
@@ -83,7 +82,6 @@ use {
     },
     std::{path::PathBuf, time::Duration},
 };
-#[cfg(windows)]
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Probe {
@@ -92,7 +90,6 @@ struct Probe {
     expected_revision: u64,
     confirmed: bool,
 }
-#[cfg(windows)]
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Removal {
@@ -100,7 +97,6 @@ struct Removal {
     confirmed: bool,
 }
 
-#[cfg(windows)]
 pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Response {
     let input: Probe = match super::jira_transitions::input(request).await {
         Ok(input) => input,
@@ -136,7 +132,6 @@ pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Resp
     )
 }
 
-#[cfg(windows)]
 pub(super) async fn install(State(state): State<Shared>, request: Request) -> Response {
     let input: Installation = match super::jira_transitions::input(request).await {
         Ok(input) => input,
@@ -180,7 +175,6 @@ pub(super) async fn install(State(state): State<Shared>, request: Request) -> Re
     )
 }
 
-#[cfg(windows)]
 pub(super) async fn configure(
     State(state): State<Shared>,
     Path(id): Path<String>,
@@ -202,7 +196,6 @@ pub(super) async fn configure(
             .await,
     )
 }
-#[cfg(windows)]
 pub(super) async fn remove(
     State(state): State<Shared>,
     Path(id): Path<String>,
@@ -229,7 +222,6 @@ pub(super) async fn remove(
     )
 }
 
-#[cfg(windows)]
 pub(super) async fn invoke(
     State(state): State<Shared>,
     Path(id): Path<String>,
@@ -270,6 +262,12 @@ pub(super) async fn invoke(
         )
         .await?;
         let action = request.action.clone();
+        let time_source =
+            if request.method == atelier_core::application::extensions::Method::TimePreview {
+                Some(request.input.clone())
+            } else {
+                None
+            };
         let reply = executable
             .prepare(&profile.manifest, request, Duration::from_secs(30))?
             .dispatch()
@@ -280,6 +278,13 @@ pub(super) async fn invoke(
             } else {
                 reply.message.into()
             });
+        }
+        if let Some(source) = time_source
+            && serde_json::to_value(
+                crate::infrastructure::connector_time::proposal(&reply.output)?.source,
+            )? != source
+        {
+            return Err("Le module a changé la saisie demandée dans son aperçu de temps.".into());
         }
         let report = Report {
             id: uuid::Uuid::new_v4().to_string(),

@@ -1,5 +1,3 @@
-#![cfg(windows)]
-
 use atelier_app::infrastructure::{
     command_runs::{CommandRuns, RunInput},
     database::Database,

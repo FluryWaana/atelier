@@ -30,6 +30,22 @@ fn ready(value: impl std::fmt::Display) -> io::Result<()> {
     io::stdout().flush()
 }
 
+fn no_inherited_credentials() -> Result<(), Box<dyn std::error::Error>> {
+    for key in [
+        "CODEX_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "JIRA_TOKEN",
+        "NODE_OPTIONS",
+    ] {
+        if std::env::var_os(key).is_some() {
+            return Err("Unexpected secret or injection in synthetic CLI environment".into());
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args
@@ -39,12 +55,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_slice()
     {
         [] => fake_extension::run(),
-        ["--version"] => {
-            for key in ["CODEX_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "JIRA_TOKEN", "NODE_OPTIONS"] {
-                if std::env::var_os(key).is_some() { return Err("Unexpected secret or injection in synthetic version environment".into()); }
+        #[cfg(unix)]
+        ["posix-detached-parent"] => {
+            use std::io::{BufRead, BufReader};
+            if std::fs::read_to_string(".agent-run-fixture")? != "atelier-r03-synthetic-only" {
+                return Err("Synthetic process scope marker missing".into());
             }
-            ready("synthetic-agent 0.0.7")?;
+            let mut child=Command::new(std::env::current_exe()?).arg("posix-detached-child")
+                .stdin(Stdio::inherit()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn()?;
+            let mut line=String::new();
+            BufReader::new(child.stdout.take().ok_or("Synthetic output missing")?).read_line(&mut line)?;
+            if line.trim()!=format!("detached-ready {}",child.id()) {return Err("Synthetic detach not confirmed".into());}
+            ready(line.trim())?;
             Ok(())
+        }
+        #[cfg(unix)]
+        ["posix-detached-child"] => {
+            use std::io::Read;
+            if std::fs::read_to_string(".agent-run-fixture")? != "atelier-r03-synthetic-only" {
+                return Err("Synthetic process scope marker missing".into());
+            }
+            // This child deliberately escapes its parent's group to demonstrate the POSIX limit.
+            if unsafe{libc::setsid()}<0 {return Err(std::io::Error::last_os_error().into());}
+            ready(format!("detached-ready {}",std::process::id()))?;
+            let _=std::io::stdin().read(&mut [0u8;1])?;
+            Ok(())
+        }
+        ["--version"] => {
+            no_inherited_credentials()?;
+            if std::fs::read_to_string(".cli-update-fixture").is_ok_and(|value|value=="atelier-r03-cli-update/synthetic-only") {
+                let version=std::fs::read_to_string("installed-version")?;
+                if !["0.0.7", "0.0.8"].contains(&version.as_str()){return Err("Synthetic installed version invalid".into());}
+                ready(format!("synthetic-agent {version}"))?;
+            } else {
+                ready("synthetic-agent 0.0.7")?;
+            }
+            Ok(())
+        }
+        ["update"] => {
+            no_inherited_credentials()?;
+            if std::fs::read_to_string(".cli-update-fixture")? != "atelier-r03-cli-update/synthetic-only" {
+                return Err("Synthetic update scope missing".into());
+            }
+            let mut marker=std::fs::OpenOptions::new().write(true).create_new(true).open("update-attempted")?;
+            marker.write_all(b"one synthetic native update")?;marker.sync_all()?;
+            match std::fs::read_to_string("update-mode")?.as_str() {
+                "success"=>{std::fs::write("installed-version","0.0.8")?;ready("private-cli-update-output")?;Ok(())},
+                "hang"=>{
+                    let mut command=Command::new(std::env::current_exe()?);
+                    #[cfg(windows)]
+                    {use std::os::windows::process::CommandExt;command.creation_flags(0x08000000);}
+                    let mut child=command.arg("idle").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+                    std::fs::write("update-child.pid",child.id().to_string())?;
+                    child.wait()?;Ok(())
+                },
+                _=>Err("Synthetic native update refused".into()),
+            }
         }
         ["login", "status"] => {
             if std::env::var("CODEX_HOME")?.ends_with("agents-ui-config") {
@@ -147,15 +213,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::io::copy(&mut io::stdin(), &mut io::stdout())?;
             Ok(())
         }
-        #[cfg(windows)]
         ["process-output", mode @ ("flood" | "hang" | "failure"), directory] => {
-            use std::{fs, os::windows::process::CommandExt};
+            use std::fs;
             let directory = fs::canonicalize(directory)?;
             if fs::read_to_string(directory.join(".process-fixture"))? != "atelier-m04-synthetic-only" {
                 return Err("Not a process test fixture".into());
             }
-            let mut child = Command::new(std::env::current_exe()?).arg("idle")
-                .creation_flags(0x08000000).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+            let mut command=Command::new(std::env::current_exe()?);
+            #[cfg(windows)]
+            { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
+            let mut child = command.arg("idle")
+                .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
             fs::write(directory.join("pid"), child.id().to_string())?;
             let deadline = std::time::Instant::now() + Duration::from_secs(10);
             while !directory.join("go").exists() {

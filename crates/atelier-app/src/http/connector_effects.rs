@@ -1,8 +1,6 @@
 use super::{Shared, failure, responses::response};
 use crate::infrastructure::connector_effects as workflow;
-#[cfg(windows)]
 use crate::infrastructure::extensions::Executable;
-#[cfg(windows)]
 use atelier_core::{application::extensions::RemoteOperation, contracts::ForgeWriteState as Phase};
 use atelier_core::{
     application::extensions::{RemoteCommand, RemotePreview},
@@ -34,12 +32,6 @@ pub(super) async fn preview(
     Path(module): Path<String>,
     request: Request,
 ) -> Response {
-    if !cfg!(windows) {
-        return failure(
-            StatusCode::CONFLICT,
-            "Les écritures de connecteurs ne sont pas disponibles sur cette plateforme.",
-        );
-    }
     let input: RemotePreview = match super::jira_transitions::input(request).await {
         Ok(value) => value,
         Err(response) => return response,
@@ -73,7 +65,6 @@ pub(super) async fn cancel(
     let _ = state.changed.send(());
     response(result)
 }
-#[cfg(windows)]
 pub(super) async fn send(
     State(state): State<Shared>,
     Path((module, id)): Path<(String, String)>,
@@ -81,7 +72,6 @@ pub(super) async fn send(
 ) -> Response {
     execute(state, module, id, request, false).await
 }
-#[cfg(windows)]
 pub(super) async fn reconcile(
     State(state): State<Shared>,
     Path((module, id)): Path<(String, String)>,
@@ -89,7 +79,6 @@ pub(super) async fn reconcile(
 ) -> Response {
     execute(state, module, id, request, true).await
 }
-#[cfg(windows)]
 async fn execute(
     state: Shared,
     module: String,

@@ -109,6 +109,17 @@ impl CommandRuns {
         let (replies, responses) = mpsc::channel(8);
         let interactive = matches!(&input, RunInput::Agent(_));
         let verification = matches!(&input, RunInput::Verification);
+        #[cfg(unix)]
+        {
+            let opened = match &directory {
+                RunDirectory::Worktree(repository) => repository.directory.try_clone()?,
+                RunDirectory::Conversation(directory) => cap_std::fs::Dir::open_ambient_dir(
+                    directory.path(),
+                    cap_std::ambient_authority(),
+                )?,
+            };
+            super::service_launch::anchor(&mut command, &opened)?;
+        }
         {
             let mut entries = self.entries();
             entries.retain(|_, entry| !*entry.done.borrow());
