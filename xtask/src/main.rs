@@ -84,6 +84,7 @@ fn build_ui() -> Result<()> {
     pinned("wasm-bindgen", "wasm-bindgen 0.2.129")?;
     run(command("trunk").args([
         "build",
+        "--release",
         "--config",
         "crates/atelier-ui/Trunk.toml",
         "--locked",

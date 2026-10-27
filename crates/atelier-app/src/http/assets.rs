@@ -92,7 +92,9 @@ pub(super) fn router(path: &Path, legacy: bool) -> Result<Router<Shared>> {
     for name in names {
         // Capture checked bytes once; replacing the path later cannot publish another file.
         let bytes = Bytes::from(
-            CheckedFile::open_in(&directory, Path::new(&name))?.read(64 * 1024 * 1024)?,
+            CheckedFile::open_in(&directory, Path::new(&name))?
+                .read(64 * 1024 * 1024)
+                .map_err(|error| format!("Asset {name} : {error}"))?,
         );
         total = total
             .checked_add(bytes.len())

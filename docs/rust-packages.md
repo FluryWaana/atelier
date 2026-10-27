@@ -20,6 +20,8 @@ Les avis sont générés depuis `cargo metadata --locked --offline` et les texte
 
 Dépendances de fabrication : toolchain/Cargo.lock du dépôt, Trunk 0.22.0, wasm-bindgen CLI 0.2.129, compilateur natif et SQLite embarqué ; Inno Setup 6 sous Windows, dpkg-deb/rpmbuild/desktop-file-validate sous Linux. Le conteneur ZIP et Ed25519 réutilisent les crates verrouillées. Aucun de ces outils de fabrication n’est ajouté au runtime applicatif.
 
+`cargo xtask build-ui` utilise le profil release de Trunk, avec les mêmes versions épinglées et dépendances verrouillées hors ligne. Le WASM debug n'est pas le payload de livraison. Le serveur conserve sa borne de 64 Mio par asset et de 256 Mio au total ; un refus de lecture identifie l'asset concerné.
+
 ## Signature synthétique
 
 ```text

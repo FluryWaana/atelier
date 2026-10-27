@@ -209,10 +209,10 @@ async fn stale_time_snapshots_cannot_overwrite_or_delete_a_newer_entry() {
         let body:Document=serde_json::from_str(r#"{"cardId":"synthetic-card","seconds":60,"date":"2026-10-25","startTime":"10:00:00","description":"Synthetic work"}"#)?;
         let initial=time_tracking::execute(store,&Clock,"create","",&body,||"synthetic-entry".into(),|_|false)?;
         let mut first=body.clone();first.set("expected",&initial)?;first.set("seconds",&90)?;
-        let current=time_tracking::execute(store,&Clock,"update","synthetic-entry",&first,||String::new(),|_|false)?;
-        let error=time_tracking::execute(store,&Clock,"update","synthetic-entry",&first,||String::new(),|_|false).err().unwrap();assert!(error.is::<time_tracking::TimeConflict>());
-        assert!(time_tracking::execute(store,&Clock,"remove","synthetic-entry",&first,||String::new(),|_|false).is_err());
-        let mut remove=Document::default();remove.set("expected",&current)?;time_tracking::execute(store,&Clock,"remove","synthetic-entry",&remove,||String::new(),|_|false)?;
+        let current=time_tracking::execute(store,&Clock,"update","synthetic-entry",&first,String::new,|_|false)?;
+        let error=time_tracking::execute(store,&Clock,"update","synthetic-entry",&first,String::new,|_|false).err().unwrap();assert!(error.is::<time_tracking::TimeConflict>());
+        assert!(time_tracking::execute(store,&Clock,"remove","synthetic-entry",&first,String::new,|_|false).is_err());
+        let mut remove=Document::default();remove.set("expected",&current)?;time_tracking::execute(store,&Clock,"remove","synthetic-entry",&remove,String::new,|_|false)?;
         assert!(store.document::<Document>(Documents::Times,"synthetic-entry")?.is_none());Ok(())
     }).await.unwrap();
     database.close().await.unwrap();

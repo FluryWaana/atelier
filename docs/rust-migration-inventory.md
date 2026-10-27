@@ -2,7 +2,7 @@
 
 Généré par `runtime/node.exe scripts/rust-migration-inventory.mjs`. Vérification sans écriture : ajouter `--check`.
 
-Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask et .cargo ; aucune donnée utilisateur ni artefact target. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.
+Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask, .cargo et docs/archive/node-delivery ; aucune donnée utilisateur ni artefact target. L’archive node-delivery est exclusivement historique : lanceurs/outils et tests Node de livraison se consultent au snapshot 7f48996, pas comme commandes actives. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.
 
 Les numéros de ligne servent à retrouver les contrats. Les extraits sont des repères lexicaux : les lignes voisines restent nécessaires pour interpréter validation, erreurs et limites.
 
@@ -17,10 +17,6 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [Cargo.lock](../Cargo.lock) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [Cargo.toml](../Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [LICENSE](../LICENSE) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [Start.cmd](../Start.cmd) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [Start.command](../Start.command) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [Stop.cmd](../Stop.cmd) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [Stop.command](../Stop.command) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/Cargo.toml](../crates/atelier-app/Cargo.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/examples/connector-demo.rs](../crates/atelier-app/examples/connector-demo.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-app/src/http.rs](../crates/atelier-app/src/http.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -310,8 +306,30 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/src/updates.rs](../crates/atelier-ui/src/updates.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/src/worktree.rs](../crates/atelier-ui/src/worktree.rs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/README.md](../docs/archive/node-delivery/README.md) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/Start.cmd](../docs/archive/node-delivery/Start.cmd) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/Start.command](../docs/archive/node-delivery/Start.command) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/Stop.cmd](../docs/archive/node-delivery/Stop.cmd) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/Stop.command](../docs/archive/node-delivery/Stop.command) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/launcher.mjs](../docs/archive/node-delivery/launcher.mjs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/Compress-Release.ps1](../docs/archive/node-delivery/scripts/Compress-Release.ps1) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/Expand-Update.ps1](../docs/archive/node-delivery/scripts/Expand-Update.ps1) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/MacTray.swift](../docs/archive/node-delivery/scripts/MacTray.swift) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/WindowsTray.cs](../docs/archive/node-delivery/scripts/WindowsTray.cs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/check-codeql.mjs](../docs/archive/node-delivery/scripts/check-codeql.mjs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/check-release.mjs](../docs/archive/node-delivery/scripts/check-release.mjs) | Archive historique Node — non active | [docs/archive/node-delivery/scripts/sign-release.mjs](../docs/archive/node-delivery/scripts/sign-release.mjs) |
+| [docs/archive/node-delivery/scripts/installers/AtelierKanban.cs](../docs/archive/node-delivery/scripts/installers/AtelierKanban.cs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/installers/atelier-kanban](../docs/archive/node-delivery/scripts/installers/atelier-kanban) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/installers/atelier-kanban.desktop](../docs/archive/node-delivery/scripts/installers/atelier-kanban.desktop) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/installers/check-stopped.sh](../docs/archive/node-delivery/scripts/installers/check-stopped.sh) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/installers/linux.spec](../docs/archive/node-delivery/scripts/installers/linux.spec) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/installers/windows.iss](../docs/archive/node-delivery/scripts/installers/windows.iss) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/linux-tray.py](../docs/archive/node-delivery/scripts/linux-tray.py) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/package-installers.mjs](../docs/archive/node-delivery/scripts/package-installers.mjs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/package.mjs](../docs/archive/node-delivery/scripts/package.mjs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/sign-release.mjs](../docs/archive/node-delivery/scripts/sign-release.mjs) | Archive historique Node — non active | Entrée, ressource ou appel calculé/injecté : voir matrice |
+| [docs/archive/node-delivery/scripts/update-worker.mjs](../docs/archive/node-delivery/scripts/update-worker.mjs) | Archive historique Node — non active | [docs/archive/node-delivery/launcher.mjs](../docs/archive/node-delivery/launcher.mjs) |
 | [examples/connectors/demo/index.mjs](../examples/connectors/demo/index.mjs) | Source / configuration | [test/connectors-api.test.mjs](../test/connectors-api.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
-| [launcher.mjs](../launcher.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [lib/agent-account.mjs](../lib/agent-account.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/agent-account.test.mjs](../test/agent-account.test.mjs) |
 | [lib/agent-credentials.mjs](../lib/agent-credentials.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/claude-account.mjs](../lib/claude-account.mjs), [test/agent-provider-security.test.mjs](../test/agent-provider-security.test.mjs) |
 | [lib/agent-interactions.mjs](../lib/agent-interactions.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs) |
@@ -335,7 +353,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/automation.mjs](../lib/automation.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/automation.test.mjs](../test/automation.test.mjs) |
 | [lib/backups.mjs](../lib/backups.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/automation-backups.test.mjs](../test/automation-backups.test.mjs), [test/fixtures/rust-backup-reference.mjs](../test/fixtures/rust-backup-reference.mjs), [test/fixtures/rust-utf16-reference.mjs](../test/fixtures/rust-utf16-reference.mjs), [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [lib/brainstorm.mjs](../lib/brainstorm.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/brainstorm.test.mjs](../test/brainstorm.test.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs) |
-| [lib/browser.mjs](../lib/browser.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [test/browser.test.mjs](../test/browser.test.mjs) |
+| [lib/browser.mjs](../lib/browser.mjs) | Source / configuration | [test/browser.test.mjs](../test/browser.test.mjs) |
 | [lib/checklist.mjs](../lib/checklist.mjs) | Source / configuration | [lib/brainstorm.mjs](../lib/brainstorm.mjs), [lib/ticket-preparation.mjs](../lib/ticket-preparation.mjs), [server.mjs](../server.mjs) |
 | [lib/claude-account.mjs](../lib/claude-account.mjs) | Source / configuration | [lib/agent-account.mjs](../lib/agent-account.mjs), [test/claude-account.test.mjs](../test/claude-account.test.mjs) |
 | [lib/connectors/azure.mjs](../lib/connectors/azure.mjs) | Source / configuration | [test/connectors.test.mjs](../test/connectors.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
@@ -349,14 +367,14 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/domain/checklist.mjs](../lib/domain/checklist.mjs) | Source / configuration | [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/checklist.mjs](../lib/checklist.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs) |
 | [lib/domain/connectors.mjs](../lib/domain/connectors.mjs) | Source / configuration | [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/infrastructure/connector-loader.mjs](../lib/infrastructure/connector-loader.mjs), [test/connectors.test.mjs](../test/connectors.test.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs), [test/i18n.test.mjs](../test/i18n.test.mjs) |
 | [lib/domain/paths.mjs](../lib/domain/paths.mjs) | Source / configuration | [lib/infrastructure/task-files.mjs](../lib/infrastructure/task-files.mjs), [lib/paths.mjs](../lib/paths.mjs), [public/app.js](../public/app.js), [public/connector-availability.mjs](../public/connector-availability.mjs), [public/ui-helpers.mjs](../public/ui-helpers.mjs), [public/views/board.mjs](../public/views/board.mjs), [public/views/brainstorm.mjs](../public/views/brainstorm.mjs), [public/views/card.mjs](../public/views/card.mjs), [public/views/processes.mjs](../public/views/processes.mjs), [public/views/project-settings.mjs](../public/views/project-settings.mjs), [public/views/projects.mjs](../public/views/projects.mjs), [public/views/task-editor.mjs](../public/views/task-editor.mjs), [public/views/time.mjs](../public/views/time.mjs), [test/brainstorm-page.test.mjs](../test/brainstorm-page.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/processes-ui.test.mjs](../test/processes-ui.test.mjs) |
-| [lib/domain/release-package.mjs](../lib/domain/release-package.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [lib/infrastructure/tar-package.mjs](../lib/infrastructure/tar-package.mjs), [scripts/package.mjs](../scripts/package.mjs), [scripts/update-worker.mjs](../scripts/update-worker.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/update-worker.test.mjs](../test/update-worker.test.mjs) |
-| [lib/domain/releases.mjs](../lib/domain/releases.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/updates.mjs](../lib/application/updates.mjs), [lib/infrastructure/github-releases.mjs](../lib/infrastructure/github-releases.mjs), [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs), [scripts/check-release.mjs](../scripts/check-release.mjs), [scripts/package-installers.mjs](../scripts/package-installers.mjs), [scripts/package.mjs](../scripts/package.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
+| [lib/domain/release-package.mjs](../lib/domain/release-package.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [lib/infrastructure/tar-package.mjs](../lib/infrastructure/tar-package.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/update-worker.test.mjs](../test/update-worker.test.mjs) |
+| [lib/domain/releases.mjs](../lib/domain/releases.mjs) | Source / configuration | [lib/agents.mjs](../lib/agents.mjs), [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/updates.mjs](../lib/application/updates.mjs), [lib/infrastructure/github-releases.mjs](../lib/infrastructure/github-releases.mjs), [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/platform.test.mjs](../test/platform.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
 | [lib/domain/reviews.mjs](../lib/domain/reviews.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [test/project-rules.test.mjs](../test/project-rules.test.mjs) |
 | [lib/domain/tasks.mjs](../lib/domain/tasks.mjs) | Source / configuration | [lib/application/automation.mjs](../lib/application/automation.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/reviews.mjs](../lib/reviews.mjs), [public/workflow.mjs](../public/workflow.mjs), [server.mjs](../server.mjs), [test/board-use-cases.test.mjs](../test/board-use-cases.test.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/tickets.mjs](../lib/domain/tickets.mjs) | Source / configuration | [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs) |
 | [lib/domain/time.mjs](../lib/domain/time.mjs) | Source / configuration | [lib/application/time-tracking.mjs](../lib/application/time-tracking.mjs), [lib/tempo-export.mjs](../lib/tempo-export.mjs), [lib/time-tracking.mjs](../lib/time-tracking.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs) |
 | [lib/domain/validation.mjs](../lib/domain/validation.mjs) | Source / configuration | [lib/application/agent-providers.mjs](../lib/application/agent-providers.mjs), [lib/application/card-workflows.mjs](../lib/application/card-workflows.mjs), [lib/application/card-worktrees.mjs](../lib/application/card-worktrees.mjs), [lib/application/connector-tickets.mjs](../lib/application/connector-tickets.mjs), [lib/application/connector-time.mjs](../lib/application/connector-time.mjs), [lib/application/connectors.mjs](../lib/application/connectors.mjs), [lib/application/jira-sync.mjs](../lib/application/jira-sync.mjs), [lib/application/projects.mjs](../lib/application/projects.mjs), [lib/application/runs.mjs](../lib/application/runs.mjs), [lib/application/settings.mjs](../lib/application/settings.mjs), [lib/application/tasks.mjs](../lib/application/tasks.mjs), [lib/domain/tasks.mjs](../lib/domain/tasks.mjs), [lib/jira-card-workflows.mjs](../lib/jira-card-workflows.mjs), [test/fixtures/rust-domain-reference.mjs](../test/fixtures/rust-domain-reference.mjs), [test/fixtures/rust-project-detection-reference.mjs](../test/fixtures/rust-project-detection-reference.mjs), [test/fixtures/rust-project-lifecycle-reference.mjs](../test/fixtures/rust-project-lifecycle-reference.mjs), [test/fixtures/rust-settings-reference.mjs](../test/fixtures/rust-settings-reference.mjs), [test/fixtures/rust-task-creation-reference.mjs](../test/fixtures/rust-task-creation-reference.mjs), [test/fixtures/rust-task-editing-reference.mjs](../test/fixtures/rust-task-editing-reference.mjs) |
-| [lib/folders.mjs](../lib/folders.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs) |
+| [lib/folders.mjs](../lib/folders.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/platform.test.mjs](../test/platform.test.mjs) |
 | [lib/forge-repositories.mjs](../lib/forge-repositories.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [lib/connectors/gitlab.mjs](../lib/connectors/gitlab.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
 | [lib/forges/github.mjs](../lib/forges/github.mjs) | Source / configuration | [lib/connectors/github.mjs](../lib/connectors/github.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
 | [lib/forges/gitlab.mjs](../lib/forges/gitlab.mjs) | Source / configuration | [lib/connectors/gitlab.mjs](../lib/connectors/gitlab.mjs), [test/forge-repositories.test.mjs](../test/forge-repositories.test.mjs) |
@@ -375,16 +393,16 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/infrastructure/connector-loader.mjs](../lib/infrastructure/connector-loader.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/connector-loader.test.mjs](../test/connector-loader.test.mjs), [test/connectors-api.test.mjs](../test/connectors-api.test.mjs) |
 | [lib/infrastructure/data-lock.mjs](../lib/infrastructure/data-lock.mjs) | Source / configuration | [lib/infrastructure/portable-import.mjs](../lib/infrastructure/portable-import.mjs), [test/data-lock.test.mjs](../test/data-lock.test.mjs), [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs), [test/fixtures/rust-lock-reference.mjs](../test/fixtures/rust-lock-reference.mjs) |
 | [lib/infrastructure/github-releases.mjs](../lib/infrastructure/github-releases.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
-| [lib/infrastructure/installation.mjs](../lib/infrastructure/installation.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [scripts/update-worker.mjs](../scripts/update-worker.mjs), [server.mjs](../server.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs) |
-| [lib/infrastructure/local-http.mjs](../lib/infrastructure/local-http.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs), [test/local-http.test.mjs](../test/local-http.test.mjs) |
-| [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [scripts/update-worker.mjs](../scripts/update-worker.mjs), [server.mjs](../server.mjs), [test/file-read-races.test.mjs](../test/file-read-races.test.mjs), [test/http-security.test.mjs](../test/http-security.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/linux-installed-check.mjs](../test/linux-installed-check.mjs), [test/local-http.test.mjs](../test/local-http.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs) |
-| [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs) | Source / configuration | [lib/infrastructure/windows-updater.mjs](../lib/infrastructure/windows-updater.mjs), [scripts/check-release.mjs](../scripts/check-release.mjs), [scripts/package-installers.mjs](../scripts/package-installers.mjs), [scripts/sign-release.mjs](../scripts/sign-release.mjs), [server.mjs](../server.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/release-signature.test.mjs](../test/release-signature.test.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
-| [lib/infrastructure/portable-import.mjs](../lib/infrastructure/portable-import.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs), [test/installation.test.mjs](../test/installation.test.mjs) |
-| [lib/infrastructure/release-public-key.mjs](../lib/infrastructure/release-public-key.mjs) | Source / configuration | [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs), [scripts/sign-release.mjs](../scripts/sign-release.mjs) |
-| [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [scripts/check-release.mjs](../scripts/check-release.mjs), [scripts/sign-release.mjs](../scripts/sign-release.mjs), [test/release-signature.test.mjs](../test/release-signature.test.mjs) |
+| [lib/infrastructure/installation.mjs](../lib/infrastructure/installation.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [server.mjs](../server.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs) |
+| [lib/infrastructure/local-http.mjs](../lib/infrastructure/local-http.mjs) | Source / configuration | [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs), [test/local-http.test.mjs](../test/local-http.test.mjs) |
+| [lib/infrastructure/local-session.mjs](../lib/infrastructure/local-session.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/file-read-races.test.mjs](../test/file-read-races.test.mjs), [test/http-security.test.mjs](../test/http-security.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/linux-installed-check.mjs](../test/linux-installed-check.mjs), [test/local-http.test.mjs](../test/local-http.test.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs) |
+| [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs) | Source / configuration | [lib/infrastructure/windows-updater.mjs](../lib/infrastructure/windows-updater.mjs), [server.mjs](../server.mjs), [test/installation.test.mjs](../test/installation.test.mjs), [test/installer-smoke.test.mjs](../test/installer-smoke.test.mjs), [test/release-signature.test.mjs](../test/release-signature.test.mjs), [test/updates.test.mjs](../test/updates.test.mjs) |
+| [lib/infrastructure/portable-import.mjs](../lib/infrastructure/portable-import.mjs) | Source / configuration | [test/fixtures/rust-import-reference.mjs](../test/fixtures/rust-import-reference.mjs), [test/installation.test.mjs](../test/installation.test.mjs) |
+| [lib/infrastructure/release-public-key.mjs](../lib/infrastructure/release-public-key.mjs) | Source / configuration | [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs) |
+| [lib/infrastructure/release-signature.mjs](../lib/infrastructure/release-signature.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [test/release-signature.test.mjs](../test/release-signature.test.mjs) |
 | [lib/infrastructure/settings-repository.mjs](../lib/infrastructure/settings-repository.mjs) | Source / configuration | [server.mjs](../server.mjs) |
 | [lib/infrastructure/sync-repository.mjs](../lib/infrastructure/sync-repository.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/jira-sync-races.test.mjs](../test/jira-sync-races.test.mjs) |
-| [lib/infrastructure/tar-package.mjs](../lib/infrastructure/tar-package.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [scripts/package-installers.mjs](../scripts/package-installers.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/tar-package.test.mjs](../test/tar-package.test.mjs) |
+| [lib/infrastructure/tar-package.mjs](../lib/infrastructure/tar-package.mjs) | Source / configuration | [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [test/release-smoke.test.mjs](../test/release-smoke.test.mjs), [test/tar-package.test.mjs](../test/tar-package.test.mjs) |
 | [lib/infrastructure/task-files.mjs](../lib/infrastructure/task-files.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/task-files.test.mjs](../test/task-files.test.mjs) |
 | [lib/infrastructure/transaction.mjs](../lib/infrastructure/transaction.mjs) | Source / configuration | [lib/infrastructure/board-repositories.mjs](../lib/infrastructure/board-repositories.mjs), [lib/infrastructure/settings-repository.mjs](../lib/infrastructure/settings-repository.mjs), [lib/infrastructure/sync-repository.mjs](../lib/infrastructure/sync-repository.mjs), [test/settings-use-cases.test.mjs](../test/settings-use-cases.test.mjs) |
 | [lib/infrastructure/tray.mjs](../lib/infrastructure/tray.mjs) | Source / configuration | [server.mjs](../server.mjs), [test/tray.test.mjs](../test/tray.test.mjs), [test/windows-tray.test.mjs](../test/windows-tray.test.mjs) |
@@ -448,27 +466,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [public/workflow.mjs](../public/workflow.mjs) | Source / configuration | [public/ui-helpers.mjs](../public/ui-helpers.mjs), [public/views/board.mjs](../public/views/board.mjs), [public/views/card.mjs](../public/views/card.mjs), [public/views/time.mjs](../public/views/time.mjs), [public/views/workspace-workflows.mjs](../public/views/workspace-workflows.mjs), [test/workflow-ui.test.mjs](../test/workflow-ui.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [runtime/LICENSE](../runtime/LICENSE) | Ressource / entrée | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [rust-toolchain.toml](../rust-toolchain.toml) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/Compress-Release.ps1](../scripts/Compress-Release.ps1) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/Expand-Update.ps1](../scripts/Expand-Update.ps1) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/MacTray.swift](../scripts/MacTray.swift) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/WindowsTray.cs](../scripts/WindowsTray.cs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/check-codeql.mjs](../scripts/check-codeql.mjs) | Source / configuration | [test/security-pipeline.test.mjs](../test/security-pipeline.test.mjs) |
-| [scripts/check-release.mjs](../scripts/check-release.mjs) | Source / configuration | [scripts/sign-release.mjs](../scripts/sign-release.mjs), [test/release-pipeline.test.mjs](../test/release-pipeline.test.mjs) |
-| [scripts/installers/AtelierKanban.cs](../scripts/installers/AtelierKanban.cs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/installers/atelier-kanban](../scripts/installers/atelier-kanban) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/installers/atelier-kanban.desktop](../scripts/installers/atelier-kanban.desktop) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/installers/check-stopped.sh](../scripts/installers/check-stopped.sh) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/installers/linux.spec](../scripts/installers/linux.spec) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/installers/windows.iss](../scripts/installers/windows.iss) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/linux-tray.py](../scripts/linux-tray.py) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/package-installers.mjs](../scripts/package-installers.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
-| [scripts/package.mjs](../scripts/package.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-keyring-accounts.sh](../scripts/rust-keyring-accounts.sh) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-keyring-macos-accounts.sh](../scripts/rust-keyring-macos-accounts.sh) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [scripts/rust-migration-inventory.mjs](../scripts/rust-migration-inventory.mjs) | Source / configuration | [test/rust-migration-reference.test.mjs](../test/rust-migration-reference.test.mjs) |
-| [scripts/sign-release.mjs](../scripts/sign-release.mjs) | Source / configuration | [test/release-pipeline.test.mjs](../test/release-pipeline.test.mjs) |
-| [scripts/update-worker.mjs](../scripts/update-worker.mjs) | Source / configuration | [launcher.mjs](../launcher.mjs), [lib/infrastructure/package-updater.mjs](../lib/infrastructure/package-updater.mjs), [server.mjs](../server.mjs), [test/update-worker.test.mjs](../test/update-worker.test.mjs) |
 | [server.mjs](../server.mjs) | Source / configuration | [scripts/rust-migration-baseline.mjs](../scripts/rust-migration-baseline.mjs), [test/agent-interactions.test.mjs](../test/agent-interactions.test.mjs), [test/agent-options.test.mjs](../test/agent-options.test.mjs), [test/agent-provider-security.test.mjs](../test/agent-provider-security.test.mjs), [test/agent-providers.test.mjs](../test/agent-providers.test.mjs), [test/agent-time-restart.test.mjs](../test/agent-time-restart.test.mjs), [test/agent-updates.test.mjs](../test/agent-updates.test.mjs), [test/app-version.test.mjs](../test/app-version.test.mjs), [test/application-worktrees.test.mjs](../test/application-worktrees.test.mjs), [test/automation-api.test.mjs](../test/automation-api.test.mjs), [test/brainstorm.test.mjs](../test/brainstorm.test.mjs), [test/card-actions.test.mjs](../test/card-actions.test.mjs), [test/card-creation.test.mjs](../test/card-creation.test.mjs), [test/connectors-api.test.mjs](../test/connectors-api.test.mjs), [test/default-agent.test.mjs](../test/default-agent.test.mjs), [test/dev-servers.test.mjs](../test/dev-servers.test.mjs), [test/http-security.test.mjs](../test/http-security.test.mjs), [test/jira-workflow.test.mjs](../test/jira-workflow.test.mjs), [test/project-detection.test.mjs](../test/project-detection.test.mjs), [test/project-lifecycle.test.mjs](../test/project-lifecycle.test.mjs), [test/project-location.test.mjs](../test/project-location.test.mjs), [test/static-assets.test.mjs](../test/static-assets.test.mjs), [test/task-files.test.mjs](../test/task-files.test.mjs), [test/ticket-preparation.test.mjs](../test/ticket-preparation.test.mjs), [test/updates-api.test.mjs](../test/updates-api.test.mjs), [test/workflow.test.mjs](../test/workflow.test.mjs) |
 | [styles/_atelier.scss](../styles/_atelier.scss) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
 | [styles/_dialogs.scss](../styles/_dialogs.scss) | Source / configuration | Entrée, ressource ou appel calculé/injecté : voir matrice |
@@ -661,6 +662,17 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 
 | Source | Repère |
 | --- | --- |
+| [docs/archive/node-delivery/scripts/check-codeql.mjs:5](../docs/archive/node-delivery/scripts/check-codeql.mjs#L5) | <code>export function checkCodeql(directory) {</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:9](../docs/archive/node-delivery/scripts/check-release.mjs#L9) | <code>export function checkRelease(root, { tag, target, nodeVersion = process.versions.node } = {}) {</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:21](../docs/archive/node-delivery/scripts/check-release.mjs#L21) | <code>export function releaseArtifacts(version) {</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:26](../docs/archive/node-delivery/scripts/check-release.mjs#L26) | <code>export function checkReleaseArtifacts(directory, version, repository = process.env.GITHUB_REPOSITORY, publicKey) {</code> |
+| [docs/archive/node-delivery/scripts/sign-release.mjs:9](../docs/archive/node-delivery/scripts/sign-release.mjs#L9) | <code>export function signRelease(directory, version, repository, privateKey, publicKey = releasePublicKey) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:9](../docs/archive/node-delivery/scripts/update-worker.mjs#L9) | <code>export function processExists(pid) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:13](../docs/archive/node-delivery/scripts/update-worker.mjs#L13) | <code>export function writeJson(path, value) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:16](../docs/archive/node-delivery/scripts/update-worker.mjs#L16) | <code>export function updateLock(root) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:26](../docs/archive/node-delivery/scripts/update-worker.mjs#L26) | <code>export function swapFiles(root, stage) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:37](../docs/archive/node-delivery/scripts/update-worker.mjs#L37) | <code>export function restoreFiles(root, stage) {</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:81](../docs/archive/node-delivery/scripts/update-worker.mjs#L81) | <code>export async function runUpdate(stage, recover = false) {</code> |
 | [examples/connectors/demo/index.mjs:11](../examples/connectors/demo/index.mjs#L11) | <code>export default {</code> |
 | [lib/agent-account.mjs:6](../lib/agent-account.mjs#L6) | <code>export function quotaWindows(result, redact = value =&gt; value) {</code> |
 | [lib/agent-account.mjs:20](../lib/agent-account.mjs#L20) | <code>export async function agentAccount(provider, spawnProcess = spawn, timeoutMs = 10000) {</code> |
@@ -927,17 +939,6 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [public/workflow.mjs:20](../public/workflow.mjs#L20) | <code>export function prLabel(pr) {</code> |
 | [public/workflow.mjs:32](../public/workflow.mjs#L32) | <code>export function cleanupCandidate(card) {</code> |
 | [public/workflow.mjs:36](../public/workflow.mjs#L36) | <code>export function workReport(cards, runs, times, day, allCards = cards) {</code> |
-| [scripts/check-codeql.mjs:5](../scripts/check-codeql.mjs#L5) | <code>export function checkCodeql(directory) {</code> |
-| [scripts/check-release.mjs:9](../scripts/check-release.mjs#L9) | <code>export function checkRelease(root, { tag, target, nodeVersion = process.versions.node } = {}) {</code> |
-| [scripts/check-release.mjs:21](../scripts/check-release.mjs#L21) | <code>export function releaseArtifacts(version) {</code> |
-| [scripts/check-release.mjs:26](../scripts/check-release.mjs#L26) | <code>export function checkReleaseArtifacts(directory, version, repository = process.env.GITHUB_REPOSITORY, publicKey) {</code> |
-| [scripts/sign-release.mjs:9](../scripts/sign-release.mjs#L9) | <code>export function signRelease(directory, version, repository, privateKey, publicKey = releasePublicKey) {</code> |
-| [scripts/update-worker.mjs:9](../scripts/update-worker.mjs#L9) | <code>export function processExists(pid) {</code> |
-| [scripts/update-worker.mjs:13](../scripts/update-worker.mjs#L13) | <code>export function writeJson(path, value) {</code> |
-| [scripts/update-worker.mjs:16](../scripts/update-worker.mjs#L16) | <code>export function updateLock(root) {</code> |
-| [scripts/update-worker.mjs:26](../scripts/update-worker.mjs#L26) | <code>export function swapFiles(root, stage) {</code> |
-| [scripts/update-worker.mjs:37](../scripts/update-worker.mjs#L37) | <code>export function restoreFiles(root, stage) {</code> |
-| [scripts/update-worker.mjs:81](../scripts/update-worker.mjs#L81) | <code>export async function runUpdate(stage, recover = false) {</code> |
 | [server.mjs:78](../server.mjs#L78) | <code>export function createApp({ builtinModules = builtinConnectorModules, connectorModules = [], connectorErrors = [], dataDir = dataDirectory(root), resumeSession = false, launch = startAgent, requestJira = jiraRequest, probe = agentStatus, readAgentAccount = agentAccount, installAgentUpdate = updateAgent, getAgentUpdateInfo = agentUpdateInfo, previewPR = previewPullRequest, publishPR = publishPullRequest, refreshPR = refreshPullRequest, pickFolder = chooseFolder, reviewPR = prepareReview, requestTempo = tempoRequest, verify = runVerification, protectTokens, updateOptions, shutdownForUpdate, shutdown } = {}) {</code> |
 | [test/fixtures/migration-data.mjs:1](../test/fixtures/migration-data.mjs#L1) | <code>export const migrationShape = Object.freeze({ projects: 10, cards: 500, runs: 100, times: 200, logs: 10000 });</code> |
 | [test/fixtures/migration-data.mjs:2](../test/fixtures/migration-data.mjs#L2) | <code>export const migrationDate = '2026-10-23T08:00:00.123Z';</code> |
@@ -1063,9 +1064,9 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/src/http/assets.rs:5](../crates/atelier-app/src/http/assets.rs#L5) | <code>use std::path::Path;</code> |
 | [crates/atelier-app/src/http/assets.rs:8](../crates/atelier-app/src/http/assets.rs#L8) | <code>pub const LEGACY_ASSETS: &amp;[&amp;str] = &amp;[</code> |
 | [crates/atelier-app/src/http/assets.rs:49](../crates/atelier-app/src/http/assets.rs#L49) | <code>pub fn wasm_asset_name(name: &amp;str) -&gt; bool {</code> |
-| [crates/atelier-app/src/http/assets.rs:128](../crates/atelier-app/src/http/assets.rs#L128) | <code>mod tests {</code> |
-| [crates/atelier-app/src/http/assets.rs:129](../crates/atelier-app/src/http/assets.rs#L129) | <code>use super::*;</code> |
-| [crates/atelier-app/src/http/assets.rs:130](../crates/atelier-app/src/http/assets.rs#L130) | <code>#[test]</code> |
+| [crates/atelier-app/src/http/assets.rs:130](../crates/atelier-app/src/http/assets.rs#L130) | <code>mod tests {</code> |
+| [crates/atelier-app/src/http/assets.rs:131](../crates/atelier-app/src/http/assets.rs#L131) | <code>use super::*;</code> |
+| [crates/atelier-app/src/http/assets.rs:132](../crates/atelier-app/src/http/assets.rs#L132) | <code>#[test]</code> |
 | [crates/atelier-app/src/http/automation.rs:1](../crates/atelier-app/src/http/automation.rs#L1) | <code>use super::{Shared, failure, object, responses::response};</code> |
 | [crates/atelier-app/src/http/automation.rs:2](../crates/atelier-app/src/http/automation.rs#L2) | <code>use crate::{</code> |
 | [crates/atelier-app/src/http/automation.rs:6](../crates/atelier-app/src/http/automation.rs#L6) | <code>use atelier_core::{</code> |
@@ -5023,10 +5024,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/main.rs:14](../xtask/src/main.rs#L14) | <code>mod ui;</code> |
 | [xtask/src/main.rs:15](../xtask/src/main.rs#L15) | <code>mod update_flow;</code> |
 | [xtask/src/main.rs:29](../xtask/src/main.rs#L29) | <code>use std::os::windows::process::CommandExt;</code> |
-| [xtask/src/main.rs:179](../xtask/src/main.rs#L179) | <code>mod tests {</code> |
-| [xtask/src/main.rs:180](../xtask/src/main.rs#L180) | <code>use super::*;</code> |
-| [xtask/src/main.rs:181](../xtask/src/main.rs#L181) | <code>#[test]</code> |
-| [xtask/src/main.rs:218](../xtask/src/main.rs#L218) | <code>#[test]</code> |
+| [xtask/src/main.rs:180](../xtask/src/main.rs#L180) | <code>mod tests {</code> |
+| [xtask/src/main.rs:181](../xtask/src/main.rs#L181) | <code>use super::*;</code> |
+| [xtask/src/main.rs:182](../xtask/src/main.rs#L182) | <code>#[test]</code> |
+| [xtask/src/main.rs:219](../xtask/src/main.rs#L219) | <code>#[test]</code> |
 | [xtask/src/notices.rs:1](../xtask/src/notices.rs#L1) | <code>use atelier_app::{</code> |
 | [xtask/src/notices.rs:5](../xtask/src/notices.rs#L5) | <code>use serde_json::Value;</code> |
 | [xtask/src/notices.rs:6](../xtask/src/notices.rs#L6) | <code>use std::{collections::BTreeSet, fs, path::Path, time::Duration};</code> |
@@ -5629,29 +5630,23 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 
 | Source | Repère |
 | --- | --- |
-| [.github/workflows/rust.yml:78](../.github/workflows/rust.yml#L78) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
-| [.github/workflows/rust.yml:92](../.github/workflows/rust.yml#L92) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
-| [.github/workflows/rust.yml:96](../.github/workflows/rust.yml#L96) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
-| [.github/workflows/rust.yml:97](../.github/workflows/rust.yml#L97) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
-| [.github/workflows/rust.yml:103](../.github/workflows/rust.yml#L103) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
-| [.github/workflows/rust.yml:202](../.github/workflows/rust.yml#L202) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
-| [.github/workflows/rust.yml:206](../.github/workflows/rust.yml#L206) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
-| [.github/workflows/rust.yml:215](../.github/workflows/rust.yml#L215) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
-| [.github/workflows/rust.yml:216](../.github/workflows/rust.yml#L216) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
-| [.github/workflows/rust.yml:217](../.github/workflows/rust.yml#L217) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
-| [.github/workflows/rust.yml:218](../.github/workflows/rust.yml#L218) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
-| [.github/workflows/rust.yml:258](../.github/workflows/rust.yml#L258) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
-| [.github/workflows/rust.yml:261](../.github/workflows/rust.yml#L261) | <code>export ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver"</code> |
-| [.github/workflows/rust.yml:311](../.github/workflows/rust.yml#L311) | <code>Add-Content -LiteralPath $env:GITHUB_ENV -Value "ATELIER_ISCC=$compiler"</code> |
-| [.github/workflows/rust.yml:337](../.github/workflows/rust.yml#L337) | <code>delivery="$PWD/.artifacts/rust-delivery"</code> |
-| [.github/workflows/rust.yml:338](../.github/workflows/rust.yml#L338) | <code>docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" ubuntu:24.04 sh /workspace/xtask/packaging/qualify-linux.sh deb</code> |
-| [.github/workflows/rust.yml:339](../.github/workflows/rust.yml#L339) | <code>docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm</code> |
-| [Start.cmd:2](../Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
-| [Start.command:3](../Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
-| [Start.command:4](../Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
-| [Stop.cmd:2](../Stop.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" --stop</code> |
-| [Stop.command:3](../Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
-| [Stop.command:4](../Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
+| [.github/workflows/rust.yml:79](../.github/workflows/rust.yml#L79) | <code>$source = Join-Path $env:GITHUB_WORKSPACE 'target/debug/native-fixture.exe'</code> |
+| [.github/workflows/rust.yml:93](../.github/workflows/rust.yml#L93) | <code>if ($LASTEXITCODE -ne 0) { throw 'Fixture permissions failed' }</code> |
+| [.github/workflows/rust.yml:97](../.github/workflows/rust.yml#L97) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI positive control failed' }</code> |
+| [.github/workflows/rust.yml:98](../.github/workflows/rust.yml#L98) | <code>$credential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)</code> |
+| [.github/workflows/rust.yml:104](../.github/workflows/rust.yml#L104) | <code>if ($LASTEXITCODE -ne 0) { throw 'DPAPI reciprocal refusal failed' }</code> |
+| [.github/workflows/rust.yml:212](../.github/workflows/rust.yml#L212) | <code>- run: echo "${{ runner.temp }}/atelier-tools/bin" &gt;&gt; "$GITHUB_PATH"</code> |
+| [.github/workflows/rust.yml:216](../.github/workflows/rust.yml#L216) | <code>run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'</code> |
+| [.github/workflows/rust.yml:225](../.github/workflows/rust.yml#L225) | <code>$env:ATELIER_WEBDRIVER = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'</code> |
+| [.github/workflows/rust.yml:226](../.github/workflows/rust.yml#L226) | <code>$env:ATELIER_TEST_BROWSER = 'edge'</code> |
+| [.github/workflows/rust.yml:227](../.github/workflows/rust.yml#L227) | <code>&amp; $env:ATELIER_WEBDRIVER --version</code> |
+| [.github/workflows/rust.yml:228](../.github/workflows/rust.yml#L228) | <code>if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }</code> |
+| [.github/workflows/rust.yml:268](../.github/workflows/rust.yml#L268) | <code>"$GECKOWEBDRIVER/geckodriver" --version</code> |
+| [.github/workflows/rust.yml:271](../.github/workflows/rust.yml#L271) | <code>export ATELIER_WEBDRIVER="$GECKOWEBDRIVER/geckodriver"</code> |
+| [.github/workflows/rust.yml:329](../.github/workflows/rust.yml#L329) | <code>Add-Content -LiteralPath $env:GITHUB_ENV -Value "ATELIER_ISCC=$compiler"</code> |
+| [.github/workflows/rust.yml:355](../.github/workflows/rust.yml#L355) | <code>delivery="$PWD/.artifacts/rust-delivery"</code> |
+| [.github/workflows/rust.yml:356](../.github/workflows/rust.yml#L356) | <code>docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" ubuntu:24.04 sh /workspace/xtask/packaging/qualify-linux.sh deb</code> |
+| [.github/workflows/rust.yml:357](../.github/workflows/rust.yml#L357) | <code>docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm</code> |
 | [crates/atelier-app/src/http/runs.rs:151](../crates/atelier-app/src/http/runs.rs#L151) | <code>let args=match kind.as_str() {</code> |
 | [crates/atelier-app/src/http/runs.rs:153](../crates/atelier-app/src/http/runs.rs#L153) | <code>"codex"=&gt; { let mut args=vec!["app-server".to_owned()]; if !api_key.is_empty() { args.extend(["-c".into(),"cli_auth_credentials_store=\"ephemeral\"".into()]); } args },</code> |
 | [crates/atelier-app/src/http/runs.rs:155](../crates/atelier-app/src/http/runs.rs#L155) | <code>let mut args=vec!["-p".into(),"--output-format".into(),"stream-json".into(),"--input-format".into(),"stream-json".into(),"--verbose".into(),"--include-partial-messages".into(),"--permission-mode".into(),if mode=="edit"{"default".into()}else{"plan".into()}];</code> |
@@ -5905,11 +5900,47 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/domain-contracts.rs:58](../crates/atelier-core/tests/domain-contracts.rs#L58) | <code>args[2] == "win32"</code> |
 | [crates/atelier-ui/src/agent_profiles.rs:73](../crates/atelier-ui/src/agent_profiles.rs#L73) | <code>let args: Vec&lt;String&gt; = serde_json::from_str(&amp;self.values[key])</code> |
 | [crates/atelier-ui/src/agent_profiles.rs:75](../crates/atelier-ui/src/agent_profiles.rs#L75) | <code>body[key] = serde_json::json!(args);</code> |
-| [launcher.mjs:16](../launcher.mjs#L16) | <code>const port = Number(process.env.PORT \|\| 4317);</code> |
-| [launcher.mjs:36](../launcher.mjs#L36) | <code>if (process.argv.includes('--import-data')) {</code> |
-| [launcher.mjs:39](../launcher.mjs#L39) | <code>const source = process.argv[process.argv.indexOf('--import-data') + 1] \|\| await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');</code> |
-| [launcher.mjs:43](../launcher.mjs#L43) | <code>if (process.argv.includes('--stop')) {</code> |
-| [launcher.mjs:65](../launcher.mjs#L65) | <code>if (!process.argv.includes('--no-browser')) {</code> |
+| [docs/archive/node-delivery/Start.cmd:2](../docs/archive/node-delivery/Start.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" %*</code> |
+| [docs/archive/node-delivery/Start.command:3](../docs/archive/node-delivery/Start.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
+| [docs/archive/node-delivery/Start.command:4](../docs/archive/node-delivery/Start.command#L4) | <code>exec ./runtime/node launcher.mjs "$@"</code> |
+| [docs/archive/node-delivery/Stop.cmd:2](../docs/archive/node-delivery/Stop.cmd#L2) | <code>"%~dp0runtime\node.exe" "%~dp0launcher.mjs" --stop</code> |
+| [docs/archive/node-delivery/Stop.command:3](../docs/archive/node-delivery/Stop.command#L3) | <code>cd -- "$(dirname -- "$0")"</code> |
+| [docs/archive/node-delivery/Stop.command:4](../docs/archive/node-delivery/Stop.command#L4) | <code>exec ./runtime/node launcher.mjs --stop "$@"</code> |
+| [docs/archive/node-delivery/launcher.mjs:16](../docs/archive/node-delivery/launcher.mjs#L16) | <code>const port = Number(process.env.PORT \|\| 4317);</code> |
+| [docs/archive/node-delivery/launcher.mjs:36](../docs/archive/node-delivery/launcher.mjs#L36) | <code>if (process.argv.includes('--import-data')) {</code> |
+| [docs/archive/node-delivery/launcher.mjs:39](../docs/archive/node-delivery/launcher.mjs#L39) | <code>const source = process.argv[process.argv.indexOf('--import-data') + 1] \|\| await chooseFolder('', undefined, process.platform, 'Choisir le dossier data de la version portable');</code> |
+| [docs/archive/node-delivery/launcher.mjs:43](../docs/archive/node-delivery/launcher.mjs#L43) | <code>if (process.argv.includes('--stop')) {</code> |
+| [docs/archive/node-delivery/launcher.mjs:65](../docs/archive/node-delivery/launcher.mjs#L65) | <code>if (!process.argv.includes('--no-browser')) {</code> |
+| [docs/archive/node-delivery/scripts/Compress-Release.ps1:1](../docs/archive/node-delivery/scripts/Compress-Release.ps1#L1) | <code>param([Parameter(Mandatory)][string]$Source, [Parameter(Mandatory)][string]$Destination)</code> |
+| [docs/archive/node-delivery/scripts/Expand-Update.ps1:1](../docs/archive/node-delivery/scripts/Expand-Update.ps1#L1) | <code>param([Parameter(Mandatory)][string]$Archive, [Parameter(Mandatory)][string]$Destination)</code> |
+| [docs/archive/node-delivery/scripts/MacTray.swift:4](../docs/archive/node-delivery/scripts/MacTray.swift#L4) | <code>let root = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent().deletingLastPathComponent()</code> |
+| [docs/archive/node-delivery/scripts/MacTray.swift:36](../docs/archive/node-delivery/scripts/MacTray.swift#L36) | <code>menu.items.forEach { $0.isEnabled = false }</code> |
+| [docs/archive/node-delivery/scripts/MacTray.swift:60](../docs/archive/node-delivery/scripts/MacTray.swift#L60) | <code>self.menu.items.forEach { $0.isEnabled = true }</code> |
+| [docs/archive/node-delivery/scripts/WindowsTray.cs:28](../docs/archive/node-delivery/scripts/WindowsTray.cs#L28) | <code>menu.Items.Add("Ouvrir Atelier", null, async (sender, args) =&gt; await Launch(""));</code> |
+| [docs/archive/node-delivery/scripts/WindowsTray.cs:29](../docs/archive/node-delivery/scripts/WindowsTray.cs#L29) | <code>menu.Items.Add("Quitter", null, async (sender, args) =&gt; await Launch("--stop"));</code> |
+| [docs/archive/node-delivery/scripts/WindowsTray.cs:31](../docs/archive/node-delivery/scripts/WindowsTray.cs#L31) | <code>icon.DoubleClick += async (sender, args) =&gt; await Launch("");</code> |
+| [docs/archive/node-delivery/scripts/WindowsTray.cs:34](../docs/archive/node-delivery/scripts/WindowsTray.cs#L34) | <code>timer.Tick += (sender, args) =&gt; { if (disconnected.IsCompleted) ExitThread(); };</code> |
+| [docs/archive/node-delivery/scripts/check-codeql.mjs:27](../docs/archive/node-delivery/scripts/check-codeql.mjs#L27) | <code>checkCodeql(process.argv[2]);</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:26](../docs/archive/node-delivery/scripts/check-release.mjs#L26) | <code>export function checkReleaseArtifacts(directory, version, repository = process.env.GITHUB_REPOSITORY, publicKey) {</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:42](../docs/archive/node-delivery/scripts/check-release.mjs#L42) | <code>tag: process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : undefined,</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:43](../docs/archive/node-delivery/scripts/check-release.mjs#L43) | <code>target: process.env.RELEASE_TARGET,</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:45](../docs/archive/node-delivery/scripts/check-release.mjs#L45) | <code>if (process.argv[2]) checkReleaseArtifacts(resolve(process.argv[2]), version);</code> |
+| [docs/archive/node-delivery/scripts/check-release.mjs:46](../docs/archive/node-delivery/scripts/check-release.mjs#L46) | <code>console.log(&#96;Release ${version} vérifiée${process.argv[2] ? ' : archives, installateurs, SHA256 et signatures valides' : ''}.&#96;);</code> |
+| [docs/archive/node-delivery/scripts/installers/AtelierKanban.cs:8](../docs/archive/node-delivery/scripts/installers/AtelierKanban.cs#L8) | <code>static int Main(string[] args) {</code> |
+| [docs/archive/node-delivery/scripts/installers/AtelierKanban.cs:11](../docs/archive/node-delivery/scripts/installers/AtelierKanban.cs#L11) | <code>var mode = args.Length == 0 ? "" : args[0];</code> |
+| [docs/archive/node-delivery/scripts/installers/AtelierKanban.cs:12](../docs/archive/node-delivery/scripts/installers/AtelierKanban.cs#L12) | <code>if (args.Length &gt; 1 \|\| (mode != "" &amp;&amp; mode != "--stop" &amp;&amp; mode != "--import-data" &amp;&amp; mode != "--no-browser"))</code> |
+| [docs/archive/node-delivery/scripts/installers/atelier-kanban:3](../docs/archive/node-delivery/scripts/installers/atelier-kanban#L3) | <code>exec /opt/atelier-kanban/runtime/node /opt/atelier-kanban/launcher.mjs "$@"</code> |
+| [docs/archive/node-delivery/scripts/package-installers.mjs:20](../docs/archive/node-delivery/scripts/package-installers.mjs#L20) | <code>const run = (command, args) =&gt; execFileSync(command, args, { windowsHide: true, stdio: 'inherit' });</code> |
+| [docs/archive/node-delivery/scripts/package-installers.mjs:24](../docs/archive/node-delivery/scripts/package-installers.mjs#L24) | <code>const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');</code> |
+| [docs/archive/node-delivery/scripts/package-installers.mjs:26](../docs/archive/node-delivery/scripts/package-installers.mjs#L26) | <code>const iscc = process.env.ISCC \|\| join(process.env['ProgramFiles(x86)'], 'Inno Setup 6', 'ISCC.exe');</code> |
+| [docs/archive/node-delivery/scripts/package.mjs:12](../docs/archive/node-delivery/scripts/package.mjs#L12) | <code>const repository = githubRepository(process.argv[2] \|\| process.env.GITHUB_REPOSITORY);</code> |
+| [docs/archive/node-delivery/scripts/package.mjs:16](../docs/archive/node-delivery/scripts/package.mjs#L16) | <code>const runtimeLicense = process.env.NODE_LICENSE \|\| join(dirname(process.execPath), 'LICENSE');</code> |
+| [docs/archive/node-delivery/scripts/package.mjs:27](../docs/archive/node-delivery/scripts/package.mjs#L27) | <code>const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');</code> |
+| [docs/archive/node-delivery/scripts/package.mjs:34](../docs/archive/node-delivery/scripts/package.mjs#L34) | <code>execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });</code> |
+| [docs/archive/node-delivery/scripts/sign-release.mjs:24](../docs/archive/node-delivery/scripts/sign-release.mjs#L24) | <code>if (!process.env.RELEASE_SIGNING_KEY) throw new Error('Secret RELEASE_SIGNING_KEY requis pour publier.');</code> |
+| [docs/archive/node-delivery/scripts/sign-release.mjs:25](../docs/archive/node-delivery/scripts/sign-release.mjs#L25) | <code>signRelease(process.argv[2], version, process.env.GITHUB_REPOSITORY, process.env.RELEASE_SIGNING_KEY);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:67](../docs/archive/node-delivery/scripts/update-worker.mjs#L67) | <code>const child = spawn(join(root, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'), [join(root, 'server.mjs')], { cwd: root, windowsHide: true, detached: true, stdio: ['ignore', out, err], env: { ...process.env, PORT: String(port), ATELIER_UPDATE_TOKEN: token } });</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:123](../docs/archive/node-delivery/scripts/update-worker.mjs#L123) | <code>runUpdate(process.argv[2], process.argv.includes('--recover')).catch(error =&gt; { console.error(error); process.exitCode = 1; });</code> |
 | [lib/agent-account.mjs:27](../lib/agent-account.mjs#L27) | <code>const redact = redactSecrets([env.CODEX_API_KEY, env.OPENAI_API_KEY, env.CODEX_ACCESS_TOKEN]);</code> |
 | [lib/agent-updates.mjs:7](../lib/agent-updates.mjs#L7) | <code>export function agentUpdateInfo(provider, resolve = executable, environment = process.env) {</code> |
 | [lib/agent-updates.mjs:10](../lib/agent-updates.mjs#L10) | <code>const binary = resolve(provider.type), home = environment.USERPROFILE \|\| environment.HOME;</code> |
@@ -6002,32 +6033,6 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [lib/worktrees.mjs:9](../lib/worktrees.mjs#L9) | <code>execFile('git', ['-C', repo, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }, (error, stdout, stderr) =&gt; {</code> |
 | [public/app.js:47](../public/app.js#L47) | <code>const taskEditor = createTaskEditor({ document, getState: () =&gt; state, localStorage, addCriterion: (...args) =&gt; cardView.addCriterion(...args) });</code> |
 | [public/app.js:67](../public/app.js#L67) | <code>function confirmAction(...args) { return showConfirmation(document, ...args); }</code> |
-| [scripts/Compress-Release.ps1:1](../scripts/Compress-Release.ps1#L1) | <code>param([Parameter(Mandatory)][string]$Source, [Parameter(Mandatory)][string]$Destination)</code> |
-| [scripts/Expand-Update.ps1:1](../scripts/Expand-Update.ps1#L1) | <code>param([Parameter(Mandatory)][string]$Archive, [Parameter(Mandatory)][string]$Destination)</code> |
-| [scripts/MacTray.swift:4](../scripts/MacTray.swift#L4) | <code>let root = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent().deletingLastPathComponent()</code> |
-| [scripts/MacTray.swift:36](../scripts/MacTray.swift#L36) | <code>menu.items.forEach { $0.isEnabled = false }</code> |
-| [scripts/MacTray.swift:60](../scripts/MacTray.swift#L60) | <code>self.menu.items.forEach { $0.isEnabled = true }</code> |
-| [scripts/WindowsTray.cs:28](../scripts/WindowsTray.cs#L28) | <code>menu.Items.Add("Ouvrir Atelier", null, async (sender, args) =&gt; await Launch(""));</code> |
-| [scripts/WindowsTray.cs:29](../scripts/WindowsTray.cs#L29) | <code>menu.Items.Add("Quitter", null, async (sender, args) =&gt; await Launch("--stop"));</code> |
-| [scripts/WindowsTray.cs:31](../scripts/WindowsTray.cs#L31) | <code>icon.DoubleClick += async (sender, args) =&gt; await Launch("");</code> |
-| [scripts/WindowsTray.cs:34](../scripts/WindowsTray.cs#L34) | <code>timer.Tick += (sender, args) =&gt; { if (disconnected.IsCompleted) ExitThread(); };</code> |
-| [scripts/check-codeql.mjs:27](../scripts/check-codeql.mjs#L27) | <code>checkCodeql(process.argv[2]);</code> |
-| [scripts/check-release.mjs:26](../scripts/check-release.mjs#L26) | <code>export function checkReleaseArtifacts(directory, version, repository = process.env.GITHUB_REPOSITORY, publicKey) {</code> |
-| [scripts/check-release.mjs:42](../scripts/check-release.mjs#L42) | <code>tag: process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : undefined,</code> |
-| [scripts/check-release.mjs:43](../scripts/check-release.mjs#L43) | <code>target: process.env.RELEASE_TARGET,</code> |
-| [scripts/check-release.mjs:45](../scripts/check-release.mjs#L45) | <code>if (process.argv[2]) checkReleaseArtifacts(resolve(process.argv[2]), version);</code> |
-| [scripts/check-release.mjs:46](../scripts/check-release.mjs#L46) | <code>console.log(&#96;Release ${version} vérifiée${process.argv[2] ? ' : archives, installateurs, SHA256 et signatures valides' : ''}.&#96;);</code> |
-| [scripts/installers/AtelierKanban.cs:8](../scripts/installers/AtelierKanban.cs#L8) | <code>static int Main(string[] args) {</code> |
-| [scripts/installers/AtelierKanban.cs:11](../scripts/installers/AtelierKanban.cs#L11) | <code>var mode = args.Length == 0 ? "" : args[0];</code> |
-| [scripts/installers/AtelierKanban.cs:12](../scripts/installers/AtelierKanban.cs#L12) | <code>if (args.Length &gt; 1 \|\| (mode != "" &amp;&amp; mode != "--stop" &amp;&amp; mode != "--import-data" &amp;&amp; mode != "--no-browser"))</code> |
-| [scripts/installers/atelier-kanban:3](../scripts/installers/atelier-kanban#L3) | <code>exec /opt/atelier-kanban/runtime/node /opt/atelier-kanban/launcher.mjs "$@"</code> |
-| [scripts/package-installers.mjs:20](../scripts/package-installers.mjs#L20) | <code>const run = (command, args) =&gt; execFileSync(command, args, { windowsHide: true, stdio: 'inherit' });</code> |
-| [scripts/package-installers.mjs:24](../scripts/package-installers.mjs#L24) | <code>const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');</code> |
-| [scripts/package-installers.mjs:26](../scripts/package-installers.mjs#L26) | <code>const iscc = process.env.ISCC \|\| join(process.env['ProgramFiles(x86)'], 'Inno Setup 6', 'ISCC.exe');</code> |
-| [scripts/package.mjs:12](../scripts/package.mjs#L12) | <code>const repository = githubRepository(process.argv[2] \|\| process.env.GITHUB_REPOSITORY);</code> |
-| [scripts/package.mjs:16](../scripts/package.mjs#L16) | <code>const runtimeLicense = process.env.NODE_LICENSE \|\| join(dirname(process.execPath), 'LICENSE');</code> |
-| [scripts/package.mjs:27](../scripts/package.mjs#L27) | <code>const compiler = join(process.env.SystemRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe');</code> |
-| [scripts/package.mjs:34](../scripts/package.mjs#L34) | <code>execFileSync('tar', ['--format=ustar', '-czf', archive, '-C', stage, ...managedEntries], { stdio: 'inherit', env: { ...process.env, COPYFILE_DISABLE: '1' } });</code> |
 | [scripts/rust-keyring-accounts.sh:5](../scripts/rust-keyring-accounts.sh#L5) | <code>[[ ${GITHUB_ACTIONS:-} == true &amp;&amp; ${ATELIER_TEST_DISPOSABLE_KEYRING:-} == 1 &amp;&amp; $(uname -s) == Linux ]] \|\| exit 2</code> |
 | [scripts/rust-keyring-accounts.sh:7](../scripts/rust-keyring-accounts.sh#L7) | <code>if [[ $# == 3 &amp;&amp; ($1 == first \|\| $1 == other) ]]; then</code> |
 | [scripts/rust-keyring-accounts.sh:8](../scripts/rust-keyring-accounts.sh#L8) | <code>phase=$1</code> |
@@ -6043,10 +6048,6 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [scripts/rust-migration-baseline.mjs:135](../scripts/rust-migration-baseline.mjs#L135) | <code>child = fork(here, ['--serve'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: Object.fromEntries(Object.entries(process.env).filter(([key]) =&gt; /^(path\|systemroot\|windir\|temp\|tmp)$/i.test(key))) });</code> |
 | [scripts/rust-migration-baseline.mjs:167](../scripts/rust-migration-baseline.mjs#L167) | <code>if (i === 4 &amp;&amp; args.length) result.ui = await browserBaseline(args[1], address, token);</code> |
 | [scripts/rust-migration-baseline.mjs:182](../scripts/rust-migration-baseline.mjs#L182) | <code>if (process.argv[2] === '--serve') await serve();</code> |
-| [scripts/sign-release.mjs:24](../scripts/sign-release.mjs#L24) | <code>if (!process.env.RELEASE_SIGNING_KEY) throw new Error('Secret RELEASE_SIGNING_KEY requis pour publier.');</code> |
-| [scripts/sign-release.mjs:25](../scripts/sign-release.mjs#L25) | <code>signRelease(process.argv[2], version, process.env.GITHUB_REPOSITORY, process.env.RELEASE_SIGNING_KEY);</code> |
-| [scripts/update-worker.mjs:67](../scripts/update-worker.mjs#L67) | <code>const child = spawn(join(root, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'), [join(root, 'server.mjs')], { cwd: root, windowsHide: true, detached: true, stdio: ['ignore', out, err], env: { ...process.env, PORT: String(port), ATELIER_UPDATE_TOKEN: token } });</code> |
-| [scripts/update-worker.mjs:123](../scripts/update-worker.mjs#L123) | <code>runUpdate(process.argv[2], process.argv.includes('--recover')).catch(error =&gt; { console.error(error); process.exitCode = 1; });</code> |
 | [server.mjs:104](../server.mjs#L104) | <code>initialTokens: { ...savedTokens, ...(!store.settings().credentialsReset ? { jira: process.env.JIRA_TOKEN \|\| savedTokens.jira \|\| '', azure: process.env.AZURE_DEVOPS_PAT \|\| savedTokens.azure \|\| '', tempo: process.env.TEMPO_TOKEN \|\| savedTokens.tempo \|\| '' } : {}) },</code> |
 | [server.mjs:159](../server.mjs#L159) | <code>}, syncTicketStatus: (id, required) =&gt; ticketSync.syncCardStatus(id, required), ticketWorkflow: (...args) =&gt; jiraWorkflows.execute(...args), linkPullRequest: card =&gt; linkPullRequestToJira(card, config(), settingsService.token('jira'), requestJira), syncTickets: reset =&gt; ticketSync.sync(reset), repositories: repositoryHandlers,</code> |
 | [server.mjs:483](../server.mjs#L483) | <code>if (lock &amp;&amp; lock.token !== process.env.ATELIER_UPDATE_TOKEN) throw new Error('Mise à jour en cours ou interrompue. Utilise le lanceur Atelier pour reprendre.');</code> |
@@ -6104,26 +6105,26 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/launch_detection.rs:8](../xtask/src/launch_detection.rs#L8) | <code>.args(["test/fixtures/rust-launch-detection-reference.mjs", "seed"])</code> |
 | [xtask/src/launch_detection.rs:26](../xtask/src/launch_detection.rs#L26) | <code>.args([</code> |
 | [xtask/src/main.rs:85](../xtask/src/main.rs#L85) | <code>run(command("trunk").args([</code> |
-| [xtask/src/main.rs:119](../xtask/src/main.rs#L119) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
-| [xtask/src/main.rs:120](../xtask/src/main.rs#L120) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
-| [xtask/src/main.rs:139](../xtask/src/main.rs#L139) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:140](../xtask/src/main.rs#L140) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:141](../xtask/src/main.rs#L141) | <code>run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:142](../xtask/src/main.rs#L142) | <code>run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:143](../xtask/src/main.rs#L143) | <code>run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:144](../xtask/src/main.rs#L144) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;</code> |
-| [xtask/src/main.rs:145](../xtask/src/main.rs#L145) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))</code> |
-| [xtask/src/main.rs:148](../xtask/src/main.rs#L148) | <code>run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:149](../xtask/src/main.rs#L149) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))</code> |
-| [xtask/src/main.rs:152](../xtask/src/main.rs#L152) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:153](../xtask/src/main.rs#L153) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))</code> |
-| [xtask/src/main.rs:156](../xtask/src/main.rs#L156) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:157](../xtask/src/main.rs#L157) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
-| [xtask/src/main.rs:161](../xtask/src/main.rs#L161) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;</code> |
-| [xtask/src/main.rs:162](../xtask/src/main.rs#L162) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;</code> |
-| [xtask/src/main.rs:163](../xtask/src/main.rs#L163) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;</code> |
-| [xtask/src/main.rs:168](../xtask/src/main.rs#L168) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
-| [xtask/src/main.rs:184](../xtask/src/main.rs#L184) | <code>.args([</code> |
+| [xtask/src/main.rs:120](../xtask/src/main.rs#L120) | <code>let args: Vec&lt;_&gt; = std::env::args().skip(1).collect();</code> |
+| [xtask/src/main.rs:121](../xtask/src/main.rs#L121) | <code>match args.iter().map(String::as_str).collect::&lt;Vec&lt;_&gt;&gt;().as_slice() {</code> |
+| [xtask/src/main.rs:140](../xtask/src/main.rs#L140) | <code>run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:141](../xtask/src/main.rs#L141) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:142](../xtask/src/main.rs#L142) | <code>run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:143](../xtask/src/main.rs#L143) | <code>run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:144](../xtask/src/main.rs#L144) | <code>run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:145](../xtask/src/main.rs#L145) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;</code> |
+| [xtask/src/main.rs:146](../xtask/src/main.rs#L146) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))</code> |
+| [xtask/src/main.rs:149](../xtask/src/main.rs#L149) | <code>run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:150](../xtask/src/main.rs#L150) | <code>run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))</code> |
+| [xtask/src/main.rs:153](../xtask/src/main.rs#L153) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:154](../xtask/src/main.rs#L154) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))</code> |
+| [xtask/src/main.rs:157](../xtask/src/main.rs#L157) | <code>run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:158](../xtask/src/main.rs#L158) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))</code> |
+| [xtask/src/main.rs:162](../xtask/src/main.rs#L162) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;</code> |
+| [xtask/src/main.rs:163](../xtask/src/main.rs#L163) | <code>run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;</code> |
+| [xtask/src/main.rs:164](../xtask/src/main.rs#L164) | <code>run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;</code> |
+| [xtask/src/main.rs:169](../xtask/src/main.rs#L169) | <code>["test-tray"] =&gt; run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),</code> |
+| [xtask/src/main.rs:185](../xtask/src/main.rs#L185) | <code>.args([</code> |
 | [xtask/src/notices.rs:148](../xtask/src/notices.rs#L148) | <code>command.current_dir(super::root()).args([</code> |
 | [xtask/src/package_delivery.rs:23](../xtask/src/package_delivery.rs#L23) | <code>async fn cli(binary: &amp;Path, args: &amp;[std::ffi::OsString]) -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/package_delivery.rs:26](../xtask/src/package_delivery.rs#L26) | <code>.args(args)</code> |
@@ -7340,11 +7341,28 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-core/tests/agent-protocol.rs:285](../crates/atelier-core/tests/agent-protocol.rs#L285) | <code>fn streaming_preview_withholds_incomplete_secrets_and_masks_before_truncation() {</code> |
 | [crates/atelier-ui/src/agent_cli.rs:155](../crates/atelier-ui/src/agent_cli.rs#L155) | <code>{move\|\|selected().map(\|operation\|view!{&lt;article class="task-files" id="cli-update-result"&gt;&lt;p&gt;{i18n.text(match operation.phase{Phase::Preparing=&gt;"Mise à jour CLI préparée",Phase::Running=&gt;"Mise à jour CLI en cours",Phase::Observed=&gt;"Version CLI observée",Phase::Failed=&gt;"Mise à jour CLI non lancée",Phase::Uncertain=&gt;"Résultat CLI incertain"})}&lt;/p&gt;&lt;p&gt;{operation.updated_at}&lt;/p&gt;&lt;p&gt;{i18n.text(&amp;operation.message)}&lt;/p&gt;&lt;p&gt;{i18n.text("Version réellement observée : {0}").replace("{0}",operation.actual_version.as_deref().unwrap_or("—"))}&lt;/p&gt;&lt;p&gt;{operation.target_reached.map(\|reached\|i18n.text(if reached{"Version cible atteinte selon le CLI."}else{"La version cible n’a pas été observée."})).unwrap_or_default()}&lt;/p&gt;&lt;/article&gt;})}</code> |
 | [crates/atelier-ui/src/runs.rs:321](../crates/atelier-ui/src/runs.rs#L321) | <code>text.push_str(&amp;format!("[{}] {}", entry.stream, entry.text));</code> |
-| [launcher.mjs:11](../launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
-| [launcher.mjs:33](../launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |
-| [launcher.mjs:54](../launcher.mjs#L54) | <code>const out = openSync(join(dataDir, 'server.stdout.log'), 'a');</code> |
-| [launcher.mjs:55](../launcher.mjs#L55) | <code>const err = openSync(join(dataDir, 'server.stderr.log'), 'a');</code> |
-| [launcher.mjs:62](../launcher.mjs#L62) | <code>if (!current) throw new Error('Démarrage impossible. Consultez ' + join(dataDir, 'server.stderr.log'));</code> |
+| [docs/archive/node-delivery/launcher.mjs:11](../docs/archive/node-delivery/launcher.mjs#L11) | <code>import { authenticatedHealth, readSession, browserAddress } from './lib/infrastructure/local-session.mjs';</code> |
+| [docs/archive/node-delivery/launcher.mjs:33](../docs/archive/node-delivery/launcher.mjs#L33) | <code>await new Promise((resolve, reject) =&gt; { recovery.on('error', reject); recovery.on('exit', code =&gt; code === 0 ? resolve() : reject(new Error('Récupération impossible. Consulte le dossier .updates.'))); });</code> |
+| [docs/archive/node-delivery/launcher.mjs:54](../docs/archive/node-delivery/launcher.mjs#L54) | <code>const out = openSync(join(dataDir, 'server.stdout.log'), 'a');</code> |
+| [docs/archive/node-delivery/launcher.mjs:55](../docs/archive/node-delivery/launcher.mjs#L55) | <code>const err = openSync(join(dataDir, 'server.stderr.log'), 'a');</code> |
+| [docs/archive/node-delivery/launcher.mjs:62](../docs/archive/node-delivery/launcher.mjs#L62) | <code>if (!current) throw new Error('Démarrage impossible. Consultez ' + join(dataDir, 'server.stderr.log'));</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:7](../docs/archive/node-delivery/scripts/update-worker.mjs#L7) | <code>import { authenticatedHealth, readSession } from '../lib/infrastructure/local-session.mjs';</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:17](../docs/archive/node-delivery/scripts/update-worker.mjs#L17) | <code>const path = join(root, '.update-lock.json');</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:21](../docs/archive/node-delivery/scripts/update-worker.mjs#L21) | <code>return { ...lock, stage: join(root, '.updates', lock.id) };</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:30](../docs/archive/node-delivery/scripts/update-worker.mjs#L30) | <code>writeJson(join(stage, 'transaction.json'), transaction);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:38](../docs/archive/node-delivery/scripts/update-worker.mjs#L38) | <code>const file = join(stage, 'transaction.json');</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:51](../docs/archive/node-delivery/scripts/update-worker.mjs#L51) | <code>const { backupName } = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:57](../docs/archive/node-delivery/scripts/update-worker.mjs#L57) | <code>const file = join(data, 'kanban.sqlite' + suffix);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:58](../docs/archive/node-delivery/scripts/update-worker.mjs#L58) | <code>const saved = join(failed, 'kanban.sqlite' + suffix);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:62](../docs/archive/node-delivery/scripts/update-worker.mjs#L62) | <code>copyFileSync(backup, join(data, 'kanban.sqlite'));</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:66](../docs/archive/node-delivery/scripts/update-worker.mjs#L66) | <code>const out = openSync(join(dataDirectory(root), 'server.stdout.log'), 'a'), err = openSync(join(dataDirectory(root), 'server.stderr.log'), 'a');</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:84](../docs/archive/node-delivery/scripts/update-worker.mjs#L84) | <code>if (basename(dirname(stage)) !== '.updates' \|\| !/^update-[a-f0-9-]{36}$/.test(basename(stage))) throw new Error('Dossier de mise à jour invalide.');</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:85](../docs/archive/node-delivery/scripts/update-worker.mjs#L85) | <code>assertPlain(root); assertPlain(join(root, '.updates')); assertPlain(stage); assertPlain(dataDirectory(root));</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:86](../docs/archive/node-delivery/scripts/update-worker.mjs#L86) | <code>const config = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:87](../docs/archive/node-delivery/scripts/update-worker.mjs#L87) | <code>const lockPath = join(root, '.update-lock.json'), lock = updateLock(root);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:99](../docs/archive/node-delivery/scripts/update-worker.mjs#L99) | <code>transaction.started = true; writeJson(join(stage, 'transaction.json'), transaction);</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:103](../docs/archive/node-delivery/scripts/update-worker.mjs#L103) | <code>writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: true, message: &#96;Mise à jour ${config.version} installée.&#96;, date: new Date().toISOString() });</code> |
+| [docs/archive/node-delivery/scripts/update-worker.mjs:112](../docs/archive/node-delivery/scripts/update-worker.mjs#L112) | <code>writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: false, message: error.message, date: new Date().toISOString() });</code> |
 | [lib/agent-interactions.mjs:101](../lib/agent-interactions.mjs#L101) | <code>else if (event.method === 'item/agentMessage/delta') emit({ type: 'stream_event', event: { delta: { type: 'text_delta', text: p.delta } } });</code> |
 | [lib/agents.mjs:44](../lib/agents.mjs#L44) | <code>if (agent === 'claude') return ['-p', '--output-format', 'stream-json', '--input-format', 'stream-json', '--permission-prompt-tool', 'stdio', '--verbose', '--include-partial-messages', ...modelArgs, ...(effort ? ['--effort', effort] : []), '--permission-mode', mode === 'edit' ? 'default' : 'plan'];</code> |
 | [lib/agents.mjs:164](../lib/agents.mjs#L164) | <code>const emit = (stream, line) =&gt; {</code> |
@@ -7399,23 +7417,6 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [public/app.js:23](../public/app.js#L23) | <code>import { localFetch, eventsUrl } from './local-session.mjs';</code> |
 | [public/updates.mjs:2](../public/updates.mjs#L2) | <code>import { localFetch } from './local-session.mjs';</code> |
 | [scripts/rust-migration-baseline.mjs:131](../scripts/rust-migration-baseline.mjs#L131) | <code>const store = openStore(join(directory, 'kanban.sqlite'));</code> |
-| [scripts/update-worker.mjs:7](../scripts/update-worker.mjs#L7) | <code>import { authenticatedHealth, readSession } from '../lib/infrastructure/local-session.mjs';</code> |
-| [scripts/update-worker.mjs:17](../scripts/update-worker.mjs#L17) | <code>const path = join(root, '.update-lock.json');</code> |
-| [scripts/update-worker.mjs:21](../scripts/update-worker.mjs#L21) | <code>return { ...lock, stage: join(root, '.updates', lock.id) };</code> |
-| [scripts/update-worker.mjs:30](../scripts/update-worker.mjs#L30) | <code>writeJson(join(stage, 'transaction.json'), transaction);</code> |
-| [scripts/update-worker.mjs:38](../scripts/update-worker.mjs#L38) | <code>const file = join(stage, 'transaction.json');</code> |
-| [scripts/update-worker.mjs:51](../scripts/update-worker.mjs#L51) | <code>const { backupName } = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));</code> |
-| [scripts/update-worker.mjs:57](../scripts/update-worker.mjs#L57) | <code>const file = join(data, 'kanban.sqlite' + suffix);</code> |
-| [scripts/update-worker.mjs:58](../scripts/update-worker.mjs#L58) | <code>const saved = join(failed, 'kanban.sqlite' + suffix);</code> |
-| [scripts/update-worker.mjs:62](../scripts/update-worker.mjs#L62) | <code>copyFileSync(backup, join(data, 'kanban.sqlite'));</code> |
-| [scripts/update-worker.mjs:66](../scripts/update-worker.mjs#L66) | <code>const out = openSync(join(dataDirectory(root), 'server.stdout.log'), 'a'), err = openSync(join(dataDirectory(root), 'server.stderr.log'), 'a');</code> |
-| [scripts/update-worker.mjs:84](../scripts/update-worker.mjs#L84) | <code>if (basename(dirname(stage)) !== '.updates' \|\| !/^update-[a-f0-9-]{36}$/.test(basename(stage))) throw new Error('Dossier de mise à jour invalide.');</code> |
-| [scripts/update-worker.mjs:85](../scripts/update-worker.mjs#L85) | <code>assertPlain(root); assertPlain(join(root, '.updates')); assertPlain(stage); assertPlain(dataDirectory(root));</code> |
-| [scripts/update-worker.mjs:86](../scripts/update-worker.mjs#L86) | <code>const config = JSON.parse(readFileSync(join(stage, 'config.json'), 'utf8'));</code> |
-| [scripts/update-worker.mjs:87](../scripts/update-worker.mjs#L87) | <code>const lockPath = join(root, '.update-lock.json'), lock = updateLock(root);</code> |
-| [scripts/update-worker.mjs:99](../scripts/update-worker.mjs#L99) | <code>transaction.started = true; writeJson(join(stage, 'transaction.json'), transaction);</code> |
-| [scripts/update-worker.mjs:103](../scripts/update-worker.mjs#L103) | <code>writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: true, message: &#96;Mise à jour ${config.version} installée.&#96;, date: new Date().toISOString() });</code> |
-| [scripts/update-worker.mjs:112](../scripts/update-worker.mjs#L112) | <code>writeJson(join(dataDirectory(root), 'update-result.json'), { version: config.version, success: false, message: error.message, date: new Date().toISOString() });</code> |
 | [server.mjs:24](../server.mjs#L24) | <code>import { sameSecret, sessionProof, readSession, writeSession } from './lib/infrastructure/local-session.mjs';</code> |
 | [server.mjs:81](../server.mjs#L81) | <code>const store = openStore(join(dataDir, 'kanban.sqlite'));</code> |
 | [server.mjs:134](../server.mjs#L134) | <code>store.log(run.id, 'system', 'Serveur arrêté pendant cette exécution. Vérifie le dépôt avant de relancer.');</code> |
@@ -7469,4 +7470,4 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/tests/windows-native.rs:202](../xtask/tests/windows-native.rs#L202) | <code>async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_and_cancel() {</code> |
 | [xtask/tests/windows-native.rs:207](../xtask/tests/windows-native.rs#L207) | <code>tokio::process::Command::new(executable).arg("process-streams"),</code> |
 
-Total : 646 fichiers ; 97 fichiers de tests Node.
+Total : 647 fichiers ; 97 fichiers de tests Node.

@@ -29,6 +29,7 @@ jobs:
       - name: Install pinned toolchain
         run: rustup show
       - name: Cache Windows Rust builds
+        id: windows-rust-cache
         if: runner.os == 'Windows'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -170,6 +171,14 @@ jobs:
         run: |
           cargo xtask test-tray
           cargo test -p atelier-app --test native-tray --locked -- --ignored
+      - name: Preserve partial Windows Rust cache after verification
+        if: always() && runner.os == 'Windows' && steps.windows-rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
   browser:
     strategy:
       fail-fast: false
@@ -183,6 +192,7 @@ jobs:
           persist-credentials: false
       - run: rustup show
       - name: Cache Windows Rust builds
+        id: windows-rust-cache
         if: runner.os == 'Windows'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -274,6 +284,14 @@ jobs:
           bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui
         env:
           ATELIER_TEST_BROWSER: safari
+      - name: Preserve partial Windows Rust cache after verification
+        if: always() && runner.os == 'Windows' && steps.windows-rust-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
   delivery:
     needs: [native, browser]
     strategy:
