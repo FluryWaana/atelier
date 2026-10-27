@@ -10,10 +10,10 @@ async fn queue_claims_are_unique_pause_blocks_spawn_and_restart_never_relaunches
     database.call(|store|{
         let card:Card=serde_json::from_str(&json!({"id":"task","title":"Synthetic","agent":"synthetic-command","mode":"edit","repo":"/synthetic/repo","worktree":{"source":"/synthetic/repo","path":"/synthetic/work","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"}}).to_string())?;store.put(Documents::Cards,&card)?;
         assert!(queue::change(store,&doc(json!({"action":"add","revision":0,"confirmed":false,"expected":card}))).is_err());
-        let queued=queue::change(store,&doc(json!({"action":"add","revision":0,"confirmed":true,"expected":card})))?;assert_eq!(queued.ids,vec!["task"]);assert!(queued.paused);
+        assert!(!queue::needs_tick(store)?);let queued=queue::change(store,&doc(json!({"action":"add","revision":0,"confirmed":true,"expected":card})))?;assert_eq!(queued.ids,vec!["task"]);assert!(queued.paused);assert!(!queue::needs_tick(store)?);
         assert!(queue::change(store,&doc(json!({"action":"resume","revision":0,"confirmed":true}))).is_err());
         queue::change(store,&doc(json!({"action":"resume","revision":queued.revision,"confirmed":true})))?;
-        assert!(queue::claim(store,"first".into())?.is_some());assert!(queue::claim(store,"second".into())?.is_none());
+        assert!(queue::needs_tick(store)?);assert!(queue::claim(store,"first".into())?.is_some());assert!(queue::claim(store,"second".into())?.is_none());
         queue::pause(store,"Synthetic pause")?;let run=|id:&str|doc(json!({"id":id,"cardId":"task","status":"starting","queued":true,"purpose":"work","repo":"/synthetic/work"}));
         assert!(runs::reserve(store,&run("first")).is_err());assert!(store.document::<Document>(Documents::Runs,"first")?.is_none());queue::settle(store)?;let paused=queue::read(store)?;assert!(paused.paused);assert_eq!(paused.ids,vec!["task"]);assert!(paused.active.is_none());
         queue::change(store,&doc(json!({"action":"resume","revision":paused.revision,"confirmed":true})))?;queue::claim(store,"completed".into())?;runs::reserve(store,&run("completed"))?;runs::transition(store,"completed","running","time",None)?;runs::transition(store,"completed","completed","time",Some(0))?;assert!(queue::settle(store)?);assert!(queue::read(store)?.ids.is_empty());
@@ -48,12 +48,12 @@ async fn project_workflows_keep_their_identity_through_waits_restart_and_queue_r
         assert!(!queue::settle(store)?);
         // State fixture only: no agent, verification or publication result is asserted here.
         let mut waiting=original.clone();waiting.state=State::Waiting;waiting.step=Step::Publication;active.fields.set("automation",&waiting)?;store.put(Documents::Cards,&active)?;
-        assert!(!queue::settle(store)?);assert_eq!(queue::read(store)?.ids,vec!["workflow","simple"]);
+        assert!(!queue::needs_tick(store)?);assert!(!queue::settle(store)?);assert_eq!(queue::read(store)?.ids,vec!["workflow","simple"]);
         automation::recover(store)?;queue::recover(store)?;let paused=queue::read(store)?;assert!(paused.paused && paused.active.is_none());
         assert_eq!(paused.workflows.get("workflow"),Some(&Some(original.id.clone())));
         queue::change(store,&doc(json!({"action":"resume","revision":paused.revision,"confirmed":true})))?;
         let (mut active,_)=queue::claim(store,"must-not-start-another-workflow".into())?.unwrap();let mut resumed=automation::read(&active)?.unwrap();assert_eq!(resumed.id,original.id);assert!(resumed.state==State::Waiting);
-        resumed.state=State::Ready;active.fields.set("automation",&resumed)?;store.put(Documents::Cards,&active)?;
+        resumed.state=State::Ready;active.fields.set("automation",&resumed)?;store.put(Documents::Cards,&active)?;assert!(queue::needs_tick(store)?);
         assert!(queue::settle(store)?);assert_eq!(queue::read(store)?.ids,vec!["simple"]);assert!(queue::read(store)?.workflows.is_empty());
         let (_,body)=queue::claim(store,"simple-run".into())?.unwrap();assert_eq!(body.get::<String>("purpose")?,Some("work".into()));
         let run=doc(json!({"id":"simple-run","cardId":"simple","repo":"synthetic/work","status":"starting","queued":true}));runs::reserve(store,&run)?;runs::transition(store,"simple-run","running","synthetic",None)?;runs::transition(store,"simple-run","completed","synthetic",Some(0))?;queue::settle(store)?;

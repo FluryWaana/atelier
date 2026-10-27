@@ -66,6 +66,18 @@ fn save(store: &Store<'_>, mut queue: RunQueue) -> Result<RunQueue> {
     store.save_settings(&settings)?;
     Ok(queue)
 }
+pub fn needs_tick(store: &Store<'_>) -> Result<bool> {
+    let queue = read(store)?;
+    let settling = match &queue.active {
+        Some(active) if queue.workflows.contains_key(&active.card_id) => !matches!(
+            workflow_state(store, active)?,
+            Some(WorkflowState::Running | WorkflowState::Waiting)
+        ),
+        Some(_) => true,
+        None => !queue.paused && !queue.ids.is_empty(),
+    };
+    Ok(settling || super::automation::running(store)?.is_some())
+}
 pub fn pause(store: &Store<'_>, message: &str) -> Result<RunQueue> {
     store.transaction(|store| {
         let mut queue = read(store)?;

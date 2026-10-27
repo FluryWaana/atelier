@@ -37,6 +37,10 @@ pub(super) async fn run(state: Shared) -> Result<()> {
         if !state.runs.active_cards().is_empty() {
             continue;
         }
+        // This read-only hint can delay new work by one tick; all claims are revalidated under the gate.
+        if matches!(state.database.call(queue::needs_tick).await, Ok(false)) {
+            continue;
+        }
         let Ok(_gate) = state.mutations.clone().try_write_owned() else {
             continue;
         };
