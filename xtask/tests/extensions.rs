@@ -9,10 +9,23 @@ mod windows;
 
 #[tokio::test]
 async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effect() {
+    lost_reply(Method::Action).await;
+}
+
+#[tokio::test]
+async fn a_lost_time_send_is_reconciled_without_sending_the_time_twice() {
+    lost_reply(Method::TimeSend).await;
+}
+
+async fn lost_reply(method: Method) {
     let _fixture = EXTENSION_FIXTURE.lock().await;
-    use atelier_app::infrastructure::{connector_effects as effects, database::Database};
+    use atelier_app::infrastructure::{
+        connector_effects as effects, connector_time, connectors, database::Database,
+        store::Documents,
+    };
     use atelier_core::{
-        application::extensions::RemotePreview, contracts::ForgeWriteState as Phase,
+        application::extensions::{RemotePreview, Report},
+        contracts::ForgeWriteState as Phase,
         document::Document,
     };
     let fixture = tempfile::tempdir().unwrap();
@@ -27,20 +40,39 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
     let prepared = db
         .call(move |store| {
             store.save_settings(&settings)?;
+            let input = if method == Method::TimeSend {
+                let card: Document = serde_json::from_str(&json!({"id":"22222222-2222-4222-8222-222222222222","title":"Synthetic timed task"}).to_string())?;
+                let entry: Document = serde_json::from_str(&json!({"id":"11111111-1111-4111-8111-111111111111","cardId":"22222222-2222-4222-8222-222222222222","seconds":120,"date":"2026-10-26","startTime":"10:00:00","description":"Synthetic human work","exportState":"draft"}).to_string())?;
+                store.put(Documents::Cards, &card)?;
+                store.put(Documents::Times, &entry)?;
+                let mut selection = json!({"expected":entry,"expectedCard":card});
+                let source = connector_time::preview_input(store, &selection)?;
+                connectors::record(store,"synthetic-extension",1,Report{id:"synthetic-time-report".into(),method:Method::TimePreview,action:None,message:"Synthetic time preview".into(),output:json!({"source":source,"instance":"https://synthetic.example.test/time","account":"synthetic-time-account","reference":"SYN-1"}),observed_at:time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?})?;
+                selection["reportId"] = json!("synthetic-time-report");
+                selection
+            } else { Value::Null };
             effects::preview(
                 store,
                 "synthetic-extension",
                 &RemotePreview {
                     expected_revision: 1,
-                    method: Method::Action,
-                    input: Value::Null,
-                    action: "synthetic-write".into(),
+                    method,
+                    input,
+                    action: if method == Method::Action {"synthetic-write".into()} else {String::new()},
                 },
             )
         })
         .await
         .unwrap();
+    let proposal = prepared.input.clone();
     let id = prepared.id;
+    let extension = if method == Method::TimeSend {
+        "time-effect"
+    } else {
+        "effect"
+    };
+    let marker = fixture.path().join(format!("{id}.{extension}"));
+    assert!(!marker.exists());
     let selected = id.clone();
     let (profile, request) = db
         .call(move |store| {
@@ -58,9 +90,20 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
         .unwrap();
     let nonce = request.request_id.clone();
     let selected = id.clone();
-    db.call(move |store| effects::sending(store, "synthetic-extension", &selected, 1, 1, &nonce))
-        .await
-        .unwrap();
+    db.call(move |store| {
+        let operation = effects::sending(store, "synthetic-extension", &selected, 1, 1, &nonce)?;
+        if method == Method::TimeSend {
+            assert!(
+                store
+                    .document::<Document>(Documents::Times, "11111111-1111-4111-8111-111111111111")?
+                    .unwrap()
+                    .string_equals("exportState", "sending")?
+            );
+        }
+        Ok(operation)
+    })
+    .await
+    .unwrap();
     assert!(
         Executable::open(
             PathBuf::from(&profile.binary.path),
@@ -74,8 +117,15 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
         .await
         .is_err()
     );
-    let marker = fixture.path().join(format!("{id}.effect"));
-    assert_eq!(std::fs::read(&marker).unwrap(), b"one synthetic effect");
+    let marker_bytes = std::fs::read(&marker).unwrap();
+    if method == Method::TimeSend {
+        assert_eq!(
+            serde_json::from_slice::<Value>(&marker_bytes).unwrap(),
+            proposal
+        );
+    } else {
+        assert_eq!(marker_bytes, b"one synthetic effect");
+    }
     let modified = std::fs::metadata(&marker).unwrap().modified().unwrap();
     let selected = id.clone();
     let (profile, request, version) = db
@@ -83,6 +133,17 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
             effects::recover(store)?;
             let uncertain = effects::current(store, "synthetic-extension", &selected)?;
             assert_eq!(uncertain.state, Phase::Uncertain);
+            if method == Method::TimeSend {
+                assert!(
+                    store
+                        .document::<Document>(
+                            Documents::Times,
+                            "11111111-1111-4111-8111-111111111111"
+                        )?
+                        .unwrap()
+                        .string_equals("exportState", "uncertain")?
+                );
+            }
             assert!(
                 effects::prepare(
                     store,
@@ -116,7 +177,14 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
         })
         .await
         .unwrap();
-    assert_eq!(request.method, Method::Reconcile);
+    assert_eq!(
+        request.method,
+        if method == Method::TimeSend {
+            Method::TimeReconcile
+        } else {
+            Method::Reconcile
+        }
+    );
     assert_eq!(request.operation_id.as_deref(), Some(id.as_str()));
     let reply = Executable::open(
         PathBuf::from(&profile.binary.path),
@@ -132,10 +200,19 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
     db.call(move |store| {
         let observed = effects::record(store, "synthetic-extension", &id, version, 1, reply, true)?;
         assert_eq!(observed.state, Phase::Reconciled);
+        if method == Method::TimeSend {
+            assert!(
+                store
+                    .document::<Document>(Documents::Times, "11111111-1111-4111-8111-111111111111")?
+                    .unwrap()
+                    .string_equals("exportState", "exported")?
+            );
+        }
         Ok(())
     })
     .await
     .unwrap();
+    assert_eq!(std::fs::read(&marker).unwrap(), marker_bytes);
     assert_eq!(
         std::fs::metadata(&marker).unwrap().modified().unwrap(),
         modified
@@ -148,7 +225,7 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
                 .unwrap()
                 .path()
                 .extension()
-                .is_some_and(|extension| extension == "effect"))
+                .is_some_and(|value| value == extension))
             .count(),
         1
     );
