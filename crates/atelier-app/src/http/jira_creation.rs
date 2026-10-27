@@ -25,7 +25,7 @@ pub(super) async fn create(
 ) -> Response {
     let input: JiraCreateRequest = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
@@ -111,7 +111,7 @@ pub(super) async fn reconcile(
 ) -> Response {
     let input: JiraCreationResolve = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");

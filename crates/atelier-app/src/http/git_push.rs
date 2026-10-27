@@ -19,7 +19,7 @@ pub(super) async fn preview(
 ) -> Response {
     let input: GitPushRequest = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Carte de push incohérente.");
@@ -95,7 +95,7 @@ pub(super) async fn publication_branch(
 ) -> Response {
     let publication: ForgePublicationRequest = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let input = GitPushRequest {
         expected: publication.expected.clone(),
@@ -107,7 +107,7 @@ pub(super) async fn publication_branch(
 async fn request_input(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
     let input: GitPushRequest = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     execute(state, id, input, reconcile, None).await
 }

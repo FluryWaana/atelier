@@ -70,7 +70,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
     if path.ends_with("/preview") {
         let source: Source = match super::jira_transitions::input(request).await {
             Ok(value) => value,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
         if [&source.archive, &source.signature].iter().any(|path| {
             path.is_empty()
@@ -101,7 +101,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
     } else {
         let input: Confirmation = match super::jira_transitions::input(request).await {
             Ok(value) => value,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
         if uuid::Uuid::parse_str(&input.id).is_err() {
             return failure(

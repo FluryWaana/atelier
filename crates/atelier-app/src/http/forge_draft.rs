@@ -24,7 +24,7 @@ pub(super) async fn reconcile(
 async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
     let input: ForgeDraftRequest = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id || !input.confirmed {
         return failure(

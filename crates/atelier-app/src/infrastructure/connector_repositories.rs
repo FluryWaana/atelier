@@ -160,10 +160,9 @@ pub fn selection(store: &Store<'_>, profile: &Installed, value: &Value) -> Resul
         .expected
         .fields
         .get::<ModulePullRequestLink>("connectorPullRequest")?
+        && link.module != profile.manifest.id
     {
-        if link.module != profile.manifest.id {
-            return Err("Cette PR/MR appartient à un autre connecteur.".into());
-        }
+        return Err("Cette PR/MR appartient à un autre connecteur.".into());
     }
     atelier_core::application::worktrees::validate_reference(&selection.target)?;
     if selection.title.trim().is_empty()
@@ -249,20 +248,18 @@ impl Guard {
             .expected
             .fields
             .get::<ModulePullRequestLink>("connectorPullRequest")?
-        {
-            if observation.pull_request.as_ref().is_none_or(|pr| {
+            && observation.pull_request.as_ref().is_none_or(|pr| {
                 pr.reference != link.pull_request.reference || pr.id != link.pull_request.id
-            }) {
-                return Err("La réponse du module désigne une autre PR/MR.".into());
-            }
+            })
+        {
+            return Err("La réponse du module désigne une autre PR/MR.".into());
         }
-        if let Some(pr) = &observation.pull_request {
-            if pr.source_branch != worktree.branch
+        if let Some(pr) = &observation.pull_request
+            && (pr.source_branch != worktree.branch
                 || (review && pr.source_commit != source)
-                || pr.target_commit != observation.target_commit
-            {
-                return Err("La PR/MR ne désigne pas les commits de ce worktree.".into());
-            }
+                || pr.target_commit != observation.target_commit)
+        {
+            return Err("La PR/MR ne désigne pas les commits de ce worktree.".into());
         }
         if review
             && observation
@@ -404,13 +401,11 @@ pub fn matches(store: &Store<'_>, card: &Card, context: &RepositoryReviewContext
     if let Some(link) = card
         .fields
         .get::<ModulePullRequestLink>("connectorPullRequest")?
-    {
-        if link.module != context.module
+        && (link.module != context.module
             || link.revision != context.revision
-            || Some(&link.pull_request) != context.pull_request.as_ref()
-        {
-            return Err("La PR/MR du module a changé.".into());
-        }
+            || Some(&link.pull_request) != context.pull_request.as_ref())
+    {
+        return Err("La PR/MR du module a changé.".into());
     }
     Ok(())
 }

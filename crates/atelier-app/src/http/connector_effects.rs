@@ -34,7 +34,7 @@ pub(super) async fn preview(
 ) -> Response {
     let input: RemotePreview = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let result = state
         .database
@@ -50,7 +50,7 @@ pub(super) async fn cancel(
 ) -> Response {
     let input: RemoteCommand = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if !input.confirmed {
         return failure(
@@ -88,7 +88,7 @@ async fn execute(
 ) -> Response {
     let input: RemoteCommand = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     response(perform(state, module, id, input, reconcile).await)
 }

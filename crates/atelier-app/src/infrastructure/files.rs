@@ -184,7 +184,7 @@ impl Repository {
             if !parts.len().is_multiple_of(2) {
                 return Err("Réponse Git invalide pour les changements.".into());
             }
-            for pair in parts.chunks_exact(2) {
+            for pair in parts.as_chunks::<2>().0 {
                 files.push(FileChange {
                     path: pair[1].into(),
                     status: pair[0].into(),

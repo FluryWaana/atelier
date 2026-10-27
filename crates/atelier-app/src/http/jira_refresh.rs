@@ -18,7 +18,7 @@ pub(super) async fn preview(
 ) -> Response {
     let input: JiraRefreshRequest = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
@@ -58,14 +58,13 @@ pub(super) async fn preview(
             tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("Lecture du ticket Jira trop longue.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
         }
     };
-    if result.is_err() {
-        if let Err(error) = state
+    if result.is_err()
+        && let Err(error) = state
             .database
             .call(move |store| workflow::interrupted(store, &id, &operation))
             .await
-        {
-            return response::<Card>(Err(error));
-        }
+    {
+        return response::<Card>(Err(error));
     }
     let _ = state.changed.send(());
     response(result)
@@ -77,7 +76,7 @@ pub(super) async fn apply(
 ) -> Response {
     let input: JiraRefreshApply = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");

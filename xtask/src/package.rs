@@ -1,7 +1,10 @@
 pub(super) use atelier_app::infrastructure::package::verify;
 use atelier_app::{
     Result,
-    infrastructure::package::{assets, binary_name, executable, manifest, read, write},
+    infrastructure::{
+        checked_file::plain_metadata,
+        package::{assets, binary_name, executable, manifest, read, write},
+    },
 };
 #[cfg(test)]
 use atelier_app::{http::wasm_asset_name, infrastructure::package::TARGETS};

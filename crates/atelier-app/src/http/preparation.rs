@@ -12,7 +12,7 @@ pub(super) async fn apply(
 ) -> Response {
     let input: Apply = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");

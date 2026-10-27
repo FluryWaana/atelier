@@ -222,7 +222,7 @@ pub fn apply(
                 return Err("Termine les opérations de la tâche avant de resynchroniser son périmètre.".into());
             }
             for run in &runs {
-                if run.string_equals("cardId",&card.id)? && super::runs::active(&run)? {return Err("Arrête l’exécution avant de resynchroniser le périmètre des tickets.".into());}
+                if run.string_equals("cardId",&card.id)? && super::runs::active(run)? {return Err("Arrête l’exécution avant de resynchroniser le périmètre des tickets.".into());}
             }
             for entry in &entries {
                 if entry.string_equals("cardId",&card.id)? && (entry.string_equals("exportState","sending")? || entry.string_equals("exportState","uncertain")?) {return Err("Rapproche l’export de temps avant de resynchroniser le périmètre.".into());}

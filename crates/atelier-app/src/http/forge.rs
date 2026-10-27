@@ -17,7 +17,7 @@ pub(super) async fn attach(
     use atelier_core::contracts::PullRequestAttach;
     let input: PullRequestAttach = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
@@ -83,7 +83,7 @@ pub(super) async fn detach(
     let input: atelier_core::contracts::PullRequestDetach =
         match super::jira_transitions::input(request).await {
             Ok(input) => input,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
@@ -110,7 +110,7 @@ pub(super) async fn configurations(State(state): State<Shared>) -> Response {
 pub(super) async fn configure(State(state): State<Shared>, request: Request) -> Response {
     let input: ForgeUpdate = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let vault = state.vault.clone();
     super::responses::response(

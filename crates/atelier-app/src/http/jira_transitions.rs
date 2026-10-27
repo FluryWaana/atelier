@@ -23,15 +23,22 @@ pub(super) struct Revision {
 }
 pub(super) async fn input<T: DeserializeOwned>(
     request: Request,
-) -> std::result::Result<T, Response> {
+) -> std::result::Result<T, Box<Response>> {
     let body = object(request.into_body())
         .await
-        .map_err(|(status, message)| failure(status, message))?;
-    serde_json::from_str(
-        &serde_json::to_string(&body)
-            .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres de requête invalides."))?,
-    )
-    .map_err(|_| failure(StatusCode::BAD_REQUEST, "Paramètres de requête invalides."))
+        .map_err(|(status, message)| Box::new(failure(status, message)))?;
+    serde_json::from_str(&serde_json::to_string(&body).map_err(|_| {
+        Box::new(failure(
+            StatusCode::BAD_REQUEST,
+            "Paramètres de requête invalides.",
+        ))
+    })?)
+    .map_err(|_| {
+        Box::new(failure(
+            StatusCode::BAD_REQUEST,
+            "Paramètres de requête invalides.",
+        ))
+    })
 }
 pub(super) async fn client(state: &Shared, revision: u64) -> Result<jira::Jira> {
     let vault = state.vault.clone();
@@ -85,7 +92,7 @@ pub(super) async fn send(
 ) -> Response {
     let input: JiraTransitionRequest = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
@@ -192,7 +199,7 @@ pub(super) async fn reconcile(
 ) -> Response {
     let input: JiraReconciliation = match input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if input.expected.id != id {
         return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");

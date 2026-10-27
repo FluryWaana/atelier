@@ -16,7 +16,7 @@ pub(super) async fn get(State(state): State<Shared>) -> Response {
 pub(super) async fn save(State(state): State<Shared>, request: Request) -> Response {
     let input: TempoConfigurationUpdate = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let vault = state.vault.clone();
     response(

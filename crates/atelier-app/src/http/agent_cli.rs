@@ -16,7 +16,7 @@ pub(super) async fn update(
 ) -> Response {
     let input: UpdateRequest = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if !input.confirmed {
         return failure(

@@ -206,7 +206,7 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
         let exclusive = exclusive
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/cli-update"));
-        let cancellation = request.method() == Method::POST && mutations::is_cancellation(&path);
+        let cancellation = request.method() == Method::POST && mutations::is_cancellation(path);
         let gate = state.mutations.clone();
         let changed = state.changed.clone();
         let services = state.services.clone();

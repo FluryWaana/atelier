@@ -35,7 +35,7 @@ pub(super) async fn register(State(state): State<Shared>, request: Request) -> R
     }
     let input: Input = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let root = state.prototype_directory.clone();
     response(
@@ -64,7 +64,7 @@ pub(super) async fn revoke(State(state): State<Shared>, request: Request) -> Res
     }
     let input: Input = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let root = state.prototype_directory.clone();
     response(

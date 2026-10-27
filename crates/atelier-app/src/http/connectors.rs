@@ -24,7 +24,7 @@ pub(super) async fn import_tickets(
     let input: atelier_core::application::extensions::TicketImport =
         match super::jira_transitions::input(request).await {
             Ok(input) => input,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
     let result = state
         .database
@@ -44,7 +44,7 @@ pub(super) async fn refresh_ticket(
     let input: atelier_core::application::extensions::TicketRefresh =
         match super::jira_transitions::input(request).await {
             Ok(input) => input,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
     response(
         state
@@ -99,7 +99,7 @@ struct Removal {
 pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Response {
     let input: Probe = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if !input.confirmed
         || !atelier_core::application::extensions::identifier(&input.module)
@@ -134,7 +134,7 @@ pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Resp
 pub(super) async fn install(State(state): State<Shared>, request: Request) -> Response {
     let input: Installation = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if !input.confirmed {
         return super::failure(
@@ -181,7 +181,7 @@ pub(super) async fn configure(
 ) -> Response {
     let input: Configuration = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let vault = state.vault.clone();
     response(
@@ -202,7 +202,7 @@ pub(super) async fn remove(
 ) -> Response {
     let input: Removal = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let vault = state.vault.clone();
     response(
@@ -228,7 +228,7 @@ pub(super) async fn invoke(
 ) -> Response {
     let input: Invocation = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if let Err(error) = repositories::guard_invocation(&state, input.method) {
         return response::<Report>(Err(error));

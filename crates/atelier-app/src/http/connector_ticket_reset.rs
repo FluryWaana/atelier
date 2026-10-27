@@ -16,7 +16,7 @@ pub(super) async fn preview(
 ) -> Response {
     let input: TicketResetRead = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let operation = async {
         let vault = state.vault.clone();
@@ -95,7 +95,7 @@ pub(super) async fn apply(
 ) -> Response {
     let input: TicketResetApply = match super::jira_transitions::input(request).await {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let result = state
         .database

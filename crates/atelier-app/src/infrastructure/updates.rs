@@ -287,14 +287,13 @@ pub async fn preview(
                 session::read_optional(&journal.data)
             })
             .await?;
-        if let Some(observed) = &observed {
-            if observed["protocol"] != "atelier-local/1"
-                || observed["version"] != journal.expected.active.version
-            {
-                return Err(
-                    "La version exécutée ne correspond pas à la version active installée.".into(),
-                );
-            }
+        if let Some(observed) = &observed
+            && (observed["protocol"] != "atelier-local/1"
+                || observed["version"] != journal.expected.active.version)
+        {
+            return Err(
+                "La version exécutée ne correspond pas à la version active installée.".into(),
+            );
         }
         journal.restart = observed.is_some();
         let prepared = update_package::prepare(

@@ -21,55 +21,6 @@ fn conflict() -> crate::Error {
     atelier_core::application::forge::ForgeFailure::Conflict.into()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn api_routes_and_browser_links_keep_distinct_trusted_origins_and_encode_repository_names() {
-        let github = Forge::new(
-            ForgeConfiguration {
-                kind: ForgeKind::Github,
-                base: "https://github.com".into(),
-            },
-            "synthetic-token".into(),
-            1,
-        )
-        .unwrap();
-        assert_eq!(
-            github
-                .endpoint(true, &["repos", "owner", "repo", "pulls", "1"])
-                .unwrap()
-                .as_str(),
-            "https://api.github.com/repos/owner/repo/pulls/1"
-        );
-        assert_eq!(
-            github
-                .endpoint(false, &["owner", "repo", "pull", "1"])
-                .unwrap()
-                .as_str(),
-            "https://github.com/owner/repo/pull/1"
-        );
-        let gitlab = Forge::new(
-            ForgeConfiguration {
-                kind: ForgeKind::Gitlab,
-                base: "https://gitlab.example.test/prefix".into(),
-            },
-            "synthetic-token".into(),
-            1,
-        )
-        .unwrap();
-        assert_eq!(
-            gitlab
-                .endpoint(
-                    true,
-                    &["projects", "group/nested/repo", "merge_requests", "1"]
-                )
-                .unwrap()
-                .as_str(),
-            "https://gitlab.example.test/prefix/api/v4/projects/group%2Fnested%2Frepo/merge_requests/1"
-        );
-    }
-}
 fn token_key(kind: ForgeKind) -> String {
     format!("forge.{}", kind.name())
 }
@@ -1460,4 +1411,54 @@ pub fn publication_marker(operation: &str) -> Result<String> {
         return Err("Identifiant de publication invalide.".into());
     }
     Ok(format!("<!-- atelier-publication:{operation} -->"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn api_routes_and_browser_links_keep_distinct_trusted_origins_and_encode_repository_names() {
+        let github = Forge::new(
+            ForgeConfiguration {
+                kind: ForgeKind::Github,
+                base: "https://github.com".into(),
+            },
+            "synthetic-token".into(),
+            1,
+        )
+        .unwrap();
+        assert_eq!(
+            github
+                .endpoint(true, &["repos", "owner", "repo", "pulls", "1"])
+                .unwrap()
+                .as_str(),
+            "https://api.github.com/repos/owner/repo/pulls/1"
+        );
+        assert_eq!(
+            github
+                .endpoint(false, &["owner", "repo", "pull", "1"])
+                .unwrap()
+                .as_str(),
+            "https://github.com/owner/repo/pull/1"
+        );
+        let gitlab = Forge::new(
+            ForgeConfiguration {
+                kind: ForgeKind::Gitlab,
+                base: "https://gitlab.example.test/prefix".into(),
+            },
+            "synthetic-token".into(),
+            1,
+        )
+        .unwrap();
+        assert_eq!(
+            gitlab
+                .endpoint(
+                    true,
+                    &["projects", "group/nested/repo", "merge_requests", "1"]
+                )
+                .unwrap()
+                .as_str(),
+            "https://gitlab.example.test/prefix/api/v4/projects/group%2Fnested%2Frepo/merge_requests/1"
+        );
+    }
 }

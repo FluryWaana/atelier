@@ -599,10 +599,10 @@ impl Jira {
                 }
                 result.push(parse(row)?);
             }
-            if let Some(last) = page.get("isLast") {
-                if last.as_bool() != Some(result.len() as u64 == expected) {
-                    return Err("Pagination des métadonnées Jira incohérente.".into());
-                }
+            if let Some(last) = page.get("isLast")
+                && last.as_bool() != Some(result.len() as u64 == expected)
+            {
+                return Err("Pagination des métadonnées Jira incohérente.".into());
             }
             if result.len() as u64 == expected {
                 return Ok(result);

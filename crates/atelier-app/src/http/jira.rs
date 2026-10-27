@@ -195,7 +195,7 @@ pub(super) async fn import_batch(State(state): State<Shared>, request: Request) 
     use atelier_core::contracts::{JiraBatchImport, JiraImported};
     let input: JiraBatchImport = match super::jira_transitions::input(request).await {
         Ok(input) => input,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {

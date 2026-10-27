@@ -80,9 +80,8 @@ pub(super) async fn launch(
                 let card = store
                     .document::<Card>(Documents::Cards, &id)?
                     .ok_or("Carte introuvable.")?;
-                if let Some(expected)=requested.get::<Card>("expected")? {
-                    if serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))? {return Err("La tâche a changé. Recharge avant de lancer l’exécution.".into());}
-                }
+                if let Some(expected)=requested.get::<Card>("expected")?
+                    && serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))? {return Err("La tâche a changé. Recharge avant de lancer l’exécution.".into());}
                 let (mut profile,api_key)=agent_providers::execution_profile(store,&agent,&mut |value,decrypt| vault.protect(value,decrypt))?;
                 let settings:serde_json::Value=serde_json::from_str(&serde_json::to_string(&store.settings::<Document>()?)?)?;
                 let settings=atelier_core::domain::projects::settings_for_project(&settings,&store.documents::<serde_json::Value>(Documents::Projects)?,&card.fields.get::<String>("repo")?.unwrap_or_default(),cfg!(windows));

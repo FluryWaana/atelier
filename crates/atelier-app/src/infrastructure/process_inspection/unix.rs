@@ -103,7 +103,7 @@ fn linux_address(value: &str, ipv6: bool) -> Result<(String, u16)> {
             return Err("Adresse IPv6 invalide.".into());
         }
         let mut octets = [0; 16];
-        for (index, word) in octets.chunks_exact_mut(4).enumerate() {
+        for (index, word) in octets.as_chunks_mut::<4>().0.iter_mut().enumerate() {
             word.copy_from_slice(
                 &u32::from_str_radix(&address[index * 8..index * 8 + 8], 16)?.to_ne_bytes(),
             );
