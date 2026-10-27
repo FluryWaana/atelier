@@ -6,8 +6,6 @@ data/
 .updates/
 .update-lock.json*
 dist/
-runtime/node.exe
-runtime/node
 release.json
 .serena/
 .env
