@@ -138,3 +138,74 @@ input#task-title { font-size: .9375rem; line-height: 1.5; letter-spacing: normal
   .sidebar #manage-agents:disabled { opacity: .5; }
   .sidebar .local-note { border-color: #292929; }
 }
+
+/* Agent profile management */
+#agents-dialog {
+  width: min(760px, calc(100vw - 48px));
+  padding: 30px 32px;
+  border: 1px solid #3b3b3b;
+  border-radius: 8px;
+  background: #181818;
+  color: #ededed;
+}
+#agents-dialog::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: none; }
+#agents-dialog .editor-heading { align-items: flex-start; margin-bottom: 14px; }
+#agents-dialog .editor-heading .eyebrow { margin: 0; color: #aaa; font-size: 11px; letter-spacing: .06em; }
+#agents-dialog .editor-heading h2 { margin: 6px 0 0; font-size: 24px; letter-spacing: -.02em; }
+#agents-dialog > .field-help { max-width: 64ch; margin: 0; }
+#agents-dialog .field-help { color: #b5b5b5; line-height: 1.6; }
+#agents-dialog button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #484848;
+  border-radius: 4px;
+  background: #242424;
+  color: #ededed;
+  font-size: 13px;
+}
+#agents-dialog button:hover:not(:disabled) { background: #333; border-color: #777; }
+#agents-dialog button:disabled { opacity: .5; }
+#agents-dialog button:focus-visible, #agents-dialog input:focus-visible,
+#agents-dialog select:focus-visible, #agents-dialog textarea:focus-visible {
+  outline: 2px solid #eee;
+  outline-offset: 2px;
+}
+#agents-dialog .editor-actions { gap: 8px; margin-top: 20px; }
+#agents-dialog .profile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #383838;
+}
+#agents-dialog .profile-list button { background: transparent; color: #bcbcbc; }
+#agents-dialog .profile-list button[aria-pressed="true"] { background: #e8e8e8; border-color: #e8e8e8; color: #181818; }
+#agents-dialog .profile-list button[aria-pressed="true"]:hover:not(:disabled) { background: #fff; color: #181818; }
+#agents-dialog > form { padding: 4px 0 0; }
+#agents-dialog fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+#agents-dialog label { display: block; margin: 18px 0 0; color: #dedede; font-size: 13px; }
+#agents-dialog input:not([type=checkbox]), #agents-dialog select, #agents-dialog textarea {
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid #484848;
+  border-radius: 4px;
+  background: #222;
+  color: #ededed;
+}
+#agents-dialog input[readonly] { background: #1b1b1b; color: #aaa; }
+#agents-dialog .check-filter { display: flex; align-items: center; gap: 8px; }
+#agents-dialog .check-filter input { margin: 0; }
+#agents-dialog .primary { background: #ededed; border-color: #ededed; color: #181818; }
+#agents-dialog .primary:hover:not(:disabled) { background: #fff; color: #181818; }
+#agents-dialog .danger { color: #f1b9b9; }
+#agents-dialog > .task-files, #agents-dialog > .confirmation {
+  margin-top: 28px;
+  padding: 22px 0 0;
+  border: 0;
+  border-top: 1px solid #383838;
+  background: transparent;
+}
+#agents-dialog > .task-files h3 { margin: 0 0 12px; font-size: 16px; }
+#agents-dialog > .confirmation p { margin: 0 0 14px; }
+#agents-dialog > .confirmation button { margin-right: 8px; }
