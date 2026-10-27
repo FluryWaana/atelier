@@ -94,10 +94,11 @@ mod tests {
                 .bind(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
                 .is_err()
         );
+        drop(competing);
         leases.remove(0).release();
-        let replacement = PortLease::reserve(port).unwrap();
+        let replacement = PortLease::bind(port).unwrap();
         assert_eq!(replacement.port, port);
         drop(replacement);
-        let _reopened = PortLease::reserve(port).unwrap();
+        let _reopened = PortLease::bind(port).unwrap();
     }
 }

@@ -138,7 +138,12 @@ async fn wait_title(client: &Client, title: &str) -> Result<()> {
 }
 
 pub async fn test() -> Result<()> {
-    run(command("cargo").args(["build", "--locked", "-p", "atelier-app"]))?;
+    run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
+        "build",
+        "--locked",
+        "-p",
+        "atelier-app",
+    ]))?;
     run(command("cargo").args([
         "build",
         "--locked",
@@ -663,6 +668,11 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
             .ok_or("Version de fixture excessive.")?
     );
     crate::notices::generate(&temporary.path().join("third-party-notices.txt")).await?;
+    println!(
+        "Updates : octets du binaire synthétique={}, avis={}; limite du binaire=134217728.",
+        std::fs::metadata(&binary)?.len(),
+        std::fs::metadata(temporary.path().join("third-party-notices.txt"))?.len(),
+    );
     let (original, original_signature) =
         crate::update_flow::archive(temporary.path(), "original", &binary, &assets, current)?;
     let (candidate, candidate_signature) = crate::update_flow::archive(
@@ -696,7 +706,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
     .await?;
     let result=async {
         let token=session::read(&data)?;
-        client.goto(&format!("{address}/#session={token}")).await?;
+        client.goto(&format!("{address}/#session={token}")).await.map_err(|error|format!("Updates : ouverture initiale : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
         wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.disabled === false;",vec![]).await?;
@@ -714,7 +724,8 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         wait_dom(client,"return document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;click(client,"#settings-tab-updates").await?;
         click(client,"#reload-updates").await?;
         wait_dom(client,"return document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#approve-update").await?;click(client,"#apply-update").await?;
+        click(client,"#approve-update").await.map_err(|error|format!("Updates : confirmation avant activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
+        click(client,"#apply-update").await.map_err(|error|format!("Updates : clic natif d’activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         let deadline=Instant::now()+Duration::from_secs(120);
         loop {
             let state=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?.state;
@@ -724,14 +735,24 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
-        client.goto(&format!("{address}/#session={next}")).await?;wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
+        // Reopening must mount a fresh page: a fragment-only navigation retains the old session.
+        client.goto("about:blank").await.map_err(|error|format!("Updates : fermeture de l’ancien document : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
+        client.goto(&format!("{address}/#session={next}")).await.map_err(|error|format!("Updates : réouverture après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
+        wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#manage-settings").await.map_err(|error|format!("Updates : ouverture des préférences après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
+        click(client,"#settings-tab-updates").await.map_err(|error|format!("Updates : lecture de l’onglet après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         let state:serde_json::Value=http.get(format!("{address}/api/state")).bearer_auth(&next).send().await?.checked_status().await?.json().await?;
         if state["settings"]["baseBranch"]!="synthetic-unsaved-update-draft"{return Err("La récupération a perdu le réglage enregistré.".into());}
         std::fs::write(root().join(".artifacts/rust-ui-update-recovered.png"),client.screenshot().await?)?;
         Ok::<(),Box<dyn std::error::Error+Send+Sync>>(())
     }.await;
+    if result.is_err() {
+        let phase = updates::status(Some(&installation))
+            .ok()
+            .and_then(|status| status.operation.map(|operation| operation.state));
+        eprintln!("Updates : phase du journal avant nettoyage synthétique : {phase:?}");
+    }
     let stopped = crate::update_flow::stop_fixture(&installation, &data, port).await;
     result?;
     stopped?;
@@ -961,7 +982,14 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     )
     .await?;
     let response=http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"description":"Human concurrent edit","expected":{"description":"Keep batch description"}})).send().await?;
-    response.checked_status().await?;
+    if response.status() != reqwest::StatusCode::CONFLICT
+        || !response.json::<serde_json::Value>().await?["error"]
+            .as_str()
+            .is_some_and(|error| error.contains("liée à un ticket"))
+    {
+        return Err("La description liée au ticket doit refuser une modification locale.".into());
+    }
+    http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"instructions":"Human concurrent instructions","expected":{"instructions":"Keep batch instructions"}})).send().await?.checked_status().await?;
     wait_dom(
         client,
         "return document.querySelector('#confirm-jira-batch')?.checked === false;",
@@ -997,7 +1025,10 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             .string_equals("instructions", "Keep batch instructions")?
         || !second
             .fields
-            .string_equals("description", "Human concurrent edit")?
+            .string_equals("description", "Keep batch description")?
+        || !second
+            .fields
+            .string_equals("instructions", "Human concurrent instructions")?
         || second.title != atelier_core::document::JsonString::from("Local batch 2")
     {
         return Err(
@@ -3838,7 +3869,7 @@ async fn files_scenario(
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options || []).some(option=>option.value === 'ui-run-command');",vec![]).await?;
     client.execute("const select=document.querySelector('#run-agent'); select.value='ui-run-command'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#start-run").await?;
-    wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#runs-heading')?.parentElement.querySelector('code')?.textContent.includes('Commande synthétique é😀') && window.syntheticRunExecuted !== true;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#runs-heading')?.parentElement.querySelector('pre.service-log > code')?.textContent.includes('Commande synthétique é😀') && window.syntheticRunExecuted !== true;",vec![]).await?;
     client.execute("const select=document.querySelector('#run-mode'); select.value='edit'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#start-run").await?;
     wait_dom(client,"return document.querySelector('#stop-run')?.disabled === false && document.querySelector('#runs-heading')?.parentElement.textContent.includes('Processus actif');",vec![]).await?;
