@@ -17,6 +17,7 @@ async fn explicit_commands_persist_failure_and_stop_descendants_before_releasing
     for mode in ["failure", "hang"] {
         let fixture = tempfile::tempdir().unwrap();
         let root_path = std::fs::canonicalize(fixture.path()).unwrap();
+        let prototype = PrototypeDirectory::open(&root_path).unwrap();
         let repository = root_path.join("repositories/synthetic");
         std::fs::create_dir_all(repository.join(".git")).unwrap();
         std::fs::write(
@@ -24,7 +25,6 @@ async fn explicit_commands_persist_failure_and_stop_descendants_before_releasing
             "atelier-m04-synthetic-only",
         )
         .unwrap();
-        let prototype = PrototypeDirectory::open(&root_path).unwrap();
         let root = prototype.opened_directory().unwrap();
         let selected = Repository::synthetic(
             &root,

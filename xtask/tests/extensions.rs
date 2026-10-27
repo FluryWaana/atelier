@@ -2,12 +2,14 @@ use atelier_app::infrastructure::extensions::Executable;
 use atelier_core::application::extensions::{Manifest, Method, PROTOCOL, Request, Status};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
+static EXTENSION_FIXTURE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 #[path = "support/windows.rs"]
 #[cfg(windows)]
 mod windows;
 
 #[tokio::test]
 async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effect() {
+    let _fixture = EXTENSION_FIXTURE.lock().await;
     use atelier_app::infrastructure::{connector_effects as effects, database::Database};
     use atelier_core::{
         application::extensions::RemotePreview, contracts::ForgeWriteState as Phase,
@@ -177,6 +179,7 @@ async fn installed() -> (atelier_core::application::extensions::Binary, Manifest
 
 #[tokio::test]
 async fn pinned_processes_keep_credentials_in_stdin_and_reject_untrusted_frames() {
+    let _fixture = EXTENSION_FIXTURE.lock().await;
     let (binary, manifest) = installed().await;
     let fixture = Executable::open(PathBuf::from(&binary.path), None)
         .await
@@ -245,6 +248,7 @@ async fn pinned_processes_keep_credentials_in_stdin_and_reject_untrusted_frames(
 #[tokio::test]
 #[cfg(windows)]
 async fn timeout_stops_the_extension_and_its_descendant_before_returning() {
+    let _fixture = EXTENSION_FIXTURE.lock().await;
     let (binary, manifest) = installed().await;
     let fixture = tempfile::tempdir().unwrap();
     std::fs::write(
@@ -284,6 +288,7 @@ async fn timeout_stops_the_extension_and_its_descendant_before_returning() {
 #[tokio::test]
 #[cfg(windows)]
 async fn a_pinned_synthetic_image_cannot_be_replaced_until_its_call_is_released() {
+    let _fixture = EXTENSION_FIXTURE.lock().await;
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("synthetic-extension.exe");
     std::fs::copy(env!("CARGO_BIN_EXE_native-fixture"), &path).unwrap();

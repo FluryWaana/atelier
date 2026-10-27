@@ -1680,14 +1680,15 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
             .await
             .contains("data: connected")
     );
+    let rejected = request(reqwest::Method::POST, &format!("/api/time/{id}/export"))
+        .json(&json!({"confirmed":true}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(rejected.status(), 400);
     assert_eq!(
-        request(reqwest::Method::POST, &format!("/api/time/{id}/export"))
-            .json(&json!({"confirmed":true}))
-            .send()
-            .await
-            .unwrap()
-            .status(),
-        503
+        rejected.json::<Value>().await.unwrap()["error"],
+        "Paramètres d’export Tempo invalides."
     );
     assert_eq!(
         request(reqwest::Method::POST, "/api/time")
@@ -2143,7 +2144,7 @@ async fn project_detection_reads_only_synthetic_repositories_and_never_saves_dra
             .text()
             .await
             .unwrap()
-            .contains("dépôts synthétiques")
+            .contains("Autorise explicitement ce dépôt")
     );
     assert_eq!(
         request(reqwest::Method::POST, &path)
@@ -2954,6 +2955,14 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
     )
     .unwrap();
     std::fs::write(assets.path().join("local-session"), "must not be served").unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    assert!(
+        http::serve(listener, data.path().to_owned(), assets.path().to_owned())
+            .await
+            .is_err()
+    );
+    assert!(!data.path().join("local-session").exists());
+    std::fs::remove_file(assets.path().join("local-session")).unwrap();
     let (address, token, task) = start(data.path(), assets.path()).await;
     let client = reqwest::Client::new();
     for path in [

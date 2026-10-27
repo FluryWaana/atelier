@@ -106,6 +106,24 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
         };
         let mut saved = context.scenario.get::<Card>("card").unwrap().unwrap();
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
+        // Linked ticket text is now changed only by its explicit refresh use case.
+        // Keep the historical vectors intact, while checking this intentional rebuild contract.
+        if !context.scenario.truthy("missing").unwrap()
+            && saved.fields.truthy("ticket").unwrap()
+            && (body.raw("title").is_some() || body.raw("description").is_some())
+        {
+            let error = task_editing::prepare(
+                &context,
+                &saved,
+                &body,
+                context.scenario.truthy("busy").unwrap(),
+            )
+            .err()
+            .expect("Linked ticket text must not be edited locally");
+            assert!(error.to_string().contains("liée à un ticket"));
+            assert!(context.events.borrow().is_empty());
+            continue;
+        }
         // The rebuild deliberately separates manual status changes from agent execution.
         if body.string_equals("status", "doing").unwrap()
             && !saved.fields.string_equals("status", "doing").unwrap()

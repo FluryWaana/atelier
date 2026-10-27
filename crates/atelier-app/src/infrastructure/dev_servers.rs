@@ -710,7 +710,7 @@ mod tests {
             )
         } else {
             format!(
-                "ATELIER_SERVICE_FIXTURE={{port}} '{}' --exact infrastructure::dev_servers::tests::synthetic_service_fixture --ignored --nocapture",
+                "ATELIER_SERVICE_FIXTURE={{port}} '{}' --exact infrastructure::dev_servers::tests::synthetic_service_fixture --ignored --nocapture & wait $!",
                 executable.to_string_lossy().replace('\'', "'\"'\"'")
             )
         };

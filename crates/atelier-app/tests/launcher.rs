@@ -194,7 +194,7 @@ async fn native_launcher_reuses_only_its_authenticated_instance_and_preserves_da
         .json()
         .await
         .unwrap();
-    assert!(state["cards"].as_array().unwrap().iter().any(
+    assert!(state["brainstorms"].as_array().unwrap().iter().any(
         |saved| saved["id"] == card["id"] && saved["title"] == "Synthetic launcher persistence"
     ));
     launcher::stop(instance.data.path(), instance.port)
