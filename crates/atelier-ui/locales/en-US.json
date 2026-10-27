@@ -2155,5 +2155,6 @@
   "Review de module incomplète ou périmée.": "The module review is incomplete or stale.",
   "Review de module incomplète.": "The module review is incomplete.",
   "Sélection de dépôt du module invalide.": "Invalid module repository selection.",
-  "Demande de publication du module invalide.": "Invalid module publication request."
+  "Demande de publication du module invalide.": "Invalid module publication request.",
+  "Termine ou rapproche les opérations Jira avant une sauvegarde.": "Complete or reconcile Jira operations before creating a backup."
 }

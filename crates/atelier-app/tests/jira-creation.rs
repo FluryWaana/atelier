@@ -17,6 +17,22 @@ use axum::{
     routing::{get, post},
 };
 use serde_json::{Value, json};
+fn assert_backup_blocked(
+    store: &atelier_app::infrastructure::store::Store<'_>,
+    path: &std::path::Path,
+) -> atelier_app::Result<()> {
+    let directory = BackupDirectory::open(path)?;
+    let before = serde_json::to_value(directory.list()?)?;
+    let cards = store.documents::<Value>(Documents::Cards)?;
+    let error = directory
+        .create(store)
+        .err()
+        .expect("Jira creation must block backup creation");
+    assert!(error.to_string().contains("Jira"));
+    assert_eq!(serde_json::to_value(directory.list()?)?, before);
+    assert_eq!(store.documents::<Value>(Documents::Cards)?, cards);
+    Ok(())
+}
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -210,7 +226,7 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
                         store,
                         "/api/cards/card/jira/creation-reconcile"
                     )?);
-                    assert!(BackupDirectory::open(&backups)?.create(store).is_err());
+                    assert_backup_blocked(store, &backups)?;
                     Ok(backup.name)
                 })
                 .await
@@ -228,8 +244,13 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
             );
             assert!(client.creation_metadata("SYN", "2").await.is_err());
             let original = input.expected.clone();
+            let backups = temporary.path().to_owned();
             let source = database
-                .call(move |store| workflow::sending(store, &original, "operation"))
+                .call(move |store| {
+                    let source = workflow::sending(store, &original, "operation")?;
+                    assert_backup_blocked(store, &backups)?;
+                    Ok(source)
+                })
                 .await
                 .unwrap();
             let result = client.create_issue(&metadata, &source).await;
@@ -246,6 +267,7 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
             database.close().await.unwrap();
             drop(database);
             let database = Database::open(&path).unwrap();
+            let backups = temporary.path().to_owned();
             database
                 .call(move |store| {
                     workflow::recover(store)?;
@@ -260,6 +282,9 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
                                     Phase::Confirmed
                                 })
                     );
+                    if lost {
+                        assert_backup_blocked(store, &backups)?;
+                    }
                     Ok(())
                 })
                 .await

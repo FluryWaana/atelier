@@ -57,7 +57,6 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
                 let mut active_runs = false;
                 for run in store.documents::<Document>(Documents::Runs)? { active_runs |= crate::infrastructure::runs::active(&run)?; }
                 if store.settings::<Document>()?.raw("jiraImportReservation").is_some() { return Err(BackupFailure::Conflict("Un import Jira est en cours.").into()); }
-                // shortcut: remote write reservations must join this guard when their effects are enabled.
                 backups::require_idle(active_runs, false, false, &store.documents(Documents::Times)?)?;
                 if !restore {
                     return Ok(serde_json::to_value(directory.create(store)?)?);

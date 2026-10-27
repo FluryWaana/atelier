@@ -130,6 +130,12 @@ impl BackupDirectory {
             )
             .into());
         }
+        if super::jira_transition::blocks(store, "/api/backups")? {
+            return Err(BackupFailure::Conflict(
+                "Termine ou rapproche les opérations Jira avant une sauvegarde.",
+            )
+            .into());
+        }
         let name = new_name()?;
         store.backup_in(&self.handle, Path::new(&name))?;
         Ok(CreatedBackup {
