@@ -244,7 +244,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     client
         .goto(&format!("{address}/#session={token}"))
         .await
-        .map_err(|_| "Navigation de test refusée.")?;
+        .map_err(|error| {
+            format!(
+                "Navigation de test refusée : {}",
+                error.to_string().replace(&token, "[session]")
+            )
+        })?;
     client
         .wait()
         .at_most(Duration::from_secs(15))
@@ -407,10 +412,28 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?
         .send_keys(" brouillon local")
         .await?;
-    http.patch(format!("{address}/api/cards/{}", original_id.as_str().ok_or("Carte sans id")?))
+    let external = http.patch(format!("{address}/api/cards/{}", original_id.as_str().ok_or("Carte sans id")?))
         .bearer_auth(&token).header("x-local-request", "1")
         .json(&json!({"description":"Modification externe", "expected":{"description":"Description enregistrée"}}))
-        .send().await?.error_for_status()?;
+        .send().await?;
+    if !external.status().is_success() {
+        let status = external.status();
+        let reason = external.text().await?.replace(&token, "[session]");
+        let current: serde_json::Value = http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        let description = current["cards"]
+            .as_array()
+            .and_then(|cards| cards.iter().find(|card| card["id"] == original_id))
+            .and_then(|card| card["description"].as_str())
+            .map(|description| description.encode_utf16().take(128).collect::<Vec<_>>());
+        return Err(format!("Modification externe synthétique refusée ({status}) : {reason}; description actuelle UTF-16 : {description:?}").into());
+    }
     wait_dom(client, "return document.querySelector('[data-status=doing] .card-description')?.textContent === 'Modification externe' && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;
     click(client, "#save-task").await?;
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('changé ailleurs') && document.querySelector('#edit-description')?.value === 'Description enregistrée brouillon local';", vec![]).await?;

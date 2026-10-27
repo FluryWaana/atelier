@@ -174,7 +174,11 @@ async fn the_native_transfer_selects_reviews_cancels_then_copies_without_mutatin
         Ok("1")
     );
     let root = tempfile::tempdir().unwrap();
-    let source = root.path().join("synthetic-source");
+    // Shell selection returns long paths, while the runner's TEMP may use an 8.3 alias.
+    let physical = std::fs::canonicalize(root.path()).unwrap();
+    let physical = physical.to_str().unwrap();
+    let root_path = std::path::Path::new(physical.strip_prefix(r"\\?\").unwrap_or(physical));
+    let source = root_path.join("synthetic-source");
     std::fs::create_dir(&source).unwrap();
     let database = Database::open(&source.join("kanban.sqlite")).unwrap();
     database.call(|store|store.put(Documents::Cards, &json!({"id":"native-import-card","title":"Synthetic source preserved","status":"todo","projectId":"default"}))).await.unwrap();
@@ -186,9 +190,7 @@ async fn the_native_transfer_selects_reviews_cancels_then_copies_without_mutatin
     )
     .unwrap();
     for accept in [false, true] {
-        let destination = root
-            .path()
-            .join(if accept { "accepted" } else { "cancelled" });
+        let destination = root_path.join(if accept { "accepted" } else { "cancelled" });
         let child = Command::new(env!("CARGO_BIN_EXE_atelier"))
             .args(["import-data", "--choose-source", "--destination"])
             .arg(&destination)
@@ -216,11 +218,15 @@ async fn the_native_transfer_selects_reviews_cancels_then_copies_without_mutatin
         let review = reviewed_paths(confirming).replace("\r\n", "\n");
         assert!(
             review.contains(&format!("Source : {}\n", source.display())),
-            "source mismatch: no copy may be confirmed"
+            "source mismatch: no copy may be confirmed; expected source {:?}; observed review {:?}",
+            source,
+            review
         );
         assert!(
             review.contains(&format!("Destination : {}\n", destination.display())),
-            "destination mismatch: no copy may be confirmed"
+            "destination mismatch: no copy may be confirmed; expected destination {:?}; observed review {:?}",
+            destination,
+            review
         );
         send(
             confirming,
