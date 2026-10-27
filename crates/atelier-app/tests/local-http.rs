@@ -207,6 +207,23 @@ async fn a_closed_control_socket_never_requests_credentials() {
     server.await.unwrap();
 }
 
+#[tokio::test]
+async fn a_kernel_confirmed_free_port_returns_absence_without_reading_the_session() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let result = tokio::time::timeout(
+        Duration::from_secs(1),
+        LocalHttp::new()
+            .unwrap()
+            .authenticated_health(&address, || panic!("A free port must not load the session")),
+    )
+    .await
+    .expect("A free port must not wait for HTTP timeouts")
+    .unwrap();
+    assert_eq!(result, None);
+}
+
 #[derive(Clone)]
 struct TimedHealth {
     port: u16,

@@ -122,6 +122,14 @@ impl LocalHttp {
         load_token: impl FnOnce() -> Result<Option<String>>,
     ) -> Result<Option<Value>> {
         let port = server_port(address)?;
+        match std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)) {
+            Ok(listener) => {
+                drop(listener);
+                return Ok(None);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => {}
+            Err(error) => return Err(error.into()),
+        }
         let address = format!("http://127.0.0.1:{port}");
         let challenge = session::new_token()?;
         // Only this credential-free proof GET may repeat; authenticated reads and mutations do not.

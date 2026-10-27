@@ -68,15 +68,14 @@ pub async fn start(
             command.as_std_mut().process_group(0);
         }
         let mut child = command.spawn()?;
-        let ready:Result<()>=async {
-            let deadline=Instant::now()+Duration::from_secs(20);
-            loop {
-                if health(&http,data,port).await?.is_some(){return Ok(());}
-                if child.try_wait()?.is_some(){return Err("Le serveur Atelier s’est arrêté au démarrage. Lance la commande serve avec ces dossiers pour lire le diagnostic.".into());}
-                if Instant::now()>=deadline{return Err("Délai de démarrage d’Atelier dépassé.".into());}
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            }
-        }.await;
+        let ready = wait_for_ready(
+            &http,
+            data,
+            port,
+            &mut child,
+            Instant::now() + Duration::from_secs(20),
+        )
+        .await;
         if let Err(error) = ready {
             let _ = child.kill().await;
             let _ = child.wait().await;
@@ -87,6 +86,34 @@ pub async fn start(
         open(data, port).await?;
     }
     Ok(())
+}
+
+async fn wait_for_ready(
+    http: &LocalHttp,
+    data: &Path,
+    port: u16,
+    child: &mut tokio::process::Child,
+    deadline: Instant,
+) -> Result<()> {
+    loop {
+        if Instant::now() >= deadline {
+            return Err("Délai de démarrage d’Atelier dépassé.".into());
+        }
+        if child.try_wait()?.is_some() {
+            return Err("Le serveur Atelier s’est arrêté au démarrage. Lance la commande serve avec ces dossiers pour lire le diagnostic.".into());
+        }
+        match tokio::time::timeout_at(deadline, health(http, data, port)).await {
+            Ok(Ok(Some(_))) => return Ok(()),
+            Ok(Ok(None)) => {}
+            Ok(Err(error))
+                if error
+                    .downcast_ref::<reqwest::Error>()
+                    .is_some_and(reqwest::Error::is_timeout) => {}
+            Ok(Err(error)) => return Err(error),
+            Err(_) => return Err("Délai de démarrage d’Atelier dépassé.".into()),
+        }
+        tokio::time::sleep_until(deadline.min(Instant::now() + Duration::from_millis(100))).await;
+    }
 }
 
 pub async fn open(data: &Path, port: u16) -> Result<()> {
@@ -234,6 +261,176 @@ async fn open_browser(address: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{
+        Json, Router,
+        extract::{Query, State},
+        http::HeaderMap,
+        response::IntoResponse,
+        routing::get,
+    };
+    use std::{
+        collections::HashMap,
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
+    };
+
+    #[test]
+    #[ignore = "Child fixture invoked only by the bounded launcher readiness test"]
+    fn synthetic_startup_child() {
+        assert_eq!(
+            std::fs::read_to_string(".launcher-startup-fixture").unwrap(),
+            "atelier-launcher-synthetic-only"
+        );
+        std::thread::sleep(Duration::from_secs(30));
+    }
+    #[derive(Clone, Copy)]
+    enum Readiness {
+        AfterTimeouts,
+        Timeout,
+        WrongIdentity,
+    }
+    #[derive(Clone)]
+    struct ReadyState {
+        mode: Readiness,
+        data: std::path::PathBuf,
+        port: u16,
+        pid: u32,
+        token: String,
+        proofs: Arc<AtomicUsize>,
+        credentials: Arc<AtomicUsize>,
+        release: Arc<tokio::sync::Notify>,
+    }
+    async fn startup_health(
+        State(state): State<ReadyState>,
+        Query(query): Query<HashMap<String, String>>,
+        headers: HeaderMap,
+    ) -> axum::response::Response {
+        if let Some(challenge) = query.get("challenge") {
+            assert!(!headers.contains_key("authorization"));
+            let count = state.proofs.fetch_add(1, Ordering::SeqCst) + 1;
+            if matches!(state.mode, Readiness::Timeout)
+                || (matches!(state.mode, Readiness::AfterTimeouts) && count <= 3)
+            {
+                state.release.notified().await;
+                return axum::http::StatusCode::REQUEST_TIMEOUT.into_response();
+            }
+            if matches!(state.mode, Readiness::WrongIdentity) {
+                return Json(serde_json::json!({"proof":"not-an-atelier-proof"})).into_response();
+            }
+            return Json(serde_json::json!({"proof":session::proof(&state.token,challenge,state.port).unwrap()})).into_response();
+        }
+        assert_eq!(headers["authorization"], format!("Bearer {}", state.token));
+        state.credentials.fetch_add(1, Ordering::SeqCst);
+        Json(serde_json::json!({"app":"atelier-kanban","protocol":"atelier-local/1","pid":state.pid,"dataDirectory":state.data})).into_response()
+    }
+    #[tokio::test]
+    async fn child_readiness_retries_only_health_timeouts_and_bounds_the_entire_wait() {
+        for mode in [
+            Readiness::AfterTimeouts,
+            Readiness::Timeout,
+            Readiness::WrongIdentity,
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            std::fs::write(
+                directory.path().join(".launcher-startup-fixture"),
+                "atelier-launcher-synthetic-only",
+            )
+            .unwrap();
+            let token = session::new_token().unwrap();
+            session::write(directory.path(), &token).unwrap();
+            let mut command = Command::new(std::env::current_exe().unwrap());
+            command
+                .env_clear()
+                .current_dir(directory.path())
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "infrastructure::launcher::tests::synthetic_startup_child",
+                ])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .kill_on_drop(true);
+            for name in ["SystemRoot", "WINDIR"] {
+                if let Some(value) = std::env::var_os(name) {
+                    command.env(name, value);
+                }
+            }
+            #[cfg(windows)]
+            command.creation_flags(0x08000000);
+            let mut child = command.spawn().unwrap();
+            let pid = child.id().unwrap();
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let state = ReadyState {
+                mode,
+                data: directory.path().to_owned(),
+                port,
+                pid,
+                token,
+                proofs: Arc::default(),
+                credentials: Arc::default(),
+                release: Arc::default(),
+            };
+            let router = Router::new()
+                .route("/api/health", get(startup_health))
+                .with_state(state.clone());
+            let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+            let limit = if matches!(mode, Readiness::Timeout) {
+                Duration::from_millis(250)
+            } else {
+                Duration::from_secs(20)
+            };
+            let deadline = Instant::now() + limit;
+            let result = wait_for_ready(
+                &LocalHttp::new().unwrap(),
+                directory.path(),
+                port,
+                &mut child,
+                deadline,
+            )
+            .await;
+            let still_owned_and_running =
+                child.id() == Some(pid) && child.try_wait().unwrap().is_none();
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            state.release.notify_waiters();
+            server.abort();
+            assert!(
+                still_owned_and_running,
+                "The readiness probe must not replace or kill the child"
+            );
+            match mode {
+                Readiness::AfterTimeouts => {
+                    result.unwrap();
+                    assert_eq!(state.proofs.load(Ordering::SeqCst), 4);
+                    assert_eq!(state.credentials.load(Ordering::SeqCst), 1);
+                }
+                Readiness::Timeout => {
+                    assert!(
+                        result
+                            .unwrap_err()
+                            .to_string()
+                            .contains("Délai de démarrage")
+                    );
+                    assert!(state.proofs.load(Ordering::SeqCst) <= 1);
+                    assert_eq!(state.credentials.load(Ordering::SeqCst), 0);
+                }
+                Readiness::WrongIdentity => {
+                    assert!(
+                        result
+                            .unwrap_err()
+                            .to_string()
+                            .contains("Identité du serveur local non vérifiée")
+                    );
+                    assert_eq!(state.proofs.load(Ordering::SeqCst), 1);
+                    assert_eq!(state.credentials.load(Ordering::SeqCst), 0);
+                }
+            }
+        }
+    }
     #[tokio::test]
     async fn shutdown_waits_for_data_lock_release_without_touching_business_data() {
         let root = tempfile::tempdir().unwrap();

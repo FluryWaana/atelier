@@ -73,6 +73,21 @@ fn port() -> u16 {
         .unwrap()
         .port()
 }
+
+#[tokio::test]
+async fn a_free_port_reaches_spawn_before_initializing_a_missing_data_directory() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("must-not-be-created");
+    let missing = root.path().join("missing-synthetic-server");
+    let error = launcher::start(&missing, &data, root.path(), port(), false)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<std::io::Error>().unwrap().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    assert!(!data.exists());
+}
 async fn health(instance: &Instance) -> serde_json::Value {
     LocalHttp::new()
         .unwrap()
