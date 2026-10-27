@@ -121,9 +121,13 @@ impl Repository {
     pub(super) async fn verify_root(&self) -> Result<()> {
         let top = self.git(&["rev-parse", "--show-toplevel"]).await?;
         let top = String::from_utf8(top)?;
+        // Git and Windows may spell the same existing directory using short/verbatim aliases.
+        // Compare their physical names; selection and directory ownership remain independently checked.
+        let top = std::fs::canonicalize(top.trim_end_matches(['\r', '\n']))?;
+        let selected = std::fs::canonicalize(&self.path)?;
         if !atelier_core::domain::projects::same_repository(
-            top.trim_end_matches(['\r', '\n']),
-            &path_string(&self.path).utf8()?,
+            &path_string(&top).utf8()?,
+            &path_string(&selected).utf8()?,
             cfg!(windows),
         ) {
             return Err("Le dossier de travail ne correspond plus à la racine du dépôt.".into());

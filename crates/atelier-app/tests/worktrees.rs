@@ -15,6 +15,16 @@ fn link_directory(target: &Path, link: impl AsRef<Path>) -> std::io::Result<()> 
         std::os::unix::fs::symlink(target, link)
     }
 }
+fn remove_directory_link(link: impl AsRef<Path>) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        std::fs::remove_dir(link)
+    }
+    #[cfg(unix)]
+    {
+        std::fs::remove_file(link)
+    }
+}
 async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
     command
@@ -474,7 +484,7 @@ async fn shared_dependencies_resume_and_survive_worktree_removal_and_refusal() {
     let metadata = Path::new(gitdir.trim().strip_prefix("gitdir: ").unwrap());
     let inventory = std::fs::read(metadata.join("atelier-dependencies.json")).unwrap();
     // An interrupted detach is recoverable from the intent retained in Git metadata.
-    std::fs::remove_dir(target.join("client/node_modules")).unwrap();
+    remove_directory_link(target.join("client/node_modules")).unwrap();
     worktrees::create(&root, &roots, &plan).await.unwrap();
     assert_eq!(
         std::fs::read(metadata.join("atelier-dependencies.json")).unwrap(),
@@ -493,7 +503,7 @@ async fn shared_dependencies_resume_and_survive_worktree_removal_and_refusal() {
         );
     }
     // Replacing an owned link with a real directory refuses even a forced removal.
-    std::fs::remove_dir(target.join("node_modules")).unwrap();
+    remove_directory_link(target.join("node_modules")).unwrap();
     std::fs::create_dir(target.join("node_modules")).unwrap();
     std::fs::write(target.join("node_modules/personal.txt"), "preserve").unwrap();
     assert!(worktrees::remove(&root, &roots, &plan, true).await.is_err());
