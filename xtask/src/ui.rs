@@ -10,6 +10,30 @@ use std::{
     time::{Duration, Instant},
 };
 
+trait SyntheticResponse {
+    async fn checked_status(self) -> Result<reqwest::Response>;
+}
+impl SyntheticResponse for reqwest::Response {
+    async fn checked_status(self) -> Result<Self> {
+        if self.status().is_success() {
+            return Ok(self);
+        }
+        let status = self.status();
+        let path = self.url().path().to_owned();
+        let message = self
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .and_then(|value| value["error"].as_str().map(str::to_owned))
+            .unwrap_or_else(|| "Réponse sans erreur publique JSON.".into());
+        Err(format!(
+            "Requête synthétique {path} refusée ({status}) : {}",
+            message.chars().take(2000).collect::<String>()
+        )
+        .into())
+    }
+}
+
 struct Process(Child);
 impl Drop for Process {
     fn drop(&mut self) {
@@ -214,13 +238,14 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .json(&json!({"name":"Projet synthétique", "repo":repo}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let queued: serde_json::Value = http.post(format!("{address}/api/cards"))
         .bearer_auth(&token).header("x-local-request", "1")
         .json(&json!({"title":"Attente projet", "description":"Une description à retrouver", "status":"review", "repo":repo}))
-        .send().await?.error_for_status()?.json().await?;
+        .send().await?.checked_status().await?.json().await?;
     let archived: serde_json::Value = http
         .post(format!("{address}/api/cards"))
         .bearer_auth(&token)
@@ -228,7 +253,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .json(&json!({"title":"Archive synthétique", "repo":repo}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     http.post(format!(
@@ -240,7 +266,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     .json(&json!({"archived":true}))
     .send()
     .await?
-    .error_for_status()?;
+    .checked_status()
+    .await?;
     client
         .goto(&format!("{address}/#session={token}"))
         .await
@@ -400,7 +427,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .bearer_auth(&token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if !board.runs.is_empty() {
@@ -424,7 +452,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
             .bearer_auth(&token)
             .send()
             .await?
-            .error_for_status()?
+            .checked_status()
+            .await?
             .json()
             .await?;
         let description = current["cards"]
@@ -668,7 +697,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         client.goto(&format!("{address}/#session={next}")).await?;wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
         wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        let state:serde_json::Value=http.get(format!("{address}/api/state")).bearer_auth(&next).send().await?.error_for_status()?.json().await?;
+        let state:serde_json::Value=http.get(format!("{address}/api/state")).bearer_auth(&next).send().await?.checked_status().await?.json().await?;
         if state["settings"]["baseBranch"]!="synthetic-unsaved-update-draft"{return Err("La récupération a perdu le réglage enregistré.".into());}
         std::fs::write(root().join(".artifacts/rust-ui-update-recovered.png"),client.screenshot().await?)?;
         Ok::<(),Box<dyn std::error::Error+Send+Sync>>(())
@@ -817,7 +846,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         .bearer_auth(&token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let card = board
@@ -901,7 +931,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     )
     .await?;
     let response=http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"description":"Human concurrent edit","expected":{"description":"Keep batch description"}})).send().await?;
-    response.error_for_status()?;
+    response.checked_status().await?;
     wait_dom(
         client,
         "return document.querySelector('#confirm-jira-batch')?.checked === false;",
@@ -916,7 +946,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         .bearer_auth(&token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let first = batch
@@ -1014,7 +1045,8 @@ async fn tempo_export_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let entry = board
@@ -1343,7 +1375,8 @@ async fn brainstorm_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let converted: Vec<_> = board
@@ -1361,14 +1394,15 @@ async fn brainstorm_scenario(
     let fixture = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"preparation-command","name":"Synthetic preparation command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","preparation"],"editArgs":["run-command","preparation"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"preparation-command","name":"Synthetic preparation command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","preparation"],"editArgs":["run-command","preparation"],"expected":null})).send().await?.checked_status().await?;
     http.post(format!("{address}/api/cards/{}/worktree", converted[0].id))
         .bearer_auth(token)
         .header("x-local-request", "1")
         .json(&json!({"branch":"atelier/synthetic-preparation","base":"main","fetchOrigin":false}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='preparation-command');",vec![]).await?;
     client.execute("for(const [id,value] of [['run-agent','preparation-command'],['run-purpose','preparation']]){const select=document.getElementById(id);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));}return true;",vec![]).await?;
     click(client, "#start-run").await?;
@@ -1411,7 +1445,8 @@ async fn brainstorm_scenario(
         .json(&json!({"testCommand":verification_command,"expected":{"testCommand":""}}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     wait_dom(
         client,
         "return document.querySelector('#start-verification')?.disabled === false;",
@@ -1420,14 +1455,15 @@ async fn brainstorm_scenario(
     .await?;
     click(client, "#start-verification").await?;
     wait_dom(client,"return document.querySelector('#verification-result')?.textContent.includes('Vérification réussie sur cet instantané') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('.service-log script');",vec![]).await?;
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"queue-command","name":"Synthetic queued command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","success"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"queue-command","name":"Synthetic queued command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","success"],"expected":null})).send().await?.checked_status().await?;
     http.patch(format!("{address}/api/cards/{}", converted[0].id))
         .bearer_auth(token)
         .header("x-local-request", "1")
         .json(&json!({"agent":"queue-command","expected":{"agent":"codex"}}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     wait_dom(
         client,
         "return document.querySelector('#enqueue-task')?.disabled === false;",
@@ -1446,7 +1482,7 @@ async fn brainstorm_scenario(
         vec![],
     )
     .await?;
-    http.patch(format!("{address}/api/projects/brainstorm-project")).bearer_auth(token).header("x-local-request","1").json(&json!({"automationEnabled":true,"autoFix":false,"prTarget":"main","expected":{"automationEnabled":false,"autoFix":true,"prTarget":""}})).send().await?.error_for_status()?;
+    http.patch(format!("{address}/api/projects/brainstorm-project")).bearer_auth(token).header("x-local-request","1").json(&json!({"automationEnabled":true,"autoFix":false,"prTarget":"main","expected":{"automationEnabled":false,"autoFix":true,"prTarget":""}})).send().await?.checked_status().await?;
     client
         .goto(&format!("{address}/?task={}", converted[0].id))
         .await?;
@@ -1462,7 +1498,8 @@ async fn brainstorm_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let task = before
@@ -1534,7 +1571,8 @@ async fn brainstorm_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let task = committed
@@ -1574,7 +1612,8 @@ async fn brainstorm_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let queue = queued
@@ -1605,14 +1644,15 @@ async fn brainstorm_scenario(
         vec![],
     )
     .await?;
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"brainstorm-command","name":"Synthetic brainstorm command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","brainstorm"],"editArgs":["run-command","brainstorm"],"expected":null})).send().await?.checked_status().await?;
     http.post(format!("{address}/api/cards/brainstorm-session/worktree"))
         .bearer_auth(token)
         .header("x-local-request", "1")
         .json(&json!({"branch":"atelier/synthetic-brainstorm","base":"main","fetchOrigin":false}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     client
         .goto(&format!("{address}/?task=brainstorm-session"))
         .await?;
@@ -1627,7 +1667,7 @@ async fn brainstorm_scenario(
         click(client, "#start-run").await?;
         wait_dom(client,"return document.querySelector('#brainstorm-message')?.value==='' && document.querySelector('#stop-run')?.disabled===true && document.querySelector('#runs-heading')?.parentElement.textContent.includes('Exécution terminée') && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic agent conversation reply');",vec![]).await?;
     }
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"empty-brainstorm-command","name":"Synthetic empty brainstorm","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-empty-brainstorm","synthetic-only"],"editArgs":["run-empty-brainstorm","synthetic-only"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"empty-brainstorm-command","name":"Synthetic empty brainstorm","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-empty-brainstorm","synthetic-only"],"editArgs":["run-empty-brainstorm","synthetic-only"],"expected":null})).send().await?.checked_status().await?;
     let empty: atelier_core::contracts::Card = http
         .post(format!("{address}/api/brainstorms"))
         .bearer_auth(token)
@@ -1635,7 +1675,8 @@ async fn brainstorm_scenario(
         .json(&json!({"title":"Synthetic idea without repo","repo":""}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     client
@@ -1655,7 +1696,8 @@ async fn brainstorm_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let record = board
@@ -1725,7 +1767,8 @@ async fn time_task_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let entry = board.times.first().ok_or("Temps synthétique absent.")?;
@@ -1741,7 +1784,8 @@ async fn time_task_scenario(
         .json(&update)
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     click(client, "#save-time").await?;
     wait_dom(client,"return document.querySelector('#time-error')?.textContent.includes('a changé') && document.querySelector('#time-duration')?.value === '00:02:00';",vec![]).await?;
     click(client, "#reset-time-draft").await?;
@@ -1908,7 +1952,8 @@ async fn profiles_scenario(
     let catalog = request(reqwest::Method::GET, "/api/agent-providers")
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .text()
         .await?;
     if catalog.contains("synthetic-ui-key") {
@@ -1927,7 +1972,8 @@ async fn profiles_scenario(
         .json(&external)
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     client
         .find(Locator::Css("#profile-name"))
         .await?
@@ -1978,7 +2024,8 @@ async fn profiles_scenario(
     let board: atelier_core::contracts::Board = request(reqwest::Method::GET, "/api/state")
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let previous = board
@@ -1989,7 +2036,8 @@ async fn profiles_scenario(
         .json(&json!({"agent":"ui-api","expected":{"agent":previous}}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     click(client, "#remove-profile").await?;
     click(client, "#confirm-profile-action").await?;
     wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('fournisseur est utilisé') && document.querySelector('[data-profile=ui-api]');",vec![]).await?;
@@ -1997,7 +2045,8 @@ async fn profiles_scenario(
         .json(&json!({"agent":previous,"expected":{"agent":"ui-api"}}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     click(client, "#remove-profile").await?;
     click(client, "#cancel-profile-action").await?;
     click(client, "#remove-profile").await?;
@@ -2122,13 +2171,14 @@ async fn live_scenario(
         .json(&json!({"title":"Ajout depuis une autre fenêtre"}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     wait_title(client, "Ajout depuis une autre fenêtre").await?;
     http.patch(format!("{address}/api/cards/{}", card.id)).bearer_auth(token).header("x-local-request", "1")
         .json(&json!({"title":"Modification depuis une autre fenêtre", "status":"standby", "expected":{"title":"Ajout depuis une autre fenêtre", "status":"todo"}}))
-        .send().await?.error_for_status()?;
+        .send().await?.checked_status().await?;
     wait_dom(client, "return Array.from(document.querySelectorAll('[data-status=standby] article.card')).some(card => card.dataset.id === arguments[0] && card.querySelector('.card-title').textContent === 'Modification depuis une autre fenêtre');", vec![json!(card.id)]).await?;
     http.delete(format!("{address}/api/cards/{}", card.id))
         .bearer_auth(token)
@@ -2136,7 +2186,8 @@ async fn live_scenario(
         .json(&json!({}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     wait_dom(client, "return !Array.from(document.querySelectorAll('article.card')).some(card => card.dataset.id === arguments[0]);", vec![json!(card.id)]).await?;
     Ok(())
 }
@@ -2245,7 +2296,8 @@ async fn projects_scenario(
             .bearer_auth(token)
             .send()
             .await?
-            .error_for_status()?
+            .checked_status()
+            .await?
             .json()
             .await?;
         if state["projects"].as_array().is_none_or(|projects| {
@@ -2275,7 +2327,8 @@ async fn projects_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let project = board
@@ -2331,7 +2384,8 @@ async fn projects_scenario(
     .json(&json!({"name":"Nom externe", "expected":{"name":"Projet renommé"}}))
     .send()
     .await?
-    .error_for_status()?;
+    .checked_status()
+    .await?;
     click(client, "#save-project").await?;
     wait_dom(client,"return document.querySelector('#project-error')?.textContent.includes('changé ailleurs') && document.querySelector('#project-name')?.value === 'Projet renommé brouillon';",vec![]).await?;
     click(client, "#close-projects").await?;
@@ -2405,7 +2459,8 @@ async fn settings_scenario(
         .json(&json!({"title":"Héritage des paramètres généraux"}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if !card.fields.string_equals("agent", "claude")?
@@ -2423,7 +2478,8 @@ async fn settings_scenario(
         .json(&json!({}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     client
         .find(Locator::Css("#settings-branch"))
         .await?
@@ -2435,7 +2491,8 @@ async fn settings_scenario(
         .json(&json!({"baseBranch":"remote", "expected":{"baseBranch":"main"}}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     click(client, "#save-settings").await?;
     wait_dom(client,"return document.querySelector('#settings-error')?.textContent.includes('changé ailleurs') && document.querySelector('#settings-branch')?.value === 'main-local';",vec![]).await?;
     click(client, "#close-settings").await?;
@@ -2509,7 +2566,8 @@ async fn settings_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if serde_json::to_string(&saved)?.contains("synthetic-jira-one") {
@@ -2525,7 +2583,7 @@ async fn settings_scenario(
         .await?
         .send_keys("project = LOCAL")
         .await?;
-    http.put(format!("{address}/api/jira/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":saved["configuration"]["revision"],"mode":"cloud","url":"https://synthetic-one.example.test","email":"synthetic@example.test","query":"project = REMOTE","token":"synthetic-jira-rotated"})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/jira/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":saved["configuration"]["revision"],"mode":"cloud","url":"https://synthetic-one.example.test","email":"synthetic@example.test","query":"project = REMOTE","token":"synthetic-jira-rotated"})).send().await?.checked_status().await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-error')?.textContent.includes('a changé') && document.querySelector('#jira-query')?.value === 'project = LOCAL';",vec![]).await?;
     click(client, "#reload-jira").await?;
@@ -2580,7 +2638,8 @@ async fn settings_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if serde_json::to_string(&forges)?.contains("synthetic-forge-ui") {
@@ -2596,7 +2655,7 @@ async fn settings_scenario(
         .await?
         .send_keys("https://local-forge-draft.example.test")
         .await?;
-    http.put(format!("{address}/api/forges")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":forges.revision,"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"token":"synthetic-forge-rotation"})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/forges")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":forges.revision,"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"token":"synthetic-forge-rotation"})).send().await?.checked_status().await?;
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#forge-error')?.textContent.includes('ont changé') && document.querySelector('#forge-base')?.value === 'https://local-forge-draft.example.test';",vec![]).await?;
     click(client, "#reload-forges").await?;
@@ -2634,7 +2693,8 @@ async fn settings_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if serde_json::to_string(&tempo)?.contains("synthetic-tempo-ui-token") || !tempo.token_set {
@@ -2647,7 +2707,7 @@ async fn settings_scenario(
         .await?
         .send_keys("synthetic-tempo-local-draft")
         .await?;
-    http.put(format!("{address}/api/tempo/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":tempo.configuration.revision,"expectedJiraRevision":tempo.jira_revision,"base":tempo.configuration.base,"token":"synthetic-tempo-external-rotation","clearToken":false})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/tempo/config")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":tempo.configuration.revision,"expectedJiraRevision":tempo.jira_revision,"base":tempo.configuration.base,"token":"synthetic-tempo-external-rotation","clearToken":false})).send().await?.checked_status().await?;
     click(client, "#save-tempo").await?;
     wait_dom(client,"return document.querySelector('#tempo-error')?.textContent.includes('a changé') && document.querySelector('#tempo-token')?.value === 'synthetic-tempo-local-draft';",vec![]).await?;
     click(client, "#reload-tempo").await?;
@@ -2749,7 +2809,8 @@ async fn connectors_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .text()
         .await?;
     if response.contains("synthetic-extension-browser-token") {
@@ -2771,7 +2832,7 @@ async fn connectors_scenario(
         .await?
         .send_keys("synthetic-extension-browser-draft")
         .await?;
-    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":connection.installed.revision,"values":{"fault":"success"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":connection.installed.revision,"values":{"fault":"success"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.checked_status().await?;
     click(client, "#save-connector").await?;
     wait_dom(client,"return document.querySelector('#connectors-error')?.textContent.length > 0 && document.querySelector('#connector-field-token')?.value === 'synthetic-extension-browser-draft' && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "#reload-connectors").await?;
@@ -2786,7 +2847,8 @@ async fn connectors_scenario(
         .json(&json!({"name":"Synthetic connector import","repo":repository}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let project_id = project["id"].as_str().ok_or("Projet synthétique absent")?;
@@ -2801,7 +2863,8 @@ async fn connectors_scenario(
         .json(&json!({"name":"Updated synthetic connector import"}))
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     click(client, "#import-connector-tickets").await?;
     wait_dom(client,"return document.querySelector('#connectors-error')?.textContent.includes('projet a changé') && document.querySelector('[data-connector-ticket=synthetic-ticket]')?.checked === true && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     wait_dom(client,"return Array.from(document.querySelector('#connector-import-project')?.options ?? []).some(option=>option.value===arguments[0] && option.textContent==='Updated synthetic connector import');",vec![json!(project_id)]).await?;
@@ -2815,7 +2878,8 @@ async fn connectors_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let mut imported = state["cards"]
@@ -2864,7 +2928,8 @@ async fn connectors_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let updated = refreshed["cards"]
@@ -2903,7 +2968,8 @@ async fn connectors_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if !registry.modules.is_empty() {
@@ -2914,7 +2980,8 @@ async fn connectors_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if state["cards"]
@@ -2937,7 +3004,8 @@ async fn connector_fixture_fault(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let module = registry
@@ -2946,7 +3014,7 @@ async fn connector_fixture_fault(
         .find(|module| module.installed.manifest.id == "synthetic-extension")
         .ok_or("Module synthétique absent")?;
     http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1")
-        .json(&json!({"expectedRevision":module.installed.revision,"values":{"fault":fault},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+        .json(&json!({"expectedRevision":module.installed.revision,"values":{"fault":fault},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.checked_status().await?;
     Ok(())
 }
 
@@ -2982,7 +3050,8 @@ async fn connector_reset_scenario(
             .bearer_auth(token)
             .send()
             .await?
-            .error_for_status()?
+            .checked_status()
+            .await?
             .json()
             .await?;
         if state["cards"]
@@ -3022,7 +3091,8 @@ async fn connector_transition_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let operation = operations
@@ -3054,7 +3124,8 @@ async fn connector_transition_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let profile = registry
@@ -3063,7 +3134,7 @@ async fn connector_transition_scenario(
         .find(|profile| profile.installed.manifest.id == "synthetic-extension")
         .ok_or("Module synthétique absent")?;
     let configured=http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1")
-        .json(&json!({"expectedRevision":profile.installed.revision,"values":{},"forgetValues":[],"secrets":{"token":"synthetic-rotated-transition-token"},"forgetSecrets":[]})).send().await?.error_for_status()?.text().await?;
+        .json(&json!({"expectedRevision":profile.installed.revision,"values":{},"forgetValues":[],"secrets":{"token":"synthetic-rotated-transition-token"},"forgetSecrets":[]})).send().await?.checked_status().await?.text().await?;
     if configured.contains("synthetic-rotated-transition-token") {
         return Err("Le nouveau secret du connecteur a été exposé.".into());
     }
@@ -3091,7 +3162,8 @@ async fn connector_transition_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let saved = state["cards"]
@@ -3149,7 +3221,7 @@ async fn connector_time_scenario(
     click(client, "#save-connector").await?;
     wait_dom(client,"return document.querySelector('#save-connector')?.disabled === true && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     let entry:serde_json::Value=http.post(format!("{address}/api/time")).bearer_auth(token).header("x-local-request","1")
-        .json(&json!({"cardId":card["id"],"seconds":125,"date":"2026-10-26","startTime":"10:15:00","description":"Synthetic connector time UI","start":false})).send().await?.error_for_status()?.json().await?;
+        .json(&json!({"cardId":card["id"],"seconds":125,"date":"2026-10-26","startTime":"10:15:00","description":"Synthetic connector time UI","start":false})).send().await?.checked_status().await?.json().await?;
     let id = entry["id"].as_str().ok_or("Saisie synthétique absente")?;
     wait_dom(client,"return !!document.querySelector('#connector-time-entry option[value=\"'+arguments[0]+'\"]');",vec![json!(id)]).await?;
     click(
@@ -3171,7 +3243,8 @@ async fn connector_time_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let operation = operations
@@ -3212,7 +3285,8 @@ async fn connector_time_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let saved = state["times"]
@@ -3244,7 +3318,8 @@ async fn backups_scenario(
         .json(&json!({"title":"État avant sauvegarde"}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     wait_title(client, "État avant sauvegarde").await?;
@@ -3263,7 +3338,7 @@ async fn backups_scenario(
         .await?
         .as_u64()
         .ok_or("Liste des sauvegardes absente")?;
-    let timer: serde_json::Value = post("/api/time").json(&json!({"cardId":card.id,"start":true,"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":"Chronomètre synthétique"})).send().await?.error_for_status()?.json().await?;
+    let timer: serde_json::Value = post("/api/time").json(&json!({"cardId":card.id,"start":true,"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":"Chronomètre synthétique"})).send().await?.checked_status().await?.json().await?;
     click(client, "#create-backup").await?;
     wait_dom(client,"return document.querySelector('#backups-error')?.textContent.includes('chronomètres') && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count)]).await?;
     post(&format!(
@@ -3273,7 +3348,8 @@ async fn backups_scenario(
     .json(&json!({}))
     .send()
     .await?
-    .error_for_status()?;
+    .checked_status()
+    .await?;
     click(client, "#create-backup").await?;
     wait_dom(client,"return document.querySelector('#backups-notice')?.textContent === 'Sauvegarde créée.' && document.querySelectorAll('[data-backup]').length === arguments[0] && document.querySelector('#create-backup')?.disabled === false;",vec![json!(count+1)]).await?;
     let name = client
@@ -3294,7 +3370,8 @@ async fn backups_scenario(
         )
         .send()
         .await?
-        .error_for_status()?;
+        .checked_status()
+        .await?;
     wait_title(client, "État après sauvegarde").await?;
     click(client, &selector).await?;
     click(client, "#cancel-restore").await?;
@@ -3431,7 +3508,8 @@ async fn files_scenario(
         .json(&json!({"name":"Files and services fixture", "repo":repo}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let project_id = project["id"].as_str().ok_or("Projet synthétique absent.")?;
@@ -3442,7 +3520,7 @@ async fn files_scenario(
             .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX))
             .display()
     );
-    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":fixture_command,"backCommand":fixture_command})).send().await?.error_for_status()?;
+    http.patch(format!("{address}/api/projects/{project_id}")).bearer_auth(token).header("x-local-request", "1").json(&json!({"frontRepo":service_repo,"backRepo":service_repo,"frontCommand":fixture_command,"backCommand":fixture_command})).send().await?.checked_status().await?;
     std::fs::write(repo.join("src/tracked.txt"), "modified synthetic file\n")?;
     let text = "<script>window.syntheticPreviewExecuted=true</script>\nTexte é 🔧";
     std::fs::write(repo.join("new file é.txt"), text)?;
@@ -3461,18 +3539,29 @@ async fn files_scenario(
         .json(&json!({"title":"Explorateur synthétique","repo":repo}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let endpoint = format!("{address}/api/cards/{}/file", card.id);
-    if http
+    let unauthorized = http
         .get(format!("{address}/api/cards/{}/files", card.id))
         .send()
-        .await?
-        .status()
-        != 403
+        .await?;
+    if unauthorized.status() != 401 {
+        return Err(format!(
+            "La lecture sans session doit être refusée par HTTP 401, reçu {}.",
+            unauthorized.status()
+        )
+        .into());
+    }
+    if !unauthorized.json::<serde_json::Value>().await?["error"]
+        .as_str()
+        .is_some_and(|error| error.contains("Session expirée ou absente"))
     {
-        return Err("L’explorateur a accepté une lecture sans session.".into());
+        return Err(
+            "Le refus de session de l’explorateur ne donne pas le diagnostic attendu.".into(),
+        );
     }
     for path in ["ignored.txt", ".git/config", "../outside"] {
         let mut url = reqwest::Url::parse(&endpoint)?;
@@ -3576,7 +3665,8 @@ async fn files_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let worktree = board
@@ -3607,7 +3697,8 @@ async fn files_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     for service in &before.services {
@@ -3624,7 +3715,8 @@ async fn files_scenario(
             .get(url)
             .send()
             .await?
-            .error_for_status()?
+            .checked_status()
+            .await?
             .text()
             .await?
             != "Atelier synthetic service é😀"
@@ -3639,7 +3731,8 @@ async fn files_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     if before.services[0].pid == restarted.services[0].pid
@@ -3660,7 +3753,8 @@ async fn files_scenario(
             .bearer_auth(token)
             .send()
             .await?
-            .error_for_status()?;
+            .checked_status()
+            .await?;
     }
     for path in [
         format!("{address}/api/cards/{}/worktree/remove", card.id),
@@ -3718,7 +3812,7 @@ async fn files_scenario(
     let run_fixture = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request", "1").json(&json!({"id":"ui-run-command","name":"Commande de parcours","type":"command","auth":"cli","command":run_fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","hang"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request", "1").json(&json!({"id":"ui-run-command","name":"Commande de parcours","type":"command","auth":"cli","command":run_fixture,"analyzeArgs":["run-command","success"],"editArgs":["run-command","hang"],"expected":null})).send().await?.checked_status().await?;
     let run_marker = Path::new(&worktree.path).join(".run-fixture");
     std::fs::write(&run_marker, "atelier-r03-synthetic-only")?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options || []).some(option=>option.value === 'ui-run-command');",vec![]).await?;
@@ -3784,7 +3878,8 @@ async fn files_scenario(
             .json(&body)
             .send()
             .await?
-            .error_for_status()?;
+            .checked_status()
+            .await?;
         wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options || []).some(option=>option.value === arguments[0]);",vec![json!(agent_id)]).await?;
         client.execute("const select=document.querySelector('#run-agent'); select.value=arguments[0]; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(agent_id)]).await?;
         click(client, "#start-run").await?;
@@ -3963,7 +4058,8 @@ async fn local_commit_scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let card = board

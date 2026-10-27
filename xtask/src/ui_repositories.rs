@@ -1,4 +1,4 @@
-use super::{Client, Result, click, command, root, wait_dom};
+use super::{Client, Result, SyntheticResponse, click, command, root, wait_dom};
 use atelier_core::{
     application::extensions::{Method, Registry, RemoteOperation},
     contracts::Card,
@@ -58,7 +58,7 @@ pub(super) async fn scenario(
     let target = git(&repo, &["rev-parse", "HEAD"])?;
     let origin = "https://synthetic.example.test/owner/repo.git";
     git(&repo, &["remote", "add", "origin", origin])?;
-    let card:Card=http.post(format!("{address}/api/cards")).bearer_auth(token).header("x-local-request","1").json(&json!({"title":"UI module repository","description":"Human content retained","repo":repo,"checklist":[{"text":"src/lib.rs returns 42","done":false}]})).send().await?.error_for_status()?.json().await?;
+    let card:Card=http.post(format!("{address}/api/cards")).bearer_auth(token).header("x-local-request","1").json(&json!({"title":"UI module repository","description":"Human content retained","repo":repo,"checklist":[{"text":"src/lib.rs returns 42","done":false}]})).send().await?.checked_status().await?.json().await?;
     let prepared: Card = http
         .post(format!("{address}/api/cards/{}/worktree", card.id))
         .bearer_auth(token)
@@ -66,7 +66,8 @@ pub(super) async fn scenario(
         .json(&json!({"branch":"connector-ui-task","base":"main","fetchOrigin":false}))
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let worktree = prepared
@@ -91,7 +92,8 @@ pub(super) async fn scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let profile = registry
@@ -99,7 +101,7 @@ pub(super) async fn scenario(
         .into_iter()
         .find(|profile| profile.installed.manifest.id == "synthetic-extension")
         .ok_or("Module UI absent")?;
-    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":profile.installed.revision,"values":{"fault":"repository-lost","fixture-root":data,"site":"https://synthetic.example.test"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":profile.installed.revision,"values":{"fault":"repository-lost","fixture-root":data,"site":"https://synthetic.example.test"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.checked_status().await?;
     click(client, "#reload-connectors").await?;
     wait_dom(
         client,
@@ -121,7 +123,8 @@ pub(super) async fn scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let operation = operations
@@ -147,7 +150,7 @@ pub(super) async fn scenario(
     let fixture = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
-    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"module-review-command","name":"Synthetic module review","type":"command","auth":"cli","command":fixture,"analyzeArgs":["review-json"],"editArgs":["review-json"],"expected":null})).send().await?.error_for_status()?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"module-review-command","name":"Synthetic module review","type":"command","auth":"cli","command":fixture,"analyzeArgs":["review-json"],"editArgs":["review-json"],"expected":null})).send().await?.checked_status().await?;
     click(client, "#close-settings").await?;
     client.goto(&format!("{address}/?task={}", card.id)).await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='module-review-command');",vec![]).await?;
@@ -161,7 +164,8 @@ pub(super) async fn scenario(
         .bearer_auth(token)
         .send()
         .await?
-        .error_for_status()?
+        .checked_status()
+        .await?
         .json()
         .await?;
     let retained = state["cards"]
