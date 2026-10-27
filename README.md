@@ -10,7 +10,7 @@ Le workspace contient `atelier-core` (domaine), `atelier-app` (serveur et intég
 
 Node n’est pas un prérequis du runtime Rust et doit rester exclu de ses paquets finaux. Les sources et fixtures Node restent dans le dépôt comme références fonctionnelles et outils de comparaison, sans obligation de rétrocompatibilité. Le [README Node archivé](docs/archive/node-readme.md) est conservé intégralement ; ses liens relatifs se rapportent à la racine historique du dépôt.
 
-Ces sources historiques ne constituent plus le produit ni le runtime Rust. Leur déplacement ou retrait physique R07 reste différé jusqu’aux preuves nécessaires pour conserver les fixtures et comparateurs utiles ; seul le README précédent est archivé ici. Le snapshot historique de migration est conservé au commit `7326122`.
+Ces sources historiques ne constituent plus le produit ni le runtime Rust. Le README précédent ainsi que les [lanceurs et outils de livraison/tray Node](docs/archive/node-delivery/README.md) sont archivés. `lib/`, `public/`, `test/` et les fixtures utiles restent en place pour les comparateurs optionnels ; leur archivage complet n’est pas revendiqué. Les tests et commandes de livraison Node sont des références au snapshot `7f48996`, pas des commandes actives. Le snapshot historique de migration est aussi conservé au commit `7326122`.
 
 ## Commandes natives
 

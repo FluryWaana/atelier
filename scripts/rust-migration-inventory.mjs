@@ -4,8 +4,8 @@ import { join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const folders = ['lib', 'public', 'scripts', 'test', 'examples', 'styles', '.github', 'crates', 'xtask', '.cargo'];
-const entrypoints = ['server.mjs', 'launcher.mjs', 'Start.cmd', 'Stop.cmd', 'Start.command', 'Stop.command', 'package.json', 'package-lock.json', '.node-version', 'runtime/LICENSE', 'LICENSE', '.gitignore', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'];
+const folders = ['lib', 'public', 'scripts', 'test', 'examples', 'styles', '.github', 'crates', 'xtask', '.cargo', 'docs/archive/node-delivery'];
+const entrypoints = ['server.mjs', 'package.json', 'package-lock.json', '.node-version', 'runtime/LICENSE', 'LICENSE', '.gitignore', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'];
 function filesIn(directory) {
   return readdirSync(join(root, directory), { withFileTypes: true }).flatMap(entry => {
     const path = directory + '/' + entry.name;
@@ -23,12 +23,12 @@ export function migrationInventory() {
     imports.set(path, [...new Set([...source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.[^'"]+)['"]/g)].map(match => posix.normalize(posix.join(posix.dirname(path), match[1]))))].sort());
   }
   const lines = ['# Inventaire de migration Node et Rust', '', 'Généré par `runtime/node.exe scripts/rust-migration-inventory.mjs`. Vérification sans écriture : ajouter `--check`.', '',
-    'Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask et .cargo ; aucune donnée utilisateur ni artefact target. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.', '',
+    'Périmètre : points d’entrée et tous les fichiers de lib, public, scripts, test, examples, styles, .github, crates, xtask, .cargo et docs/archive/node-delivery ; aucune donnée utilisateur ni artefact target. L’archive node-delivery est exclusivement historique : lanceurs/outils et tests Node de livraison se consultent au snapshot 7f48996, pas comme commandes actives. Les imports JavaScript sont des références statiques littérales (y compris réexports et import dynamique littéral), pas une preuve de couverture. Les liens Rust sont à examiner via Cargo et les déclarations mod/use ; les chargements calculés, tables de routes, appels par injection et fichiers natifs demandent la revue indiquée dans la matrice.', '',
     'Les numéros de ligne servent à retrouver les contrats. Les extraits sont des repères lexicaux : les lignes voisines restent nécessaires pour interpréter validation, erreurs et limites.', '',
     '## Fichiers et appelants directs', '', '| Fichier | Nature | Importé directement par |', '| --- | --- | --- |'];
   for (const path of files) {
     const callers = [...imports].filter(([, refs]) => refs.includes(path)).map(([caller]) => link(caller));
-    const kind = path.startsWith('test/') ? 'Test / support' : path.includes('/vendor/') ? 'Ressource tierce' : sources.has(path) ? 'Source / configuration' : 'Ressource / entrée';
+    const kind = path.startsWith('docs/archive/node-delivery/') ? 'Archive historique Node — non active' : path.startsWith('test/') ? 'Test / support' : path.includes('/vendor/') ? 'Ressource tierce' : sources.has(path) ? 'Source / configuration' : 'Ressource / entrée';
     lines.push(`| ${link(path)} | ${kind} | ${callers.join(', ') || 'Entrée, ressource ou appel calculé/injecté : voir matrice'} |`);
   }
   const sections = [
