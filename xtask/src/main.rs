@@ -66,24 +66,52 @@ fn externalize_loader(html: &str) -> Result<(String, String)> {
     ))
 }
 
-fn build_ui() -> Result<()> {
+fn build_ui(dev: bool) -> Result<()> {
     pinned("trunk", "trunk 0.22.0")?;
     pinned("wasm-bindgen", "wasm-bindgen 0.2.129")?;
-    run(command("trunk").args([
-        "build",
-        "--release",
+    let directory = root().join(if dev {
+        ".artifacts/rust-ui-dev"
+    } else {
+        ".artifacts/rust-ui"
+    });
+    let mut trunk = command("trunk");
+    trunk.arg("build");
+    if dev {
+        trunk
+            .arg("--dist")
+            .arg(&directory)
+            .env("CARGO_PROFILE_DEV_DEBUG", "0")
+            .env("CARGO_PROFILE_DEV_INCREMENTAL", "true");
+    } else {
+        trunk.arg("--release");
+    }
+    run(trunk.args([
         "--config",
         "crates/atelier-ui/Trunk.toml",
         "--locked",
         "--offline",
         "--skip-version-check",
     ]))?;
-    let directory = root().join(".artifacts/rust-ui");
     let (html, loader) =
         externalize_loader(&std::fs::read_to_string(directory.join("index.html"))?)?;
     // Trunk's generated loader is externalized so CSP never needs unsafe-inline.
     std::fs::write(directory.join("atelier-loader.js"), loader)?;
     std::fs::write(directory.join("index.html"), html)?;
+    let mut total = 0u64;
+    for asset in atelier_app::infrastructure::package::assets(&directory)? {
+        let size =
+            atelier_app::infrastructure::checked_file::plain_metadata(&directory.join(&asset))?
+                .len();
+        if size > 64 * 1024 * 1024 {
+            return Err(format!("Interface non utilisable : {asset} contient {size} octets, limite 64 Mio par asset. Le profil de compilation doit produire un fichier plus petit.").into());
+        }
+        total = total
+            .checked_add(size)
+            .ok_or("Taille totale de l’interface excessive.")?;
+        if total > 256 * 1024 * 1024 {
+            return Err("Interface non utilisable : plus de 256 Mio d’assets produits. Aucun relèvement de limite.".into());
+        }
+    }
     Ok(())
 }
 
@@ -93,7 +121,8 @@ async fn main() -> Result<()> {
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["inventory"] => inventory::command(false),
         ["inventory", "--check"] => inventory::command(true),
-        ["build-ui"] => build_ui(),
+        ["build-ui"] => build_ui(false),
+        ["build-ui", "--dev"] => build_ui(true),
         ["qualify-packages", output] => package_delivery::qualify(Path::new(output)).await,
         ["third-party-notices", output] => notices::generate(Path::new(output)).await,
         ["build-installers",archive,signature,trust,output]=>installers::build(Path::new(archive),Path::new(signature),Path::new(trust),Path::new(output)).await,
@@ -112,11 +141,11 @@ async fn main() -> Result<()> {
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
-        ["test-ui"] => { build_ui()?; ui::test().await },
+        ["test-ui"] => { build_ui(false)?; ui::test().await },
         ["test-updates"] => update_flow::test().await,
         ["test-updates", "--prepared-delivery", delivery] => update_flow::test_delivery(Path::new(delivery)).await,
         ["qualify-installed-update", installation, data, port, delivery] => update_flow::test_installed(Path::new(installation), Path::new(data), port.parse()?, Path::new(delivery)).await,
-        _ => Err("Usage : cargo xtask inventory [--check] | build-ui | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
+        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
     }
 }
 

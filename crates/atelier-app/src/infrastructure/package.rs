@@ -99,22 +99,8 @@ pub fn assets(directory: &Path) -> Result<Vec<String>> {
     if !plain_metadata(directory)?.is_dir() {
         return Err("Dossier d’assets ordinaire requis.".into());
     }
-    let mut names = Vec::new();
-    for entry in fs::read_dir(directory)? {
-        let entry = entry?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| "Nom d’asset invalide.")?;
-        if !wasm_asset_name(&name) || !plain_metadata(&entry.path())?.is_file() {
-            return Err("Asset inattendu : les paquets Rust refusent les fichiers legacy, données et runtime Node.".into());
-        }
-        names.push(name);
-        if names.len() > 128 {
-            return Err("Trop d’assets dans le paquet.".into());
-        }
-    }
-    names.sort();
+    let directory = cap_std::fs::Dir::open_ambient_dir(directory, cap_std::ambient_authority())?;
+    let names = asset_names(&directory)?;
     if !["index.html", "atelier-loader.js"]
         .iter()
         .all(|name| names.iter().any(|value| value.as_str() == *name))
@@ -126,6 +112,37 @@ pub fn assets(directory: &Path) -> Result<Vec<String>> {
     {
         return Err("Interface WASM construite et complète requise pour le paquet.".into());
     }
+    Ok(names)
+}
+
+/// Shared by HTTP capture and packaging. Trunk's live lock is never served,
+/// packaged, removed or acquired here; only its exact empty plain-file form is accepted.
+pub(crate) fn asset_names(directory: &cap_std::fs::Dir) -> Result<Vec<String>> {
+    let mut names = Vec::new();
+    for (index, entry) in directory.entries()?.enumerate() {
+        if index >= 129 {
+            return Err("Trop d’assets Rust à charger.".into());
+        }
+        let name = entry?
+            .file_name()
+            .into_string()
+            .map_err(|_| "Nom d’asset Rust invalide.")?;
+        if name == ".trunk-lock" {
+            CheckedFile::open_in(directory, Path::new(&name))?
+                .single_link()?
+                .read(0)?;
+            continue;
+        }
+        if !wasm_asset_name(&name) {
+            return Err("Asset inattendu : les paquets Rust refusent les fichiers legacy, données et runtime Node.".into());
+        }
+        CheckedFile::open_in(directory, Path::new(&name))?.single_link()?;
+        if names.len() >= 128 {
+            return Err("Trop d’assets Rust à charger.".into());
+        }
+        names.push(name);
+    }
+    names.sort();
     Ok(names)
 }
 pub fn version_parts(value: &str) -> Result<[u64; 3]> {
@@ -240,4 +257,37 @@ pub fn verify(directory: &Path) -> Result<()> {
         return Err("Le contenu du paquet ne correspond pas à son manifeste.".into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packaging_excludes_only_the_empty_plain_trunk_marker_and_still_requires_a_complete_bundle() {
+        let root = tempfile::tempdir().unwrap();
+        fs::write(root.path().join("index.html"), "Synthetic Rust").unwrap();
+        fs::write(root.path().join(".trunk-lock"), []).unwrap();
+        assert!(assets(root.path()).is_err());
+        for name in [
+            "atelier-loader.js",
+            "atelier-ui-synthetic.js",
+            "atelier-ui-synthetic.wasm",
+            "style-synthetic.css",
+        ] {
+            fs::write(root.path().join(name), []).unwrap();
+        }
+        let names = assets(root.path()).unwrap();
+        assert_eq!(names.len(), 5);
+        assert!(!names.iter().any(|name| name == ".trunk-lock"));
+        assert_eq!(
+            fs::read(root.path().join(".trunk-lock")).unwrap(),
+            Vec::<u8>::new()
+        );
+        fs::write(root.path().join(".trunk-lock"), b"unexpected").unwrap();
+        assert!(assets(root.path()).is_err());
+        fs::write(root.path().join(".trunk-lock"), []).unwrap();
+        fs::write(root.path().join("unknown.txt"), []).unwrap();
+        assert!(assets(root.path()).is_err());
+    }
 }

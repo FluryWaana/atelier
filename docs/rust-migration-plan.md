@@ -54,7 +54,7 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 
 ## Exécution et vérification
 
-- Aucun build, test, Clippy ou navigateur sur le PC du propriétaire. Édition, Git, formatage et inventaire légers autorisés.
+- Accord du 27 octobre : builds locaux autorisés avec les ressources normales du PC. Les tests, Clippy et scénarios automatisés restent sur les runners ; édition, Git, formatage et inventaire légers demeurent autorisés. Une compilation locale ne qualifie aucun parcours.
 - Décision explicite du propriétaire : aucun lancement ni relancement de tests GitHub pendant les implémentations ; une seule vérification à la fin. Le workflow Rust ne se déclenche plus sur push/PR et reste disponible manuellement. La vérification finale regroupe les contrôles natifs, WASM et navigateur ; Linux/macOS restent différés jusqu'à ce point.
 - Données synthétiques uniquement ; aucun compte réel, appel payant, tag ou publication de release.
 - Commits Conventional Commits en anglais et push des incréments autorisés, sans déclenchement de CI. Les nouveaux incréments restent non vérifiés jusqu'à la campagne finale ; les anciens journaux peuvent être consultés sans relancer de tests.

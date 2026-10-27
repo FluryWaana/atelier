@@ -24,3 +24,6 @@ strip = true
 
 [profile.release.package.atelier-ui]
 opt-level = "s"
+
+[profile.dev.package.atelier-ui]
+opt-level = 1

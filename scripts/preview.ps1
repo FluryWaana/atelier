@@ -19,19 +19,6 @@ try {
     }
     return $absolute
   }
-  $env:CARGO_BUILD_JOBS = '1'
-  $env:RUST_TEST_THREADS = '1'
-  $previewShell = Get-Process -Id $PID
-  $previewShell.PriorityClass = [Diagnostics.ProcessPriorityClass]::BelowNormal
-  $allowedCpu = $previewShell.ProcessorAffinity.ToInt64()
-  $selectedCpu = 0L
-  $selectedCount = 0
-  for ($bit = 0; $bit -lt 63 -and $selectedCount -lt 2; $bit++) {
-    $mask = 1L -shl $bit
-    if (($allowedCpu -band $mask) -ne 0) { $selectedCpu = $selectedCpu -bor $mask; $selectedCount++ }
-  }
-  if ($selectedCpu -ne 0) { $previewShell.ProcessorAffinity = [IntPtr]$selectedCpu }
-
   $localCargo = WorkspacePath '.artifacts/rust-tools/cargo'
   $localRustup = WorkspacePath '.artifacts/rust-tools/rustup'
   if (Test-Path -LiteralPath $localCargo -PathType Container) { $env:CARGO_HOME = $localCargo }
@@ -46,7 +33,7 @@ try {
   $env:CARGO_TARGET_DIR = $target
   $binary = WorkspacePath 'target/debug/atelier.exe'
   $data = WorkspacePath '.artifacts/local-preview/data'
-  $assets = WorkspacePath '.artifacts/rust-ui'
+  $assets = WorkspacePath '.artifacts/rust-ui-dev'
   $port = 4327
   function Invoke-PreviewCommand([string]$file, [string[]]$arguments) {
     & $file @arguments
@@ -73,10 +60,10 @@ try {
     }
     Write-Host 'Preparing the Rust preview. The first compilation can take a long time.'
     Invoke-PreviewCommand 'cargo' @('fetch', '--locked')
-    Invoke-PreviewCommand 'cargo' @('xtask', 'build-ui')
+    Invoke-PreviewCommand 'cargo' @('xtask', 'build-ui', '--dev')
     Invoke-PreviewCommand 'cargo' @('build', '--locked', '-p', 'atelier-app')
     $null = WorkspacePath 'target/debug/atelier.exe'
-    $null = WorkspacePath '.artifacts/rust-ui'
+    $null = WorkspacePath '.artifacts/rust-ui-dev'
     $null = WorkspacePath '.artifacts/local-preview/data'
     Invoke-PreviewCommand $binary @('launch', '--data-dir', $data, '--assets', $assets, '--port', "$port")
     Write-Host 'Atelier Rust preview is open. Preview data is retained in .artifacts/local-preview/data.'

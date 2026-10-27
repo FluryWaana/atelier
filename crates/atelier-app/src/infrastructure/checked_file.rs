@@ -290,7 +290,7 @@ impl CheckedFile {
         Ok(self)
     }
 
-    pub(super) fn single_link(self) -> Result<Self> {
+    pub(crate) fn single_link(self) -> Result<Self> {
         if self.identity.links != 1 {
             return Err("Configuration agent remplacée par un lien ou un dossier.".into());
         }

@@ -19,25 +19,14 @@ pub fn wasm_asset_name(name: &str) -> bool {
 
 pub(super) fn router(path: &Path) -> Result<Router<Shared>> {
     let directory = Dir::open_ambient_dir(path, ambient_authority())?;
-    let mut names = Vec::new();
-    for entry in directory.entries()? {
-        let entry = entry?;
-        let name = entry.file_name();
-        let name = name.to_str().ok_or("Nom d’asset Rust invalide.")?;
-        if !wasm_asset_name(name) {
-            return Err("Le service refuse les fichiers hors des assets Rust autorisés.".into());
-        }
-        if names.len() >= 128 {
-            return Err("Trop d’assets Rust à charger.".into());
-        }
-        names.push(name.to_owned());
-    }
+    let names = crate::infrastructure::package::asset_names(&directory)?;
     let mut router = Router::new();
     let mut total = 0usize;
     for name in names {
         // Capture checked bytes once; replacing the path later cannot publish another file.
         let bytes = Bytes::from(
             CheckedFile::open_in(&directory, Path::new(&name))?
+                .single_link()?
                 .read(64 * 1024 * 1024)
                 .map_err(|error| format!("Asset {name} : {error}"))?,
         );
@@ -79,6 +68,17 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         std::fs::write(root.path().join("index.html"), "Synthetic Rust").unwrap();
         assert!(router(root.path()).is_ok());
+        std::fs::write(root.path().join(".trunk-lock"), []).unwrap();
+        assert!(router(root.path()).is_ok());
+        let directory = Dir::open_ambient_dir(root.path(), ambient_authority()).unwrap();
+        assert_eq!(
+            crate::infrastructure::package::asset_names(&directory).unwrap(),
+            vec!["index.html"]
+        );
+        assert!(root.path().join(".trunk-lock").is_file());
+        std::fs::write(root.path().join(".trunk-lock"), b"unexpected").unwrap();
+        assert!(router(root.path()).is_err());
+        std::fs::write(root.path().join(".trunk-lock"), []).unwrap();
         std::fs::write(root.path().join("node.exe"), "Never served").unwrap();
         assert!(router(root.path()).is_err());
         std::fs::remove_file(root.path().join("node.exe")).unwrap();
@@ -86,5 +86,26 @@ mod tests {
             std::fs::write(root.path().join(format!("style-{index}.css")), []).unwrap();
         }
         assert!(router(root.path()).is_err());
+    }
+
+    #[test]
+    fn a_hardlinked_trunk_marker_is_not_ignored() {
+        let root = tempfile::tempdir().unwrap();
+        let source = tempfile::NamedTempFile::new_in(root.path().parent().unwrap()).unwrap();
+        std::fs::write(root.path().join("index.html"), "Synthetic Rust").unwrap();
+        std::fs::hard_link(source.path(), root.path().join(".trunk-lock")).unwrap();
+        assert!(router(root.path()).is_err());
+        assert!(source.path().is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_trunk_marker_is_not_ignored() {
+        let root = tempfile::tempdir().unwrap();
+        let source = tempfile::NamedTempFile::new_in(root.path().parent().unwrap()).unwrap();
+        std::fs::write(root.path().join("index.html"), "Synthetic Rust").unwrap();
+        std::os::unix::fs::symlink(source.path(), root.path().join(".trunk-lock")).unwrap();
+        assert!(router(root.path()).is_err());
+        assert!(source.path().is_file());
     }
 }

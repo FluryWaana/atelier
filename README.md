@@ -14,7 +14,9 @@ Les dix fixtures JSON encore utiles aux tests Rust sont conservées, sans change
 
 ## Commandes natives
 
-Sous Windows, double-cliquer sur [Preview.cmd](Preview.cmd) prépare puis ouvre l’aperçu Rust. La première compilation peut être longue ; Rust, Trunk et wasm-bindgen doivent être disponibles dans les outils locaux du dépôt ou le PATH. Les données de préproduction restent dans `.artifacts/local-preview/data`, séparées du `data/` utilisateur. Le lancement suivant arrête uniquement cette instance authentifiée avant de reconstruire ; aucun fichier n’est effacé. Ce raccourci ne lance ni tests ni Clippy et ne constitue pas une qualification du produit.
+Sous Windows, double-cliquer sur [Preview.cmd](Preview.cmd) prépare puis ouvre l’aperçu Rust. La première compilation peut être longue ; Rust, Trunk et wasm-bindgen doivent être disponibles dans les outils locaux du dépôt ou le PATH. L’interface utilise `cargo xtask build-ui --dev`, avec compilation incrémentale, optimisation légère et sans informations de débogage WASM, dans `.artifacts/rust-ui-dev`. Le profil ajusté doit encore être compilé et mesuré ; les assets release restent séparés. Les données de préproduction restent dans `.artifacts/local-preview/data`, séparées du `data/` utilisateur. Le lancement suivant arrête uniquement cette instance authentifiée avant de reconstruire ; aucun fichier n’est effacé. Ce raccourci ne lance ni tests ni Clippy et ne constitue pas une qualification du produit.
+
+Les compilations locales sont désormais autorisées sans plafond de ressources imposé par le projet. Preview conserve la priorité et les processeurs normaux ainsi que le parallélisme Cargo disponible ; il ne force plus un seul job. Les tests, Clippy et scénarios de qualification restent exécutés dans la CI autorisée.
 
 Après fabrication et qualification dans un environnement autorisé, le binaire `atelier` fournit notamment :
 
@@ -39,7 +41,7 @@ Ce sont des commandes candidates, pas des téléchargements disponibles. La fabr
 
 ## Développement et qualification
 
-Suivre [AGENTS.md](AGENTS.md). Pendant l’implémentation : aucun build, test, Clippy ou scénario navigateur sur le poste de travail, et aucun lancement de workflow GitHub. Une campagne finale manuelle doit produire des résultats réellement exécutés et relus. Utiliser exclusivement des données, dépôts, identifiants et agents synthétiques ; ne pas ouvrir le `data/` utilisateur, un compte réel ou un service payant.
+Suivre [AGENTS.md](AGENTS.md). Depuis l'accord explicite du 27 octobre, les builds locaux peuvent utiliser les ressources normales du poste. Les tests, Clippy et scénarios automatisés restent dans la campagne CI manuelle ; ses relances correctives ont été autorisées. Une compilation ne vaut pas preuve de parcours réussi. Utiliser exclusivement des données, dépôts, identifiants et agents synthétiques ; ne pas ouvrir le `data/` utilisateur, un compte réel ou un service payant.
 
 L’[inventaire des sources](docs/rust-migration-inventory.md) relie les capacités de référence au travail restant. Les [connecteurs Rust](docs/rust-connectors.md) documentent leurs contrats et limites. Les preuves et lacunes de qualification restent suivies dans le plan actif, sans présenter un scénario non exécuté comme réussi.
 

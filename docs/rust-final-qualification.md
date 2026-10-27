@@ -58,3 +58,31 @@ Le build Leptos/WASM release réussit et le serveur/browser démarrent. Le parco
 Le propriétaire demande ensuite le retrait complet des sources de l'ancien projet et une racine organisée autour de Rust. Sources/archives Node et comparateurs retirés, fixtures JSON utiles relogées dans les crates sans modification de contenu, pont legacy/CLI `serve-prototype` retirés ; les parcours navigateur utilisent désormais le vrai `serve`. L'inventaire est remplacé par `cargo xtask inventory [--check]`, sans Node. La génération légère locale du document utilise un équivalent PowerShell, sans compiler Rust. Ces changements doivent encore être qualifiés. Les fichiers locaux ignorés et les données utilisateur ne sont pas effacés.
 
 À la demande de simplification du lancement local, `Preview.cmd` et `scripts/preview.ps1` préparent un aperçu Windows avec outils locaux, compilation séquentielle limitée et données distinctes sous `.artifacts/local-preview/data`. Le script est relu mais **n'a pas été exécuté** ; aucune autorisation d'exécuter un build ou test sur le PC n'est déduite de son écriture.
+
+## Matrice complète sur `66acf34`
+
+Une tentative de relance intermédiaire réduite a été rejetée avant création par le contrôle automatique. Après vérification de l'accord explicite déjà donné et du dépôt propre, la matrice complète a été autorisée : [40431199519](https://github.com/FluryWaana/atelier/actions/runs/40431199519). Résultat global : **échec**, livraison ignorée.
+
+| Cible native, bibliothèque atelier-app | Réussis | Échoués | Ignorés | Diagnostic réellement lu |
+| --- | --- | --- | --- | --- |
+| Windows x64 | 116 | 1 | 1 | Expiration de santé sur port libre pendant récupération |
+| Linux x64 | 118 | 5 | 1 | Descripteurs de dossiers `O_PATH` utilisés pour synchronisation/permissions |
+| Linux ARM64 | 118 | 5 | 1 | Mêmes erreurs de descripteurs, journaux ARM64 relus |
+| macOS ARM64 | 104 | 9 | 1 | Alias `/var`, SQLite NOFOLLOW et observation de processus Darwin |
+| macOS x64 | 104 | 9 | 1 | Mêmes familles, journal Intel relu |
+
+Les trois jobs navigateur refusent le fichier `.trunk-lock` laissé par Trunk dans les assets. La livraison, les autres suites arrêtées après l'échec de bibliothèque et les contrôles ultérieurs ne sont pas qualifiés par ces nombres.
+
+Correctifs candidats : listing d'assets partagé excluant uniquement le marqueur Trunk régulier vide sans lien, sans le supprimer ni le servir ; descripteur de dossier rouvert relativement au FD ancré pour `fsync` et `fchmod` ; observation Darwin par `proc_pidinfo` gardant le leader possédé non récolté ; racines temporaires physiques dédiées dans la qualification macOS et dans le helper de snapshots SQLite de production. Les validations des chemins utilisateur ne sont pas assouplies. Régressions écrites, résultats à requalifier.
+
+L'essai local manuel signalé par le propriétaire échoue également avant le lancement du serveur sur la lecture de santé d'un port libre. Une lecture OS constate l'absence de listener et de dossier de données d'aperçu : aucun contenu métier n'est consulté. Le correctif partagé prouve d'abord la disponibilité du port par une réservation noyau brève ; seul `AddrInUse` autorise la tentative HTTP. L'attente du seul enfant lancé reste bornée à vingt secondes et ne reprend que les expirations de lecture. Aucun processus étranger n'est arrêté et aucun timeout n'est assimilé à une absence.
+
+## Compilations locales désormais autorisées
+
+Le propriétaire a explicitement levé les limites de ressources et autorisé les builds sur le PC. Les tests, Clippy et scénarios automatisés locaux n'ont pas été autorisés ni exécutés. `Preview.cmd` ne limite plus les jobs, la priorité ou l'affinité CPU.
+
+Le premier build local des cibles natives détecte une visibilité insuffisante de `single_link`, corrigée en portée interne à la crate. Ensuite `cargo build --workspace --exclude atelier-ui --all-targets --locked` réussit (3 min 50 s) et `cargo check --workspace --exclude atelier-ui --all-targets --locked` réussit (1 min 01 s). Ce sont des preuves de compilation Windows, y compris des exécutables de tests compilés sans exécution. Des avertissements de copie du cache incrémental après échec de hardlink sont présents ; ils ne sont pas présentés comme des diagnostics de tests réussis.
+
+Le premier build UI dev sans symboles de débogage compile mais produit un WASM de 277 613 094 octets, inutilisable dans la borne de 64 Mio : il n'est pas qualifié. Après profil incrémental légèrement optimisé, destination dev distincte et conservation des noms Rust encodés (`data-no-demangle` de Trunk épinglé), `cargo xtask build-ui --dev` réussit avec **20 412 294 octets**, compilation UI de 2 min 27 s ; une relance sans changement est mesurée à **4,16 s**. La commande contrôle les bornes après génération. Ces chiffres n'isolent pas chaque changement et ne mesurent ni reconstruction après édition ni scénario d'utilisation. Le build release reste distinct et requis pour la livraison.
+
+La commande Rust compilée `xtask inventory --check` a également réussi localement. Aucun compte réel, appel payant, accès au `data/` utilisateur, tag, release ou déploiement n'a été utilisé pour ces vérifications.

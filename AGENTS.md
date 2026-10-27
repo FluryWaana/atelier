@@ -30,9 +30,9 @@ No real account access, paid agent calls, tags or release publication. Test inte
 
 ## Workstation resource budget
 
-**Do not run builds, tests, Clippy or browser scenarios on this PC. Do not launch or rerun GitHub tests during implementation either.** The owner explicitly requested one verification at the end of the rebuild. The Rust workflow is manual-only; commits and pushes must not trigger it. Local editing, Git, formatting and lightweight inventory generation are allowed. Keep native/browser qualification for the final verification and do not treat deferred checks as passed.
+On 2026-10-27 the owner explicitly authorized local builds with normal workstation resources. Compilation is now allowed, including compiling test targets without executing them. **Do not run local tests, Clippy or browser scenarios unless separately authorized.** Local editing, Git, formatting and lightweight inventory generation remain allowed. Never touch user `data/`.
 
-Only if the owner explicitly requests a local heavy diagnostic later: one command at a time, `CARGO_BUILD_JOBS=1`, `RUST_TEST_THREADS=1`, Node `--test-concurrency=1`, BelowNormal priority and at most two logical processors. The ignored `.artifacts/rust-tools/low-impact.ps1` helper applies those limits.
+The earlier build limits (one Cargo job, BelowNormal and two CPUs) were explicitly lifted. The Rust workflow remains manual-only; commits and pushes must not trigger it. Final qualification is underway, and the owner explicitly authorized necessary corrective reruns until checks pass or a human blocker is identified. Do not launch workflows during unfinished feature implementation or treat deferred checks as passed.
 
 ## Build and tests
 
@@ -57,6 +57,6 @@ Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. E
 
 ## Git and progress
 
-Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch; both are already authorized. Verification is deferred to the single final run, not performed after candidate pushes. Existing logs may be read without rerunning tests. Mark pending/failed results honestly, fix known failures and record real evidence.
+Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch; both are already authorized. Use the authorized final qualification and corrective reruns, not an automatic test run after every candidate push. Existing logs may be read. Mark pending/failed results honestly, fix known failures and record real evidence.
 
 Keep concise French progress updates. Do not declare completion until the active rebuild checklist is satisfied. Do not infer permission to publish from permission to commit/push.
