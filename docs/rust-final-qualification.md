@@ -10,6 +10,8 @@ Le propriétaire a constaté dans la preview une régression majeure du design. 
 
 Restauration candidate compilée : logo historique byte-identique, palette et shell, cartes renseignées, réglages en navigation verticale, quatre onglets de tâche et explorateur partagé fichiers/diff. Composants et brouillons restent montés ; le clavier et le retour au champ invalide font l’objet de scénarios écrits, non exécutés. `cargo check --workspace --exclude atelier-ui --all-targets --locked`, le check WASM séparé, le formatage et l’inventaire réussissent localement. Aucun test, Clippy ou navigateur local exécuté. Ces checks ne qualifient ni la fidélité visuelle, ni les parcours modifiés, ni les changements parallèles du mode développement à `0c87b5a`.
 
+Restauration poussée à `f6163c4`. Build local des assets de preview `build-ui --dev` réussi (code de sortie 0, compilation UI 2 min 46 s), avec le logo dans `.artifacts/rust-ui-dev`. Aucun serveur ni navigateur lancé ou redémarré par cette commande. Les assets construits ne constituent pas une capture ni une validation visuelle.
+
 Cette vérification ciblée construit et contrôle les assets WASM avec succès, puis échoue sur l’assertion `#task-forge-kind.disabled === true`. Le sélecteur hérite de la désactivation de son `fieldset` : sa propriété propre reste fausse. Le scénario contrôle désormais `matches(':disabled')` pour les états bloqué et débloqué, sans modifier la protection produit. Les étapes Jira suivantes, dont les filtres du rapport, ne sont pas qualifiées par cette exécution. Formatage et compilation des cibles xtask réussis localement après correction ; aucun test local ni nouveau workflow pendant le diagnostic.
 
 | Périmètre | Preuve actuelle |
