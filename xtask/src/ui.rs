@@ -3959,5 +3959,14 @@ async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Valu
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    Err(format!("État DOM attendu non atteint : {script}").into())
+    let state = client
+        .execute(
+            "return Object.fromEntries(['forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
+            vec![],
+        )
+        .await;
+    Err(
+        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}")
+            .into(),
+    )
 }

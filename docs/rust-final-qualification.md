@@ -86,3 +86,19 @@ Le premier build local des cibles natives détecte une visibilité insuffisante 
 Le premier build UI dev sans symboles de débogage compile mais produit un WASM de 277 613 094 octets, inutilisable dans la borne de 64 Mio : il n'est pas qualifié. Après profil incrémental légèrement optimisé, destination dev distincte et conservation des noms Rust encodés (`data-no-demangle` de Trunk épinglé), `cargo xtask build-ui --dev` réussit avec **20 412 294 octets**, compilation UI de 2 min 27 s ; une relance sans changement est mesurée à **4,16 s**. La commande contrôle les bornes après génération. Ces chiffres n'isolent pas chaque changement et ne mesurent ni reconstruction après édition ni scénario d'utilisation. Le build release reste distinct et requis pour la livraison.
 
 La commande Rust compilée `xtask inventory --check` a également réussi localement. Aucun compte réel, appel payant, accès au `data/` utilisateur, tag, release ou déploiement n'a été utilisé pour ces vérifications.
+
+Correctifs poussés : `807b40d` (démarrage), `69890ab` (adaptateurs POSIX), `4b80a73` (assets et aperçu). Requalification complète autorisée : [40436598406](https://github.com/FluryWaana/atelier/actions/runs/40436598406) sur `4b80a73`. Résultats en attente ; les compilations locales ne remplacent aucun des parcours de cette matrice.
+
+## Résultats réels sur `4b80a73`
+
+La campagne `40436598406` se termine en **échec**, livraison ignorée. Bibliothèque atelier-app : Windows **120 réussis, 0 échoué, 2 ignorés** ; Linux x64 et ARM64 **129 réussis, 0 échoué, 2 ignorés** ; macOS x64 et ARM64 **115 réussis, 4 échoués, 2 ignorés**. Les anciens échecs des descripteurs de dossiers, chemins temporaires et démarrage sur port libre ne réapparaissent pas dans ces suites. Ces nombres ne couvrent pas les cibles suivantes arrêtées par Cargo.
+
+Les quatre échecs macOS concernent désormais `killpg` sur un groupe ne contenant que des zombies : Darwin renvoie `EPERM`. Le correctif conserve le refus pour un groupe vivant ou une inspection indisponible ; il exige une nouvelle preuve du leader zombie possédé et une inspection complète sans membre vivant. Sous Windows, la suite s'arrête ensuite sur l'association de forge : deux formes du même chemin (`\\?\` et ordinaire) étaient comparées sans normalisation commune. Sous Linux, elle s'arrête sur la sauvegarde directe pendant une création Jira ; le garde Jira existant est désormais aussi appliqué à cette frontière, avant création de fichier. Régressions conservées et renforcées, requalification requise.
+
+Chrome et Edge atteignent l'import de ticket : la carte est réellement créée, mais la désérialisation UI depuis `Value` échoue pour `Card/Document`. Le parsing depuis texte JSON corrige cette frontière sans changer l'assertion du parcours. Safari s'arrête auparavant sur la conservation d'un brouillon de forge après conflit ; la cause n'est pas encore prouvée. Le diagnostic d'échec recueille désormais uniquement les états publics synthétiques des contrôles concernés, et les captures sont conservées pour les trois plateformes. Aucun de ces parcours incomplets n'est déclaré réussi.
+
+La campagne corrective poursuit toutes les cibles Cargo avec `--no-fail-fast` afin de recueillir les échecs indépendants dans la même exécution ; le code de sortie reste en échec si une seule cible échoue. Les étapes suivantes et la livraison restent conditionnées aux contrôles réussis.
+
+Les correctifs natifs de ce lot compilent localement sous Windows avec toutes les cibles (`cargo build --workspace --exclude atelier-ui --all-targets --locked`, 3 min 12 s), sans exécution de test. Darwin reste à requalifier sur ses runners.
+
+Le contrôle de compilation UI `cargo check -p atelier-ui --target wasm32-unknown-unknown --locked` réussit également localement (25,15 s), ainsi que le formatage et le contrôle d'inventaire. Aucun parcours ni test n'est déduit de ces contrôles.

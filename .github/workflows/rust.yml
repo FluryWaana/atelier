@@ -48,11 +48,11 @@ jobs:
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
       - name: Verify the current Rust source inventory
         run: cargo xtask inventory --check
-      - run: cargo test --workspace --exclude atelier-ui --locked
+      - run: cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
         if: runner.os == 'Windows'
       - name: Native Rust tests with an explicit disposable macOS keychain
         if: runner.os == 'macOS'
-        run: bash xtask/packaging/with-macos-keychain.sh cargo test --workspace --exclude atelier-ui --locked
+        run: bash xtask/packaging/with-macos-keychain.sh cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
       - name: Native Rust tests in a disposable Linux keyring session
         if: runner.os == 'Linux'
         shell: bash
@@ -62,7 +62,7 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-tests-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo test --workspace --exclude atelier-ui --locked
+            cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
           '
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
@@ -229,11 +229,11 @@ jobs:
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo xtask test-ui
-      - name: Preserve synthetic Windows UI screenshots
-        if: always() && runner.os == 'Windows'
+      - name: Preserve synthetic UI screenshots
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: rust-ui-Windows-${{ runner.arch }}
+          name: rust-ui-${{ runner.os }}-${{ runner.arch }}
           path: .artifacts/rust-*.png
           include-hidden-files: true
           if-no-files-found: ignore
