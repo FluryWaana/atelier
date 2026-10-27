@@ -173,11 +173,23 @@ pub fn repository_proposal(value: &Value) -> Result<RepositoryProposal> {
         || proposal
             .automation_id
             .as_ref()
-            .is_some_and(|id| !identifier(id))
+            .is_some_and(|id| !workflow_id(id))
     {
         return Err("Aperçu de publication du connecteur invalide.");
     }
     Ok(proposal)
+}
+// Workflow IDs are host-generated UUIDs, not module identifiers. In particular,
+// a UUID may start with a digit, which the module identifier grammar forbids.
+fn workflow_id(id: &str) -> bool {
+    id.len() == 36
+        && id.bytes().enumerate().all(|(index, byte)| {
+            if [8, 13, 18, 23].contains(&index) {
+                byte == b'-'
+            } else {
+                byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)
+            }
+        })
 }
 pub fn repository_source(card: &crate::contracts::Card) -> crate::contracts::Card {
     let mut card = card.clone();
@@ -217,4 +229,46 @@ pub fn repository_prompt(context: &RepositoryReviewContext) -> Result<String> {
         &context.base,
         context,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn approved_publication_accepts_numeric_workflow_uuid_and_rejects_invalid_ids() {
+        let commit = "a".repeat(40);
+        let origin = "https://synthetic.example.test/owner/repository.git";
+        let mut proposal = json!({
+            "automationId":"01234567-89ab-4cde-8fab-0123456789ab",
+            "context":{
+                "module":"synthetic-extension","revision":1,"cardId":"task",
+                "requirements":{"criteria":["Synthetic criterion"]},
+                "worktree":{"path":"synthetic-worktree","source":"synthetic-repository",
+                    "branch":"task","base":"main","baseCommit":commit,"state":"ready"},
+                "origin":origin,"source":commit,"target":commit,"base":commit,
+                "fingerprint":"a".repeat(64),"pullRequest":null
+            },
+            "cardRevision":"b".repeat(64),
+            "observation":{
+                "reference":{"instance":"https://synthetic.example.test",
+                    "repository":"owner/repository","origin":origin},
+                "targetBranch":"main","targetCommit":commit,"remoteSource":commit,"pullRequest":null
+            },
+            "title":"Synthetic publication","body":"Approved body","draft":true
+        });
+        assert!(repository_proposal(&proposal).is_ok());
+        for invalid in [
+            "synthetic-workflow",
+            "0123456789ab4cde8fab0123456789ab",
+            "01234567-89ab-4cde-8fab-0123456789ag",
+            "01234567-89ab-4cde-8fab-0123456789ab/",
+        ] {
+            proposal["automationId"] = json!(invalid);
+            assert!(repository_proposal(&proposal).is_err(), "{invalid}");
+        }
+        proposal["automationId"] = Value::Null;
+        assert!(repository_proposal(&proposal).is_ok());
+    }
 }
