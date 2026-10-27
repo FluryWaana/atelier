@@ -17,8 +17,29 @@ async fn compiled_synthetic_accounts_only_report_explicit_scoped_windows_and_nev
         std::fs::create_dir(&config).unwrap();
         let profile:Document=serde_json::from_str(&json!({"id":"synthetic-account","type":"codex","auth":"cli","command":binary,"configDir":config}).to_string()).unwrap();
         let diagnostic = diagnose(profile).await.unwrap();
+        assert!(
+            diagnostic.version_error.is_none(),
+            "version diagnostic: {}",
+            serde_json::to_string(&diagnostic).unwrap()
+        );
+        assert!(
+            diagnostic.authentication_error.is_none(),
+            "authentication diagnostic: {}",
+            serde_json::to_string(&diagnostic).unwrap()
+        );
+        assert_eq!(
+            diagnostic.authentication,
+            atelier_core::contracts::AgentAuthentication::Present,
+            "authentication diagnostic: {}",
+            serde_json::to_string(&diagnostic).unwrap()
+        );
         let report = diagnostic.account_report.as_ref().unwrap();
-        assert_eq!(report.state, state);
+        assert_eq!(
+            report.state,
+            state,
+            "account diagnostic: {}",
+            serde_json::to_string(&diagnostic).unwrap()
+        );
         assert!(!report.observed_at.is_empty());
         if state == State::Available {
             assert_eq!(report.windows[0].remaining_tenths, 750);

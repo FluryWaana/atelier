@@ -113,12 +113,19 @@ impl ContainedChild {
             && error
                 .downcast_ref::<io::Error>()
                 .is_some_and(|error| error.raw_os_error() == Some(libc::EPERM))
-            && self.exited()?
-            && self.process_ids().await?.is_empty()
         {
-            // Darwin killpg excludes zombies and reports EPERM for a zombie-only group.
-            // Accept it only after verifying our unreaped leader and absence of live members.
-            return Ok(());
+            // Darwin can reject the signal during exit before the leader becomes observable as
+            // a zombie. Observe that transition, never resubmit the signal or accept a live group.
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+            loop {
+                if self.exited()? && self.process_ids().await?.is_empty() {
+                    return Ok(());
+                }
+                if tokio::time::Instant::now() >= deadline {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
         }
         result
     }
@@ -147,10 +154,12 @@ impl ContainedChild {
         if self.group.is_none() {
             return Ok(self.child.wait().await?);
         }
-        self.terminate_and_confirm().await?;
-        tokio::time::timeout(Duration::from_secs(10), self.wait())
-            .await
-            .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
+        tokio::time::timeout(Duration::from_secs(10), async {
+            self.terminate_and_confirm().await?;
+            self.wait().await
+        })
+        .await
+        .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
     }
 }
 
@@ -283,6 +292,17 @@ mod tests {
         child.stop().await.unwrap();
         assert!(child.group.is_none());
         assert_eq!(unsafe { libc::getpgrp() }, parent);
+    }
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn a_macos_spontaneous_exit_racing_explicit_stop_still_confirms_cleanup() {
+        for _ in 0..16 {
+            let mut command = shell("exit 0");
+            let mut child = ContainedChild::spawn(&mut command).await.unwrap();
+            tokio::task::yield_now().await;
+            child.stop().await.unwrap();
+            assert!(child.group.is_none());
+        }
     }
     #[cfg(target_os = "macos")]
     #[tokio::test]
