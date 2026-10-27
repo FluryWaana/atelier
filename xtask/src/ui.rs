@@ -651,7 +651,13 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         wait_dom(client,"return document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#approve-update").await?;click(client,"#apply-update").await?;
         let deadline=Instant::now()+Duration::from_secs(120);
-        loop {let state=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?.state;if state==Phase::RolledBack{break;}if !state.pending(){return Err("La mauvaise version n’a pas déclenché une récupération navigateur.".into());}if Instant::now()>=deadline{return Err("Récupération navigateur trop longue.".into());}tokio::time::sleep(Duration::from_millis(100)).await;}
+        loop {
+            let state=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?.state;
+            if state==Phase::RolledBack { break; }
+            if !state.pending() { return Err("La mauvaise version n’a pas déclenché une récupération navigateur.".into()); }
+            if Instant::now()>=deadline { return Err("Récupération navigateur trop longue.".into()); }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
         client.goto(&format!("{address}/#session={next}")).await?;wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
@@ -2920,14 +2926,14 @@ async fn connector_reset_scenario(
         wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
         click(client, "[data-connector=synthetic-extension]").await?;
         click(client, "#preview-connector-ticket-reset").await?;
-        if present.is_none() {
-            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Boucle de pagination') && document.querySelector('#preview-connector-ticket-reset')?.disabled === false;",vec![]).await?;
-        } else {
+        if let Some(present) = present {
             wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('2 pages') && document.querySelector('#approve-connector-ticket-reset')?.disabled === false;",vec![]).await?;
             click(client, "#approve-connector-ticket-reset").await?;
             click(client, "#apply-connector-ticket-reset").await?;
             wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Périmètre actualisé') && document.querySelector('#apply-connector-ticket-reset')?.disabled === true;",vec![]).await?;
-            expected["ticketOutOfScope"] = json!(!present.unwrap());
+            expected["ticketOutOfScope"] = json!(!present);
+        } else {
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Boucle de pagination') && document.querySelector('#preview-connector-ticket-reset')?.disabled === false;",vec![]).await?;
         }
         let state: serde_json::Value = http
             .get(format!("{address}/api/state"))

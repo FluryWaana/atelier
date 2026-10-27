@@ -273,8 +273,9 @@ pub fn ConnectorEffects(
             });
         },
     );
-    view! {<section class="task-files" data-connector-journal-card=card_id.get_value() hidden=move||connection.get().is_none() aria-labelledby=heading.clone() aria-busy=move||(loading.get()||pending.get()).to_string()>
-        <h4 id=heading>{move||i18n.text("Écritures distantes du connecteur")}</h4>
+    let heading_id = heading.clone();
+    view! {<section class="task-files" data-connector-journal-card=card_id.get_value() hidden=move||connection.get().is_none() aria-labelledby=heading aria-busy=move||(loading.get()||pending.get()).to_string()>
+        <h4 id=heading_id>{move||i18n.text("Écritures distantes du connecteur")}</h4>
         <Show when=move||!scoped>
         <connector_time::ConnectorTime connection board token pending dirty=time_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
         <connector_ticket_reset::ConnectorTicketReset connection board token pending dirty=reset_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>

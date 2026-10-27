@@ -2955,7 +2955,7 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/native-tray.rs:76](../crates/atelier-app/tests/native-tray.rs#L76) | <code>use atelier_app::infrastructure::{data_lock::DataLock, local_http::LocalHttp, session};</code> |
 | [crates/atelier-app/tests/native-tray.rs:77](../crates/atelier-app/tests/native-tray.rs#L77) | <code>use std::{collections::HashMap, time::Instant};</code> |
 | [crates/atelier-app/tests/native-tray.rs:78](../crates/atelier-app/tests/native-tray.rs#L78) | <code>use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value};</code> |
-| [crates/atelier-app/tests/native-tray.rs:354](../crates/atelier-app/tests/native-tray.rs#L354) | <code>#[tokio::test]</code> |
+| [crates/atelier-app/tests/native-tray.rs:355](../crates/atelier-app/tests/native-tray.rs#L355) | <code>#[tokio::test]</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:1](../crates/atelier-app/tests/package-maintenance.rs#L1) | <code>use std::process::Command;</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:3](../crates/atelier-app/tests/package-maintenance.rs#L3) | <code>#[test]</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:37](../crates/atelier-app/tests/package-maintenance.rs#L37) | <code>#[test]</code> |
@@ -4534,9 +4534,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-ui/Cargo.toml:6](../crates/atelier-ui/Cargo.toml#L6) | <code>license.workspace = true</code> |
 | [crates/atelier-ui/Cargo.toml:8](../crates/atelier-ui/Cargo.toml#L8) | <code>[dependencies]</code> |
 | [crates/atelier-ui/Cargo.toml:9](../crates/atelier-ui/Cargo.toml#L9) | <code>atelier-core.workspace = true</code> |
-| [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde_json.workspace = true</code> |
-| [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
-| [crates/atelier-ui/Cargo.toml:16](../crates/atelier-ui/Cargo.toml#L16) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Document", "HtmlElement", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent", "EventSource", "MessageEvent", "Blob", "Url", "HtmlAnchorElement"] }</code> |
+| [crates/atelier-ui/Cargo.toml:10](../crates/atelier-ui/Cargo.toml#L10) | <code>serde.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:11](../crates/atelier-ui/Cargo.toml#L11) | <code>serde_json.workspace = true</code> |
+| [crates/atelier-ui/Cargo.toml:12](../crates/atelier-ui/Cargo.toml#L12) | <code>leptos = { version = "=0.8.22", features = ["csr"] }</code> |
+| [crates/atelier-ui/Cargo.toml:17](../crates/atelier-ui/Cargo.toml#L17) | <code>web-sys = { version = "=0.3.106", features = ["Window", "Document", "HtmlElement", "Location", "Storage", "History", "UrlSearchParams", "HtmlDialogElement", "BeforeUnloadEvent", "EventSource", "MessageEvent", "Blob", "Url", "HtmlAnchorElement"] }</code> |
 | [crates/atelier-ui/src/agent_cli.rs:1](../crates/atelier-ui/src/agent_cli.rs#L1) | <code>use crate::{field, i18n::I18n, read, write};</code> |
 | [crates/atelier-ui/src/agent_cli.rs:2](../crates/atelier-ui/src/agent_cli.rs#L2) | <code>use atelier_core::{</code> |
 | [crates/atelier-ui/src/agent_cli.rs:7](../crates/atelier-ui/src/agent_cli.rs#L7) | <code>use gloo_net::http::Method;</code> |
@@ -5070,10 +5071,10 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:111](../xtask/src/ui.rs#L111) | <code>pub async fn test(legacy: bool) -&gt; Result&lt;()&gt; {</code> |
 | [xtask/src/ui.rs:577](../xtask/src/ui.rs#L577) | <code>use atelier_app::infrastructure::{</code> |
 | [xtask/src/ui.rs:581](../xtask/src/ui.rs#L581) | <code>use atelier_core::application::updates::Phase;</code> |
-| [xtask/src/ui.rs:671](../xtask/src/ui.rs#L671) | <code>use atelier_app::infrastructure::{prototype::PrototypeDirectory, store::Documents};</code> |
-| [xtask/src/ui.rs:672](../xtask/src/ui.rs#L672) | <code>use atelier_core::document::Document;</code> |
-| [xtask/src/ui.rs:1489](../xtask/src/ui.rs#L1489) | <code>use std::io::Write;</code> |
-| [xtask/src/ui.rs:2639](../xtask/src/ui.rs#L2639) | <code>use atelier_core::application::extensions::Registry;</code> |
+| [xtask/src/ui.rs:677](../xtask/src/ui.rs#L677) | <code>use atelier_app::infrastructure::{prototype::PrototypeDirectory, store::Documents};</code> |
+| [xtask/src/ui.rs:678](../xtask/src/ui.rs#L678) | <code>use atelier_core::document::Document;</code> |
+| [xtask/src/ui.rs:1495](../xtask/src/ui.rs#L1495) | <code>use std::io::Write;</code> |
+| [xtask/src/ui.rs:2645](../xtask/src/ui.rs#L2645) | <code>use atelier_core::application::extensions::Registry;</code> |
 | [xtask/src/ui_repositories.rs:1](../xtask/src/ui_repositories.rs#L1) | <code>use super::{Client, Result, click, command, root, wait_dom};</code> |
 | [xtask/src/ui_repositories.rs:2](../xtask/src/ui_repositories.rs#L2) | <code>use atelier_core::{</code> |
 | [xtask/src/ui_repositories.rs:6](../xtask/src/ui_repositories.rs#L6) | <code>use serde_json::json;</code> |
@@ -5856,8 +5857,8 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [crates/atelier-app/tests/local-commit.rs:15](../crates/atelier-app/tests/local-commit.rs#L15) | <code>.args([</code> |
 | [crates/atelier-app/tests/local-commit.rs:23](../crates/atelier-app/tests/local-commit.rs#L23) | <code>.args(args);</code> |
 | [crates/atelier-app/tests/native-import.rs:193](../crates/atelier-app/tests/native-import.rs#L193) | <code>.args(["import-data", "--choose-source", "--destination"])</code> |
-| [crates/atelier-app/tests/native-tray.rs:357](../crates/atelier-app/tests/native-tray.rs#L357) | <code>for args in [</code> |
-| [crates/atelier-app/tests/native-tray.rs:365](../crates/atelier-app/tests/native-tray.rs#L365) | <code>.args(args)</code> |
+| [crates/atelier-app/tests/native-tray.rs:358](../crates/atelier-app/tests/native-tray.rs#L358) | <code>for args in [</code> |
+| [crates/atelier-app/tests/native-tray.rs:366](../crates/atelier-app/tests/native-tray.rs#L366) | <code>.args(args)</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:7](../crates/atelier-app/tests/package-maintenance.rs#L7) | <code>for args in [</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:14](../crates/atelier-app/tests/package-maintenance.rs#L14) | <code>.args(args)</code> |
 | [crates/atelier-app/tests/package-maintenance.rs:22](../crates/atelier-app/tests/package-maintenance.rs#L22) | <code>.args(["recover-package-maintenance", "--root"])</code> |
@@ -6139,15 +6140,15 @@ Les numéros de ligne servent à retrouver les contrats. Les extraits sont des r
 | [xtask/src/ui.rs:136](../xtask/src/ui.rs#L136) | <code>driver_command.args(["--port", &amp;driver_port.to_string()]);</code> |
 | [xtask/src/ui.rs:172](../xtask/src/ui.rs#L172) | <code>capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));</code> |
 | [xtask/src/ui.rs:176](../xtask/src/ui.rs#L176) | <code>capabilities.insert("moz:firefoxOptions".into(), json!({"args":["-headless"]}));</code> |
-| [xtask/src/ui.rs:683](../xtask/src/ui.rs#L683) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:692](../xtask/src/ui.rs#L692) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
-| [xtask/src/ui.rs:697](../xtask/src/ui.rs#L697) | <code>.args([</code> |
-| [xtask/src/ui.rs:3337](../xtask/src/ui.rs#L3337) | <code>.args(["init", "-b", "main"]))?;</code> |
-| [xtask/src/ui.rs:3349](../xtask/src/ui.rs#L3349) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
-| [xtask/src/ui.rs:3354](../xtask/src/ui.rs#L3354) | <code>.args([</code> |
-| [xtask/src/ui.rs:3369](../xtask/src/ui.rs#L3369) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
-| [xtask/src/ui.rs:3375](../xtask/src/ui.rs#L3375) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
-| [xtask/src/ui.rs:3937](../xtask/src/ui.rs#L3937) | <code>.args([</code> |
+| [xtask/src/ui.rs:689](../xtask/src/ui.rs#L689) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:698](../xtask/src/ui.rs#L698) | <code>.args(["add", "--", ".run-fixture"]))?;</code> |
+| [xtask/src/ui.rs:703](../xtask/src/ui.rs#L703) | <code>.args([</code> |
+| [xtask/src/ui.rs:3343](../xtask/src/ui.rs#L3343) | <code>.args(["init", "-b", "main"]))?;</code> |
+| [xtask/src/ui.rs:3355](../xtask/src/ui.rs#L3355) | <code>.args(["add", "--", ".gitignore", "src/tracked.txt"]))?;</code> |
+| [xtask/src/ui.rs:3360](../xtask/src/ui.rs#L3360) | <code>.args([</code> |
+| [xtask/src/ui.rs:3375](../xtask/src/ui.rs#L3375) | <code>.args(["-c", "core.hooksPath=NUL", "clone", "--no-hardlinks", "--"])</code> |
+| [xtask/src/ui.rs:3381](../xtask/src/ui.rs#L3381) | <code>.args(["config", "--local", "remote.origin.url"])</code> |
+| [xtask/src/ui.rs:3943](../xtask/src/ui.rs#L3943) | <code>.args([</code> |
 | [xtask/src/ui_repositories.rs:8](../xtask/src/ui_repositories.rs#L8) | <code>fn git(path: &amp;Path, args: &amp;[&amp;str]) -&gt; Result&lt;String&gt; {</code> |
 | [xtask/src/ui_repositories.rs:10](../xtask/src/ui_repositories.rs#L10) | <code>process.env_clear().current_dir(path);</code> |
 | [xtask/src/ui_repositories.rs:13](../xtask/src/ui_repositories.rs#L13) | <code>process.env(key, value);</code> |

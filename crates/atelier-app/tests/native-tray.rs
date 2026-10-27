@@ -340,6 +340,7 @@ fn linux_product_registration(before: &[String], pid: u32) -> String {
                 assert!(pixels.iter().any(|(width, height, bytes)| *width == 16
                     && *height == 16
                     && bytes.len() == 1024));
+                drop(item);
                 return registration;
             }
         }

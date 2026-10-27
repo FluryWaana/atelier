@@ -243,6 +243,7 @@ dependencies = [
  "gloo-net 0.7.0",
  "js-sys",
  "leptos",
+ "serde",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",

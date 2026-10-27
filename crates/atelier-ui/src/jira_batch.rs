@@ -51,7 +51,7 @@ pub fn JiraBatch(
         let _ = context.get();
         confirmed.set(false);
     });
-    let candidates = Memo::new(move |_| {
+    let candidates = Signal::derive(move || {
         board
             .cards
             .get()

@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 atelier-core.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 leptos = { version = "=0.8.22", features = ["csr"] }
 gloo-net = "=0.7.0"

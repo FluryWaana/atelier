@@ -50,7 +50,7 @@ async fn committed_disk_can_be_reviewed_while_preserving_a_partially_staged_huma
     let repository = Repository::synthetic(
         &root,
         &[home.path().to_owned()],
-        &JsonString::from(source.to_string_lossy().replace('\\', "/")),
+        &JsonString::from(source.to_string_lossy().replace('\\', "/").as_str()),
     )
     .unwrap();
     let preview = local_commit::preview(&repository, vec!["file.txt".into()])
@@ -128,7 +128,7 @@ async fn selected_snapshot_preserves_human_index_disk_and_fetch_head_and_rejects
     let repository = Repository::synthetic(
         &root,
         &[home.path().to_owned()],
-        &JsonString::from(source.to_string_lossy().replace('\\', "/")),
+        &JsonString::from(source.to_string_lossy().replace('\\', "/").as_str()),
     )
     .unwrap();
     let preview = local_commit::preview(&repository, vec!["selected.txt".into()])

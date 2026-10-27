@@ -1,7 +1,7 @@
 use crate::{i18n::I18n, live::BoardState, read, write};
 use atelier_core::application::extensions::{
-    self as protocol, Candidate, Connection, Effect, FieldKind, ImportedTicket, Manifest,
-    Method as ConnectorMethod, Registry, Report, TicketIdentity,
+    self as protocol, Candidate, Connection, Effect as ConnectorEffect, FieldKind, ImportedTicket,
+    Manifest, Method as ConnectorMethod, Registry, Report, TicketIdentity,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -414,7 +414,7 @@ pub fn Connectors(
                 }/>
                 <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("Enregistrer le connecteur")}</button>
                 <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("Exécuter le contrôle du connecteur")}</button>
-                <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==Effect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
+                <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==ConnectorEffect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
                 <button id="remove-connector" class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("Retirer le connecteur…")}</button>
             </fieldset>
             <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("Retirer le connecteur et ses secrets ? Les tâches importées seront conservées.")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("Confirmer")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("Annuler")}</button></div>

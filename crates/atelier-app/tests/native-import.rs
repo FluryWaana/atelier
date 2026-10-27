@@ -189,7 +189,7 @@ async fn the_native_transfer_selects_reviews_cancels_then_copies_without_mutatin
         let destination = root
             .path()
             .join(if accept { "accepted" } else { "cancelled" });
-        let mut child = Command::new(env!("CARGO_BIN_EXE_atelier"))
+        let child = Command::new(env!("CARGO_BIN_EXE_atelier"))
             .args(["import-data", "--choose-source", "--destination"])
             .arg(&destination)
             .arg("--confirm")
