@@ -180,6 +180,31 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
         "org.kde.StatusNotifierItem",
     )
     .unwrap();
+    assert_eq!(std::env::var("XDG_CURRENT_DESKTOP").as_deref(), Ok("XFCE"));
+    let helper = item.get_property::<String>("Id").unwrap();
+    let helper: u32 = helper
+        .strip_prefix("atelier-rust-")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let environment = std::fs::read(format!("/proc/{helper}/environ")).unwrap();
+    assert!(environment.len() <= 64 * 1024);
+    for key in [
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_CURRENT_DESKTOP",
+        "XDG_SESSION_DESKTOP",
+        "DESKTOP_SESSION",
+    ] {
+        let expected = format!("{key}={}", std::env::var(key).unwrap());
+        assert!(
+            environment
+                .split(|byte| *byte == 0)
+                .any(|entry| entry == expected.as_bytes()),
+            "The tray helper lost its desktop context: {key}"
+        );
+    }
     let path = item.get_property::<OwnedObjectPath>("Menu").unwrap();
     let menu = zbus::blocking::Proxy::new(
         &connection,
@@ -233,7 +258,8 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
         let labels: Vec<_> = properties().iter().map(|(_, props)| label(props)).collect();
         assert!(
             !labels.iter().any(|text| text.starts_with("Action refusée")),
-            "Native Open action failed"
+            "Native Open action failed; owned browser session prepared: {}",
+            data.join("local-browser.html").is_file()
         );
         if data.join("local-browser.html").is_file()
             && labels.iter().any(|text| text == "Prêt / Ready")

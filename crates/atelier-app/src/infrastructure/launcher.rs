@@ -245,14 +245,21 @@ async fn open_browser(address: &str) -> Result<()> {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .kill_on_drop(true)
             .spawn()?;
         match tokio::time::timeout(Duration::from_secs(15), child.wait()).await {
             Ok(Ok(status)) if status.success() => Ok(()),
-            _ => {
-                let _ = child.kill().await;
-                let _ = child.wait().await;
+            Ok(_) => {
                 Err("Le navigateur n’a pas pu ouvrir Atelier. Le serveur reste disponible.".into())
+            }
+            Err(_) => {
+                // Some desktop openers remain attached to the browser; never kill that external application.
+                tokio::spawn(async move {
+                    let _ = child.wait().await;
+                });
+                Err(
+                    "L’ouverture du navigateur n’a pas été confirmée. Le serveur reste disponible."
+                        .into(),
+                )
             }
         }
     }
