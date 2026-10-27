@@ -113,6 +113,14 @@ pub fn Settings(
             node.close();
         }
         on_close.run(());
+        request_animation_frame(move || {
+            if let Some(element) = document()
+                .get_element_by_id("manage-settings")
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+        });
     };
     let request_close = move || {
         if pending.get_untracked() {

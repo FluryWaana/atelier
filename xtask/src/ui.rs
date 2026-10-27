@@ -221,14 +221,33 @@ pub async fn test() -> Result<()> {
         .no_proxy()
         .retry(reqwest::retry::never())
         .build()?;
-    let result = scenario(&client, &http).await;
-    if result.is_err()
-        && let Ok(screenshot) = client.screenshot().await
-    {
-        let _ = std::fs::write(root().join(".artifacts/rust-ui-failed.png"), screenshot);
+    let journeys = [
+        (
+            "application",
+            Box::pin(scenario(&client, &http)) as Pin<Box<dyn Future<Output = Result<()>> + '_>>,
+        ),
+        ("jira", Box::pin(jira_recovery_scenario(&client, &http))),
+        ("updates", Box::pin(updates_scenario(&client, &http))),
+    ];
+    let mut failures = Vec::new();
+    for (name, journey) in journeys {
+        match journey.await {
+            Ok(()) => println!("Parcours synthétique {name} réussi."),
+            Err(error) => {
+                if let Ok(screenshot) = client.screenshot().await {
+                    let _ = std::fs::write(
+                        root().join(format!(".artifacts/rust-ui-{name}-failed.png")),
+                        screenshot,
+                    );
+                }
+                failures.push(format!("{name}: {error}"));
+            }
+        }
     }
     let closed = client.close().await;
-    result?;
+    if !failures.is_empty() {
+        return Err(failures.join("\n").into());
+    }
     closed?;
     println!(
         "Parcours {browser} réussi : tableau, filtres, cartes, critères/dépendances, conflits d’édition, projets, persistance et rotation de session sous CSP."
@@ -616,8 +635,6 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .await?;
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
-    jira_recovery_scenario(client, http).await?;
-    updates_scenario(client, http).await?;
     Ok(())
 }
 
@@ -3703,7 +3720,7 @@ async fn files_scenario(
     }
     wait_dom(client, "return Array.from(document.querySelectorAll('.service-worktree')).filter(element=>!element.hidden).length === 2 && Array.from(document.querySelectorAll('.service-worktree [role=status]')).every(element=>element.textContent === 'Worktree prêt.');", vec![]).await?;
     click(client, "#start-services").await?;
-    wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Processus actif') && Array.from(document.querySelectorAll('.service-log')).every(element=>element.textContent.includes('synthetic-service-ready'));", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('.service-state').length === 2 && Array.from(document.querySelectorAll('.service-state')).every(service=>service.querySelector('.service-status')?.textContent === 'Processus actif' && service.querySelector('.service-log')?.textContent.includes('synthetic-service-ready'));", vec![]).await?;
     wait_dom(client,"return document.querySelectorAll('.service-endpoints a').length === 2 && Array.from(document.querySelectorAll('.service-endpoints a')).every(link=>link.href.startsWith('http://127.0.0.1:'));",vec![]).await?;
     let before: atelier_core::contracts::ServiceSession = http
         .get(format!("{address}/api/cards/{}/services", card.id))
@@ -4122,25 +4139,32 @@ async fn click(client: &Client, selector: &str) -> Result<()> {
     Ok(())
 }
 
-async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Value>) -> Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(15);
-    while Instant::now() < deadline {
-        if client.execute(script, arguments.clone()).await? == json!(true) {
-            return Ok(());
+fn wait_dom<'a>(
+    client: &'a Client,
+    script: &'a str,
+    arguments: Vec<serde_json::Value>,
+) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>> {
+    // Keep repeated WebDriver waits and their failure diagnostics off Windows' thread stack.
+    Box::pin(async move {
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while Instant::now() < deadline {
+            if client.execute(script, arguments.clone()).await? == json!(true) {
+                return Ok(());
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
-    let state = client
+        let state = client
         .execute(
             "return Object.fromEntries(['file-error','file-search','next-files','previous-files','refresh-files','project-error','save-project','editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:(id==='forge-base'||id==='file-search') ? element.value : null} : null];}));",
             vec![],
         )
         .await;
-    let journals = client.execute("return Array.from(document.querySelectorAll('[data-connector-journal-card]')).map(section=>({card:section.dataset.connectorJournalCard,busy:section.getAttribute('aria-busy'),errors:Array.from(section.querySelectorAll('p.error')).map(error=>error.textContent),operations:Array.from(section.querySelectorAll('[data-connector-operation]')).map(operation=>({id:operation.dataset.connectorOperation,state:operation.querySelector('.connector-effect-state')?.textContent}))}));", vec![]).await;
-    let services = client.execute("return {error:document.querySelector('#services-error')?.textContent,states:Array.from(document.querySelectorAll('.service-state')).map(service=>({status:service.querySelector('.service-status')?.textContent,ready:service.querySelector('.service-log')?.textContent.includes('synthetic-service-ready'),errors:Array.from(service.querySelectorAll('.error')).map(error=>error.textContent.slice(0,2000))}))};",vec![]).await;
-    let settings = client.execute("return {saveDisabled:document.querySelector('#save-settings')?.disabled,discardHidden:document.querySelector('#discard-settings')?.closest('.confirmation')?.hidden,focused:document.activeElement?.id};",vec![]).await;
-    Err(
+        let journals = client.execute("return Array.from(document.querySelectorAll('[data-connector-journal-card]')).map(section=>({card:section.dataset.connectorJournalCard,busy:section.getAttribute('aria-busy'),errors:Array.from(section.querySelectorAll('p.error')).map(error=>error.textContent),operations:Array.from(section.querySelectorAll('[data-connector-operation]')).map(operation=>({id:operation.dataset.connectorOperation,state:operation.querySelector('.connector-effect-state')?.textContent}))}));", vec![]).await;
+        let services = client.execute("return {error:document.querySelector('#services-error')?.textContent,states:Array.from(document.querySelectorAll('.service-state')).map(service=>({status:service.querySelector('.service-status')?.textContent,ready:service.querySelector('.service-log')?.textContent.includes('synthetic-service-ready'),errors:Array.from(service.querySelectorAll('.error')).map(error=>error.textContent.slice(0,2000))}))};",vec![]).await;
+        let settings = client.execute("return {saveDisabled:document.querySelector('#save-settings')?.disabled,discardHidden:document.querySelector('#discard-settings')?.closest('.confirmation')?.hidden,focused:document.activeElement?.id};",vec![]).await;
+        Err(
         format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}; services : {services:?}; paramètres : {settings:?}")
             .into(),
     )
+    })
 }
