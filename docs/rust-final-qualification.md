@@ -2,7 +2,9 @@
 
 ## État courant
 
-La reconstruction n'est pas terminée. Dernière campagne : [40493450905](https://github.com/FluryWaana/atelier/actions/runs/40493450905) sur `342e020`. Journaux et captures relus ; les corrections suivantes restent candidates.
+La reconstruction n'est pas terminée. Dernière campagne complète : [40493450905](https://github.com/FluryWaana/atelier/actions/runs/40493450905) sur `342e020`. Vérification ciblée suivante : [40506116913](https://github.com/FluryWaana/atelier/actions/runs/40506116913) sur `dc27452`, Chrome/Jira uniquement, en échec.
+
+Cette vérification ciblée construit et contrôle les assets WASM avec succès, puis échoue sur l’assertion `#task-forge-kind.disabled === true`. Le sélecteur hérite de la désactivation de son `fieldset` : sa propriété propre reste fausse. Le scénario contrôle désormais `matches(':disabled')` pour les états bloqué et débloqué, sans modifier la protection produit. Les étapes Jira suivantes, dont les filtres du rapport, ne sont pas qualifiées par cette exécution. Formatage et compilation des cibles xtask réussis localement après correction ; aucun test local ni nouveau workflow pendant le diagnostic.
 
 | Périmètre | Preuve actuelle |
 | --- | --- |

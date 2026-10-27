@@ -725,7 +725,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         client.goto(&format!("{address}/#session={token}")).await.map_err(|error|format!("Updates : ouverture initiale : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
-        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.disabled === false;",vec![]).await?;
+        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.matches(':disabled') === false;",vec![]).await?;
         client.find(Locator::Css("#update-archive")).await?.send_keys(&candidate.to_string_lossy()).await?;
         client.find(Locator::Css("#update-signature")).await?.send_keys(&candidate_signature.to_string_lossy()).await?;
         click(client,"#close-settings").await?;click(client,"#keep-settings").await?;
@@ -969,7 +969,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     wait_dom(client,"return document.querySelector('#jira-create-error')?.textContent.includes('Renseigne le jeton Jira') && document.querySelector('#jira-created-key')?.value === 'SYN-9' && document.querySelector('#resolve-jira-creation')?.disabled === false;",vec![]).await?;
     click(client, "#close-jira-creation-ack").await?;
     click(client, "#close-jira-creation").await?;
-    wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.matches(':disabled') === false;",vec![]).await?;
     client
         .goto(&format!("{address}/?task=jira-creation"))
         .await?;
@@ -1264,7 +1264,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .await?;
     wait_dom(
         client,
-        "return document.querySelector('#task-forge-kind')?.disabled === true;",
+        "return document.querySelector('#task-forge-kind')?.matches(':disabled') === true;",
         vec![],
     )
     .await?;
@@ -1280,11 +1280,11 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     // Missing synthetic credentials must refuse before Git or any remote request.
     wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-repository')?.value === 'owner/repo' && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
     click(client, "#cancel-publication").await?;
-    wait_dom(client,"return document.querySelector('#publication-repository')?.value === '' && document.querySelector('#task-forge-kind')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#publication-repository')?.value === '' && document.querySelector('#task-forge-kind')?.matches(':disabled') === false;",vec![]).await?;
     client
         .goto(&format!("{address}/?task=publication-branch"))
         .await?;
-    wait_dom(client,"return document.querySelector('#confirm-publication-push')?.disabled === false && document.querySelector('#create-publication')?.offsetParent === null && document.querySelector('#publication-title')?.value === 'Synthetic first publication';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#confirm-publication-push')?.matches(':disabled') === false && document.querySelector('#create-publication')?.offsetParent === null && document.querySelector('#publication-title')?.value === 'Synthetic first publication';",vec![]).await?;
     click(client, "#confirm-publication-push").await?;
     wait_dom(
         client,
@@ -1362,7 +1362,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .await?;
     wait_dom(
         client,
-        "return document.querySelector('#commit-author-name')?.disabled === false;",
+        "return document.querySelector('#commit-author-name')?.matches(':disabled') === false;",
         vec![],
     )
     .await?;
@@ -1643,7 +1643,7 @@ async fn brainstorm_scenario(
             .await?;
     }
     click(client, "#preview-local-commit").await?;
-    wait_dom(client,"return document.querySelector('#confirm-local-commit')?.disabled === false && document.querySelector('#workflow-local-commit')?.offsetParent !== null;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#confirm-local-commit')?.matches(':disabled') === false && document.querySelector('#workflow-local-commit')?.offsetParent !== null;",vec![]).await?;
     click(client, "#confirm-local-commit").await?;
     click(client, "#workflow-local-commit").await?;
     wait_dom(client,"return document.querySelector('#automation')?.textContent.includes('Publication à confirmer') && document.querySelector('#edit-status')?.value === 'standby' && document.querySelector('#commit-author-name')?.value === '' && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
@@ -2620,7 +2620,7 @@ async fn settings_scenario(
     click(client, "#settings-tab-jira").await?;
     wait_dom(
         client,
-        "return document.querySelector('#jira-query')?.disabled === false;",
+        "return document.querySelector('#jira-query')?.matches(':disabled') === false;",
         vec![],
     )
     .await?;
@@ -2688,7 +2688,7 @@ async fn settings_scenario(
     click(client, "#settings-tab-forges").await?;
     wait_dom(
         client,
-        "return document.querySelector('#forge-base')?.disabled === false;",
+        "return document.querySelector('#forge-base')?.matches(':disabled') === false;",
         vec![],
     )
     .await?;
@@ -3126,13 +3126,13 @@ async fn connector_reset_scenario(
         click(client, "[data-connector=synthetic-extension]").await?;
         click(client, "#preview-connector-ticket-reset").await?;
         if let Some(present) = present {
-            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('2 pages') && document.querySelector('#approve-connector-ticket-reset')?.disabled === false;",vec![]).await?;
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('2 pages') && document.querySelector('#approve-connector-ticket-reset')?.matches(':disabled') === false;",vec![]).await?;
             click(client, "#approve-connector-ticket-reset").await?;
             click(client, "#apply-connector-ticket-reset").await?;
             wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Périmètre actualisé') && document.querySelector('#apply-connector-ticket-reset')?.disabled === true;",vec![]).await?;
             expected["ticketOutOfScope"] = json!(!present);
         } else {
-            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Boucle de pagination') && document.querySelector('#preview-connector-ticket-reset')?.disabled === false;",vec![]).await?;
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Boucle de pagination') && document.querySelector('#preview-connector-ticket-reset')?.matches(':disabled') === false;",vec![]).await?;
         }
         let state: serde_json::Value = http
             .get(format!("{address}/api/state"))
@@ -3745,7 +3745,7 @@ async fn files_scenario(
         .await?;
     click(client, "#create-worktree").await?;
     // Invalid scope fails before any credential lookup or network access.
-    wait_dom(client, "return document.querySelector('#worktree-error')?.textContent.length > 0 && document.querySelector('#worktree-fetch-repository')?.value === '../repo' && document.querySelector('#create-worktree')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#worktree-error')?.textContent.length > 0 && document.querySelector('#worktree-fetch-repository')?.value === '../repo' && document.querySelector('#create-worktree')?.matches(':disabled') === false;", vec![]).await?;
     client.execute("const select=document.querySelector('#worktree-fetch-forge'); select.value='local'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#create-worktree").await?;
     wait_dom(client,"return document.querySelector('#worktree-state')?.textContent === 'Worktree prêt.' && document.querySelector('#worktree-error')?.textContent === '' && document.querySelector('#verify-worktree')?.disabled === false;",vec![]).await?;
@@ -4057,7 +4057,7 @@ async fn files_scenario(
     }
     click(client, "#discard-worktree-files").await?;
     click(client, "#confirm-remove-worktree").await?;
-    wait_dom(client,"return document.querySelector('#worktree-notice')?.textContent === 'Worktree retiré. La branche Git est conservée.' && document.querySelector('#create-worktree')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#worktree-notice')?.textContent === 'Worktree retiré. La branche Git est conservée.' && document.querySelector('#create-worktree')?.matches(':disabled') === false;",vec![]).await?;
     if Path::new(&worktree.path).exists() {
         return Err("Le retrait du worktree n’a pas terminé.".into());
     }
@@ -4152,7 +4152,7 @@ async fn local_commit_scenario(
     wait_dom(client,"return document.querySelector('#local-commit .file-preview')?.textContent.includes('+human changed after preview') && document.querySelector('#confirm-local-commit')?.checked === false;",vec![]).await?;
     click(client, "#confirm-local-commit").await?;
     click(client, "#create-local-commit").await?;
-    wait_dom(client,"return document.querySelector('#local-commit-notice')?.textContent.includes('Commit observé sur la branche locale') && document.querySelector('#commit-message')?.value === '' && document.querySelector('#edit-title')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#local-commit-notice')?.textContent.includes('Commit observé sur la branche locale') && document.querySelector('#commit-message')?.value === '' && document.querySelector('#edit-title')?.matches(':disabled') === false;",vec![]).await?;
     let board: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
         .bearer_auth(token)
