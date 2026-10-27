@@ -5,32 +5,37 @@ use atelier_app::infrastructure::{local_http::LocalHttp, session};
 use fantoccini::{Client, ClientBuilder, Locator};
 use serde_json::json;
 use std::{
+    future::Future,
     path::Path,
+    pin::Pin,
     process::{Child, Stdio},
     time::{Duration, Instant},
 };
 
 trait SyntheticResponse {
-    async fn checked_status(self) -> Result<reqwest::Response>;
+    fn checked_status(self) -> Pin<Box<dyn Future<Output = Result<reqwest::Response>>>>;
 }
 impl SyntheticResponse for reqwest::Response {
-    async fn checked_status(self) -> Result<Self> {
-        if self.status().is_success() {
-            return Ok(self);
-        }
-        let status = self.status();
-        let path = self.url().path().to_owned();
-        let message = self
-            .json::<serde_json::Value>()
-            .await
-            .ok()
-            .and_then(|value| value["error"].as_str().map(str::to_owned))
-            .unwrap_or_else(|| "Réponse sans erreur publique JSON.".into());
-        Err(format!(
-            "Requête synthétique {path} refusée ({status}) : {}",
-            message.chars().take(2000).collect::<String>()
-        )
-        .into())
+    fn checked_status(self) -> Pin<Box<dyn Future<Output = Result<Self>>>> {
+        // Keep the many sequential journey futures small on Windows' native thread stack.
+        Box::pin(async move {
+            if self.status().is_success() {
+                return Ok(self);
+            }
+            let status = self.status();
+            let path = self.url().path().to_owned();
+            let message = self
+                .json::<serde_json::Value>()
+                .await
+                .ok()
+                .and_then(|value| value["error"].as_str().map(str::to_owned))
+                .unwrap_or_else(|| "Réponse sans erreur publique JSON.".into());
+            Err(format!(
+                "Requête synthétique {path} refusée ({status}) : {}",
+                message.chars().take(2000).collect::<String>()
+            )
+            .into())
+        })
     }
 }
 
@@ -169,6 +174,8 @@ pub async fn test() -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(15);
     let http = reqwest::Client::builder()
         .timeout(Duration::from_secs(2))
+        .no_proxy()
+        .retry(reqwest::retry::never())
         .build()?;
     loop {
         if driver.0.try_wait()?.is_some() {
@@ -208,6 +215,12 @@ pub async fn test() -> Result<()> {
         .capabilities(capabilities)
         .connect(&endpoint)
         .await?;
+    // The two-second client above is only for driver readiness, not multi-step native operations.
+    let http = reqwest::Client::builder()
+        .timeout(Duration::from_secs(180))
+        .no_proxy()
+        .retry(reqwest::retry::never())
+        .build()?;
     let result = scenario(&client, &http).await;
     if result.is_err()
         && let Ok(screenshot) = client.screenshot().await
@@ -4102,7 +4115,7 @@ async fn local_commit_scenario(
 }
 
 async fn click(client: &Client, selector: &str) -> Result<()> {
-    wait_dom(client, "const element=document.querySelector(arguments[0]);return !!element && !element.matches(':disabled');", vec![json!(selector)]).await?;
+    wait_dom(client, "const element=document.querySelector(arguments[0]);return !!element && !element.matches(':disabled');", vec![json!(selector)]).await.map_err(|error|format!("Contrôle synthétique {selector} indisponible : {error}"))?;
     // Center controls inside scrolling dialogs; retain WebDriver's native click and hit testing.
     client.execute("document.querySelector(arguments[0])?.scrollIntoView({block:'center', inline:'nearest', behavior:'instant'});", vec![json!(selector)]).await?;
     client.find(Locator::Css(selector)).await?.click().await?;
@@ -4119,7 +4132,7 @@ async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Valu
     }
     let state = client
         .execute(
-            "return Object.fromEntries(['project-error','save-project','editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
+            "return Object.fromEntries(['file-error','file-search','next-files','previous-files','refresh-files','project-error','save-project','editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:(id==='forge-base'||id==='file-search') ? element.value : null} : null];}));",
             vec![],
         )
         .await;

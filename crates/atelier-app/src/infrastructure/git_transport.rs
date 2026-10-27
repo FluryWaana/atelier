@@ -24,6 +24,28 @@ fn synthetic_git_failure(stderr: &[u8]) -> &'static str {
     // Return fixed classifications only: Git stderr can contain URLs and credentials.
     if diagnostic.contains("unsupported ssl backend") {
         "Synthetic Git TLS: unsupported SSL backend."
+    } else if diagnostic.contains("error setting certificate")
+        || diagnostic.contains("could not load pem")
+        || diagnostic.contains("couldn't load pem")
+        || diagnostic.contains("bad ca certificate")
+    {
+        "Synthetic Git TLS: explicit CA file or directory could not be loaded."
+    } else if diagnostic.contains("subject name")
+        || diagnostic.contains("subject alternative")
+        || diagnostic.contains("hostname mismatch")
+        || diagnostic.contains("no alternative certificate")
+    {
+        "Synthetic Git TLS: certificate hostname or IP did not match."
+    } else if diagnostic.contains("expired") || diagnostic.contains("not yet valid") {
+        "Synthetic Git TLS: certificate validity dates were refused."
+    } else if diagnostic.contains("self-signed")
+        || diagnostic.contains("unable to get local issuer")
+        || diagnostic.contains("unable to verify the first")
+        || diagnostic.contains("unable to verify first")
+    {
+        "Synthetic Git TLS: certificate issuer was not anchored by the explicit CA."
+    } else if diagnostic.contains("sectrust") {
+        "Synthetic Git TLS: Apple native trust rejected the certificate."
     } else if diagnostic.contains("certificate")
         || diagnostic.contains("issuer")
         || diagnostic.contains("ssl peer")
@@ -651,6 +673,10 @@ mod tests {
         for diagnostic in [
             "fatal: Unsupported SSL backend with synthetic-private-token",
             "SSL certificate problem at https://synthetic-private-token@127.0.0.1/repo",
+            "SSL: no alternative certificate subject name matches 127.0.0.1 synthetic-private-token",
+            "SSL certificate problem: unable to get local issuer certificate synthetic-private-token",
+            "error setting certificate file: /private/synthetic-private-token",
+            "certificate has expired synthetic-private-token",
             "HTTP 403 synthetic-private-token",
             "unexpected synthetic-private-token at https://127.0.0.1/private",
         ] {
