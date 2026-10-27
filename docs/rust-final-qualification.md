@@ -18,3 +18,11 @@ Les résultats doivent être relus dans les vrais journaux et associés au commi
 Les journaux natifs et navigateur ont été téléchargés et relus. La préparation de Git OpenSSL macOS a réellement réussi sur ARM et Intel ; cela ne prouve pas les scénarios TLS, non atteints.
 
 La compilation navigateur signale les frontières de visibilité de fonctions utilisées par HTTP (`forge::configuration`, `task_creation::path_string`, fonctions du journal CLI Windows), la possession de l'état dans la mutation détachée, l'import POSIX `Ipv4Addr`, une tranche `str` passée à `Document::set` et le format `LowerHex` absent des sorties SHA de la dépendance verrouillée. Les correctifs réutilisent l'encodeur hexadécimal existant, conservent les SHA et leur représentation, et ajoutent un vecteur connu. Une condition imbriquée et des imports/mutabilités inutiles sont corrigés sans neutraliser Clippy. Ces corrections restent à requalifier ; aucun test ni contrôle lourd local.
+
+## Corrections et blocage de la requalification
+
+Les corrections sont commitées et poussées à `9959d31`. Formatage et génération légère de l'inventaire exécutés avec code de sortie 0 ; aucun build, test, Clippy ou scénario local. Cela ne prouve pas la compilation ni la réussite des correctifs.
+
+La tentative de déclenchement du workflow manuel sur les corrections a été **rejetée avant exécution par le contrôle automatique d'approbation** : la consigne autorisait une seule campagne finale, déjà lancée ; une relance complète est considérée comme une seconde campagne coûteuse exigeant un accord explicite du propriétaire. Aucune seconde exécution n'a été créée et aucun contournement ni relance indirecte n'est autorisé.
+
+Intervention nécessaire : autorisation explicite de requalifier les corrections via le workflow manuel complet. En attendant, tous les tests natifs/TLS, parcours navigateur, artefacts/installations/mises à jour restent sans preuve de réussite ; les interactions de bureau manuelles et le retrait physique final des références Node restent également ouverts. La reconstruction n'est pas terminée.
