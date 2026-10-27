@@ -2156,5 +2156,14 @@
   "Review de module incomplète.": "The module review is incomplete.",
   "Sélection de dépôt du module invalide.": "Invalid module repository selection.",
   "Demande de publication du module invalide.": "Invalid module publication request.",
-  "Termine ou rapproche les opérations Jira avant une sauvegarde.": "Complete or reconcile Jira operations before creating a backup."
+  "Termine ou rapproche les opérations Jira avant une sauvegarde.": "Complete or reconcile Jira operations before creating a backup.",
+  "Abandonner et recharger": "Discard and reload",
+  "Annuler le brouillon": "Cancel draft",
+  "Branche cible": "Target branch",
+  "Brouillon": "Draft",
+  "Choisir une tâche": "Choose a task",
+  "Commit cible": "Target commit",
+  "Dépôt distant": "Remote repository",
+  "Préparer la publication de PR/MR": "Prepare PR/MR publication",
+  "Temps humain": "Human time"
 }
