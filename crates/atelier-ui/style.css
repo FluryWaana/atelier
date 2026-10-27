@@ -50,3 +50,49 @@ input#task-title { font-size: .9375rem; line-height: 1.5; letter-spacing: normal
 .profile-list { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; }
 .backup-list { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
 .backup-name { overflow-wrap: anywhere; }
+/* Desktop navigation: independent controls, with the current destination in ink. */
+@media (min-width: 801px) {
+  .sidebar {
+    padding: 28px 18px 22px;
+    background: #141414;
+    border-right: 1px solid #292929;
+  }
+  .sidebar .brand { padding: 0 4px 20px; border-bottom: 1px solid #292929; }
+  .sidebar .workspace-label {
+    margin: 28px 10px 10px;
+    color: #a3a3a3;
+    font-size: 11px;
+    letter-spacing: .06em;
+  }
+  .sidebar .nav-item {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 42px;
+    margin: 2px 0;
+    padding: 10px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #bcbcbc;
+    font-size: 13px;
+    font-weight: 450;
+    text-align: left;
+  }
+  .sidebar .nav-item:hover { background: #242424; color: #fff; }
+  .sidebar .nav-item.nav-active { background: transparent; color: #fff; font-weight: 650; }
+  .sidebar .nav-item.nav-active:hover { background: #242424; }
+  .sidebar .nav-item:focus-visible, .sidebar .agent-row:focus-visible,
+  .sidebar .text-button:focus-visible, .sidebar .brand:focus-visible {
+    outline: 2px solid #e4e4e4;
+    outline-offset: 2px;
+  }
+  .sidebar .nav-item:disabled { opacity: .5; }
+  .sidebar-bottom { padding-top: 16px; }
+  .sidebar-bottom .workspace-label { border-top: 1px solid #292929; padding-top: 20px; }
+  .sidebar .agent-row { border: 0; border-radius: 4px; }
+  .sidebar .agent-row:hover { background: #242424; }
+  .sidebar .local-note { border-color: #292929; }
+}
