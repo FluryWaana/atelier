@@ -6,6 +6,12 @@ pub const PROTOCOL: &str = "atelier-connector/1";
 pub const INPUT_LIMIT: usize = 256 * 1024;
 pub const OUTPUT_LIMIT: usize = 512 * 1024;
 pub type Result<T> = std::result::Result<T, &'static str>;
+#[path = "extension_repositories.rs"]
+mod repositories;
+pub use repositories::*;
+#[path = "extension_ticket_reset.rs"]
+mod ticket_reset;
+pub use ticket_reset::*;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -583,6 +589,19 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
         return Err("Manifeste de connecteur invalide.");
     }
     let methods = manifest.methods.iter().copied().collect::<BTreeSet<_>>();
+    if methods.contains(&Method::RepositoriesPublish)
+        && ![
+            Method::RepositoriesPreview,
+            Method::RepositoriesRefresh,
+            Method::RepositoriesReview,
+        ]
+        .iter()
+        .all(|method| methods.contains(method))
+    {
+        return Err(
+            "La publication d’un dépôt exige aperçu, actualisation et préparation de review.",
+        );
+    }
     if methods.len() != manifest.methods.len()
         || !methods.contains(&Method::Check)
         || methods.contains(&Method::Describe)

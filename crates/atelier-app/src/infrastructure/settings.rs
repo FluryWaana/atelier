@@ -103,6 +103,11 @@ pub(super) fn persist(
 ) -> Result<()> {
     let encrypted = encrypt(&next.tokens, protect)?;
     store.transaction(|store| {
+        super::connector_repositories::invalidate_connections(
+            store,
+            &store.settings::<Document>()?,
+            &next.settings,
+        )?;
         token_vault::save_encrypted(store, encrypted.as_deref())?;
         store.save_settings(&next.settings)
     })

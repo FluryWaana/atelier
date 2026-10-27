@@ -85,7 +85,13 @@ pub fn Automation(
     });
     let publication = Signal::derive(move || {
         card.get().and_then(|card| {
-            if card.fields.raw("pullRequest").is_some() {
+            if let Ok(Some(preview)) = card
+                .fields
+                .get::<atelier_core::application::extensions::RepositoryProposal>(
+                "connectorRepositoryPreview",
+            ) {
+                Some(PublicationPlan::Module(Box::new(preview)))
+            } else if card.fields.raw("pullRequest").is_some() {
                 card.fields
                     .get("gitPushPreview")
                     .ok()
@@ -177,7 +183,7 @@ pub fn Automation(
         <div hidden=move||flow.get().is_none_or(|flow|flow.state!=State::Waiting)||publication.get().is_none()>
             <h4>{move||i18n.text("Enchaîner la publication approuvée")}</h4>
             <p class="field-help">{move||i18n.text("Prépare d’abord le commit et l’aperçu de push ou de PR/MR dans les panneaux ci-dessous. Cette action revérifie le commit affiché, pousse avec protection de la branche distante, crée la PR/MR brouillon si nécessaire, puis lance la review. Une incertitude suspend le parcours sans renvoi.")}</p>
-            {move||publication.get().map(|plan| {let (repository,origin,branch,commit,title,body)=match plan {PublicationPlan::Create(preview)=>(preview.repository,preview.origin,format!("{} → {}",preview.worktree.branch,preview.target),preview.source_commit,preview.title,preview.body),PublicationPlan::Push(preview)=>(preview.repository,preview.origin,preview.worktree.branch,preview.commit,String::new(),String::new())};view!{<p>{repository}" · "{origin}</p><p>{branch}</p><code>{commit}</code><p>{title}</p><p class="task-description">{body}</p>}})}
+            {move||publication.get().map(|plan| {let (repository,origin,branch,commit,title,body)=match plan {PublicationPlan::Create(preview)=>(preview.repository,preview.origin,format!("{} → {}",preview.worktree.branch,preview.target),preview.source_commit,preview.title,preview.body),PublicationPlan::Push(preview)=>(preview.repository,preview.origin,preview.worktree.branch,preview.commit,String::new(),String::new()),PublicationPlan::Module(preview)=>(preview.observation.reference.repository,preview.context.origin,format!("{} → {}",preview.context.worktree.branch,preview.observation.target_branch),preview.context.source,preview.title,preview.body)};view!{<p>{repository}" · "{origin}</p><p>{branch}</p><code>{commit}</code><p>{title}</p><p class="task-description">{body}</p>}})}
             <label hidden=move||!needs_branch.get()><input id="approve-workflow-branch" type="checkbox" disabled=move||pending.get()||blocked.get() prop:checked=move||branch_approved.get().as_deref()==Some(snapshot.get().as_str()) on:change=move|event|branch_approved.set(event_target_checked(&event).then(||snapshot.get_untracked()))/>{move||i18n.text("Autoriser séparément la création de cette branche distante absente.")}</label>
             <button id="publish-workflow" type="button" disabled=move||pending.get()||blocked.get()||approved.get().as_deref()!=Some(snapshot.get().as_str())||(needs_branch.get()&&branch_approved.get().as_deref()!=Some(snapshot.get().as_str())) on:click=move|_|execute.with_value(|execute|execute("publish"))>{move||i18n.text("Revérifier, publier cet aperçu et lancer la review")}</button>
         </div>

@@ -108,11 +108,17 @@ pub(super) async fn launch(
                 Ok((card, profile, api_key, rules, conversation))
             })
             .await?;
-        let correction=if purpose=="correction" {
+        let connector_review=card.fields.raw("connectorPullRequest").is_some();
+        let connector_correction=if purpose=="correction"&&connector_review {
+            let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("Review introuvable.")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("Sélection de constats invalide.")?;
+            Some(state.database.call(move|store|crate::infrastructure::connector_repositories::correction(store,&input,&review,&indexes)).await?)
+        }else{None};
+        let connector_context=if connector_review&&["review","correction"].contains(&purpose.as_str()) {Some(super::connectors::repositories::prepare_review(state,&card).await?)}else{None};
+        let correction=if purpose=="correction"&&!connector_review {
             let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("Review introuvable.")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("Sélection de constats invalide.")?;
             Some(state.database.call(move|store|crate::infrastructure::reviews::correction(store,&input,&review,&indexes)).await?)
         }else{None};
-        let review_context=if ["review","correction"].contains(&purpose.as_str()) {
+        let review_context=if !connector_review&&["review","correction"].contains(&purpose.as_str()) {
             let expected=body.get::<Card>("expected")?.ok_or("Instantané de tâche requis.")?;
             if card.fields.truthy("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("La tâche a changé. Recharge avant la review.".into());}
             let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
@@ -120,7 +126,9 @@ pub(super) async fn launch(
             let (configuration,token)=state.database.call(move|store|crate::infrastructure::forge::credentials(store,kind,revision,&mut|value,decrypt|vault.protect(value,decrypt))).await?;
             Some(crate::infrastructure::reviews::prepare(&state.prototype_directory,&state.prototype_paths,&card,configuration,token).await?)
         }else{None};
-        let conversation=if let Some((expected,prompt))=correction {
+        let conversation=if let Some((expected,prompt))=connector_correction {
+            if connector_context.as_ref()!=Some(&expected){return Err("Les commits ou critères du module ont changé. Relance la review.".into());}Some(prompt)
+        }else if let Some(context)=&connector_context {Some(atelier_core::application::extensions::repository_prompt(context)?)}else if let Some((expected,prompt))=correction {
             if review_context.as_ref()!=Some(&expected) {return Err("Les commits ou le besoin ont changé. Relance la review.".into());}
             Some(prompt)
         }else if let Some(context)=&review_context {Some(atelier_core::application::reviews::prompt(context)?)}else{conversation};
@@ -183,6 +191,11 @@ pub(super) async fn launch(
         run.set("agent", &profile.get::<String>("id")?)?;
         run.set("agentType", &kind)?;
         run.set("mode", &mode)?;
+        if let Some(context)=connector_context {
+            run.set("connectorReviewContext",&context)?;
+            if purpose=="review"{run.set("kind",&"pr-review")?;run.set("reviewStaleReason",&crate::infrastructure::reviews::UNCHECKED)?;}
+            else{run.set("correctionOf",&body.get::<String>("reviewId")?)?;run.set("correctionIndexes",&body.get::<Vec<usize>>("indexes")?)?;}
+        }
         if let Some(context)=review_context {
             run.set("purpose",&purpose)?;run.set("reviewContext",&context)?;
             if purpose=="review" {run.set("kind",&"pr-review")?;run.set("reviewStaleReason",&crate::infrastructure::reviews::UNCHECKED)?;}

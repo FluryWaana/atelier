@@ -22,6 +22,9 @@ pub(super) fn guard(manager: &DevServers, path: &str) -> Option<Response> {
     }
     let projects = manager.active_projects();
     let blocked = path.starts_with("/api/backups")
+        // Global mutations (repository selection, module writes/reset, CLI updates)
+        // share this alias with the run and persistent-operation guards.
+        || path == "/api/projects"
         || path == "/api/projects/archive-tasks"
         || path
             .strip_prefix("/api/projects/")

@@ -110,6 +110,11 @@ async fn validate_review(state: &Shared, card: &Card, flow: &Flow) -> Result<()>
     if !run.string_equals("status", "completed")? || run.get::<i32>("exitCode")? != Some(0) {
         return Err("La review du parcours n’a pas abouti. Consulte le journal.".into());
     }
+    if run.raw("connectorReviewContext").is_some() {
+        tested_sources(state, card, flow).await?;
+        super::connectors::repositories::validate_review(state, card, &id).await?;
+        return Ok(());
+    }
     let recorded = run
         .get::<Context>("reviewContext")?
         .ok_or("Contexte de review absent.")?;

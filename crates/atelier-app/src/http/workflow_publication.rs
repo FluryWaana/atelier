@@ -140,6 +140,7 @@ pub(super) async fn perform(state: &Shared, id: &str, operation: &str) -> Result
     let commit = match &plan {
         PublicationPlan::Create(preview) => &preview.source_commit,
         PublicationPlan::Push(preview) => &preview.commit,
+        PublicationPlan::Module(preview) => &preview.context.source,
     };
     let repository = crate::infrastructure::worktrees::inspect(
         &state.prototype_directory,
@@ -155,6 +156,41 @@ pub(super) async fn perform(state: &Shared, id: &str, operation: &str) -> Result
         .try_acquire()
         .map_err(|_| "Les recherches distantes sont occupées. Réessaie dans un instant.")?;
     match plan {
+        PublicationPlan::Module(approved) => {
+            let expected = card.clone();
+            let module = approved.context.module.clone();
+            let selected = module.clone();
+            let revision = approved.context.revision;
+            let operation_id = operation.to_owned();
+            let effect=state.database.call(move|store|crate::infrastructure::connector_effects::preview(store,&selected,&atelier_core::application::extensions::RemotePreview{expected_revision:revision,method:atelier_core::application::extensions::Method::RepositoriesPublish,action:String::new(),input:serde_json::json!({"expected":expected,"approved":approved,"automationId":operation_id})})).await?;
+            let observed = super::connector_effects::perform(
+                state.clone(),
+                module,
+                effect.id,
+                atelier_core::application::extensions::RemoteCommand {
+                    expected_revision: revision,
+                    expected_version: effect.version,
+                    confirmed: true,
+                },
+                false,
+            )
+            .await?;
+            if !matches!(
+                observed.state,
+                ForgeWriteState::Confirmed | ForgeWriteState::Reconciled
+            ) {
+                return Err(
+                    "La publication du module reste incertaine. Rapproche-la sans nouvel envoi."
+                        .into(),
+                );
+            }
+            let card = current(state, id, operation).await?;
+            let op = operation.to_owned();
+            state
+                .database
+                .call(move |store| workflow::publication_complete(store, &card, &op))
+                .await?;
+        }
         PublicationPlan::Create(approved) => {
             let card = checked_preview(state, card, &approved, false).await?;
             if approved.remote_source.as_deref() != Some(approved.source_commit.as_str()) {

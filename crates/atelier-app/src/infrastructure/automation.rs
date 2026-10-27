@@ -201,13 +201,24 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
                 .ok_or("Le parcours n’attend pas de publication.")?;
             current(store, &card, active)?;
-            let linked = card
-                .fields
-                .get::<atelier_core::contracts::PullRequest>("pullRequest")?
-                .ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
-            if active.project.get::<String>("prTarget")?.as_deref()
-                != Some(linked.target_branch.as_str())
-                || linked.source_branch != active.worktree.branch
+            let branches = if let Some(linked) =
+                card.fields
+                    .get::<atelier_core::application::extensions::ModulePullRequestLink>(
+                        "connectorPullRequest",
+                    )? {
+                (
+                    linked.pull_request.source_branch,
+                    linked.pull_request.target_branch,
+                )
+            } else {
+                let linked = card
+                    .fields
+                    .get::<atelier_core::contracts::PullRequest>("pullRequest")?
+                    .ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
+                (linked.source_branch, linked.target_branch)
+            };
+            if active.project.get::<String>("prTarget")?.as_deref() != Some(branches.1.as_str())
+                || branches.0 != active.worktree.branch
             {
                 return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into());
             }
@@ -250,7 +261,26 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 .project
                 .get::<String>("prTarget")?
                 .ok_or("Branche cible absente.")?;
-            let plan = if card.fields.raw("pullRequest").is_some() {
+            let plan = if let Some(preview) =
+                card.fields
+                    .get::<atelier_core::application::extensions::RepositoryProposal>(
+                        "connectorRepositoryPreview",
+                    )? {
+                if preview.context.worktree != active.worktree
+                    || preview
+                        .observation
+                        .pull_request
+                        .as_ref()
+                        .is_some_and(|pr| !pr.draft || pr.auto_merge || pr.status != "active")
+                    || preview.observation.target_branch != target
+                    || !preview.draft
+                    || preview.card_revision != super::connector_repositories::revision(&card)?
+                {
+                    return Err("L’aperçu du module ne correspond plus au parcours ou n’est pas un brouillon.".into());
+                }
+                super::connector_repositories::matches(store, &card, &preview.context)?;
+                PublicationPlan::Module(Box::new(preview))
+            } else if card.fields.raw("pullRequest").is_some() {
                 let preview = card
                     .fields
                     .get::<atelier_core::contracts::GitPushPreview>("gitPushPreview")?
@@ -383,6 +413,12 @@ pub fn blocks(store: &Store<'_>, path: &str) -> Result<bool> {
     Ok(false)
 }
 pub fn running(store: &Store<'_>) -> Result<Option<(Card, Flow)>> {
+    if super::connector_effects::read(&store.settings::<Document>()?)?
+        .iter()
+        .any(super::connector_effects::pending)
+    {
+        return Ok(None);
+    }
     for card in store.documents::<Card>(Documents::Cards)? {
         if let Some(flow) = read(&card)?
             && flow.state == State::Running
@@ -476,10 +512,16 @@ pub fn publication_complete(store: &Store<'_>, expected: &Card, operation: &str)
     store.transaction(|store| {
         super::forge_association::snapshot(store,expected)?;
         let (mut card,mut flow,plan)=publication(store,&expected.id,operation)?;
+        if let PublicationPlan::Module(approved)=&plan {
+            let linked=card.fields.get::<atelier_core::application::extensions::ModulePullRequestLink>("connectorPullRequest")?.ok_or("PR/MR du module absente.")?;
+            if linked.module!=approved.context.module||linked.revision!=approved.context.revision||linked.pull_request.reference!=approved.observation.reference||linked.pull_request.source_commit!=approved.context.source||linked.pull_request.target_commit!=approved.context.target||linked.pull_request.status!="active"||!linked.pull_request.draft||linked.pull_request.auto_merge{return Err("La PR/MR du module ne correspond pas à la publication approuvée.".into());}
+            flow.publication_plan=None;flow.review_requested=true;flow.step=Step::Review;flow.run_id=None;flow.message="Publication du module observée. La review va examiner ses commits vérifiés.".into();return save(store,&mut card,&mut flow);
+        }
         let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("PR/MR publiée absente.")?;
         let (kind,revision,repository,commit,target_commit)=match &plan {
             PublicationPlan::Create(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.source_commit,Some(preview.target_commit.as_str())),
             PublicationPlan::Push(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.commit,preview.pull_request.as_ref().and_then(|remote|remote.target_commit.as_deref())),
+            PublicationPlan::Module(_)=>unreachable!("module publication handled above"),
         };
         if linked.kind!=kind || linked.revision!=revision || linked.repository!=*repository || linked.source_commit.as_ref()!=Some(commit) || linked.target_commit.as_deref()!=target_commit || linked.source_branch!=flow.worktree.branch || flow.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.status!="active" || linked.fork {
             return Err("La PR/MR observée ne correspond pas à la publication approuvée. Relis ses commits avant de poursuivre.".into());

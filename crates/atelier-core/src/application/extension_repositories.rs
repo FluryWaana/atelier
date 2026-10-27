@@ -1,0 +1,203 @@
+use super::{Result, identifier, text};
+use crate::contracts::Worktree;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RepositoryReference {
+    pub instance: String,
+    pub repository: String,
+    pub origin: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModulePullRequest {
+    pub reference: RepositoryReference,
+    pub id: String,
+    pub url: String,
+    pub source_branch: String,
+    pub target_branch: String,
+    pub source_commit: String,
+    pub target_commit: String,
+    pub status: String,
+    pub draft: bool,
+    pub auto_merge: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RepositoryObservation {
+    pub reference: RepositoryReference,
+    pub target_branch: String,
+    pub target_commit: String,
+    pub remote_source: Option<String>,
+    pub pull_request: Option<ModulePullRequest>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModulePullRequestLink {
+    pub module: String,
+    pub revision: u64,
+    pub pull_request: ModulePullRequest,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RepositoryReviewContext {
+    pub module: String,
+    pub revision: u64,
+    pub card_id: String,
+    pub requirements: Value,
+    pub worktree: Worktree,
+    pub origin: String,
+    pub source: String,
+    pub target: String,
+    pub base: String,
+    pub fingerprint: String,
+    pub pull_request: Option<ModulePullRequest>,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RepositoryProposal {
+    #[serde(default)]
+    pub automation_id: Option<String>,
+    pub context: RepositoryReviewContext,
+    pub card_revision: String,
+    pub observation: RepositoryObservation,
+    pub title: String,
+    pub body: String,
+    pub draft: bool,
+}
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RepositoryPublication {
+    pub reference: RepositoryReference,
+    pub worktree: Worktree,
+    pub source: String,
+    pub target: String,
+    pub target_branch: String,
+    pub remote_source: Option<String>,
+    pub title: String,
+    pub body: String,
+    pub draft: bool,
+    pub pull_request: Option<ModulePullRequest>,
+}
+pub fn repository_publication(value: &Value) -> Result<RepositoryPublication> {
+    let payload: RepositoryPublication = serde_json::from_value(value.clone())
+        .map_err(|_| "Demande de publication du module invalide.")?;
+    if !repository_commit(&payload.source)
+        || !repository_commit(&payload.target)
+        || !text(&payload.title, 255, false)
+        || !text(&payload.body, 3500, true)
+        || crate::application::worktrees::validate_reference(&payload.target_branch).is_err()
+        || payload.target_branch == payload.worktree.branch
+        || payload
+            .remote_source
+            .as_ref()
+            .is_some_and(|value| !repository_commit(value))
+    {
+        return Err("Demande de publication du module invalide.");
+    }
+    Ok(payload)
+}
+pub fn repository_commit(value: &str) -> bool {
+    [40, 64].contains(&value.len()) && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+pub fn repository_observation(value: &Value) -> Result<RepositoryObservation> {
+    let observation: RepositoryObservation = serde_json::from_value(value.clone())
+        .map_err(|_| "Observation de dépôt du connecteur invalide.")?;
+    let reference = &observation.reference;
+    if !text(&reference.instance, 2000, false)
+        || !text(&reference.repository, 1000, false)
+        || !text(&reference.origin, 2000, false)
+        || crate::application::worktrees::validate_reference(&observation.target_branch).is_err()
+        || !repository_commit(&observation.target_commit)
+        || observation
+            .remote_source
+            .as_ref()
+            .is_some_and(|value| !repository_commit(value))
+    {
+        return Err("Identité, branche ou commit du dépôt du connecteur invalide.");
+    }
+    if let Some(pr) = &observation.pull_request {
+        if pr.reference != *reference
+            || !text(&pr.id, 200, false)
+            || !text(&pr.url, 2000, false)
+            || crate::application::worktrees::validate_reference(&pr.source_branch).is_err()
+            || pr.target_branch != observation.target_branch
+            || pr.target_commit != observation.target_commit
+            || !repository_commit(&pr.source_commit)
+            || !["active", "completed", "abandoned"].contains(&pr.status.as_str())
+        {
+            return Err("PR/MR de connecteur incohérente avec son dépôt et ses commits.");
+        }
+    }
+    Ok(observation)
+}
+pub fn repository_proposal(value: &Value) -> Result<RepositoryProposal> {
+    let proposal: RepositoryProposal = serde_json::from_value(value.clone())
+        .map_err(|_| "Aperçu de publication du connecteur invalide.")?;
+    repository_observation(
+        &serde_json::to_value(&proposal.observation).map_err(|_| "Observation invalide.")?,
+    )?;
+    if !identifier(&proposal.context.module)
+        || proposal.context.revision == 0
+        || !text(&proposal.context.card_id, 100, false)
+        || !text(&proposal.title, 255, false)
+        || !text(&proposal.body, 3500, true)
+        || proposal.card_revision.len() != 64
+        || !proposal
+            .card_revision
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+        || [
+            &proposal.context.source,
+            &proposal.context.target,
+            &proposal.context.base,
+        ]
+        .iter()
+        .any(|value| !repository_commit(value))
+        || proposal.context.target != proposal.observation.target_commit
+        || proposal.context.origin != proposal.observation.reference.origin
+        || proposal.context.pull_request != proposal.observation.pull_request
+        || proposal.context.worktree.state != crate::contracts::WorktreeState::Ready
+        || proposal.context.fingerprint.len() != 64
+        || !proposal
+            .context
+            .fingerprint
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+        || proposal.context.requirements["criteria"]
+            .as_array()
+            .is_none_or(|criteria| {
+                criteria.len() > 20 || criteria.iter().any(|value| value.as_str().is_none())
+            })
+        || proposal
+            .automation_id
+            .as_ref()
+            .is_some_and(|id| !identifier(id))
+    {
+        return Err("Aperçu de publication du connecteur invalide.");
+    }
+    Ok(proposal)
+}
+pub fn repository_source(card: &crate::contracts::Card) -> crate::contracts::Card {
+    let mut card = card.clone();
+    for key in [
+        "connectorRepositoryPreview",
+        "connectorReviewContext",
+        "connectorRepositoryObservation",
+        "automation",
+        "updatedAt",
+    ] {
+        card.fields.remove(key);
+    }
+    card
+}
+pub fn repository_prompt(context: &RepositoryReviewContext) -> Result<String> {
+    crate::application::reviews::prompt_snapshot(
+        &context.source,
+        &context.target,
+        &context.base,
+        context,
+    )
+}

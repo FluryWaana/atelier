@@ -28,6 +28,7 @@ pub enum Step {
 pub enum PublicationPlan {
     Create(Box<crate::contracts::ForgePublicationPreview>),
     Push(Box<crate::contracts::GitPushPreview>),
+    Module(Box<super::extensions::RepositoryProposal>),
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

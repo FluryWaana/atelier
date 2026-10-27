@@ -2,6 +2,8 @@ use atelier_core::application::extensions::{
     self, Manifest, Method, PROTOCOL, Reply, Request, Status,
 };
 use serde_json::{Value, json};
+#[path = "fake_repository.rs"]
+mod fake_repository;
 use std::{
     io::{Read, Write},
     time::Duration,
@@ -70,7 +72,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","ticketsTransitions","ticketsTransition","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -81,8 +83,30 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         message: "Synthetic extension ready".into(),
         output: if request.method == Method::Describe {
             serde_json::to_value(&manifest)?
+        } else if matches!(
+            request.method,
+            Method::RepositoriesPreview | Method::RepositoriesRefresh | Method::RepositoriesReview
+        ) {
+            fake_repository::observation(&request)?
         } else if request.method == Method::TicketsSearch {
-            json!({"items":[{"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Synthetic connector ticket","description":"No remote account or paid agent.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Open"}],"next":null})
+            if fault.starts_with("reset-") {
+                if request.input["cursor"].is_null() {
+                    json!({"items":[],"next":"synthetic-second-page"})
+                } else if request.input["cursor"] == "synthetic-second-page" {
+                    match fault {
+                        "reset-loop" => json!({"items":[],"next":"synthetic-second-page"}),
+                        "reset-absent" => json!({"items":[],"next":null}),
+                        "reset-present" => {
+                            json!({"items":[ticket(&ticket_status(&request)?)],"next":null})
+                        }
+                        _ => return Err("Unknown synthetic reset fault".into()),
+                    }
+                } else {
+                    return Err("Unexpected synthetic pagination cursor".into());
+                }
+            } else {
+                json!({"items":[{"instance":"https://synthetic.example.test/tenant","id":"synthetic-ticket","key":"SYN-1","title":"Synthetic connector ticket","description":"No remote account or paid agent.","url":"https://synthetic.example.test/tenant/tickets/1","status":"Open"}],"next":null})
+            }
         } else if request.method == Method::TicketsRead {
             if request.input["instance"] != "https://synthetic.example.test/tenant"
                 || request.input["id"] != "synthetic-ticket"
@@ -106,6 +130,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     if request.method != Method::Describe {
         extensions::effect(&manifest, &request)?;
+    }
+    if fake_repository::effect(&request, &mut reply)? {
+        return Ok(());
     }
     if request.method == Method::Action
         || (request.method == Method::Reconcile && request.input["method"] == "action")

@@ -171,6 +171,7 @@ pub fn ConnectorTicket(
     };
     view! { <section class="task-files" hidden=move||module.get().is_empty() aria-labelledby="connector-ticket-heading">
         <h3 id="connector-ticket-heading">{move||i18n.text("Synchronisation du ticket de connecteur")}</h3>
+        <p role="status" hidden=move||!card.get().is_some_and(|card|card.fields.truthy("ticketOutOfScope").unwrap_or(false))>{move||i18n.text("Ce ticket est hors du dernier périmètre complet du connecteur. Sa carte et son lien sont conservés.")}</p>
         <button id="read-connector-ticket" type="button" disabled=move||pending.get()||blocked.get()||transition_dirty.get() on:click=load>{move||i18n.text("Lire le ticket distant")}</button>
         <Show when=move||preview.get().is_some()>
             <p>{move||preview.get().map(|preview|format!("{} · {}",preview.ticket.key,preview.report.observed_at)).unwrap_or_default()}</p>

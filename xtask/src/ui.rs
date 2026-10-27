@@ -1,4 +1,6 @@
 use crate::{Result, command, root, run};
+#[path = "ui_repositories.rs"]
+mod connector_repositories;
 use atelier_app::infrastructure::{local_http::LocalHttp, session};
 use fantoccini::{Client, ClientBuilder, Locator};
 use serde_json::json;
@@ -2842,7 +2844,9 @@ async fn connectors_scenario(
     click(client, "#reload-connectors").await?;
     wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
     click(client, "[data-connector=synthetic-extension]").await?;
+    imported = connector_reset_scenario(client, http, address, token, &imported).await?;
     connector_time_scenario(client, http, address, token, data, &imported).await?;
+    connector_repositories::scenario(client, http, address, token, data).await?;
     click(client, "#remove-connector").await?;
     click(client, "#confirm-remove-connector").await?;
     wait_dom(client,"return !document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
@@ -2896,6 +2900,56 @@ async fn connector_fixture_fault(
     http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1")
         .json(&json!({"expectedRevision":module.installed.revision,"values":{"fault":fault},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
     Ok(())
+}
+
+async fn connector_reset_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+    card: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    let mut expected = card.clone();
+    for (fault, present) in [
+        ("reset-loop", None),
+        ("reset-absent", Some(false)),
+        ("reset-present", Some(true)),
+    ] {
+        connector_fixture_fault(http, address, token, fault).await?;
+        click(client, "#reload-connectors").await?;
+        wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
+        click(client, "[data-connector=synthetic-extension]").await?;
+        click(client, "#preview-connector-ticket-reset").await?;
+        if present.is_none() {
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Boucle de pagination') && document.querySelector('#preview-connector-ticket-reset')?.disabled === false;",vec![]).await?;
+        } else {
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('2 pages') && document.querySelector('#approve-connector-ticket-reset')?.disabled === false;",vec![]).await?;
+            click(client, "#approve-connector-ticket-reset").await?;
+            click(client, "#apply-connector-ticket-reset").await?;
+            wait_dom(client,"return document.querySelector('#connector-reset')?.textContent.includes('Périmètre actualisé') && document.querySelector('#apply-connector-ticket-reset')?.disabled === true;",vec![]).await?;
+            expected["ticketOutOfScope"] = json!(!present.unwrap());
+        }
+        let state: serde_json::Value = http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        if state["cards"]
+            .as_array()
+            .and_then(|cards| cards.iter().find(|value| value["id"] == card["id"]))
+            != Some(&expected)
+        {
+            return Err("La resynchronisation complète a modifié autre chose que l’indicateur hors périmètre, ou a appliqué une page partielle.".into());
+        }
+    }
+    connector_fixture_fault(http, address, token, "success").await?;
+    click(client, "#reload-connectors").await?;
+    wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
+    click(client, "[data-connector=synthetic-extension]").await?;
+    Ok(expected)
 }
 
 async fn connector_transition_scenario(
@@ -3548,8 +3602,25 @@ async fn files_scenario(
     click(client, ".stop-service").await?;
     wait_dom(client,"return document.querySelector('.service-status')?.textContent === 'Arrêté' && document.querySelectorAll('.service-status')[1]?.textContent === 'Processus actif';",vec![]).await?;
     for path in [
+        "/api/extensions",
+        "/api/agent-providers/cli-update",
+        "/api/backups",
+    ] {
+        http.get(format!("{address}{path}"))
+            .bearer_auth(token)
+            .send()
+            .await?
+            .error_for_status()?;
+    }
+    for path in [
         format!("{address}/api/cards/{}/worktree/remove", card.id),
         format!("{address}/api/backups"),
+        format!("{address}/api/backups/restore"),
+        format!("{address}/api/agent-providers/synthetic-guard/cli-update"),
+        format!("{address}/api/extensions/synthetic-guard/operations"),
+        format!("{address}/api/extensions/synthetic-guard/operations/synthetic-operation/send"),
+        format!("{address}/api/extensions/synthetic-guard/tickets/reset/preview"),
+        format!("{address}/api/extensions/synthetic-guard/tickets/reset/apply"),
     ] {
         if http
             .post(path)
@@ -3575,6 +3646,23 @@ async fn files_scenario(
         != reqwest::StatusCode::CONFLICT
     {
         return Err("Un projet actif peut être retiré.".into());
+    }
+    for method in [
+        "repositoriesPreview",
+        "repositoriesRefresh",
+        "repositoriesReview",
+    ] {
+        let response=http.post(format!("{address}/api/extensions/synthetic-guard/invoke"))
+            .bearer_auth(token).header("x-local-request","1")
+            .json(&json!({"expectedRevision":1,"method":method,"action":null,"input":{},"confirmed":true})).send().await?;
+        if response.status() != reqwest::StatusCode::BAD_REQUEST
+            || !response
+                .text()
+                .await?
+                .contains("Arrête les agents et services")
+        {
+            return Err("Une opération de dépôt extensible n’a pas été bloquée avant de charger son profil avec un service actif.".into());
+        }
     }
     // Run commands alongside the remaining service, then prove cancellation leaves it alive.
     let run_fixture = root()
@@ -3668,6 +3756,29 @@ async fn files_scenario(
     std::fs::remove_file(agent_marker)?;
     click(client, "#stop-services").await?;
     wait_dom(client, "return document.querySelectorAll('.service-status').length === 2 && Array.from(document.querySelectorAll('.service-status')).every(element=>element.textContent === 'Arrêté') && document.querySelector('#start-services')?.disabled === false;", vec![]).await?;
+    // Invalid bodies cannot launch anything; after the real services stop,
+    // these requests must reach validation rather than the active-service guard.
+    for path in [
+        "/api/agent-providers/synthetic-guard/cli-update",
+        "/api/extensions/synthetic-guard/operations",
+        "/api/extensions/synthetic-guard/tickets/reset/preview",
+        "/api/extensions/synthetic-guard/tickets/reset/apply",
+    ] {
+        let response = http
+            .post(format!("{address}{path}"))
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&json!({}))
+            .send()
+            .await?;
+        if response.status() != reqwest::StatusCode::BAD_REQUEST {
+            return Err(format!(
+                "Après arrêt des services, {path} n’a pas rejoint sa validation sans effet : {}",
+                response.status()
+            )
+            .into());
+        }
+    }
     if std::fs::read_to_string(Path::new(&worktree.path).join("node_modules/keep.txt"))?
         != "synthetic shared dependency"
     {

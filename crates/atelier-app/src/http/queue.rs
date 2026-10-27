@@ -60,12 +60,18 @@ pub(super) async fn run(state: Shared) -> Result<()> {
             }
             let id = uuid::Uuid::new_v4().to_string();
             let run_id = id.clone();
-            if let Some((card, body)) = state
+            let (claimed, changed) = state
                 .database
-                .call(move |store| queue::claim(store, id))
-                .await?
-            {
+                .call(move |store| {
+                    let revision=queue::read(store)?.revision;
+                    let claimed=queue::claim(store,id)?;
+                    Ok((claimed,queue::read(store)?.revision!=revision))
+                })
+                .await?;
+            if changed {
                 let _ = state.changed.send(());
+            }
+            if let Some((card, body)) = claimed {
                 if body.get::<bool>("workflow")?!=Some(true) {super::runs::launch(&state, card.id, body, run_id, true).await?;}
                 let _ = state.changed.send(());
             }

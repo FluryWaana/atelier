@@ -52,6 +52,11 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
     Ok(card)
 }
 pub fn prepare(store: &Store<'_>, input: &PullRequestAttach) -> Result<(Card, ForgeConfiguration)> {
+    if input.expected.fields.raw("connectorPullRequest").is_some() {
+        return Err(
+            "Retire la liaison de PR/MR du module avant de choisir une forge native.".into(),
+        );
+    }
     if !input.confirmed {
         return Err("Confirme l’association de cette PR/MR à la tâche.".into());
     }
@@ -270,10 +275,15 @@ pub fn detach(store: &Store<'_>, input: PullRequestDetach) -> Result<Card> {
             return Err("Confirme le retrait de la liaison de PR/MR.".into());
         }
         let mut card = snapshot(store, &input.expected)?;
-        if card.fields.raw("pullRequest").is_none() {
+        if card.fields.raw("pullRequest").is_none()
+            && card.fields.raw("connectorPullRequest").is_none()
+        {
             return Err("Cette tâche n’a aucune PR/MR associée.".into());
         }
         card.fields.remove("pullRequest");
+        card.fields.remove("connectorPullRequest");
+        card.fields.remove("connectorRepositoryPreview");
+        card.fields.remove("connectorReviewContext");
         card.fields
             .set("updatedAt", &CreationContext::timestamp(store)?)?;
         invalidate(

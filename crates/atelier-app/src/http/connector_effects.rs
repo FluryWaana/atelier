@@ -90,19 +90,26 @@ async fn execute(
         Ok(value) => value,
         Err(response) => return response,
     };
+    response(perform(state, module, id, input, reconcile).await)
+}
+pub(super) async fn perform(
+    state: Shared,
+    module: String,
+    id: String,
+    input: RemoteCommand,
+    reconcile: bool,
+) -> crate::Result<RemoteOperation> {
     if !input.confirmed {
-        return failure(
-            StatusCode::BAD_REQUEST,
-            "Confirme l’opération de connecteur affichée.",
-        );
+        return Err("Confirme l’opération de connecteur affichée.".into());
     }
     let vault = state.vault.clone();
     let selected = module.clone();
     let operation = id.clone();
-    let (profile, request) = match state
+    let (profile, request, original_operation) = state
         .database
         .call(move |store| {
-            workflow::prepare(
+            let original = workflow::current(store, &selected, &operation)?;
+            let (profile, request) = workflow::prepare(
                 store,
                 &selected,
                 &operation,
@@ -110,17 +117,22 @@ async fn execute(
                 input.expected_revision,
                 reconcile,
                 &mut |value, decrypt| vault.protect(value, decrypt),
-            )
+            )?;
+            Ok((profile, request, original))
         })
-        .await
-    {
-        Ok(value) => value,
-        Err(error) => return response::<RemoteOperation>(Err(error)),
-    };
+        .await?;
     let revision = profile.revision;
     let mut version = input.expected_version;
     let mut stopped = state.shutdown.subscribe();
     let work = async {
+        let repository_guard = super::connectors::repositories::remote_guard(
+            &state,
+            &profile,
+            &request,
+            &original_operation,
+            reconcile,
+        )
+        .await?;
         if let Some(read) =
             crate::infrastructure::connector_ticket_transitions::preflight(&request)?
         {
@@ -180,6 +192,9 @@ async fn execute(
             let _ = state.changed.send(());
         }
         let reply = prepared.dispatch().await?;
+        if let Some(guard) = repository_guard {
+            guard.unchanged().await?;
+        }
         let selected = module.clone();
         let operation = id.clone();
         state
@@ -220,5 +235,5 @@ async fn execute(
         result => result,
     };
     let _ = state.changed.send(());
-    response(result)
+    result
 }

@@ -11,7 +11,7 @@ use atelier_core::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-fn profiles(settings: &Document) -> Result<Vec<Installed>> {
+pub(super) fn profiles(settings: &Document) -> Result<Vec<Installed>> {
     if settings
         .raw("processConnectors")
         .is_some_and(|raw| raw.get().len() > 2 * 1024 * 1024)
@@ -359,6 +359,9 @@ pub fn invocation(
             protocol::Method::TicketsRead,
             protocol::Method::TicketsTransitions,
             protocol::Method::TimePreview,
+            protocol::Method::RepositoriesPreview,
+            protocol::Method::RepositoriesRefresh,
+            protocol::Method::RepositoriesReview,
             protocol::Method::Action,
         ]
         .contains(&request.method)
@@ -367,6 +370,18 @@ pub fn invocation(
     }
     if request.method == protocol::Method::TimePreview {
         request.input = super::connector_time::preview_input(store, &request.input)?;
+    }
+    if matches!(
+        request.method,
+        protocol::Method::RepositoriesPreview
+            | protocol::Method::RepositoriesRefresh
+            | protocol::Method::RepositoriesReview
+    ) {
+        request.input = serde_json::to_value(super::connector_repositories::selection(
+            store,
+            &profile,
+            &request.input,
+        )?)?;
     }
     if request.method == protocol::Method::TicketsTransitions {
         request.input =
@@ -404,7 +419,15 @@ pub fn record(store: &Store<'_>, id: &str, expected: u64, report: Report) -> Res
         super::connector_ticket_transitions::report(&report.output)?;
     }
     store.transaction(|store| {
-        profile(store, id, expected)?;
+        let profile = profile(store, id, expected)?;
+        if matches!(
+            report.method,
+            protocol::Method::RepositoriesPreview
+                | protocol::Method::RepositoriesRefresh
+                | protocol::Method::RepositoriesReview
+        ) {
+            super::connector_repositories::record(store, &profile, &report)?;
+        }
         let mut stored = store.settings::<Document>()?;
         let mut profiles = profiles(&stored)?;
         profiles

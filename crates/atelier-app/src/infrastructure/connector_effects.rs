@@ -43,6 +43,9 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             Method::TicketsTransition if operation.action.is_empty() => {
                 super::connector_ticket_transitions::payload(&operation.input)?;
             }
+            Method::RepositoriesPublish if operation.action.is_empty() => {
+                protocol::repository_proposal(&operation.input)?;
+            }
             _ => return Err("Opération distante de connecteur non prise en charge.".into()),
         }
         if operation.module != operation.manifest.id
@@ -189,11 +192,12 @@ pub fn require_removal(store: &Store<'_>, module: &str) -> Result<()> {
 }
 pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result<Operation> {
     store.transaction(|store|{
+        let owner=super::connector_repositories::publication_owner(store,input.method,&input.input)?;
         for run in store.documents::<Document>(super::store::Documents::Runs)?{if super::runs::active(&run)?{return Err("Arrête les agents avant de préparer une écriture distante de connecteur.".into());}}
         for entry in store.documents::<Document>(super::store::Documents::Times)?{if entry.truthy("runningSince")?||entry.string_equals("exportState","sending")?||entry.string_equals("exportState","uncertain")?{return Err("Arrête les chronomètres et rapproche les exports avant cette action de connecteur.".into());}}
-        for card in store.documents::<Document>(super::store::Documents::Cards)?{if atelier_core::application::jira::unresolved(&card)?||atelier_core::application::forge::unresolved(&card)?||card.get::<Document>("automation")?.is_some_and(|flow|flow.string_equals("state","running").unwrap_or(true)){return Err("Termine les opérations de tâches avant cette action de connecteur.".into());}}
+        for card in store.documents::<Document>(super::store::Documents::Cards)?{if atelier_core::application::jira::unresolved(&card)?||atelier_core::application::forge::unresolved(&card)?||card.get::<Document>("automation")?.is_some_and(|flow|flow.string_equals("state","running").unwrap_or(true)&&!owner.as_ref().is_some_and(|(id,operation)|card.string_equals("id",id).unwrap_or(false)&&flow.string_equals("id",operation).unwrap_or(false))){return Err("Termine les opérations de tâches avant cette action de connecteur.".into());}}
         let queue=super::queue::read(store)?;
-        if queue.active.is_some()||(!queue.paused&&!queue.ids.is_empty()){return Err("Mets la file en pause et termine sa tâche active avant cette action de connecteur.".into());}
+        if queue.active.as_ref().is_some_and(|active|!owner.as_ref().is_some_and(|(id,_)|*id==active.card_id))||(!queue.paused&&!queue.ids.is_empty()&&owner.is_none()){return Err("Mets la file en pause et termine sa tâche active avant cette action de connecteur.".into());}
         let mut operations=read(&store.settings::<Document>()?)?;
         if operations.iter().any(pending){return Err("Termine ou rapproche l’écriture de connecteur en cours.".into());}
         if operations.len()>=1024{return Err("Historique des écritures de connecteurs plein.".into());}
@@ -203,6 +207,7 @@ pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result
             Method::TicketsCreate if input.action.is_empty()=>serde_json::to_value(protocol::ticket_creation(&input.input)?)?,
             Method::TimeSend if input.action.is_empty()=>super::connector_time::prepare_preview(store,&profile,&input.input)?,
             Method::TicketsTransition if input.action.is_empty()=>super::connector_ticket_transitions::prepare_preview(store,&profile,&input.input)?,
+            Method::RepositoriesPublish if input.action.is_empty()=>super::connector_repositories::prepare_preview(store,&profile,&input.input)?,
             _=>return Err("Opération distante de connecteur non prise en charge.".into())
         };
         let timestamp=now()?;
@@ -254,7 +259,9 @@ fn request(operation: &Operation, reconcile: bool) -> Request {
         settings: operation.values.clone(),
         secrets: BTreeMap::new(),
         input: if reconcile {
-            serde_json::json!({"method":operation.method,"action":if operation.method==Method::Action {Some(&operation.action)}else{None},"input":operation.input})
+            serde_json::json!({"method":operation.method,"action":if operation.method==Method::Action {Some(&operation.action)}else{None},"input":if operation.method==Method::RepositoriesPublish{super::connector_repositories::publication_input(&operation.input)}else{operation.input.clone()}})
+        } else if operation.method == Method::RepositoriesPublish {
+            super::connector_repositories::publication_input(&operation.input)
         } else {
             operation.input.clone()
         },
@@ -318,6 +325,7 @@ fn change(
         action(operation)?;
         super::connector_time::synchronize(store, operation)?;
         super::connector_ticket_transitions::synchronize(store, operation)?;
+        super::connector_repositories::synchronize(store, operation)?;
         touch(operation)?;
         let result = operation.clone();
         save(store, &operations)?;
@@ -346,6 +354,7 @@ pub fn sending(
         }
         super::connector_time::before_send(store, operation)?;
         super::connector_ticket_transitions::before_send(store, &profile, operation)?;
+        super::connector_repositories::before_send(store, operation)?;
         operation.state = Phase::Sending;
         operation.request_id = Some(request_id.into());
         Ok(())

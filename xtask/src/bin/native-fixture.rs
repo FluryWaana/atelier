@@ -56,12 +56,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         [] => fake_extension::run(),
         ["review-json"] => {
+            use std::io::Read;
             no_inherited_credentials()?;
             if std::fs::read_to_string(".review-fixture")?
                 != "atelier-review-synthetic-only"
             {
                 return Err("Synthetic review scope marker missing".into());
             }
+            let mut prompt=Vec::new();std::io::stdin().take(256*1024+1).read_to_end(&mut prompt)?;
+            if prompt.len()>256*1024{return Err("Synthetic review prompt too large".into());}
             let source = std::fs::read_to_string("src/lib.rs")?;
             if source != "pub fn synthetic_answer() -> u8 { 42 }\n" {
                 return Err("Synthetic review input changed".into());

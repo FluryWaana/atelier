@@ -32,6 +32,10 @@ pub(super) async fn validate(
         if card_id != expected.id {
             return Err("Carte incohérente.".into());
         }
+        if expected.fields.raw("connectorPullRequest").is_some() {
+            return super::connectors::repositories::validate_review(&state, &expected, &run_id)
+                .await;
+        }
         let selected = run_id.clone();
         let input = expected.clone();
         let vault = state.vault.clone();

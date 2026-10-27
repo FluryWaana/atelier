@@ -13,6 +13,8 @@ pub mod claude_account;
 pub mod command_runs;
 pub mod commits;
 pub mod connector_effects;
+pub mod connector_repositories;
+pub mod connector_ticket_reset;
 pub mod connector_ticket_transitions;
 pub mod connector_tickets;
 pub mod connector_time;

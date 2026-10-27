@@ -10,6 +10,10 @@ use gloo_net::http::Method as Http;
 use leptos::prelude::*;
 use std::{cell::Cell, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
+#[path = "connector_repositories.rs"]
+mod connector_repositories;
+#[path = "connector_ticket_reset.rs"]
+mod connector_ticket_reset;
 #[path = "connector_time.rs"]
 mod connector_time;
 fn state(phase: Phase) -> &'static str {
@@ -41,6 +45,8 @@ pub fn ConnectorEffects(
     let ticket_title = RwSignal::new(String::new());
     let ticket_description = RwSignal::new(String::new());
     let time_dirty = RwSignal::new(false);
+    let repository_dirty = RwSignal::new(false);
+    let reset_dirty = RwSignal::new(false);
     let scoped = !card_id.is_empty();
     let heading = if scoped {
         format!("connector-effects-heading-{card_id}")
@@ -73,6 +79,8 @@ pub fn ConnectorEffects(
         dirty.set(
             !approved.get().is_empty()
                 || time_dirty.get()
+                || repository_dirty.get()
+                || reset_dirty.get()
                 || !ticket_kind.get().is_empty()
                 || !ticket_title.get().is_empty()
                 || !ticket_description.get().is_empty()
@@ -131,9 +139,12 @@ pub fn ConnectorEffects(
                             let selected = card_id.get_value();
                             if !selected.is_empty() {
                                 values.retain(|operation| {
-                                    operation.method == Method::TicketsTransition
+                                    (operation.method == Method::TicketsTransition
                                         && operation.input["cardId"].as_str()
-                                            == Some(selected.as_str())
+                                            == Some(selected.as_str()))
+                                        || (operation.method == Method::RepositoriesPublish
+                                            && operation.input["context"]["cardId"].as_str()
+                                                == Some(selected.as_str()))
                                 });
                             }
                             values.reverse();
@@ -229,6 +240,7 @@ pub fn ConnectorEffects(
                         .map_err(|_| "Réponse du serveur invalide.".to_owned())
                 }
                 .await;
+                let _ = board.refresh(&credential).await;
                 if alive.get() {
                     pending.set(false);
                     match result {
@@ -254,6 +266,7 @@ pub fn ConnectorEffects(
                         }
                         Err(message) => {
                             error.set(message);
+                            load.with_value(|load| load());
                         }
                     }
                 }
@@ -264,6 +277,8 @@ pub fn ConnectorEffects(
         <h4 id=heading>{move||i18n.text("Écritures distantes du connecteur")}</h4>
         <Show when=move||!scoped>
         <connector_time::ConnectorTime connection board token pending dirty=time_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
+        <connector_ticket_reset::ConnectorTicketReset connection board token pending dirty=reset_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
+        <connector_repositories::ConnectorRepositories connection board token pending dirty=repository_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))) on_prepared=Callback::new(move |operation:Operation|{operations.update(|rows|rows.insert(0,operation));page.set(0);})/>
         <fieldset hidden=move||connection.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&Method::TicketsCreate)) disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|rows|rows.iter().any(|row|matches!(row.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))>
             <legend>{move||i18n.text("Créer un ticket distant")}</legend>
             <label for="connector-ticket-kind">{move||i18n.text("Type de ticket")}</label><input id="connector-ticket-kind" maxlength="100" prop:value=move||ticket_kind.get() on:input=move|event|ticket_kind.set(event_target_value(&event))/>
@@ -279,7 +294,7 @@ pub fn ConnectorEffects(
         <For each=move||{let _=i18n.code();operations.with(|operations|operations.iter().skip(page.get()*20).take(20).cloned().collect::<Vec<_>>())} key=move|operation|(operation.id.clone(),operation.version,i18n.code()) children=move|operation|{
             let current=StoredValue::new(operation.clone());
             let key=move||context.get().map(|(_,revision)|format!("{}:{}:{revision}",current.with_value(|operation|operation.id.clone()),current.with_value(|operation|operation.version))).unwrap_or_default();
-            let label=if operation.method==Method::TicketsTransition{i18n.text("Modifier le statut d’un ticket distant")}else if operation.method==Method::TimeSend {i18n.text("Exporter une saisie de temps")}else if operation.method==Method::TicketsCreate {i18n.text("Créer un ticket distant")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
+            let label=if operation.method==Method::RepositoriesPublish{i18n.text("Publier une PR/MR par ce module")}else if operation.method==Method::TicketsTransition{i18n.text("Modifier le statut d’un ticket distant")}else if operation.method==Method::TimeSend {i18n.text("Exporter une saisie de temps")}else if operation.method==Method::TicketsCreate {i18n.text("Créer un ticket distant")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
             let report=operation.reply.as_ref().map(|reply|protocol::Report{id:operation.id.clone(),method:operation.method,action:if operation.method==Method::Action {Some(operation.action.clone())}else{None},message:reply.message.clone(),output:reply.output.clone(),observed_at:operation.updated_at.clone()});
             let items=report.as_ref().map(protocol::report_items).transpose().unwrap_or_default().unwrap_or_default();
             view!{<article class="task-files" data-connector-operation=operation.id.clone()>
@@ -292,6 +307,7 @@ pub fn ConnectorEffects(
                     <dt>{i18n.text("Limite de concurrence distante")}</dt><dd>{i18n.text("Un autre acteur peut modifier le ticket entre la relecture et l’envoi. Le rapprochement constate la déclaration du module, sans attribuer l’effet à Atelier.")}</dd>
                 </dl>})}else{None}}
                 {if operation.method==Method::TicketsCreate {Some(view!{<dl><dt>{i18n.text("Type de ticket")}</dt><dd>{operation.input["kind"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Titre")}</dt><dd>{operation.input["title"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("Description")}</dt><dd class="pre-wrap">{operation.input["description"].as_str().unwrap_or_default().to_owned()}</dd></dl>})}else{None}}
+                {if operation.method==Method::RepositoriesPublish{protocol::repository_proposal(&operation.input).ok().map(|proposal|view!{<dl><dt>{i18n.text("Dépôt distant")}</dt><dd>{proposal.observation.reference.origin}</dd><dt>{i18n.text("Titre")}</dt><dd>{proposal.title}</dd><dt>{i18n.text("Description")}</dt><dd class="pre-wrap">{proposal.body}</dd><dt>{i18n.text("Commit source")}</dt><dd>{proposal.context.source}</dd><dt>{i18n.text("Commit cible")}</dt><dd>{proposal.context.target}</dd><dt>{i18n.text("Branche cible")}</dt><dd>{proposal.observation.target_branch}</dd></dl>})}else{None}}
                 {if operation.method==Method::TimeSend {protocol::time_proposal(&operation.input).ok().map(|proposal|view!{<dl>
                     <dt>{i18n.text("Tâche")}</dt><dd>{proposal.source.card_title}</dd><dt>{i18n.text("Saisie de temps")}</dt><dd>{proposal.source.id}</dd>
                     <dt>{i18n.text("Destination")}</dt><dd>{proposal.instance}</dd><dt>{i18n.text("Compte")}</dt><dd>{proposal.account}</dd><dt>{i18n.text("Référence distante")}</dt><dd>{proposal.reference}</dd>

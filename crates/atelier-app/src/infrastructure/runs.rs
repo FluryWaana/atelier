@@ -14,6 +14,15 @@ pub fn active(run: &Document) -> Result<bool> {
 /// The caller reserves HTTP mutations before preparing the external launch.
 pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
     store.transaction(|store| {
+        if super::connector_effects::read(&store.settings::<Document>()?)?
+            .iter()
+            .any(super::connector_effects::pending)
+        {
+            return Err(
+                "Termine ou rapproche les écritures du connecteur avant de lancer une exécution."
+                    .into(),
+            );
+        }
         if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
             return Err("Une mise à jour CLI est en cours. Aucun agent lancé.".into());
         }
@@ -89,26 +98,50 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
             }
         }
         if run.string_equals("kind", "pr-review")? {
-            let context = run
-                .get::<atelier_core::application::reviews::Context>("reviewContext")?
-                .ok_or("Contexte de review absent.")?;
-            super::reviews::matches(store, &card, &context)?;
+            if let Some(context) = run
+                .get::<atelier_core::application::extensions::RepositoryReviewContext>(
+                "connectorReviewContext",
+            )? {
+                super::connector_repositories::review_matches(store, &card, &context)?;
+            } else {
+                let context = run
+                    .get::<atelier_core::application::reviews::Context>("reviewContext")?
+                    .ok_or("Contexte de review absent.")?;
+                super::reviews::matches(store, &card, &context)?;
+            }
         }
         if run.string_equals("purpose", "correction")? {
             if !run.string_equals("mode", "edit")? {
                 return Err("Confirme la correction sélectionnée en mode Modification.".into());
             }
-            let context = run
-                .get::<atelier_core::application::reviews::Context>("reviewContext")?
-                .ok_or("Contexte de review absent.")?;
-            let review = run
-                .get::<String>("correctionOf")?
-                .ok_or("Review introuvable.")?;
-            let indexes = run
-                .get::<Vec<usize>>("correctionIndexes")?
-                .ok_or("Sélection de constats invalide.")?;
-            if super::reviews::correction(store, &card, &review, &indexes)?.0 != context {
-                return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+            if let Some(context) = run
+                .get::<atelier_core::application::extensions::RepositoryReviewContext>(
+                "connectorReviewContext",
+            )? {
+                let review = run
+                    .get::<String>("correctionOf")?
+                    .ok_or("Review absente.")?;
+                let indexes = run
+                    .get::<Vec<usize>>("correctionIndexes")?
+                    .ok_or("Constats absents.")?;
+                if super::connector_repositories::correction(store, &card, &review, &indexes)?.0
+                    != context
+                {
+                    return Err("Les commits ou critères du module ont changé.".into());
+                }
+            } else {
+                let context = run
+                    .get::<atelier_core::application::reviews::Context>("reviewContext")?
+                    .ok_or("Contexte de review absent.")?;
+                let review = run
+                    .get::<String>("correctionOf")?
+                    .ok_or("Review introuvable.")?;
+                let indexes = run
+                    .get::<Vec<usize>>("correctionIndexes")?
+                    .ok_or("Sélection de constats invalide.")?;
+                if super::reviews::correction(store, &card, &review, &indexes)?.0 != context {
+                    return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+                }
             }
             let invalidation = atelier_core::application::task_editing::invalidate_reviews(
                 &card_id,
@@ -197,6 +230,13 @@ pub fn transition(
             } else if purpose == "preparation" {
                 atelier_core::application::preparation::parse(&text)
                     .map(|value| serde_json::to_value(value).expect("preparation serialization"))
+            } else if let Some(context) =
+                run.get::<atelier_core::application::extensions::RepositoryReviewContext>(
+                    "connectorReviewContext",
+                )?
+            {
+                atelier_core::application::reviews::parse_requirements(&text, &context.requirements)
+                    .map(|value| serde_json::to_value(value).expect("review serialization"))
             } else {
                 let context = run
                     .get::<atelier_core::application::reviews::Context>("reviewContext")?

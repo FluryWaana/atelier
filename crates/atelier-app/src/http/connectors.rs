@@ -1,4 +1,6 @@
 use super::{Shared, responses::response};
+#[path = "connector_repositories.rs"]
+pub(super) mod repositories;
 use crate::infrastructure::connectors;
 use axum::{extract::State, response::Response};
 
@@ -231,10 +233,13 @@ pub(super) async fn invoke(
         Ok(input) => input,
         Err(response) => return response,
     };
+    if let Err(error) = repositories::guard_invocation(&state, input.method) {
+        return response::<Report>(Err(error));
+    }
     let operation = async {
         let vault = state.vault.clone();
         let module = id.clone();
-        let (profile, request) = state
+        let (profile, mut request) = state
             .database
             .call(move |store| {
                 let (profile, mut request) =
@@ -261,6 +266,9 @@ pub(super) async fn invoke(
             Some(profile.binary.sha256.clone()),
         )
         .await?;
+        let repository_guard = repositories::prepare_read(&state, &profile, &mut request).await?;
+        let repository_review =
+            request.method == atelier_core::application::extensions::Method::RepositoriesReview;
         let action = request.action.clone();
         let transitions_source = if request.method
             == atelier_core::application::extensions::Method::TicketsTransitions
@@ -275,7 +283,7 @@ pub(super) async fn invoke(
             } else {
                 None
             };
-        let reply = executable
+        let mut reply = executable
             .prepare(&profile.manifest, request, Duration::from_secs(30))?
             .dispatch()
             .await?;
@@ -285,6 +293,10 @@ pub(super) async fn invoke(
             } else {
                 reply.message.into()
             });
+        }
+        if let Some(guard) = repository_guard {
+            reply.output =
+                serde_json::to_value(guard.observe(&reply.output, repository_review).await?)?;
         }
         if let Some(source) = time_source
             && serde_json::to_value(
@@ -317,6 +329,7 @@ pub(super) async fn invoke(
             .database
             .call(move |store| connectors::record(store, &id, profile.revision, saved))
             .await?;
+        let _ = state.changed.send(());
         Ok::<_, crate::Error>(report)
     };
     let mut closing = state.shutdown.subscribe();

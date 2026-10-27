@@ -33,6 +33,7 @@ mod brainstorm;
 mod card_lifecycle;
 mod commits;
 mod connector_effects;
+mod connector_ticket_reset;
 mod connectors;
 mod events;
 mod files;
@@ -219,7 +220,8 @@ async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
                     || (request.uri().path().starts_with("/api/agent-providers/")
                         && request.uri().path().ends_with("/cli-update"))
                     || (request.uri().path().starts_with("/api/extensions/")
-                        && request.uri().path().contains("/operations"))
+                        && (request.uri().path().contains("/operations")
+                            || request.uri().path().contains("/tickets/reset/")))
                 {
                     "/api/projects"
                 } else {
@@ -575,6 +577,14 @@ async fn serve_mode(
             axum::routing::put(connectors::configure).delete(connectors::remove),
         )
         .route("/api/extensions/{id}/invoke", post(connectors::invoke))
+        .route(
+            "/api/extensions/{id}/tickets/reset/preview",
+            post(connector_ticket_reset::preview),
+        )
+        .route(
+            "/api/extensions/{id}/tickets/reset/apply",
+            post(connector_ticket_reset::apply),
+        )
         .route("/api/queue", get(queue::get).post(queue::change))
         .route("/api/cards/{id}/automation", post(automation::change))
         .route("/api/cards/{id}/automation/stop", post(automation::stop))

@@ -179,6 +179,13 @@ pub fn claim(store: &Store<'_>, run_id: String) -> Result<Option<(Card, Document
         if queue.paused || queue.active.is_some() || queue.ids.is_empty() {
             return Ok(None);
         }
+        if super::connector_effects::read(&store.settings::<Document>()?)?
+            .iter().any(super::connector_effects::pending) {
+            queue.paused=true;
+            queue.message="File en pause : termine ou rapproche l’écriture du connecteur avant de reprendre.".into();
+            save(store,queue)?;
+            return Ok(None);
+        }
         let card = store
             .document::<Card>(Documents::Cards, &queue.ids[0])?
             .ok_or("Carte introuvable.")?;

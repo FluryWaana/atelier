@@ -7,6 +7,13 @@ use gloo_net::http::Method;
 use leptos::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use wasm_bindgen_futures::spawn_local;
+#[derive(Clone)]
+struct ContextView {
+    source: String,
+    target: String,
+    base: String,
+    requirements: serde_json::Value,
+}
 
 #[component]
 pub fn ReviewResult(
@@ -56,8 +63,28 @@ pub fn ReviewResult(
             .and_then(|run| run.get::<Review>("review").ok().flatten())
     });
     let context = Signal::derive(move || {
-        run.get()
-            .and_then(|run| run.get::<Context>("reviewContext").ok().flatten())
+        run.get().and_then(|run| {
+            if let Ok(Some(context)) = run.get::<Context>("reviewContext") {
+                Some(ContextView {
+                    source: context.source,
+                    target: context.target,
+                    base: context.base,
+                    requirements: context.requirements,
+                })
+            } else {
+                run.get::<atelier_core::application::extensions::RepositoryReviewContext>(
+                    "connectorReviewContext",
+                )
+                .ok()
+                .flatten()
+                .map(|context| ContextView {
+                    source: context.source,
+                    target: context.target,
+                    base: context.base,
+                    requirements: context.requirements,
+                })
+            }
+        })
     });
     let validate = move |_| {
         if pending.get_untracked() || blocked.get_untracked() {
