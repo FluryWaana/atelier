@@ -67,6 +67,7 @@ impl LocalHttp {
             client: Client::builder()
                 .no_proxy()
                 .redirect(reqwest::redirect::Policy::none())
+                .retry(reqwest::retry::never())
                 .pool_max_idle_per_host(0)
                 .build()?,
         })
@@ -123,31 +124,52 @@ impl LocalHttp {
         let port = server_port(address)?;
         let address = format!("http://127.0.0.1:{port}");
         let challenge = session::new_token()?;
-        let response = match self
-            .request(
-                &format!("{address}/api/health?challenge={challenge}"),
-                Method::GET,
-                HeaderMap::new(),
-                None,
-                Duration::from_secs(2),
-            )
-            .await
-        {
-            Ok(response) => response,
-            Err(error) if disconnected(error.as_ref()) => return Ok(None),
-            Err(error) => return Err(error),
+        // Only this credential-free proof GET may repeat; authenticated reads and mutations do not.
+        let mut attempt = 0;
+        let response = loop {
+            attempt += 1;
+            match self
+                .request(
+                    &format!("{address}/api/health?challenge={challenge}"),
+                    Method::GET,
+                    HeaderMap::new(),
+                    None,
+                    Duration::from_secs(2),
+                )
+                .await
+            {
+                Ok(response) => break response,
+                Err(error)
+                    if error
+                        .downcast_ref::<reqwest::Error>()
+                        .is_some_and(reqwest::Error::is_timeout) =>
+                {
+                    if attempt == 3 {
+                        return Err(error);
+                    }
+                }
+                Err(error) if disconnected(error.as_ref()) => return Ok(None),
+                Err(error) => return Err(error),
+            }
         };
+        if !response.status.is_success() {
+            return Err(
+                "Identité du serveur local non vérifiée. Ferme le programme qui utilise ce port."
+                    .into(),
+            );
+        }
         let data = response.json()?;
+        let proof = data["proof"]
+            .as_str()
+            .filter(|proof| proof.len() == 64 && proof.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .ok_or(
+                "Identité du serveur local non vérifiée. Ferme le programme qui utilise ce port.",
+            )?;
         // Read only after the server answers: startup binds the port before writing the session.
         let token = load_token()?.filter(|token| !token.is_empty()).ok_or(
             "Identité du serveur local non vérifiée. Ferme le programme qui utilise ce port.",
         )?;
-        if !response.status.is_success()
-            || !session::same_secret(
-                data["proof"].as_str().unwrap_or(""),
-                &session::proof(&token, &challenge, port)?,
-            )
-        {
+        if !session::same_secret(proof, &session::proof(&token, &challenge, port)?) {
             return Err(
                 "Identité du serveur local non vérifiée. Ferme le programme qui utilise ce port."
                     .into(),

@@ -207,6 +207,202 @@ async fn a_closed_control_socket_never_requests_credentials() {
     server.await.unwrap();
 }
 
+#[derive(Clone)]
+struct TimedHealth {
+    port: u16,
+    token: String,
+    timeouts: usize,
+    proofs: Arc<AtomicUsize>,
+    credentials: Arc<AtomicUsize>,
+    answered: Arc<AtomicBool>,
+    release: Arc<tokio::sync::Notify>,
+}
+async fn timed_health(
+    State(state): State<TimedHealth>,
+    Query(query): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+) -> axum::response::Response {
+    if let Some(challenge) = query.get("challenge") {
+        assert!(!headers.contains_key("authorization"));
+        if state.proofs.fetch_add(1, Ordering::SeqCst) < state.timeouts {
+            state.release.notified().await;
+            return StatusCode::REQUEST_TIMEOUT.into_response();
+        }
+        state.answered.store(true, Ordering::SeqCst);
+        return Json(json!({"proof":session::proof(&state.token,challenge,state.port).unwrap()}))
+            .into_response();
+    }
+    assert!(state.answered.load(Ordering::SeqCst));
+    assert_eq!(headers["authorization"], format!("Bearer {}", state.token));
+    state.credentials.fetch_add(1, Ordering::SeqCst);
+    Json(json!({"app":"atelier-kanban","pid":42})).into_response()
+}
+
+#[tokio::test]
+async fn an_initial_proof_timeout_retries_without_credentials_and_authenticates_only_once() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let state = TimedHealth {
+        port,
+        token: "cd".repeat(32),
+        timeouts: 1,
+        proofs: Arc::default(),
+        credentials: Arc::default(),
+        answered: Arc::default(),
+        release: Arc::default(),
+    };
+    let router = Router::new()
+        .route("/api/health", get(timed_health))
+        .with_state(state.clone());
+    let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+    let loads = AtomicUsize::new(0);
+    let result = LocalHttp::new()
+        .unwrap()
+        .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
+            assert!(state.answered.load(Ordering::SeqCst));
+            loads.fetch_add(1, Ordering::SeqCst);
+            Ok(Some(state.token.clone()))
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(result, json!({"app":"atelier-kanban","pid":42}));
+    assert_eq!(state.proofs.load(Ordering::SeqCst), 2);
+    assert_eq!(loads.load(Ordering::SeqCst), 1);
+    assert_eq!(state.credentials.load(Ordering::SeqCst), 1);
+    state.release.notify_waiters();
+    server.abort();
+}
+
+#[tokio::test]
+async fn persistent_proof_timeouts_are_bounded_errors_and_never_read_or_send_credentials() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let state = TimedHealth {
+        port,
+        token: "ef".repeat(32),
+        timeouts: usize::MAX,
+        proofs: Arc::default(),
+        credentials: Arc::default(),
+        answered: Arc::default(),
+        release: Arc::default(),
+    };
+    let router = Router::new()
+        .route("/api/health", get(timed_health))
+        .with_state(state.clone());
+    let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+    let loads = AtomicUsize::new(0);
+    let result = tokio::time::timeout(
+        Duration::from_secs(10),
+        LocalHttp::new()
+            .unwrap()
+            .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
+                loads.fetch_add(1, Ordering::SeqCst);
+                Ok(Some(state.token.clone()))
+            }),
+    )
+    .await
+    .expect("Three two-second proof attempts must remain bounded");
+    let error = result.expect_err("Timeout is an unknown server state, never absence");
+    assert!(
+        error
+            .downcast_ref::<reqwest::Error>()
+            .is_some_and(reqwest::Error::is_timeout)
+    );
+    assert_eq!(state.proofs.load(Ordering::SeqCst), 3);
+    assert_eq!(loads.load(Ordering::SeqCst), 0);
+    assert_eq!(state.credentials.load(Ordering::SeqCst), 0);
+    state.release.notify_waiters();
+    server.abort();
+}
+
+#[tokio::test]
+async fn failed_or_invalid_proof_responses_are_not_retried_and_do_not_read_the_token() {
+    for (status, body) in [
+        (StatusCode::FORBIDDEN, "{\"proof\":\"forbidden\"}"),
+        (StatusCode::OK, "not JSON"),
+        (StatusCode::OK, "{\"proof\":42}"),
+    ] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        let requests = Arc::new(AtomicUsize::new(0));
+        let seen = requests.clone();
+        let router = Router::new().route(
+            "/api/health",
+            get(move |headers: HeaderMap| {
+                let seen = seen.clone();
+                async move {
+                    assert!(!headers.contains_key("authorization"));
+                    seen.fetch_add(1, Ordering::SeqCst);
+                    (status, body)
+                }
+            }),
+        );
+        let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+        assert!(
+            LocalHttp::new()
+                .unwrap()
+                .authenticated_health(&address, || panic!(
+                    "Invalid proof responses must not read the token"
+                ))
+                .await
+                .is_err()
+        );
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn a_mutation_with_a_lost_response_is_never_sent_again() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let effects = Arc::new(AtomicUsize::new(0));
+    let seen = effects.clone();
+    let release = Arc::new(tokio::sync::Notify::new());
+    let pending = release.clone();
+    let router = Router::new().route(
+        "/mutation",
+        post(move |headers: HeaderMap, body: String| {
+            let seen = seen.clone();
+            let pending = pending.clone();
+            async move {
+                assert_eq!(headers["authorization"], "Bearer synthetic-mutation");
+                assert_eq!(body, "synthetic-effect");
+                seen.fetch_add(1, Ordering::SeqCst);
+                pending.notified().await;
+                StatusCode::NO_CONTENT
+            }
+        }),
+    );
+    let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "authorization",
+        "Bearer synthetic-mutation".parse().unwrap(),
+    );
+    let error = LocalHttp::new()
+        .unwrap()
+        .request(
+            &format!("{address}/mutation"),
+            Method::POST,
+            headers,
+            Some("synthetic-effect"),
+            Duration::from_secs(2),
+        )
+        .await
+        .err()
+        .expect("The reply is deliberately withheld after the effect");
+    assert!(
+        error
+            .downcast_ref::<reqwest::Error>()
+            .is_some_and(reqwest::Error::is_timeout)
+    );
+    assert_eq!(effects.load(Ordering::SeqCst), 1);
+    release.notify_waiters();
+    server.abort();
+}
+
 #[test]
 fn browser_address_and_missing_session_keep_the_native_privacy_contract() {
     let directory = tempfile::tempdir().unwrap();

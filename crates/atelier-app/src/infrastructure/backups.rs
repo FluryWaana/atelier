@@ -703,7 +703,7 @@ mod tests {
             )
             .unwrap();
         store.put(Documents::Runs,&json!({"id":"verification","purpose":"verification","status":"completed","verificationState":"passed"})).unwrap();
-        store.save_settings(&json!({"extra":null})).unwrap();
+        store.save_settings(&json!({"extra":null,"connectorRevision":7,"processConnectors":[],"tempoConnection":{"base":"https://api.tempo.io/4","revision":11}})).unwrap();
         store.log("review", "stdout", "saved").unwrap();
         let saved = root.path().join("saved.sqlite");
         store.backup(&saved).unwrap();
@@ -711,6 +711,7 @@ mod tests {
             .put(Documents::Cards, &json!({"id":"new", "status":"todo"}))
             .unwrap();
         store.log("review", "stdout", "newer").unwrap();
+        store.save_settings(&json!({"extra":"current settings preserved in rescue","connectorRevision":12,"processConnectors":[],"tempoConnection":{"base":"https://api.eu.tempo.io/4","revision":19}})).unwrap();
         connection.execute_batch("CREATE TABLE token_vault(id INTEGER PRIMARY KEY,encrypted TEXT); INSERT INTO token_vault VALUES(1,'synthetic-only');").unwrap();
         let rescue = root.path().join("rescue.sqlite");
         restore(&store, &saved, &rescue).unwrap();
@@ -730,8 +731,34 @@ mod tests {
                 .get("reviewStaleReason")
                 .is_some()
         );
+        let mut restored_settings = store
+            .settings::<Value>()
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .clone();
+        let connector_revision = restored_settings
+            .remove("connectorRevision")
+            .unwrap()
+            .as_u64()
+            .unwrap();
+        // Restoring must invalidate previews from both the backup and the superseded live state.
+        for previous_revision in [7, 12] {
+            assert!(connector_revision > previous_revision);
+        }
         assert_eq!(
-            store.settings::<serde_json::Value>().unwrap(),
+            restored_settings.remove("processConnectors").unwrap(),
+            json!([])
+        );
+        let tempo = restored_settings.remove("tempoConnection").unwrap();
+        assert_eq!(tempo["base"], "https://api.tempo.io/4");
+        let tempo_revision = tempo["revision"].as_u64().unwrap();
+        for previous_revision in [11, 19] {
+            assert!(tempo_revision > previous_revision);
+        }
+        assert_eq!(tempo.as_object().unwrap().len(), 2);
+        assert_eq!(
+            Value::Object(restored_settings),
             json!({"extra":null,"credentialsReset":true})
         );
         assert_eq!(
@@ -752,6 +779,13 @@ mod tests {
         store.log("review", "stdout", "after restore").unwrap();
         assert_eq!(store.logs("review", 0).unwrap()[1].seq, 3);
         let rescued = open(&rescue).unwrap();
+        let rescue_settings = Store::new(&rescued).settings::<Value>().unwrap();
+        assert_eq!(rescue_settings["connectorRevision"], 12);
+        assert_eq!(rescue_settings["tempoConnection"]["revision"], 19);
+        assert_eq!(
+            rescue_settings["extra"],
+            "current settings preserved in rescue"
+        );
         assert!(
             Store::new(&rescued)
                 .document::<serde_json::Value>(Documents::Cards, "new")
