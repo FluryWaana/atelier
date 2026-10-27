@@ -137,17 +137,28 @@ impl Certificates {
     }
 }
 
-async fn openssl(root: &Path, args: &[&str]) -> Result<()> {
+pub fn openssl_executable() -> Result<PathBuf> {
     #[cfg(windows)]
     let executable = std::env::var_os("ProgramFiles")
         .map(PathBuf::from)
         .ok_or("ProgramFiles absent pour le scénario TLS.")?
         .join("Git/usr/bin/openssl.exe");
-    #[cfg(unix)]
+    #[cfg(target_os = "macos")]
+    let executable = PathBuf::from(if cfg!(target_arch = "aarch64") {
+        "/opt/homebrew/opt/openssl@3/bin/openssl"
+    } else {
+        "/usr/local/opt/openssl@3/bin/openssl"
+    });
+    #[cfg(all(unix, not(target_os = "macos")))]
     let executable = PathBuf::from("/usr/bin/openssl");
     if !executable.is_absolute() || !executable.is_file() {
         return Err("OpenSSL OS absolu requis pour le scénario TLS synthétique.".into());
     }
+    Ok(executable)
+}
+
+async fn openssl(root: &Path, args: &[&str]) -> Result<()> {
+    let executable = openssl_executable()?;
     let mut command = tokio::process::Command::new(executable);
     command
         .args(args)

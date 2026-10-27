@@ -41,16 +41,7 @@ use std::{
 
 #[cfg(target_os = "macos")]
 async fn verify_with_git_tls_library(certificates: &tls::Certificates) -> atelier_app::Result<()> {
-    let executable = if cfg!(target_arch = "aarch64") {
-        Path::new("/opt/homebrew/opt/openssl@3/bin/openssl")
-    } else {
-        Path::new("/usr/local/opt/openssl@3/bin/openssl")
-    };
-    if !executable.is_file() {
-        return Err(
-            "Synthetic Git TLS: Homebrew OpenSSL verification executable is absent.".into(),
-        );
-    }
+    let executable = tls::openssl_executable()?;
     let root = certificates._directory.path();
     let empty = root.join("git-verify-empty-ca");
     std::fs::create_dir(&empty)?;
@@ -76,7 +67,19 @@ async fn verify_with_git_tls_library(certificates: &tls::Certificates) -> atelie
     let output =
         process_tree::capture(&mut command, &[], Duration::from_secs(10), 64 * 1024).await?;
     if !output.status.success() {
-        return Err("Synthetic Git TLS: Homebrew OpenSSL refused the generated chain, server purpose or IP.".into());
+        let diagnostic = String::from_utf8_lossy(&output.stderr);
+        let code = diagnostic.lines().find_map(|line| {
+            let value = line
+                .trim()
+                .strip_prefix("error ")?
+                .split_whitespace()
+                .next()?;
+            value.parse::<u16>().ok()
+        });
+        return Err(format!(
+            "Synthetic Git TLS: Homebrew OpenSSL verification failed (certificate code {code:?})."
+        )
+        .into());
     }
     eprintln!(
         "Synthetic Git TLS: Homebrew OpenSSL verified the explicit CA chain, server purpose and IP."

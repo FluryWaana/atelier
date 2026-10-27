@@ -2736,7 +2736,7 @@ async fn settings_scenario(
         client.screenshot().await?,
     )?;
     client
-        .find(Locator::Css("#settings-agent"))
+        .find(Locator::Css("#close-settings"))
         .await?
         .send_keys("\u{e00c}")
         .await?;
@@ -4137,8 +4137,10 @@ async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Valu
         )
         .await;
     let journals = client.execute("return Array.from(document.querySelectorAll('[data-connector-journal-card]')).map(section=>({card:section.dataset.connectorJournalCard,busy:section.getAttribute('aria-busy'),errors:Array.from(section.querySelectorAll('p.error')).map(error=>error.textContent),operations:Array.from(section.querySelectorAll('[data-connector-operation]')).map(operation=>({id:operation.dataset.connectorOperation,state:operation.querySelector('.connector-effect-state')?.textContent}))}));", vec![]).await;
+    let services = client.execute("return {error:document.querySelector('#services-error')?.textContent,states:Array.from(document.querySelectorAll('.service-state')).map(service=>({status:service.querySelector('.service-status')?.textContent,ready:service.querySelector('.service-log')?.textContent.includes('synthetic-service-ready'),errors:Array.from(service.querySelectorAll('.error')).map(error=>error.textContent.slice(0,2000))}))};",vec![]).await;
+    let settings = client.execute("return {saveDisabled:document.querySelector('#save-settings')?.disabled,discardHidden:document.querySelector('#discard-settings')?.closest('.confirmation')?.hidden,focused:document.activeElement?.id};",vec![]).await;
     Err(
-        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}")
+        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}; services : {services:?}; paramètres : {settings:?}")
             .into(),
     )
 }
