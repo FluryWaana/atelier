@@ -178,7 +178,7 @@ async fn serve(State(remote): State<Remote>, request: Request) -> Response {
         .env("GIT_CONFIG_GLOBAL", null())
         .env("GIT_CONFIG_SYSTEM", null())
         .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("GIT_PROJECT_ROOT", &remote.root)
+        .env("GIT_PROJECT_ROOT", path(&remote.root))
         .env("GIT_HTTP_EXPORT_ALL", "1")
         .env("REMOTE_USER", "synthetic")
         .env("REQUEST_METHOD", method.as_str())
@@ -235,11 +235,18 @@ async fn serve(State(remote): State<Remote>, request: Request) -> Response {
             }
         }
     }
-    response
+    let response = response
         .body(axum::body::Body::from(
             output.stdout[split.0 + split.1..].to_vec(),
         ))
-        .unwrap()
+        .unwrap();
+    assert!(
+        response.status().is_success(),
+        "Synthetic Git backend returned {} for {}",
+        response.status(),
+        uri.path()
+    );
+    response
 }
 #[tokio::test]
 async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_lost_responses() {

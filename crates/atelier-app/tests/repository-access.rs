@@ -42,8 +42,15 @@ fn external_repositories_require_exact_local_authorization_and_keep_human_files(
     );
     repository_access::register(&root, source_text, 1, true).unwrap();
     drop(repository_access::open(&root, &source).unwrap());
-    let traversal = source.join("..").join("other");
-    assert!(repository_access::register(&root, traversal.to_str().unwrap(), 2, true).is_err());
+    // Joining onto a verbatim Windows PathBuf normalizes parent components before validation.
+    let traversal = format!(
+        "{}{}..{}other",
+        source.display(),
+        std::path::MAIN_SEPARATOR,
+        std::path::MAIN_SEPARATOR
+    );
+    assert!(repository_access::register(&root, &traversal, 2, true).is_err());
+    assert_eq!(repository_access::read(&root).unwrap().revision, 2);
     assert!(repository_access::references(
         &serde_json::json!({"project":{"frontRepo":source_text}}),
         source_text

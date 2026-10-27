@@ -334,9 +334,13 @@ impl Repository {
                 ));
             }
         }
-        options.extend(
-            ["-c", "core.hooksPath=NUL", "-c", "submodule.recurse=false"].map(str::to_owned),
-        );
+        let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
+        options.extend([
+            "-c".to_owned(),
+            format!("core.hooksPath={null}"),
+            "-c".to_owned(),
+            "submodule.recurse=false".to_owned(),
+        ]);
         Ok(options)
     }
 
@@ -432,7 +436,6 @@ impl Repository {
             .args([
                 "--no-pager",
                 "--no-optional-locks",
-                "--literal-pathspecs",
                 "--no-lazy-fetch",
                 "--no-replace-objects",
                 "-c",
@@ -446,8 +449,12 @@ impl Repository {
                 &format!("core.hooksPath={null}"),
                 "-c",
                 &format!("core.askPass={null}"),
-            ])
-            .args(arguments);
+            ]);
+        // check-ignore accepts literal paths itself and rejects pathspec magic, including this flag.
+        if arguments.first() != Some(&"check-ignore") {
+            command.arg("--literal-pathspecs");
+        }
+        command.args(arguments);
         let output = super::process_tree::capture(
             &mut command,
             &[],

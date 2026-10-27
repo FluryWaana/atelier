@@ -41,7 +41,10 @@ async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
             "-c",
             "user.email=synthetic@example.invalid",
         ])
-        .args(args);
+        .args(
+            args.iter()
+                .map(|argument| argument.strip_prefix(r"\\?\").unwrap_or(argument)),
+        );
     let output = process_tree::capture(&mut command, &[], Duration::from_secs(15), 1024 * 1024)
         .await
         .unwrap();
@@ -411,7 +414,7 @@ async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
         .await
         .unwrap_err()
         .to_string()
-        .contains("repositories")
+        .contains("connexion HTTPS de forge explicitement choisie")
     );
 }
 

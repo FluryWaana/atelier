@@ -35,8 +35,8 @@ async fn git(path: &Path, args: &[&str]) -> Vec<u8> {
 #[tokio::test]
 async fn committed_disk_can_be_reviewed_while_preserving_a_partially_staged_human_index() {
     let home = tempfile::tempdir().unwrap();
-    let source = home.path().join("repo");
-    std::fs::create_dir(&source).unwrap();
+    let source = home.path().join("repositories/repo");
+    std::fs::create_dir_all(&source).unwrap();
     git(&source, &["init", "-b", "main"]).await;
     std::fs::write(source.join("file.txt"), "baseline\n").unwrap();
     git(&source, &["add", "."]).await;
@@ -94,8 +94,8 @@ async fn committed_disk_can_be_reviewed_while_preserving_a_partially_staged_huma
 #[tokio::test]
 async fn selected_snapshot_preserves_human_index_disk_and_fetch_head_and_rejects_stale_preview() {
     let home = tempfile::tempdir().unwrap();
-    let source = home.path().join("repo");
-    std::fs::create_dir(&source).unwrap();
+    let source = home.path().join("repositories/repo");
+    std::fs::create_dir_all(&source).unwrap();
     git(&source, &["init", "-b", "main"]).await;
     for name in ["selected.txt", "unrelated.txt"] {
         std::fs::write(source.join(name), "base\n").unwrap();
