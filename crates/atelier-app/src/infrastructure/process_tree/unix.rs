@@ -106,6 +106,22 @@ impl ContainedChild {
         }
         Ok(())
     }
+    async fn terminate_and_confirm(&mut self) -> Result<()> {
+        let result = self.terminate();
+        #[cfg(target_os = "macos")]
+        if let Err(error) = &result
+            && error
+                .downcast_ref::<io::Error>()
+                .is_some_and(|error| error.raw_os_error() == Some(libc::EPERM))
+            && self.exited()?
+            && self.process_ids().await?.is_empty()
+        {
+            // Darwin killpg excludes zombies and reports EPERM for a zombie-only group.
+            // Accept it only after verifying our unreaped leader and absence of live members.
+            return Ok(());
+        }
+        result
+    }
     pub async fn wait(&mut self) -> Result<ExitStatus> {
         if self.group.is_none() {
             return Ok(self.child.wait().await?);
@@ -113,7 +129,7 @@ impl ContainedChild {
         while !self.exited()? {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        self.terminate()?;
+        self.terminate_and_confirm().await?;
         let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
         while !self.process_ids().await?.is_empty() {
             if tokio::time::Instant::now() >= deadline {
@@ -131,7 +147,7 @@ impl ContainedChild {
         if self.group.is_none() {
             return Ok(self.child.wait().await?);
         }
-        self.terminate()?;
+        self.terminate_and_confirm().await?;
         tokio::time::timeout(Duration::from_secs(10), self.wait())
             .await
             .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
