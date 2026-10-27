@@ -71,6 +71,10 @@ Sous Windows, Inno retire les fichiers et inscriptions qu’il suit. Le scénari
 
 Le serveur natif possède le helper tray du même exécutable : thread principal AppKit, boucle Windows, backend StatusNotifier Linux. Menus Ouvrir/Quitter bilingues, actions sérialisées, refus visible et retrait sur EOF du propriétaire. Aucun Node/Python/.NET ni jeton en arguments/environnement. Linux sans bureau/D-Bus n’ouvre pas de tray ; une création refusée laisse l’application accessible dans le navigateur. Windows/macOS exigent un rectangle réel avant READY ; le scénario Linux observe l’Id/pixels/état de l’item produit dans l’hôte D-Bus puis son retrait. Clics et focus restent à qualifier.
 
+Un second scénario Linux démarre un vrai serveur synthétique puis utilise les interfaces publiques StatusNotifier/DBusMenu : sélection des actions bilingues par leur label, événement externe `clicked` pour Ouvrir, fichier de session navigateur préparé et retour à Prêt, puis Quitter avec serveur HTTP arrêté, verrou libéré et item retiré. Il n’appelle aucune fonction interne d’action. Ce scénario est écrit et raccordé à la commande `native-tray --ignored`, mais non exécuté.
+
+**Preuve bureau macOS encore manquante :** dans une session jetable, lancer le paquet de la cible avec un dossier de données synthétique explicite, cliquer l’icône puis Ouvrir, constater le fichier de session navigateur et le retour du menu à Prêt, puis cliquer Quitter. Consigner cible/commit/version, fermeture du serveur HTTP, acquisition du verrou de données et disparition de l’icône, sans publier de jeton. Le scénario AppKit existant ne prouve que présence/retrait sur EOF ; il ne remplace pas ces interactions ni leur résultat. Le rendu WASM relève des parcours WebDriver distincts.
+
 Le transfert Rust portable explicite réutilise `import-data` et son choix de source confirmé : source verrouillée, format ATKR contrôlé, copie privée bornée puis publication, aucun ancien format Node. Session/verrous/autorisation locale de dépôts ne sont pas transférés ; chiffrement intercompte non promis. Les sauvegardes sont conservées.
 
 ## Campagne finale préparée, non lancée

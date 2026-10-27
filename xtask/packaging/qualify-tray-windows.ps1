@@ -41,7 +41,11 @@ function Confirm-TrayQuit([string]$LockFile, [int]$Port) {
   $open = Wait-TrayControl 'Ouvrir Atelier / Open Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $open
   $button = Wait-TrayControl $readyName ([System.Windows.Automation.ControlType]::Button)
-  if (-not [IO.File]::Exists((Join-Path ([IO.Path]::GetDirectoryName($LockFile)) 'local-browser.html'))) { throw 'Native Open did not prepare the owned browser session.' }
+  # Windows opens the authenticated URL directly; only Unix creates local-browser.html.
+  $openedConnection = [Net.Sockets.TcpClient]::new()
+  try {
+    if (-not $openedConnection.ConnectAsync([Net.IPAddress]::Loopback, $Port).Wait(5000) -or -not $openedConnection.Connected) { throw 'Native Open lost the local server.' }
+  } finally { $openedConnection.Dispose() }
   Invoke-TrayControl $button
   $quit = Wait-TrayControl 'Quitter Atelier / Quit Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $quit
