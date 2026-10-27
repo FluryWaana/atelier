@@ -87,12 +87,12 @@ async fn capture_child(
         .stdin
         .take()
         .ok_or("Entrée du processus absente.")?;
-    let stdout = child
+    let mut stdout = child
         .child
         .stdout
         .take()
         .ok_or("Sortie du processus absente.")?;
-    let stderr = child
+    let mut stderr = child
         .child
         .stderr
         .take()
@@ -105,8 +105,10 @@ async fn capture_child(
             Ok::<(), crate::Error>(())
         };
         let (stdout, stderr, (), status) = tokio::try_join!(
-            bounded(stdout, limit, "stdout"),
-            bounded(stderr, limit, "stderr"),
+            // Keep pipe handles until owned-child cleanup, including an output-limit failure.
+            // Closing a full pipe first can terminate the child with SIGPIPE during that cleanup.
+            bounded(&mut stdout, limit, "stdout"),
+            bounded(&mut stderr, limit, "stderr"),
             input,
             child.wait()
         )?;

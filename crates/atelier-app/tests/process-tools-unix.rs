@@ -30,13 +30,12 @@ async fn bounded_tools_stop_on_timeout_overflow_and_guard_cancellation() {
     );
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "while :; do printf synthetic-output; done"]);
+    let overflow = process_tree::capture(&mut command, &[], Duration::from_secs(5), 100)
+        .await
+        .unwrap_err();
     assert!(
-        process_tree::capture(&mut command, &[], Duration::from_secs(5), 100)
-            .await
-            .err()
-            .unwrap()
-            .to_string()
-            .contains("Limite de sortie")
+        overflow.to_string().contains("Limite de sortie"),
+        "{overflow}"
     );
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "sleep 30 & wait"]);

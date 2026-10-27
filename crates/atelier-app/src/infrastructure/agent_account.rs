@@ -22,8 +22,8 @@ pub(super) fn reflected(value: &Value, secrets: &[String]) -> bool {
     }
 }
 async fn stream(
-    mut stdin: tokio::process::ChildStdin,
-    stdout: tokio::process::ChildStdout,
+    stdin: &mut tokio::process::ChildStdin,
+    stdout: &mut tokio::process::ChildStdout,
     secrets: Vec<String>,
 ) -> Result<Report> {
     let mut probe = Probe::default();
@@ -79,24 +79,24 @@ pub(super) async fn read(
         })
         .collect();
     let mut child = ContainedChild::spawn(&mut command).await?;
-    let stdin = child
+    let mut stdin = child
         .child
         .stdin
         .take()
         .ok_or("Entrée du diagnostic absente.")?;
-    let stdout = child
+    let mut stdout = child
         .child
         .stdout
         .take()
         .ok_or("Sortie du diagnostic absente.")?;
-    let stderr = child
+    let mut stderr_pipe = child
         .child
         .stderr
         .take()
         .ok_or("Sortie d’erreur du diagnostic absente.")?;
-    let stderr = async move {
+    let stderr = async {
         let mut bytes = Vec::new();
-        stderr
+        (&mut stderr_pipe)
             .take((LIMIT + 1) as u64)
             .read_to_end(&mut bytes)
             .await?;
@@ -106,7 +106,8 @@ pub(super) async fn read(
         Ok::<(), crate::Error>(())
     };
     let work = async {
-        let result = stream(stdin, stdout, secrets).await;
+        // Keep the pipe endpoints live until containment cleanup has finished.
+        let result = stream(&mut stdin, &mut stdout, secrets).await;
         child.stop().await?;
         result
     };

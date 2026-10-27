@@ -193,9 +193,6 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
         }
         Ok(())
     }.await;
-    // Readers own no process handle; abort them before stopping the complete tree.
-    stdout_task.abort();
-    stderr_task.abort();
     if cancelled {
         let id = id.to_owned();
         let timestamp = timestamp()?;
@@ -204,9 +201,16 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
             .await?;
         let _ = changed.send(());
     }
-    if cancelled || operation.is_err() {
-        child.stop().await?;
-    }
+    // Keep readers and their pipes alive until the owned process tree is stopped.
+    // Aborting them first can turn a protocol/cancellation error into a SIGPIPE exit race.
+    let stopped = if cancelled || operation.is_err() {
+        child.stop().await.map(|_| ())
+    } else {
+        Ok(())
+    };
+    stdout_task.abort();
+    stderr_task.abort();
+    stopped?;
     let code = child.child.try_wait()?.and_then(|status| status.code());
     let id = id.to_owned();
     let timestamp = timestamp()?;

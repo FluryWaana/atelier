@@ -158,7 +158,14 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
                 }
                 assert!(
                     tokio::time::Instant::now() < deadline,
-                    "Synthetic agent did not finish"
+                    "Synthetic agent did not finish: {}/{mode}, status={:?}, attention={:?}",
+                    if kind == Kind::Codex {
+                        "codex"
+                    } else {
+                        "claude"
+                    },
+                    run.get::<String>("status").unwrap(),
+                    run.get::<String>("attention").unwrap()
                 );
                 tokio::time::sleep(Duration::from_millis(20)).await;
             };
