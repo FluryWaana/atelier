@@ -18,18 +18,49 @@ pub fn wasm_asset_name(name: &str) -> bool {
 }
 
 pub(super) fn router(path: &Path) -> Result<Router<Shared>> {
+    asset_router(path, None)
+}
+
+pub(super) fn development_router(path: &Path) -> Result<Router<Shared>> {
+    asset_router(path, Some(crate::infrastructure::session::new_token()?))
+}
+
+fn development_asset(name: &str, bytes: Vec<u8>, revision: &str) -> Vec<u8> {
+    match name {
+        "index.html" => {
+            let mut bytes = bytes;
+            bytes.extend_from_slice(format!("<!--atelier-dev:{revision}-->").as_bytes());
+            bytes
+        }
+        "atelier-loader.js" => {
+            let mut bytes = bytes;
+            bytes.extend_from_slice(
+                include_str!("dev_reload.js")
+                    .replace("__ATELIER_REVISION__", revision)
+                    .as_bytes(),
+            );
+            bytes
+        }
+        _ => bytes,
+    }
+}
+
+fn asset_router(path: &Path, revision: Option<String>) -> Result<Router<Shared>> {
     let directory = Dir::open_ambient_dir(path, ambient_authority())?;
     let names = crate::infrastructure::package::asset_names(&directory)?;
     let mut router = Router::new();
     let mut total = 0usize;
     for name in names {
         // Capture checked bytes once; replacing the path later cannot publish another file.
-        let bytes = Bytes::from(
-            CheckedFile::open_in(&directory, Path::new(&name))?
-                .single_link()?
-                .read(64 * 1024 * 1024)
-                .map_err(|error| format!("Asset {name} : {error}"))?,
-        );
+        let bytes = CheckedFile::open_in(&directory, Path::new(&name))?
+            .single_link()?
+            .read(64 * 1024 * 1024)
+            .map_err(|error| format!("Asset {name} : {error}"))?;
+        let bytes = Bytes::from(if let Some(revision) = &revision {
+            development_asset(&name, bytes, revision)
+        } else {
+            bytes
+        });
         total = total
             .checked_add(bytes.len())
             .filter(|total| *total <= 256 * 1024 * 1024)
@@ -63,6 +94,26 @@ pub(super) fn router(path: &Path) -> Result<Router<Shared>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn development_reload_marks_html_and_only_extends_the_loader() {
+        let html = development_asset("index.html", b"<html></html>".to_vec(), "synthetic");
+        assert!(
+            String::from_utf8(html)
+                .unwrap()
+                .ends_with("<!--atelier-dev:synthetic-->")
+        );
+        let loader = development_asset("atelier-loader.js", b"// loader\n".to_vec(), "synthetic");
+        let loader = String::from_utf8(loader).unwrap();
+        assert!(loader.starts_with("// loader\n"));
+        assert!(loader.contains("<!--atelier-dev:synthetic-->"));
+        assert!(!loader.contains("__ATELIER_REVISION__"));
+        assert_eq!(
+            development_asset("style-a.css", vec![1, 2], "synthetic"),
+            vec![1, 2]
+        );
+    }
+
     #[test]
     fn native_assets_refuse_unexpected_names_and_unbounded_file_counts() {
         let root = tempfile::tempdir().unwrap();

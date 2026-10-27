@@ -433,7 +433,7 @@ async fn unavailable() -> Response {
 
 // Headless HTTP journeys keep the same Rust assets and guards without opening desktop controls.
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
-    serve_mode(listener, directory, assets, false, None).await
+    serve_mode(listener, directory, assets, false, None, false).await
 }
 
 pub async fn serve_native(
@@ -441,7 +441,16 @@ pub async fn serve_native(
     directory: PathBuf,
     assets: PathBuf,
 ) -> Result<()> {
-    serve_mode(listener, directory, assets, true, None).await
+    serve_mode(listener, directory, assets, true, None, false).await
+}
+
+/// Local development only: keep the tab authenticated across supervised restarts.
+pub async fn serve_development(
+    listener: TcpListener,
+    directory: PathBuf,
+    assets: PathBuf,
+) -> Result<()> {
+    serve_mode(listener, directory, assets, true, None, true).await
 }
 
 pub async fn serve_installed(
@@ -450,7 +459,7 @@ pub async fn serve_installed(
     assets: PathBuf,
     root: PathBuf,
 ) -> Result<()> {
-    serve_mode(listener, directory, assets, true, Some(root)).await
+    serve_mode(listener, directory, assets, true, Some(root), false).await
 }
 
 async fn serve_mode(
@@ -459,11 +468,16 @@ async fn serve_mode(
     assets: PathBuf,
     desktop: bool,
     installation_root: Option<PathBuf>,
+    development: bool,
 ) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
     }
-    let app = assets::router(&assets)?;
+    let app = if development {
+        assets::development_router(&assets)?
+    } else {
+        assets::router(&assets)?
+    };
     let _package_guard =
         crate::infrastructure::package_maintenance::acquire(installation_root.as_deref())?;
     let expected_identity = installation_root
@@ -484,7 +498,14 @@ async fn serve_mode(
         return Err("Le dossier de données a changé avant le démarrage de la version.".into());
     }
     let vault = crate::infrastructure::token_vault::PrototypeVault::new(service)?;
-    let token = session::new_token()?;
+    let token = if development {
+        match session::read_optional_in(&directory.opened_directory()?)? {
+            Some(token) => token,
+            None => session::new_token()?,
+        }
+    } else {
+        session::new_token()?
+    };
     directory.write_session(&token)?;
     let database = directory.database()?;
     database

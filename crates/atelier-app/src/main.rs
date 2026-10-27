@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]";
+const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317] [--dev]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -27,6 +27,7 @@ struct Options {
     assets: Option<PathBuf>,
     port: u16,
     browser: bool,
+    development: bool,
 }
 
 fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
@@ -61,6 +62,7 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
         data: None,
         assets: None,
         browser: true,
+        development: false,
     };
     let mut port = false;
     while let Some(arg) = args.next() {
@@ -68,6 +70,10 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
             return Err("Arguments inattendus.".into());
         }
         let arg = arg.to_str().ok_or("Option Atelier invalide.")?;
+        if arg == "--dev" && options.action == Action::Serve && !options.development {
+            options.development = true;
+            continue;
+        }
         if arg == "--no-browser" && options.action == Action::Launch && options.browser {
             options.browser = false;
             continue;
@@ -271,8 +277,13 @@ async fn application() -> Result<()> {
     let listener =
         tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, options.port)).await?;
     println!("Atelier Kanban Rust sur http://{}", listener.local_addr()?);
+    if installation.is_some() && options.development {
+        return Err("Le mode développement exige un binaire hors installation.".into());
+    }
     if installation.is_some() {
         http::serve_installed(listener, data, assets, root.to_owned()).await
+    } else if options.development {
+        http::serve_development(listener, data, assets).await
     } else {
         http::serve_native(listener, data, assets).await
     }
@@ -311,7 +322,29 @@ mod tests {
             4317
         );
         assert_eq!(options(&["stop"]).unwrap().action, Action::Stop);
+        assert!(
+            options(&[
+                "serve",
+                "--dev",
+                "--data-dir",
+                "synthetic",
+                "--assets",
+                "ui"
+            ])
+            .unwrap()
+            .development
+        );
         for args in [
+            vec!["launch", "--dev"],
+            vec![
+                "serve",
+                "--dev",
+                "--dev",
+                "--data-dir",
+                "synthetic",
+                "--assets",
+                "ui",
+            ],
             vec!["serve-prototype"],
             vec!["serve"],
             vec!["serve", "--data-dir", "synthetic"],

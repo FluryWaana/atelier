@@ -138,10 +138,14 @@ pub fn read_optional(directory: &Path) -> Result<Option<String>> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error.into()),
     };
+    read_optional_in(&directory)
+}
+
+pub(crate) fn read_optional_in(directory: &Dir) -> Result<Option<String>> {
     match directory.symlink_metadata("local-session") {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(error.into()),
-        Ok(_) => read_in(&directory).map(Some),
+        Ok(_) => read_in(directory).map(Some),
     }
 }
 
@@ -239,6 +243,7 @@ mod tests {
             source
         };
         assert_eq!(read_in(&directory).unwrap(), token);
+        assert_eq!(read_optional_in(&directory).unwrap(), Some(token.clone()));
         write_private_in(&directory, Path::new("local-session"), &stored).unwrap();
         assert_eq!(read_in(&directory).unwrap(), token);
         assert_eq!(
