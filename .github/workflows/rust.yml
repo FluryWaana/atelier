@@ -229,14 +229,6 @@ jobs:
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo xtask test-ui
-      - name: Preserve synthetic UI screenshots
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: rust-ui-${{ runner.os }}-${{ runner.arch }}
-          path: .artifacts/rust-*.png
-          include-hidden-files: true
-          if-no-files-found: ignore
       - name: Share the verified platform-independent WASM payload
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -286,6 +278,14 @@ jobs:
           bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui
         env:
           ATELIER_TEST_BROWSER: safari
+      - name: Preserve synthetic UI screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-ui-${{ runner.os }}-${{ runner.arch }}
+          path: .artifacts/rust-*.png
+          include-hidden-files: true
+          if-no-files-found: ignore
       - name: Preserve partial Windows Rust cache after verification
         if: always() && runner.os == 'Windows' && steps.windows-rust-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

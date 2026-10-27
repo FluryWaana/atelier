@@ -2828,6 +2828,12 @@ async fn connectors_scenario(
     imported = updated;
     imported = connector_transition_scenario(client, http, address, token, data, &imported).await?;
     click(client, "#close-editor").await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#task-editor');",
+        vec![],
+    )
+    .await?;
     click(client, "#manage-settings").await?;
     click(client, "#settings-tab-connectors").await?;
     click(client, "#reload-connectors").await?;
@@ -3058,6 +3064,8 @@ async fn connector_transition_scenario(
     }
     let instructions = client.find(Locator::Css("#edit-instructions")).await?;
     instructions.clear().await?;
+    // WebDriver clear does not reliably emit input when the replacement text is empty.
+    client.execute("document.querySelector('#edit-instructions').dispatchEvent(new Event('input',{bubbles:true}));", vec![]).await?;
     instructions
         .send_keys(card["instructions"].as_str().unwrap_or_default())
         .await?;
@@ -3945,6 +3953,7 @@ async fn local_commit_scenario(
 }
 
 async fn click(client: &Client, selector: &str) -> Result<()> {
+    wait_dom(client, "const element=document.querySelector(arguments[0]);return !!element && !element.matches(':disabled');", vec![json!(selector)]).await?;
     // Center controls inside scrolling dialogs; retain WebDriver's native click and hit testing.
     client.execute("document.querySelector(arguments[0])?.scrollIntoView({block:'center', inline:'nearest', behavior:'instant'});", vec![json!(selector)]).await?;
     client.find(Locator::Css(selector)).await?.click().await?;
@@ -3961,7 +3970,7 @@ async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Valu
     }
     let state = client
         .execute(
-            "return Object.fromEntries(['forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
+            "return Object.fromEntries(['editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
             vec![],
         )
         .await;
