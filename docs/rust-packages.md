@@ -65,6 +65,8 @@ atelier recover-package-maintenance --root ABSOLUTE_INSTALLATION --confirm
 
 `build-installers` exige `CI=true` et `ATELIER_RUST_FINAL_CAMPAIGN=1`. Il prépare et vérifie une installation signée neuve : Setup x64 utilisateur Windows (`ATELIER_ISCC` absolu), DEB/RPM système Linux x64/ARM64 ; macOS utilise le portable. Les recettes n’embarquent aucun Node. Les scripts Linux sont conservés en LF et les modes des fichiers permettent lecture/exécution par les autres comptes.
 
+Les recettes DEB/RPM déclarent `xdg-utils` pour l’ouverture par le bureau, ainsi que le stockage natif des secrets, Zenity et les outils de verrouillage nécessaires. Un navigateur et un hôte de tray appartiennent au bureau installé ; XFCE/exo et Epiphany sont les outils réels de la fixture CI, pas des composants ajoutés au payload Rust. Le job de qualification installe aussi `xdg-utils` explicitement, y compris sur le runner ARM64 minimal.
+
 Le serveur Windows conserve un mutex global entre sessions ; Setup/désinstallation réservent la maintenance et refusent toute instance active, sans arrêt forcé. Sous Linux, chaque serveur système conserve un verrou partagé ; le gestionnaire exige l’exclusivité et pose un marqueur qui empêche les nouveaux lancements. Un verrou système absent/modifié ou lié ne devient pas un accès portable implicite.
 
 `verify-installation` contrôle bootstrap, slots et reçus sans ouvrir de données. Le retrait refuse code modifié, reçu étranger et historique nécessitant un examen. Les fichiers humains non suivis et données sont conservés. La récupération Linux exige verrou exclusif, marqueur exact et installation signée complète ; elle conserve le marqueur dans un reçu et ne répare pas silencieusement une installation partiellement effacée.

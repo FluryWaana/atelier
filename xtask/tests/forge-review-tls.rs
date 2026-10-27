@@ -39,6 +39,51 @@ use std::{
     time::Duration,
 };
 
+#[cfg(target_os = "macos")]
+async fn verify_with_git_tls_library(certificates: &tls::Certificates) -> atelier_app::Result<()> {
+    let executable = if cfg!(target_arch = "aarch64") {
+        Path::new("/opt/homebrew/opt/openssl@3/bin/openssl")
+    } else {
+        Path::new("/usr/local/opt/openssl@3/bin/openssl")
+    };
+    if !executable.is_file() {
+        return Err(
+            "Synthetic Git TLS: Homebrew OpenSSL verification executable is absent.".into(),
+        );
+    }
+    let root = certificates._directory.path();
+    let empty = root.join("git-verify-empty-ca");
+    std::fs::create_dir(&empty)?;
+    let mut command = tokio::process::Command::new(executable);
+    command
+        .current_dir(root)
+        .env_clear()
+        .env("HOME", root)
+        .env("OPENSSL_CONF", "/dev/null")
+        .arg("verify")
+        .arg("-CAfile")
+        .arg(root.join("ca.pem"))
+        .arg("-CApath")
+        .arg(&empty)
+        .args([
+            "-no-CAstore",
+            "-purpose",
+            "sslserver",
+            "-verify_ip",
+            "127.0.0.1",
+        ])
+        .arg(root.join("server.pem"));
+    let output =
+        process_tree::capture(&mut command, &[], Duration::from_secs(10), 64 * 1024).await?;
+    if !output.status.success() {
+        return Err("Synthetic Git TLS: Homebrew OpenSSL refused the generated chain, server purpose or IP.".into());
+    }
+    eprintln!(
+        "Synthetic Git TLS: Homebrew OpenSSL verified the explicit CA chain, server purpose and IP."
+    );
+    Ok(())
+}
+
 fn doc(value: Value) -> Document {
     serde_json::from_str(&value.to_string()).unwrap()
 }
@@ -312,6 +357,8 @@ async fn stage(
 async fn publication_recovery_real_commit_review_and_automation_keep_human_criteria() {
     tls::require_final();
     let certificates = tls::Certificates::new().await.unwrap();
+    #[cfg(target_os = "macos")]
+    verify_with_git_tls_library(&certificates).await.unwrap();
     let temporary = tempfile::tempdir().unwrap();
     let base = PathBuf::from(
         temporary

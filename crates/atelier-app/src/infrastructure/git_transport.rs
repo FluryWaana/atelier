@@ -400,6 +400,48 @@ impl HttpsAuthentication {
         }
         Ok(scope)
     }
+    async fn verify_synthetic_authority_scope(
+        &self,
+        home: &std::path::Path,
+        origin: &str,
+    ) -> Result<()> {
+        if self.synthetic_authority.is_none() {
+            return Ok(());
+        }
+        for (key, name) in [
+            ("http.sslCAInfo", "synthetic-authority.pem"),
+            ("http.sslCAPath", "synthetic-empty-authorities"),
+        ] {
+            let mut command = git_command().await?;
+            let scope = self.configure_network(&mut command, home, origin)?;
+            // remote-curl appends this slash before applying URL-matched HTTP configuration.
+            let effective = format!("{}/", scope.trim_end_matches('/'));
+            command.args(["config", "--get-urlmatch", key, &effective]);
+            let output = super::process_tree::capture(
+                &mut command,
+                &[],
+                std::time::Duration::from_secs(5),
+                64 * 1024,
+            )
+            .await
+            .map_err(|_| "Synthetic Git TLS: authority scope inspection was interrupted.")?;
+            let expected = home.join(name);
+            if !output.status.success()
+                || std::str::from_utf8(&output.stdout)
+                    .ok()
+                    .map(|value| std::path::Path::new(value.trim_end_matches(['\r', '\n'])))
+                    != Some(expected.as_path())
+            {
+                return Err(if key == "http.sslCAInfo" {
+                    "Synthetic Git TLS: explicit CA file did not match the effective Git URL."
+                } else {
+                    "Synthetic Git TLS: explicit CA directory did not match the effective Git URL."
+                }
+                .into());
+            }
+        }
+        Ok(())
+    }
     pub async fn remote_head(&self, origin: &str, reference: &str) -> Result<String> {
         self.remote_head_optional(origin, reference)
             .await?
@@ -418,6 +460,7 @@ impl HttpsAuthentication {
             .prefix("atelier-git-read-")
             .tempdir()?;
         let result=async {
+            self.verify_synthetic_authority_scope(home.path(), origin).await?;
             let mut command=git_command().await?;
             let scope=self.configure_network(&mut command,home.path(),origin)?;
             command.args(["ls-remote","--refs","--exit-code","--",&scope,reference]);

@@ -43,7 +43,7 @@ jobs:
         run: bash xtask/packaging/install-macos-git.sh
       - name: Install isolated Linux native prerequisites
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf exo-utils epiphany-browser xvfb xauth zenity
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf exo-utils epiphany-browser xdg-utils xvfb xauth zenity
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
       - name: Verify the current Rust source inventory

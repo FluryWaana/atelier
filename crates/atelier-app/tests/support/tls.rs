@@ -22,7 +22,7 @@ pub fn require_final() {
 }
 
 pub struct Certificates {
-    _directory: tempfile::TempDir,
+    pub(crate) _directory: tempfile::TempDir,
     pub authority: Vec<u8>,
     pub foreign: Vec<u8>,
     pub valid: Arc<rustls::ServerConfig>,
