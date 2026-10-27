@@ -133,6 +133,19 @@ async fn lost_reply(method: Method) {
             effects::recover(store)?;
             let uncertain = effects::current(store, "synthetic-extension", &selected)?;
             assert_eq!(uncertain.state, Phase::Uncertain);
+            let reconciliation =
+                format!("/api/extensions/synthetic-extension/operations/{selected}/reconcile");
+            assert_eq!(
+                effects::reconciles_time(store, &reconciliation)?,
+                method == Method::TimeSend
+            );
+            for wrong in [
+                reconciliation.replace("/reconcile", "/send"),
+                reconciliation.replace("synthetic-extension/", "other-module/"),
+                format!("{reconciliation}/extra"),
+            ] {
+                assert!(!effects::reconciles_time(store, &wrong)?);
+            }
             if method == Method::TimeSend {
                 assert!(
                     store
@@ -200,6 +213,10 @@ async fn lost_reply(method: Method) {
     db.call(move |store| {
         let observed = effects::record(store, "synthetic-extension", &id, version, 1, reply, true)?;
         assert_eq!(observed.state, Phase::Reconciled);
+        assert!(!effects::reconciles_time(
+            store,
+            &format!("/api/extensions/synthetic-extension/operations/{id}/reconcile")
+        )?);
         if method == Method::TimeSend {
             assert!(
                 store

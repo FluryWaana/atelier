@@ -499,6 +499,24 @@ pub fn recover(store: &Store<'_>) -> Result<()> {
         Ok(())
     })
 }
+pub fn reconciles_time(store: &Store<'_>, path: &str) -> Result<bool> {
+    let Some(tail) = path.strip_prefix("/api/extensions/") else {
+        return Ok(false);
+    };
+    let parts = tail.split('/').collect::<Vec<_>>();
+    let [module, "operations", id, "reconcile"] = parts.as_slice() else {
+        return Ok(false);
+    };
+    Ok(read(&store.settings::<Document>()?)?
+        .iter()
+        .any(|operation| {
+            operation.module == *module
+                && operation.id == *id
+                && operation.method == Method::TimeSend
+                && operation.state == Phase::Uncertain
+        }))
+}
+
 pub fn blocks(store: &Store<'_>, path: &str) -> Result<bool> {
     if !read(&store.settings::<Document>()?)?.iter().any(pending) {
         return Ok(false);

@@ -237,6 +237,15 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
                 match state
                     .database
                     .call(move |store| {
+                        let tempo_path =
+                            if crate::infrastructure::connector_effects::reconciles_time(
+                                store,
+                                &operation_path,
+                            )? {
+                                &operation_path
+                            } else {
+                                &guarded_path
+                            };
                         Ok(crate::infrastructure::connector_effects::blocks(
                             store,
                             &operation_path,
@@ -245,7 +254,7 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
                         )? || crate::infrastructure::jira_transition::blocks(
                             store,
                             &guarded_path,
-                        )? || crate::infrastructure::tempo_export::blocks(store, &guarded_path)?
+                        )? || crate::infrastructure::tempo_export::blocks(store, tempo_path)?
                             || crate::infrastructure::forge_draft::blocks(store, &guarded_path)?
                             || crate::infrastructure::automation::blocks(store, &guarded_path)?)
                     })
