@@ -13,15 +13,15 @@ Le plan et les capacités restent décrits dans [rust-migration-plan.md](rust-mi
 | Périmètre | Fichiers |
 | --- | ---: |
 | crates/atelier-core | 66 |
-| crates/atelier-app | 183 |
-| crates/atelier-ui | 50 |
+| crates/atelier-app | 184 |
+| crates/atelier-ui | 51 |
 | xtask | 99 |
-| scripts | 3 |
+| scripts | 4 |
 | .github | 1 |
 | .cargo | 1 |
 | racine | 9 |
 
-Total : 412 fichiers.
+Total : 415 fichiers.
 
 ## Fichiers
 
@@ -52,6 +52,7 @@ Total : 412 fichiers.
 | [crates/atelier-app/src/http/connector_repositories.rs](../crates/atelier-app/src/http/connector_repositories.rs) | Source Rust |
 | [crates/atelier-app/src/http/connector_ticket_reset.rs](../crates/atelier-app/src/http/connector_ticket_reset.rs) | Source Rust |
 | [crates/atelier-app/src/http/connectors.rs](../crates/atelier-app/src/http/connectors.rs) | Source Rust |
+| [crates/atelier-app/src/http/dev_reload.js](../crates/atelier-app/src/http/dev_reload.js) | Ressource / documentation |
 | [crates/atelier-app/src/http/events.rs](../crates/atelier-app/src/http/events.rs) | Source Rust |
 | [crates/atelier-app/src/http/files.rs](../crates/atelier-app/src/http/files.rs) | Source Rust |
 | [crates/atelier-app/src/http/folders.rs](../crates/atelier-app/src/http/folders.rs) | Source Rust |
@@ -288,6 +289,7 @@ Total : 412 fichiers.
 | [crates/atelier-core/tests/task-editing.rs](../crates/atelier-core/tests/task-editing.rs) | Test / support |
 | [crates/atelier-ui/Cargo.toml](../crates/atelier-ui/Cargo.toml) | Configuration |
 | [crates/atelier-ui/Trunk.toml](../crates/atelier-ui/Trunk.toml) | Configuration |
+| [crates/atelier-ui/atelier-kanban.png](../crates/atelier-ui/atelier-kanban.png) | Ressource / documentation |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Ressource / documentation |
 | [crates/atelier-ui/locales/en-US.json](../crates/atelier-ui/locales/en-US.json) | Ressource / documentation |
 | [crates/atelier-ui/src/agent_cli.rs](../crates/atelier-ui/src/agent_cli.rs) | Source Rust |
@@ -337,6 +339,7 @@ Total : 412 fichiers.
 | [crates/atelier-ui/src/worktree.rs](../crates/atelier-ui/src/worktree.rs) | Source Rust |
 | [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / documentation |
 | [rust-toolchain.toml](../rust-toolchain.toml) | Configuration |
+| [scripts/preview-watch.tests.ps1](../scripts/preview-watch.tests.ps1) | Outil natif / fabrication |
 | [scripts/preview.ps1](../scripts/preview.ps1) | Outil natif / fabrication |
 | [scripts/rust-keyring-accounts.sh](../scripts/rust-keyring-accounts.sh) | Outil natif / fabrication |
 | [scripts/rust-keyring-macos-accounts.sh](../scripts/rust-keyring-macos-accounts.sh) | Outil natif / fabrication |

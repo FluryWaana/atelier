@@ -157,17 +157,19 @@ pub fn Settings(
     view! {
         <dialog id="settings-dialog" class="editor" node_ref=dialog aria-labelledby="settings-title" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("PRÉFÉRENCES")}</p><h2 id="settings-title">{move || i18n.text("Paramètres de l’application")}</h2></div><button id="close-settings" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
-            <label for="interface-language">{move || i18n.text("Langue")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="field-help">{move || i18n.text("La langue est conservée dans ce navigateur.")}</p>
-            <div class="editor-actions" role="tablist" aria-label=move || i18n.text("Paramètres de l’application")>
+            <div class="settings-page">
+            <nav class="settings-navigation" role="tablist" aria-orientation="vertical" aria-label=move || i18n.text("Paramètres de l’application")>
                 {TABS.into_iter().enumerate().map(move |(index,(id,label))| view! {
                     <button type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
                         if pending.get_untracked() { return; }
-                        let next=match event.key().as_str() { "ArrowRight"=> (index+1)%TABS.len(), "ArrowLeft"=> (index+TABS.len()-1)%TABS.len(), "Home"=>0, "End"=>TABS.len()-1, _=>return };
+                        let next=match event.key().as_str() { "ArrowRight"|"ArrowDown"=> (index+1)%TABS.len(), "ArrowLeft"|"ArrowUp"=> (index+TABS.len()-1)%TABS.len(), "Home"=>0, "End"=>TABS.len()-1, _=>return };
                         event.prevent_default(); tab.set(next);
                         if let Some(element)=document().get_element_by_id(&format!("settings-tab-{}",TABS[next].0)).and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok()) { let _=element.focus(); }
                     }>{move || i18n.text(label)}</button>
                 }).collect_view()}
-            </div>
+            </nav>
+            <div class="settings-content">
+            <label for="interface-language">{move || i18n.text("Langue")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="field-help">{move || i18n.text("La langue est conservée dans ce navigateur.")}</p>
             <section id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" hidden=move || tab.get()!=0>
             <p class="field-help">{move || i18n.text("Ces valeurs s’appliquent aux nouvelles tâches. Les projets peuvent définir leurs propres préférences.")}</p>
             <form on:submit=move |event| {
@@ -216,6 +218,7 @@ pub fn Settings(
             <section id="settings-panel-tempo" role="tabpanel" aria-labelledby="settings-tab-tempo" hidden=move || tab.get()!=3><crate::tempo::TempoSettings token pending dirty=tempo_dirty /></section>
             <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors board token pending dirty=connectors_dirty /></section>
             <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
+            </div></div>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| discard.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
         </dialog>

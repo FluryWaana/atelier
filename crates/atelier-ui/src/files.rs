@@ -5,8 +5,20 @@ use wasm_bindgen_futures::spawn_local;
 
 const PAGE_SIZE: usize = 200;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FileMode {
+    Files,
+    Changes,
+}
+
 #[component]
-pub fn Files(card_id: String, token: StoredValue<Result<String, String>>) -> impl IntoView {
+pub fn Files(
+    card_id: String,
+    token: StoredValue<Result<String, String>>,
+    mode: Signal<FileMode>,
+    active: Signal<bool>,
+    revision: Signal<u64>,
+) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let id = StoredValue::new(card_id);
     let files = RwSignal::new(Vec::<FileChange>::new());
@@ -17,7 +29,8 @@ pub fn Files(card_id: String, token: StoredValue<Result<String, String>>) -> imp
     let unavailable = RwSignal::new(String::new());
     let error = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
-    let changes = RwSignal::new(false);
+    let loaded = RwSignal::new(None::<(FileMode, u64)>);
+    let stale = Memo::new(move |_| loaded.get() != Some((mode.get(), revision.get())));
     let base = RwSignal::new(String::new());
     let matching = Memo::new(move |_| {
         let query = filter.get().to_lowercase();
@@ -39,8 +52,9 @@ pub fn Files(card_id: String, token: StoredValue<Result<String, String>>) -> imp
             }
         };
         let card = id.get_value();
-        let changes = changes.get_untracked();
+        let changes = mode.get_untracked() == FileMode::Changes;
         if selection.is_none() {
+            loaded.set(Some((mode.get_untracked(), revision.get_untracked())));
             files.set(Vec::new());
             base.set(String::new());
             page.set(0);
@@ -132,20 +146,22 @@ pub fn Files(card_id: String, token: StoredValue<Result<String, String>>) -> imp
             }
         });
     };
-    load(None);
+    Effect::new(move |_| {
+        // Finish an in-flight read before loading the requested mode or worktree.
+        // The stale browser remains hidden until that new listing is loaded.
+        if active.get() && stale.get() && !pending.get() {
+            load(None);
+        }
+    });
     view! {
-        <div class="file-explorer" aria-busy=move || pending.get().to_string()>
-            <div class="editor-actions" role="group" aria-label=move || i18n.text("Vue du dépôt")>
-                <button id="show-all-files" type="button" aria-pressed=move || (!changes.get()).to_string() disabled=move || pending.get() on:click=move |_| { changes.set(false); load(None); }>{move || i18n.text("Tous les fichiers")}</button>
-                <button id="show-changes" type="button" aria-pressed=move || changes.get().to_string() disabled=move || pending.get() on:click=move |_| { changes.set(true); load(None); }>{move || i18n.text("Changements")}</button>
-            </div>
+        <div class="file-explorer" aria-busy=move || (pending.get() || stale.get()).to_string()>
             <p class="field-help">{move || i18n.text("Lecture seule : fichiers suivis et nouveaux fichiers non ignorés par Git.")}</p>
-            <p class="field-help" hidden=move || !changes.get()>{move || i18n.text("Comparaison avec le point de départ du worktree, ou le dernier commit du dépôt principal : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.")}</p>
+            <p class="field-help" hidden=move || mode.get() != FileMode::Changes>{move || i18n.text("Comparaison avec le point de départ du worktree, ou le dernier commit du dépôt principal : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.")}</p>
             <p class="field-help" hidden=move || base.get().is_empty()>{move || i18n.text("Commit de référence : {0}").replace("{0}", &base.get())}</p>
             <div class="editor-actions"><button id="refresh-files" type="button" disabled=move || pending.get() on:click=move |_| load(None)>{move || i18n.text("Actualiser")}</button><span role="status">{move || if pending.get() { i18n.text("Chargement des fichiers…") } else { i18n.text("{0} fichier(s)").replace("{0}",&matching.with(Vec::len).to_string()) }}</span></div>
             <label for="file-search">{move || i18n.text("Filtrer les fichiers")}</label><input id="file-search" type="search" prop:value=move || filter.get() on:input=move |event| { filter.set(event_target_value(&event)); page.set(0); } />
             <p id="file-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <div class="file-browser"><div>
+            <div class="file-browser" hidden=move || stale.get()><div>
                 <nav class="file-list" aria-label=move || i18n.text("Fichiers du projet")><For each={move || matching.with(|files| files.iter().skip(page.get()*PAGE_SIZE).take(PAGE_SIZE).cloned().collect::<Vec<_>>())} key=|entry| (entry.path.clone(), entry.untracked, entry.status.clone()) children=move |entry| {
                     let name = StoredValue::new(entry);
                     view! { <button type="button" class="file-choice" data-file=name.get_value().path aria-pressed=move || (selected.get() == Some((name.get_value().path, name.get_value().untracked))).to_string() disabled=move || pending.get() on:click=move |_| load(Some(name.get_value()))>{if name.get_value().status.is_empty() { String::new() } else { format!("{} · ", name.get_value().status) }}{name.get_value().path}</button> }

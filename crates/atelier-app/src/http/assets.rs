@@ -12,6 +12,7 @@ pub fn wasm_asset_name(name: &str) -> bool {
         return false;
     }
     name == "index.html"
+        || name == "atelier-kanban.png"
         || name == "atelier-loader.js"
         || (name.starts_with("atelier-ui-") && (name.ends_with(".js") || name.ends_with(".wasm")))
         || (name.starts_with("style-") && name.ends_with(".css"))
@@ -114,6 +115,18 @@ mod tests {
         );
     }
 
+    #[test]
+    fn brand_asset_has_an_exact_name_allowance() {
+        assert!(wasm_asset_name("atelier-kanban.png"));
+        for name in [
+            "other.png",
+            "../atelier-kanban.png",
+            "atelier-kanban.png.js",
+            "atelier-kanban.svg",
+        ] {
+            assert!(!wasm_asset_name(name));
+        }
+    }
     #[test]
     fn native_assets_refuse_unexpected_names_and_unbounded_file_counts() {
         let root = tempfile::tempdir().unwrap();

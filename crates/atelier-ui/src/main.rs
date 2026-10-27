@@ -239,6 +239,7 @@ fn App() -> impl IntoView {
     let archives = RwSignal::new(false);
     let loading = RwSignal::new(true);
     let title = RwSignal::new(String::new());
+    let title_input = NodeRef::<leptos::html::Input>::new();
     let error = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
     let selected = RwSignal::new(None::<Card>);
@@ -310,25 +311,38 @@ fn App() -> impl IntoView {
         selected.set(card);
     });
     view! {
-        <main id="main-content" class="main-content">
-            <header class="app-header"><div><p class="eyebrow">"ATELIER KANBAN"</p><h1>{move || i18n.text("Votre espace de travail")}</h1><p class="subtitle">{move || i18n.text("Des idées aux tâches terminées, une étape à la fois.")}</p></div><span class="development">{move || i18n.text("En développement")}</span></header>
+        <a class="skip-link" href="#main-content">{move || i18n.text("Aller au contenu")}</a>
+        <aside class="sidebar" aria-label=move || i18n.text("Navigation principale")>
+            <a class="brand" href="#main-content" aria-label="Atelier Kanban">
+                <img class="brand-logo" src="/atelier-kanban.png" width="40" height="40" alt="" />
+                <span>"Atelier"<span class="brand-subtitle">"Kanban"</span></span>
+            </a>
+            <div class="workspace-label">{move || i18n.text("ESPACE PERSONNEL")}</div>
+            <a class="nav-item" href="#brainstorms-heading"><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 18h6M9 21h6M8 14a6 6 0 1 1 8 0c-1 .8-1 2-1 2H9s0-1.2-1-2Z" /></svg><span class="nav-label">{move || i18n.text("Brainstorms")}</span></a>
+            <a class="nav-item" href="#prototype-board" aria-current="page"><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="7" rx="1" /></svg><span class="nav-label">"Kanban"</span></a>
+            <button class="nav-item" id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3Z" /></svg><span class="nav-label">{move || i18n.text("Mes projets")}</span></button>
+            <button class="nav-item" id="manage-settings" type="button" disabled=move || loading.get() on:click=move |_| show_settings.set(true)><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6" /></svg><span class="nav-label">{move || i18n.text("Réglages")}</span></button>
+            <button class="nav-item" id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true)><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 3h13l3 3v15H4ZM8 3v6h8V3M8 21v-8h8v8" /></svg><span class="nav-label">{move || i18n.text("Sauvegardes")}</span></button>
+            <div class="sidebar-bottom">
+                <div class="workspace-label">{move || i18n.text("VOS AGENTS")}</div>
+                <button class="nav-item" id="manage-agents" type="button" disabled=move || loading.get() on:click=move |_| show_agents.set(true)><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="3" /><path d="M12 2v4M8 11h1M15 11h1M8 16h8" /></svg><span class="nav-label">{move || i18n.text("Agents")}</span></button>
+                <div class="local-note"><span class="online-dot"></span>{move || i18n.text("Sur ce PC")}<small>{move || i18n.text("Vos cartes restent ici.")}</small></div>
+            </div>
+        </aside>
+        <main id="main-content" class="main-content" tabindex="-1">
+            <header class="topbar"><span>{move || i18n.text("Mon espace")}<span class="slash">" / "</span><strong>{move || i18n.text("Tableau")}</strong></span><span class="local-badge">"LOCAL"<span class="online-dot"></span></span></header>
+            <section class="heading"><div><div class="eyebrow">{move || i18n.text("VOTRE ESPACE DE TRAVAIL")}</div><h1>{move || i18n.text("Votre prochain pas.")}</h1><p>{move || i18n.text("Un tableau pour vos tâches. Vos agents pour avancer.")}</p></div><div class="heading-actions"><button class="primary" type="button" disabled=move || pending.get() || loading.get() on:click=move |_| { if let Some(input) = title_input.get() { let _ = input.focus(); } }>{move || i18n.text("Nouvelle tâche")}</button></div></section>
             <crate::time::TimerBanner board token on_task=open_task />
-            <div class="toolbar" aria-label=move || i18n.text("Filtres du tableau")>
+            <div class="toolbar"><nav class="tabs" aria-label=move || i18n.text("Vues du projet")><a class="selected" href="#prototype-board">"Kanban"</a><button id="view-time-report" type="button" disabled=move || loading.get() on:click=move |_|{if let Err(message)=location_parameter("view",Some("time")){error.set(message);}show_time_report.set(true);}>{move ||i18n.text("Temps")}</button><label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />{move || i18n.text("Archives")}</label></nav></div>
+            <div class="toolbar-actions" aria-label=move || i18n.text("Filtres du tableau")>
                 <div><label for="board-search">{move || i18n.text("Rechercher")}</label><input id="board-search" type="search" placeholder=move || i18n.text("Titre ou description…") prop:value=move || search.get() on:input=move |event| search.set(event_target_value(&event)) /></div>
                 <div><label for="board-project">{move || i18n.text("Projet")}</label><select id="board-project" prop:value=move || repository.get() on:change=move |event| repository.set(event_target_value(&event))><option value="">{move || i18n.text("Tous les projets")}</option><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
                     let id = StoredValue::new(field(&project, "id"));
                     let current = move || projects.with(|projects| projects.iter().find(|project| field(project, "id") == id.get_value()).cloned());
                     view! { <option value=move || current().map(|project| field(&project, "repo")).unwrap_or_default()>{move || current().map(|project| field(&project, "name")).unwrap_or_default()}</option> }
                 } /></select></div>
-                <label class="check-filter"><input id="show-archives" type="checkbox" prop:checked=move || archives.get() on:change=move |event| archives.set(event_target_checked(&event)) />{move || i18n.text("Archives")}</label>
-                <button id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true)>{move || i18n.text("Gérer les projets")}</button>
-                <button id="manage-settings" type="button" disabled=move || loading.get() on:click=move |_| show_settings.set(true)>{move || i18n.text("Paramètres")}</button>
-                <button id="manage-agents" type="button" disabled=move || loading.get() on:click=move |_| show_agents.set(true)>{move || i18n.text("Agents")}</button>
-                <button id="view-time-report" type="button" disabled=move || loading.get() on:click=move |_|{if let Err(message)=location_parameter("view",Some("time")){error.set(message);}show_time_report.set(true);}>{move ||i18n.text("Temps")}</button>
-                <button id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true)>{move || i18n.text("Sauvegardes")}</button>
-                <span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible(false).len().to_string())}</span>
             </div>
-            <form class="quick-create" on:submit=move |event:leptos::ev::SubmitEvent| {
+            <form id="quick-create-form" class="quick-create" on:submit=move |event:leptos::ev::SubmitEvent| {
                 let brainstorming=event.submitter().is_some_and(|button|button.id()=="create-brainstorm");
                 event.prevent_default();
                 if pending.get_untracked() || template_pending.get_untracked() { return; }
@@ -350,7 +364,7 @@ fn App() -> impl IntoView {
                     pending.set(false);
                 });
             }>
-                <div><label for="task-title">{move || i18n.text("Nouvelle tâche")}</label><input id="task-title" name="title" required maxlength="300" disabled=move || pending.get() placeholder=move || i18n.text("Que voulez-vous accomplir ?") prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
+                <div><label for="task-title">{move || i18n.text("Nouvelle tâche")}</label><input node_ref=title_input id="task-title" name="title" required maxlength="300" disabled=move || pending.get() placeholder=move || i18n.text("Que voulez-vous accomplir ?") prop:value=move || title.get() on:input=move |event| title.set(event_target_value(&event)) /></div>
                 <div class="template-picker" hidden=move || templates.get().is_empty()><label for="task-template">{move || i18n.text("Modèle")}</label><select id="task-template" disabled=move || pending.get() || template_pending.get() prop:value=move || template.get() on:change=move |event| { template.set(event_target_value(&event)); remove_template.set(false); }><option value="">{move || i18n.text("Sans modèle")}</option><For each=move || templates.get() key=|item| field(item,"id") children=|item| view! { <option value=field(&item,"id")>{field(&item,"name")}</option> } /></select><button id="remove-template" type="button" class="text-action" hidden=move || template.get().is_empty() disabled=move || pending.get() || template_pending.get() on:click=move |_| remove_template.set(true)>{move || i18n.text("Retirer ce modèle…")}</button></div>
                 <button id="create-task" class="primary" type="submit" disabled=move || pending.get() || template_pending.get() || loading.get()>{move || i18n.text(if pending.get() { "Création…" } else { "Créer la tâche" })}</button>
                 <button id="create-brainstorm" type="submit" disabled=move||pending.get()||template_pending.get()||loading.get()>{move||i18n.text("Créer une session de brainstorm")}</button>
@@ -368,20 +382,28 @@ fn App() -> impl IntoView {
                 });
             }>{move || i18n.text("Retirer le modèle")}</button><button type="button" disabled=move || template_pending.get() on:click=move |_| remove_template.set(false)>{move || i18n.text("Annuler")}</button></div>
             <p role="alert" id="error">{move || i18n.text(&error.get())}</p>
-            <p id="live-status" class="field-help" role="status" hidden=move || token.get_value().is_err() data-connected=move || board.connected.get().to_string()>{move || i18n.text(&(if !board.sync_error.get().is_empty() { board.sync_error.get() } else if board.connected.get() { "Tableau à jour".to_owned() } else { "Actualisation interrompue. Reconnexion automatique…".to_owned() }))}</p>
+            <div class="board-meta"><span class="task-count" role="status">{move || i18n.text("{0} tâche(s)").replace("{0}", &visible(false).len().to_string())}</span><p id="live-status" class="field-help" role="status" hidden=move || token.get_value().is_err() data-connected=move || board.connected.get().to_string()>{move || i18n.text(&(if !board.sync_error.get().is_empty() { board.sync_error.get() } else if board.connected.get() { "Tableau à jour".to_owned() } else { "Actualisation interrompue. Reconnexion automatique…".to_owned() }))}</p></div>
             <p class="loading" role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement du tableau…")}</p>
             <crate::queue::Queue board token on_open=open_task />
-            <section aria-label=move || i18n.text("Tableau des tâches") id="prototype-board" class="kanban" aria-busy=move || loading.get().to_string()>
+            <section aria-label=move || i18n.text("Tableau des tâches") id="prototype-board" class="kanban" tabindex="-1" aria-busy=move || loading.get().to_string()>
                 <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
                     let column = move || visible(false).into_iter().filter(|card| field(&card.fields, "status") == status).collect::<Vec<_>>();
                     view! { <section class="kanban-column" data-status=status aria-label=move || i18n.text(label)><header class="column-heading"><h2>{move || i18n.text(label)}</h2><span>{move || column().len()}</span></header><div class="column-cards"><For each=column key=|card| card.id.clone() children=move |card| {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
-                        view! { <article class="card" data-id=id.get_value()><h3 class="card-title"><button type="button" class="card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3><p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p></article> }
+                        view! { <article class="card" data-id=id.get_value()>
+                            <span class="card-label">{move || current().and_then(|card|card.fields.get::<atelier_core::document::Document>("ticket").ok().flatten()).map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text("TÂCHE LOCALE"))}</span>
+                            <h3 class="card-title"><button type="button" class="card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button></h3>
+                            <p class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</p>
+                            {move || current().and_then(|card|card.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist").ok().flatten()).filter(|criteria|!criteria.is_empty()).map(|criteria|view!{<span class="card-criteria">{i18n.text("{0}/{1} critères vérifiés").replace("{0}",&criteria.iter().filter(|criterion|criterion.done).count().to_string()).replace("{1}",&criteria.len().to_string())}</span>})}
+                            <div class="card-bottom">{move || current().and_then(|card|{let agent=field(&card.fields,"agent");board.settings.with(|settings|atelier_core::domain::agent_options::providers(settings).unwrap_or_default().into_iter().find(|profile|field(profile,"id")==agent))}).map(|profile|view!{<span class="agent-pill">{field(&profile,"name")}</span>})}<span class="project-pill">{move || current().map(|card|{let repo=field(&card.fields,"repo");projects.with(|projects|projects.iter().find(|project|field(project,"repo")==repo).map(|project|field(project,"name"))).unwrap_or_else(||if repo.is_empty(){i18n.text("Sans projet")}else{repo.rsplit(['/', '\\']).find(|part|!part.is_empty()).unwrap_or(&repo).to_owned()})}).unwrap_or_default()}</span>
+                                <span class="card-live" hidden=move || !board.runs.with(|runs|runs.iter().any(|run|field(run,"cardId")==id.get_value()&&field(run,"status")=="running"))>{move ||i18n.text("Travail en cours")}</span>
+                            </div>
+                        </article> }
                     } /><p class="empty-column" hidden=move || !column().is_empty() || loading.get()>{move || i18n.text("Aucune tâche")}</p></div></section> }
                 } />
             </section>
-            <section class="task-files" aria-labelledby="brainstorms-heading"><h2 id="brainstorms-heading">{move||i18n.text("Brainstorms")}</h2><p class="field-help">{move||i18n.text("Saisis une idée pour ouvrir une conversation en lecture seule, avec ou sans projet. Les propositions deviennent des tâches uniquement après confirmation.")}</p><For each=move||visible(true) key=|card|(card.id.clone(),String::from_utf16_lossy(&card.title.0)) children=move|card|view!{<button id=format!("card-open-{}",card.id) type="button" on:click=move|_|open_task.run(card.id.clone())>{String::from_utf16_lossy(&card.title.0)}</button>} /><p hidden=move||!visible(true).is_empty()>{move||i18n.text("Aucun brainstorm pour ces filtres.")}</p></section>
+            <section class="task-files" aria-labelledby="brainstorms-heading"><h2 id="brainstorms-heading" tabindex="-1">{move||i18n.text("Brainstorms")}</h2><p class="field-help">{move||i18n.text("Saisis une idée pour ouvrir une conversation en lecture seule, avec ou sans projet. Les propositions deviennent des tâches uniquement après confirmation.")}</p><For each=move||visible(true) key=|card|(card.id.clone(),String::from_utf16_lossy(&card.title.0)) children=move|card|view!{<button id=format!("card-open-{}",card.id) type="button" on:click=move|_|open_task.run(card.id.clone())>{String::from_utf16_lossy(&card.title.0)}</button>} /><p hidden=move||!visible(true).is_empty()>{move||i18n.text("Aucun brainstorm pour ces filtres.")}</p></section>
             {move || selected.get().map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| { selected.set(None); if let Err(message) = task_location(None) { error.set(message); } }) /> })}
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_settings.get()><Settings board token on_close=Callback::new(move |()| show_settings.set(false)) /></Show>

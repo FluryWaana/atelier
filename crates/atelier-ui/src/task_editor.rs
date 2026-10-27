@@ -1,4 +1,4 @@
-use crate::files::Files;
+use crate::files::{FileMode, Files};
 use crate::i18n::I18n;
 use crate::worktree::Workspace;
 use crate::{STATUSES, field, live::BoardState, replace_card, write};
@@ -9,6 +9,13 @@ use gloo_net::http::Method;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
+
+const TASK_TABS: [(&str, &str); 4] = [
+    ("details", "La tâche"),
+    ("activity", "Agent & activité"),
+    ("diff", "Diff"),
+    ("files", "Fichiers"),
+];
 
 #[derive(Clone, PartialEq)]
 struct Draft {
@@ -127,7 +134,26 @@ pub fn TaskEditor(
     let commit_dirty = RwSignal::new(false);
     let connector_dirty = RwSignal::new(false);
     let reply_drafts = RwSignal::new(std::collections::BTreeSet::<String>::new());
-    let show_files = RwSignal::new(false);
+    let initial_tab = if field(&card.fields, "status") == "review" && !no_repository {
+        "diff"
+    } else {
+        "details"
+    };
+    let active_tab = RwSignal::new(initial_tab);
+    let file_mode = RwSignal::new(if initial_tab == "diff" {
+        FileMode::Changes
+    } else {
+        FileMode::Files
+    });
+    let files_revision = RwSignal::new(0u64);
+    let select_tab = move |tab: &'static str| {
+        if tab == "diff" {
+            file_mode.set(FileMode::Changes);
+        } else if tab == "files" {
+            file_mode.set(FileMode::Files);
+        }
+        active_tab.set(tab);
+    };
     let error = RwSignal::new(String::new());
     let confirmation = RwSignal::new("");
     let next_task = RwSignal::new(String::new());
@@ -311,13 +337,43 @@ pub fn TaskEditor(
             draft.set(next);
         }
     });
+    // Hide panels without unmounting their forms, pending operations or draft guards.
     view! {
-        <dialog id="task-editor" class="editor" class:workspace=move || show_files.get() node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
+        <dialog id="task-editor" class="editor workspace" node_ref=dialog aria-labelledby="editor-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text(if archived { "ARCHIVE" } else { "TÂCHE" })}</p><h2 id="editor-heading">{move || i18n.text("Détails de la tâche")}</h2></div><button id="close-editor" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
+            <nav class="task-tabs" role="tablist" aria-label=move || i18n.text("Sections de la tâche")>
+                {TASK_TABS.into_iter().enumerate().map(move |(index, (tab, label))| view! {
+                    <button id=format!("task-tab-{tab}") type="button" role="tab" aria-controls=if matches!(tab,"diff"|"files") { "task-panel-repository".to_owned() } else { format!("task-panel-{tab}") } aria-selected=move || (active_tab.get()==tab).to_string() tabindex=move || if active_tab.get()==tab { 0 } else { -1 } on:click=move |_| select_tab(tab) on:keydown=move |event: leptos::ev::KeyboardEvent| {
+                        let next = match event.key().as_str() {
+                            "ArrowRight" => (index + 1) % TASK_TABS.len(),
+                            "ArrowLeft" => (index + TASK_TABS.len() - 1) % TASK_TABS.len(),
+                            "Home" => 0,
+                            "End" => TASK_TABS.len() - 1,
+                            _ => return,
+                        };
+                        event.prevent_default();
+                        let tab = TASK_TABS[next].0;
+                        select_tab(tab);
+                        if let Some(document) = web_sys::window().and_then(|window| window.document())
+                            && let Some(element) = document.get_element_by_id(&format!("task-tab-{tab}"))
+                            && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
+                        {
+                            let _ = element.focus();
+                        }
+                    }>{move || i18n.text(label)}</button>
+                }).collect_view()}
+            </nav>
+            <crate::time::TimerBanner board token nested=true on_task=navigate />
+            <section id="task-panel-details" class="task-panel" role="tabpanel" aria-labelledby="task-tab-details" tabindex="0" hidden=move || active_tab.get() != "details">
+            <div class="task-columns"><div class="task-main">
             {move ||ticket_info.get().map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("Ticket associé")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("Le titre et la description de cette carte sont conservés localement. Aucune synchronisation automatique n’est active.")}</p></section>}})}
             {move||board.cards.with(|cards|cards.iter().find(|card|card.id==id.get_value()).map(|card|["brainstormQuestions","preparationQuestions"].into_iter().flat_map(|key|card.fields.get::<Vec<String>>(key).ok().flatten().unwrap_or_default()).collect::<Vec<_>>())).filter(|questions|!questions.is_empty()).map(|questions|view!{<section class="task-files"><h3>{move||i18n.text("Questions à clarifier")}</h3><ul>{questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul></section>})}
-            <crate::time::TimerBanner board token nested=true on_task=navigate />
-            <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); }>
+            <form on:submit=move |event| { event.prevent_default(); perform(Action::Save); } on:invalid:capture=move |event: web_sys::Event| {
+                select_tab("details");
+                if let Some(target) = event.target().and_then(|target| target.dyn_into::<web_sys::HtmlElement>().ok()) {
+                    request_animation_frame(move || { let _ = target.focus(); });
+                }
+            }>
                 <fieldset disabled=move || pending.get() || automation_active.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || archived || show_template.get()>
                     <label for="edit-title">{move || i18n.text("Titre")}</label><input id="edit-title" required maxlength="300" autofocus readonly=move ||ticket.get() prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
                     <label for="edit-status">{move || i18n.text("Statut")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, label)| view! { <option value=status>{move || i18n.text(label)}</option> }).collect_view()}</select>
@@ -344,21 +400,29 @@ pub fn TaskEditor(
                         <p class="field-help" hidden={move || cards.get().len() > 1}>{move || i18n.text("Aucune autre tâche disponible.")}</p>
                     </section>
                 </fieldset>
-                <p id="editor-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
                 <div class="editor-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><span role="status">{move || i18n.text(if dirty.get() { "Modifications non enregistrées" } else { "" })}</span></div>
             </form>
-            <crate::automation::Automation card_id=id.get_value() board token pending on_applied=reload_draft blocked=Memo::new(move |_|dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||forge_dirty.get()||connector_dirty.get()||commit_dirty.get()||show_template.get()||archived) />
+            </div><aside class="task-aside">
             <crate::commits::Commits card_id=id.get_value() board token pending dirty=commit_dirty blocked=Memo::new(move |_|dirty.get()||connector_dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||forge_dirty.get()||automation_active.get()||show_template.get()) archived />
             <crate::forge_task::ForgeTask card_id=id.get_value() board token pending dirty=forge_dirty blocked=Memo::new(move |_|dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||connector_dirty.get()||commit_dirty.get()||automation_active.get()||show_template.get()) archived />
             <crate::jira_creation::JiraCreation card_id=id.get_value() board token pending dirty=creation_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) archived />
             <crate::time::TimeTask card_id=id.get_value() board token pending dirty=time_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) archived />
-            <Show when=move||!no_repository><Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) on_change=Callback::new(move |()| show_files.set(false)) /></Show>
+            <Show when=move||!no_repository><Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) on_change=Callback::new(move |()| files_revision.update(|revision| *revision += 1)) /></Show>
             <crate::connector_ticket::ConnectorTicket card_id=id.get_value() board token pending dirty=connector_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() || archived) on_applied=reload_draft />
             <crate::jira_refresh::JiraRefresh card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() || archived) on_applied=reload_draft />
             <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
+            </aside></div></section>
+            <section id="task-panel-activity" class="task-panel" role="tabpanel" aria-labelledby="task-tab-activity" tabindex="0" hidden=move || active_tab.get() != "activity">
+            <crate::automation::Automation card_id=id.get_value() board token pending on_applied=reload_draft blocked=Memo::new(move |_|dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||forge_dirty.get()||connector_dirty.get()||commit_dirty.get()||show_template.get()||archived) />
             <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
             <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts on_open=navigate on_applied=reload_draft blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
-            <section class="task-files" hidden=no_repository><button id="browse-task-files" type="button" disabled=move || pending.get() aria-expanded=move || show_files.get().to_string() on:click=move |_| show_files.update(|shown| *shown = !*shown)>{move || i18n.text("Fichiers du projet")}</button><Show when=move || show_files.get()><Files card_id=id.get_value() token /></Show></section>
+            </section>
+            <section id="task-panel-repository" class="task-panel" role="tabpanel" aria-labelledby=move || if file_mode.get()==FileMode::Changes { "task-tab-diff" } else { "task-tab-files" } tabindex="0" hidden=move || !matches!(active_tab.get(),"diff"|"files")>
+                <Show when=move || !no_repository fallback=move || view! { <p class="field-help">{move || i18n.text("Cette tâche n’a pas de dépôt.")}</p> }>
+                    <Files card_id=id.get_value() token mode=Signal::derive(move || file_mode.get()) active=Signal::derive(move || matches!(active_tab.get(),"diff"|"files")) revision=Signal::derive(move || files_revision.get()) />
+                </Show>
+            </section>
+            <p id="editor-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("Dupliquer")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "Restaurer" } else { "Archiver" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("Supprimer…")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("Créer un modèle")}</button></div>
             <form class="template-form" hidden=move || !show_template.get() on:submit=move |event| { event.prevent_default(); perform(Action::Template); }><label for="template-name">{move || i18n.text("Nom du modèle")}</label><input id="template-name" required maxlength="100" disabled=move || pending.get() prop:value=move || template_name.get() on:input=move |event| template_name.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text("Le modèle reprend la description, les instructions et les critères à vérifier.")}</p><button id="save-template" class="primary" type="submit" disabled=move || pending.get()>{move || i18n.text("Enregistrer le modèle")}</button><button type="button" disabled=move || pending.get() on:click=move |_| { template_name.set(String::new()); show_template.set(false); }>{move || i18n.text("Annuler le modèle")}</button></form>
             <p id="editor-notice" role="status">{move || i18n.text(&notice.get())}</p>
