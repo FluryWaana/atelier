@@ -363,7 +363,9 @@ impl Installation {
         let payload = update_package::authenticated_payload(&receipt, &self.trust, target)?;
         let bytes = CheckedFile::open_in(&self.directory, Path::new("bootstrap-manifest.json"))?
             .read(1024 * 1024)?;
-        if format!("{:x}", Sha256::digest(&bytes)) != payload.manifest_sha256 {
+        if crate::infrastructure::session::hexadecimal(&Sha256::digest(&bytes))
+            != payload.manifest_sha256
+        {
             return Err("Manifeste du lanceur installé modifié.".into());
         }
         let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
@@ -384,7 +386,8 @@ impl Installation {
             CheckedFile::open_in(&self.directory, Path::new(binary))?.read(128 * 1024 * 1024)?;
         package::executable(target, &image)?;
         if entries[0]["size"].as_u64() != Some(image.len() as u64)
-            || entries[0]["sha256"] != format!("{:x}", Sha256::digest(&image))
+            || entries[0]["sha256"]
+                != crate::infrastructure::session::hexadecimal(&Sha256::digest(&image))
         {
             return Err("Le binaire du lanceur installé a été modifié.".into());
         }

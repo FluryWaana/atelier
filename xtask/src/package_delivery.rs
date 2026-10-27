@@ -249,7 +249,7 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
     }
     let bytes = payload::read(&archive, 512 * 1024 * 1024)?;
     let archive_size = bytes.len();
-    let checksum = format!("{:x}", Sha256::digest(bytes));
+    let checksum = atelier_app::infrastructure::session::hexadecimal(&Sha256::digest(bytes));
     payload::write(
         &delivery.join("portable.sha256"),
         format!(

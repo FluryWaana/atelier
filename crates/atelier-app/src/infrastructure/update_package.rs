@@ -100,7 +100,7 @@ impl PreparedUpdate {
     }
 }
 fn key_id(key: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(key))
+    crate::infrastructure::session::hexadecimal(&Sha256::digest(key))
 }
 fn private_write(path: &Path, bytes: &[u8]) -> Result<()> {
     let mut options = fs::OpenOptions::new();
@@ -117,12 +117,14 @@ fn private_write(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 pub fn generate_synthetic(directory: &Path) -> Result<()> {
-    let mut builder = fs::DirBuilder::new();
+    let builder = fs::DirBuilder::new();
     #[cfg(unix)]
-    {
+    let builder = {
         use std::os::unix::fs::DirBuilderExt;
+        let mut builder = builder;
         builder.mode(0o700);
-    }
+        builder
+    };
     builder.create(directory)?;
     let document = Ed25519KeyPair::generate_pkcs8(&SystemRandom::new())
         .map_err(|_| "Génération de clé synthétique indisponible.")?;
@@ -178,14 +180,10 @@ pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<
             .ok_or("Version à signer absente.")?
             .into(),
         archive_size: bytes.len() as u64,
-        archive_sha256: format!("{:x}", Sha256::digest(&bytes)),
-        manifest_sha256: format!(
-            "{:x}",
-            Sha256::digest(package::read(
-                &staged.path().join("atelier-package.json"),
-                1024 * 1024
-            )?)
-        ),
+        archive_sha256: crate::infrastructure::session::hexadecimal(&Sha256::digest(&bytes)),
+        manifest_sha256: crate::infrastructure::session::hexadecimal(&Sha256::digest(
+            package::read(&staged.path().join("atelier-package.json"), 1024 * 1024)?,
+        )),
         key_id: trust.key_id.clone(),
     };
     let signature = STANDARD.encode(pair.sign(&serde_json::to_vec(&payload)?).as_ref());
@@ -254,7 +252,8 @@ pub fn verify_installed_payload(
     package::verify(directory)?;
     let bytes = package::read(&directory.join("atelier-package.json"), 1024 * 1024)?;
     let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
-    if format!("{:x}", Sha256::digest(&bytes)) != payload.manifest_sha256
+    if crate::infrastructure::session::hexadecimal(&Sha256::digest(&bytes))
+        != payload.manifest_sha256
         || manifest["version"] != payload.version
         || manifest["target"] != payload.target
     {
@@ -275,20 +274,18 @@ pub fn prepare(
     let payload = authenticate(&metadata, trust, target, current)?;
     let bytes = package::read(archive, usize::try_from(payload.archive_size)?)?;
     if bytes.len() as u64 != payload.archive_size
-        || format!("{:x}", Sha256::digest(&bytes)) != payload.archive_sha256
+        || crate::infrastructure::session::hexadecimal(&Sha256::digest(&bytes))
+            != payload.archive_sha256
     {
         return Err("L’archive ne correspond pas à la taille et à l’empreinte signées.".into());
     }
     let package = package_archive::unpack(&bytes, target, parent)?;
     if package.manifest()["version"] != payload.version
         || package.manifest()["target"] != payload.target
-        || format!(
-            "{:x}",
-            Sha256::digest(super::package::read(
-                &package.path().join("atelier-package.json"),
-                1024 * 1024
-            )?)
-        ) != payload.manifest_sha256
+        || crate::infrastructure::session::hexadecimal(&Sha256::digest(super::package::read(
+            &package.path().join("atelier-package.json"),
+            1024 * 1024,
+        )?)) != payload.manifest_sha256
     {
         return Err(
             "Le contenu du paquet ne correspond pas à la version et à la cible signées.".into(),

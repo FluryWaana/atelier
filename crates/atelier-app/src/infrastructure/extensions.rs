@@ -113,7 +113,7 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
         size: 0,
     };
     file.copy_to(&mut digest)?;
-    let hash = format!("{:x}", digest.hash.finalize());
+    let hash = crate::infrastructure::session::hexadecimal(&digest.hash.finalize());
     if expected.as_ref().is_some_and(|expected| expected != &hash) {
         return Err("Le binaire du connecteur a changé. Réinstalle-le et confirme sa nouvelle portée avant de transmettre des secrets.".into());
     }
@@ -214,7 +214,9 @@ impl Executable {
             .open_same(Path::new(&self.binary.path))?
             .copy_to(&mut copy)?;
         copy.output.sync_all()?;
-        if format!("{:x}", copy.hash.hash.finalize()) != self.binary.sha256 {
+        if crate::infrastructure::session::hexadecimal(&copy.hash.hash.finalize())
+            != self.binary.sha256
+        {
             return Err(
                 "Le binaire du connecteur a changé avant sa copie privée. Aucun appel envoyé."
                     .into(),

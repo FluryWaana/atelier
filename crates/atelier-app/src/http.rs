@@ -100,7 +100,7 @@ fn header_value<'a>(request: &'a Request, name: &str) -> Option<&'a str> {
 }
 
 async fn security(State(state): State<Shared>, request: Request, next: Next) -> Response {
-    let mut response = authorize(&state, request, next).await;
+    let mut response = authorize(state, request, next).await;
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_SECURITY_POLICY,
@@ -117,7 +117,7 @@ async fn security(State(state): State<Shared>, request: Request, next: Next) -> 
     response
 }
 
-async fn authorize(state: &AppState, request: Request, next: Next) -> Response {
+async fn authorize(state: Shared, request: Request, next: Next) -> Response {
     let host = header_value(&request, "host").unwrap_or("");
     if host != format!("127.0.0.1:{}", state.port) && host != format!("localhost:{}", state.port) {
         return failure(StatusCode::FORBIDDEN, "Hôte interdit.");

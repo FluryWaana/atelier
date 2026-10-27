@@ -118,18 +118,17 @@ pub fn repository_observation(value: &Value) -> Result<RepositoryObservation> {
     {
         return Err("Identité, branche ou commit du dépôt du connecteur invalide.");
     }
-    if let Some(pr) = &observation.pull_request {
-        if pr.reference != *reference
+    if let Some(pr) = &observation.pull_request
+        && (pr.reference != *reference
             || !text(&pr.id, 200, false)
             || !text(&pr.url, 2000, false)
             || crate::application::worktrees::validate_reference(&pr.source_branch).is_err()
             || pr.target_branch != observation.target_branch
             || pr.target_commit != observation.target_commit
             || !repository_commit(&pr.source_commit)
-            || !["active", "completed", "abandoned"].contains(&pr.status.as_str())
-        {
-            return Err("PR/MR de connecteur incohérente avec son dépôt et ses commits.");
-        }
+            || !["active", "completed", "abandoned"].contains(&pr.status.as_str()))
+    {
+        return Err("PR/MR de connecteur incohérente avec son dépôt et ses commits.");
     }
     Ok(observation)
 }

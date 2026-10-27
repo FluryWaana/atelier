@@ -92,7 +92,7 @@ async fn apply(
                 while !summary.is_char_boundary(start) {
                     start += 1;
                 }
-                run.set("summary", &summary[start..])?;
+                run.set("summary", &&summary[start..])?;
             }
             if let Some(usage) = effects.usage {
                 run.set("usage", &usage)?;

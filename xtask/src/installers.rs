@@ -311,7 +311,11 @@ pub(super) async fn build(
         put(
             &result,
             &format!("{name}.sha256"),
-            format!("{:x}  {name}\n", Sha256::digest(bytes)).as_bytes(),
+            format!(
+                "{}  {name}\n",
+                atelier_app::infrastructure::session::hexadecimal(&Sha256::digest(bytes))
+            )
+            .as_bytes(),
             false,
         )?;
     }

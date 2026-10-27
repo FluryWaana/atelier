@@ -64,7 +64,7 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 
 État d'intégration du 27 octobre : les derniers lots candidats couvrent la synchronisation exhaustive des tickets par module, les gardes des files/workers pendant les effets incertains, les dépôts/publications/reviews extensibles et le cycle des paquets système Linux. La documentation d'entrée doit décrire le produit Rust et conserver la référence Node séparément. Le tableau ci-dessus décrit l'état courant ; les points datés ci-dessous gardent l'historique des limites au moment de chaque incrément.
 
-**Preuves actuelles : implémentation et scénarios écrits uniquement. Aucun build, test, Clippy, scénario natif ou navigateur de ces lots n'a été exécuté ; aucun artefact final n'a été produit.** Le formatage et la lecture statique ne qualifient aucun lot. La campagne finale n'a pas été lancée et toutes ses preuves restent à obtenir. Aucun élément ci-dessous n'est validé par la seule présence du code.
+**La campagne finale manuelle a été lancée sur `1ba8e3b` ; ses résultats restent à obtenir et à relire.** Voir [le relevé de qualification](rust-final-qualification.md). Le formatage et la lecture statique ne qualifient aucun lot. Aucun élément ci-dessous n'est validé par la seule présence du code ; les points historiques « non exécuté » décrivent leur état avant cette campagne.
 
 - [ ] Chaque ligne de l'inventaire fonctionnel a un parcours réel, ses erreurs et une preuve au commit livré.
 - [ ] Tous les écrans sont utilisables : clavier, focus, brouillons, navigation, traductions, états vides/occupés/erreur.

@@ -205,6 +205,16 @@ mod tests {
     use std::fs;
 
     #[test]
+    fn digest_encoding_preserves_lowercase_and_leading_zeroes() {
+        use sha2::Digest;
+        assert_eq!(hexadecimal(&[0, 1, 15, 255]), "00010fff");
+        assert_eq!(
+            hexadecimal(&Sha256::digest(b"abc")),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
     fn session_reads_and_atomic_writes_stay_in_the_opened_directory() {
         let root = tempfile::tempdir().unwrap();
         let source = root.path().join("session é");

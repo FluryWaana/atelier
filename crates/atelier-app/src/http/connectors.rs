@@ -72,11 +72,8 @@ pub(super) async fn refresh_ticket(
 
 use {
     crate::{Result, infrastructure::extensions::Executable},
-    atelier_core::{
-        application::extensions::{
-            Candidate, Configuration, Installation, Invocation, Report, Status,
-        },
-        document::Document,
+    atelier_core::application::extensions::{
+        Candidate, Configuration, Installation, Invocation, Report, Status,
     },
     axum::{
         extract::{Path, Request},

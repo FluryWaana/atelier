@@ -279,7 +279,7 @@ pub fn credentials(
         .ok_or("Renseigne le jeton de cette forge avant la lecture.")?;
     Ok((configuration, token))
 }
-pub(super) fn configuration(
+pub(crate) fn configuration(
     store: &Store<'_>,
     kind: ForgeKind,
     expected: u64,

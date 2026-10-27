@@ -54,11 +54,10 @@ pub fn payload(value: &Value) -> Result<TicketTransitionPayload> {
     Ok(payload)
 }
 fn revision(card: &Card) -> Result<String> {
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(
-            &atelier_core::application::jira::card_snapshot(card)
-        )?)
+    Ok(crate::infrastructure::session::hexadecimal(
+        &Sha256::digest(serde_json::to_vec(
+            &atelier_core::application::jira::card_snapshot(card),
+        )?),
     ))
 }
 fn select(

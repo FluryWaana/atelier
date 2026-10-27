@@ -104,7 +104,9 @@ impl Fixture {
         }
         let image = Binary {
             path: binary.to_str().unwrap().to_owned(),
-            sha256: format!("{:x}", Sha256::digest(std::fs::read(&binary).unwrap())),
+            sha256: atelier_app::infrastructure::session::hexadecimal(&Sha256::digest(
+                std::fs::read(&binary).unwrap(),
+            )),
         };
         let info = UpdateInfo {
             package: "@openai/codex".into(),

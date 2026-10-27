@@ -233,14 +233,14 @@ pub(super) async fn pin(
         Ok((
             atelier_core::application::extensions::Binary {
                 path: super::task_creation::path_string(&path).utf8()?,
-                sha256: format!("{:x}", digest.digest.finalize()),
+                sha256: crate::infrastructure::session::hexadecimal(&digest.digest.finalize()),
             },
             checked,
         ))
     })
     .await?
 }
-pub(super) fn read(
+pub(crate) fn read(
     store: &super::store::Store<'_>,
 ) -> Result<Option<atelier_core::application::agent_cli::Operation>> {
     Ok(atelier_core::application::agent_cli::operation(
@@ -258,7 +258,7 @@ fn save(
     settings.set("agentCliUpdate", operation)?;
     store.save_settings(&settings)
 }
-pub(super) fn reserve(
+pub(crate) fn reserve(
     store: &super::store::Store<'_>,
     provider: &str,
     info: UpdateInfo,
@@ -387,7 +387,7 @@ pub(super) fn reserve(
         Ok(operation)
     })
 }
-pub(super) fn change(
+pub(crate) fn change(
     store: &super::store::Store<'_>,
     id: &str,
     phase: atelier_core::application::agent_cli::Phase,
@@ -431,7 +431,7 @@ pub(super) fn change(
         Ok(operation)
     })
 }
-pub(super) async fn prepare(
+pub(crate) async fn prepare(
     profile: &Document,
     info: &UpdateInfo,
 ) -> Result<(
@@ -545,7 +545,7 @@ async fn prepare_selected(
     Ok((command, pin, lock))
 }
 
-pub(super) async fn observed_version(profile: &Document, info: &UpdateInfo) -> Result<String> {
+pub(crate) async fn observed_version(profile: &Document, info: &UpdateInfo) -> Result<String> {
     let (binary, environment) = super::agent_diagnostics::resolve(profile).await?;
     let kind = profile
         .get::<String>("type")?

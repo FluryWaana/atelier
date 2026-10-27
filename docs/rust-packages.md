@@ -1,6 +1,6 @@
 # Paquets Rust de préproduction
 
-Les composants décrits ici sont des **candidats non compilés et non exécutés**. Aucun paquet réel ni résultat de qualification n’existe encore pour ces changements. Le workflow Rust reste uniquement manuel ; aucune exécution n’a été lancée pendant l’implémentation. Aucun tag, release ni déploiement n’est autorisé.
+Les composants décrits ici sont des **candidats en cours de qualification finale**. Aucun paquet n'est encore déclaré qualifié. Le workflow Rust reste uniquement manuel ; aucune exécution n'a été lancée pendant l'implémentation. La campagne finale sur `1ba8e3b` est suivie dans [le relevé des résultats](rust-final-qualification.md) ; les paragraphes « non exécuté » ci-dessous décrivent la préparation et ne préjugent pas de son résultat. Aucun tag, release ni déploiement n'est autorisé.
 
 ## Fabrication et contenu
 

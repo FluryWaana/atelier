@@ -77,7 +77,9 @@ impl Repository {
                 digest.update((content.len() as u64).to_le_bytes());
                 digest.update(&content);
             }
-            Ok::<_, crate::Error>(format!("{:x}", digest.finalize()))
+            Ok::<_, crate::Error>(crate::infrastructure::session::hexadecimal(
+                &digest.finalize(),
+            ))
         })
         .await??;
         if self

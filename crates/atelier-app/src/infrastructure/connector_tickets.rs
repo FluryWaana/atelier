@@ -26,13 +26,12 @@ pub(super) fn scope(profile: &Installed) -> Result<String> {
         .filter(|field| field.kind != FieldKind::Password)
         .map(|field| (&field.id, profile.values.get(&field.id)))
         .collect();
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&(
+    Ok(crate::infrastructure::session::hexadecimal(
+        &Sha256::digest(serde_json::to_vec(&(
             "atelier-ticket-scope/1",
             &profile.manifest.id,
-            fields
-        ))?)
+            fields,
+        ))?),
     ))
 }
 

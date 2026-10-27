@@ -50,7 +50,7 @@ impl CreationContext for Store<'_> {
     }
 }
 
-pub(super) fn path_string(path: &std::path::Path) -> JsonString {
+pub(crate) fn path_string(path: &std::path::Path) -> JsonString {
     let path = path.to_string_lossy();
     #[cfg(windows)]
     let path = if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {

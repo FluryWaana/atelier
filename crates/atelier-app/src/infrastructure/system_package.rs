@@ -203,7 +203,9 @@ mod native {
                 .filter(|name| !name.is_empty())
                 .ok_or("Dossier système distinct requis.")?;
             let root = std::fs::canonicalize(parent_path)?.join(leaf);
-            let key = format!("{:x}", Sha256::digest(root.as_os_str().as_encoded_bytes()));
+            let key = crate::infrastructure::session::hexadecimal(&Sha256::digest(
+                root.as_os_str().as_encoded_bytes(),
+            ));
             let mut options = cap_std::fs::OpenOptions::new();
             options
                 .read(true)
@@ -333,7 +335,9 @@ mod native {
         let parent = super::super::repository_access::absolute(parent_path)?;
         let root = std::fs::canonicalize(parent_path)?
             .join(root.file_name().ok_or("Dossier système absent.")?);
-        let key = format!("{:x}", Sha256::digest(root.as_os_str().as_encoded_bytes()));
+        let key = crate::infrastructure::session::hexadecimal(&Sha256::digest(
+            root.as_os_str().as_encoded_bytes(),
+        ));
         Ok(read_journal(&parent, &root, &key)?.is_some_and(|journal| journal.pending()))
     }
     fn lock(file: &std::fs::File) -> Result<()> {
@@ -411,7 +415,9 @@ mod native {
         let bytes = CheckedFile::open_in(&parent, Path::new(&name))?
             .single_link()?
             .read(128 * 1024 * 1024)?;
-        Ok(format!("{:x}", Sha256::digest(bytes)))
+        Ok(crate::infrastructure::session::hexadecimal(
+            &Sha256::digest(bytes),
+        ))
     }
     fn marker(journal: &Journal) -> Vec<u8> {
         format!("atelier-system-package-maintenance/1 {}\n", journal.id).into_bytes()

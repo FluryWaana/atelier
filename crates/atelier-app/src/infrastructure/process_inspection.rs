@@ -1,6 +1,5 @@
 use crate::Result;
 use atelier_core::contracts::ServiceEndpoint;
-#[cfg(any(windows, test))]
 use std::net::Ipv4Addr;
 use std::{
     collections::BTreeSet,

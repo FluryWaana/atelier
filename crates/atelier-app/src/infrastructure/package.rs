@@ -217,7 +217,7 @@ pub fn manifest(directory: &Path, target: &str, version: &str) -> Result<Value> 
             return Err("Module WASM invalide dans le paquet.".into());
         }
         inventory.push(
-            json!({"path":path,"size":bytes.len(),"sha256":format!("{:x}",Sha256::digest(&bytes))}),
+            json!({"path":path,"size":bytes.len(),"sha256":crate::infrastructure::session::hexadecimal(&Sha256::digest(&bytes))}),
         );
     }
     Ok(

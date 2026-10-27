@@ -309,9 +309,8 @@ impl Guard {
     }
 }
 pub fn revision(card: &Card) -> Result<String> {
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&protocol::repository_source(card))?)
+    Ok(crate::infrastructure::session::hexadecimal(
+        &Sha256::digest(serde_json::to_vec(&protocol::repository_source(card))?),
     ))
 }
 pub fn publication_input(input: &Value) -> Value {

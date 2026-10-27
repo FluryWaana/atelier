@@ -39,9 +39,8 @@ struct Cached {
 }
 
 fn digest(card: &Card) -> Result<String> {
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&card_snapshot(card))?)
+    Ok(crate::infrastructure::session::hexadecimal(
+        &Sha256::digest(serde_json::to_vec(&card_snapshot(card))?),
     ))
 }
 
