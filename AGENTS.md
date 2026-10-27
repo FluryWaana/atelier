@@ -16,7 +16,7 @@ The Cargo workspace contains exactly:
 
 Keep domain/application independent of I/O and platform APIs. Prefer explicit typed models and focused functions. Keep transactions short, reserve external operations before I/O, and revalidate before committing their results. Do not add abstractions without a concrete caller.
 
-The existing `server.mjs`, `launcher.mjs`, `lib/`, `public/`, `test/`, `scripts/` and Node runtime are reference implementations until their functions are replaced or archived. They are not a production compatibility obligation and must not enter final Rust packages. The source inventory helps find all capabilities and tests.
+The former Node implementation is preserved only in Git history at `7f48996b9626ccff79ecf0e1be7f8fa43b7b90e6`. Its source trees, launchers, delivery tools and code archives have been removed from the active Rust project. Ten useful JSON regression fixtures remain under their owning Rust crates' `tests/fixtures/` directories. Do not restore Node comparators or runtime dependencies as delivery gates. The source inventory helps find current Rust capabilities and tests; `scripts/` contains Rust CI keyring probes and the optional local preview helper.
 
 ## Data and security
 
@@ -45,7 +45,7 @@ Use `rust-toolchain.toml` and the committed `Cargo.lock`. The final manual verif
 
 `cargo xtask build-ui` uses pinned Trunk 0.22.0 and wasm-bindgen CLI 0.2.129; fetch locked dependencies before its offline build. Browser selection is not browser qualification. Read actual job logs before claiming success.
 
-The existing `serve-prototype` command is the current development entry point, not the finished product. Its API remains partial until the rebuild delivers its screens and use cases. Historical Node comparators and the legacy UI bridge are reference tools; they are no longer mandatory gates for every increment. Do not regenerate an old expectation to disguise a bug: document intentional contract changes and test the new behavior.
+Use the real Rust `serve` entry point for synthetic development and browser qualification. The `serve-prototype` command, Node comparators and legacy UI bridge have been retired. Do not regenerate an old expectation to disguise a bug: document intentional contract changes and test the new behavior.
 
 Add meaningful regression tests for nontrivial behavior, trust boundaries, concurrency and data loss. Prefer complete user journeys over tests mirroring implementation. Existing Node tests may inform the new tests, but exact Node output is not the specification.
 
@@ -53,7 +53,7 @@ Add meaningful regression tests for nontrivial behavior, trust boundaries, concu
 
 Preserve the existing capabilities and translations, including French user-facing text. Build each screen with its use case, including loading, empty/error states, keyboard/focus and unsaved drafts. Avoid exposing implementation details in user flows.
 
-Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. Keep existing JavaScript ES module conventions while reference code remains. Edit Sass sources and regenerate CSS when using the legacy styling pipeline; final build dependencies must be documented.
+Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. Edit the Rust UI styling sources directly; final build dependencies must be documented. Do not reintroduce the retired Node/Sass pipeline.
 
 ## Git and progress
 

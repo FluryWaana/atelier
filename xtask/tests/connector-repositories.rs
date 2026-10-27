@@ -253,7 +253,7 @@ async fn compiled_repository_module_publication_recovers_once_and_reviews_real_c
             .describe("synthetic-extension")
             .await
             .unwrap();
-    let installed=Installed{binary,manifest,revision:1,values:serde_json::from_value(json!({"fault":"repository-lost","fixtureRoot":base,"site":"https://synthetic.example.test"})).unwrap(),report:None};
+    let installed=Installed{binary,manifest,revision:1,values:serde_json::from_value(json!({"fault":"repository-lost","fixture-root":base,"site":"https://synthetic.example.test"})).unwrap(),report:None};
     let root = Dir::open_ambient_dir(&base, ambient_authority()).unwrap();
     let worktree = Worktree {
         path: work.to_str().unwrap().into(),

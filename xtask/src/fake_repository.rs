@@ -5,7 +5,7 @@ fn root(request: &Request) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let root = std::fs::canonicalize(
         request
             .settings
-            .get("fixtureRoot")
+            .get("fixture-root")
             .and_then(Value::as_str)
             .ok_or("Synthetic repository root missing")?,
     )?;

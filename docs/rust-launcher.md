@@ -1,6 +1,6 @@
 # Lanceur Rust — candidat non qualifié
 
-Le binaire `atelier` propose maintenant `launch` (commande par défaut), `stop`, `serve`, `--help` et `--version`. `serve-prototype` reste une entrée de référence explicite ; seul ce chemin peut charger les assets legacy. Le service natif accepte uniquement les noms d’assets Leptos/WASM autorisés, capturés par le serveur après ouverture vérifiée. Aucun moteur Node n’est lancé.
+Le binaire `atelier` propose `launch` (commande par défaut), `stop`, `serve`, `--help` et `--version`. L’ancienne entrée `serve-prototype` et l’interface Node ont été retirées. Le service natif accepte uniquement les noms d’assets Leptos/WASM autorisés, capturés par le serveur après ouverture vérifiée. Aucun moteur Node n’est lancé.
 
 Pendant la reconstruction, utiliser exclusivement des dossiers synthétiques lors de la campagne finale, par exemple :
 

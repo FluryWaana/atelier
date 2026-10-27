@@ -640,7 +640,7 @@ async fn project_field_guards_reject_stale_relocations_before_creating_backups()
 async fn stop(address: &str, token: &str, task: tokio::task::JoinHandle<atelier_app::Result<()>>) {
     assert!(
         reqwest::Client::new()
-            .post(format!("{address}/api/prototype/stop"))
+            .post(format!("{address}/api/shutdown"))
             .bearer_auth(token)
             .header("x-local-request", "1")
             .json(&json!({}))
@@ -755,13 +755,19 @@ async fn guarded_task_edits_reject_lost_updates_and_merge_independent_fields() {
 async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_paths() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
-    for name in http::LEGACY_ASSETS {
+    for name in [
+        "index.html",
+        "atelier-loader.js",
+        "atelier-ui-synthetic.js",
+        "atelier-ui-synthetic.wasm",
+        "style-synthetic.css",
+    ] {
         let path = assets.path().join(name);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, format!("synthetic {name}")).unwrap();
     }
-    std::fs::write(assets.path().join("private.txt"), "private synthetic bytes").unwrap();
     let (address, token, task) = start(data.path(), assets.path()).await;
+    std::fs::write(data.path().join("private.txt"), "private synthetic bytes").unwrap();
     let client = reqwest::Client::new();
     std::fs::write(assets.path().join("index.html"), "replaced synthetic bytes").unwrap();
     let response = client.get(&address).send().await.unwrap();
@@ -771,11 +777,11 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
         "text/html; charset=utf-8"
     );
     assert_eq!(response.text().await.unwrap(), "synthetic index.html");
-    for name in [
-        "app.js",
-        "local-session.mjs",
-        "views/card.mjs",
-        "lib/domain/tasks.mjs",
+    for (name, mime) in [
+        ("atelier-loader.js", "text/javascript; charset=utf-8"),
+        ("atelier-ui-synthetic.js", "text/javascript; charset=utf-8"),
+        ("atelier-ui-synthetic.wasm", "application/wasm"),
+        ("style-synthetic.css", "text/css; charset=utf-8"),
     ] {
         let response = client
             .get(format!("{address}/{name}"))
@@ -783,13 +789,18 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
             .await
             .unwrap();
         assert_eq!(response.status(), 200);
-        assert_eq!(
-            response.headers()["content-type"],
-            "text/javascript; charset=utf-8"
-        );
+        assert_eq!(response.headers()["content-type"], mime);
         assert_eq!(response.text().await.unwrap(), format!("synthetic {name}"));
     }
-    for path in ["/private.txt", "/lib/store.mjs", "/data/local-session"] {
+    for path in [
+        "/private.txt",
+        "/lib/store.mjs",
+        "/data/local-session",
+        "/app.js",
+        "/local-session.mjs",
+        "/views/card.mjs",
+        "/lib/domain/tasks.mjs",
+    ] {
         assert_eq!(
             client
                 .get(format!("{address}{path}"))
@@ -815,8 +826,7 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), 503);
-    assert!(response.text().await.unwrap().contains("prototype Rust"));
+    assert_eq!(response.status(), 404);
     stop(&address, &token, task).await;
 }
 

@@ -5,7 +5,7 @@ mod json;
 #[test]
 fn provider_settings_preserve_utf16_and_error_priority() {
     let reference: Document = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-provider-settings-reference.json"
+        "fixtures/rust-provider-settings-reference.json"
     ))
     .unwrap();
     let input: Document = reference.get("body").unwrap().unwrap();

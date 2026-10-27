@@ -101,10 +101,8 @@ async fn a_failed_timer_tick_rolls_back_every_entry_in_the_same_job() {
 
 #[tokio::test]
 async fn historical_time_transitions_match_node_on_sqlite() {
-    let cases: Vec<Document> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-time-reference.json"
-    ))
-    .unwrap();
+    let cases: Vec<Document> =
+        serde_json::from_str(include_str!("fixtures/rust-time-reference.json")).unwrap();
     let mut count = 0;
     for case in cases {
         let name = case.get::<String>("name").unwrap().unwrap();

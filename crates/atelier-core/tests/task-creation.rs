@@ -68,10 +68,8 @@ impl CreationContext for Context {
 
 #[test]
 fn historical_task_creation_preserves_fields_utf16_and_validation_order() {
-    let cases: Vec<Document> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-task-creation-reference.json"
-    ))
-    .unwrap();
+    let cases: Vec<Document> =
+        serde_json::from_str(include_str!("fixtures/rust-task-creation-reference.json")).unwrap();
     assert!(cases.len() >= 70);
     for (index, scenario) in cases.into_iter().enumerate() {
         let context = Context {

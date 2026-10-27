@@ -12,7 +12,7 @@ use std::{
 fn ticket_status(request: &Request) -> Result<String, Box<dyn std::error::Error>> {
     let Some(root) = request
         .settings
-        .get("fixtureRoot")
+        .get("fixture-root")
         .and_then(Value::as_str)
         .filter(|root| !root.is_empty())
     else {
@@ -72,7 +72,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixtureRoot","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixture-root","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -139,7 +139,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let root = request
             .settings
-            .get("fixtureRoot")
+            .get("fixture-root")
             .and_then(Value::as_str)
             .ok_or("Marked synthetic root required")?;
         let root = std::fs::canonicalize(root)?;
@@ -182,7 +182,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     {
         let root = request
             .settings
-            .get("fixtureRoot")
+            .get("fixture-root")
             .and_then(Value::as_str)
             .ok_or("Marked synthetic root required")?;
         let root = std::fs::canonicalize(root)?;
@@ -237,7 +237,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     if matches!(request.method, Method::TimeSend | Method::TimeReconcile) {
         let root = request
             .settings
-            .get("fixtureRoot")
+            .get("fixture-root")
             .and_then(Value::as_str)
             .ok_or("Marked synthetic root required")?;
         let root = std::fs::canonicalize(root)?;

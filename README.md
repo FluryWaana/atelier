@@ -8,11 +8,13 @@ Atelier Kanban est une application locale pour préparer des tâches, travailler
 
 Le workspace contient `atelier-core` (domaine), `atelier-app` (serveur et intégrations), `atelier-ui` (interface) et `xtask` (fabrication et qualification). Utiliser [rust-toolchain.toml](rust-toolchain.toml) et [Cargo.lock](Cargo.lock). La fabrication UI utilise Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 ; les dépendances natives et outils d’installation sont décrits dans [les paquets Rust](docs/rust-packages.md).
 
-Node n’est pas un prérequis du runtime Rust et doit rester exclu de ses paquets finaux. Les sources et fixtures Node restent dans le dépôt comme références fonctionnelles et outils de comparaison, sans obligation de rétrocompatibilité. Le [README Node archivé](docs/archive/node-readme.md) est conservé intégralement ; ses liens relatifs se rapportent à la racine historique du dépôt.
+Le projet actif est le workspace Rust à la racine. Les sources, lanceurs, outils de livraison, tests et archives de code Node ont été retirés ; leur référence complète reste accessible dans l’historique Git au snapshot `7f48996b9626ccff79ecf0e1be7f8fa43b7b90e6`. Le snapshot historique de migration est également conservé au commit `7326122`. Aucun runtime Node ne fait partie du produit ou des paquets Rust.
 
-Ces sources historiques ne constituent plus le produit ni le runtime Rust. Le README précédent ainsi que les [lanceurs et outils de livraison/tray Node](docs/archive/node-delivery/README.md) sont archivés. `lib/`, `public/`, `test/` et les fixtures utiles restent en place pour les comparateurs optionnels ; leur archivage complet n’est pas revendiqué. Les tests et commandes de livraison Node sont des références au snapshot `7f48996`, pas des commandes actives. Le snapshot historique de migration est aussi conservé au commit `7326122`.
+Les dix fixtures JSON encore utiles aux tests Rust sont conservées, sans changement de contenu, dans `crates/atelier-core/tests/fixtures/` et `crates/atelier-app/tests/fixtures/`. Les comparateurs exécutant Node et l’ancienne interface ne sont plus des commandes de `xtask`. Les fichiers locaux non suivis et les données utilisateur n’ont pas été nettoyés par ce retrait de sources.
 
 ## Commandes natives
+
+Sous Windows, double-cliquer sur [Preview.cmd](Preview.cmd) prépare puis ouvre l’aperçu Rust. La première compilation peut être longue ; Rust, Trunk et wasm-bindgen doivent être disponibles dans les outils locaux du dépôt ou le PATH. Les données de préproduction restent dans `.artifacts/local-preview/data`, séparées du `data/` utilisateur. Le lancement suivant arrête uniquement cette instance authentifiée avant de reconstruire ; aucun fichier n’est effacé. Ce raccourci ne lance ni tests ni Clippy et ne constitue pas une qualification du produit.
 
 Après fabrication et qualification dans un environnement autorisé, le binaire `atelier` fournit notamment :
 
@@ -24,7 +26,7 @@ atelier stop --data-dir EMPTY_SYNTHETIC_DIRECTORY --port 4317
 atelier serve --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets BUILT_RUST_UI --port 4317
 ```
 
-Remplacer les chemins d’exemple par des dossiers synthétiques explicites ; `BUILT_RUST_UI` désigne les assets Leptos/WASM fabriqués. `launch` démarre ou retrouve une instance locale ; `serve` garde le serveur au premier plan. Utiliser le même dossier et le même port pour l’arrêter. `serve-prototype` reste une entrée de développement distincte, pas une installation livrée. Voir [le lanceur](docs/rust-launcher.md).
+Remplacer les chemins d’exemple par des dossiers synthétiques explicites ; `BUILT_RUST_UI` désigne les assets Leptos/WASM fabriqués. `launch` démarre ou retrouve une instance locale ; `serve` garde le serveur au premier plan. Utiliser le même dossier et le même port pour l’arrêter. Voir [le lanceur](docs/rust-launcher.md).
 
 L’installation signée dans un **nouveau** dossier dispose de la commande suivante ; elle exige une archive, ses métadonnées signées et une clé publique de confiance choisie séparément :
 

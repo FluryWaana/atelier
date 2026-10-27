@@ -3,10 +3,10 @@
 Le logo représente des cartes Kanban en trois colonnes, en lavande et menthe sur une tuile anthracite. Il reste sans texte pour servir d’icône à petite taille.
 
 - Source : `docs/branding/atelier-kanban-master.png` (image générée avec l’outil intégré imagegen).
-- Application, favicon et lanceur Linux : `public/atelier-kanban.png`, 512 × 512 pixels.
-- Exécutable, installateur et raccourcis Windows : `public/atelier-kanban.ico`, tailles 16, 32, 48, 64 et 256 pixels.
+- Export PNG produit conservé : [atelier-kanban.png](branding/atelier-kanban.png), 512 × 512 pixels.
+- Export Windows conservé : [atelier-kanban.ico](branding/atelier-kanban.ico), tailles 16, 32, 48, 64 et 256 pixels.
 
-Les exports sont des réductions de la source avec transparence conservée, sans nouvelle dépendance de compilation. Pour renouveler le logo, régénérer ces deux exports avant de construire les paquets. L’icône ICO contient une image PNG par taille.
+Les exports sont des réductions de la source avec transparence conservée. Ils sont préservés sans modification lors du retrait de l’ancienne arborescence Node ; leur présence ne prouve pas qu’un paquet Rust les utilise déjà. Pour renouveler le logo, régénérer ces exports avant de les intégrer aux paquets. L’icône ICO contient une image PNG par taille.
 
 ## Prompt de création
 

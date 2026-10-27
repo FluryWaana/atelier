@@ -96,10 +96,8 @@ fn task_agent_preferences_are_conflict_checked_and_reset_options_on_profile_chan
 
 #[test]
 fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
-    let cases: Vec<Document> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-task-editing-reference.json"
-    ))
-    .unwrap();
+    let cases: Vec<Document> =
+        serde_json::from_str(include_str!("fixtures/rust-task-editing-reference.json")).unwrap();
     assert!(cases.len() >= 60);
     for (index, scenario) in cases.into_iter().enumerate() {
         let context = Context {

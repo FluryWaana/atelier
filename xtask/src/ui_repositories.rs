@@ -99,7 +99,7 @@ pub(super) async fn scenario(
         .into_iter()
         .find(|profile| profile.installed.manifest.id == "synthetic-extension")
         .ok_or("Module UI absent")?;
-    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":profile.installed.revision,"values":{"fault":"repository-lost","fixtureRoot":data,"site":"https://synthetic.example.test"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
+    http.put(format!("{address}/api/extensions/synthetic-extension")).bearer_auth(token).header("x-local-request","1").json(&json!({"expectedRevision":profile.installed.revision,"values":{"fault":"repository-lost","fixture-root":data,"site":"https://synthetic.example.test"},"forgetValues":[],"secrets":{},"forgetSecrets":[]})).send().await?.error_for_status()?;
     click(client, "#reload-connectors").await?;
     wait_dom(
         client,

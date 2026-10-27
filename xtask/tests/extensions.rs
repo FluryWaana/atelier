@@ -21,7 +21,7 @@ async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effe
     .unwrap();
     let (binary, manifest) = installed().await;
     let db = Database::open(std::path::Path::new(":memory:")).unwrap();
-    let settings: Document = serde_json::from_str(&json!({"connectorRevision":1,"processConnectors":[{"manifest":manifest,"binary":binary,"revision":1,"values":{"fault":"lost-write","fixtureRoot":fixture.path()},"report":null}]}).to_string()).unwrap();
+    let settings: Document = serde_json::from_str(&json!({"connectorRevision":1,"processConnectors":[{"manifest":manifest,"binary":binary,"revision":1,"values":{"fault":"lost-write","fixture-root":fixture.path()},"report":null}]}).to_string()).unwrap();
     let prepared = db
         .call(move |store| {
             store.save_settings(&settings)?;

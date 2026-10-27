@@ -5,7 +5,7 @@ mod json;
 #[test]
 fn historical_project_settings_preserve_utf16_paths_and_error_precedence() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-project-settings-reference.json"
+        "fixtures/rust-project-settings-reference.json"
     ))
     .unwrap();
     assert!(cases.len() >= 40);

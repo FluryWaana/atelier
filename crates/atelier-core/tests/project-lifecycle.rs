@@ -217,7 +217,7 @@ impl ProjectRepository for Context {
 #[test]
 fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollback() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-project-lifecycle-reference.json"
+        "fixtures/rust-project-lifecycle-reference.json"
     ))
     .unwrap();
     assert!(cases.len() >= 35);

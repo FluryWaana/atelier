@@ -5,12 +5,11 @@ use std::{
 };
 
 mod installers;
+mod inventory;
 mod keyring;
-mod launch_detection;
 mod notices;
 mod package;
 mod package_delivery;
-mod storage;
 mod ui;
 mod update_flow;
 
@@ -30,18 +29,6 @@ fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
         command.creation_flags(0x08000000);
     }
     command
-}
-
-fn node_executable() -> PathBuf {
-    std::env::var_os("ATELIER_NODE")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            root().join(if cfg!(windows) {
-                "runtime/node.exe"
-            } else {
-                "runtime/node"
-            })
-        })
 }
 
 fn run(command: &mut Command) -> Result<()> {
@@ -100,25 +87,12 @@ fn build_ui() -> Result<()> {
     Ok(())
 }
 
-fn build_legacy_ui() -> Result<()> {
-    let output = root().join(".artifacts/rust-legacy-ui");
-    for name in atelier_app::http::LEGACY_ASSETS {
-        let source = if name.starts_with("lib/") {
-            root().join(name)
-        } else {
-            root().join("public").join(name)
-        };
-        let destination = output.join(name);
-        std::fs::create_dir_all(destination.parent().ok_or("Asset sans dossier.")?)?;
-        std::fs::copy(source, destination)?;
-    }
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
+        ["inventory"] => inventory::command(false),
+        ["inventory", "--check"] => inventory::command(true),
         ["build-ui"] => build_ui(),
         ["qualify-packages", output] => package_delivery::qualify(Path::new(output)).await,
         ["third-party-notices", output] => notices::generate(Path::new(output)).await,
@@ -134,45 +108,15 @@ async fn main() -> Result<()> {
             let scratch=tempfile::tempdir()?;
             atelier_app::infrastructure::update_package::prepare(Path::new(archive),Path::new(metadata),&trust,target,current,scratch.path()).map(|_|())
         },
-        ["build-legacy-ui"] => build_legacy_ui(),
-        ["test-storage-parity"] => storage::test().await,
-        ["test-domain-parity"] => {
-            run(command(node_executable()).args(["test/fixtures/rust-domain-reference.mjs", "--check"]))?;
-            run(command(node_executable()).args(["test/fixtures/rust-project-settings-reference.mjs", "--check"]))?;
-            run(command(node_executable()).args(["test/fixtures/rust-settings-reference.mjs"]))?;
-            run(command(node_executable()).args(["test/fixtures/rust-provider-settings-reference.mjs"]))?;
-            run(command(node_executable()).args(["test/fixtures/rust-jira-url-reference.mjs"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "domain-contracts", "--test", "project-settings", "--test", "settings", "--test", "provider-settings", "--locked"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-app", "--test", "settings", "--locked"]))
-        }
-        ["test-time-parity"] => {
-            run(command(node_executable()).args(["test/fixtures/rust-time-reference.mjs", "--check"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-app", "--test", "time-tracking", "--locked"]))
-        }
-        ["test-task-creation-parity"] => {
-            run(command(node_executable()).args(["test/fixtures/rust-task-creation-reference.mjs", "--check"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-creation", "--locked"]))
-        }
-        ["test-task-editing-parity"] => {
-            run(command(node_executable()).args(["test/fixtures/rust-task-editing-reference.mjs", "--check"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "task-editing", "--locked"]))
-        }
         ["test-keyring"] => keyring::test(false).await,
-        ["test-project-lifecycle-parity"] => {
-            run(command(node_executable()).args(["test/fixtures/rust-project-lifecycle-reference.mjs", "--check"]))?;
-            run(command(node_executable()).args(["test/fixtures/rust-project-detection-reference.mjs"]))?;
-            run(command("cargo").args(["test", "-p", "atelier-core", "--test", "project-lifecycle", "--test", "project-detection", "--locked"]))?;
-            launch_detection::test()
-        }
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
-        ["test-ui"] => { build_ui()?; ui::test(false).await },
+        ["test-ui"] => { build_ui()?; ui::test().await },
         ["test-updates"] => update_flow::test().await,
         ["test-updates", "--prepared-delivery", delivery] => update_flow::test_delivery(Path::new(delivery)).await,
         ["qualify-installed-update", installation, data, port, delivery] => update_flow::test_installed(Path::new(installation), Path::new(data), port.parse()?, Path::new(delivery)).await,
-        ["test-legacy-ui"] => { build_legacy_ui()?; ui::test(true).await },
-        _ => Err("Usage : cargo xtask build-ui | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | build-legacy-ui | test-legacy-ui | test-storage-parity | test-domain-parity | test-time-parity | test-task-creation-parity | test-task-editing-parity | test-project-lifecycle-parity | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
+        _ => Err("Usage : cargo xtask inventory [--check] | build-ui | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
     }
 }
 

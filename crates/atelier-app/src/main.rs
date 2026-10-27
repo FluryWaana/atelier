@@ -10,14 +10,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]\natelier serve-prototype --data-dir DOSSIER_SYNTHETIQUE --assets DOSSIER_UI [--port 4318]";
+const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
     Launch,
     Stop,
     Serve,
-    Prototype,
     Help,
     Version,
 }
@@ -45,10 +44,6 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
             args.next();
             Action::Serve
         }
-        Some("serve-prototype") => {
-            args.next();
-            Action::Prototype
-        }
         Some("--help" | "-h") => {
             args.next();
             Action::Help
@@ -61,11 +56,7 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
         _ => Action::Launch,
     };
     let mut options = Options {
-        port: if action == Action::Prototype {
-            4318
-        } else {
-            4317
-        },
+        port: 4317,
         action,
         data: None,
         assets: None,
@@ -98,8 +89,7 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
         }
     }
     if options.port == 0
-        || (matches!(options.action, Action::Serve | Action::Prototype)
-            && (options.data.is_none() || options.assets.is_none()))
+        || (options.action == Action::Serve && (options.data.is_none() || options.assets.is_none()))
     {
         return Err("Dossiers de service ou port Atelier invalides.".into());
     }
@@ -242,7 +232,7 @@ async fn application() -> Result<()> {
     } else {
         executable.clone()
     };
-    if matches!(options.action, Action::Serve | Action::Prototype)
+    if options.action == Action::Serve
         && std::fs::canonicalize(&effective)? != std::fs::canonicalize(&executable)?
     {
         return Err("Le service doit être lancé depuis la version active vérifiée.".into());
@@ -281,9 +271,7 @@ async fn application() -> Result<()> {
     let listener =
         tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, options.port)).await?;
     println!("Atelier Kanban Rust sur http://{}", listener.local_addr()?);
-    if options.action == Action::Prototype {
-        http::serve(listener, data, assets).await
-    } else if installation.is_some() {
+    if installation.is_some() {
         http::serve_installed(listener, data, assets, root.to_owned()).await
     } else {
         http::serve_native(listener, data, assets).await
@@ -317,19 +305,14 @@ mod tests {
         assert!(!launch.browser);
         assert_eq!(launch.data, Some(PathBuf::from("synthetic data")));
         assert_eq!(
-            options(&[
-                "serve-prototype",
-                "--data-dir",
-                "synthetic",
-                "--assets",
-                "ui"
-            ])
-            .unwrap()
-            .port,
-            4318
+            options(&["serve", "--data-dir", "synthetic", "--assets", "ui"])
+                .unwrap()
+                .port,
+            4317
         );
         assert_eq!(options(&["stop"]).unwrap().action, Action::Stop);
         for args in [
+            vec!["serve-prototype"],
             vec!["serve"],
             vec!["serve", "--data-dir", "synthetic"],
             vec!["launch", "--port", "0"],

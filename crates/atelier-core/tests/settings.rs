@@ -40,10 +40,8 @@ fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {
 
 #[test]
 fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() {
-    let reference: Document = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-settings-reference.json"
-    ))
-    .unwrap();
+    let reference: Document =
+        serde_json::from_str(include_str!("fixtures/rust-settings-reference.json")).unwrap();
     let defaults: Document = reference.get("defaults").unwrap().unwrap();
     let cases: Vec<Document> = reference.get("cases").unwrap().unwrap();
     assert!(cases.len() >= 40);

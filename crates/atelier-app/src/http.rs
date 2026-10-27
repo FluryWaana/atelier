@@ -26,7 +26,6 @@ mod agent_cli;
 mod agent_providers;
 mod assets;
 mod automation;
-pub use assets::LEGACY_ASSETS;
 pub use assets::wasm_asset_name;
 mod backups;
 mod brainstorm;
@@ -419,42 +418,13 @@ async fn events(State(state): State<Shared>) -> Response {
     events::response(state.changed.subscribe(), state.shutdown.subscribe())
 }
 
-async fn unavailable(request: Request) -> Response {
-    let namespace = request
-        .uri()
-        .path()
-        .strip_prefix("/api/")
-        .and_then(|path| path.split('/').next());
-    if matches!(
-        namespace,
-        Some(
-            "agents"
-                | "agent-providers"
-                | "connectors"
-                | "updates"
-                | "cards"
-                | "brainstorms"
-                | "runs"
-                | "queue"
-                | "diagnostics"
-                | "tickets"
-                | "worktrees"
-                | "dev-servers"
-                | "folders"
-                | "shutdown"
-        )
-    ) {
-        failure(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Cette fonction n’est pas encore disponible dans le prototype Rust.",
-        )
-    } else {
-        failure(StatusCode::NOT_FOUND, "Route introuvable.")
-    }
+async fn unavailable() -> Response {
+    failure(StatusCode::NOT_FOUND, "Route introuvable.")
 }
 
+// Headless HTTP journeys keep the same Rust assets and guards without opening desktop controls.
 pub async fn serve(listener: TcpListener, directory: PathBuf, assets: PathBuf) -> Result<()> {
-    serve_mode(listener, directory, assets, true, None).await
+    serve_mode(listener, directory, assets, false, None).await
 }
 
 pub async fn serve_native(
@@ -462,7 +432,7 @@ pub async fn serve_native(
     directory: PathBuf,
     assets: PathBuf,
 ) -> Result<()> {
-    serve_mode(listener, directory, assets, false, None).await
+    serve_mode(listener, directory, assets, true, None).await
 }
 
 pub async fn serve_installed(
@@ -471,27 +441,22 @@ pub async fn serve_installed(
     assets: PathBuf,
     root: PathBuf,
 ) -> Result<()> {
-    serve_mode(listener, directory, assets, false, Some(root)).await
+    serve_mode(listener, directory, assets, true, Some(root)).await
 }
 
 async fn serve_mode(
     listener: TcpListener,
     directory: PathBuf,
     assets: PathBuf,
-    legacy: bool,
+    desktop: bool,
     installation_root: Option<PathBuf>,
 ) -> Result<()> {
     if !listener.local_addr()?.ip().is_loopback() {
         return Err("Écoute distante interdite.".into());
     }
-    let app = assets::router(&assets, legacy)?;
-    let _package_guard = if legacy {
-        None
-    } else {
-        Some(crate::infrastructure::package_maintenance::acquire(
-            installation_root.as_deref(),
-        )?)
-    };
+    let app = assets::router(&assets)?;
+    let _package_guard =
+        crate::infrastructure::package_maintenance::acquire(installation_root.as_deref())?;
     let expected_identity = installation_root
         .as_ref()
         .map(|root| crate::infrastructure::updates::expected_data_identity(root, &directory))
@@ -538,7 +503,7 @@ async fn serve_mode(
     let (shutdown, mut stopped) = watch::channel(false);
     let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
-        native: !legacy,
+        native: desktop,
         installation_root,
         database: Arc::new(database),
         prototype_paths: [directory.path.clone(), original_directory],
@@ -773,7 +738,6 @@ async fn serve_mode(
         .route("/api/cards/{id}/file-diff", get(files::diff))
         .route("/api/cards/{id}/worktree", post(worktrees::create))
         .route("/api/cards/{id}/worktree/remove", post(worktrees::remove))
-        .route("/api/prototype/stop", post(stop))
         .route("/api/shutdown", post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
@@ -781,7 +745,7 @@ async fn serve_mode(
     let stop_events = state.shutdown.clone();
     let clock = tokio::spawn(time_tracking::run(state.clone()));
     let queue_worker = tokio::spawn(queue::run(state.clone()));
-    let tray = if legacy {
+    let tray = if !desktop {
         None
     } else {
         match crate::infrastructure::tray::Owner::start(&state.prototype_paths[0], state.port).await

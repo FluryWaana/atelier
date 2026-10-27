@@ -2,11 +2,9 @@ use atelier_core::domain::{agent_options::*, checklist::*, projects::*, tasks::*
 use serde_json::{Value, json};
 
 #[test]
-fn historical_node_domain_results_and_errors_match() {
-    let cases: Vec<Value> = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-domain-reference.json"
-    ))
-    .unwrap();
+fn domain_contract_examples_and_validation_errors_hold() {
+    let cases: Vec<Value> =
+        serde_json::from_str(include_str!("fixtures/rust-domain-reference.json")).unwrap();
     assert!(cases.len() > 150);
     for (index, case) in cases.iter().enumerate() {
         let args = &case["args"];

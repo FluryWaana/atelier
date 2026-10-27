@@ -10,7 +10,7 @@ mod json;
 #[test]
 fn historical_project_detection_preserves_sources_drafts_roles_caching_and_utf16() {
     let fixture: Document = serde_json::from_str(include_str!(
-        "../../../test/fixtures/rust-project-detection-reference.json"
+        "fixtures/rust-project-detection-reference.json"
     ))
     .unwrap();
     let default_project: Document = fixture.get("project").unwrap().unwrap();
