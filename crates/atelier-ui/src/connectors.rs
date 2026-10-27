@@ -302,8 +302,9 @@ pub fn Connectors(
                                 import_approved.set(false);
                             }
                             Action::Import => {
-                                let imported = serde_json::from_value::<Vec<ImportedTicket>>(value)
-                                    .map_err(|_| "Réponse du serveur invalide.")?;
+                                let imported =
+                                    serde_json::from_str::<Vec<ImportedTicket>>(&value.to_string())
+                                        .map_err(|_| "Réponse du serveur invalide.")?;
                                 if imported.len() != tickets.get_untracked().len() {
                                     return Err("Réponse du serveur invalide.".into());
                                 }
