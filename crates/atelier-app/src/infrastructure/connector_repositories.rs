@@ -307,9 +307,12 @@ impl Guard {
 }
 pub fn revision(card: &Card) -> Result<String> {
     Ok(crate::infrastructure::session::hexadecimal(
-        &Sha256::digest(serde_json::to_vec(&protocol::repository_source(card))?),
+        &Sha256::digest(serde_json::to_vec(&serde_json::to_value(
+            protocol::repository_source(card),
+        )?)?),
     ))
 }
+
 pub fn publication_input(input: &Value) -> Value {
     json!({"reference":input["observation"]["reference"],"worktree":input["context"]["worktree"],"source":input["context"]["source"],"target":input["context"]["target"],"targetBranch":input["observation"]["targetBranch"],"remoteSource":input["observation"]["remoteSource"],"title":input["title"],"body":input["body"],"draft":input["draft"],"pullRequest":input["observation"]["pullRequest"]})
 }
@@ -671,4 +674,18 @@ pub fn synchronize(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
         "La PR/MR du module a changé. Relance la review sur ses commits actuels.",
     )?;
     store.put(Documents::Cards, &card)
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+    #[test]
+    fn revision_ignores_object_layout_but_detects_human_changes() {
+        let first:Card=serde_json::from_str(r#"{"id":"synthetic","title":"Human title","description":"Keep","unknown":{"z":1,"a":2}}"#).unwrap();
+        let same:Card=serde_json::from_str(r#"{"unknown":{"a":2,"z":1},"description":"Keep","title":"Human title","id":"synthetic"}"#).unwrap();
+        assert_eq!(revision(&first).unwrap(), revision(&same).unwrap());
+        let mut changed = same;
+        changed.fields.set("description", &"Human change").unwrap();
+        assert_ne!(revision(&first).unwrap(), revision(&changed).unwrap());
+    }
 }
