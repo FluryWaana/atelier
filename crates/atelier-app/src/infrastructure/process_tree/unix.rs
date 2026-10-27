@@ -201,6 +201,19 @@ async fn members(group: libc::pid_t) -> Result<Vec<u32>> {
     }
 }
 
+fn invalid_process_number(field: &str, value: &str) -> crate::Error {
+    if value.len() <= 20
+        && !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || byte == b'-')
+    {
+        format!("Inspection des processus : {field} invalide ou hors limites ({value}).").into()
+    } else {
+        format!("Inspection des processus : {field} non numérique ou trop long.").into()
+    }
+}
+
 fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
     let text = std::str::from_utf8(bytes)?;
     let mut members = Vec::new();
@@ -209,8 +222,14 @@ fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
             return Err("Trop de processus pour une inspection complète.".into());
         }
         let mut fields = line.split_whitespace();
-        let pid: u32 = fields.next().ok_or("PID absent.")?.parse()?;
-        let observed: libc::pid_t = fields.next().ok_or("Groupe absent.")?.parse()?;
+        let pid = fields.next().ok_or("PID absent.")?;
+        let pid: u32 = pid
+            .parse()
+            .map_err(|_| invalid_process_number("PID", pid))?;
+        let observed = fields.next().ok_or("Groupe absent.")?;
+        let observed: libc::pid_t = observed
+            .parse()
+            .map_err(|_| invalid_process_number("PGID", observed))?;
         let state = fields.next().ok_or("État du processus absent.")?;
         if fields.next().is_some() || pid == 0 || state.is_empty() {
             return Err("Réponse d’inspection des processus invalide.".into());
@@ -326,5 +345,16 @@ mod tests {
         assert!(parse_members(b"1 2 S unexpected\n", 2).is_err());
         assert!(parse_members(b"4294967296 2 S\n", 2).is_err());
         assert!(parse_members(b"1 2\n", 2).is_err());
+        assert!(
+            parse_members(b"42 4294967295 S\n", 2)
+                .unwrap_err()
+                .to_string()
+                .contains("PGID invalide ou hors limites (4294967295)")
+        );
+        assert!(
+            !invalid_process_number("PID", "synthetic-private-argument")
+                .to_string()
+                .contains("synthetic-private-argument")
+        );
     }
 }
