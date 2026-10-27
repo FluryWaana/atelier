@@ -841,7 +841,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             for index in 1..=2 {
                 let id=format!("jira-batch-{index}");
                 let issue=format!("{}",index+20);
-                let card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":id,"title":format!("Local batch {index}"),"description":"Keep batch description","instructions":"Keep batch instructions","status":"review","checklist":[{"text":"Keep batch criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":issue,"key":format!("SYN-{}",index+20)}}).to_string())?;
+                let card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":id,"title":format!("Local batch {index}"),"agent":"codex","description":"Keep batch description","instructions":"Keep batch instructions","status":"review","checklist":[{"text":"Keep batch criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":issue,"key":format!("SYN-{}",index+20)}}).to_string())?;
                 store.put(Documents::Cards,&card)?;
                 atelier_app::infrastructure::jira_refresh::reserve(store,&atelier_core::contracts::JiraRefreshRequest{revision:1,expected:card},&id)?;
                 atelier_app::infrastructure::jira_refresh::ready(store,&id,&id,atelier_core::contracts::JiraIssueDetail{connection_revision:1,description:"Batch remote description".into(),issue:atelier_core::contracts::JiraIssue{id:issue,key:format!("SYN-{}",index+20),title:format!("Remote batch {index}"),status:"Open".into(),status_id:"1".into(),url:format!("https://synthetic-recovery.example.test/browse/SYN-{}",index+20)}})?;
@@ -2089,7 +2089,7 @@ async fn profiles_scenario(
         .await?;
     click(client, "#remove-profile").await?;
     click(client, "#confirm-profile-action").await?;
-    wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('fournisseur est utilisé') && document.querySelector('[data-profile=ui-api]');",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('fournisseur est utilisé') && !!document.querySelector('[data-profile=ui-api]');",vec![]).await?;
     request(reqwest::Method::PUT, "/api/settings")
         .json(&json!({"agent":previous,"expected":{"agent":"ui-api"}}))
         .send()
@@ -2143,7 +2143,7 @@ async fn profiles_scenario(
         .send_keys(r#"["--analyze","{model}"]"#)
         .await?;
     click(client, "#save-profile").await?;
-    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('[data-profile=ui-command]');",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && !!document.querySelector('[data-profile=ui-command]');",vec![]).await?;
     click(client, "#close-agents").await?;
     client.refresh().await?;
     wait_dom(
@@ -3967,7 +3967,12 @@ async fn files_scenario(
             .json(&json!({}))
             .send()
             .await?;
-        if response.status() != reqwest::StatusCode::BAD_REQUEST {
+        let expected = if !cfg!(windows) && path.ends_with("/cli-update") {
+            reqwest::StatusCode::NOT_FOUND
+        } else {
+            reqwest::StatusCode::BAD_REQUEST
+        };
+        if response.status() != expected {
             return Err(format!(
                 "Après arrêt des services, {path} n’a pas rejoint sa validation sans effet : {}",
                 response.status()
@@ -4051,7 +4056,7 @@ async fn local_commit_scenario(
         "Keep human unselected content\n",
     )?;
     click(client, "#load-commit-files").await?;
-    wait_dom(client,"return document.querySelector('#local-commit')?.getAttribute('aria-busy') === 'false' && document.querySelector('[data-commit-path=\"src/tracked.txt\"]') && document.querySelector('[data-commit-path=\"human-unselected.txt\"]');",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#local-commit')?.getAttribute('aria-busy') === 'false' && !!document.querySelector('[data-commit-path=\"src/tracked.txt\"]') && !!document.querySelector('[data-commit-path=\"human-unselected.txt\"]');",vec![]).await?;
     click(client, "[data-commit-path='src/tracked.txt']").await?;
     for (selector, value) in [
         ("#commit-author-name", "Synthetic author"),
