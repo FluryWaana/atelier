@@ -296,6 +296,8 @@ pub fn AgentProfiles(
         <dialog id="agents-dialog" class="editor" node_ref=dialog aria-labelledby="agents-title" aria-busy=move || pending.get().to_string() on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("AGENTS")}</p><h2 id="agents-title">{move || i18n.text("Profils d’agents")}</h2></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
             <p class="field-help">{move || i18n.text("Un profil définit un agent et ses réglages. L’enregistrer ne lance aucune commande. Les contrôles d’installation et de connexion sont explicites.")}</p>
+            <div class="agent-profile-layout">
+            <aside class="agent-profile-sidebar" aria-label=move || i18n.text("Profils d’agents")>
             <div class="editor-actions"><button id="new-profile" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(None)>{move || i18n.text("Nouveau profil")}</button><button id="refresh-profiles" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| refresh(false)>{move || i18n.text("Actualiser la liste")}</button></div>
             <ul class="profile-list"><For each=move || items.get() key=|profile| field(profile,"id") children=move |profile| {
                 let id = StoredValue::new(field(&profile,"id"));
@@ -303,6 +305,9 @@ pub fn AgentProfiles(
                 view! { <li><button type="button" data-profile=id.get_value() aria-pressed=move || original.get().is_some_and(|profile| field(&profile,"id") == id.get_value()).to_string() disabled=move || pending.get() || dirty.get() on:click=move |_| select(current())>{move || current().map(|profile| format!("{} · {}", field(&profile,"name"), field(&profile,"type"))).unwrap_or_default()}</button></li> }
             } /></ul>
             <p hidden=move || !dirty.get() class="field-help">{move || i18n.text("Enregistre ou recharge ce profil avant d’en choisir un autre.")}</p>
+            </aside>
+            <div class="agent-profile-content">
+            <p class="agent-profile-empty" hidden=move || editing.get()>{move || i18n.text("Choisis un profil ou crée-en un pour commencer.")}</p>
             <form hidden=move || !editing.get() on:submit=move |event| { event.prevent_default(); execute(false); }>
                 <fieldset disabled=move || pending.get()>
                     <label for="profile-id">{move || i18n.text("Identifiant du profil")}</label><input id="profile-id" required maxlength="64" pattern="[a-z][a-z0-9-]*" readonly=move || original.get().is_some() prop:value=move || draft.get().values["id"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("id", event_target_value(&event)); }) />
@@ -329,6 +334,8 @@ pub fn AgentProfiles(
             <crate::agent_diagnostics::AgentDiagnostics profile=original token pending blocked=dirty />
             <div class="confirmation" hidden=move || confirmation.get().is_none()><p>{move || i18n.text(if matches!(confirmation.get(),Some(Confirmation::Remove)) { "Retirer ce profil et sa clé ? Les profils utilisés par des tâches ou projets doivent d’abord être remplacés." } else { "Abandonner les modifications non enregistrées ?" })}</p><button id="confirm-profile-action" type="button" class="danger" disabled=move || pending.get() on:click=move |_| { let action=confirmation.get_untracked(); confirmation.set(None); match action { Some(Confirmation::Close)=>close(), Some(Confirmation::Reload)=>refresh(true), Some(Confirmation::Remove)=>execute(true), None=>{} } }>{move || i18n.text("Confirmer")}</button><button id="cancel-profile-action" type="button" disabled=move || pending.get() on:click=move |_| { confirmation.set(None); focus("profile-name"); }>{move || i18n.text("Annuler")}</button></div>
             <p id="profiles-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="profiles-notice" role="status">{move || i18n.text(&notice.get())}</p>
+            </div>
+            </div>
         </dialog>
     }
 }
