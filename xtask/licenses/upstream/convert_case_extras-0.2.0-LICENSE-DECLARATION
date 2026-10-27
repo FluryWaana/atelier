@@ -1,0 +1,23 @@
+[package]
+name = "convert_case_extras"
+version = "0.2.0"
+authors = ["rutrum <dave@rutrum.net>"]
+edition = "2021"
+description = "Extra features for convert_case"
+license = "MIT"
+keywords = [ "casing", "case", "string" ]
+categories = [ "text-processing" ]
+readme = "README.md"
+repository = "https://github.com/rutrum/convert-case-extras"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = 'abort'
+
+[features]
+random = ["rand"]
+
+[dependencies]
+convert_case = { version = "0.11.0" }
+rand = { version = "^0.8", optional = true }

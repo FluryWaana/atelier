@@ -3,8 +3,87 @@ use atelier_app::{
     infrastructure::{package, process_tree},
 };
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, fs, path::Path, time::Duration};
 pub(super) const LIMIT: usize = 32 * 1024 * 1024;
+fn supplement(dependency: &Value, root: &Path) -> Result<Option<String>> {
+    let manifests = [
+        include_str!("../licenses/core-supplements.json"),
+        include_str!("../licenses/leptos-supplements.json"),
+        include_str!("../licenses/connector-supplements.json"),
+        include_str!("../licenses/other-supplements.json"),
+    ];
+    let mut matched = None;
+    for manifest in manifests {
+        for entry in serde_json::from_str::<Vec<Value>>(manifest)? {
+            if entry["name"] != dependency["name"] || entry["version"] != dependency["version"] {
+                continue;
+            }
+            if matched.is_some()
+                || entry["license"] != dependency["license"]
+                || entry["repository"] != dependency["repository"]
+            {
+                return Err("Identité du complément de licence incompatible.".into());
+            }
+            let vcs: Value = serde_json::from_slice(&package::read(
+                &root.join(".cargo_vcs_info.json"),
+                1024 * 1024,
+            )?)?;
+            if vcs["git"]["sha1"] != entry["commit"] {
+                return Err("Révision du complément de licence incompatible.".into());
+            }
+            let lock = include_str!("../../Cargo.lock");
+            let name = format!("name = {}", serde_json::to_string(&entry["name"])?);
+            let version = format!("version = {}", serde_json::to_string(&entry["version"])?);
+            let checksum = format!("checksum = {}", serde_json::to_string(&entry["checksum"])?);
+            if !lock.split("[[package]]").any(|block| {
+                let lines = block.lines().collect::<BTreeSet<_>>();
+                lines.contains(name.as_str())
+                    && lines.contains(version.as_str())
+                    && lines.contains(checksum.as_str())
+            }) {
+                return Err("Empreinte Cargo du complément de licence incompatible.".into());
+            }
+            let mut text = format!(
+                "\nSelected license: {}\nUpstream revision: {}\n",
+                entry["selectedLicense"]
+                    .as_str()
+                    .ok_or("Licence sélectionnée absente.")?,
+                entry["commit"].as_str().ok_or("Révision absente.")?
+            );
+            let texts = entry["texts"]
+                .as_array()
+                .filter(|texts| !texts.is_empty())
+                .ok_or("Textes complémentaires absents.")?;
+            for item in texts {
+                let relative = Path::new(item["file"].as_str().ok_or("Chemin de licence absent.")?);
+                if relative
+                    .components()
+                    .any(|part| !matches!(part, std::path::Component::Normal(_)))
+                {
+                    return Err("Chemin de complément de licence invalide.".into());
+                }
+                let bytes = package::read(
+                    &super::root().join("xtask/licenses").join(relative),
+                    1024 * 1024,
+                )?;
+                if atelier_app::infrastructure::session::hexadecimal(&Sha256::digest(&bytes))
+                    != item["sha256"].as_str().unwrap_or_default()
+                {
+                    return Err("Texte complémentaire de licence modifié.".into());
+                }
+                text.push_str(&format!(
+                    "\n--- {} ---\nUpstream: {}\n{}\n",
+                    relative.display(),
+                    item["url"].as_str().ok_or("Provenance absente.")?,
+                    std::str::from_utf8(&bytes)?
+                ));
+            }
+            matched = Some(text);
+        }
+    }
+    Ok(matched)
+}
 fn collect(
     root: &Path,
     relative: &Path,
@@ -120,15 +199,22 @@ fn render(metadata: &Value) -> Result<String> {
             files.insert(file.to_path_buf());
         }
         collect(root, Path::new(""), 0, &mut entries, &mut files)?;
-        if files.is_empty() {
+        let supplemental = supplement(dependency, root)?;
+        if files.is_empty() && supplemental.is_none() {
             return Err(format!("Texte de licence manquant pour {name} {version}; compléter les avis avant le paquet.").into());
         }
         output.push_str(&format!(
-            "===== {name} {version} =====\nLicense: {}\nSource: {source}\n",
+            "===== {name} {version} =====\nLicense: {}\nSource: {source}\nSource archive: https://static.crates.io/crates/{name}/{name}-{version}.crate\n",
             dependency["license"]
                 .as_str()
                 .unwrap_or("See bundled license text")
         ));
+        if let Some(text) = supplemental {
+            output.push_str(&text);
+            if output.len() > LIMIT {
+                return Err("Avis de licences trop volumineux.".into());
+            }
+        }
         for file in files {
             let bytes = package::read(&root.join(&file), 1024 * 1024)?;
             let text = std::str::from_utf8(&bytes).map_err(|_| "Texte de licence non UTF-8.")?;
@@ -169,6 +255,41 @@ pub(super) async fn generate(output: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn supplemental_notices_require_exact_locked_identity_and_revision() {
+        let root = tempfile::tempdir().unwrap();
+        let entries: Vec<Value> =
+            serde_json::from_str(include_str!("../licenses/core-supplements.json")).unwrap();
+        let entry = &entries[0];
+        fs::write(
+            root.path().join(".cargo_vcs_info.json"),
+            serde_json::to_vec(&json!({"git":{"sha1":entry["commit"]}})).unwrap(),
+        )
+        .unwrap();
+        let mut dependency = json!({"name":entry["name"],"version":entry["version"],"license":entry["license"],"repository":entry["repository"]});
+        let text = supplement(&dependency, root.path()).unwrap().unwrap();
+        assert!(text.contains("Upstream revision:"));
+        assert!(text.contains("MIT License"));
+        dependency["id"] = json!("synthetic-wrapper");
+        dependency["source"] = json!("registry+https://github.com/rust-lang/crates.io-index");
+        dependency["manifest_path"] = json!(root.path().join("Cargo.toml"));
+        fs::write(root.path().join("LICENSE"), "Synthetic wrapper license.").unwrap();
+        let rendered =
+            render(&json!({"workspace_members":[],"packages":[dependency.clone()]})).unwrap();
+        assert!(rendered.contains("Synthetic wrapper license."));
+        assert!(rendered.contains("Upstream revision:"));
+        dependency["license"] = json!("Unrecognised license");
+        assert!(supplement(&dependency, root.path()).is_err());
+        dependency["license"] = entry["license"].clone();
+        fs::write(
+            root.path().join(".cargo_vcs_info.json"),
+            br#"{"git":{"sha1":"different-revision"}}"#,
+        )
+        .unwrap();
+        assert!(supplement(&dependency, root.path()).is_err());
+        dependency["version"] = json!("999.0.0");
+        assert!(supplement(&dependency, root.path()).unwrap().is_none());
+    }
     #[test]
     fn missing_license_text_and_foreign_paths_are_not_silently_omitted() {
         let root = tempfile::tempdir().unwrap();

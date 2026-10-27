@@ -15,13 +15,13 @@ Le plan et les capacités restent décrits dans [rust-migration-plan.md](rust-mi
 | crates/atelier-core | 66 |
 | crates/atelier-app | 183 |
 | crates/atelier-ui | 50 |
-| xtask | 44 |
+| xtask | 99 |
 | scripts | 3 |
 | .github | 1 |
 | .cargo | 1 |
 | racine | 9 |
 
-Total : 357 fichiers.
+Total : 412 fichiers.
 
 ## Fichiers
 
@@ -341,6 +341,61 @@ Total : 357 fichiers.
 | [scripts/rust-keyring-accounts.sh](../scripts/rust-keyring-accounts.sh) | Outil natif / fabrication |
 | [scripts/rust-keyring-macos-accounts.sh](../scripts/rust-keyring-macos-accounts.sh) | Outil natif / fabrication |
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Configuration |
+| [xtask/licenses/README.md](../xtask/licenses/README.md) | Ressource / documentation |
+| [xtask/licenses/connector-supplements-provenance.md](../xtask/licenses/connector-supplements-provenance.md) | Ressource / documentation |
+| [xtask/licenses/connector-supplements.json](../xtask/licenses/connector-supplements.json) | Ressource / documentation |
+| [xtask/licenses/core-supplements.json](../xtask/licenses/core-supplements.json) | Ressource / documentation |
+| [xtask/licenses/leptos-supplements-provenance.md](../xtask/licenses/leptos-supplements-provenance.md) | Ressource / documentation |
+| [xtask/licenses/leptos-supplements.json](../xtask/licenses/leptos-supplements.json) | Ressource / documentation |
+| [xtask/licenses/other-supplements-provenance.md](../xtask/licenses/other-supplements-provenance.md) | Ressource / documentation |
+| [xtask/licenses/other-supplements.json](../xtask/licenses/other-supplements.json) | Ressource / documentation |
+| [xtask/licenses/upstream/SPDX-MIT.txt](../xtask/licenses/upstream/SPDX-MIT.txt) | Ressource / documentation |
+| [xtask/licenses/upstream/any_spawner-0.3.0-LICENSE](../xtask/licenses/upstream/any_spawner-0.3.0-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/block2-0.6.2-LICENSE.md](../xtask/licenses/upstream/block2-0.6.2-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/const_str_slice_concat-0.1.0-LICENSE](../xtask/licenses/upstream/const_str_slice_concat-0.1.0-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/convert_case_extras-0.2.0-LICENSE-DECLARATION](../xtask/licenses/upstream/convert_case_extras-0.2.0-LICENSE-DECLARATION) | Ressource / documentation |
+| [xtask/licenses/upstream/dispatch2-0.3.1-LICENSE.md](../xtask/licenses/upstream/dispatch2-0.3.1-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/drain_filter_polyfill-0.1.3-LICENSE-DECLARATION](../xtask/licenses/upstream/drain_filter_polyfill-0.1.3-LICENSE-DECLARATION) | Ressource / documentation |
+| [xtask/licenses/upstream/either_of-0.1.9-LICENSE](../xtask/licenses/upstream/either_of-0.1.9-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/erased-0.1.2-LICENSE-DECLARATION](../xtask/licenses/upstream/erased-0.1.2-LICENSE-DECLARATION) | Ressource / documentation |
+| [xtask/licenses/upstream/gloo-net-0.6.0-LICENSE-MIT](../xtask/licenses/upstream/gloo-net-0.6.0-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/gloo-net-0.7.0-LICENSE-MIT](../xtask/licenses/upstream/gloo-net-0.7.0-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/gloo-utils-0.2.0-LICENSE-MIT](../xtask/licenses/upstream/gloo-utils-0.2.0-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/gloo-utils-0.3.0-LICENSE-MIT](../xtask/licenses/upstream/gloo-utils-0.3.0-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/hydration_context-0.3.2-LICENSE](../xtask/licenses/upstream/hydration_context-0.3.2-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/jni-0.22.4-LICENSE-MIT](../xtask/licenses/upstream/jni-0.22.4-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/jni-macros-0.22.4-LICENSE-MIT](../xtask/licenses/upstream/jni-macros-0.22.4-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/jni-sys-macros-0.4.1-LICENSE-MIT](../xtask/licenses/upstream/jni-sys-macros-0.4.1-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos-0.8.22-LICENSE](../xtask/licenses/upstream/leptos-0.8.22-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos_config-0.8.10-LICENSE](../xtask/licenses/upstream/leptos_config-0.8.10-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos_dom-0.8.8-LICENSE](../xtask/licenses/upstream/leptos_dom-0.8.8-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos_hot_reload-0.8.7-LICENSE](../xtask/licenses/upstream/leptos_hot_reload-0.8.7-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos_macro-0.8.19-LICENSE](../xtask/licenses/upstream/leptos_macro-0.8.19-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/leptos_server-0.8.8-LICENSE](../xtask/licenses/upstream/leptos_server-0.8.8-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/libsqlite3-sys-0.38.2-SQLite-copyright.txt](../xtask/licenses/upstream/libsqlite3-sys-0.38.2-SQLite-copyright.txt) | Ressource / documentation |
+| [xtask/licenses/upstream/next_tuple-0.1.0-LICENSE](../xtask/licenses/upstream/next_tuple-0.1.0-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/objc2-0.6.5-LICENSE.md](../xtask/licenses/upstream/objc2-0.6.5-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/objc2-app-kit-0.3.2-LICENSE.md](../xtask/licenses/upstream/objc2-app-kit-0.3.2-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/objc2-core-foundation-0.3.2-LICENSE.md](../xtask/licenses/upstream/objc2-core-foundation-0.3.2-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/objc2-core-graphics-0.3.2-LICENSE.md](../xtask/licenses/upstream/objc2-core-graphics-0.3.2-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/objc2-encode-4.1.0-LICENSE.md](../xtask/licenses/upstream/objc2-encode-4.1.0-LICENSE.md) | Ressource / documentation |
+| [xtask/licenses/upstream/oco_ref-0.2.1-LICENSE](../xtask/licenses/upstream/oco_ref-0.2.1-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/or_poisoned-0.1.0-LICENSE](../xtask/licenses/upstream/or_poisoned-0.1.0-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/r-efi-6.0.0-LICENSE-AUTHORS](../xtask/licenses/upstream/r-efi-6.0.0-LICENSE-AUTHORS) | Ressource / documentation |
+| [xtask/licenses/upstream/reactive_graph-0.2.16-LICENSE](../xtask/licenses/upstream/reactive_graph-0.2.16-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/reactive_stores-0.4.4-LICENSE](../xtask/licenses/upstream/reactive_stores-0.4.4-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/reactive_stores_macro-0.4.4-LICENSE](../xtask/licenses/upstream/reactive_stores_macro-0.4.4-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/rsqlite-vfs-0.1.1-LICENSE](../xtask/licenses/upstream/rsqlite-vfs-0.1.1-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/rstml-0.13.1-LICENSE](../xtask/licenses/upstream/rstml-0.13.1-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/rustls-platform-verifier-android-0.2.0-LICENSE-MIT](../xtask/licenses/upstream/rustls-platform-verifier-android-0.2.0-LICENSE-MIT) | Ressource / documentation |
+| [xtask/licenses/upstream/server_fn-0.8.13-LICENSE](../xtask/licenses/upstream/server_fn-0.8.13-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/server_fn_macro-0.8.12-LICENSE](../xtask/licenses/upstream/server_fn_macro-0.8.12-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/server_fn_macro_default-0.8.6-LICENSE](../xtask/licenses/upstream/server_fn_macro_default-0.8.6-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/tachys-0.2.19-LICENSE](../xtask/licenses/upstream/tachys-0.2.19-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/throw_error-0.3.1-LICENSE](../xtask/licenses/upstream/throw_error-0.3.1-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/wasm_split_helpers-0.2.3-LICENSE](../xtask/licenses/upstream/wasm_split_helpers-0.2.3-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/wasm_split_macros-0.2.2-LICENSE](../xtask/licenses/upstream/wasm_split_macros-0.2.2-LICENSE) | Ressource / documentation |
+| [xtask/licenses/upstream/webdriver-0.53.0-MPL-2.0.txt](../xtask/licenses/upstream/webdriver-0.53.0-MPL-2.0.txt) | Ressource / documentation |
 | [xtask/packaging/atelier-kanban-rust](../xtask/packaging/atelier-kanban-rust) | Outil natif / fabrication |
 | [xtask/packaging/atelier-kanban-rust.desktop](../xtask/packaging/atelier-kanban-rust.desktop) | Outil natif / fabrication |
 | [xtask/packaging/install-macos-git.sh](../xtask/packaging/install-macos-git.sh) | Outil natif / fabrication |

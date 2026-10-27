@@ -3,5 +3,7 @@
 *.cmd text eol=crlf
 xtask/packaging/*.sh text eol=lf
 xtask/packaging/atelier-kanban-rust text eol=lf
+# Preserve upstream notice bytes verbatim for their recorded SHA-256.
+xtask/licenses/upstream/** -text -whitespace
 scripts/rust-keyring-accounts.sh text eol=lf
 scripts/rust-keyring-macos-accounts.sh text eol=lf

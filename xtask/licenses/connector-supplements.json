@@ -1,0 +1,146 @@
+[
+  {
+    "name": "gloo-net",
+    "version": "0.6.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustwasm/gloo",
+    "commit": "40c6daa612a90a138ba3e3d70804fcbc5ad4911e",
+    "checksum": "c06f627b1a58ca3d42b45d6104bf1e1a03799df472df00988b6ba21accc10580",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/gloo-net-0.6.0-LICENSE-MIT",
+        "sha256": "5a6f5443ea473f130adbdcf84254761d1292bc79759b5253915d4b5e7afbef66",
+        "url": "https://raw.githubusercontent.com/rustwasm/gloo/40c6daa612a90a138ba3e3d70804fcbc5ad4911e/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "gloo-net",
+    "version": "0.7.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustwasm/gloo",
+    "commit": "d69fcff62ee63f37076c4a0715a6f828b0036599",
+    "checksum": "a6420f887c48417e9e86c6cf61274eb231830cccc100e49613f7952e269a1fe1",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/gloo-net-0.7.0-LICENSE-MIT",
+        "sha256": "5a6f5443ea473f130adbdcf84254761d1292bc79759b5253915d4b5e7afbef66",
+        "url": "https://raw.githubusercontent.com/rustwasm/gloo/d69fcff62ee63f37076c4a0715a6f828b0036599/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "gloo-utils",
+    "version": "0.2.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustwasm/gloo/tree/master/crates/utils",
+    "commit": "f3bb1d1a1c33dbcccaf26446aca7d0cea8e9d574",
+    "checksum": "0b5555354113b18c547c1d3a98fbf7fb32a9ff4f6fa112ce823a21641a0ba3aa",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/gloo-utils-0.2.0-LICENSE-MIT",
+        "sha256": "5a6f5443ea473f130adbdcf84254761d1292bc79759b5253915d4b5e7afbef66",
+        "url": "https://raw.githubusercontent.com/rustwasm/gloo/f3bb1d1a1c33dbcccaf26446aca7d0cea8e9d574/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "gloo-utils",
+    "version": "0.3.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustwasm/gloo/tree/master/crates/utils",
+    "commit": "e6280d4b93c86a478a8f2f31af5f13d770b156b7",
+    "checksum": "4202275d95a142fa209a1e35e91c250a710c5600731372cd3464a39ed01573d6",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/gloo-utils-0.3.0-LICENSE-MIT",
+        "sha256": "5a6f5443ea473f130adbdcf84254761d1292bc79759b5253915d4b5e7afbef66",
+        "url": "https://raw.githubusercontent.com/rustwasm/gloo/e6280d4b93c86a478a8f2f31af5f13d770b156b7/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "jni",
+    "version": "0.22.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jni-rs/jni-rs",
+    "commit": "5ae9458a4ec44c5318f37ddc7569c1d4ae8a69e7",
+    "checksum": "5efd9a482cf3a427f00d6b35f14332adc7902ce91efb778580e180ff90fa3498",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/jni-0.22.4-LICENSE-MIT",
+        "sha256": "fea1d5bf3dd71605ce5d7d2ff695c1837e914c77195e523a86b5391716477960",
+        "url": "https://raw.githubusercontent.com/jni-rs/jni-rs/5ae9458a4ec44c5318f37ddc7569c1d4ae8a69e7/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "jni-macros",
+    "version": "0.22.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jni-rs/jni-rs",
+    "commit": "33045a124105c939d1e2cbdcb5a39e5d868ffa03",
+    "checksum": "a00109accc170f0bdb141fed3e393c565b6f5e072365c3bd58f5b062591560a3",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/jni-macros-0.22.4-LICENSE-MIT",
+        "sha256": "fea1d5bf3dd71605ce5d7d2ff695c1837e914c77195e523a86b5391716477960",
+        "url": "https://raw.githubusercontent.com/jni-rs/jni-rs/33045a124105c939d1e2cbdcb5a39e5d868ffa03/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "jni-sys-macros",
+    "version": "0.4.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jni-rs/jni-sys",
+    "commit": "64d77b7a5f119d7b55b4e2c169a4668067ff59e6",
+    "checksum": "38c0b942f458fe50cdac086d2f946512305e5631e720728f2a61aabcd47a6264",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/jni-sys-macros-0.4.1-LICENSE-MIT",
+        "sha256": "1d85bd754b04ceec93e98e890edd1fa3c6a22e81bcb32135806beeccefa51cd1",
+        "url": "https://raw.githubusercontent.com/jni-rs/jni-sys/64d77b7a5f119d7b55b4e2c169a4668067ff59e6/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "rustls-platform-verifier-android",
+    "version": "0.2.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rustls/rustls-platform-verifier",
+    "commit": "252e25161a91af476cbea620e29d277592d27ec7",
+    "checksum": "eec689c0bc40ff2458a5977b6619cb718087084a18e02a131c599b62d05e1a5f",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/rustls-platform-verifier-android-0.2.0-LICENSE-MIT",
+        "sha256": "1c7cf76689c837a68ed8d704994e52a0f2940c087958f860d17f3186afbdcc0c",
+        "url": "https://raw.githubusercontent.com/rustls/rustls-platform-verifier/252e25161a91af476cbea620e29d277592d27ec7/LICENSE-MIT"
+      }
+    ]
+  },
+  {
+    "name": "webdriver",
+    "version": "0.53.0",
+    "license": "MPL-2.0",
+    "repository": "https://hg.mozilla.org/mozilla-central/file/tip/testing/webdriver",
+    "commit": "2c83250e67d85c2a172670b08cd88753d1552d91",
+    "checksum": "91d53921e1bef27512fa358179c9a22428d55778d2c2ae3c5c37a52b82ce6e92",
+    "selectedLicense": "MPL-2.0",
+    "texts": [
+      {
+        "file": "upstream/webdriver-0.53.0-MPL-2.0.txt",
+        "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+        "url": "https://raw.githubusercontent.com/mozilla/bedrock/a15178c3c7c976c67b3641af77cae0b66093a175/media/MPL/2.0/index.txt"
+      }
+    ]
+  }
+]

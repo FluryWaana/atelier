@@ -1,0 +1,338 @@
+[
+  {
+    "name": "any_spawner",
+    "version": "0.3.0",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "9b2e313d20c89603ddc0deb7b1133e60c877faed",
+    "checksum": "1384d3fe1eecb464229fcf6eebb72306591c56bf27b373561489458a7c73027d",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/any_spawner-0.3.0-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/9b2e313d20c89603ddc0deb7b1133e60c877faed/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "const_str_slice_concat",
+    "version": "0.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "4e23d2b6f1cb74ef7eb08b40ef7f14baa85a7285",
+    "checksum": "f67855af358fcb20fac58f9d714c94e2b228fe5694c1c9b4ead4a366343eda1b",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/const_str_slice_concat-0.1.0-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/4e23d2b6f1cb74ef7eb08b40ef7f14baa85a7285/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "either_of",
+    "version": "0.1.9",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "fbc9ed631ff8c19c5eed02a1d4459e202cff7043",
+    "checksum": "5060e0a4cbf26a87550792688ade88e6b8aec9208613631a7a363bda7bc2d4cd",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/either_of-0.1.9-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/fbc9ed631ff8c19c5eed02a1d4459e202cff7043/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "hydration_context",
+    "version": "0.3.2",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "95f574434a11ba607d58bc0018d3ab5a17e7ac8b",
+    "checksum": "285b05858fe7d58c5eff059f7b46c228fd86996d996c59eb35fc0340d174f640",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/hydration_context-0.3.2-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos",
+    "version": "0.8.22",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "58fe6c1ad0cd175e9c8ec204895a9739d52fda16",
+    "checksum": "713ee6895e3d1126ea9781280d01414f5643f3f201a949b71efffac07d735f00",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos-0.8.22-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos_config",
+    "version": "0.8.10",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "fbc9ed631ff8c19c5eed02a1d4459e202cff7043",
+    "checksum": "0c06f751315bccc0d193fab302ac01d25bcfcd97474d4676440e7e3250dc3fc3",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos_config-0.8.10-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/fbc9ed631ff8c19c5eed02a1d4459e202cff7043/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos_dom",
+    "version": "0.8.8",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "da62c0cb9a1d814cf480c2f1dae5f67f4ea4773f",
+    "checksum": "35742e9ed8f8aaf9e549b454c68a7ac0992536e06856365639b111f72ab07884",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos_dom-0.8.8-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/da62c0cb9a1d814cf480c2f1dae5f67f4ea4773f/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos_hot_reload",
+    "version": "0.8.7",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "58fe6c1ad0cd175e9c8ec204895a9739d52fda16",
+    "checksum": "d84989bd3d604e66adbfe13a32bec2ea47bdcb6c9fcd643f784facbb32f6ef10",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos_hot_reload-0.8.7-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos_macro",
+    "version": "0.8.19",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "58fe6c1ad0cd175e9c8ec204895a9739d52fda16",
+    "checksum": "0902af1e6947ffc7e906b7003a165f76f178dc711a47b74241025090b0c32a72",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos_macro-0.8.19-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "leptos_server",
+    "version": "0.8.8",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "584c3a2d884b0e4dba9e3f822a9b6982cff072c7",
+    "checksum": "202b2d1261c22d886f307934760a6bb566444f68f39b24f6f10defdc23633049",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/leptos_server-0.8.8-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/584c3a2d884b0e4dba9e3f822a9b6982cff072c7/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "next_tuple",
+    "version": "0.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "d665dd4b89151e5d797df3db5cd2260cbe1e8fae",
+    "checksum": "60993920e071b0c9b66f14e2b32740a4e27ffc82854dcd72035887f336a09a28",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/next_tuple-0.1.0-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/d665dd4b89151e5d797df3db5cd2260cbe1e8fae/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "oco_ref",
+    "version": "0.2.1",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "5f2d5115537d08043bba0293c406c4f9b97a4dae",
+    "checksum": "ed0423ff9973dea4d6bd075934fdda86ebb8c05bdf9d6b0507067d4a1226371d",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/oco_ref-0.2.1-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/5f2d5115537d08043bba0293c406c4f9b97a4dae/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "or_poisoned",
+    "version": "0.1.0",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "6865c1f951bfa0bc5b107aa69286a110cd6f45ca",
+    "checksum": "8c04f5d74368e4d0dfe06c45c8627c81bd7c317d52762d118fb9b3076f6420fd",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/or_poisoned-0.1.0-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/6865c1f951bfa0bc5b107aa69286a110cd6f45ca/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "reactive_graph",
+    "version": "0.2.16",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "fa7f7bd30bf3b835c00bf4878339d8672a94490a",
+    "checksum": "3bcec36a2d1b9a53a4129b3270b19e3df6f6b88c2e7c97ed9404dc9307f137d7",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/reactive_graph-0.2.16-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/fa7f7bd30bf3b835c00bf4878339d8672a94490a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "reactive_stores",
+    "version": "0.4.4",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "584c3a2d884b0e4dba9e3f822a9b6982cff072c7",
+    "checksum": "a29e469b556f25486678e9f5f65fa21a0351d98affde9a7eea9fee286bf8ebd6",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/reactive_stores-0.4.4-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/584c3a2d884b0e4dba9e3f822a9b6982cff072c7/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "reactive_stores_macro",
+    "version": "0.4.4",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "584c3a2d884b0e4dba9e3f822a9b6982cff072c7",
+    "checksum": "8d11f1b82859d94577892b8037c35f8a4f066cbb3864583e22e68def0af49a88",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/reactive_stores_macro-0.4.4-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/584c3a2d884b0e4dba9e3f822a9b6982cff072c7/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "server_fn",
+    "version": "0.8.13",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "30fa4e039455bea69c9467e8ec45cad7fce0722f",
+    "checksum": "be8559dd05af1b5b7e363a150616589d5a88af5187273f7f331ba0dae8922812",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/server_fn-0.8.13-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/30fa4e039455bea69c9467e8ec45cad7fce0722f/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "server_fn_macro",
+    "version": "0.8.12",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "95f574434a11ba607d58bc0018d3ab5a17e7ac8b",
+    "checksum": "ce79d7b6ab93f7994e5ff4999eb962f2aea370d7c3b91986eb75da738a8e65f9",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/server_fn_macro-0.8.12-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "server_fn_macro_default",
+    "version": "0.8.6",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "58fe6c1ad0cd175e9c8ec204895a9739d52fda16",
+    "checksum": "d9a4f81a0d855f279c3448243138a55cbfdd9851da9341b9c1e5971b90089e61",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/server_fn_macro_default-0.8.6-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/8d69739866fcd56e5483bb4a9c09350b8773089a/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "tachys",
+    "version": "0.2.19",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "584c3a2d884b0e4dba9e3f822a9b6982cff072c7",
+    "checksum": "e47e2220bb9d2a3be976a22a0fb7685a0b84499bb11ea5cb3bbc82907675ac68",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/tachys-0.2.19-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/584c3a2d884b0e4dba9e3f822a9b6982cff072c7/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "throw_error",
+    "version": "0.3.1",
+    "license": "MIT",
+    "repository": "https://github.com/leptos-rs/leptos",
+    "commit": "43359694b6596f88d911b9c8d8d92a121c27d0ce",
+    "checksum": "dc0ed6038fcbc0795aca7c92963ddda636573b956679204e044492d2b13c8f64",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/throw_error-0.3.1-LICENSE",
+        "sha256": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+        "url": "https://raw.githubusercontent.com/leptos-rs/leptos/43359694b6596f88d911b9c8d8d92a121c27d0ce/LICENSE"
+      }
+    ]
+  }
+]

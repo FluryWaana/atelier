@@ -1,0 +1,145 @@
+[
+  {
+    "name": "convert_case_extras",
+    "version": "0.2.0",
+    "license": "MIT",
+    "repository": "https://github.com/rutrum/convert-case-extras",
+    "commit": "d523585a01afddd13944be1d88faa4d1db6a3eb4",
+    "checksum": "589c70f0faf8aa9d17787557d5eae854d7755cac50f5c3d12c81d3d57661cebb",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/convert_case_extras-0.2.0-LICENSE-DECLARATION",
+        "sha256": "de1a69e358036abbdf4641078fed6c0a9ac84d8fabe3c6cd76f9ebee393f6dfd",
+        "url": "https://raw.githubusercontent.com/rutrum/convert-case-extras/d523585a01afddd13944be1d88faa4d1db6a3eb4/Cargo.toml"
+      },
+      {
+        "file": "upstream/SPDX-MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MIT.txt"
+      }
+    ]
+  },
+  {
+    "name": "drain_filter_polyfill",
+    "version": "0.1.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/whentze/drain_filter_polyfill.git",
+    "commit": "9dc585f3eec048bfc3faf8656e07c4a19273c38f",
+    "checksum": "669a445ee724c5c69b1b06fe0b63e70a1c84bc9bb7d9696cd4f4e3ec45050408",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/drain_filter_polyfill-0.1.3-LICENSE-DECLARATION",
+        "sha256": "9a20e81178ae493a1524696028fbf0a8d279a97595e69c5f2c4a8353a9aa7176",
+        "url": "https://raw.githubusercontent.com/whentze/drain_filter_polyfill/9dc585f3eec048bfc3faf8656e07c4a19273c38f/Cargo.toml"
+      },
+      {
+        "file": "upstream/SPDX-MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MIT.txt"
+      }
+    ]
+  },
+  {
+    "name": "erased",
+    "version": "0.1.2",
+    "license": "MIT",
+    "repository": "https://github.com/JonathanBrouwer/erased",
+    "commit": "60eebad28ab2578a6322199099b8a07035438008",
+    "checksum": "a1731451909bde27714eacba19c2566362a7f35224f52b153d3f42cf60f72472",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/erased-0.1.2-LICENSE-DECLARATION",
+        "sha256": "05dd025524337ef6224a0878d4a580774d5981e1c63d9c7c2fe449b88fff703e",
+        "url": "https://raw.githubusercontent.com/JonathanBrouwer/erased/60eebad28ab2578a6322199099b8a07035438008/Cargo.toml"
+      },
+      {
+        "file": "upstream/SPDX-MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+        "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MIT.txt"
+      }
+    ]
+  },
+  {
+    "name": "r-efi",
+    "version": "6.0.0",
+    "license": "MIT OR Apache-2.0 OR LGPL-2.1-or-later",
+    "repository": "https://github.com/r-efi/r-efi",
+    "commit": "7e1b0322d31d625f81a5656096330934f9cd835d",
+    "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/r-efi-6.0.0-LICENSE-AUTHORS",
+        "sha256": "d027e91dbc9cdbb2f1190068e498bd6b61cff022b6a032b191021ba658d96111",
+        "url": "https://raw.githubusercontent.com/r-efi/r-efi/7e1b0322d31d625f81a5656096330934f9cd835d/AUTHORS"
+      }
+    ]
+  },
+  {
+    "name": "rsqlite-vfs",
+    "version": "0.1.1",
+    "license": "MIT",
+    "repository": null,
+    "commit": "1bb309784f25c401ddf95131dcde4c4cdad7aee7",
+    "checksum": "c51c9ae4df8a7fba42103df5c621fa3c37eccf3a3c650879e90fc48b11cc192c",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/rsqlite-vfs-0.1.1-LICENSE",
+        "sha256": "e1c1975c3474cce31722836f101a40ffaf1cc784e4d2f38ce3e77b9712934e78",
+        "url": "https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/1bb309784f25c401ddf95131dcde4c4cdad7aee7/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "rstml",
+    "version": "0.13.1",
+    "license": "MIT",
+    "repository": "https://github.com/rs-tml/rstml",
+    "commit": "9fe0f4616a8224d37d64a53fa91722a08d736952",
+    "checksum": "c6bd1bfba3c4c0b57aae906204d9e5744f3f65800ce6c75bd4cc162f2c26f3aa",
+    "selectedLicense": "MIT",
+    "texts": [
+      {
+        "file": "upstream/rstml-0.13.1-LICENSE",
+        "sha256": "f99321bd5b3678fae12d43f1ae77064b2a0f6db3646c36d5171a38ecd01e744c",
+        "url": "https://raw.githubusercontent.com/rs-tml/rstml/9fe0f4616a8224d37d64a53fa91722a08d736952/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "wasm_split_helpers",
+    "version": "0.2.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/WorldSEnder/wasm-split-prototype",
+    "commit": "d8263b20578e8c49b02851009ae3bc7d43c567bd",
+    "checksum": "ab578aae2fe2916edaea06843187d50f87b0965622da0ceef648edca27b385ba",
+    "selectedLicense": "Apache-2.0",
+    "texts": [
+      {
+        "file": "upstream/wasm_split_helpers-0.2.3-LICENSE",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "url": "https://raw.githubusercontent.com/WorldSEnder/wasm-split-prototype/d8263b20578e8c49b02851009ae3bc7d43c567bd/LICENSE"
+      }
+    ]
+  },
+  {
+    "name": "wasm_split_macros",
+    "version": "0.2.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/WorldSEnder/wasm-split-prototype",
+    "commit": "a3266fe9d998b3f8b0d2111500b7c4b8ec892506",
+    "checksum": "3e653af7ee4a9ef0fce481a9ec6f43cb78de20d0cdb4f4f5862e1dc6e407e6c8",
+    "selectedLicense": "Apache-2.0",
+    "texts": [
+      {
+        "file": "upstream/wasm_split_macros-0.2.2-LICENSE",
+        "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+        "url": "https://raw.githubusercontent.com/WorldSEnder/wasm-split-prototype/a3266fe9d998b3f8b0d2111500b7c4b8ec892506/LICENSE"
+      }
+    ]
+  }
+]
