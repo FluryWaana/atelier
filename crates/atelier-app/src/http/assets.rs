@@ -81,6 +81,30 @@ fn asset_router(path: &Path, revision: Option<String>) -> Result<Router<Shared>>
         } else {
             format!("/{name}")
         };
+        if name == "index.html" {
+            for page in [
+                "/overview",
+                "/board",
+                "/brainstorm",
+                "/agents",
+                "/processes",
+                "/worktrees",
+                "/time",
+                "/archives",
+                "/settings",
+                "/updates",
+                "/tasks/{id}",
+            ] {
+                let bytes = bytes.clone();
+                router = router.route(
+                    page,
+                    get(move || {
+                        let bytes = bytes.clone();
+                        async move { ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], bytes) }
+                    }),
+                );
+            }
+        }
         router = router.route(
             &route,
             get(move || {

@@ -749,6 +749,27 @@ async fn worktrees_resume_verify_ownership_and_require_explicit_discard_without_
     worktrees::create(&root, &roots, &plan).await.unwrap();
     let target = Path::new(&plan.path);
     assert!(target.join(&long_path).as_os_str().len() > 260);
+    let gitdir = std::fs::read_to_string(target.join(".git")).unwrap();
+    let target_index = Path::new(gitdir.trim().strip_prefix("gitdir: ").unwrap()).join("index");
+    let target_index_before = std::fs::read(&target_index).unwrap();
+    let (observed_head, clean) = worktrees::inspect_status(&root, &roots, &plan)
+        .await
+        .unwrap();
+    assert!(clean);
+    assert_eq!(observed_head, plan.base_commit);
+    std::fs::write(
+        target.join("inspection-untracked.txt"),
+        "Synthetic inspection content",
+    )
+    .unwrap();
+    assert!(
+        !worktrees::inspect_status(&root, &roots, &plan)
+            .await
+            .unwrap()
+            .1
+    );
+    std::fs::remove_file(target.join("inspection-untracked.txt")).unwrap();
+    assert_eq!(std::fs::read(&target_index).unwrap(), target_index_before);
     assert_eq!(
         std::fs::read_to_string(target.join(&long_path)).unwrap(),
         "long path synthetic content"

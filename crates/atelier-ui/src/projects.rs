@@ -126,10 +126,38 @@ pub fn Projects(
     let original = RwSignal::new(Draft::default());
     let draft = RwSignal::new(Draft::default());
     let dirty = Memo::new(move |_| original.get() != draft.get());
+    let repository_locked = Memo::new(move |_| {
+        let previous = original.get();
+        !previous.id.is_empty()
+            && board.cards.with(|cards| {
+                cards.iter().any(|card| {
+                    field(&card.fields, "repo") == previous.repo
+                        && card
+                            .fields
+                            .get::<Document>("worktree")
+                            .ok()
+                            .flatten()
+                            .is_some()
+                })
+            })
+    });
     let pending = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let confirmation = RwSignal::new("");
     let archive = RwSignal::new(false);
+    let editing = RwSignal::new(false);
+    let settings_dialog = NodeRef::<leptos::html::Dialog>::new();
+    Effect::new(move |_| {
+        let opened = editing.get();
+        if let Some(node) = settings_dialog.get() {
+            if opened && !node.open() {
+                let _ = node.show_modal();
+            }
+            if !opened && node.open() {
+                node.close();
+            }
+        }
+    });
     let dialog = NodeRef::<leptos::html::Dialog>::new();
     dialog.on_load(move |node| {
         let _ = node.show_modal();
@@ -172,6 +200,76 @@ pub fn Projects(
         error.set(String::new());
         archive.set(false);
     };
+    let close_settings = move || {
+        let target = format!("project-settings-{}", draft.get_untracked().id);
+        editing.set(false);
+        select(Draft::default());
+        request_animation_frame(move || {
+            if let Some(element) = document()
+                .get_element_by_id(&target)
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+        });
+    };
+    let request_settings_close = move || {
+        if pending.get_untracked() {
+            return;
+        }
+        if dirty.get_untracked() {
+            confirmation.set("settings-discard");
+        } else {
+            close_settings();
+        }
+    };
+    let browse = move || {
+        if pending.get_untracked() {
+            return;
+        }
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(message) => {
+                error.set(message);
+                return;
+            }
+        };
+        pending.set(true);
+        error.set(String::new());
+        spawn_local(async move {
+            let result = async {
+                let response = write(
+                    &credential,
+                    Method::POST,
+                    "/api/folders/choose",
+                    &serde_json::json!({}),
+                )
+                .await?;
+                let chosen: serde_json::Value = response
+                    .json()
+                    .await
+                    .map_err(|_| "Réponse du serveur invalide.")?;
+                if let Some(path) = chosen["path"].as_str().filter(|path| !path.is_empty()) {
+                    draft.update(|value| {
+                        value.repo = path.into();
+                        if value.name.trim().is_empty() {
+                            value.name = path
+                                .rsplit(['/', '\\'])
+                                .find(|part| !part.is_empty())
+                                .unwrap_or_default()
+                                .into();
+                        }
+                    });
+                }
+                Ok::<(), String>(())
+            }
+            .await;
+            if let Err(message) = result {
+                error.set(message);
+            }
+            pending.set(false);
+        });
+    };
     let save = move |remove: bool| {
         if pending.get_untracked() {
             return;
@@ -212,6 +310,7 @@ pub fn Projects(
                         repository.set(String::new());
                     }
                     select(Draft::default());
+                    editing.set(false);
                 } else {
                     let project: Document = response
                         .json()
@@ -229,7 +328,12 @@ pub fn Projects(
                         }
                     });
                     repository.set(saved.repo.clone());
-                    select(saved);
+                    if value.id.is_empty() {
+                        select(Draft::default());
+                    } else {
+                        select(saved);
+                        close_settings();
+                    }
                 }
                 // A failed refresh must not turn an already committed creation into a retry.
                 board.refresh(&token).await.map_err(|message| {
@@ -246,23 +350,37 @@ pub fn Projects(
         });
     };
     view! {
-        <dialog id="projects-dialog" class="editor" node_ref=dialog aria-labelledby="projects-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("ESPACE DE TRAVAIL")}</p><h2 id="projects-heading">{move || i18n.text("Vos projets")}</h2></div><button id="close-projects" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
-            <div class="project-list" aria-label=move || i18n.text("Projets enregistrés")><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
+        <dialog id="projects-dialog" node_ref=dialog aria-labelledby="projects-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
+            <header class="dialog-heading"><div><div class="eyebrow">{move || i18n.text("SUR CE PC")}</div><h2 id="projects-heading">{move || i18n.text("Mes projets")}</h2></div><button id="close-projects" data-close="" aria-label=move ||i18n.text("Fermer") type="button" disabled=move || pending.get() on:click=move |_| request_close()><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></header>
+            <p class="hint">{move ||i18n.text("Enregistrez vos répertoires pour les retrouver et filtrer les tâches. Retirer un projet archive ses tâches et les enlève du tableau. Ses fichiers, worktrees et tickets distants sont conservés.")}</p>
+            <div class="projects-layout"><section class="project-catalog"><div class="section-heading"><span class="section-number">"01"</span><div><h3>{move ||i18n.text("Vos projets")}</h3></div></div>
+            <div id="project-list" aria-label=move || i18n.text("Projets enregistrés")><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
                 let id = StoredValue::new(field(&project, "id"));
                 let current = move || projects.with(|projects| projects.iter().find(|project| field(project, "id") == id.get_value()).cloned());
-                view! { <button type="button" class="project-choice" data-project-id=id.get_value() disabled=move || pending.get() || dirty.get() aria-pressed=move || (draft.get().id == id.get_value()).to_string() on:click=move |_| { if let Some(project) = current() { select(Draft::from_document(&project)); } }><strong>{move || current().map(|project| field(&project,"name")).unwrap_or_default()}</strong><small>{move || current().map(|project| field(&project,"repo")).unwrap_or_default()}</small></button> }
-            } /><p class="field-help" hidden=move || !projects.get().is_empty()>{move || i18n.text("Ajoutez votre premier projet pour regrouper ses tâches et ses réglages.")}</p></div>
-            <button id="new-project" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(Draft::default())>{move || i18n.text("Nouveau projet")}</button>
-            <form class="project-form" on:submit=move |event| { event.prevent_default(); save(false); }>
+                view! { <div class="project-row"><button type="button" data-project=id.get_value() disabled=move || pending.get() || dirty.get() on:click=move |_| {if let Some(project)=current(){repository.set(field(&project,"repo"));close();}}><strong>{move || current().map(|project| field(&project,"name")).unwrap_or_default()}</strong><small>{move || current().map(|project| field(&project,"repo")).unwrap_or_default()}</small></button><div class="project-row-actions"><button id=format!("project-settings-{}",id.get_value()) type="button" data-project-id=id.get_value() disabled=move ||pending.get()||dirty.get() on:click=move |_|{if let Some(project)=current(){select(Draft::from_document(&project));editing.set(true);}}>{move ||i18n.text("Réglages")}</button><button type="button" disabled=move ||pending.get()||dirty.get() on:click=move |_|{if let Some(project)=current(){select(Draft::from_document(&project));editing.set(true);archive.set(true);confirmation.set("remove");}}>{move ||i18n.text("Retirer")}</button></div></div> }
+            } /><p class="hint" hidden=move || !projects.get().is_empty()>{move || i18n.text("Aucun projet enregistré.")}</p></div></section>
+            <form id="project-form" class="form-section" on:submit=move |event|{event.prevent_default();save(false);}>
+                <div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("Ajouter un projet")}</h3><p class="hint">{move ||i18n.text("Un nom et un dossier, pour retrouver vos tâches.")}</p></div></div>
+                <fieldset disabled=move ||pending.get()||editing.get()><label for="project-create-name">{move ||i18n.text("Nom du projet")}</label><input id="project-create-name" required maxlength="100" placeholder=move ||i18n.text("Mon application") prop:value=move ||draft.get().name on:input=move |event|draft.update(|draft|draft.name=event_target_value(&event))/>
+                <label for="project-directory">{move ||i18n.text("Répertoire local")}</label><div class="directory-picker"><input id="project-directory" required maxlength="2000" prop:value=move ||draft.get().repo on:input=move |event|draft.update(|draft|draft.repo=event_target_value(&event))/><button id="browse-project" type="button" on:click=move |_|browse()>{move ||i18n.text("Parcourir…")}</button></div>
+                <p class="hint">{move ||i18n.text("Choisissez un dossier existant ou collez son chemin. Les worktrees nécessitent un dépôt Git.")}</p><div class="form-actions"><button class="primary" type="submit" disabled=move ||!dirty.get()>{move ||i18n.text("Ajouter le projet")}</button></div></fieldset>
+                <p class="error" role="alert">{move ||i18n.text(&error.get())}</p>
+            </form></div>
+            <div class="confirmation" role="alert" hidden=move ||confirmation.get()!="discard"><p>{move ||i18n.text("Abandonner les modifications non enregistrées ?")}</p><button type="button" class="danger" on:click=move |_|close()>{move ||i18n.text("Abandonner")}</button><button type="button" on:click=move |_|confirmation.set("")>{move ||i18n.text("Continuer à modifier")}</button></div>
+        </dialog>
+        <dialog id="project-settings-dialog" node_ref=settings_dialog aria-labelledby="project-settings-title" on:cancel=move |event:web_sys::Event|{event.prevent_default();request_settings_close();}>
+            <header class="dialog-heading"><div><div class="eyebrow">{move ||i18n.text("RÉGLAGES DU PROJET")}</div><h2 id="project-settings-title">{move ||draft.get().name}</h2></div><button data-close="" aria-label=move ||i18n.text("Fermer") type="button" disabled=move ||pending.get() on:click=move |_|request_settings_close()><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></header>
+            <p class="hint">{move ||i18n.text("Le dépôt principal peut contenir le Front ou le Back. Les autres dépôts se configurent dans Lancement des applications.")}</p>
+            <form id="project-settings-form" on:submit=move |event| { event.prevent_default(); save(false); }>
                 <fieldset disabled=move || pending.get()>
+                    <section class="form-section"><div class="section-heading"><span class="section-number">"01"</span><h3>{move ||i18n.text("Projet principal")}</h3></div>
                     <label for="project-name">{move || i18n.text("Nom du projet")}</label><input id="project-name" required maxlength="100" autofocus prop:value=move || draft.get().name on:input=move |event| draft.update(|draft| draft.name = event_target_value(&event)) />
-                    <label for="project-repo">{move || i18n.text("Dossier du dépôt")}</label><input id="project-repo" required maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|draft| draft.repo = event_target_value(&event)) />
-                    <p class="field-help">{move || i18n.text("Chemin complet d’un dossier existant. Changer ce chemin réassocie les tâches ; les fichiers ne sont pas déplacés.")}</p>
-                    <div hidden=move || draft.get().id.is_empty()><label for="project-branch">{move || i18n.text("Branche de base")}</label><input id="project-branch" maxlength="180" placeholder=move || i18n.text("Valeur par défaut") prop:value=move || draft.get().branch on:input=move |event| draft.update(|draft| draft.branch = event_target_value(&event)) />
+                    <label for="project-repo">{move || i18n.text("Emplacement du dépôt Git")}</label><div class="directory-picker"><input id="project-repo" required maxlength="2000" spellcheck="false" readonly=move ||repository_locked.get() prop:value=move || draft.get().repo on:input=move |event| draft.update(|draft| draft.repo = event_target_value(&event)) /><button id="browse-project-settings" type="button" disabled=move ||repository_locked.get() on:click=move |_|browse()>{move ||i18n.text("Parcourir…")}</button></div>
+                    <p class="hint">{move || i18n.text(if repository_locked.get(){"Retirez les worktrees de ce projet avant de modifier son emplacement."}else{"Choisissez un dossier existant. Aucun fichier ne sera déplacé ; les cartes du projet suivront le nouveau chemin."})}</p>
+                    <label for="project-branch">{move || i18n.text("Branche de base")}</label><input id="project-branch" maxlength="180" placeholder=move || i18n.text("Valeur par défaut") prop:value=move || draft.get().branch on:input=move |event| draft.update(|draft| draft.branch = event_target_value(&event)) />
                     <label for="project-rules">{move || i18n.text("Consignes du projet")}</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
                     <label for="project-agent">{move || i18n.text("Agent préféré")}</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">{move || i18n.text("Hériter du réglage global")}</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select>
-                    <ProjectServices draft=draft pending=pending token=token />
+                    </section><section class="form-section"><h3>{move ||i18n.text("Lancement des applications")}</h3><ProjectServices draft=draft pending=pending token=token /></section><section class="form-section">
                     <label for="project-jira-mode">{move||i18n.text("Correspondances Jira du projet")}</label>
                     <select id="project-jira-mode" prop:value=move||draft.get().jira_mode on:change=move|event|draft.update(|draft|draft.jira_mode=event_target_value(&event))>
                         <option value="inherit">{move||i18n.text("Hériter du réglage global")}</option>
@@ -276,7 +394,7 @@ pub fn Projects(
                         }/>
                         <p class="field-help">{move||i18n.text("Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.")}</p>
                     </div>
-                    <label for="project-test-command">{move||i18n.text("Commande de vérification")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
+                    </section><section class="form-section"><h3>{move ||i18n.text("Développement automatique")}</h3><label for="project-test-command">{move||i18n.text("Commande de vérification")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
                     <p class="field-help">{move||i18n.text("Cette commande sera exécutée explicitement dans le worktree de la tâche, avec les permissions de ton compte. L’enregistrement ne la lance pas.")}</p>
                     <label for="project-pr-target">{move||i18n.text("Branche cible du parcours")}</label><input id="project-pr-target" maxlength="180" spellcheck="false" prop:value=move||draft.get().target on:input=move|event|draft.update(|draft|draft.target=event_target_value(&event))/>
                     <label><input id="project-automation" type="checkbox" prop:checked=move||draft.get().automation on:change=move|event|draft.update(|draft|draft.automation=event_target_checked(&event))/>{move||i18n.text("Autoriser les parcours automatiques de ce projet")}</label>
@@ -284,15 +402,15 @@ pub fn Projects(
                     <p class="field-help">{move||i18n.text("Le parcours lance les agents et vérifications après confirmation sur la tâche. Commit, push et publication restent à contrôler explicitement.")}</p>
                     <label for="project-linked">{move || i18n.text("Projet lié pour les tests")}</label>
                     <select id="project-linked" prop:value=move || draft.get().linked on:change=move |event| draft.update(|draft| draft.linked = event_target_value(&event))><option value="">{move || i18n.text("Aucun projet lié")}</option><For each={move || projects.get().into_iter().filter(|project| field(project,"id") != draft.get().id).collect::<Vec<_>>()} key=|project| field(project,"id") children=move |project| { let id = field(&project,"id"); let option_id=id.clone(); view! { <option value=option_id>{move || projects.with(|projects| projects.iter().find(|project| field(project,"id") == id).map(|project| field(project,"name")).unwrap_or_default())}</option> } } /></select>
-                    <p class="field-help">{move || i18n.text("Les commandes et le projet lié sont enregistrés pour les futurs lancements. Aucun service n’est démarré par cet écran.")}</p></div>
+                    <p class="field-help">{move || i18n.text("Les commandes et le projet lié sont enregistrés pour les futurs lancements. Aucun service n’est démarré par cet écran.")}</p></section>
                 </fieldset>
                 <p id="project-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-                <div class="editor-actions"><button id="save-project" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else if draft.get().id.is_empty() { "Créer le projet" } else { "Enregistrer" })}</button><button id="reset-project" type="button" disabled=move || pending.get() || !dirty.get() on:click=move |_| confirmation.set("reset")>{move || i18n.text("Annuler les modifications…")}</button></div>
+                <div class="form-actions"><button id="save-project" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer" })}</button><button id="reset-project" type="button" disabled=move || pending.get() || !dirty.get() on:click=move |_| confirmation.set("reset")>{move || i18n.text("Annuler les modifications…")}</button></div>
             </form>
             <div class="editor-secondary" hidden=move || draft.get().id.is_empty()><button id="remove-project" class="danger" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| confirmation.set("remove")>{move || i18n.text("Retirer ce projet…")}</button></div>
             <div class="confirmation" role="alert" hidden=move || confirmation.get().is_empty()><p>{move || i18n.text(if confirmation.get() == "remove" { "Retirer ce projet de la liste ? Les fichiers du dépôt et les tâches sont conservés." } else { "Abandonner les modifications non enregistrées ?" })}</p>
                 <label class="check-filter" hidden=move || confirmation.get() != "remove"><input id="archive-project-tasks" type="checkbox" prop:checked=move || archive.get() on:change=move |event| archive.set(event_target_checked(&event)) />{move || i18n.text("Archiver aussi les tâches de ce projet")}</label>
-                <button id="confirm-project" class="danger" type="button" disabled=move || pending.get() on:click=move |_| match confirmation.get_untracked() { "remove" => save(true), "reset" => select(original.get_untracked()), _ => close() }>{move || i18n.text("Confirmer")}</button><button id="cancel-project-confirmation" type="button" disabled=move || pending.get() on:click=move |_| confirmation.set("")>{move || i18n.text("Revenir")}</button>
+                <button id="confirm-project" class="danger" type="button" disabled=move || pending.get() on:click=move |_| match confirmation.get_untracked() { "remove" => save(true), "reset" => select(original.get_untracked()), "settings-discard"=>close_settings(), _ => close() }>{move || i18n.text("Confirmer")}</button><button id="cancel-project-confirmation" type="button" disabled=move || pending.get() on:click=move |_| confirmation.set("")>{move || i18n.text("Revenir")}</button>
             </div>
         </dialog>
     }
@@ -306,6 +424,7 @@ fn ProjectServices(
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     view! {
+        <div class="row g-3 launch-settings-grid">
         {[(0usize, "front", "Front"), (1usize, "back", "Back")].into_iter().map(move |(index, role, label)| {
             let candidates = RwSignal::new(Vec::<Document>::new());
             let warnings = RwSignal::new(Vec::<String>::new());
@@ -338,8 +457,8 @@ fn ProjectServices(
                 });
             };
             view! {
-                <section class="task-files" aria-labelledby=format!("project-{role}-heading")>
-                    <h3 id=format!("project-{role}-heading")>{label}</h3>
+                <div class="col-12 col-md-6"><fieldset class="application-launch-panel" aria-labelledby=format!("project-{role}-heading")>
+                    <legend id=format!("project-{role}-heading")>{label}</legend>
                     <label for=format!("project-{role}-repo")>{move || i18n.text("Dépôt du service")}</label><input id=format!("project-{role}-repo") maxlength="2000" spellcheck="false" placeholder=move || i18n.text("Dépôt principal si vide") prop:value=move || draft.get().services[index].repo.clone() on:input=move |event| draft.update(|draft| draft.services[index].repo = event_target_value(&event)) />
                     <label for=format!("project-{role}-directory")>{move || i18n.text("Sous-dossier du service")}</label><input id=format!("project-{role}-directory") maxlength="2000" spellcheck="false" placeholder=move || i18n.text("Racine du worktree si vide") prop:value=move || draft.get().services[index].directory.clone() on:input=move |event| draft.update(|draft| draft.services[index].directory = event_target_value(&event)) />
                     <label for=format!("project-{role}-command")>{move || i18n.text("Commande de lancement")}</label><textarea id=format!("project-{role}-command") rows="2" maxlength="2000" spellcheck="false" prop:value=move || draft.get().services[index].command.clone() on:input=move |event| draft.update(|draft| draft.services[index].command = event_target_value(&event))></textarea>
@@ -356,8 +475,9 @@ fn ProjectServices(
                     } /></div>
                     <div role="status">{move || warnings.get().into_iter().map(|warning| view! { <p>{i18n.text(&warning)}</p> }).collect_view()}</div>
                     <p class="error" role="alert">{move || i18n.text(&error.get())}</p>
-                </section>
+                </fieldset></div>
             }
         }).collect_view()}
+        </div>
     }
 }

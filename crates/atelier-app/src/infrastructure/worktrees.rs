@@ -318,6 +318,28 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
     Ok(target)
 }
 
+pub async fn inspect_status(
+    root: &Dir,
+    roots: &[PathBuf],
+    worktree: &Worktree,
+) -> Result<(String, bool)> {
+    let repository = inspect(root, roots, worktree).await?;
+    let head = String::from_utf8(repository.git(&["rev-parse", "--verify", "HEAD"]).await?)?;
+    let head = head.trim().to_owned();
+    super::files::validate_commit(&head)?;
+    let changes = repository
+        .git(&["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
+        .await?;
+    let after = String::from_utf8(repository.git(&["rev-parse", "--verify", "HEAD"]).await?)?;
+    if head != after.trim() {
+        return Err(
+            "Le commit du worktree a changé pendant sa lecture. Actualise son état.".into(),
+        );
+    }
+    inspect(root, roots, worktree).await?;
+    Ok((head, changes.is_empty()))
+}
+
 pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> {
     let link =
         String::from_utf8(CheckedFile::open_in(&target.directory, Path::new(".git"))?.read(8192)?)?;

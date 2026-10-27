@@ -14,14 +14,14 @@ Le plan et les capacités restent décrits dans [rust-migration-plan.md](rust-mi
 | --- | ---: |
 | crates/atelier-core | 66 |
 | crates/atelier-app | 184 |
-| crates/atelier-ui | 51 |
-| xtask | 99 |
+| crates/atelier-ui | 53 |
+| xtask | 100 |
 | scripts | 4 |
 | .github | 1 |
 | .cargo | 1 |
 | racine | 9 |
 
-Total : 415 fichiers.
+Total : 418 fichiers.
 
 ## Fichiers
 
@@ -299,6 +299,7 @@ Total : 415 fichiers.
 | [crates/atelier-ui/src/automation.rs](../crates/atelier-ui/src/automation.rs) | Source Rust |
 | [crates/atelier-ui/src/backups.rs](../crates/atelier-ui/src/backups.rs) | Source Rust |
 | [crates/atelier-ui/src/brainstorm.rs](../crates/atelier-ui/src/brainstorm.rs) | Source Rust |
+| [crates/atelier-ui/src/brainstorm_page.rs](../crates/atelier-ui/src/brainstorm_page.rs) | Source Rust |
 | [crates/atelier-ui/src/commits.rs](../crates/atelier-ui/src/commits.rs) | Source Rust |
 | [crates/atelier-ui/src/connector_effects.rs](../crates/atelier-ui/src/connector_effects.rs) | Source Rust |
 | [crates/atelier-ui/src/connector_repositories.rs](../crates/atelier-ui/src/connector_repositories.rs) | Source Rust |
@@ -336,6 +337,7 @@ Total : 415 fichiers.
 | [crates/atelier-ui/src/time.rs](../crates/atelier-ui/src/time.rs) | Source Rust |
 | [crates/atelier-ui/src/time_report.rs](../crates/atelier-ui/src/time_report.rs) | Source Rust |
 | [crates/atelier-ui/src/updates.rs](../crates/atelier-ui/src/updates.rs) | Source Rust |
+| [crates/atelier-ui/src/workspace_views.rs](../crates/atelier-ui/src/workspace_views.rs) | Source Rust |
 | [crates/atelier-ui/src/worktree.rs](../crates/atelier-ui/src/worktree.rs) | Source Rust |
 | [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / documentation |
 | [rust-toolchain.toml](../rust-toolchain.toml) | Configuration |
@@ -345,6 +347,7 @@ Total : 415 fichiers.
 | [scripts/rust-keyring-macos-accounts.sh](../scripts/rust-keyring-macos-accounts.sh) | Outil natif / fabrication |
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Configuration |
 | [xtask/licenses/README.md](../xtask/licenses/README.md) | Ressource / documentation |
+| [xtask/licenses/bootstrap-5.3.8.txt](../xtask/licenses/bootstrap-5.3.8.txt) | Ressource / documentation |
 | [xtask/licenses/connector-supplements-provenance.md](../xtask/licenses/connector-supplements-provenance.md) | Ressource / documentation |
 | [xtask/licenses/connector-supplements.json](../xtask/licenses/connector-supplements.json) | Ressource / documentation |
 | [xtask/licenses/core-supplements.json](../xtask/licenses/core-supplements.json) | Ressource / documentation |

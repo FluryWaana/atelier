@@ -158,6 +158,9 @@ fn render(metadata: &Value) -> Result<String> {
     let mut output = String::from(
         "Atelier Rust third-party notices\nCargo.lock dependency inventory; includes build tools and all target platforms.\nLicense expressions are declarations from dependency metadata.\n\n",
     );
+    output.push_str("===== Bootstrap 5.3.8 CSS =====\nLicense: MIT\nSource: Atelier historical stylesheet, Git 7f48996, public/style.css\n");
+    output.push_str(include_str!("../licenses/bootstrap-5.3.8.txt"));
+    output.push('\n');
     let mut entries = 0;
     for dependency in packages {
         let name = dependency["name"]
@@ -302,6 +305,8 @@ mod tests {
         .unwrap();
         let text = render(&metadata).unwrap();
         assert!(text.contains("synthetic-dependency 1.0.0"));
+        assert!(text.contains("Bootstrap 5.3.8 CSS"));
+        assert!(text.contains("Copyright (c) 2011-2025 The Bootstrap Authors"));
         assert!(text.contains("Synthetic license text"));
         assert!(!text.contains(&root.path().display().to_string()));
         let embedded = root.path().join("src/polyfill/synthetic-component");

@@ -54,6 +54,8 @@ Les tests privilégient les invariants et parcours utiles. Les anciens tests res
 
 ## Exécution et vérification
 
+Consigne actuelle du propriétaire, 27 octobre : **aucune CI, ni lancement ni relance**. L’autorisation antérieure des relances correctives est révoquée. Les builds/checks de compilation locaux restent autorisés ; tests, Clippy et scénarios navigateur locaux restent interdits. Les références historiques aux campagnes ci-dessous ne constituent pas une autorisation actuelle.
+
 - Accord du 27 octobre : builds locaux autorisés avec les ressources normales du PC. Les tests, Clippy et scénarios automatisés restent sur les runners ; édition, Git, formatage et inventaire légers demeurent autorisés. Une compilation locale ne qualifie aucun parcours.
 - Décision explicite du propriétaire : aucun lancement ni relancement de tests GitHub pendant les implémentations ; une seule vérification à la fin. Le workflow Rust ne se déclenche plus sur push/PR et reste disponible manuellement. La vérification finale regroupe les contrôles natifs, WASM et navigateur ; Linux/macOS restent différés jusqu'à ce point.
 - Données synthétiques uniquement ; aucun compte réel, appel payant, tag ou publication de release.

@@ -32,7 +32,7 @@ No real account access, paid agent calls, tags or release publication. Test inte
 
 On 2026-10-27 the owner explicitly authorized local builds with normal workstation resources. Compilation is now allowed, including compiling test targets without executing them. **Do not run local tests, Clippy or browser scenarios unless separately authorized.** Local editing, Git, formatting and lightweight inventory generation remain allowed. Never touch user `data/`.
 
-The earlier build limits (one Cargo job, BelowNormal and two CPUs) were explicitly lifted. The Rust workflow remains manual-only; commits and pushes must not trigger it. Final qualification is underway, and the owner explicitly authorized necessary corrective reruns until checks pass or a human blocker is identified. Do not launch workflows during unfinished feature implementation or treat deferred checks as passed.
+The earlier build limits (one Cargo job, BelowNormal and two CPUs) were explicitly lifted. The Rust workflow remains manual-only; commits and pushes must not trigger it. On 2026-10-27 the owner withdrew authorization for CI: do not launch or rerun any workflow. Earlier corrective-rerun authorization is superseded. Local compilation remains authorized; local tests, Clippy and browser scenarios remain prohibited. Do not treat deferred checks as passed.
 
 ## Build and tests
 
@@ -57,6 +57,6 @@ Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. E
 
 ## Git and progress
 
-Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch; both are already authorized. Use the authorized final qualification and corrective reruns, not an automatic test run after every candidate push. Existing logs may be read. Mark pending/failed results honestly, fix known failures and record real evidence.
+Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch; both are already authorized. No CI launch or rerun is currently authorized. Existing logs may be read. Mark pending/failed results honestly, fix known failures and record real evidence.
 
 Keep concise French progress updates. Do not declare completion until the active rebuild checklist is satisfied. Do not infer permission to publish from permission to commit/push.

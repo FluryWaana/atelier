@@ -17,6 +17,84 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
+pub(super) async fn inspect_status(
+    State(state): State<Shared>,
+    Path(id): Path<String>,
+) -> Response {
+    let Ok(_permit) = state.file_reads.try_acquire() else {
+        return failure(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "La lecture des dépôts est occupée. Réessaie dans un instant.",
+        );
+    };
+    let lookup = id.clone();
+    let card = match state
+        .database
+        .call(move |store| store.document::<Card>(Documents::Cards, &lookup))
+        .await
+    {
+        Ok(Some(card)) => card,
+        Ok(None) => return failure(StatusCode::NOT_FOUND, "Carte introuvable."),
+        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+    };
+    let worktree = match card.fields.get::<Worktree>("worktree") {
+        Ok(Some(worktree)) if worktree.state == WorktreeState::Ready => worktree,
+        _ => {
+            return failure(
+                StatusCode::CONFLICT,
+                "Vérifie ou termine l’opération interrompue sur ce worktree.",
+            );
+        }
+    };
+    let repo = card
+        .fields
+        .get::<String>("repo")
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    if !atelier_core::domain::projects::same_repository(&repo, &worktree.source, cfg!(windows)) {
+        return failure(
+            StatusCode::CONFLICT,
+            "Le dépôt source ne correspond plus au worktree.",
+        );
+    }
+    let (head, clean) = match worktrees::inspect_status(
+        &state.prototype_directory,
+        &state.prototype_paths,
+        &worktree,
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+    };
+    let expected = worktree.clone();
+    let checked = state
+        .database
+        .call(move |store| {
+            let current = store
+                .document::<Card>(Documents::Cards, &id)?
+                .ok_or(CardFailure::Missing)?;
+            if current.fields.get::<Worktree>("worktree")?.as_ref() != Some(&expected)
+                || current.fields.get::<String>("repo")?.unwrap_or_default() != repo
+            {
+                return Err("L’association du worktree a changé pendant sa lecture.".into());
+            }
+            store.timestamp()
+        })
+        .await;
+    match checked {
+        Ok(checked_at) => Json(atelier_core::contracts::WorktreeInspection {
+            worktree,
+            head,
+            clean,
+            checked_at,
+        })
+        .into_response(),
+        Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
+    }
+}
+
 async fn save_services(
     state: &Shared,
     id: String,

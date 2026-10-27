@@ -350,6 +350,10 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
+    wait_dom(client,"return document.querySelector('#overview-button')?.getAttribute('aria-current') === 'page';",vec![]).await?;
+    click(client, "#overview-button").await?;
+    wait_dom(client, "return location.pathname === '/overview';", vec![]).await?;
+    new_task(client).await?;
     let title = "Tâche synthétique é 🔧 <script>";
     client
         .find(Locator::Css("#task-title"))
@@ -357,8 +361,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys(title)
         .await?;
     click(client, "#create-task").await?;
-    wait_title(client, title).await?;
-    wait_dom(client, "return document.querySelectorAll('.kanban-column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=review] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
+    created_task(client, title).await?;
+    wait_dom(client, "return document.querySelectorAll('#prototype-board .column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=review] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
     client
         .find(Locator::Css("#board-search"))
         .await?
@@ -374,8 +378,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     client.execute("document.querySelector('#board-search').dispatchEvent(new Event('input', {bubbles:true})); const select=document.querySelector('#board-project'); select.value=arguments[0]; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![project["repo"].clone()]).await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
     click(client, "#show-archives").await?;
-    wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![archived["id"].clone()]).await?;
-    click(client, "#show-archives").await?;
+    wait_dom(client, "return location.pathname === '/archives' && document.querySelectorAll('#workspace-archives .archive-row').length === 1 && document.querySelector('#workspace-archives .card-open')?.id === 'card-open-'+arguments[0];", vec![archived["id"].clone()]).await?;
+    show_board(client).await?;
     client.execute("const select=document.querySelector('#board-project'); select.value=''; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![]).await?;
     wait_title(client, title).await?;
     std::fs::write(
@@ -388,30 +392,51 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
             vec![],
         )
         .await?;
+    click(
+        client,
+        &format!(
+            "#card-actions-toggle-{}",
+            original_id.as_str().ok_or("Carte sans id")?
+        ),
+    )
+    .await?;
+    wait_dom(
+        client,
+        "return document.getElementById('card-actions-'+arguments[0])?.matches(':popover-open');",
+        vec![original_id.clone()],
+    )
+    .await?;
+    click(
+        client,
+        &format!(
+            "#card-actions-{} button.danger:not([hidden])",
+            original_id.as_str().ok_or("Carte sans id")?
+        ),
+    )
+    .await?;
+    wait_dom(client,"return document.querySelector('#confirm-dialog')?.open && document.querySelectorAll('article.card').length === 2;",vec![]).await?;
+    click(
+        client,
+        "#confirm-dialog .form-actions button:not(#confirm-action)",
+    )
+    .await?;
+    wait_dom(client,"return !document.querySelector('#confirm-dialog') && document.querySelectorAll('article.card').length === 2 && !!document.getElementById('card-open-'+arguments[0]);",vec![original_id.clone()]).await?;
     click(client, "[data-status=todo] .card-open").await?;
-    wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.activeElement?.id === 'edit-title';", vec![]).await?;
-    if !client
-        .current_url()
-        .await?
-        .query_pairs()
-        .any(|(key, value)| key == "task" && Some(value.as_ref()) == original_id.as_str())
+    wait_dom(client, "return location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor') && document.activeElement?.id === 'editor-heading';", vec![]).await?;
+    if client.current_url().await?.path()
+        != format!("/tasks/{}", original_id.as_str().ok_or("Carte sans id")?)
     {
         return Err("Adresse de tâche absente.".into());
     }
     client.refresh().await?;
-    wait_dom(client, "return document.querySelector('#task-editor')?.open === true && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
+    wait_dom(client, "return (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor')) && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
     client
         .find(Locator::Css("#edit-title"))
         .await?
         .send_keys("\u{e00c}")
         .await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.activeElement?.classList.contains('card-open') === true;", vec![]).await?;
-    if client
-        .current_url()
-        .await?
-        .query_pairs()
-        .any(|(key, _)| key == "task")
-    {
+    if client.current_url().await?.path() != "/board" {
         return Err("Adresse de tâche conservée après fermeture.".into());
     }
     click(client, "[data-status=todo] .card-open").await?;
@@ -464,6 +489,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("\u{e011}")
         .await?;
     wait_dom(client,"return document.activeElement?.id==='task-tab-details' && document.querySelector('#task-panel-details')?.hidden===false && document.querySelector('#edit-title')?.value===arguments[0] && document.querySelector('#edit-description')?.value==='Description enregistrée' && document.querySelector('.criterion-done')?.checked===true && document.querySelector('#save-task')?.disabled===false;",vec![json!(title)]).await?;
+    click(client, "#manage-settings").await?;
+    wait_dom(client,"return location.pathname.startsWith('/tasks/') && document.querySelector('#confirm-editor')?.offsetParent !== null && document.querySelector('#edit-title')?.value === arguments[0] && !document.querySelector('#settings-page');",vec![json!(title)]).await?;
+    click(client, "#cancel-confirmation").await?;
+    client.back().await?;
+    wait_dom(client,"return location.pathname.startsWith('/tasks/') && document.querySelector('#confirm-editor')?.offsetParent !== null && document.querySelector('#edit-title')?.value === arguments[0];",vec![json!(title)]).await?;
+    click(client, "#cancel-confirmation").await?;
     clear_input(client, "#edit-title").await?;
     task_tab(client, "activity").await?;
     if client
@@ -509,6 +540,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     )
     .await?;
     click(client, "#save-task").await?;
+    saved_task(client).await?;
     wait_title(client, title).await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=todo] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
     click(client, "[data-status=todo] .card-open").await?;
@@ -518,6 +550,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     wait_dom(client, "return document.querySelector('#editor-error')?.textContent === 'Statut invalide.' && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
     client.execute("const select=document.querySelector('#edit-status'); select.value='doing'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-task").await?;
+    saved_task(client).await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0];", vec![original_id.clone()]).await?;
     let board: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
@@ -583,6 +616,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("Description enregistrée")
         .await?;
     click(client, "#save-task").await?;
+    saved_task(client).await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée';", vec![]).await?;
     click(client, "[data-status=doing] .card-open").await?;
     click(client, "#duplicate-task").await?;
@@ -604,14 +638,21 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "[data-status=review] .card-open").await?;
     click(client, "#delete-task").await?;
     click(client, "#confirm-editor").await?;
-    wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('Bloquée par') && document.querySelector('#task-editor')?.open === true;", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#editor-error')?.textContent.includes('Bloquée par') && (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor'));", vec![]).await?;
     click(client, "#close-editor").await?;
     click(client, "#show-archives").await?;
-    click(client, &copy_selector).await?;
+    click(
+        client,
+        &format!(
+            "#workspace-archives #card-open-{}",
+            copy_id.as_str().ok_or("Copie sansid")?
+        ),
+    )
+    .await?;
     wait_dom(client, "return document.querySelector('#edit-title')?.disabled === true || document.querySelector('#edit-title')?.matches(':disabled') === true;", vec![]).await?;
     click(client, "#archive-task").await?;
-    wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 1;", vec![]).await?;
-    click(client, "#show-archives").await?;
+    wait_dom(client, "return location.pathname === '/archives' && !document.querySelector('#task-editor') && document.querySelectorAll('#workspace-archives .archive-row').length === 1;", vec![]).await?;
+    show_board(client).await?;
     click(client, &copy_selector).await?;
     click(client, "#delete-task").await?;
     click(client, "#cancel-confirmation").await?;
@@ -639,6 +680,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .goto(&format!("{address}/#session={next_token}"))
         .await
         .map_err(|_| "Navigation après redémarrage refusée.")?;
+    show_board(client).await?;
     wait_title(client, title).await?;
     wait_dom(client, "return document.querySelector('[data-status=doing] article.card')?.dataset.id === arguments[0] && document.querySelector('[data-status=doing] .card-description')?.textContent === 'Description enregistrée' && !document.querySelector('.card-title script');", vec![original_id]).await?;
     click(client, "[data-status=doing] .card-open").await?;
@@ -674,6 +716,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         root().join(".artifacts/rust-ui-reopened.png"),
         client.screenshot().await?,
     )?;
+    new_task(client).await?;
+    expand_control(client, "#task-template").await?;
     client.execute("const select=document.querySelector('#task-template'); select.selectedIndex=1; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     client
         .find(Locator::Css("#task-title"))
@@ -681,13 +725,17 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("Tâche issue du modèle")
         .await?;
     click(client, "#create-task").await?;
-    wait_title(client, "Tâche issue du modèle").await?;
+    created_task(client, "Tâche issue du modèle").await?;
     click(client, "[data-status=todo] .card-open").await?;
     wait_dom(client, "return document.querySelector('#edit-description')?.value === 'Description enregistrée' && document.querySelector('.criterion-text')?.value === 'Vérification humaine synthétique' && document.querySelector('.criterion-done')?.checked === false && document.querySelectorAll('[data-dependency]:checked').length === 0;", vec![]).await?;
     click(client, "#close-editor").await?;
+    new_task(client).await?;
+    expand_control(client, "#task-template").await?;
+    client.execute("const select=document.querySelector('#task-template');select.selectedIndex=1;select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#remove-template").await?;
     click(client, "#confirm-remove-template").await?;
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
+    click(client, "#new-dialog .dialog-heading button").await?;
     live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     settings_scenario(client, http, &address, &next_token, data.path()).await?;
@@ -696,7 +744,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     files_scenario(client, http, &address, &next_token, data.path()).await?;
     profiles_scenario(client, http, &address, &next_token, data.path()).await?;
     client
-        .goto(&format!("{address}/?task=missing-synthetic-task"))
+        .goto(&format!("{address}/tasks/missing-synthetic-task"))
         .await?;
     wait_dom(client, "return document.querySelector('#error')?.textContent.includes('introuvable') && !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length > 0;", vec![]).await?;
     stop_server(&mut restarted, port, &next_token).await?;
@@ -768,7 +816,8 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         let token=session::read(&data)?;
         client.goto(&format!("{address}/#session={token}")).await.map_err(|error|format!("Updates : ouverture initiale : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#manage-settings").await?;click(client,"#settings-tab-updates").await?;
+        click(client,"#check-updates").await?;
+        wait_dom(client,"return location.pathname === '/updates';",vec![]).await?;
         wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.matches(':disabled') === false;",vec![]).await?;
         client.find(Locator::Css("#update-archive")).await?.send_keys(&candidate.to_string_lossy()).await?;
         client.find(Locator::Css("#update-signature")).await?.send_keys(&candidate_signature.to_string_lossy()).await?;
@@ -788,6 +837,8 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        client.refresh().await?;
+        wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#approve-update").await?;click(client,"#settings-tab-general").await?;
         client.find(Locator::Css("#settings-branch")).await?.clear().await?;client.find(Locator::Css("#settings-branch")).await?.send_keys("synthetic-unsaved-update-draft").await?;
         click(client,"#settings-tab-updates").await?;
@@ -811,9 +862,8 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         client.goto("about:blank").await.map_err(|error|format!("Updates : fermeture de l’ancien document : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
         client.goto(&format!("{address}/#session={next}")).await.map_err(|error|format!("Updates : réouverture après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#manage-settings").await.map_err(|error|format!("Updates : ouverture des préférences après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
-        click(client,"#settings-tab-updates").await.map_err(|error|format!("Updates : lecture de l’onglet après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
-        wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#check-updates").await.map_err(|error|format!("Updates : ouverture de la page après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
+        wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         let state:serde_json::Value=http.get(format!("{address}/api/state")).bearer_auth(&next).send().await?.checked_status().await?.json().await?;
         if state["settings"]["baseBranch"]!="synthetic-unsaved-update-draft"{return Err("La récupération a perdu le réglage enregistré.".into());}
         std::fs::write(root().join(".artifacts/rust-ui-update-recovered.png"),client.screenshot().await?)?;
@@ -936,15 +986,15 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     let (mut server, token) =
         start_server(data.path(), port, &root().join(".artifacts/rust-ui")).await?;
     client
-        .goto(&format!("{address}/?task=time-export#session={token}"))
+        .goto(&format!("{address}/tasks/time-export#session={token}"))
         .await?;
     task_tab(client, "details").await?;
     tempo_export_scenario(client, http, &address, &token).await?;
     client
-        .goto(&format!("{address}/?task=jira-recovery#session={token}"))
+        .goto(&format!("{address}/tasks/jira-recovery"))
         .await?;
     task_tab(client, "details").await?;
-    wait_dom(client,"return document.querySelector('#task-editor')?.open && document.querySelector('#load-jira-transitions')?.disabled === true && document.querySelector('#reconcile-jira-transition')?.disabled === false && document.querySelector('#dismiss-jira-transition')?.disabled === true;",vec![]).await?;
+    wait_dom(client,"return (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor')) && document.querySelector('#load-jira-transitions')?.disabled === true && document.querySelector('#reconcile-jira-transition')?.disabled === false && document.querySelector('#dismiss-jira-transition')?.disabled === true;",vec![]).await?;
     click(client, "#dismiss-jira-ack").await?;
     wait_dom(
         client,
@@ -997,7 +1047,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         return Err("La vérification sans identifiant a perdu l’incertitude Jira.".into());
     }
     client
-        .goto(&format!("{address}/?task=jira-creation"))
+        .goto(&format!("{address}/tasks/jira-creation"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#jira-create-heading')?.parentElement.textContent.includes('Création Jira incertaine') && document.querySelector('#close-jira-creation')?.disabled === true;",vec![]).await?;
@@ -1027,12 +1077,12 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#close-jira-creation").await?;
     wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.matches(':disabled') === false;",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=jira-creation"))
+        .goto(&format!("{address}/tasks/jira-creation"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#jira-create-heading')?.parentElement.textContent.includes('Incertitude Jira close') && document.querySelector('#edit-description')?.value === 'Keep local creation content';",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=jira-refresh"))
+        .goto(&format!("{address}/tasks/jira-refresh"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Local refresh title' && document.querySelector('#apply-jira-refresh')?.disabled === true && document.querySelector('#confirm-jira-refresh')?.disabled === false;",vec![]).await?;
@@ -1124,7 +1174,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#clear-jira-batch").await?;
     click(client, "#close-settings").await?;
     client
-        .goto(&format!("{address}/?task=jira-refresh"))
+        .goto(&format!("{address}/tasks/jira-refresh"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(
@@ -1218,7 +1268,7 @@ async fn tempo_export_scenario(
 async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     // The link is seeded explicitly; this journey proves local UI guards, not remote identity.
     client
-        .goto(&format!("{address}/?task=jira-refresh"))
+        .goto(&format!("{address}/tasks/jira-refresh"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true && document.querySelector('#edit-title')?.readOnly === true && document.querySelector('#edit-description')?.readOnly === true;",vec![]).await?;
@@ -1231,14 +1281,12 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#cancel-confirmation").await?;
     wait_dom(client,"return document.querySelector('#forge-content-title')?.value.endsWith(' Human content draft') && document.querySelector('#save-forge-content')?.disabled === true;",vec![]).await?;
     click(client, "#reset-forge-content").await?;
-    let instructions = client
-        .find(Locator::Css("#edit-instructions"))
+    let instructions = editable(client, "#edit-instructions")
         .await?
         .prop("value")
         .await?
         .ok_or("Synthetic instructions absent")?;
-    client
-        .find(Locator::Css("#edit-instructions"))
+    editable(client, "#edit-instructions")
         .await?
         .send_keys(" Synthetic checks draft")
         .await?;
@@ -1251,13 +1299,11 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#read-forge-checks").await?;
     // A metadata read remains usable with a local draft; no forge connection means no remote request.
     wait_dom(client,"return document.querySelector('#forge-checks-error')?.textContent.length > 0 && document.querySelector('#edit-instructions')?.value.endsWith(' Synthetic checks draft');",vec![]).await?;
-    client
-        .find(Locator::Css("#edit-instructions"))
+    editable(client, "#edit-instructions")
         .await?
         .clear()
         .await?;
-    client
-        .find(Locator::Css("#edit-instructions"))
+    editable(client, "#edit-instructions")
         .await?
         .send_keys(&instructions)
         .await?;
@@ -1314,7 +1360,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#detach-task-forge").await?;
     wait_dom(client,"return document.querySelector('#forge-task-notice')?.textContent.includes('Aucune PR/MR distante modifiée') && document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('.criterion-done')?.checked === true;",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=jira-refresh"))
+        .goto(&format!("{address}/tasks/jira-refresh"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#forge-task-heading') && !document.querySelector('#forge-task-heading')?.parentElement.querySelector('a') && document.querySelector('#edit-title')?.value === 'Remote refresh title';",vec![]).await?;
@@ -1343,7 +1389,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#cancel-publication").await?;
     wait_dom(client,"return document.querySelector('#publication-repository')?.value === '' && document.querySelector('#task-forge-kind')?.matches(':disabled') === false;",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=publication-branch"))
+        .goto(&format!("{address}/tasks/publication-branch"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#confirm-publication-push')?.matches(':disabled') === false && document.querySelector('#create-publication')?.offsetParent === null && document.querySelector('#publication-title')?.value === 'Synthetic first publication';",vec![]).await?;
@@ -1380,7 +1426,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     // No forge connection exists, so this refuses before Git or network I/O.
     wait_dom(client,"return document.querySelector('#publication-error')?.textContent.length > 0 && document.querySelector('#publication-body')?.value === 'Keep first publication draft' && document.querySelector('#edit-description')?.value === 'Human branch content';",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=publication-approval"))
+        .goto(&format!("{address}/tasks/publication-approval"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(client,"return document.querySelector('#approve-automation')?.disabled === false && document.querySelector('#publish-workflow')?.disabled === true;",vec![]).await?;
@@ -1423,7 +1469,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .await?;
     wait_dom(client,"return document.querySelector('#publish-workflow')?.disabled === true && document.querySelector('#approve-automation')?.checked === false && document.querySelector('#approve-workflow-branch')?.checked === false;",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=commit-draft"))
+        .goto(&format!("{address}/tasks/commit-draft"))
         .await?;
     task_tab(client, "details").await?;
     wait_dom(
@@ -1465,7 +1511,7 @@ async fn brainstorm_scenario(
     data: &Path,
 ) -> Result<()> {
     client
-        .goto(&format!("{address}/?task=review-report"))
+        .goto(&format!("{address}/tasks/review-report"))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#review-summary')?.textContent.includes('Synthetic review limits') && document.querySelector('.review-criterion')?.textContent.includes('Synthetic review criterion') && document.querySelector('#review-freshness')?.textContent.includes('non revalidée') && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('#review-result script');",vec![]).await?;
@@ -1491,7 +1537,7 @@ async fn brainstorm_scenario(
     click(client, ".review-selection").await?;
     // The completed answer is an explicit fixture, not evidence of a native agent run.
     client
-        .goto(&format!("{address}/?task=brainstorm-session"))
+        .goto(&format!("{address}/tasks/brainstorm-session"))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Synthetic structured proposal') && document.querySelector('#convert-brainstorm')?.disabled === true;",vec![]).await?;
@@ -1514,7 +1560,7 @@ async fn brainstorm_scenario(
     click(client, "#convert-brainstorm").await?;
     wait_dom(client,"return document.querySelector('.brainstorm-proposal')?.disabled === true && document.querySelector('#brainstorm-answer-heading')?.parentElement.textContent.includes('Propositions converties');",vec![]).await?;
     client
-        .goto(&format!("{address}/?task=brainstorm-session"))
+        .goto(&format!("{address}/tasks/brainstorm-session"))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(
@@ -1541,7 +1587,7 @@ async fn brainstorm_scenario(
         return Err("La conversion de brainstorm est absente ou dupliquée.".into());
     }
     client
-        .goto(&format!("{address}/?task={}", converted[0].id))
+        .goto(&format!("{address}/tasks/{}", converted[0].id))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#task-editor')?.textContent.includes('Keep open question') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
@@ -1566,26 +1612,21 @@ async fn brainstorm_scenario(
     click(client, "#apply-preparation").await?;
     wait_dom(client,"return document.querySelector('.criterion-text')?.value === 'Synthetic prepared criterion' && document.querySelector('.criterion-done')?.checked === false && document.querySelector('#preparation-notice')?.textContent.includes('Préparation appliquée') && document.querySelector('#save-task')?.disabled === true;",vec![]).await?;
     task_tab(client, "details").await?;
-    client
-        .find(Locator::Css("#edit-model"))
+    editable(client, "#edit-model")
         .await?
         .send_keys("synthetic invalid model")
         .await?;
     click(client, "#save-task").await?;
     wait_dom(client,"return document.querySelector('#editor-error')?.textContent.includes('Modèle invalide') && document.querySelector('#edit-model')?.value === 'synthetic invalid model';",vec![]).await?;
     task_tab(client, "details").await?;
-    client
-        .find(Locator::Css("#edit-model"))
-        .await?
-        .clear()
-        .await?;
+    editable(client, "#edit-model").await?.clear().await?;
     task_tab(client, "details").await?;
-    client
-        .find(Locator::Css("#edit-model"))
+    editable(client, "#edit-model")
         .await?
         .send_keys("synthetic-task-model")
         .await?;
     click(client, "#save-task").await?;
+    saved_task(client).await?;
     wait_dom(
         client,
         "return !document.querySelector('#task-editor');",
@@ -1593,7 +1634,7 @@ async fn brainstorm_scenario(
     )
     .await?;
     client
-        .goto(&format!("{address}/?task={}", converted[0].id))
+        .goto(&format!("{address}/tasks/{}", converted[0].id))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#edit-model')?.value === 'synthetic-task-model' && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
@@ -1635,7 +1676,7 @@ async fn brainstorm_scenario(
     )
     .await?;
     client
-        .goto(&format!("{address}/?task={}", converted[0].id))
+        .goto(&format!("{address}/tasks/{}", converted[0].id))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#approve-automation')?.disabled === false && document.querySelector('#automation')?.textContent.includes('Synthetic queued command');",vec![]).await?;
@@ -1811,7 +1852,7 @@ async fn brainstorm_scenario(
         .checked_status()
         .await?;
     client
-        .goto(&format!("{address}/?task=brainstorm-session"))
+        .goto(&format!("{address}/tasks/brainstorm-session"))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='brainstorm-command');",vec![]).await?;
@@ -1839,7 +1880,7 @@ async fn brainstorm_scenario(
         .json()
         .await?;
     client
-        .goto(&format!("{address}/?task={}", empty.id))
+        .goto(&format!("{address}/tasks/{}", empty.id))
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='empty-brainstorm-command') && document.querySelector('#task-editor')?.textContent.includes('Conversation sans dépôt');",vec![]).await?;
@@ -1976,17 +2017,18 @@ async fn time_task_scenario(
     click(client, "#start-human-timer").await?;
     wait_dom(client,"return document.querySelector('#human-timer-in-task')?.hidden === false && document.querySelectorAll('[data-time-id]').length === 2 && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
     click(client, "#close-editor").await?;
+    new_task(client).await?;
     client
         .find(Locator::Css("#task-title"))
         .await?
         .send_keys("Unsaved synthetic idea")
         .await?;
+    click(client, "#new-dialog .dialog-heading button").await?;
     click(client, "#open-timer-task").await?;
-    wait_dom(client,"return document.querySelector('#task-editor')?.open && document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",vec![]).await?;
+    wait_dom(client,"return (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor')) && document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",vec![]).await?;
     click(client, "#close-editor").await?;
     click(client, "#card-open-jira-recovery").await?;
-    client
-        .find(Locator::Css("#edit-instructions"))
+    editable(client, "#edit-instructions")
         .await?
         .send_keys("Unsaved synthetic task draft")
         .await?;
@@ -2013,14 +2055,16 @@ async fn time_task_scenario(
         vec![],
     )
     .await?;
+    new_task(client).await?;
     clear_input(client, "#task-title").await?;
+    click(client, "#new-dialog .dialog-heading button").await?;
     click(client, "#view-time-report").await?;
-    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
+    wait_dom(client,"return (location.pathname === '/time' && !!document.querySelector('#time-report')) && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
     let set_dates = "for(const id of ['report-from','report-to']){const input=document.getElementById(id);input.value=arguments[0];input.dispatchEvent(new Event('input',{bubbles:true}));}";
     client.execute(set_dates, vec![json!(date)]).await?;
     wait_dom(client,"return document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     client.refresh().await?;
-    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-from')?.value==='' && document.querySelector('#report-to')?.value==='' && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
+    wait_dom(client,"return (location.pathname === '/time' && !!document.querySelector('#time-report')) && document.querySelector('#report-from')?.value==='' && document.querySelector('#report-to')?.value==='' && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
     client.execute(set_dates, vec![json!(date)]).await?;
     client.execute("const source=document.querySelector('#report-source');source.value='agent';source.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.querySelectorAll('.time-report-row').length===0 && document.querySelector('#download-time-csv')?.disabled===true;",vec![]).await?;
@@ -2040,8 +2084,116 @@ async fn time_task_scenario(
     {
         return Err("Le CSV ne correspond pas à la sélection synthétique arrêtée.".into());
     }
+    let before: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    let before_count = before["times"]
+        .as_array()
+        .ok_or("Historique des temps absent.")?
+        .len();
+    click(client, "#add-time").await?;
+    wait_dom(client,"return document.querySelector('#time-dialog')?.open && document.querySelector('#time-card')?.disabled === false;",vec![]).await?;
+    client.execute("const select=document.querySelector('#time-card');select.value='jira-refresh';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    client.execute("const input=document.querySelector('#time-date');input.value=arguments[0];input.dispatchEvent(new Event('input',{bubbles:true}));",vec![json!(date)]).await?;
+    clear_input(client, "#time-duration").await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .send_keys("00:00:05")
+        .await?;
+    client
+        .find(Locator::Css("#time-description"))
+        .await?
+        .send_keys("Synthetic global time draft")
+        .await?;
+    click(client, "#close-time-editor").await?;
+    wait_dom(client,"return document.querySelector('#time-dialog')?.open && document.querySelector('#discard-time-editor')?.offsetParent !== null && document.querySelector('#time-description')?.value === 'Synthetic global time draft';",vec![]).await?;
+    click(client, "#keep-time-editor").await?;
+    click(client, "#close-time-editor").await?;
+    click(client, "#discard-time-editor").await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#time-dialog') && location.pathname === '/time';",
+        vec![],
+    )
+    .await?;
+    let unchanged: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if unchanged["times"] != before["times"] {
+        return Err("Abandonner la saisie globale a modifié les temps enregistrés.".into());
+    }
+    click(client, "#add-time").await?;
+    wait_dom(client,"return document.querySelector('#time-dialog')?.open && document.querySelector('#time-card')?.disabled === false;",vec![]).await?;
+    client.execute("const select=document.querySelector('#time-card');select.value='jira-refresh';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    client.execute("const input=document.querySelector('#time-date');input.value=arguments[0];input.dispatchEvent(new Event('input',{bubbles:true}));",vec![json!(date)]).await?;
+    clear_input(client, "#time-duration").await?;
+    client
+        .find(Locator::Css("#time-duration"))
+        .await?
+        .send_keys("00:00:05")
+        .await?;
+    client
+        .find(Locator::Css("#time-description"))
+        .await?
+        .send_keys("Synthetic global time saved")
+        .await?;
+    click(client, "#save-time").await?;
+    wait_dom(client,"return !document.querySelector('#time-dialog') && document.querySelector('#report-human-total')?.textContent === '00:02:05' && document.querySelectorAll('.time-report-row').length === 2;",vec![]).await?;
+    let saved: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if saved["times"].as_array().map(Vec::len) != Some(before_count + 1) {
+        return Err("La saisie globale n’a pas produit une seule entrée.".into());
+    }
+    let row=client.execute("return Array.from(document.querySelectorAll('.time-report-row')).findIndex(row=>row.querySelector('.entry-description')?.textContent === 'Synthetic global time saved');",vec![]).await?.as_i64().filter(|index|*index>=0).ok_or("Saisie globale absente du rapport.")?;
+    click(
+        client,
+        &format!(
+            "#time-report .time-report-row:nth-child({}) .delete-report-time",
+            row + 1
+        ),
+    )
+    .await?;
+    click(client, "#confirm-report-delete-time").await?;
+    wait_dom(client,"return document.querySelector('#report-human-total')?.textContent === '00:02:00' && document.querySelectorAll('.time-report-row').length === 1;",vec![]).await?;
+    let removed: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if removed["times"] != before["times"] {
+        return Err("Le retrait global n’a pas préservé les autres saisies.".into());
+    }
     click(client, "#close-time-report").await?;
-    wait_dom(client,"return !document.querySelector('#time-report') && document.activeElement?.id==='view-time-report';",vec![]).await?;
+    wait_dom(
+        client,
+        "return location.pathname === '/overview' && !document.querySelector('#time-report');",
+        vec![],
+    )
+    .await?;
     Ok(())
 }
 
@@ -2337,6 +2489,7 @@ async fn live_scenario(
     address: &str,
     token: &str,
 ) -> Result<()> {
+    show_board(client).await?;
     let card: atelier_core::contracts::Card = http
         .post(format!("{address}/api/cards"))
         .bearer_auth(token)
@@ -2380,18 +2533,26 @@ async fn projects_scenario(
     )?;
     click(client, "#manage-projects").await?;
     client
-        .find(Locator::Css("#project-name"))
+        .find(Locator::Css("#project-create-name"))
         .await?
         .send_keys("Projet depuis l’interface")
         .await?;
     client
-        .find(Locator::Css("#project-repo"))
+        .find(Locator::Css("#project-directory"))
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
-    click(client, "#save-project").await?;
-    wait_dom(client, "return document.querySelectorAll('.project-choice').length === 2 && document.querySelector('#new-project')?.disabled === false && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
-    let id = client.execute("return document.querySelector('.project-choice[aria-pressed=true]').dataset.projectId;", vec![]).await?;
+    click(client, "#project-form button[type=submit]").await?;
+    wait_dom(client, "return document.querySelectorAll('#project-list .project-row').length === 2 && document.querySelector('#project-create-name')?.value === '' && document.querySelector('#project-form .error')?.textContent === '';", vec![]).await?;
+    let id = client.execute("return Array.from(document.querySelectorAll('#project-list [data-project-id]')).find(button=>button.closest('.project-row').querySelector('strong').textContent === 'Projet depuis l’interface').dataset.projectId;", vec![]).await?;
+    click(
+        client,
+        &format!(
+            "[data-project-id='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        ),
+    )
+    .await?;
     client
         .find(Locator::Css("#project-name"))
         .await?
@@ -2414,7 +2575,7 @@ async fn projects_scenario(
         .await?;
     client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#detect-front").await?;
-    wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#projects-dialog fieldset')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#project-settings-dialog fieldset')?.disabled === false;", vec![]).await?;
     click(client, ".launch-candidate[data-role=front]").await?;
     wait_dom(client, "return document.querySelector('#project-front-directory')?.value === 'client' && document.querySelector('#project-front-command')?.value.includes('--port {port}');", vec![]).await?;
     client
@@ -2434,28 +2595,27 @@ async fn projects_scenario(
         .await?;
     client.execute("const select=document.querySelector('#project-linked'); select.value=Array.from(select.options).find(option=>option.value).value; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-project").await?;
-    wait_dom(client, "return document.querySelector('.project-choice[aria-pressed=true] strong')?.textContent === 'Projet renommé' && document.querySelector('#new-project')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#project-settings-dialog')?.open === false && Array.from(document.querySelectorAll('#project-list strong')).some(element=>element.textContent === 'Projet renommé');", vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-project-editor.png"),
         client.screenshot().await?,
     )?;
-    click(client, "#new-project").await?;
     client
-        .find(Locator::Css("#project-name"))
+        .find(Locator::Css("#project-create-name"))
         .await?
         .send_keys("Doublon refusé")
         .await?;
     client
-        .find(Locator::Css("#project-repo"))
+        .find(Locator::Css("#project-directory"))
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
     for _ in 0..2 {
-        click(client, "#save-project").await?;
-        wait_dom(client, "const error=document.querySelector('#project-error')?.textContent;return (error?.includes('déjà') || error === 'Une modification est en cours. Réessaie dans un instant.') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
+        click(client, "#project-form button[type=submit]").await?;
+        wait_dom(client, "const error=document.querySelector('#project-form .error')?.textContent;return (error?.includes('déjà') || error === 'Une modification est en cours. Réessaie dans un instant.') && document.querySelector('#project-create-name')?.value === 'Doublon refusé';", vec![]).await?;
         if client
             .execute(
-                "return document.querySelector('#project-error').textContent.includes('déjà');",
+                "return document.querySelector('#project-form .error').textContent.includes('déjà');",
                 vec![],
             )
             .await?
@@ -2482,19 +2642,28 @@ async fn projects_scenario(
             return Err("Le refus de concurrence a modifié les projets.".into());
         }
     }
-    wait_dom(client, "return document.querySelector('#project-error')?.textContent.includes('déjà') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
-    click(client, "#reset-project").await?;
-    click(client, "#confirm-project").await?;
-    wait_dom(client, "return document.querySelector('#project-name')?.value === '' && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#project-form .error')?.textContent.includes('déjà') && document.querySelector('#project-create-name')?.value === 'Doublon refusé';", vec![]).await?;
     click(client, "#close-projects").await?;
+    click(client, "#projects-dialog > .confirmation button.danger").await?;
+    click(client, "#manage-projects").await?;
+    wait_dom(client,"return document.querySelector('#project-create-name')?.value === '' && document.querySelector('#project-form .error')?.textContent === '';",vec![]).await?;
+    click(
+        client,
+        &format!(
+            "#project-list [data-project='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        ),
+    )
+    .await?;
     wait_dom(client, "return !document.querySelector('#projects-dialog') && document.activeElement?.id === 'manage-projects' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
+    new_task(client).await?;
     client
         .find(Locator::Css("#task-title"))
         .await?
         .send_keys("Tâche du nouveau projet")
         .await?;
     click(client, "#create-task").await?;
-    wait_title(client, "Tâche du nouveau projet").await?;
+    created_task(client, "Tâche du nouveau projet").await?;
     let board: atelier_core::contracts::Board = http
         .get(format!("{address}/api/state"))
         .bearer_auth(token)
@@ -2561,8 +2730,9 @@ async fn projects_scenario(
     .await?;
     click(client, "#save-project").await?;
     wait_dom(client,"return document.querySelector('#project-error')?.textContent.includes('changé ailleurs') && document.querySelector('#project-name')?.value === 'Projet renommé brouillon';",vec![]).await?;
-    click(client, "#close-projects").await?;
+    click(client, "#project-settings-dialog .dialog-heading button").await?;
     click(client, "#confirm-project").await?;
+    click(client, "#close-projects").await?;
     click(client, "#manage-projects").await?;
     click(
         client,
@@ -2583,10 +2753,10 @@ async fn projects_scenario(
     click(client, "#remove-project").await?;
     click(client, "#archive-project-tasks").await?;
     click(client, "#confirm-project").await?;
-    wait_dom(client, "return document.querySelectorAll('.project-choice').length === 1 && document.querySelector('#project-name')?.value === '' && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('#project-list .project-row').length === 1 && document.querySelector('#project-settings-dialog')?.open === false && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
     click(client, "#close-projects").await?;
     click(client, "#show-archives").await?;
-    wait_dom(client, "return Array.from(document.querySelectorAll('article.card')).some(card => card.dataset.id === arguments[0]);", vec![json!(card_id)]).await?;
+    wait_dom(client, "return location.pathname === '/archives' && Array.from(document.querySelectorAll('#workspace-archives .archive-row')).some(card => card.dataset.id === arguments[0]);", vec![json!(card_id)]).await?;
     if !repo.is_dir() {
         return Err("Le retrait du projet a supprimé son dossier.".into());
     }
@@ -2624,7 +2794,9 @@ async fn settings_scenario(
         .await?;
     client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    client.refresh().await?;
+    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-branch')?.value === 'main' && document.querySelector('#settings-agent')?.value === 'claude' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
     let card: atelier_core::contracts::Card = http
         .post(format!("{address}/api/cards"))
         .bearer_auth(token)
@@ -3061,7 +3233,7 @@ async fn connectors_scenario(
     click(client, "#close-settings").await?;
     client
         .goto(&format!(
-            "{address}/?task={}",
+            "{address}/tasks/{}",
             imported["id"]
                 .as_str()
                 .ok_or("Carte importée sans identifiant")?
@@ -3284,8 +3456,7 @@ async fn connector_transition_scenario(
         .join(format!("{}.ticket-effect", operation.id));
     let content = std::fs::read(&marker)?;
     let modified = std::fs::metadata(&marker)?.modified()?;
-    client
-        .find(Locator::Css("#edit-instructions"))
+    editable(client, "#edit-instructions")
         .await?
         .send_keys(" · unsaved human draft")
         .await?;
@@ -3357,7 +3528,7 @@ async fn connector_transition_scenario(
     {
         return Err("L’observation de transition n’a pas été conservée.".into());
     }
-    let instructions = client.find(Locator::Css("#edit-instructions")).await?;
+    let instructions = editable(client, "#edit-instructions").await?;
     instructions.clear().await?;
     // WebDriver clear does not reliably emit input when the replacement text is empty.
     client.execute("document.querySelector('#edit-instructions').dispatchEvent(new Event('input',{bubbles:true}));", vec![]).await?;
@@ -3479,6 +3650,7 @@ async fn backups_scenario(
     address: &str,
     token: &str,
 ) -> Result<()> {
+    show_board(client).await?;
     let post = |path: &str| {
         http.post(format!("{address}{path}"))
             .bearer_auth(token)
@@ -3580,14 +3752,15 @@ async fn language_scenario(client: &Client) -> Result<()> {
         .send_keys("-draft")
         .await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='en-US'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
-    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#settings-title')?.textContent === 'Application settings' && document.querySelector('#settings-branch')?.value === arguments[0] && document.querySelector('#save-settings')?.textContent === 'Save';",vec![json!(format!("{original}-draft"))]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#workspace-title')?.textContent === 'Settings' && document.querySelector('#settings-branch')?.value === arguments[0] && document.querySelector('#save-settings')?.textContent === 'Save general settings';",vec![json!(format!("{original}-draft"))]).await?;
     click(client, "#close-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-dialog .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#settings-page .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
     click(client, "#discard-settings").await?;
-    wait_dom(client,"return document.querySelector('h1')?.textContent === 'Your workspace' && document.querySelector('#board-search')?.placeholder === 'Title or description…' && Array.from(document.querySelectorAll('.column-heading h2')).map(node=>node.textContent).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
+    show_board(client).await?;
+    wait_dom(client,"return document.querySelector('#workspace-title')?.textContent === 'Task board' && document.querySelector('#board-search')?.placeholder === 'Title, Jira ticket or description…' && Array.from(document.querySelectorAll('#prototype-board .column-heading')).map(node=>Array.from(node.childNodes).filter(child=>child.nodeType===Node.TEXT_NODE).map(child=>child.textContent).join('').trim()).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
     wait_title(client, "État après sauvegarde").await?;
     click(client, ".card-open").await?;
-    wait_dom(client,"return document.querySelector('#editor-heading')?.textContent === 'Task details' && document.querySelector('#criteria-heading')?.textContent === 'Acceptance criteria' && document.querySelector('#edit-status option')?.textContent === 'To do';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#editor-heading')?.textContent === 'État après sauvegarde' && document.querySelector('#criteria-heading')?.textContent === 'Acceptance criteria' && document.querySelector('#edit-status option')?.textContent === 'To do';",vec![]).await?;
     click(client, "#add-criterion").await?;
     wait_dom(client,"return document.querySelector('.criterion .sr-only')?.textContent === 'Criterion 1' && document.querySelector('.criterion button')?.getAttribute('aria-label') === 'Remove criterion 1';",vec![]).await?;
     click(client, "#close-editor").await?;
@@ -3613,7 +3786,7 @@ async fn language_scenario(client: &Client) -> Result<()> {
     click(client, "#discard-settings").await?;
     click(client, "#manage-settings").await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='fr-FR'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
-    wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#settings-title')?.textContent === 'Paramètres de l’application';",vec![]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#workspace-title')?.textContent === 'Paramètres';",vec![]).await?;
     click(client, "#close-settings").await?;
     Ok(())
 }
@@ -3625,6 +3798,7 @@ async fn files_scenario(
     token: &str,
     data: &Path,
 ) -> Result<()> {
+    show_board(client).await?;
     let repo = data.join("repositories/files-ui");
     std::fs::create_dir_all(repo.join("src"))?;
     run(command("git")
@@ -3743,9 +3917,9 @@ async fn files_scenario(
     wait_title(client, "Explorateur synthétique").await?;
     click(client, &format!("[data-id='{}'] .card-open", card.id)).await?;
     task_tab(client, "files").await?;
-    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 200 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-entry').length === 200 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
     click(client, "#next-files").await?;
-    wait_dom(client,"return document.querySelectorAll('.file-choice').length > 0 && document.querySelectorAll('.file-choice').length < 200 && document.querySelector('#next-files')?.disabled === true;",vec![]).await?;
+    wait_dom(client,"return document.querySelectorAll('.file-entry').length > 0 && document.querySelectorAll('.file-entry').length < 200 && document.querySelector('#next-files')?.disabled === true;",vec![]).await?;
     client
         .find(Locator::Css("#file-search"))
         .await?
@@ -3753,12 +3927,12 @@ async fn files_scenario(
         .await?;
     wait_dom(
         client,
-        "return document.querySelectorAll('.file-choice').length === 1;",
+        "return document.querySelectorAll('.file-entry').length === 1;",
         vec![],
     )
     .await?;
-    click(client, ".file-choice").await?;
-    wait_dom(client,"return document.querySelector('#file-content')?.textContent === arguments[0] && !window.syntheticPreviewExecuted;",vec![json!(text)]).await?;
+    click(client, ".file-entry").await?;
+    wait_dom(client,"return Array.from(document.querySelectorAll('#file-content .code-line code')).map(line=>line.textContent).join('\\n') === arguments[0] && !window.syntheticPreviewExecuted;",vec![json!(text)]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-files.png"),
         client.screenshot().await?,
@@ -3771,8 +3945,8 @@ async fn files_scenario(
         vec![],
     )
     .await?;
-    click(client, ".file-choice").await?;
-    wait_dom(client,"return document.querySelector('#file-content')?.textContent === 'Contenu modifié sur disque';",vec![]).await?;
+    click(client, ".file-entry").await?;
+    wait_dom(client,"return Array.from(document.querySelectorAll('#file-content .code-line code')).map(line=>line.textContent).join('\\n') === 'Contenu modifié sur disque';",vec![]).await?;
     client
         .find(Locator::Css("#file-search"))
         .await?
@@ -3783,7 +3957,7 @@ async fn files_scenario(
         .await?
         .send_keys("binary")
         .await?;
-    click(client, ".file-choice").await?;
+    click(client, ".file-entry").await?;
     wait_dom(client,"return document.querySelector('#file-unavailable')?.textContent.includes('binaire') && document.querySelector('#file-content')?.hidden === true;",vec![]).await?;
     task_tab(client, "diff").await?;
     wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
@@ -3797,8 +3971,8 @@ async fn files_scenario(
         .await?
         .send_keys("tracked.txt")
         .await?;
-    wait_dom(client,"return document.querySelectorAll('.file-choice').length === 1 && document.querySelector('.file-choice')?.textContent.startsWith('M · ');",vec![]).await?;
-    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelectorAll('.file-entry').length === 1 && document.querySelector('.file-entry')?.textContent.startsWith('M · ');",vec![]).await?;
+    click(client, ".file-entry").await?;
     wait_dom(client,"return document.querySelector('#file-content')?.textContent.includes('-tracked synthetic file') && document.querySelector('#file-content')?.textContent.includes('+modified synthetic file');",vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-diff.png"),
@@ -3806,7 +3980,7 @@ async fn files_scenario(
     )?;
     std::fs::write(repo.join("src/tracked.txt"), "tracked synthetic file\n")?;
     click(client, "#refresh-files").await?;
-    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 0 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-entry').length === 0 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
     task_tab(client, "details").await?;
     client
         .find(Locator::Css("#worktree-base"))
@@ -4123,8 +4297,8 @@ async fn files_scenario(
     task_tab(client, "files").await?;
     wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
     task_tab(client, "diff").await?;
-    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-choice').length === 1 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
-    click(client, ".file-choice").await?;
+    wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-entry').length === 1 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
+    click(client, ".file-entry").await?;
     wait_dom(client,"return document.querySelector('#file-content')?.textContent.includes('+worktree synthetic modification');",vec![]).await?;
     if std::fs::read_to_string(repo.join("src/tracked.txt"))? != "tracked synthetic file\n" {
         return Err("Le worktree a modifié le dépôt source.".into());
@@ -4297,14 +4471,61 @@ async fn task_tab(client: &Client, tab: &str) -> Result<()> {
     click(client, &format!("#task-tab-{tab}")).await?;
     wait_dom(client, "const tab=document.getElementById('task-tab-'+arguments[0]); const panel=document.getElementById(tab?.getAttribute('aria-controls')); return tab?.getAttribute('aria-selected')==='true' && panel?.hidden===false && panel.getAttribute('aria-labelledby')===tab.id && Array.from(document.querySelectorAll('#task-editor .task-panel')).filter(panel=>!panel.hidden).length===1;", vec![json!(tab)]).await
 }
+async fn show_board(client: &Client) -> Result<()> {
+    if client.current_url().await?.path() != "/board" {
+        click(client, "#overview-button").await?;
+        click(client, "[data-view=board]").await?;
+    }
+    wait_dom(client,"return location.pathname === '/board' && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await
+}
+
+async fn new_task(client: &Client) -> Result<()> {
+    show_board(client).await?;
+    click(client, "#create-button").await?;
+    wait_dom(client,"return document.querySelector('#new-dialog')?.open && document.activeElement?.id === 'task-title';",vec![]).await
+}
+
+async fn created_task(client: &Client, title: &str) -> Result<()> {
+    wait_dom(client,"return location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor') && document.querySelector('#edit-title')?.value === arguments[0] && document.querySelector('#new-dialog')?.open === false;",vec![json!(title)]).await?;
+    click(client, "#close-editor").await?;
+    show_board(client).await?;
+    wait_title(client, title).await
+}
+
+async fn saved_task(client: &Client) -> Result<()> {
+    wait_dom(client,"return location.pathname.startsWith('/tasks/') && document.querySelector('#save-task')?.disabled === true && document.querySelector('#editor-notice')?.textContent === 'Carte enregistrée.';",vec![]).await?;
+    click(client, "#close-editor").await?;
+    show_board(client).await
+}
+
+async fn expand_control(client: &Client, selector: &str) -> Result<()> {
+    for _ in 0..16 {
+        if client.execute("const element=document.querySelector(arguments[0]);return !!element?.closest('details:not([open])');",vec![json!(selector)]).await? != json!(true) { return Ok(()); }
+        client
+            .find(Locator::Css(&format!(
+                "details:not([open]):has({selector}) > summary"
+            )))
+            .await?
+            .click()
+            .await?;
+    }
+    Err("Trop de panneaux repliés dans le parcours synthétique.".into())
+}
+
+async fn editable(client: &Client, selector: &str) -> Result<fantoccini::elements::Element> {
+    expand_control(client, selector).await?;
+    Ok(client.find(Locator::Css(selector)).await?)
+}
+
 async fn clear_input(client: &Client, selector: &str) -> Result<()> {
-    client.find(Locator::Css(selector)).await?.clear().await?;
+    editable(client, selector).await?.clear().await?;
     // WebDriver clear does not consistently notify input listeners across browsers.
     client.execute("document.querySelector(arguments[0]).dispatchEvent(new Event('input',{bubbles:true}));",vec![json!(selector)]).await?;
     Ok(())
 }
 
 async fn click(client: &Client, selector: &str) -> Result<()> {
+    expand_control(client, selector).await?;
     wait_dom(client, "const element=document.querySelector(arguments[0]);return !!element && !element.matches(':disabled');", vec![json!(selector)]).await.map_err(|error|format!("Contrôle synthétique {selector} indisponible : {error}"))?;
     // Center controls inside scrolling dialogs; retain WebDriver's native click and hit testing.
     client.execute("document.querySelector(arguments[0])?.scrollIntoView({block:'center', inline:'nearest', behavior:'instant'});", vec![json!(selector)]).await?;

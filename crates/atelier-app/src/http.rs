@@ -767,6 +767,10 @@ async fn serve_mode(
         .route("/api/cards/{id}/changes", get(files::changes))
         .route("/api/cards/{id}/file-diff", get(files::diff))
         .route("/api/cards/{id}/worktree", post(worktrees::create))
+        .route(
+            "/api/cards/{id}/worktree/inspection",
+            get(worktrees::inspect_status),
+        )
         .route("/api/cards/{id}/worktree/remove", post(worktrees::remove))
         .route("/api/shutdown", post(stop))
         .fallback(unavailable)

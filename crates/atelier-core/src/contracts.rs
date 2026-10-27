@@ -406,6 +406,15 @@ pub struct Worktree {
     pub state: WorktreeState,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeInspection {
+    pub worktree: Worktree,
+    pub head: String,
+    pub clean: bool,
+    pub checked_at: String,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WorktreeState {

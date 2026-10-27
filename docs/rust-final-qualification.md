@@ -1,5 +1,19 @@
 # Campagne finale Rust
 
+**Consigne actuelle du propriétaire : aucune CI, ni lancement ni relance.** Cette interdiction remplace l’autorisation antérieure de relances correctives. Les scénarios et contrôles restants demeurent non qualifiés ; aucune demande de relance n’est déduite des commits ou pushes.
+
+## Reprise fidèle des écrans — candidat en cours
+
+Après rejet de la preview par le propriétaire, les sources `7f48996` deviennent le modèle direct des écrans et non une simple inspiration. La feuille CSS historique complète et sa licence Bootstrap 5.3.8 sont reprises, avec des liaisons limitées aux composants Rust. Shell, création, commandes/recherche, tableau, archives, aperçu, agents, processus, branches/PR, brainstorm, réglages, projets, tâche et temps sont raccordés à partir des templates historiques. Les modifications restent candidates : présence de code et compilation ne prouvent pas la fidélité visuelle.
+
+La navigation utilise des chemins `/overview`, `/board`, `/brainstorm`, `/agents`, `/processes`, `/worktrees`, `/time`, `/archives`, `/settings`, `/updates` et `/tasks/{id}` ; le serveur sert l’interface sur ces seules routes connues, sans masquer les chemins inconnus ou privés. Le fragment de session initial reste transitoire puis retiré ; aucune navigation utilisateur par ancre n’est nécessaire. Retour/rechargement et protection des brouillons font l’objet de parcours adaptés, non exécutés.
+
+L’inspection Git des worktrees dispose d’une vraie lecture bornée : association et branche vérifiées, statut Git/HEAD relus et association de carte revalidée. Elle ne crée aucun worktree, ne fetch aucune origine et ne publie aucun résultat fictif. Le scénario synthétique conserve l’index et vérifie les fichiers non suivis ; écrit seulement.
+
+Adaptations de contrat explicites : un glisser-déposer change l’avancement avec comparaison de l’état attendu ; il ne lance pas implicitement un agent. La synchronisation de tickets ouvre le parcours Rust de préparation/confirmation. Le code et les diffs sont rendus comme texte échappé, avec compteurs source distincts dans les hunks ; aucune coloration syntaxique historique n’est encore revendiquée. Les autres différences de présentation restent à examiner visuellement avant toute qualification.
+
+Preuves locales de ce lot : formatage et inventaire réussis ; `cargo check --workspace --exclude atelier-ui --all-targets --locked` réussi en 42,80 s et check WASM séparé réussi en 8,09 s sur les sources finales figées. Build des assets `build-ui --dev` réussi (compilation UI 2 min 51 s, WASM produit 25 854 401 octets), puis `cargo build -p atelier-app --locked` réussi en 45,32 s. Ces durées sont celles des commandes locales, sans revendication de performance du produit. Le préfixe historique du CSS source est byte-identique sur ses 144 451 octets (SHA256 `bac7bbbd06bfea3edbc87b8e4b0f3313eb71da3fa9a8915796ba1950e317df45`) ; les seules règles suivantes lient les composants Rust. Aucun serveur ni navigateur lancé ou redémarré par ces commandes, aucun test ou Clippy exécuté et aucune CI lancée. La fidélité visuelle et les parcours adaptés restent non qualifiés.
+
 ## État courant
 
 La reconstruction n'est pas terminée. Dernière campagne complète : [40493450905](https://github.com/FluryWaana/atelier/actions/runs/40493450905) sur `342e020`. Vérification ciblée suivante : [40506116913](https://github.com/FluryWaana/atelier/actions/runs/40506116913) sur `dc27452`, Chrome/Jira uniquement, en échec.

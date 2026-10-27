@@ -777,6 +777,23 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
         "text/html; charset=utf-8"
     );
     assert_eq!(response.text().await.unwrap(), "synthetic index.html");
+    for path in [
+        "/overview",
+        "/board",
+        "/brainstorm",
+        "/agents",
+        "/processes",
+        "/worktrees",
+        "/time",
+        "/archives",
+        "/settings?section=jira",
+        "/updates",
+        "/tasks/synthetic-card",
+    ] {
+        let response = client.get(format!("{address}{path}")).send().await.unwrap();
+        assert_eq!(response.status(), 200, "{path}");
+        assert_eq!(response.text().await.unwrap(), "synthetic index.html");
+    }
     for (name, mime) in [
         ("atelier-loader.js", "text/javascript; charset=utf-8"),
         ("atelier-ui-synthetic.js", "text/javascript; charset=utf-8"),
@@ -793,6 +810,8 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
         assert_eq!(response.text().await.unwrap(), format!("synthetic {name}"));
     }
     for path in [
+        "/unknown-page",
+        "/tasks/synthetic-card/private.txt",
         "/private.txt",
         "/lib/store.mjs",
         "/data/local-session",

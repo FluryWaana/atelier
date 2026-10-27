@@ -417,7 +417,7 @@ pub fn Runs(
 }
 
 #[component]
-fn Interaction(
+pub(super) fn Interaction(
     run_id: String,
     request: atelier_core::contracts::AgentInteraction,
     token: StoredValue<Result<String, String>>,

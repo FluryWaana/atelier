@@ -23,6 +23,8 @@ pub fn Results(
     message: RwSignal<String>,
     run: Signal<Option<Document>>,
     on_open: Callback<String>,
+    #[prop(optional)] hide_history: bool,
+    #[prop(optional)] hide_questions: bool,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let card = StoredValue::new(card_id);
@@ -147,11 +149,11 @@ pub fn Results(
         });
     };
     view! {<section class="task-files" aria-labelledby="brainstorm-answer-heading">
-        <h4 id="brainstorm-answer-heading">{move||i18n.text("Conversation et propositions")}</h4>
+        <h4 id="brainstorm-answer-heading" hidden=hide_history>{move||i18n.text("Conversation et propositions")}</h4>
         <p class="error" role="alert">{move||run.with(|run|run.as_ref().map(|run|i18n.text(&field(run,"brainstormError"))).unwrap_or_default())}</p>
-        <p>{move||run.with(|run|run.as_ref().map(|run|field(run,"userMessage")).unwrap_or_default())}</p>
-        <pre class="service-log">{move||answer.with(|answer|answer.as_ref().map(|answer|answer.message.clone()).unwrap_or_default())}</pre>
-        <div hidden=move||pending.get()||run.with(|run|run.as_ref().is_some_and(|run|matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")))>
+        <p hidden=hide_history>{move||run.with(|run|run.as_ref().map(|run|field(run,"userMessage")).unwrap_or_default())}</p>
+        <pre class="service-log" hidden=hide_history>{move||answer.with(|answer|answer.as_ref().map(|answer|answer.message.clone()).unwrap_or_default())}</pre>
+        <div hidden=move||hide_questions||pending.get()||run.with(|run|run.as_ref().is_some_and(|run|matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")))>
             {move||answer.get().and_then(|answer|answer.questions.get(question.get()).cloned()).map(|item|{let label=StoredValue::new(item.question.clone());view!{<div class="task-files"><p>{item.question}</p><For each=move||item.options.clone() key=|option|option.clone() children=move|option|{let text=option.clone();view!{<button class="brainstorm-option" type="button" disabled=move||blocked.get() on:click=move|_|choose.run(format!("{} : {}",label.get_value(),option))>{text}</button>}}/><p class="field-help">{move||i18n.text("Tu peux aussi répondre librement dans le message.")}</p><button type="button" on:click=move|_|question.update(|index|*index+=1)>{move||i18n.text("Question suivante")}</button></div>}})}
             <button type="button" hidden=move||question.get()==0 on:click=move|_|question.set(0)>{move||i18n.text("Revoir les questions")}</button>
         </div>
