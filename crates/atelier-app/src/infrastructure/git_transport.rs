@@ -19,6 +19,38 @@ pub(super) async fn git_command() -> Result<tokio::process::Command> {
     Ok(command)
 }
 const DOWNLOAD_LIMIT: u64 = 512 * 1024 * 1024;
+fn synthetic_git_failure(stderr: &[u8]) -> &'static str {
+    let diagnostic = String::from_utf8_lossy(stderr).to_ascii_lowercase();
+    // Return fixed classifications only: Git stderr can contain URLs and credentials.
+    if diagnostic.contains("unsupported ssl backend") {
+        "Synthetic Git TLS: unsupported SSL backend."
+    } else if diagnostic.contains("certificate")
+        || diagnostic.contains("issuer")
+        || diagnostic.contains("ssl peer")
+    {
+        "Synthetic Git TLS: certificate or authority verification failed."
+    } else if diagnostic.contains("ssl") || diagnostic.contains("tls") {
+        "Synthetic Git TLS: TLS connection failed."
+    } else if diagnostic.contains("401") || diagnostic.contains("403") {
+        "Synthetic Git TLS: authentication was refused."
+    } else if diagnostic.contains("404") || diagnostic.contains("repository not found") {
+        "Synthetic Git TLS: repository or HTTP route was not found."
+    } else if diagnostic.contains("500") || diagnostic.contains("502") {
+        "Synthetic Git TLS: fixture HTTP backend failed."
+    } else if diagnostic.contains("not a git repository")
+        || diagnostic.contains("invalid")
+        || diagnostic.contains("bad line")
+        || diagnostic.contains("protocol")
+    {
+        "Synthetic Git TLS: Git protocol response was invalid."
+    } else if diagnostic.contains("connect") || diagnostic.contains("resolve") {
+        "Synthetic Git TLS: loopback connection failed."
+    } else if diagnostic.contains("remote-https") || diagnostic.contains("not a git command") {
+        "Synthetic Git TLS: HTTPS transport executable was unavailable."
+    } else {
+        "Synthetic Git TLS: unclassified Git failure; raw diagnostic withheld."
+    }
+}
 fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
     let mut pending = vec![(path.to_owned(), 0usize)];
     let mut bytes = 0u64;
@@ -293,13 +325,12 @@ impl HttpsAuthentication {
                     .to_str()
                     .ok_or("Chemin d’autorité synthétique invalide.")?
             ));
-            // Request OpenSSL explicitly; the final fixture also requires the provisioned Git backend.
-            command.args([
-                "-c",
-                "http.sslBackend=openssl",
-                "-c",
-                "http.schannelUseSSLCAInfo=true",
-            ]);
+            // Ubuntu Git uses GnuTLS, which consumes the explicit CA bundle and
+            // empty CA directory above. Its curl cannot select OpenSSL. Windows
+            // and macOS qualification instead provision an OpenSSL backend.
+            #[cfg(not(target_os = "linux"))]
+            command.args(["-c", "http.sslBackend=openssl"]);
+            command.args(["-c", "http.schannelUseSSLCAInfo=true"]);
         }
         command
             .env("GIT_CONFIG_COUNT", "1")
@@ -370,7 +401,7 @@ impl HttpsAuthentication {
             command.args(["ls-remote","--refs","--exit-code","--",&scope,reference]);
             let output=super::process_tree::capture(&mut command,&[],std::time::Duration::from_secs(30),1024*1024).await.map_err(|_|"Lecture de branche HTTPS interrompue.")?;
             if output.status.code()==Some(2){if !output.stdout.is_empty(){return Err("Réponse de branche Git ambiguë.".into());}return Ok(None);}
-            if !output.status.success(){return Err("Branche HTTPS absente ou inaccessible. Aucun détail d’authentification n’est affiché.".into());}
+            if !output.status.success(){return Err(if self.synthetic_authority.is_some(){synthetic_git_failure(&output.stderr)}else{"Branche HTTPS absente ou inaccessible. Aucun détail d’authentification n’est affiché."}.into());}
             let text=String::from_utf8(output.stdout)?;
             let mut lines=text.lines();
             let (commit,actual)=lines.next().and_then(|line|line.split_once('\t')).ok_or("Réponse de branche Git invalide.")?;
@@ -615,6 +646,67 @@ fn validate_commit(value: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn synthetic_git_failure_classification_never_returns_raw_credentials_or_urls() {
+        for diagnostic in [
+            "fatal: Unsupported SSL backend with synthetic-private-token",
+            "SSL certificate problem at https://synthetic-private-token@127.0.0.1/repo",
+            "HTTP 403 synthetic-private-token",
+            "unexpected synthetic-private-token at https://127.0.0.1/private",
+        ] {
+            let message = synthetic_git_failure(diagnostic.as_bytes());
+            assert!(!message.contains("synthetic-private-token"));
+            assert!(!message.contains("127.0.0.1"));
+            assert!(!message.contains("https://"));
+        }
+    }
+
+    #[test]
+    fn synthetic_tls_keeps_explicit_ca_trust_without_selecting_an_unavailable_linux_backend() {
+        let mut authentication = HttpsAuthentication::new(
+            ForgeConfiguration {
+                kind: atelier_core::contracts::ForgeKind::Github,
+                base: "https://github.example.test".into(),
+            },
+            "owner/repo".into(),
+            "synthetic-private-token".into(),
+        )
+        .unwrap();
+        authentication.synthetic_authority = Some(b"synthetic-public-ca".to_vec());
+        let home = tempfile::tempdir().unwrap();
+        let mut command = tokio::process::Command::new("git");
+        authentication
+            .configure_network(
+                &mut command,
+                home.path(),
+                "https://github.example.test/owner/repo.git",
+            )
+            .unwrap();
+        let arguments = command
+            .as_std()
+            .get_args()
+            .map(|arg| arg.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert!(arguments.contains(".sslCAInfo="));
+        assert!(arguments.contains(".sslCAPath="));
+        assert!(arguments.contains("http.sslVerify=true"));
+        assert_eq!(
+            arguments.contains("http.sslBackend=openssl"),
+            !cfg!(target_os = "linux")
+        );
+        assert_eq!(
+            std::fs::read(home.path().join("synthetic-authority.pem")).unwrap(),
+            b"synthetic-public-ca"
+        );
+        assert_eq!(
+            std::fs::read_dir(home.path().join("synthetic-empty-authorities"))
+                .unwrap()
+                .count(),
+            0
+        );
+        assert!(!arguments.contains("synthetic-private-token"));
+    }
 
     #[test]
     fn download_limits_include_all_objects_and_prevent_import_of_excessive_storage() {
