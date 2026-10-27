@@ -1034,23 +1034,19 @@ async fn tempo_export_scenario(
     click(client, &format!("{first} .confirm-time-export")).await?;
     click(client, &format!("{first} .send-time-export")).await?;
     // No Tempo credential is stored: refuse before any Jira or Tempo HTTP request.
-    wait_dom(client,"return document.querySelector('.time-export-error')?.textContent.includes('Renseigne le jeton Tempo') && document.querySelector('.send-time-export')?.disabled === true;",vec![]).await?;
+    wait_dom(client,"const entry=document.querySelector(arguments[0]);return entry?.querySelector('.time-export-error')?.textContent.includes('Renseigne le jeton Tempo') && entry?.querySelector('.send-time-export')?.disabled === true;",vec![json!(first)]).await?;
     client
         .find(Locator::Css("#time-description"))
         .await?
         .send_keys("Keep local time draft")
         .await?;
     click(client, &format!("{second} .reconcile-time-export")).await?;
-    wait_dom(client,"return document.querySelectorAll('.time-export-error')[1]?.textContent.includes('Renseigne le jeton Tempo') && document.querySelector('#time-description')?.value === 'Keep local time draft';",vec![]).await?;
+    wait_dom(client,"return document.querySelector(arguments[0])?.querySelector('.time-export-error')?.textContent.includes('Renseigne le jeton Tempo') && document.querySelector('#time-description')?.value === 'Keep local time draft';",vec![json!(second)]).await?;
     let response=http.patch(format!("{address}/api/cards/time-export")).bearer_auth(token).header("x-local-request","1").json(&json!({"description":"Must be refused","expected":{"description":"Keep local export content"}})).send().await?;
     if response.status() != reqwest::StatusCode::CONFLICT {
         return Err("Une mutation a accepté un export Tempo incertain.".into());
     }
-    client
-        .find(Locator::Css("#time-description"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#time-description").await?;
     click(client, &format!("{second} .open-time-export-reset")).await?;
     wait_dom(client,"return document.querySelector('[data-time-id=\"00000000-0000-4000-8000-000000000002\"] .reset-time-export')?.disabled === true;",vec![]).await?;
     client
@@ -1381,11 +1377,7 @@ async fn brainstorm_scenario(
     )
     .await?;
     click(client, "#cancel-confirmation").await?;
-    client
-        .find(Locator::Css("#brainstorm-message"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#brainstorm-message").await?;
     click(client, ".brainstorm-proposal").await?;
     client.execute("const select=document.querySelector('#brainstorm-project');select.value='brainstorm-project';select.dispatchEvent(new Event('change',{bubbles:true}));return true;",vec![]).await?;
     click(client, "#confirm-brainstorm-convert").await?;
@@ -1879,11 +1871,7 @@ async fn time_task_scenario(
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#task-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#task-title").await?;
     click(client, "#view-time-report").await?;
     wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     client.refresh().await?;
@@ -2344,7 +2332,7 @@ async fn projects_scenario(
     click(client, "#confirm-project").await?;
     wait_dom(client, "return document.querySelector('#project-name')?.value === '' && document.querySelector('#project-error')?.textContent === '';", vec![]).await?;
     click(client, "#close-projects").await?;
-    wait_dom(client, "return !document.querySelector('#projects-dialog') && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
+    wait_dom(client, "return !document.querySelector('#projects-dialog') && document.activeElement?.id === 'manage-projects' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
     client
         .find(Locator::Css("#task-title"))
         .await?
@@ -2658,11 +2646,7 @@ async fn settings_scenario(
     click(client, "#list-forge-prs").await?;
     // Invalid repository scope is rejected before any HTTP call to the forge.
     wait_dom(client,"return document.querySelector('#forge-error')?.textContent.includes('Dépôt ou numéro de PR invalide') && document.querySelector('#forge-repository')?.value === '../invalid' && document.querySelector('#list-forge-prs')?.disabled === false;",vec![]).await?;
-    client
-        .find(Locator::Css("#forge-repository"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#forge-repository").await?;
     let forges: atelier_core::contracts::ForgeConnections = http
         .get(format!("{address}/api/forges"))
         .bearer_auth(token)
@@ -3744,7 +3728,13 @@ async fn files_scenario(
         if http
             .get(url)
             .send()
-            .await?
+            .await
+            .map_err(|error| {
+                format!(
+                    "HTTP du service synthétique {} (PID {:?}, port {:?}) : {error:?}",
+                    service.id, service.pid, service.port
+                )
+            })?
             .checked_status()
             .await?
             .text()
@@ -4128,6 +4118,13 @@ async fn local_commit_scenario(
                 .into(),
         );
     }
+    Ok(())
+}
+
+async fn clear_input(client: &Client, selector: &str) -> Result<()> {
+    client.find(Locator::Css(selector)).await?.clear().await?;
+    // WebDriver clear does not consistently notify input listeners across browsers.
+    client.execute("document.querySelector(arguments[0]).dispatchEvent(new Event('input',{bubbles:true}));",vec![json!(selector)]).await?;
     Ok(())
 }
 

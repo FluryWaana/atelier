@@ -373,7 +373,7 @@ impl DevServers {
         let card = prepared.plan.card_id.clone();
         let launch = prepared.plan.services.remove(0);
         let directory = prepared.directories.remove(0);
-        let (index, previous_port) = {
+        let index = {
             let inner = self.inner();
             let session = inner
                 .sessions
@@ -403,15 +403,12 @@ impl DevServers {
             }) {
                 return Err("Arrête la pile déjà lancée pour ces projets, ou utilise {port} pour chaque service.".into());
             }
-            (index, session.services[index].state.port)
+            index
         };
         self.stop_inner(&card, Some(&launch.id)).await?;
         let lease = if launch.command.contains("{port}") {
-            let requested = if launch.requested_port == 0 {
-                previous_port.unwrap_or(0)
-            } else {
-                launch.requested_port
-            };
+            // A fresh automatic port avoids TIME_WAIT and listeners that acquired the previous port.
+            let requested = launch.requested_port;
             if requested != 0
                 && self
                     .inner()
@@ -785,24 +782,36 @@ mod tests {
         assert!(partial.services[0].process_ids.is_empty());
         assert_eq!(partial.services[1].pid, started.services[1].pid);
         assert_eq!(partial.services[1].status, ServiceStatus::Running);
-        let selected = || {
+        let selected = |requested_port| {
             let mut launch = prepared();
             launch.plan.services.retain(|service| service.id == "front");
+            launch.plan.services[0].requested_port = requested_port;
             launch.directories.truncate(1);
             launch
         };
         let occupied = PortLease::reserve(started.services[0].port.unwrap()).unwrap();
-        assert!(manager.restart(selected()).await.is_err());
+        let automatic = manager.restart(selected(0)).await.unwrap();
+        assert_ne!(automatic.services[0].port, started.services[0].port);
+        assert_eq!(automatic.services[1].pid, started.services[1].pid);
+        assert!(
+            manager
+                .restart(selected(started.services[0].port.unwrap()))
+                .await
+                .is_err()
+        );
         assert_eq!(
             manager.snapshot("synthetic-card").unwrap().services[1].pid,
             started.services[1].pid
         );
         drop(occupied);
-        let restarted = manager.restart(selected()).await.unwrap();
+        let restarted = manager
+            .restart(selected(started.services[0].port.unwrap()))
+            .await
+            .unwrap();
         assert_ne!(restarted.services[0].pid, started.services[0].pid);
         assert_eq!(restarted.services[0].port, started.services[0].port);
         assert_eq!(restarted.services[1].pid, started.services[1].pid);
-        let again = manager.restart(selected()).await.unwrap();
+        let again = manager.restart(selected(0)).await.unwrap();
         assert_ne!(again.services[0].pid, restarted.services[0].pid);
         assert_eq!(again.services[1].pid, started.services[1].pid);
         assert!(

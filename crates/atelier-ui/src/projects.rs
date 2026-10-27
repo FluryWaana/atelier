@@ -5,6 +5,7 @@ use atelier_core::document::Document;
 use atelier_core::domain::agent_options::providers;
 use gloo_net::http::Method;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone, Default, PartialEq)]
@@ -138,6 +139,14 @@ pub fn Projects(
             node.close();
         }
         on_close.run(());
+        request_animation_frame(move || {
+            if let Some(element) = document()
+                .get_element_by_id("manage-projects")
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+        });
     };
     let request_close = move || {
         if pending.get_untracked() {

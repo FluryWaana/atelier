@@ -20,6 +20,8 @@ POSIX n’offre pas le partage de fichier Windows qui interdit la modification d
 
 Les ports Linux sont lus dans `/proc` à partir des descripteurs de sockets des PID sélectionnés : 65 536 descripteurs, 1 Mio par table et 16 Mio cumulés. macOS utilise `/usr/sbin/lsof` avec PID exacts, champs numériques IPv4/IPv6, sans résolution DNS, une limite de deux secondes et 1 Mio. Les membres du groupe sont relus avant/après ; seuls les listeners d’un membre encore présent sont exposés. Ce relevé ponctuel ne prouve ni réponse HTTP ni disponibilité continue.
 
+La relance d’un service avec port automatique réserve un nouveau port auprès du système ; l’ancien peut encore être en `TIME_WAIT` ou appartenir à un autre listener. Un port configuré reste demandé exactement et son indisponibilité est un refus. Ce contrat est commun aux trois systèmes ; le service voisin reste indépendant et les adresses affichées sont relues après relance. Le correctif et sa régression attendent leur requalification.
+
 ## État de preuve
 
 Scénarios écrits : nettoyage de descendants ordinaires, annulation et activité persistante, limite `setsid`, diagnostics compilés, protocoles interactifs Codex/Claude, vérification de sources, comptes synthétiques, copies d’extensions et mutation humaine, parseurs de ports et vrais listeners synthétiques. Les scénarios services utilisent le shell de la plateforme ; leur point d’entrée enfant est explicitement ignoré hors lancement par le scénario.

@@ -158,6 +158,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             while std::time::Instant::now() < deadline {
                 match listener.accept() {
                     Ok((mut stream,_)) => {
+                        stream.set_nonblocking(false)?;
                         stream.set_read_timeout(Some(Duration::from_secs(1)))?;
                         stream.set_write_timeout(Some(Duration::from_secs(1)))?;
                         let mut request = [0u8;1024];

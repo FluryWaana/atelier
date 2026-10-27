@@ -3,6 +3,7 @@ use crate::{field, live::BoardState, read, write};
 use atelier_core::document::Document;
 use gloo_net::http::Method;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 async fn list(token: &str) -> Result<Vec<Document>, String> {
@@ -41,6 +42,14 @@ pub fn Backups(
             node.close();
         }
         on_close.run(());
+        request_animation_frame(move || {
+            if let Some(element) = document()
+                .get_element_by_id("manage-backups")
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+        });
     };
     let refresh = move || {
         if pending.get_untracked() {
