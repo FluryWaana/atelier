@@ -23,6 +23,47 @@ impl ContainedChild {
             .ok_or("Le propriétaire du groupe de processus est absent.")?;
         members(group).await
     }
+    #[cfg(target_os = "macos")]
+    fn exited(&mut self) -> Result<bool> {
+        let group = self
+            .group
+            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+        // Darwin's waitid(WNOHANG) can fail its MAC check when no child is ready.
+        // Query only our unreaped leader; arg=1 includes zombies, without consuming its exit status.
+        let mut information = std::mem::MaybeUninit::<libc::proc_bsdshortinfo>::zeroed();
+        let size = std::mem::size_of::<libc::proc_bsdshortinfo>();
+        // The kernel writes this POD buffer, checked for its complete ABI size before reading it.
+        let written = unsafe {
+            libc::proc_pidinfo(
+                group,
+                libc::PROC_PIDT_SHORTBSDINFO,
+                1,
+                information.as_mut_ptr().cast(),
+                i32::try_from(size)?,
+            )
+        };
+        if written <= 0 {
+            let error = io::Error::last_os_error();
+            if error.raw_os_error() == Some(libc::ESRCH) {
+                self.group = None;
+            }
+            return Err(error.into());
+        }
+        if usize::try_from(written)? != size {
+            return Err("État du processus propriétaire incomplet.".into());
+        }
+        // A full successful proc_pidinfo call initialized the fields used below.
+        let information = unsafe { information.assume_init() };
+        let pid = u32::try_from(group)?;
+        if information.pbsi_pid != pid
+            || information.pbsi_ppid != std::process::id()
+            || information.pbsi_pgid != pid
+        {
+            return Err("L’identité du groupe propriétaire a changé.".into());
+        }
+        Ok(information.pbsi_status == libc::SZOMB)
+    }
+    #[cfg(not(target_os = "macos"))]
     fn exited(&mut self) -> Result<bool> {
         let group = self
             .group
@@ -220,11 +261,28 @@ mod tests {
         let mut child = ContainedChild::spawn(&mut command).await.unwrap();
         let group = child.group.unwrap();
         assert_ne!(group, parent);
+        assert!(!child.exited().unwrap());
         let ids = child.process_ids().await.unwrap();
         assert!(ids.contains(&u32::try_from(group).unwrap()));
         child.stop().await.unwrap();
         assert!(child.group.is_none());
         assert_eq!(unsafe { libc::getpgrp() }, parent);
+    }
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn a_macos_exited_leader_stays_owned_and_unreaped_until_group_cleanup() {
+        let mut command = shell("exit 0");
+        let mut child = ContainedChild::spawn(&mut command).await.unwrap();
+        let group = child.group.unwrap();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+        while !child.exited().unwrap() {
+            assert!(tokio::time::Instant::now() < deadline);
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(child.child.id(), Some(u32::try_from(group).unwrap()));
+        assert!(child.exited().unwrap());
+        assert!(child.wait().await.unwrap().success());
+        assert!(child.group.is_none());
     }
 
     #[test]

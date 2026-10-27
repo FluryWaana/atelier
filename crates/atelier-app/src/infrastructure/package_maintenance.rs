@@ -96,7 +96,7 @@ fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path
                 .into(),
         );
     }
-    directory.try_clone()?.into_std_file().sync_all()?;
+    super::publish::sync_directory(&directory)?;
     Ok(root.join(receipt))
 }
 

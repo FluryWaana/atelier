@@ -341,7 +341,7 @@ impl Installation {
             }
             Err(error) => return Err(error.into()),
         }
-        receipts.try_clone()?.into_std_file().sync_all()?;
+        publish::sync_directory(&receipts)?;
         let retained = prepared.keep_package();
         let source = super::repository_access::absolute(
             retained

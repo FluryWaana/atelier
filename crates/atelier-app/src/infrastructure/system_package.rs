@@ -268,7 +268,7 @@ mod native {
             publish::write_private(&self.parent, Path::new(&self.name()), &bytes, false)?;
             // This ledger contains only public code/signature metadata; users need it for a fail-closed startup gate.
             readable_file(&self.parent, &self.name(), false)?;
-            self.parent.try_clone()?.into_std_file().sync_all()?;
+            publish::sync_directory(&self.parent)?;
             Ok(())
         }
         fn directory(&self, journal: &Journal) -> Result<Dir> {
@@ -388,7 +388,7 @@ mod native {
             file.sync_all()?;
             drop(file);
             publish::rename_new(directory, Path::new(&temporary), Path::new(name))?;
-            directory.try_clone()?.into_std_file().sync_all()?;
+            publish::sync_directory(directory)?;
             Ok(())
         })();
         if result.is_err() {
@@ -508,7 +508,7 @@ mod native {
             }
             Err(error) => return Err(error.into()),
         }
-        directory.try_clone()?.into_std_file().sync_all()?;
+        publish::sync_directory(directory)?;
         Ok(())
     }
     fn retained_limit(scope: &Scope, prefix: &str) -> Result<()> {
@@ -548,7 +548,7 @@ mod native {
             return Err("Marqueur de maintenance remplacé ; contenu conservé.".into());
         }
         directory.remove_file(MARKER)?;
-        directory.try_clone()?.into_std_file().sync_all()?;
+        publish::sync_directory(&directory)?;
         Ok(())
     }
     fn identity(root: &Path) -> Result<(u64, u64)> {
@@ -601,7 +601,7 @@ mod native {
             } else {
                 directory.open_dir_nofollow(path)?
             };
-            dir.into_std_file()
+            publish::directory_file(&dir)?
                 .set_permissions(std::fs::Permissions::from_mode(0o755))?;
         }
         for name in [
@@ -619,11 +619,8 @@ mod native {
         let slot = directory
             .open_dir_nofollow("versions")?
             .open_dir_nofollow(&version.id)?;
-        slot.try_clone()?
-            .into_std_file()
-            .set_permissions(std::fs::Permissions::from_mode(0o755))?;
-        slot.open_dir_nofollow("ui")?
-            .into_std_file()
+        publish::directory_file(&slot)?.set_permissions(std::fs::Permissions::from_mode(0o755))?;
+        publish::directory_file(&slot.open_dir_nofollow("ui")?)?
             .set_permissions(std::fs::Permissions::from_mode(0o755))?;
         package::verify(&installation.slot_path(version)?)?;
         let manifest: serde_json::Value = serde_json::from_slice(
@@ -918,11 +915,7 @@ mod native {
             }
             runtime(&observed.active_executable()?, target, &payload.version).await?;
             // Persist the selected current.json name before committing the external ledger.
-            observed
-                .directory()
-                .try_clone()?
-                .into_std_file()
-                .sync_all()?;
+            publish::sync_directory(observed.directory())?;
             journal.phase = Phase::Committed;
             journal.message =
                 "Code système vérifié et sélectionné ; aucune base ouverte ou restaurée.".into();
@@ -1058,11 +1051,7 @@ mod native {
                 "La sélection système a été modifiée ; récupération automatique refusée.".into(),
             );
         }
-        installation
-            .directory()
-            .try_clone()?
-            .into_std_file()
-            .sync_all()?;
+        publish::sync_directory(installation.directory())?;
         scope.save(&journal)?;
         clear_marker(scope, &journal)?;
         println!("{}", journal.message);
@@ -1083,10 +1072,7 @@ mod native {
         let retained = format!(".atelier-system-failed-{}-{}", scope.key, journal.id);
         if journal.rescue.is_none() {
             scope.parent.create_dir(&retained)?;
-            scope
-                .parent
-                .open_dir_nofollow(&retained)?
-                .into_std_file()
+            publish::directory_file(&scope.parent.open_dir_nofollow(&retained)?)?
                 .set_permissions(std::fs::Permissions::from_mode(0o700))?;
             journal.rescue = Some(retained.clone());
             scope.save(journal)?;
@@ -1233,10 +1219,7 @@ mod native {
         retained_limit(scope, &prefix)?;
         let rescue = format!("{prefix}{}", journal.id);
         scope.parent.create_dir(&rescue)?;
-        scope
-            .parent
-            .open_dir_nofollow(&rescue)?
-            .into_std_file()
+        publish::directory_file(&scope.parent.open_dir_nofollow(&rescue)?)?
             .set_permissions(std::fs::Permissions::from_mode(0o700))?;
         journal.rescue = Some(rescue);
         journal.phase = Phase::Removing;
@@ -1304,8 +1287,8 @@ mod native {
                 );
             }
             publish::rename_new_between(&from, &name, &to, &target)?;
-            from.try_clone()?.into_std_file().sync_all()?;
-            to.try_clone()?.into_std_file().sync_all()?;
+            publish::sync_directory(&from)?;
+            publish::sync_directory(&to)?;
             if digest(&destination, &file.path)? != file.sha256 {
                 let _ = publish::rename_new_between(&to, &target, &from, &name);
                 return Err("Fichier système modifié pendant son déplacement ; copie conservée pour examen.".into());
@@ -1324,7 +1307,7 @@ mod native {
             for part in path.components() {
                 destination_parent = destination_parent.open_dir_nofollow(part.as_os_str())?;
             }
-            destination_parent.into_std_file().sync_all()?;
+            publish::sync_directory(&destination_parent)?;
             let removal = parent_file(&source, path.to_str().ok_or("Chemin système non UTF-8.")?)
                 .and_then(|(directory, name)| directory.remove_dir(name).map_err(Into::into));
             match removal {

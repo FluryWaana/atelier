@@ -3,6 +3,30 @@ use cap_std::fs::Dir;
 use std::path::{Component, Path};
 
 #[cfg(target_os = "linux")]
+pub(super) fn directory_file(directory: &Dir) -> Result<std::fs::File> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    // cap-std may hold an O_PATH descriptor. Reopen the same anchored directory, not its ambient name.
+    let descriptor = unsafe {
+        libc::openat(
+            directory.as_raw_fd(),
+            c".".as_ptr(),
+            libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+        )
+    };
+    if descriptor < 0 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    // A successful openat returned a fresh descriptor; this File becomes its unique owner.
+    Ok(unsafe { std::fs::File::from_raw_fd(descriptor) })
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn sync_directory(directory: &Dir) -> Result<()> {
+    directory_file(directory)?.sync_all()?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
 pub(super) fn rename_new_between(
     source: &Dir,
     name: &std::ffi::OsStr,
@@ -36,8 +60,8 @@ pub(super) fn rename_new_between(
     {
         return Err(std::io::Error::last_os_error().into());
     }
-    source.try_clone()?.into_std_file().sync_all()?;
-    destination.try_clone()?.into_std_file().sync_all()?;
+    sync_directory(source)?;
+    sync_directory(destination)?;
     Ok(())
 }
 
@@ -212,6 +236,48 @@ mod tests {
     use super::*;
     use cap_std::ambient_authority;
     use std::fs;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn directory_sync_and_permissions_reopen_path_descriptors_without_following_replaced_names() {
+        use std::os::{
+            fd::{AsRawFd, FromRawFd},
+            unix::fs::{MetadataExt, PermissionsExt},
+        };
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("original");
+        let moved = root.path().join("moved");
+        let outside = root.path().join("outside");
+        fs::create_dir(&path).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let anchor = Dir::open_ambient_dir(&path, ambient_authority()).unwrap();
+        // This fresh synthetic O_PATH descriptor is owned exactly once by the File below.
+        let descriptor = unsafe {
+            libc::openat(
+                anchor.as_raw_fd(),
+                c".".as_ptr(),
+                libc::O_PATH | libc::O_DIRECTORY | libc::O_CLOEXEC,
+            )
+        };
+        assert!(descriptor >= 0);
+        let directory = Dir::from_std_file(unsafe { fs::File::from_raw_fd(descriptor) });
+        let original = directory.dir_metadata().unwrap();
+        let outside_mode = fs::metadata(&outside).unwrap().mode();
+        fs::rename(&path, &moved).unwrap();
+        std::os::unix::fs::symlink(&outside, &path).unwrap();
+        let file = directory_file(&directory).unwrap();
+        let reopened = file.metadata().unwrap();
+        use cap_std::fs::MetadataExt as _;
+        assert_eq!(
+            (original.dev(), original.ino()),
+            (reopened.dev(), reopened.ino())
+        );
+        file.set_permissions(fs::Permissions::from_mode(0o750))
+            .unwrap();
+        sync_directory(&directory).unwrap();
+        assert_eq!(fs::metadata(&moved).unwrap().mode() & 0o777, 0o750);
+        assert_eq!(fs::metadata(&outside).unwrap().mode(), outside_mode);
+    }
 
     #[test]
     fn failed_private_publication_cleans_staging_and_preserves_existing_data() {

@@ -5,6 +5,10 @@ fixture_base=$(cd -P "$RUNNER_TEMP" && pwd)
 fixture=$(mktemp -d "$fixture_base/.atelier-final-keychain-XXXXXXXX")
 keychain="$fixture/fixture.keychain-db"
 umask 077
+mkdir "$fixture/tmp"
+# Rust/SQLite NOFOLLOW checks must not traverse macOS's /var -> /private/var alias.
+fixture_tmp=$(cd -P "$fixture/tmp" && pwd)
+export TMPDIR="$fixture_tmp/" TMP="$fixture_tmp" TEMP="$fixture_tmp"
 printf '%s\n' atelier-final-keychain/1 > "$fixture/.keychain-fixture"
 quoted=${keychain//\\/\\\\}
 quoted=${quoted//\"/\\\"}

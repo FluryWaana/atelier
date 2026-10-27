@@ -41,6 +41,13 @@ pub struct Store<'a> {
 }
 
 pub(super) fn temporary_directory() -> Result<tempfile::TempDir> {
+    temporary_directory_in(&std::env::temp_dir())
+}
+
+fn temporary_directory_in(base: &Path) -> Result<tempfile::TempDir> {
+    // Only normalize the OS temporary root used to create our own private directory.
+    // User-selected database and credential paths retain their strict no-link policy.
+    let base = std::fs::canonicalize(base)?;
     let mut builder = tempfile::Builder::new();
     builder.prefix("atelier-sqlite-");
     #[cfg(unix)]
@@ -48,7 +55,11 @@ pub(super) fn temporary_directory() -> Result<tempfile::TempDir> {
         use std::os::unix::fs::PermissionsExt;
         builder.permissions(std::fs::Permissions::from_mode(0o700));
     }
-    Ok(builder.tempdir()?)
+    let directory = builder.tempdir_in(base)?;
+    if std::fs::canonicalize(directory.path())? != directory.path() {
+        return Err("Le dossier temporaire privé a changé pendant sa création.".into());
+    }
+    Ok(directory)
 }
 
 pub(super) fn open(path: &Path) -> Result<Connection> {
@@ -339,6 +350,48 @@ impl<'a> Store<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[cfg(unix)]
+    #[test]
+    fn private_sqlite_temporary_directory_uses_physical_root_without_changing_user_paths() {
+        let fixture = tempfile::tempdir().unwrap();
+        let physical = std::fs::canonicalize(fixture.path()).unwrap();
+        let target = physical.join("physical");
+        std::fs::create_dir(&target).unwrap();
+        let alias = physical.join("alias");
+        std::os::unix::fs::symlink(&target, &alias).unwrap();
+        let temporary = temporary_directory_in(&alias).unwrap();
+        assert_eq!(temporary.path().parent(), Some(target.as_path()));
+        assert_eq!(
+            std::fs::canonicalize(temporary.path()).unwrap(),
+            temporary.path()
+        );
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(temporary.path())
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        let database = temporary.path().join("snapshot.sqlite");
+        let connection = Connection::open_with_flags(
+            &database,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
+                | rusqlite::OpenFlags::SQLITE_OPEN_CREATE
+                | rusqlite::OpenFlags::SQLITE_OPEN_NOFOLLOW,
+        )
+        .unwrap();
+        initialize(&connection).unwrap();
+        validate_format(&connection).unwrap();
+        assert!(
+            std::fs::symlink_metadata(&alias)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+    }
 
     #[test]
     fn new_database_has_a_rust_identity_and_reopens_with_its_content() {
