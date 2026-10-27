@@ -168,10 +168,15 @@ pub async fn verify(
         .fields
         .get::<Worktree>("worktree")?
         .ok_or("Prépare le worktree avant de lier une PR/MR.")?;
+    let repository_path = card.fields.get::<String>("repo")?.unwrap_or_default();
+    let repository_path =
+        super::task_creation::path_string(std::path::Path::new(&repository_path)).utf8()?;
+    let source_path =
+        super::task_creation::path_string(std::path::Path::new(&worktree.source)).utf8()?;
     if worktree.state != WorktreeState::Ready
         || !atelier_core::domain::projects::same_repository(
-            &card.fields.get::<String>("repo")?.unwrap_or_default(),
-            &worktree.source,
+            &repository_path,
+            &source_path,
             cfg!(windows),
         )
     {

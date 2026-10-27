@@ -210,10 +210,19 @@ async fn native_association_verification_refuses_origin_or_branch_changes_withou
     )
     .unwrap();
     let configuration = configuration(ForgeKind::Github, "https://github.example.test");
+    // canonicalize retains Windows' extended prefix; generated worktree paths use its plain spelling.
+    workflow::verify(&root, &roots, &card, &configuration, "owner/repo")
+        .await
+        .unwrap();
+    let mut foreign = card.clone();
+    foreign
+        .fields
+        .set("repo", &source.with_file_name("other-repository"))
+        .unwrap();
     assert!(
-        workflow::verify(&root, &roots, &card, &configuration, "owner/repo")
+        workflow::verify(&root, &roots, &foreign, &configuration, "owner/repo")
             .await
-            .is_ok()
+            .is_err()
     );
     git(
         &source,
