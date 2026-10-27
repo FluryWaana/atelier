@@ -2,15 +2,21 @@
 
 ## État courant
 
-La reconstruction n'est pas terminée. Dernier relevé : `40489418512` sur `ee3122b` ; les corrections de scénarios suivantes sont poussées à `737b763` et attendent leur requalification.
+La reconstruction n'est pas terminée. Dernière campagne : [40493450905](https://github.com/FluryWaana/atelier/actions/runs/40493450905) sur `342e020`. Journaux et captures relus ; les corrections suivantes restent candidates.
 
 | Périmètre | Preuve actuelle |
 | --- | --- |
 | Sources actives | Rust à la racine, quatre crates ; retrait Node effectué à `fe5095c`, référence conservée dans Git |
-| Jobs natifs complets | Cinq réussites sur `654f066` ; dernier relevé : Windows, Linux ARM64 et les deux macOS réussis, Linux x64 annulé pendant les téléchargements système avant compilation/test |
-| Navigateurs | Parcours de rollback/mise à jour réussi sur Edge, Chrome, Firefox et Safari à `ee3122b` ; parcours application et Jira encore échoués, corrections candidates suivantes non exécutées |
+| Jobs natifs complets | Les cinq jobs réussissent à `342e020`, y compris TLS et probes natives effectivement invoquées |
+| Application navigateur | Réussite Edge, Safari et Chrome ; Firefox échoue sur l’expiration synthétique des quotas |
+| Jira navigateur | Échec des quatre navigateurs : le rapport contient aussi les deux entrées Tempo des fixtures ; attentes du scénario corrigées, sans modifier le calcul produit |
+| Mises à jour navigateur | Réussite Edge/Safari à `342e020` ; Chrome/Firefox dépassent l’attente DOM pendant la préparation. Réussite des quatre à `ee3122b`, sans qualification automatique des changements suivants |
 | Paquets | Avis, archives signées et rollback synthétique exécutés dans le parcours navigateur ; job delivery et vrais installeurs toujours ignorés, aucun paquet de livraison qualifié |
 | Bureau | Clics Ouvrir/Quitter macOS et sélecteurs POSIX encore sans preuve ; ne pas les déduire des tests AppKit sur EOF ou des sélecteurs Windows |
+
+Revue corrective confiée à GPT‑6 Astra après la demande de réduire les dépenses CI. Elle corrige également une attente de persistance de filtres inexistante et un scénario éditant la description Jira verrouillée ; le brouillon utilise les instructions éditables. L’horloge Firefox instrumentée et l’attente bornée du journal de préparation restent à exécuter. Aucun scénario écrit ne vaut preuve.
+
+Le workflow manuel permet désormais une sélection par famille, plateforme, navigateur et parcours. Les assets candidats sont partagés ; les installeurs ne dépendent plus du succès navigateur et les caches sont conservés après échec. Aucun nouveau pipeline n’a été lancé pendant cette revue. Les sélections partielles ne qualifient pas toute la reconstruction.
 
 Les sections suivantes conservent l'historique exact des échecs et corrections, sans remplacer leurs commits par le dernier état du code.
 

@@ -137,7 +137,28 @@ async fn wait_title(client: &Client, title: &str) -> Result<()> {
     Err("La tâche n’apparaît pas dans le navigateur.".into())
 }
 
-pub async fn test() -> Result<()> {
+pub async fn test(prepared_assets: bool) -> Result<()> {
+    let requested_journey = std::env::var("ATELIER_TEST_JOURNEY").unwrap_or("all".into());
+    if !matches!(
+        requested_journey.as_str(),
+        "all" | "application" | "jira" | "updates"
+    ) {
+        return Err("Parcours navigateur inconnu.".into());
+    }
+    let browser = std::env::var("ATELIER_TEST_BROWSER")
+        .unwrap_or(if cfg!(windows) { "edge" } else { "chrome" }.into());
+    let default_driver = match browser.as_str() {
+        "edge" => "msedgedriver",
+        "chrome" => "chromedriver",
+        "firefox" => "geckodriver",
+        "safari" => "safaridriver",
+        _ => return Err("Navigateur de test inconnu.".into()),
+    };
+    if prepared_assets {
+        super::validate_ui_assets(&root().join(".artifacts/rust-ui"))?;
+    } else {
+        super::build_ui(false)?;
+    }
     run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
         "build",
         "--locked",
@@ -152,15 +173,6 @@ pub async fn test() -> Result<()> {
         "--bin",
         "native-fixture",
     ]))?;
-    let browser = std::env::var("ATELIER_TEST_BROWSER")
-        .unwrap_or(if cfg!(windows) { "edge" } else { "chrome" }.into());
-    let default_driver = match browser.as_str() {
-        "edge" => "msedgedriver",
-        "chrome" => "chromedriver",
-        "firefox" => "geckodriver",
-        "safari" => "safaridriver",
-        _ => return Err("Navigateur de test inconnu.".into()),
-    };
     let driver_program = std::env::var_os("ATELIER_WEBDRIVER").unwrap_or(default_driver.into());
     let driver_port = free_port()?;
     let mut driver_command = command(driver_program);
@@ -236,12 +248,16 @@ pub async fn test() -> Result<()> {
     ];
     let mut failures = Vec::new();
     for (name, journey) in journeys {
+        if requested_journey != "all" && requested_journey != name {
+            println!("Parcours synthétique {name} non exécuté (sélection {requested_journey}).");
+            continue;
+        }
         match journey.await {
             Ok(()) => println!("Parcours synthétique {name} réussi."),
             Err(error) => {
                 if let Ok(screenshot) = client.screenshot().await {
                     let _ = std::fs::write(
-                        root().join(format!(".artifacts/rust-ui-{name}-failed.png")),
+                        root().join(format!(".artifacts/rust-ui-{browser}-{name}-failed.png")),
                         screenshot,
                     );
                 }
@@ -255,7 +271,7 @@ pub async fn test() -> Result<()> {
     }
     closed?;
     println!(
-        "Parcours {browser} réussi : tableau, filtres, cartes, critères/dépendances, conflits d’édition, projets, persistance et rotation de session sous CSP."
+        "Sélection navigateur {browser}/{requested_journey} réussie ; les parcours non exécutés restent non qualifiés."
     );
     Ok(())
 }
@@ -715,6 +731,18 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         click(client,"#close-settings").await?;click(client,"#keep-settings").await?;
         wait_dom(client,"return document.querySelector('#update-archive')?.value === arguments[0];",vec![json!(candidate)]).await?;
         click(client,"#preview-update").await?;
+        let preparation_deadline=Instant::now()+Duration::from_secs(120);
+        loop {
+            let phase=updates::status(Some(&installation))?.operation.map(|operation|operation.state);
+            if phase==Some(Phase::Prepared) { break; }
+            if phase.is_some_and(|phase|phase!=Phase::Preparing) {
+                return Err(format!("Préparation navigateur interrompue : {phase:?}.").into());
+            }
+            if Instant::now()>=preparation_deadline {
+                return Err(format!("Préparation navigateur trop longue : {phase:?}.").into());
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
         wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#approve-update").await?;click(client,"#settings-tab-general").await?;
         client.find(Locator::Css("#settings-branch")).await?.clear().await?;client.find(Locator::Css("#settings-branch")).await?.send_keys("synthetic-unsaved-update-draft").await?;
@@ -1133,7 +1161,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     client
         .goto(&format!("{address}/?task=jira-refresh"))
         .await?;
-    wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#forge-task-heading')?.parentElement.textContent.includes('Synthetic linked PR') && document.querySelector('#detach-task-forge')?.disabled === true && document.querySelector('#edit-title')?.readOnly === true && document.querySelector('#edit-description')?.readOnly === true;",vec![]).await?;
     client
         .find(Locator::Css("#forge-content-title"))
         .await?
@@ -1143,14 +1171,14 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     click(client, "#cancel-confirmation").await?;
     wait_dom(client,"return document.querySelector('#forge-content-title')?.value.endsWith(' Human content draft') && document.querySelector('#save-forge-content')?.disabled === true;",vec![]).await?;
     click(client, "#reset-forge-content").await?;
-    let description = client
-        .find(Locator::Css("#edit-description"))
+    let instructions = client
+        .find(Locator::Css("#edit-instructions"))
         .await?
         .prop("value")
         .await?
-        .ok_or("Synthetic description absent")?;
+        .ok_or("Synthetic instructions absent")?;
     client
-        .find(Locator::Css("#edit-description"))
+        .find(Locator::Css("#edit-instructions"))
         .await?
         .send_keys(" Synthetic checks draft")
         .await?;
@@ -1162,16 +1190,16 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     .await?;
     click(client, "#read-forge-checks").await?;
     // A metadata read remains usable with a local draft; no forge connection means no remote request.
-    wait_dom(client,"return document.querySelector('#forge-checks-error')?.textContent.length > 0 && document.querySelector('#edit-description')?.value.endsWith(' Synthetic checks draft');",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#forge-checks-error')?.textContent.length > 0 && document.querySelector('#edit-instructions')?.value.endsWith(' Synthetic checks draft');",vec![]).await?;
     client
-        .find(Locator::Css("#edit-description"))
+        .find(Locator::Css("#edit-instructions"))
         .await?
         .clear()
         .await?;
     client
-        .find(Locator::Css("#edit-description"))
+        .find(Locator::Css("#edit-instructions"))
         .await?
-        .send_keys(&description)
+        .send_keys(&instructions)
         .await?;
     client
         .find(Locator::Css("#task-forge-repository"))
@@ -1828,6 +1856,9 @@ async fn time_task_scenario(
     let id = entry
         .get::<String>("id")?
         .ok_or("Identifiant temps absent.")?;
+    let date = entry
+        .get::<String>("date")?
+        .ok_or("Date du temps absente.")?;
     let mut update = serde_json::to_value(entry)?;
     update["expected"] = serde_json::to_value(entry)?;
     update["description"] = json!("Concurrent synthetic note");
@@ -1904,13 +1935,20 @@ async fn time_task_scenario(
     .await?;
     clear_input(client, "#task-title").await?;
     click(client, "#view-time-report").await?;
-    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
+    let set_dates = "for(const id of ['report-from','report-to']){const input=document.getElementById(id);input.value=arguments[0];input.dispatchEvent(new Event('input',{bubbles:true}));}";
+    client.execute(set_dates, vec![json!(date)]).await?;
+    wait_dom(client,"return document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     client.refresh().await?;
-    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#time-report')?.open && document.querySelector('#report-from')?.value==='' && document.querySelector('#report-to')?.value==='' && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
+    client.execute(set_dates, vec![json!(date)]).await?;
     client.execute("const source=document.querySelector('#report-source');source.value='agent';source.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.querySelectorAll('.time-report-row').length===0 && document.querySelector('#download-time-csv')?.disabled===true;",vec![]).await?;
+    client.execute(set_dates, vec![json!("")]).await?;
     wait_dom(client,"return Array.from(document.querySelectorAll('#agent-usage-report tbody tr')).some(row=>row.textContent.includes('synthetic-usage-model')&&row.cells[2].textContent.includes('11 (1/1)')&&row.cells[3].textContent==='Indisponible');",vec![]).await?;
+    client.execute(set_dates, vec![json!(date)]).await?;
     client.execute("const source=document.querySelector('#report-source');source.value='human';source.dispatchEvent(new Event('change',{bubbles:true}));window.syntheticCsvHref='';window.syntheticCsvBlob=null;window.syntheticCreateObjectURL=URL.createObjectURL;URL.createObjectURL=function(blob){window.syntheticCsvBlob=blob;return window.syntheticCreateObjectURL.call(this,blob);};window.syntheticAnchorClick=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(this.download==='atelier-time.csv'){window.syntheticCsvHref=this.href;return;}return window.syntheticAnchorClick.call(this);};",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#report-human-total')?.textContent.includes('00:02:00') && document.querySelectorAll('.time-report-row').length===1;",vec![]).await?;
     click(client, "#download-time-csv").await?;
     let csv=client.execute_async("const done=arguments[arguments.length-1];window.syntheticCsvBlob.text().then(text=>done(text)).catch(()=>done(null));",vec![]).await?;
     client.execute("HTMLAnchorElement.prototype.click=window.syntheticAnchorClick;URL.createObjectURL=window.syntheticCreateObjectURL;delete window.syntheticAnchorClick;delete window.syntheticCreateObjectURL;delete window.syntheticCsvBlob;",vec![]).await?;
@@ -1918,6 +1956,7 @@ async fn time_task_scenario(
     if !csv.contains("Concurrent synthetic note")
         || !csv.contains("\"120\"")
         || csv.contains("Synthetic timer")
+        || csv.contains("Synthetic human time")
     {
         return Err("Le CSV ne correspond pas à la sélection synthétique arrêtée.".into());
     }
@@ -2057,19 +2096,24 @@ async fn profiles_scenario(
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && !document.querySelector('#agents-dialog')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     wait_dom(client,"return document.querySelector('#agent-account-quotas')?.textContent.includes('synthetic-plan') && document.querySelector('.agent-quota-value')?.textContent === '75.0 % restants' && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-account-output') && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-quota-output');",vec![]).await?;
-    client
+    let shifted_clock = client
         .execute(
-            "window.__atelierQuotaClock=Date.now;const now=Date.now();Date.now=()=>now+601000;",
+            "window.__atelierQuotaClock=window.Date.now;const now=window.Date.now();window.Date.now=()=>now+601000;return {delta:window.Date.now()-now,sameClock:Date===window.Date};",
             vec![],
         )
         .await?;
-    wait_dom(client,"return document.querySelector('.agent-quota-value')?.textContent === 'À actualiser' && document.querySelector('.agent-quota-window progress')?.hidden;",vec![]).await?;
+    let expired_quota = if shifted_clock["delta"].as_f64() == Some(601_000.0) {
+        wait_dom(client,"return document.querySelector('.agent-quota-value')?.textContent === 'À actualiser' && document.querySelector('.agent-quota-window progress')?.hidden;",vec![]).await
+    } else {
+        Err(format!("Horloge de quota synthétique non décalée : {shifted_clock}").into())
+    };
     client
         .execute(
-            "Date.now=window.__atelierQuotaClock;delete window.__atelierQuotaClock;",
+            "window.Date.now=window.__atelierQuotaClock;delete window.__atelierQuotaClock;",
             vec![],
         )
         .await?;
+    expired_quota.map_err(|error| format!("{error}; horloge synthétique : {shifted_clock}"))?;
     let board: atelier_core::contracts::Board = request(reqwest::Method::GET, "/api/state")
         .send()
         .await?

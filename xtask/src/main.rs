@@ -97,8 +97,12 @@ fn build_ui(dev: bool) -> Result<()> {
     // Trunk's generated loader is externalized so CSP never needs unsafe-inline.
     std::fs::write(directory.join("atelier-loader.js"), loader)?;
     std::fs::write(directory.join("index.html"), html)?;
+    validate_ui_assets(&directory)
+}
+
+fn validate_ui_assets(directory: &Path) -> Result<()> {
     let mut total = 0u64;
-    for asset in atelier_app::infrastructure::package::assets(&directory)? {
+    for asset in atelier_app::infrastructure::package::assets(directory)? {
         let size =
             atelier_app::infrastructure::checked_file::plain_metadata(&directory.join(&asset))?
                 .len();
@@ -141,11 +145,12 @@ async fn main() -> Result<()> {
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
-        ["test-ui"] => { build_ui(false)?; ui::test().await },
+        ["test-ui"] => ui::test(false).await,
+        ["test-ui", "--prepared-assets"] => ui::test(true).await,
         ["test-updates"] => update_flow::test().await,
         ["test-updates", "--prepared-delivery", delivery] => update_flow::test_delivery(Path::new(delivery)).await,
         ["qualify-installed-update", installation, data, port, delivery] => update_flow::test_installed(Path::new(installation), Path::new(data), port.parse()?, Path::new(delivery)).await,
-        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
+        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui [--prepared-assets] | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
     }
 }
 

@@ -122,7 +122,8 @@ pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
         .collect::<Vec<_>>()
         .join("[[package]]");
     std::fs::write(lock, changed)?;
-    let target = temporary.join("next-target");
+    // Reuse release dependencies without overwriting the original version in target/release.
+    let target = root().join("target/synthetic-update");
     run(command("cargo")
         .current_dir(&source)
         .env("CARGO_TARGET_DIR", &target)
@@ -134,11 +135,14 @@ pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
             "-p",
             "atelier-app",
         ]))?;
-    Ok(target.join("release").join(if cfg!(windows) {
+    let binary = target.join("release").join(if cfg!(windows) {
         "atelier.exe"
     } else {
         "atelier"
-    }))
+    });
+    let successor = temporary.join(format!("next-atelier{}", std::env::consts::EXE_SUFFIX));
+    std::fs::copy(binary, &successor)?;
+    Ok(successor)
 }
 pub(super) fn archive(
     temporary: &Path,

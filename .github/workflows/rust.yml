@@ -1,12 +1,32 @@
 name: Rust rebuild
 on:
-  # Owner decision: one manual verification at the end of the rebuild.
+  # Manual only; corrective checks select one family/browser/journey.
   workflow_dispatch:
     inputs:
+      scope:
+        description: 'Verification family; partial runs never qualify the whole rebuild'
+        type: choice
+        default: browser
+        options: [browser, delivery, native, full]
+      browser:
+        description: 'Browser for scope=browser'
+        type: choice
+        default: chrome
+        options: [chrome, firefox, edge, safari, all]
+      journey:
+        description: 'Journey for scope=browser'
+        type: choice
+        default: jira
+        options: [jira, application, updates, all]
+      platform:
+        description: 'Platform for native/delivery; all explicitly selects all five'
+        type: choice
+        default: windows
+        options: [windows, linux, linux-arm, macos, macos-intel, all]
       full_matrix:
-        description: 'Run all platforms and browsers for final qualification'
+        description: 'Legacy shortcut: override platform with all five'
         type: boolean
-        default: true
+        default: false
 permissions:
   contents: read
 env:
@@ -15,11 +35,103 @@ concurrency:
   group: rust-migration-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  selection:
+    runs-on: ubuntu-24.04
+    outputs:
+      browser_os: ${{ steps.select.outputs.browser_os }}
+      target_os: ${{ steps.select.outputs.target_os }}
+    steps:
+      - id: select
+        shell: bash
+        env:
+          REQUESTED_SCOPE: ${{ inputs.scope }}
+          REQUESTED_BROWSER: ${{ inputs.browser }}
+          REQUESTED_JOURNEY: ${{ inputs.journey }}
+          REQUESTED_PLATFORM: ${{ inputs.platform }}
+          RUN_ALL_PLATFORMS: ${{ inputs.full_matrix }}
+        run: |
+          case "$REQUESTED_SCOPE" in full|native|browser|delivery) ;; *) exit 2;; esac
+          case "$REQUESTED_BROWSER" in all|edge|chrome|firefox|safari) ;; *) exit 2;; esac
+          case "$REQUESTED_JOURNEY" in all|application|jira|updates) ;; *) exit 2;; esac
+          case "$REQUESTED_PLATFORM" in windows|linux|linux-arm|macos|macos-intel|all) ;; *) exit 2;; esac
+          if [ "$RUN_ALL_PLATFORMS" = true ]; then REQUESTED_PLATFORM=all; fi
+          case "$REQUESTED_PLATFORM" in
+            windows) target_os='["windows-latest"]';;
+            linux) target_os='["ubuntu-24.04"]';;
+            linux-arm) target_os='["ubuntu-24.04-arm"]';;
+            macos) target_os='["macos-15"]';;
+            macos-intel) target_os='["macos-15-intel"]';;
+            all) target_os='["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]';;
+          esac
+          if [ "$REQUESTED_SCOPE" = full ]; then
+            case "$REQUESTED_PLATFORM" in
+              windows) browser_os='["windows-latest"]';;
+              linux|linux-arm) browser_os='["ubuntu-24.04"]';;
+              macos|macos-intel) browser_os='["macos-15"]';;
+              all) browser_os='["windows-latest","ubuntu-24.04","macos-15"]';;
+            esac
+          else
+            case "$REQUESTED_BROWSER" in
+              edge) browser_os='["windows-latest"]';;
+              chrome|firefox) browser_os='["ubuntu-24.04"]';;
+              safari) browser_os='["macos-15"]';;
+              all) browser_os='["windows-latest","ubuntu-24.04","macos-15"]';;
+            esac
+          fi
+          printf 'browser_os=%s\n' "$browser_os" >> "$GITHUB_OUTPUT"
+          printf 'target_os=%s\n' "$target_os" >> "$GITHUB_OUTPUT"
+          printf 'Scope: %s; browser/journey (browser scope only): %s/%s; platform: %s\n\nA partial selection is not global qualification. No release is published.\n' "$REQUESTED_SCOPE" "$REQUESTED_BROWSER" "$REQUESTED_JOURNEY" "$REQUESTED_PLATFORM" >> "$GITHUB_STEP_SUMMARY"
+  ui-payload:
+    needs: selection
+    if: inputs.scope != 'native'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-ui-payload-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: rust-ui-payload-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: wasm-tools
+        with:
+          path: ${{ runner.temp }}/atelier-tools
+          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.0-bindgen0.2.129
+      - run: cargo install --locked trunk --version 0.22.0 --root "${{ runner.temp }}/atelier-tools"
+        if: steps.wasm-tools.outputs.cache-hit != 'true'
+      - run: cargo install --locked wasm-bindgen-cli --version 0.2.129 --root "${{ runner.temp }}/atelier-tools"
+        if: steps.wasm-tools.outputs.cache-hit != 'true'
+      - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
+      - run: cargo fetch --locked
+      - run: cargo xtask build-ui
+      - name: Preserve built candidate WASM without claiming browser qualification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-wasm-ui-candidate
+          path: .artifacts/rust-ui/*
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve compilation cache after candidate build
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-ui-payload-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   native:
+    needs: selection
+    if: inputs.scope == 'native' || inputs.scope == 'full'
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]' || '["windows-latest"]') }}
+        os: ${{ fromJSON(needs.selection.outputs.target_os) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     steps:
@@ -206,10 +318,14 @@ jobs:
             target
           key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
   browser:
+    needs: [selection, ui-payload]
+    if: inputs.scope == 'browser' || inputs.scope == 'full'
+    env:
+      ATELIER_TEST_JOURNEY: ${{ inputs.scope == 'full' && 'all' || inputs.journey }}
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","macos-15"]' || '["windows-latest"]') }}
+        os: ${{ fromJSON(needs.selection.outputs.browser_os) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -217,29 +333,21 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup show
-      - name: Cache Windows Rust builds
-        id: windows-rust-cache
-        if: runner.os == 'Windows'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Restore browser compilation cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             target
-          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        id: wasm-tools
+          key: rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-build-v1-${{ runner.os }}-${{ runner.arch }}-browser-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+            ${{ runner.os == 'Linux' && format('rust-ui-payload-v1-{0}-', hashFiles('Cargo.lock', 'rust-toolchain.toml')) || '' }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          path: ${{ runner.temp }}/atelier-tools
-          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.0-bindgen0.2.129
-      - run: cargo install --locked trunk --version 0.22.0 --root "${{ runner.temp }}/atelier-tools"
-        if: steps.wasm-tools.outputs.cache-hit != 'true'
-      - run: cargo install --locked wasm-bindgen-cli --version 0.2.129 --root "${{ runner.temp }}/atelier-tools"
-        if: steps.wasm-tools.outputs.cache-hit != 'true'
-      - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
-        if: runner.os != 'Windows'
-      - name: Add WASM tools to Windows PATH
-        if: runner.os == 'Windows'
-        run: Add-Content -LiteralPath $env:GITHUB_PATH -Value '${{ runner.temp }}/atelier-tools/bin'
+          name: rust-wasm-ui-candidate
+          path: .artifacts/rust-ui
       - run: cargo fetch --locked
       - name: Install disposable Linux browser keyring prerequisites
         if: runner.os == 'Linux'
@@ -252,22 +360,14 @@ jobs:
           $env:ATELIER_TEST_BROWSER = 'edge'
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo xtask test-ui
-      - name: Share the verified platform-independent WASM payload
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: rust-wasm-ui
-          path: .artifacts/rust-ui/*
-          if-no-files-found: error
-          retention-days: 7
+          cargo xtask test-ui --prepared-assets
       - name: Record browser and driver versions
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && (inputs.scope == 'full' || inputs.browser == 'all' || inputs.browser == 'chrome')
         run: |
           google-chrome --version
           chromedriver --version
       - name: Chrome journey in a disposable Linux keyring session
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && (inputs.scope == 'full' || inputs.browser == 'all' || inputs.browser == 'chrome')
         shell: bash
         run: |
           export XDG_DATA_HOME="$(mktemp -d)"
@@ -275,12 +375,12 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-chrome-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo xtask test-ui
+            cargo xtask test-ui --prepared-assets
           '
         env:
           ATELIER_TEST_BROWSER: chrome
       - name: Firefox WASM and restart scenario
-        if: ${{ !cancelled() && runner.os == 'Linux' }}
+        if: ${{ !cancelled() && runner.os == 'Linux' && (inputs.scope == 'full' || inputs.browser == 'all' || inputs.browser == 'firefox') }}
         run: |
           firefox --version
           "$GECKOWEBDRIVER/geckodriver" --version
@@ -290,7 +390,7 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-firefox-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo xtask test-ui
+            cargo xtask test-ui --prepared-assets
           '
         env:
           ATELIER_TEST_BROWSER: firefox
@@ -299,7 +399,7 @@ jobs:
         run: |
           sudo safaridriver --enable
           safaridriver --version
-          bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui
+          bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui --prepared-assets
         env:
           ATELIER_TEST_BROWSER: safari
       - name: Preserve synthetic UI screenshots
@@ -310,20 +410,21 @@ jobs:
           path: .artifacts/rust-*.png
           include-hidden-files: true
           if-no-files-found: ignore
-      - name: Preserve partial Windows Rust cache after verification
-        if: always() && runner.os == 'Windows' && steps.windows-rust-cache.outputs.cache-hit != 'true'
+      - name: Preserve browser compilation cache after verification
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             target
-          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   delivery:
-    needs: [native, browser]
+    needs: [selection, ui-payload]
+    if: inputs.scope == 'delivery' || inputs.scope == 'full'
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.full_matrix && '["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]' || '["windows-latest"]') }}
+        os: ${{ fromJSON(needs.selection.outputs.target_os) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -331,16 +432,19 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup show
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             target
-          key: rust-delivery-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-
+          key: rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-delivery-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+            rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: rust-wasm-ui
+          name: rust-wasm-ui-candidate
           path: .artifacts/rust-ui
       - run: cargo fetch --locked
       - name: Install native Linux packaging and synthetic keyring tools
@@ -354,12 +458,15 @@ jobs:
           if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'Inno Setup 6 compiler missing.' }
           Add-Content -LiteralPath $env:GITHUB_ENV -Value "ATELIER_ISCC=$compiler"
       - name: Fabricate and exercise real signed portable packages and native installers
+        id: fabricate-windows
         if: runner.os == 'Windows'
         run: cargo xtask qualify-packages .artifacts/rust-delivery
       - name: Fabricate and exercise macOS portable with a disposable keychain
+        id: fabricate-macos
         if: runner.os == 'macOS'
         run: bash xtask/packaging/with-macos-keychain.sh cargo xtask qualify-packages .artifacts/rust-delivery
       - name: Fabricate and exercise Linux packages in a disposable keyring session
+        id: fabricate-linux
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -371,24 +478,29 @@ jobs:
             cargo xtask qualify-packages .artifacts/rust-delivery
           '
       - name: Qualify the real Windows Setup and native uninstaller
-        if: runner.os == 'Windows'
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.fabricate-windows.outcome == 'success' }}
         shell: pwsh
         run: ./xtask/packaging/qualify-windows.ps1 -Delivery .artifacts/rust-delivery
-      - name: Qualify DEB and RPM with native managers in disposable containers
-        if: runner.os == 'Linux'
+      - name: Qualify DEB with its native manager in a disposable container
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.fabricate-linux.outcome == 'success' }}
         shell: bash
         run: |
           delivery="$PWD/.artifacts/rust-delivery"
           docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" ubuntu:24.04 sh /workspace/xtask/packaging/qualify-linux.sh deb
+      - name: Qualify RPM with its native manager in a disposable container
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.fabricate-linux.outcome == 'success' }}
+        shell: bash
+        run: |
+          delivery="$PWD/.artifacts/rust-delivery"
           docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$PWD:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm
       - name: Compile and execute native Rust update and rollback journeys
-        if: runner.os == 'Windows'
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.fabricate-windows.outcome == 'success' }}
         run: cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
       - name: Compile and execute macOS update and rollback with a disposable keychain
-        if: runner.os == 'macOS'
+        if: ${{ !cancelled() && runner.os == 'macOS' && steps.fabricate-macos.outcome == 'success' }}
         run: bash xtask/packaging/with-macos-keychain.sh cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
       - name: Compile and execute Linux update and rollback in a disposable keyring session
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.fabricate-linux.outcome == 'success' }}
         shell: bash
         run: |
           export XDG_DATA_HOME="$(mktemp -d)"
@@ -402,8 +514,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: rust-preproduction-${{ runner.os }}-${{ runner.arch }}
+          name: rust-preproduction-candidate-${{ runner.os }}-${{ runner.arch }}
           path: .artifacts/rust-delivery/**
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+      - name: Preserve package and successor compilation cache after verification
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
