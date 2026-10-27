@@ -181,6 +181,24 @@ pub fn repository_proposal(value: &Value) -> Result<RepositoryProposal> {
 }
 pub fn repository_source(card: &crate::contracts::Card) -> crate::contracts::Card {
     let mut card = card.clone();
+    // A confirmed workflow changes its own column while rechecking the approved
+    // sources. Preserve manual columns, but do not invalidate approval for this
+    // explicitly owned transition from Waiting to Running (or back).
+    if let Ok(Some(flow)) = card
+        .fields
+        .get::<crate::application::automation::Flow>("automation")
+        && matches!(
+            flow.state,
+            crate::application::automation::State::Running
+                | crate::application::automation::State::Waiting
+        )
+        && card
+            .fields
+            .string_equals("status", flow.state.card_status())
+            .unwrap_or(false)
+    {
+        card.fields.remove("status");
+    }
     for key in [
         "connectorRepositoryPreview",
         "connectorReviewContext",

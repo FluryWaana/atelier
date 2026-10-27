@@ -688,4 +688,20 @@ mod snapshot_tests {
         changed.fields.set("description", &"Human change").unwrap();
         assert_ne!(revision(&first).unwrap(), revision(&changed).unwrap());
     }
+
+    #[test]
+    fn rechecking_an_approved_workflow_ignores_only_its_owned_column_transition() {
+        let flow = |state: &str| json!({"id":"synthetic-workflow","state":state,"step":"publication","project":{},"requirements":{},"worktree":{"source":"synthetic/source","path":"synthetic/work","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"},"agent":"synthetic","profile":{},"model":"","effort":"","instructions":"","runId":null,"reviewId":null,"verificationId":null,"publicationPlan":null,"commitPlan":null,"reviewRequested":false,"correctionIndexes":[],"cycles":0,"autoFix":false,"startedAt":"synthetic","updatedAt":"synthetic","message":""});
+        let mut waiting:Card=serde_json::from_str(r#"{"id":"synthetic","title":"Human title","status":"standby","description":"Keep human text"}"#).unwrap();
+        waiting.fields.set("automation", &flow("waiting")).unwrap();
+        let mut running = waiting.clone();
+        running.fields.set("automation", &flow("running")).unwrap();
+        running.fields.set("status", &"doing").unwrap();
+        assert_eq!(revision(&waiting).unwrap(), revision(&running).unwrap());
+        running.fields.set("status", &"done").unwrap();
+        assert_ne!(revision(&waiting).unwrap(), revision(&running).unwrap());
+        running.fields.set("status", &"doing").unwrap();
+        running.title = "Human edit after approval".into();
+        assert_ne!(revision(&waiting).unwrap(), revision(&running).unwrap());
+    }
 }
