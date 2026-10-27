@@ -325,7 +325,7 @@ pub fn ConnectorEffects(
                 </div>
             </article>}
         }/>
-        <button type="button" disabled=move||page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled=move||(page.get()+1)*20>=operations.with(Vec::len) on:click=move |_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button>
+        <button type="button" disabled=move||page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled={move||(page.get()+1)*20>=operations.with(Vec::len)} on:click=move |_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </section>}
 }

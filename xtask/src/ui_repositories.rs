@@ -116,6 +116,7 @@ pub(super) async fn scenario(
     click(client, "#preview-connector-repository").await?;
     wait_dom(client,"return !document.querySelector('#prepare-connector-repository')?.disabled&&document.querySelector('#connector-repository-card')?.parentElement.textContent.includes(arguments[0]);",vec![json!(source)]).await?;
     click(client, "#prepare-connector-repository").await?;
+    wait_dom(client,"return Array.from(document.querySelector('#prepare-connector-repository')?.closest('fieldset')?.querySelectorAll('[role=status]')||[]).some(element=>element.textContent.startsWith('Aperçu d’envoi enregistré.'));",vec![]).await?;
     let operations: Vec<RemoteOperation> = http
         .get(format!(
             "{address}/api/extensions/synthetic-extension/operations"
