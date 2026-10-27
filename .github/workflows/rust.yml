@@ -65,7 +65,9 @@ jobs:
             cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
           '
       - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
+        if: ${{ !cancelled() }}
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+        if: ${{ !cancelled() }}
       - name: Synthetic native TLS integration journeys
         run: cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
       - name: Synthetic native forge publication and reviewed commits over TLS
@@ -256,7 +258,7 @@ jobs:
         env:
           ATELIER_TEST_BROWSER: chrome
       - name: Firefox WASM and restart scenario
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
         run: |
           firefox --version
           "$GECKOWEBDRIVER/geckodriver" --version

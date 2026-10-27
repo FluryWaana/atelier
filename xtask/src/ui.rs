@@ -2203,7 +2203,37 @@ async fn projects_scenario(
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
-    click(client, "#save-project").await?;
+    for _ in 0..2 {
+        click(client, "#save-project").await?;
+        wait_dom(client, "const error=document.querySelector('#project-error')?.textContent;return (error?.includes('déjà') || error === 'Une modification est en cours. Réessaie dans un instant.') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
+        if client
+            .execute(
+                "return document.querySelector('#project-error').textContent.includes('déjà');",
+                vec![],
+            )
+            .await?
+            == json!(true)
+        {
+            break;
+        }
+        // This explicit admission refusal guarantees no write; verify it before a second user click.
+        let state: serde_json::Value = http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        if state["projects"].as_array().is_none_or(|projects| {
+            projects.len() != 2
+                || projects
+                    .iter()
+                    .any(|project| project["name"] == "Doublon refusé")
+        }) {
+            return Err("Le refus de concurrence a modifié les projets.".into());
+        }
+    }
     wait_dom(client, "return document.querySelector('#project-error')?.textContent.includes('déjà') && document.querySelector('#project-name')?.value === 'Doublon refusé';", vec![]).await?;
     click(client, "#reset-project").await?;
     click(client, "#confirm-project").await?;
@@ -3970,12 +4000,13 @@ async fn wait_dom(client: &Client, script: &str, arguments: Vec<serde_json::Valu
     }
     let state = client
         .execute(
-            "return Object.fromEntries(['editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
+            "return Object.fromEntries(['project-error','save-project','editor-error','task-editor','duplicate-task','close-editor','forge-error','connectors-error','connectors-notice','connectors-settings','forge-base','save-forge','approve-connector-import','import-connector-tickets'].map(id=>{const element=document.getElementById(id);return [id,element ? {text:element.matches('[role=alert],[role=status]') ? element.textContent : null,busy:element.getAttribute('aria-busy'),disabled:element.disabled,fieldsetDisabled:element.closest('fieldset')?.disabled,valid:element.validity?.valid,validation:element.validationMessage,checked:element.checked,value:id==='forge-base' ? element.value : null} : null];}));",
             vec![],
         )
         .await;
+    let journals = client.execute("return Array.from(document.querySelectorAll('[data-connector-journal-card]')).map(section=>({card:section.dataset.connectorJournalCard,busy:section.getAttribute('aria-busy'),errors:Array.from(section.querySelectorAll('p.error')).map(error=>error.textContent),operations:Array.from(section.querySelectorAll('[data-connector-operation]')).map(operation=>({id:operation.dataset.connectorOperation,state:operation.querySelector('.connector-effect-state')?.textContent}))}));", vec![]).await;
     Err(
-        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}")
+        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}")
             .into(),
     )
 }
