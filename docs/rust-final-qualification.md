@@ -1,5 +1,21 @@
 # Campagne finale Rust
 
+## État courant
+
+La reconstruction n'est pas terminée. Dernier relevé : `40489418512` sur `ee3122b` ; les corrections de scénarios suivantes sont poussées à `737b763` et attendent leur requalification.
+
+| Périmètre | Preuve actuelle |
+| --- | --- |
+| Sources actives | Rust à la racine, quatre crates ; retrait Node effectué à `fe5095c`, référence conservée dans Git |
+| Jobs natifs complets | Cinq réussites sur `654f066` ; dernier relevé : Windows, Linux ARM64 et les deux macOS réussis, Linux x64 annulé pendant les téléchargements système avant compilation/test |
+| Navigateurs | Parcours de rollback/mise à jour réussi sur Edge, Chrome, Firefox et Safari à `ee3122b` ; parcours application et Jira encore échoués, corrections candidates suivantes non exécutées |
+| Paquets | Avis, archives signées et rollback synthétique exécutés dans le parcours navigateur ; job delivery et vrais installeurs toujours ignorés, aucun paquet de livraison qualifié |
+| Bureau | Clics Ouvrir/Quitter macOS et sélecteurs POSIX encore sans preuve ; ne pas les déduire des tests AppKit sur EOF ou des sélecteurs Windows |
+
+Les sections suivantes conservent l'historique exact des échecs et corrections, sans remplacer leurs commits par le dernier état du code.
+
+## Première exécution
+
 Première exécution finale : [40423799275](https://github.com/FluryWaana/atelier/actions/runs/40423799275), déclenchée manuellement le 27 octobre 2026 sur `1ba8e3b56825af9d9fef6f212bf47462503eaa32`, avec `full_matrix=true`.
 
 | Périmètre | État observé |
@@ -212,3 +228,13 @@ Les avis, archives signées et préparation de mise à jour sont réellement att
 Linux refuse un fichier trop volumineux lors du staging de cette fixture de mise à jour, cohérent avec son binaire debug contenant DWARF. La construction interne du seul binaire de serveur navigateur utilise maintenant CARGO_PROFILE_DEV_DEBUG=0, sans changer le profil utilisateur ni la borne de 128 Mio des paquets. Le prochain journal donnera les tailles publiques binaire/avis avant staging ; la cause n'est pas présentée comme une mesure déjà obtenue. Aucun paquet de livraison ni parcours navigateur complet n'est encore qualifié.
 
 Le lot correctif compile localement avec toutes les cibles natives (17,93 s), puis le runner révisé (4,29 s), formatage et inventaire vérifiés. Aucun test, Clippy ou navigateur local exécuté.
+
+## Rollback navigateur réussi sur `ee3122b`
+
+[40489418512](https://github.com/FluryWaana/atelier/actions/runs/40489418512) : parcours synthétique updates **réussi sur Edge, Chrome, Firefox et Safari**, journaux relus. Avis 3 602 256 octets ; binaires Linux 71 770 904, Windows 32 832 512 et macOS 61 087 552 octets, tous sous la borne inchangée de 128 Mio. Vraies archives signées, préparation/application provoquant le rollback attendu, rotation de session, nouveau document et réglage conservé sont vérifiés. Cela ne qualifie ni une mise à niveau réussie vers une nouvelle version réellement construite ni les installeurs du job delivery.
+
+Windows, Linux ARM64 et les deux macOS réussissent leurs jobs natifs complets. Le test de réouverture de port Mac passe après fermeture du socket concurrent, sans retry ; aucune défaillance de production n'est déclarée résolue par ce seul changement de test. Le dernier job Linux x64 attendait depuis plus de 25 minutes les prérequis, sans compilation ni test. Les logs après annulation montrent les téléchargements très lents de WebKit/polices via azure.archive.ubuntu.com. La campagne, déjà échouée sur les navigateurs avec tous leurs diagnostics collectés, est annulée pour arrêter cette dépense : Linux x64 reste explicitement non exécuté sur ce commit. Les échecs navigateur sont conservés ; delivery reste ignoré.
+
+Le parcours application expose la route CLI de mise à jour disponible uniquement sous Windows : après arrêt des services, les corps invalides restent 400 sous Windows, l'absence de route POSIX reste 404 ; leurs gardes 409 pendant les services restent vérifiés. Edge atteint ensuite le commit local mais son attente renvoyait un élément DOM, pas true. Trois attentes identiques (commit/profils) sont rendues explicitement booléennes, sans élargir wait_dom ni réduire leurs conditions. Le batch Jira semé directement en base n'avait pas d'agent ; ses deux cartes ont maintenant le fournisseur intégré codex avant création de leurs snapshots. Cette validation n'exécute aucun agent réel et aucun garde produit n'est réduit.
+
+Ces correctifs sont poussés à `737b763`, compilation du runner réussie (2,19 s), formatage et inventaire vérifiés, aucun test local exécuté. La fixture de bureau Linux choisira Chrome s'il est déjà présent, Epiphany sinon, avec associations HTML/http/https vérifiées et mêmes vrais scénarios Open/Quit. Cela évite le téléchargement inutile d'Epiphany sur le runner x64 ; ce choix de fixture reste candidat jusqu'à son exécution.

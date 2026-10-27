@@ -43,7 +43,13 @@ jobs:
         run: bash xtask/packaging/install-macos-git.sh
       - name: Install isolated Linux native prerequisites
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf exo-utils epiphany-browser xdg-utils xvfb xauth zenity
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11 xfce4-panel xfconf exo-utils xdg-utils xvfb xauth zenity
+          if [ ! -f /usr/share/applications/google-chrome.desktop ]; then
+            sudo apt-get install -y epiphany-browser
+          fi
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
       - name: Verify the current Rust source inventory
@@ -160,9 +166,15 @@ jobs:
           export DESKTOP_SESSION=xfce
           xvfb-run -a dbus-run-session -- bash -euo pipefail -c '
             test -x /usr/bin/exo-open
-            test -f /usr/share/applications/org.gnome.Epiphany.desktop
-            xdg-mime default org.gnome.Epiphany.desktop text/html x-scheme-handler/http x-scheme-handler/https
-            test "$(xdg-mime query default text/html)" = org.gnome.Epiphany.desktop
+            browser_desktop=google-chrome.desktop
+            if [ ! -f "/usr/share/applications/$browser_desktop" ]; then
+              browser_desktop=org.gnome.Epiphany.desktop
+            fi
+            test -f "/usr/share/applications/$browser_desktop"
+            xdg-mime default "$browser_desktop" text/html x-scheme-handler/http x-scheme-handler/https
+            for mime in text/html x-scheme-handler/http x-scheme-handler/https; do
+              test "$(xdg-mime query default "$mime")" = "$browser_desktop"
+            done
             xfconf-query -c xfce4-panel -p /configver -n -t int -s 2
             xfconf-query -c xfce4-panel -p /panels -n -a -t int -s 1
             xfconf-query -c xfce4-panel -p /panels/panel-1/position -n -t string -s "p=6;x=0;y=0"
