@@ -7,7 +7,7 @@ const FILES: &[&str] = &[
     "Cargo.lock",
     "rust-toolchain.toml",
     "README.md",
-    "Preview.cmd",
+    "Atelier.cmd",
     "AGENTS.md",
     "LICENSE",
     ".gitignore",
