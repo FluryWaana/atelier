@@ -17,64 +17,18 @@ const TABS: [(&str, &str); 6] = [
 
 #[derive(Clone, PartialEq)]
 struct Draft {
-    repo: String,
-    branch: String,
     agent: String,
-    jira_enabled: bool,
-    jira_mapping: std::collections::BTreeMap<String, String>,
-    jira_revision: u64,
 }
 impl Draft {
     fn from_document(settings: &Document) -> Self {
         Self {
-            repo: field(settings, "repo"),
-            branch: field(settings, "baseBranch"),
             agent: field(settings, "agent"),
-            jira_enabled: settings
-                .get::<bool>("jiraAutoTransition")
-                .ok()
-                .flatten()
-                .unwrap_or(false),
-            jira_mapping: settings
-                .get("jiraStatusMap")
-                .ok()
-                .flatten()
-                .unwrap_or_default(),
-            jira_revision: settings
-                .get::<atelier_core::contracts::JiraConfiguration>("jiraConnection")
-                .ok()
-                .flatten()
-                .unwrap_or_default()
-                .revision,
         }
     }
-
-    fn fields(&self) -> serde_json::Value {
-        serde_json::json!({"repo":self.repo, "baseBranch":self.branch, "agent":self.agent,"jiraAutoTransition":self.jira_enabled,"jiraStatusMap":self.jira_mapping})
-    }
-
     fn patch(&self, previous: &Self) -> serde_json::Value {
-        let (next, previous) = (self.fields(), previous.fields());
-        let mut patch = serde_json::json!({"expected":{}});
-        for field in [
-            "repo",
-            "baseBranch",
-            "agent",
-            "jiraAutoTransition",
-            "jiraStatusMap",
-        ] {
-            if next[field] != previous[field] {
-                patch[field] = next[field].clone();
-                patch["expected"][field] = previous[field].clone();
-            }
-        }
-        if patch.get("jiraAutoTransition").is_some() || patch.get("jiraStatusMap").is_some() {
-            patch["expectedJiraRevision"] = serde_json::json!(self.jira_revision);
-        }
-        patch
+        serde_json::json!({"agent":self.agent,"expected":{"agent":previous.agent}})
     }
 }
-
 #[component]
 pub fn Settings(
     board: BoardState,
@@ -97,14 +51,12 @@ pub fn Settings(
     let tempo_dirty = RwSignal::new(false);
     let connectors_dirty = RwSignal::new(false);
     let updates_dirty = RwSignal::new(false);
-    let repositories_dirty = RwSignal::new(false);
     let updates_blocked = Memo::new(move |_| {
         dirty.get()
             || jira_dirty.get()
             || forge_dirty.get()
             || tempo_dirty.get()
             || connectors_dirty.get()
-            || repositories_dirty.get()
     });
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
@@ -137,7 +89,6 @@ pub fn Settings(
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
-            || repositories_dirty.get_untracked()
         {
             close_focus.set_value(
                 document()
@@ -181,7 +132,6 @@ pub fn Settings(
             || tempo_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
-            || repositories_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -226,29 +176,15 @@ pub fn Settings(
                 });
             }>
                 <fieldset disabled=move || pending.get()>
-                    <section class="form-section"><div class="section-heading"><span class="section-number">"01"</span><div><h3>{move ||i18n.text("message.agents_models")}</h3><p class="hint">{move ||i18n.text("message.your_preferences_for_new_tasks")}</p></div></div>
+                    <section class="form-section"><div class="section-heading"><div><h3>{move ||i18n.text("message.agents_models")}</h3><p class="hint">{move ||i18n.text("message.your_preferences_for_new_tasks")}</p></div></div>
                     <label for="settings-agent">{move || i18n.text("message.default_agent")}</label><select id="settings-agent" autofocus prop:value=move || draft.get().agent on:change=move |event| draft.update(|value| value.agent = event_target_value(&event))>
                         <For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } />
                     </select>
                     <p class="hint">{move || i18n.text("message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent")}</p></section>
-                    <section class="form-section"><div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("message.directories_branches")}</h3></div></div>
-                    <label for="settings-repo">{move || i18n.text("message.default_source_git_repository")}</label><input id="settings-repo" maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|value| value.repo = event_target_value(&event)) />
-                    <p class="field-help">{move || i18n.text("message.full_path_to_an_existing_folder_leave_blank_to_choose_a_project")}</p>
-                    <label for="settings-branch">{move || i18n.text("message.default_starting_git_reference")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />
-                    </section><section class="form-section">
-                    <h3>{move||i18n.text("message.global_jira_mappings")}</h3>
-                    <label><input id="settings-jira-enabled" type="checkbox" prop:checked=move||draft.get().jira_enabled on:change=move|event|draft.update(|draft|draft.jira_enabled=event_target_checked(&event))/>{move||i18n.text("message.suggest_matching_jira_statuses")}</label>
-                    <For each=||crate::STATUSES key=|(status,_)|*status children=move|(status,label)|view!{
-                        <label for=format!("settings-jira-{status}")>{move||i18n.text(label)}</label>
-                        <input id=format!("settings-jira-{status}") maxlength="100" prop:value=move||draft.get().jira_mapping.get(status).cloned().unwrap_or_default() on:input=move|event|draft.update(|draft|{draft.jira_mapping.insert(status.into(),event_target_value(&event));})/>
-                    }/>
-                    <p class="field-help">{move||i18n.text("message.target_jira_status_id_or_name_saving_a_mapping_does_not_send_any")}</p>
-                    </section>
                 </fieldset>
                 <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
                 <div class="form-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "message.saving" } else { "message.save_general_settings" })}</button></div>
             </form>
-            <crate::repository_access::RepositoryAccess token pending dirty=repositories_dirty/>
             </section>
             <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
             <section id="settings-panel-jira" role="tabpanel" aria-labelledby="settings-tab-jira" hidden=move || tab.get()!=1><crate::jira::JiraSettings board token pending dirty=jira_dirty /></section>

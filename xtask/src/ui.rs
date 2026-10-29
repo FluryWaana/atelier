@@ -895,7 +895,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         client.refresh().await?;
         wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#approve-update").await?;click(client,"#settings-tab-general").await?;
-        client.find(Locator::Css("#settings-branch")).await?.clear().await?;client.find(Locator::Css("#settings-branch")).await?.send_keys("synthetic-unsaved-update-draft").await?;
+        client.execute("const select=document.querySelector('#settings-agent'); select.value=select.value === 'claude' ? 'codex' : 'claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
         click(client,"#settings-tab-updates").await?;
         if client.execute("return document.querySelector('#apply-update')?.matches(':disabled');",vec![]).await?!=json!(true){return Err("La mise à jour n’a pas protégé l’autre brouillon.".into());}
         click(client,"#settings-tab-general").await?;click(client,"#save-settings").await?;
@@ -2727,6 +2727,7 @@ async fn projects_scenario(
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
+    wait_dom(client,"return document.querySelector('#project-create-access')?.hidden === false && document.querySelector('#project-create-access .authorize-project-repository') && !document.querySelector('#project-edit-access')?.matches(':not([hidden])');",vec![]).await?;
     click(client, "#project-form button[type=submit]").await?;
     wait_dom(client, "return document.querySelectorAll('#project-list .project-row').length === 2 && document.querySelector('#project-create-name')?.value === '' && document.querySelector('#project-form .error')?.textContent === '';", vec![]).await?;
     let id = client.execute("return Array.from(document.querySelectorAll('#project-list [data-project-id]')).find(button=>button.closest('.project-row').querySelector('strong').textContent === 'Projet depuis l’interface').dataset.projectId;", vec![]).await?;
@@ -2959,72 +2960,15 @@ async fn settings_scenario(
     token: &str,
     data: &Path,
 ) -> Result<()> {
-    let repo = data.join("repositories/settings-ui");
-    std::fs::create_dir_all(&repo)?;
+    let _ = data;
     click(client, "#manage-settings").await?;
-    client
-        .find(Locator::Css("#settings-repo"))
-        .await?
-        .send_keys(&repo.to_string_lossy())
-        .await?;
-    client
-        .find(Locator::Css("#settings-branch"))
-        .await?
-        .clear()
-        .await?;
-    client
-        .find(Locator::Css("#settings-branch"))
-        .await?
-        .send_keys("main")
-        .await?;
-    client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    wait_dom(client,"return !document.querySelector('#settings-repo') && !document.querySelector('#settings-branch') && !document.querySelector('#settings-jira-enabled');",vec![]).await?;
+    client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-settings").await?;
-    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
     client.refresh().await?;
-    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-branch')?.value === 'main' && document.querySelector('#settings-agent')?.value === 'claude' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
-    let card: atelier_core::contracts::Card = http
-        .post(format!("{address}/api/cards"))
-        .bearer_auth(token)
-        .header("x-local-request", "1")
-        .json(&json!({"title":"Héritage des paramètres généraux"}))
-        .send()
-        .await?
-        .checked_status()
-        .await?
-        .json()
-        .await?;
-    if !card.fields.string_equals("agent", "claude")?
-        || std::fs::canonicalize(
-            card.fields
-                .get::<String>("repo")?
-                .ok_or("Dépôt hérité absent")?,
-        )? != std::fs::canonicalize(&repo)?
-    {
-        return Err("Les nouvelles tâches n’héritent pas des préférences enregistrées.".into());
-    }
-    http.delete(format!("{address}/api/cards/{}", card.id))
-        .bearer_auth(token)
-        .header("x-local-request", "1")
-        .json(&json!({}))
-        .send()
-        .await?
-        .checked_status()
-        .await?;
-    client
-        .find(Locator::Css("#settings-branch"))
-        .await?
-        .send_keys("-local")
-        .await?;
-    http.put(format!("{address}/api/settings"))
-        .bearer_auth(token)
-        .header("x-local-request", "1")
-        .json(&json!({"baseBranch":"remote", "expected":{"baseBranch":"main"}}))
-        .send()
-        .await?
-        .checked_status()
-        .await?;
-    click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.includes('changé ailleurs') && document.querySelector('#settings-branch')?.value === 'main-local';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#settings-agent')?.value === 'claude' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
+    client.execute("const select=document.querySelector('#settings-agent'); select.value='codex'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     click(client, "#overview-button").await?;
@@ -3032,28 +2976,10 @@ async fn settings_scenario(
     click(client, "#manage-settings").await?;
     wait_dom(
         client,
-        "return document.querySelector('#settings-branch')?.value === 'remote';",
+        "return document.querySelector('#settings-agent')?.value === 'claude';",
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#settings-repo"))
-        .await?
-        .send_keys("/missing-synthetic-directory")
-        .await?;
-    click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.length > 0 && document.querySelector('#settings-repo')?.value.endsWith('/missing-synthetic-directory') && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
-    click(client, "#overview-button").await?;
-    click(client, "#discard-settings").await?;
-    client.refresh().await?;
-    wait_dom(
-        client,
-        "return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",
-        vec![],
-    )
-    .await?;
-    click(client, "#manage-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-branch')?.value === 'remote' && document.querySelector('#settings-agent')?.value === 'claude' && !document.querySelector('#settings-repo')?.value.includes('missing-synthetic-directory');",vec![]).await?;
     click(client, "#settings-tab-jira").await?;
     wait_dom(
         client,
@@ -3925,19 +3851,9 @@ async fn backups_scenario(
 
 async fn language_scenario(client: &Client) -> Result<()> {
     click(client, "#manage-settings").await?;
-    let original = client
-        .find(Locator::Css("#settings-branch"))
-        .await?
-        .prop("value")
-        .await?
-        .ok_or("Branche absente")?;
-    client
-        .find(Locator::Css("#settings-branch"))
-        .await?
-        .send_keys("-draft")
-        .await?;
+    client.execute("const select=document.querySelector('#settings-agent'); select.value=select.value === 'claude' ? 'codex' : 'claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='en-US'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
-    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#workspace-title')?.textContent === 'Settings' && document.querySelector('#settings-branch')?.value === arguments[0] && document.querySelector('#save-settings')?.textContent === 'Save general settings';",vec![json!(format!("{original}-draft"))]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#workspace-title')?.textContent === 'Settings' && document.querySelector('#save-settings')?.disabled === false && document.querySelector('#save-settings')?.textContent === 'Save general settings';",vec![]).await?;
     click(client, "#overview-button").await?;
     wait_dom(client,"return document.querySelector('#settings-page .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
     click(client, "#discard-settings").await?;
@@ -3959,16 +3875,6 @@ async fn language_scenario(client: &Client) -> Result<()> {
     click(client, "#manage-backups").await?;
     wait_dom(client,"return document.querySelector('#backups-title')?.textContent === 'Backups and restore' && document.querySelector('#create-backup')?.disabled === false;",vec![]).await?;
     click(client, "#close-backups").await?;
-    click(client, "#manage-settings").await?;
-    client
-        .find(Locator::Css("#settings-repo"))
-        .await?
-        .send_keys("/missing-synthetic-directory")
-        .await?;
-    click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-error')?.textContent === 'The repository could not be found or accessed.' && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
-    click(client, "#overview-button").await?;
-    click(client, "#discard-settings").await?;
     click(client, "#manage-settings").await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='fr-FR'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#workspace-title')?.textContent === 'Paramètres';",vec![]).await?;

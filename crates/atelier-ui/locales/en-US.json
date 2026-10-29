@@ -1,4 +1,5 @@
 {
+  "message.repository_authorized_here": "Repository authorized on this computer.",
   "message.profile_advanced": "Advanced settings",
   "message.add_agent_profile": "Add profile",
   "message.agent_profiles_intro": "Create multiple profiles for the same agent, each with its own connection or API key.",

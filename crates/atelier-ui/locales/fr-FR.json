@@ -1,4 +1,5 @@
 {
+  "message.repository_authorized_here": "Dépôt autorisé sur cet ordinateur.",
   "message.profile_advanced": "Paramètres avancés",
   "message.add_agent_profile": "Ajouter un profil",
   "message.agent_profiles_intro": "Créez plusieurs profils pour un même agent, avec une connexion ou une clé API propre à chacun.",

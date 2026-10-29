@@ -125,7 +125,17 @@ pub fn Projects(
     let projects = board.projects;
     let original = RwSignal::new(Draft::default());
     let draft = RwSignal::new(Draft::default());
-    let dirty = Memo::new(move |_| original.get() != draft.get());
+    let access_dirty = RwSignal::new(false);
+    let create_access_dirty = RwSignal::new(false);
+    let front_access_dirty = RwSignal::new(false);
+    let back_access_dirty = RwSignal::new(false);
+    let dirty = Memo::new(move |_| {
+        original.get() != draft.get()
+            || access_dirty.get()
+            || create_access_dirty.get()
+            || front_access_dirty.get()
+            || back_access_dirty.get()
+    });
     let repository_locked = Memo::new(move |_| {
         let previous = original.get();
         !previous.id.is_empty()
@@ -254,7 +264,7 @@ pub fn Projects(
                     &credential,
                     Method::POST,
                     "/api/folders/choose",
-                    &serde_json::json!({}),
+                    &serde_json::json!({"confirmed":true}),
                 )
                 .await?;
                 let chosen: serde_json::Value = response
@@ -377,6 +387,7 @@ pub fn Projects(
                 <div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("message.add_a_project")}</h3><p class="hint">{move ||i18n.text("message.a_name_and_a_folder_to_find_your_tasks")}</p></div></div>
                 <fieldset disabled=move ||pending.get()||editing.get()><label for="project-create-name">{move ||i18n.text("message.project_name")}</label><input id="project-create-name" required maxlength="100" placeholder=move ||i18n.text("message.my_application") prop:value=move ||draft.get().name on:input=move |event|draft.update(|draft|draft.name=event_target_value(&event))/>
                 <label for="project-directory">{move ||i18n.text("message.local_directory")}</label><div class="directory-picker"><input id="project-directory" required maxlength="2000" prop:value=move ||draft.get().repo on:input=move |event|draft.update(|draft|draft.repo=event_target_value(&event))/><button id="browse-project" type="button" on:click=move |_|browse()>{move ||i18n.text("message.browse")}</button></div>
+                <crate::repository_access::RepositoryAccess token pending dirty=create_access_dirty path=Signal::derive(move||if editing.get(){String::new()}else{draft.get().repo}) id="project-create-access"/>
                 <p class="hint">{move ||i18n.text("message.choose_an_existing_folder_or_paste_its_path_worktrees_require_a")}</p><div class="form-actions"><button class="primary" type="submit" disabled=move ||!dirty.get()>{move ||i18n.text("message.add_project")}</button></div></fieldset>
                 <p class="error" role="alert">{error_text}</p>
             </form></div>
@@ -391,10 +402,11 @@ pub fn Projects(
                     <label for="project-name">{move || i18n.text("message.project_name")}</label><input id="project-name" required maxlength="100" autofocus prop:value=move || draft.get().name on:input=move |event| draft.update(|draft| draft.name = event_target_value(&event)) />
                     <label for="project-repo">{move || i18n.text("message.git_repository_location")}</label><div class="directory-picker"><input id="project-repo" required maxlength="2000" spellcheck="false" readonly=move ||repository_locked.get() prop:value=move || draft.get().repo on:input=move |event| draft.update(|draft| draft.repo = event_target_value(&event)) /><button id="browse-project-settings" type="button" disabled=move ||repository_locked.get() on:click=move |_|browse()>{move ||i18n.text("message.browse")}</button></div>
                     <p class="hint">{move || i18n.text(if repository_locked.get(){"message.remove_this_projects_worktrees_before_changing_its_location"}else{"message.choose_an_existing_folder_no_files_will_be_moved_project_cards_w"})}</p>
+                    <crate::repository_access::RepositoryAccess token pending dirty=access_dirty path=Signal::derive(move||if editing.get(){draft.get().repo}else{String::new()}) id="project-edit-access"/>
                     <label for="project-branch">{move || i18n.text("message.base_branch")}</label><input id="project-branch" maxlength="180" placeholder=move || i18n.text("message.default_value") prop:value=move || draft.get().branch on:input=move |event| draft.update(|draft| draft.branch = event_target_value(&event)) />
                     <label for="project-rules">{move || i18n.text("message.project_instructions")}</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
                     <label for="project-agent">{move || i18n.text("message.preferred_agent")}</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">{move || i18n.text("message.inherit_global_setting")}</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select>
-                    </section><section class="form-section"><h3>{move ||i18n.text("message.application_launch")}</h3><ProjectServices draft=draft pending=pending token=token /></section><section class="form-section">
+                    </section><section class="form-section"><h3>{move ||i18n.text("message.application_launch")}</h3><ProjectServices draft=draft pending=pending token=token access_dirty=[front_access_dirty,back_access_dirty] /></section><section class="form-section">
                     <label for="project-jira-mode">{move||i18n.text("message.project_jira_mappings")}</label>
                     <select id="project-jira-mode" prop:value=move||draft.get().jira_mode on:change=move|event|draft.update(|draft|draft.jira_mode=event_target_value(&event))>
                         <option value="inherit">{move||i18n.text("message.inherit_global_setting")}</option>
@@ -432,6 +444,7 @@ pub fn Projects(
 
 #[component]
 fn ProjectServices(
+    access_dirty: [RwSignal<bool>; 2],
     draft: RwSignal<Draft>,
     pending: RwSignal<bool>,
     token: StoredValue<Result<String, String>>,
@@ -474,6 +487,7 @@ fn ProjectServices(
                 <div class="col-12 col-md-6"><fieldset class="application-launch-panel" aria-labelledby=format!("project-{role}-heading")>
                     <legend id=format!("project-{role}-heading")>{label}</legend>
                     <label for=format!("project-{role}-repo")>{move || i18n.text("message.service_repository")}</label><input id=format!("project-{role}-repo") maxlength="2000" spellcheck="false" placeholder=move || i18n.text("message.main_repository_when_empty") prop:value=move || draft.get().services[index].repo.clone() on:input=move |event| draft.update(|draft| draft.services[index].repo = event_target_value(&event)) />
+                    <crate::repository_access::RepositoryAccess token pending dirty=access_dirty[index] path=Signal::derive(move||draft.get().services[index].repo.clone()) id={if index==0 {"project-front-access"}else{"project-back-access"}}/>
                     <label for=format!("project-{role}-directory")>{move || i18n.text("message.service_subfolder")}</label><input id=format!("project-{role}-directory") maxlength="2000" spellcheck="false" placeholder=move || i18n.text("message.worktree_root_when_empty") prop:value=move || draft.get().services[index].directory.clone() on:input=move |event| draft.update(|draft| draft.services[index].directory = event_target_value(&event)) />
                     <label for=format!("project-{role}-command")>{move || i18n.text("message.launch_command")}</label><textarea id=format!("project-{role}-command") rows="2" maxlength="2000" spellcheck="false" prop:value=move || draft.get().services[index].command.clone() on:input=move |event| draft.update(|draft| draft.services[index].command = event_target_value(&event))></textarea>
                     <label for=format!("project-{role}-port")>{move || i18n.text("message.preferred_port")}</label><input id=format!("project-{role}-port") type="number" min="0" max="65535" step="1" prop:value=move || draft.get().services[index].port.clone() on:input=move |event| draft.update(|draft| draft.services[index].port = event_target_value(&event)) />
