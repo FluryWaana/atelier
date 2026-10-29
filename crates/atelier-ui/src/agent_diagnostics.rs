@@ -109,11 +109,55 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
             let label=if window.kind=="secondary"{"message.secondary_window"}else{"message.primary_window"};
             let minutes=window.window_minutes;let amount=f64::from(window.remaining_tenths)/10.0;
             let reset=window.resets_at;
-            view!{<article class="task-files agent-quota-window"><h5>{window.name}</h5><p>{move||i18n.text(label)}{minutes.map(|minutes|format!(" · {minutes} min"))}</p>
+            view!{<article class="task-files agent-quota-window"><h5>{window.name}</h5><p>{move || minutes.map(|minutes| i18n.text("message.quota_period").replace("{0}", &quota_duration(u64::from(minutes), &i18n.text("message.quota_day_short")))).unwrap_or_else(|| i18n.text(label))}</p>
                 <p class="agent-quota-value">{move||if stale(){i18n.text("message.refresh_required")}else{i18n.text("message.0_remaining").replace("{0}",&format!("{amount:.1}"))}}</p>
                 <progress max="100" value=amount hidden=stale aria-label=move||i18n.text(label)></progress>
-                <p>{move || reset.map(|reset|i18n.text("message.resets_0").replace("{0}", &i18n.date(reset as f64 * 1000.0))).unwrap_or_else(||i18n.text("message.reset_time_not_reported"))}</p>
+                <p>{move || reset.map(|reset| remaining_quota_minutes(reset, now.get()).map(|minutes| i18n.text("message.quota_resets_in").replace("{0}", &quota_duration(minutes, &i18n.text("message.quota_day_short")))).unwrap_or_else(|| i18n.text("message.refresh_required"))).unwrap_or_else(||i18n.text("message.reset_time_not_reported"))}</p>
             </article>}
         }/>
     </section>}
+}
+
+fn quota_duration(minutes: u64, day: &str) -> String {
+    if minutes == 0 {
+        return "0 min".into();
+    }
+    [
+        (minutes / 1440, day),
+        (minutes % 1440 / 60, "h"),
+        (minutes % 60, "min"),
+    ]
+    .into_iter()
+    .filter(|(value, _)| *value > 0)
+    .map(|(value, unit)| format!("{value} {unit}"))
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+fn remaining_quota_minutes(reset_seconds: i64, now_milliseconds: f64) -> Option<u64> {
+    let remaining = (reset_seconds as f64 * 1000.0 - now_milliseconds) / 60_000.0;
+    (remaining.is_finite() && remaining > 0.0).then(|| remaining.ceil() as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{quota_duration, remaining_quota_minutes};
+
+    #[test]
+    fn quota_periods_use_days_hours_and_minutes() {
+        assert_eq!(quota_duration(10080, "j"), "7 j");
+        assert_eq!(quota_duration(300, "j"), "5 h");
+        assert_eq!(quota_duration(1561, "j"), "1 j 2 h 1 min");
+        assert_eq!(quota_duration(2880, "d"), "2 d");
+        assert_eq!(quota_duration(0, "j"), "0 min");
+    }
+
+    #[test]
+    fn countdown_rounds_up_and_stops_at_reset() {
+        assert_eq!(remaining_quota_minutes(3600, 0.0), Some(60));
+        assert_eq!(remaining_quota_minutes(3600, 3_599_999.0), Some(1));
+        assert_eq!(remaining_quota_minutes(3600, 3_600_000.0), None);
+        assert_eq!(remaining_quota_minutes(3600, 3_600_001.0), None);
+        assert_eq!(remaining_quota_minutes(3600, f64::NAN), None);
+    }
 }
