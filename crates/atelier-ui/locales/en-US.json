@@ -1,4 +1,6 @@
 {
+  "message.tickets": "Tickets",
+  "message.time_tracking": "Time tracking",
   "message.recorded_locally": "Recorded locally",
   "message.local_only": "Local — no integration",
   "message.ticket_source": "Ticket source",
