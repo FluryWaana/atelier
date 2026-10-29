@@ -1,4 +1,11 @@
 {
+  "message.profile_advanced": "Advanced settings",
+  "message.add_agent_profile": "Add profile",
+  "message.agent_profiles_intro": "Create multiple profiles for the same agent, each with its own connection or API key.",
+  "message.cancel_profile_changes": "Discard changes",
+  "message.replace_profile_key": "Replace key",
+  "message.cancel_key_removal": "Keep key",
+  "message.profile_key_removal_pending": "The key will be removed when you save.",
   "message.collapse_navigation": "Collapse navigation",
   "message.expand_navigation": "Expand navigation",
   "message.agent_diagnostic_busy": "An agent check is already running. Retrying automatically.",

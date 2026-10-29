@@ -1,4 +1,11 @@
 {
+  "message.profile_advanced": "Paramètres avancés",
+  "message.add_agent_profile": "Ajouter un profil",
+  "message.agent_profiles_intro": "Créez plusieurs profils pour un même agent, avec une connexion ou une clé API propre à chacun.",
+  "message.cancel_profile_changes": "Annuler les modifications",
+  "message.replace_profile_key": "Remplacer la clé",
+  "message.cancel_key_removal": "Conserver la clé",
+  "message.profile_key_removal_pending": "La clé sera supprimée à l’enregistrement.",
   "message.collapse_navigation": "Réduire le menu",
   "message.expand_navigation": "Déployer le menu",
   "message.agent_diagnostic_busy": "Une vérification des agents est déjà en cours. Nouvelle tentative automatique.",

@@ -2280,6 +2280,21 @@ async fn profiles_scenario(
     click(client, "#manage-agents").await?;
     wait_dom(client, "return document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('[data-profile]').length >= 2;", vec![]).await?;
     click(client, "#new-profile").await?;
+    wait_dom(client, "return /^profile-[0-9]+$/.test(document.querySelector('#profile-id')?.value) && !document.querySelector('#profile-advanced')?.open;", vec![]).await?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .send_keys("Brouillon à annuler")
+        .await?;
+    click(client, "#cancel-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client, "return document.querySelector('#profile-name')?.value === '' && document.querySelector('#save-profile')?.disabled;", vec![]).await?;
+    click(client, "#profile-advanced > summary").await?;
+    client
+        .find(Locator::Css("#profile-id"))
+        .await?
+        .clear()
+        .await?;
     for (selector, text) in [
         ("#profile-id", "ui-api"),
         ("#profile-name", "Profil synthétique <b>é😀</b>"),
@@ -2308,9 +2323,23 @@ async fn profiles_scenario(
         .await?;
     click(client, "#save-profile").await?;
     wait_dom(client, "return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key')?.value === '' && document.querySelector('#profile-key-state')?.textContent.includes('Secret enregistré') && document.querySelector('[data-profile=ui-api]')?.textContent.includes('<b>é😀</b>') && !document.querySelector('[data-profile=ui-api] b');", vec![]).await?;
-    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#diagnose-profile')?.disabled === false;",
+        vec![],
+    )
+    .await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-version')?.textContent === '0.0.7' && document.querySelector('#agent-diagnostic-auth')?.textContent === 'Clé présente, validité non vérifiée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    click(client, "#replace-profile-key").await?;
+    client
+        .find(Locator::Css("#profile-key"))
+        .await?
+        .send_keys("synthetic-ui-replacement-key")
+        .await?;
+    click(client, "#cancel-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client, "return document.querySelector('#profile-key')?.value === '' && document.querySelector('#profile-key-state')?.textContent.includes('Secret enregistré') && document.querySelector('#save-profile')?.disabled;", vec![]).await?;
     let catalog = request(reqwest::Method::GET, "/api/agent-providers")
         .send()
         .await?
@@ -2321,6 +2350,57 @@ async fn profiles_scenario(
     if catalog.contains("synthetic-ui-key") {
         return Err("La clé synthétique a été exposée dans le catalogue.".into());
     }
+    click(client, "#new-profile").await?;
+    let second_id = client
+        .execute(
+            "return document.querySelector('#profile-id').value;",
+            vec![],
+        )
+        .await?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .send_keys("Second profil API synthétique")
+        .await?;
+    client.execute("const select=document.querySelector('#profile-auth'); select.value='api'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#profile-key"))
+        .await?
+        .send_keys("synthetic-second-profile-key")
+        .await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client, "return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && [...document.querySelectorAll('[data-profile]')].some(row => row.dataset.profile === arguments[0]);", vec![second_id.clone()]).await?;
+    let separate: Vec<serde_json::Value> = request(reqwest::Method::GET, "/api/agent-providers")
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    let first = separate
+        .iter()
+        .find(|profile| profile["id"] == "ui-api")
+        .ok_or("Premier profil absent.")?;
+    let second = separate
+        .iter()
+        .find(|profile| profile["id"] == second_id)
+        .ok_or("Second profil absent.")?;
+    if first["type"] != second["type"]
+        || first["apiKeySet"] != true
+        || second["apiKeySet"] != true
+        || serde_json::to_string(&separate)?.contains("synthetic-second-profile-key")
+    {
+        return Err("Les profils API doivent rester distincts sans exposer leurs clés.".into());
+    }
+    click(client, "#remove-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",
+        vec![],
+    )
+    .await?;
+    click(client, "[data-profile=ui-api]").await?;
     let profiles: Vec<serde_json::Value> = serde_json::from_str(&catalog)?;
     let original = profiles
         .iter()
@@ -2362,13 +2442,23 @@ async fn profiles_scenario(
     click(client, "#profile-clear-key").await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key-state')?.textContent === 'Aucun secret enregistré.';",vec![]).await?;
-    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#diagnose-profile')?.disabled === false;",
+        vec![],
+    )
+    .await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Aucune clé API enregistrée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     client.execute("const select=document.querySelector('#profile-auth'); select.value='cli'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
-    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#diagnose-profile')?.disabled === false;",
+        vec![],
+    )
+    .await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && !document.querySelector('#agents-dialog')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     wait_dom(client,"return document.querySelector('#agent-account-quotas')?.textContent.includes('synthetic-plan') && document.querySelector('.agent-quota-value')?.textContent === '75.0 % restants' && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-account-output') && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-quota-output');",vec![]).await?;
@@ -2423,6 +2513,11 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.' && !document.querySelector('[data-profile=ui-api]');",vec![]).await?;
     click(client, "#new-profile").await?;
     client.execute("const select=document.querySelector('#profile-type'); select.value='command'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    client
+        .find(Locator::Css("#profile-id"))
+        .await?
+        .clear()
+        .await?;
     for (selector, text) in [
         ("#profile-id", "ui-command"),
         ("#profile-name", "Commande synthétique"),
@@ -2476,7 +2571,12 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('[data-profile=ui-command]') && document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "[data-profile=ui-command]").await?;
     wait_dom(client,"return document.querySelector('#profile-analyzeArgs')?.value === '[\"--analyze\",\"{model}\"]' && document.querySelector('#profile-versionArgs')?.value === '[\"--version\"]';",vec![]).await?;
-    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#diagnose-profile')?.disabled === false;",
+        vec![],
+    )
+    .await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && document.querySelector('#agent-diagnostic-result')?.textContent.includes('synthetic@example.invalid') && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     for (selector, arguments, expected) in [
@@ -2504,7 +2604,12 @@ async fn profiles_scenario(
             .await?;
         click(client, "#save-profile").await?;
         wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
-        wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+        wait_dom(
+            client,
+            "return document.querySelector('#diagnose-profile')?.disabled === false;",
+            vec![],
+        )
+        .await?;
         click(client, "#diagnose-profile").await?;
         wait_dom(client,"return document.querySelector('#agent-diagnostic-result')?.textContent.includes(arguments[0]) && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned') && document.querySelector('#diagnose-profile')?.disabled === false;",vec![json!(expected)]).await?;
     }
@@ -2517,6 +2622,11 @@ async fn profiles_scenario(
     wait_dom(client,"return !document.querySelector('[data-profile=ui-command]') && document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",vec![]).await?;
     click(client, "#new-profile").await?;
     client.execute("const select=document.querySelector('#profile-type'); select.value='acp'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    client
+        .find(Locator::Css("#profile-id"))
+        .await?
+        .clear()
+        .await?;
     for (selector, value) in [
         ("#profile-id", "ui-acp".to_owned()),
         ("#profile-name", "Agent ACP synthétique".to_owned()),
@@ -2533,7 +2643,12 @@ async fn profiles_scenario(
     arguments.send_keys(r#"["acp"]"#).await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('[data-profile=ui-acp]') && document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.';",vec![]).await?;
-    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#diagnose-profile')?.disabled === false;",
+        vec![],
+    )
+    .await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-version')?.textContent === '0.0.7' && document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion non vérifiée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#remove-profile").await?;
