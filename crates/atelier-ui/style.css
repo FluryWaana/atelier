@@ -239,6 +239,67 @@ input#task-title { font-size: .9375rem; line-height: 1.5; letter-spacing: normal
   .topbar .command-trigger kbd { display: none; }
 }
 
+/* Native modal surface; callers keep their own content and dismissal policy. */
+dialog.app-modal {
+  border: 1px solid var(--nav-avatar-border);
+  border-radius: 8px;
+  background: var(--app-background);
+  color: var(--nav-active);
+  box-shadow: none;
+  animation: none;
+  scroll-padding: 0;
+}
+dialog.app-modal::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: none; }
+.app-modal .modal-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--sidebar-radius);
+  background: transparent;
+  color: var(--nav-text);
+}
+.app-modal .modal-close:hover { background: var(--nav-hover); color: var(--nav-active); }
+.app-modal :is(button, input):focus-visible { outline: 2px solid var(--nav-focus); outline-offset: 2px; box-shadow: none; }
+#command-dialog {
+  width: min(660px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+}
+#command-dialog[open] { display: flex; flex-direction: column; }
+#command-dialog .command-heading { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 16px; padding: 16px 20px 0; }
+#command-title { margin: 0; color: var(--nav-active); font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+#command-dialog .command-search { flex-shrink: 0; padding: 12px 20px 16px; }
+#command-dialog .command-search label { display: block; margin: 0 0 8px; color: var(--nav-secondary); font-size: 13px; font-weight: 400; }
+#command-query { width: 100%; margin: 0; padding: 12px; border: 1px solid var(--nav-avatar-border); border-radius: var(--sidebar-radius); background: var(--nav-hover); color: var(--nav-active); font-size: 16px; }
+#command-query::placeholder { color: var(--nav-secondary); opacity: 1; }
+#command-results { min-height: 0; max-height: 48dvh; margin: 0; padding: 4px 8px; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--nav-border); }
+#command-dialog .command-result { gap: 16px; min-height: 64px; margin: 2px 0; padding: 10px 12px; border: 1px solid transparent; border-radius: var(--sidebar-radius); background: transparent; color: var(--nav-text); box-shadow: none; }
+#command-dialog .command-result[aria-current=true] { background: var(--nav-hover); color: var(--nav-active); }
+#command-dialog .command-result:hover { border-color: var(--nav-hover-border); }
+#command-dialog .command-copy { flex: 1; min-width: 0; }
+#command-dialog .command-copy strong { font-size: 14px; font-weight: 500; }
+#command-dialog .command-copy small { margin-top: 4px; color: var(--nav-secondary); font-size: 12px; font-weight: 400; }
+#command-dialog .command-kind { flex: 0 0 auto; width: auto; color: var(--nav-secondary); font-size: 12px; letter-spacing: 0; text-transform: lowercase; }
+#command-dialog .command-return { flex: 0 0 16px; visibility: hidden; }
+#command-dialog .command-result[aria-current=true] .command-return { visibility: visible; }
+#command-dialog .empty { margin: 0; padding: 28px 12px; color: var(--nav-secondary); font-size: 14px; text-align: left; }
+#command-dialog .search-help { display: flex; flex-shrink: 0; justify-content: flex-start; flex-wrap: wrap; gap: 16px; margin: 0; padding: 12px 20px; border-top: 1px solid var(--nav-border); color: var(--nav-secondary); font-size: 12px; }
+#command-dialog .search-help span { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+#command-dialog kbd { padding: 2px 4px; border-color: var(--nav-avatar-border); color: var(--nav-text); font: inherit; opacity: 1; }
+@media (max-width: 800px) {
+  #command-dialog { max-height: calc(100dvh - 24px); }
+  .app-modal .modal-close { width: 44px; min-height: 44px; }
+  #command-dialog .command-heading { padding-inline: 16px; }
+  #command-dialog .command-search { padding-inline: 16px; }
+  #command-dialog .command-result { gap: 10px; }
+  #command-dialog .command-kind { font-size: 12px; }
+  #command-dialog .search-help { padding-inline: 16px; gap: 8px 16px; }
+}
+
 /* Agent profile management */
 #agents-dialog {
   width: min(1040px, calc(100vw - 48px));

@@ -350,6 +350,21 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
+    click(client, "#command-button").await?;
+    wait_dom(client, "return document.querySelector('#command-dialog')?.matches(':modal') && document.activeElement?.id === 'command-query' && document.querySelector('#command-dialog').getAttribute('aria-labelledby') === 'command-title';", vec![]).await?;
+    let query = client.find(Locator::Css("#command-query")).await?;
+    query.send_keys("\u{e015}").await?;
+    wait_dom(client, "return document.querySelectorAll('.command-result')[1]?.getAttribute('aria-current') === 'true';", vec![]).await?;
+    query.send_keys("synthetic-no-search-match-92817").await?;
+    wait_dom(client, "return document.querySelectorAll('.command-result').length === 0 && document.querySelector('#command-results .empty')?.hidden === false;", vec![]).await?;
+    query.send_keys("\u{e007}").await?;
+    wait_dom(client, "return document.querySelector('#command-dialog')?.open === true;", vec![]).await?;
+    query.send_keys("\u{e00c}").await?;
+    wait_dom(client, "return !document.querySelector('#command-dialog') && document.activeElement?.id === 'command-button';", vec![]).await?;
+    click(client, "#command-button").await?;
+    wait_dom(client, "return document.activeElement?.id === 'command-query' && document.querySelector('#command-query')?.value === '' && document.querySelectorAll('.command-result').length >= 3;", vec![]).await?;
+    click(client, "#command-dialog .modal-close").await?;
+    wait_dom(client, "return !document.querySelector('#command-dialog') && document.activeElement?.id === 'command-button';", vec![]).await?;
     wait_dom(client,"return document.querySelector('#overview-button')?.getAttribute('aria-current') === 'page';",vec![]).await?;
     wait_dom(client, "const nav = document.querySelector('.sidebar'); const overview = document.querySelector('#overview-button'); return innerWidth <= 800 || (overview.getBoundingClientRect().height > 0 && (innerHeight < 600 || nav.scrollHeight <= nav.clientHeight + 1));", vec![]).await?;
     if client

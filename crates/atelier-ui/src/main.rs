@@ -31,6 +31,7 @@ mod jira_creation;
 mod jira_refresh;
 mod jira_task;
 mod live;
+mod modal;
 mod preparation;
 mod projects;
 mod queue;
@@ -1166,10 +1167,6 @@ fn CommandPalette(
     let query = RwSignal::new(String::new());
     let index = RwSignal::new(0usize);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-        focus_element("command-query");
-    });
     let results = Memo::new(move |_| {
         let mut items = vec![
             (
@@ -1243,7 +1240,42 @@ fn CommandPalette(
             }
         }
     });
-    view! {<dialog id="command-dialog" aria-label=move ||i18n.text("message.quick_search") node_ref=dialog on:cancel=move |event:web_sys::Event|{event.prevent_default();close();}><div class="dialog-heading"><div><div class="eyebrow">{move ||i18n.text("message.quick_search_ae731321")}</div><h2>{move ||i18n.text("message.go_to")}</h2></div><button type="button" aria-label=move ||i18n.text("message.close") on:click=move |_|close()>"×"</button></div><label class="sr-only" for="command-query">{move ||i18n.text("message.project_task_or_action")}</label><input id="command-query" type="search" autocomplete="off" placeholder=move ||i18n.text("message.a_ticket_a_project_an_action") prop:value=move ||query.get() on:input=move |event|{query.set(event_target_value(&event));index.set(0);} on:keydown=move |event:leptos::ev::KeyboardEvent|{match event.key().as_str(){"ArrowDown"=>{event.prevent_default();index.update(|index|*index=(*index+1).min(results.with(Vec::len).saturating_sub(1)));},"ArrowUp"=>{event.prevent_default();index.update(|index|*index=index.saturating_sub(1));},"Enter"=>{event.prevent_default();execute.run(index.get_untracked());},_=>{}}} /><div id="command-results" aria-live="polite">{move ||results.get().into_iter().enumerate().map(|(position,(target,title,detail))|view!{<button class="command-result" type="button" aria-current=move ||(index.get()==position).to_string() on:click=move |_|execute.run(position)><span class="command-kind">{i18n.text(match target{CommandTarget::Project(_)=>"message.command_project",CommandTarget::Card(_)=>"message.task_10cbc4db",_=>"message.command_action"})}</span><span><strong>{title}</strong><small>{detail}</small></span><span>"↵"</span></button>}).collect_view()}<p class="empty" hidden=move ||!results.with(Vec::is_empty)>{move ||i18n.text("message.no_results_try_a_title_jira_id_or_project_name")}</p></div><p class="search-help"><kbd>"↑"</kbd><kbd>"↓"</kbd>{move ||i18n.text("message.browse_622500d8")}<span><kbd>{move ||i18n.text("message.enter")}</kbd>{move ||i18n.text("message.open")}</span><span><kbd>{move ||i18n.text("message.esc")}</kbd>{move ||i18n.text("message.close_d932b8d4")}</span></p></dialog>}
+    view! {
+        <modal::Modal id="command-dialog" labelledby="command-title" node_ref=dialog on_close=Callback::new(move |()|close())>
+            <header class="command-heading">
+                <h2 id="command-title">{move ||i18n.text("message.quick_search")}</h2>
+                <button class="modal-close" type="button" aria-label=move ||i18n.text("message.close") on:click=move |_|close()>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+            </header>
+            <div class="command-search">
+                <label for="command-query">{move ||i18n.text("message.project_task_or_action")}</label>
+                <input id="command-query" type="search" autofocus autocomplete="off" aria-controls="command-results"
+                    placeholder=move ||i18n.text("message.a_ticket_a_project_an_action") prop:value=move ||query.get()
+                    on:input=move |event|{query.set(event_target_value(&event));index.set(0);}
+                    on:keydown=move |event:leptos::ev::KeyboardEvent|{match event.key().as_str(){
+                        "ArrowDown"=>{event.prevent_default();index.update(|index|*index=(*index+1).min(results.with(Vec::len).saturating_sub(1)));},
+                        "ArrowUp"=>{event.prevent_default();index.update(|index|*index=index.saturating_sub(1));},
+                        "Enter"=>{event.prevent_default();execute.run(index.get_untracked());},_=>{}
+                    }} />
+            </div>
+            <div id="command-results" aria-live="polite">
+                {move ||results.get().into_iter().enumerate().map(|(position,(target,title,detail))|view!{
+                    <button class="command-result" type="button" aria-current=move ||(index.get()==position).to_string() on:click=move |_|execute.run(position)>
+                        <span class="command-copy"><strong>{title}</strong><small>{detail}</small></span>
+                        <span class="command-kind">{i18n.text(match target{CommandTarget::Project(_)=>"message.project",CommandTarget::Card(_)=>"message.task",_=>"message.command_action"})}</span>
+                        <span class="command-return" aria-hidden="true">"↵"</span>
+                    </button>
+                }).collect_view()}
+                <p class="empty" hidden=move ||!results.with(Vec::is_empty)>{move ||i18n.text("message.no_results_try_a_title_jira_id_or_project_name")}</p>
+            </div>
+            <div class="search-help">
+                <span><kbd>"↑"</kbd><kbd>"↓"</kbd>{move ||i18n.text("message.browse_622500d8")}</span>
+                <span><kbd>{move ||i18n.text("message.enter")}</kbd>{move ||i18n.text("message.open")}</span>
+                <span><kbd>{move ||i18n.text("message.esc")}</kbd>{move ||i18n.text("message.close_d932b8d4")}</span>
+            </div>
+        </modal::Modal>
+    }
 }
 
 #[component]
