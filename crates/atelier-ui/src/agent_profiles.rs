@@ -140,12 +140,6 @@ pub fn AgentProfiles(
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let items = RwSignal::new(Vec::<Document>::new());
-    let discovered = RwSignal::new(None::<Vec<atelier_core::contracts::DiscoveredAgent>>);
-    let statuses = RwSignal::new(BTreeMap::<
-        String,
-        Option<atelier_core::contracts::AgentDiagnostic>,
-    >::new());
-    let status_generation = RwSignal::new(0u64);
     let original = RwSignal::new(None::<Document>);
     let baseline = RwSignal::new(Draft::new(None));
     let draft = RwSignal::new(baseline.get_untracked());
@@ -214,22 +208,15 @@ pub fn AgentProfiles(
             }
         };
         let id = draft.get_untracked().values["id"].clone();
-        let generation = status_generation.get_untracked().wrapping_add(1);
-        status_generation.set(generation);
-        statuses.set(BTreeMap::new());
         pending.set(true);
         error.set(String::new());
         spawn_local(async move {
-            let result = async {
-                let (profiles, agents) = discover_profiles(&token, board).await?;
-                let _ = discovered.try_set(Some(agents));
-                Ok::<_, String>(profiles)
-            }.await;
+            let result = discover_profiles(&token, board).await;
             if pending.try_get_untracked().is_none() {
                 return;
             }
             match result {
-                Ok(profiles) => {
+                Ok((profiles, _)) => {
                     if reload {
                         let current = profiles
                             .iter()
@@ -243,43 +230,7 @@ pub fn AgentProfiles(
                             focus("new-profile");
                         }
                     }
-                    items.set(profiles.clone());
-                    let detected = discovered.get_untracked().unwrap_or_default();
-                    spawn_local(async move {
-                        for agent in detected.into_iter().filter(|agent| {
-                            agent.installed && agent.supported && !agent.script_only
-                        }) {
-                            let Some(profile) = profiles
-                                .iter()
-                                .find(|profile| field(profile, "type") == agent.id)
-                                .cloned()
-                            else {
-                                continue;
-                            };
-                            let path =
-                                format!("/api/agent-providers/{}/diagnose", field(&profile, "id"));
-                            let response = match write(
-                                &token,
-                                Method::POST,
-                                &path,
-                                &serde_json::json!({"expected":profile,"statusOnly":true}),
-                            )
-                            .await
-                            {
-                                Ok(response) => response
-                                    .json::<atelier_core::contracts::AgentDiagnostic>()
-                                    .await
-                                    .ok(),
-                                Err(_) => None,
-                            };
-                            if status_generation.try_get_untracked() != Some(generation) {
-                                return;
-                            }
-                            statuses.update(|statuses| {
-                                statuses.insert(agent.id, response);
-                            });
-                        }
-                    });
+                    items.set(profiles);
                 }
                 Err(message) => error.set(message),
             }
@@ -377,42 +328,6 @@ pub fn AgentProfiles(
             <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("message.agents")}</p><h2 id="agents-title">{move || i18n.text("message.agent_profiles")}</h2></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.close")}</button></header>
             <p class="field-help">{move || i18n.text("message.a_profile_defines_an_agent_and_its_settings_saving_it_does_not_r")}</p>
             <button id="discover-agents" type="button" disabled=move || pending.get() || dirty.get() on:click=discover>{move || i18n.text(if pending.get() { "message.searching_for_agents" } else { "message.find_installed_agents" })}</button>
-            <div id="agent-discovery" aria-live="polite">{move || discovered.get().map(|agents| view! {
-                <ul>{agents.into_iter().map(|agent| {
-                    let id = agent.id.clone();
-                    let status_id = agent.id.clone();
-                    let name = agent.name.clone();
-                    let can_configure = agent.installed && agent.supported && !agent.script_only;
-                    view! {
-                        <li>{agent.name}" : "{i18n.text(if agent.script_only { "message.script_detected" } else if agent.installed { "message.installed" } else { "message.not_detected" })}{if agent.script_only { format!(" — {}", i18n.text("message.launching_it_is_not_supported")) } else if agent.installed && !agent.supported { format!(" — {}", i18n.text("message.integration_unavailable")) } else { String::new() }}
-                            {move || statuses.with(|statuses| statuses.get(&status_id).cloned()).map(|status| match status { Some(status) => {
-                                let state = match status.authentication {
-                                    atelier_core::contracts::AgentAuthentication::Present => "message.cli_login_present_service_access_has_not_been_verified",
-                                    atelier_core::contracts::AgentAuthentication::Absent => "message.no_cli_login",
-                                    atelier_core::contracts::AgentAuthentication::Configured => "message.key_present_validity_has_not_been_verified",
-                                    atelier_core::contracts::AgentAuthentication::MissingKey => "message.no_saved_api_key",
-                                    atelier_core::contracts::AgentAuthentication::Unavailable => "message.login_not_checked",
-                                };
-                                let version = status.version.unwrap_or_else(|| i18n.text("message.unavailable"));
-                                view! { <span>" — "{i18n.text("message.version")} " : " {version} " — " {i18n.text(state)} {status.account.map(|account| format!(" — {account}"))}</span> }.into_any()
-                            }, None => view! { <span>" — " {i18n.text("message.login_not_checked")}</span> }.into_any() })}
-                            <button type="button" hidden=!can_configure disabled=move || pending.get() || dirty.get() on:click=move |_| {
-                                let current = items.with_untracked(|items| items.iter().find(|item| field(item, "id") == id).cloned());
-                                if current.is_some() {
-                                    select(current);
-                                } else {
-                                    select(None);
-                                    draft.update(|draft| {
-                                        draft.values.insert("id", id.clone());
-                                        draft.values.insert("name", name.clone());
-                                        draft.values.insert("type", id.clone());
-                                    });
-                                }
-                            }>{move || i18n.text("message.configure")}</button>
-                        </li>
-                    }
-                }).collect_view()}</ul>
-            })}</div>
             <div class="agent-profile-layout">
             <aside class="agent-profile-sidebar" aria-label=move || i18n.text("message.agent_profiles")>
             <div class="editor-actions"><button id="new-profile" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(None)>{move || i18n.text("message.new_profile")}</button><button id="refresh-profiles" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| refresh(false)>{move || i18n.text("message.refresh_list")}</button></div>
