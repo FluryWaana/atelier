@@ -691,3 +691,10 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
   .settings-navigation .settings-tab { width: auto; flex: 0 0 auto; }
   .settings-content { padding-left: 0; border-left: 0; }
 }
+
+.jira-connection-summary { display: grid; gap: 4px; margin: 12px 0 20px; overflow-wrap: anywhere; }
+.jira-connection-summary .field-help { margin: 4px 0 0; }
+.jira-connection-editor { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.jira-connection-editor > summary { cursor: pointer; font-weight: 600; }
+.jira-connection-fields { padding-top: 16px; }
+.jira-module .editor-actions { flex-wrap: wrap; }

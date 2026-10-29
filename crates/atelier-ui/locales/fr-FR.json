@@ -1,4 +1,8 @@
 {
+  "message.jira_access_not_checked": "Les réglages sont enregistrés. Lance une recherche pour vérifier l’accès aux tickets.",
+  "message.edit_jira_connection": "Modifier la connexion",
+  "message.configure_jira_connection": "Configurer la connexion",
+  "message.save_jira_settings": "Enregistrer les réglages Jira",
   "message.to_separator": " vers ",
   "message.tickets": "Tickets",
   "message.time_tracking": "Suivi du temps",
