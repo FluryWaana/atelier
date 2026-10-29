@@ -1,3 +1,4 @@
+@layer legacy {
 /*!
 Bootstrap v5.3.8
 The MIT License (MIT)
@@ -391,4 +392,175 @@ dialog.app-modal::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: no
   #agents-dialog .agent-profile-content { padding: 20px 0 0; border-left: 0; border-top: 1px solid #383838; }
   #agents-dialog fieldset { grid-template-columns: minmax(0, 1fr); }
   #agents-dialog fieldset > p, #agents-dialog fieldset > div { grid-column: auto; }
+}
+}
+
+/* Shared field appearance overrides legacy screen rules; layout stays with each screen. */
+:root {
+  --field-background: #202020;
+  --field-text: #ededed;
+  --field-muted: #aaa;
+  --field-border: #505050;
+  --field-hover-border: #777;
+  --field-focus: #aaa;
+  --field-selected: #363636;
+  --field-disabled: #191919;
+  --field-error: #e3a796;
+  --field-radius: 6px;
+  --field-height: 44px;
+}
+
+/* Existing class names also apply automatically to native fields. */
+:is(.form-control, .form-select, input:not([type=checkbox], [type=radio], [type=hidden], [type=range], [type=color], [type=file], [type=button], [type=submit], [type=reset], [type=image]), select, textarea) {
+  min-height: var(--field-height);
+  padding: 10px 12px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  background-color: var(--field-background);
+  color: var(--field-text);
+  font: 400 14px/1.5 "Segoe UI", system-ui, sans-serif;
+  box-shadow: none;
+  color-scheme: dark;
+
+  &:hover:not(:disabled):not([readonly]) { border-color: var(--field-hover-border); }
+  &:focus {
+    border-color: var(--field-focus);
+    outline: 1px solid var(--field-focus);
+    outline-offset: -1px;
+    box-shadow: none;
+  }
+  &::placeholder { color: var(--field-muted); opacity: 1; }
+  &:disabled, &[readonly] {
+    background-color: var(--field-disabled);
+    color: var(--field-muted);
+  }
+  &:disabled { cursor: not-allowed; }
+  &[aria-invalid="true"] { border-color: var(--field-error); }
+}
+
+select { padding-right: 36px; cursor: pointer; }
+select[multiple], select[size]:not([size="1"]) { padding-right: 12px; }
+textarea { resize: vertical; }
+select option { background: var(--field-background); color: var(--field-text); }
+
+/* Unsupported browsers keep their native picker and keyboard handling. */
+@supports (appearance: base-select) {
+  select:not([multiple]):is(:not([size]), [size="1"]) {
+    appearance: base-select;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    padding-right: 12px;
+    background-image: none;
+
+    &::picker(select) {
+      appearance: base-select;
+      min-width: anchor-size(width);
+      max-height: min(320px, 60dvh);
+      overflow-y: auto;
+      padding: 4px;
+      margin-block: 6px;
+      border: 1px solid var(--field-border);
+      border-radius: var(--field-radius);
+      background: var(--field-background);
+      color: var(--field-text);
+      font: 400 14px/1.5 "Segoe UI", system-ui, sans-serif;
+      box-shadow: 0 8px 24px #0004;
+    }
+    &::picker-icon { margin-left: auto; color: var(--field-muted); }
+    & option {
+      min-height: var(--field-height);
+      padding: 10px 12px;
+      gap: 12px;
+      border-radius: 3px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      cursor: pointer;
+    }
+    & option:checked { background: var(--field-selected); font-weight: 600; }
+    & option:hover, & option:focus { background: #414141; color: #fff; }
+    & option:disabled { color: var(--field-muted); cursor: not-allowed; }
+    & option::checkmark { color: var(--field-text); }
+  }
+}
+
+/* A compact task brief, with optional configuration disclosed on demand. */
+#new-dialog {
+  width: 620px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  background: #191919;
+  color: var(--field-text);
+  color-scheme: dark;
+}
+#new-form { padding: 28px; }
+#new-dialog .dialog-heading {
+  position: static;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#new-dialog .dialog-heading h2 { font-size: 22px; letter-spacing: -.4px; }
+#new-dialog .dialog-heading > button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--field-muted);
+}
+#new-dialog .form-section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+#new-dialog label { color: var(--field-text); font-size: 13px; font-weight: 400; }
+#new-dialog :is(input, select, textarea) { width: 100%; margin-top: 8px; }
+#new-dialog textarea { min-height: 120px; }
+#new-dialog .disclosure {
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+#new-dialog .disclosure > summary {
+  padding: 10px 24px 10px 0;
+  color: var(--field-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+#new-dialog .disclosure > summary:hover { color: var(--field-text); }
+#new-dialog .disclosure[open] > summary { margin-bottom: 12px; }
+#new-dialog .template-options { margin: 0; padding: 0 0 12px; border: 0; }
+#new-dialog .template-options > span { display: none; }
+#new-dialog .template-options button { background: #282828; border: 1px solid #444; color: var(--field-text); }
+#new-dialog .notice-line { margin: 4px 0 0; color: var(--field-muted); font-size: 12px; line-height: 1.6; }
+#new-dialog .error:empty { display: none; }
+#new-dialog .form-actions {
+  position: static;
+  margin: 24px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 12px;
+}
+#new-dialog .form-actions button { min-height: 44px; }
+#new-dialog button:focus-visible, #new-dialog summary:focus-visible {
+  outline: 2px solid var(--field-focus);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+@media (max-width: 600px) {
+  #new-form { padding: 20px; }
+  #new-dialog :is(input, select, textarea) { font-size: 16px; }
 }
