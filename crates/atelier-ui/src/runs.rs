@@ -395,7 +395,7 @@ pub fn Runs(
             <crate::review::ReviewResult card_id=card.get_value() board token pending blocked run=latest agent reply_drafts /><Show when=move||!brainstorm.get()><crate::preparation::PreparationResult card_id=card.get_value() board token pending blocked run=latest on_applied /></Show>
             <Show when=move||brainstorm.get()><crate::brainstorm::Results card_id=card.get_value() board token pending blocked message run=latest on_open /></Show>
             <details hidden=move || latest.get().is_none_or(|run| field(&run,"summary").is_empty())><summary>{move || i18n.text("message.run_summary")}</summary><p>{move || latest.get().map(|run| field(&run,"summary")).unwrap_or_default()}</p></details>
-            <p hidden=move || latest.get().is_none_or(|run| run.raw("usage").is_none())>{move || latest.get().and_then(|run| run.get::<serde_json::Value>("usage").ok().flatten()).map(|usage| format!("{} {} / {} / {}",i18n.text("message.input_cache_output_tokens"),usage["inputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()),usage["cachedInputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()),usage["outputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"—".into()))).unwrap_or_default()}</p>
+            <p hidden=move || latest.get().is_none_or(|run| run.raw("usage").is_none())>{move || latest.get().and_then(|run| run.get::<serde_json::Value>("usage").ok().flatten()).map(|usage| format!("{} {} / {} / {}",i18n.text("message.input_cache_output_tokens"),usage["inputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"-".into()),usage["cachedInputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"-".into()),usage["outputTokens"].as_u64().map(|value|value.to_string()).unwrap_or_else(||"-".into()))).unwrap_or_default()}</p>
             <p>{move||latest.get().and_then(|run|run.get::<serde_json::Value>("usage").ok().flatten()).filter(|usage|usage["costSource"]=="claude-cli"&&usage["costScope"]=="cli-session").and_then(|usage|usage["estimatedCostUsd"].as_f64()).filter(|amount|amount.is_finite()&&(0.0..=1_000_000.0).contains(amount)).map(|amount|i18n.text("message.estimate_reported_by_claude_0_usd_may_include_a_resumed_session").replace("{0}",&format!("{amount:.6}"))).unwrap_or_default()}</p>
             <p>{move || {
                 let Some(run) = latest.get().filter(|run| field(run,"agentType")=="codex") else { return String::new(); };
@@ -404,8 +404,8 @@ pub fn Runs(
                 if usage["costSource"]=="openai-standard-api" && usage["costScope"]=="requested-model-thread" && let Some(amount)=amount {
                     i18n.text("message.estimated_standard_api_equivalent_usd_0_requested_model_1_prices")
                         .replace("{0}",&format!("{amount:.6}"))
-                        .replace("{1}",usage["pricingModel"].as_str().unwrap_or("—"))
-                        .replace("{2}",usage["pricingDate"].as_str().unwrap_or("—"))
+                        .replace("{1}",usage["pricingModel"].as_str().unwrap_or("-"))
+                        .replace("{2}",usage["pricingDate"].as_str().unwrap_or("-"))
                 } else {
                     i18n.text("message.codex_estimate_unavailable_for_this_model_or_these_counters_or_a")
                 }

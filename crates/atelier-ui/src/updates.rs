@@ -173,7 +173,7 @@ pub fn Updates(
         </fieldset>
         <div hidden=move||operation().is_none()>
             <h4 id="update-phase">{move||operation().map(|operation|i18n.text(phase_label(operation.state)))}</h4>
-            <p>{move||operation().map(|operation|format!("{} → {}",operation.from_version,operation.to_version))}</p>
+            <p>{move||operation().map(|operation|format!("{}{}{}",operation.from_version,i18n.text("message.to_separator"),operation.to_version))}</p>
             <p>{move||operation().map(|operation|i18n.text(&operation.message))}</p>
             <p>{move||i18n.text("message.key_fingerprint")}" "{move||operation().map(|operation|operation.key_id)}</p>
             <p>{move||i18n.text("message.package_fingerprint")}" "{move||operation().map(|operation|operation.sha256)}</p>

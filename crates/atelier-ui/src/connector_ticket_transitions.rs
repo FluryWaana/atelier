@@ -135,7 +135,7 @@ pub fn ConnectorTicketTransitions(
             <label for="connector-ticket-transition">{i18n.text("message.transition")}</label>
             <select id="connector-ticket-transition" disabled=move||pending.get()||blocked.get() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))>
                 <option value="">{i18n.text("message.choose_a_transition")}</option>
-                {report.transitions.into_iter().map(|transition|view!{<option value=transition.id disabled=transition.requires_fields>{format!("{} → {}{}",transition.name,transition.status,if transition.requires_fields {i18n.text("message.additional_fields_required")}else{String::new()})}</option>}).collect_view()}
+                {report.transitions.into_iter().map(|transition|view!{<option value=transition.id disabled=transition.requires_fields>{format!("{}{}{}{}",transition.name,i18n.text("message.to_separator"),transition.status,if transition.requires_fields {i18n.text("message.additional_fields_required")}else{String::new()})}</option>}).collect_view()}
             </select>
             <button id="prepare-connector-transition" type="button" disabled=move||pending.get()||blocked.get()||selected.get().is_empty() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.prepare_this_transition_in_the_journal")}</button>
             <button type="button" disabled=move||pending.get() on:click=move |_|{preview.set(None);selected.set(String::new());}>{move||i18n.text("message.cancel_preview")}</button>

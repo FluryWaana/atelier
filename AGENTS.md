@@ -51,6 +51,10 @@ Add meaningful regression tests for nontrivial behavior, trust boundaries, concu
 
 ## UI and coding style
 
+Local tickets and local time tracking must always remain available, including when an external module is selected by default. Defaults must never disable local creation.
+
+Use plain, natural user-facing text in French and English. Do not use em dashes, en dashes, semicolons or decorative text arrows. Use short sentences and ordinary words instead. These punctuation restrictions apply to prose, not Rust or other code syntax.
+
 Preserve the existing capabilities and translations, including French user-facing text. Build each screen with its use case, including loading, empty/error states, keyboard/focus and unsaved drafts. Avoid exposing implementation details in user flows.
 
 Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. Edit the Rust UI styling sources directly; final build dependencies must be documented. Do not reintroduce the retired Node/Sass pipeline.
