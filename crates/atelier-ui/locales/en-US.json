@@ -2307,7 +2307,7 @@
   "message.save_a_project_folder": "Save a folder to group a project’s tasks and find it easily next time.",
   "message.describe_the_work": "Describe the work to do",
   "message.first_task_help": "Give the task a title and describe the expected outcome. You can review the instructions before starting an agent.",
-  "message.connect_tools_later": "Configure Jira, remote repositories and preferences in settings whenever you need them.",
+  "message.connect_tools_later": "Configure ticketing tools, remote repositories and preferences in settings whenever you need them.",
   "message.creating_the_task_does_not_start_the_agent_you_can_review_its_in": "Creating the task does not start the agent. You can review its instructions before starting.",
   "message.create_a_task": "Create a task",
   "message.create_a_task_without_a_discussion": "Create a task without a discussion",

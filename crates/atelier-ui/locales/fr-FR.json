@@ -2307,7 +2307,7 @@
   "message.save_a_project_folder": "Enregistrez un dossier pour regrouper les tâches d’un projet et le retrouver facilement.",
   "message.describe_the_work": "Décrivez le travail à faire",
   "message.first_task_help": "Donnez un titre et décrivez le résultat attendu. Vous pourrez relire les instructions avant de lancer un agent.",
-  "message.connect_tools_later": "Jira, dépôts distants et préférences se configurent dans les réglages, quand vous en avez besoin.",
+  "message.connect_tools_later": "Outils de ticketing, dépôts distants et préférences se configurent dans les réglages, quand vous en avez besoin.",
   "message.creating_the_task_does_not_start_the_agent_you_can_review_its_in": "Créer la tâche ne lance pas l’agent. Vous pourrez relire ses instructions avant de démarrer.",
   "message.create_a_task": "Créer une tâche",
   "message.create_a_task_without_a_discussion": "Créer une tâche sans discuter",
