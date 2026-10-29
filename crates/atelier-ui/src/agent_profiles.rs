@@ -325,9 +325,8 @@ pub fn AgentProfiles(
     on_cleanup(move || unload.remove());
     view! {
         <dialog id="agents-dialog" class="editor" node_ref=dialog aria-labelledby="agents-title" aria-busy=move || pending.get().to_string() on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("message.agents")}</p><h2 id="agents-title">{move || i18n.text("message.agent_profiles")}</h2></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.close")}</button></header>
+            <header class="editor-heading"><div><h2 id="agents-title">{move || i18n.text("message.agents")}</h2><button id="discover-agents" type="button" disabled=move || pending.get() || dirty.get() on:click=discover>{move || i18n.text(if pending.get() { "message.searching_for_agents" } else { "message.find_installed_agents" })}</button></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.close")}</button></header>
             <p class="field-help">{move || i18n.text("message.a_profile_defines_an_agent_and_its_settings_saving_it_does_not_r")}</p>
-            <button id="discover-agents" type="button" disabled=move || pending.get() || dirty.get() on:click=discover>{move || i18n.text(if pending.get() { "message.searching_for_agents" } else { "message.find_installed_agents" })}</button>
             <div class="agent-profile-layout">
             <aside class="agent-profile-sidebar" aria-label=move || i18n.text("message.agent_profiles")>
             <div class="editor-actions"><button id="new-profile" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(None)>{move || i18n.text("message.new_profile")}</button><button id="refresh-profiles" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| refresh(false)>{move || i18n.text("message.refresh_list")}</button></div>
