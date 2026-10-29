@@ -98,9 +98,9 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
     let observed = js_sys::Date::parse(&report.observed_at);
     view! {<section id="agent-account-quotas" class="task-files" aria-label=move||i18n.text("message.last_quota_report")>
         <h4>{move||i18n.text("message.last_quota_report")}</h4>
-        <p>{report.observed_at}</p>
+        <p id="agent-account-observed">{move || i18n.date(observed)}</p>
         <p>{i18n.text(match report.state{State::Available=>"message.limits_reported_by_the_service_they_do_not_establish_access_to_a",State::Api=>"message.api_limits_are_separate_from_subscription_quotas",State::Disconnected=>"message.sign_in_through_the_cli_then_check_again",State::Unsupported=>"message.auth_mode_quotas_unsupported",State::Unavailable=>"message.quotas_unavailable_no_values_are_inferred",State::RateLimited=>"message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte"})}</p>
-        {report.retry_at.map(|date|view!{<p>{i18n.text("message.next_attempt_0").replace("{0}",&date)}</p>})}
+        {report.retry_at.map(|date|view!{<p>{move || i18n.text("message.next_attempt_0").replace("{0}", &i18n.date(js_sys::Date::parse(&date)))}</p>})}
         {report.account.map(|account|view!{<p>{i18n.text("message.account")}" : "{account}</p>})}
         {report.subscription.map(|plan|view!{<p>{i18n.text("message.subscription")}" : "{plan}</p>})}
         <p class="field-help">{move||i18n.text("message.refresh_through_the_profile_check_the_report_expires_after_ten_m")}</p>
@@ -108,11 +108,11 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
             let stale=move||!observed.is_finite()||now.get()-observed>=600_000.0||window.resets_at.is_some_and(|date|date as f64*1000.0<=now.get());
             let label=if window.kind=="secondary"{"message.secondary_window"}else{"message.primary_window"};
             let minutes=window.window_minutes;let amount=f64::from(window.remaining_tenths)/10.0;
-            let reset=window.resets_at.map(|date|String::from(js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(date as f64*1000.0)).to_iso_string()));
+            let reset=window.resets_at;
             view!{<article class="task-files agent-quota-window"><h5>{window.name}</h5><p>{move||i18n.text(label)}{minutes.map(|minutes|format!(" · {minutes} min"))}</p>
                 <p class="agent-quota-value">{move||if stale(){i18n.text("message.refresh_required")}else{i18n.text("message.0_remaining").replace("{0}",&format!("{amount:.1}"))}}</p>
                 <progress max="100" value=amount hidden=stale aria-label=move||i18n.text(label)></progress>
-                <p>{reset.map(|reset|i18n.text("message.resets_0").replace("{0}",&reset)).unwrap_or_else(||i18n.text("message.reset_time_not_reported"))}</p>
+                <p>{move || reset.map(|reset|i18n.text("message.resets_0").replace("{0}", &i18n.date(reset as f64 * 1000.0))).unwrap_or_else(||i18n.text("message.reset_time_not_reported"))}</p>
             </article>}
         }/>
     </section>}
