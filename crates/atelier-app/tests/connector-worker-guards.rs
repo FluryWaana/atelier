@@ -25,9 +25,9 @@ async fn pending_module_writes_pause_queue_and_block_sql_run_reservation_without
             assert_eq!(connector_effects::read(&settings)?.len(),1);
             assert!(queue::claim(store,"must-not-spawn".into())?.is_none());
             let paused=queue::read(store)?;assert!(paused.paused && paused.active.is_none());assert_eq!(paused.ids,vec!["synthetic-task"]);
-            assert!(paused.message.contains("connecteur"));
+            assert_eq!(paused.message, "message.queue_paused_complete_or_reconcile_the_module_write_before_resum");
             let run=doc(json!({"id":"manual-reservation","cardId":"synthetic-task","repo":"synthetic/work","status":"starting"}));
-            let error=runs::reserve(store,&run).unwrap_err();assert!(error.to_string().contains("connecteur"));
+            let error=runs::reserve(store,&run).unwrap_err();assert_eq!(error.to_string(), "message.complete_or_reconcile_module_writes_before_starting_a_run");
             assert!(store.documents::<Document>(Documents::Runs)?.is_empty());
             assert_eq!(serde_json::to_value(store.document::<Card>(Documents::Cards,&card.id)?.unwrap())?,serde_json::to_value(&card)?);
             let mut settings=store.settings::<Document>()?;settings.set("connectorEffects",&journal("failed"))?;store.save_settings(&settings)?;

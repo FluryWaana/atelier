@@ -66,27 +66,27 @@ impl State {
             _ => "standby",
         }
     }
-    pub fn label(self) -> &'static str {
+    pub fn translation_key(self) -> &'static str {
         match self {
-            Self::Running => "Parcours en cours",
-            Self::Waiting => "Publication à confirmer",
-            Self::Ready => "Prêt pour le contrôle humain",
-            Self::Blocked => "Parcours bloqué",
-            Self::Interrupted => "Parcours interrompu",
-            Self::Error => "Parcours en échec",
-            Self::Cancelled => "Parcours arrêté",
+            Self::Running => "message.workflow_running",
+            Self::Waiting => "message.publication_awaiting_confirmation",
+            Self::Ready => "message.ready_for_human_review",
+            Self::Blocked => "message.workflow_blocked",
+            Self::Interrupted => "message.workflow_interrupted",
+            Self::Error => "message.workflow_failed",
+            Self::Cancelled => "message.workflow_stopped",
         }
     }
 }
 impl Step {
-    pub fn label(self) -> &'static str {
+    pub fn translation_key(self) -> &'static str {
         match self {
-            Self::Development => "Développement",
-            Self::Tests => "Vérification",
-            Self::Commit => "Commit",
-            Self::Publication => "Publication",
-            Self::Review => "Review",
-            Self::Correction => "Correction",
+            Self::Development => "message.development",
+            Self::Tests => "message.verification",
+            Self::Commit => "message.commit",
+            Self::Publication => "message.publication",
+            Self::Review => "message.review",
+            Self::Correction => "message.correction",
         }
     }
 }

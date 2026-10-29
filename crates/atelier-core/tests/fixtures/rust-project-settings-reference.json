@@ -810,7 +810,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -854,7 +854,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -898,7 +898,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+      "error": "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree"
     }
   },
   {
@@ -942,7 +942,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+      "error": "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree"
     }
   },
   {
@@ -951,7 +951,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Le dossier du service doit être relatif et rester dans le worktree."
+      "error": "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree"
     }
   },
   {
@@ -1035,7 +1035,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Correspondance Jira invalide."
+      "error": "message.invalid_jira_mapping"
     }
   },
   {
@@ -1081,7 +1081,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier."
+      "error": "message.add_port_to_the_command_to_apply_the_port_provided_by_atelier"
     }
   },
   {
@@ -1133,7 +1133,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Agent invalide."
+      "error": "message.invalid_agent"
     }
   },
   {
@@ -1183,7 +1183,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -1193,7 +1193,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Fournisseur Git invalide."
+      "error": "message.invalid_git_provider"
     }
   },
   {
@@ -1203,7 +1203,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Agent invalide."
+      "error": "message.invalid_agent"
     }
   },
   {
@@ -1213,7 +1213,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Agent invalide."
+      "error": "message.invalid_agent"
     }
   },
   {
@@ -1223,7 +1223,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Fournisseur Git invalide."
+      "error": "message.invalid_git_provider"
     }
   },
   {
@@ -1233,7 +1233,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -1243,7 +1243,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Option automatique invalide."
+      "error": "message.invalid_automatic_option"
     }
   },
   {
@@ -1254,7 +1254,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier."
+      "error": "message.add_port_to_the_command_to_apply_the_port_provided_by_atelier"
     }
   },
   {
@@ -1265,7 +1265,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -1275,7 +1275,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Réglage de projet invalide."
+      "error": "message.invalid_project_setting"
     }
   },
   {
@@ -1284,7 +1284,7 @@
     },
     "settings": {},
     "expected": {
-      "error": "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique."
+      "error": "message.invalid_port_enter_a_number_from_1_to_65535_or_leave_empty_for_a"
     }
   },
   {

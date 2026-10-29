@@ -133,6 +133,35 @@ impl Fixture {
     fn directory(&self) -> &Path {
         self.binary.parent().unwrap()
     }
+    fn manual() -> Self {
+        let mut fixture = Self::new("success");
+        let home = PathBuf::from(&fixture.environment["USERPROFILE"]);
+        let root = home.join(".grok");
+        let bin = root.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let binary = bin.join("grok.exe");
+        std::fs::copy(env!("CARGO_BIN_EXE_native-fixture"), &binary).unwrap();
+        std::fs::write(
+            bin.join(".cli-update-fixture"),
+            "atelier-r03-cli-update/synthetic-only",
+        )
+        .unwrap();
+        std::fs::write(bin.join("installed-version"), "0.0.7").unwrap();
+        std::fs::write(bin.join("update-mode"), "success").unwrap();
+        fixture.info.package = "grok-native".into();
+        fixture.info.latest_version = None;
+        fixture.info.availability = Availability::Manual;
+        fixture.info.managed_root = Some(root.to_str().unwrap().replace('\\', "/"));
+        fixture.info.image = Some(Binary {
+            path: binary.to_str().unwrap().into(),
+            sha256: atelier_app::infrastructure::session::hexadecimal(&Sha256::digest(
+                std::fs::read(&binary).unwrap(),
+            )),
+        });
+        fixture.profile.set("type", &"grok").unwrap();
+        fixture.binary = binary;
+        fixture
+    }
     fn clean_environment(&self) -> BTreeMap<String, OsString> {
         self.environment
             .iter()
@@ -153,6 +182,78 @@ impl Fixture {
         assert!(output.status.success());
         String::from_utf8(output.stdout).unwrap()
     }
+}
+
+#[tokio::test]
+async fn manual_acp_updates_are_pinned_and_do_not_invent_a_target_version() {
+    let registry = Registry::new().await;
+    let fixture = Fixture::manual();
+    let (mut command, pin, _lock) = registry
+        .catalog
+        .prepare_selected(
+            &fixture.profile,
+            &fixture.info,
+            fixture.binary.clone(),
+            fixture.environment.clone(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        command.as_std().get_args().collect::<Vec<_>>(),
+        [std::ffi::OsStr::new("update")]
+    );
+    assert_eq!(
+        command
+            .as_std()
+            .get_envs()
+            .find(|(key, _)| *key == "GROK_HOME")
+            .and_then(|(_, value)| value)
+            .and_then(|value| value.to_str()),
+        fixture.info.managed_root.as_deref()
+    );
+    let output = process_tree::capture_pinned(
+        &mut command,
+        pin,
+        Duration::from_secs(10),
+        1024 * 1024,
+        std::future::pending(),
+    )
+    .await
+    .unwrap();
+    assert!(output.status.success());
+    assert_eq!(fixture.version().await.trim(), "synthetic-agent 0.0.8");
+    assert!(fixture.info.latest_version.is_none());
+    assert_eq!(registry.calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn grok_update_rejects_a_different_configured_installation_root() {
+    let registry = Registry::new().await;
+    let mut fixture = Fixture::manual();
+    fixture
+        .profile
+        .set(
+            "configDir",
+            &fixture
+                ._root
+                .path()
+                .join("different-root")
+                .to_string_lossy(),
+        )
+        .unwrap();
+    assert!(
+        registry
+            .catalog
+            .prepare_selected(
+                &fixture.profile,
+                &fixture.info,
+                fixture.binary.clone(),
+                fixture.environment.clone()
+            )
+            .await
+            .is_err()
+    );
+    assert!(!fixture.directory().join("update-attempted").exists());
 }
 
 #[tokio::test]

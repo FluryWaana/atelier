@@ -36,7 +36,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -108,7 +108,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -180,7 +180,7 @@
       }
     ],
     "expected": {
-      "error": "Un nom de projet est nécessaire.",
+      "error": "message.a_project_name_is_required",
       "projects": [
         {
           "id": "project",
@@ -252,7 +252,7 @@
       }
     ],
     "expected": {
-      "error": "Un nom de projet est nécessaire.",
+      "error": "message.a_project_name_is_required",
       "projects": [
         {
           "id": "project",
@@ -486,7 +486,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -558,7 +558,7 @@
       }
     ],
     "expected": {
-      "error": "Ce répertoire figure déjà dans les projets.",
+      "error": "message.this_directory_is_already_in_the_projects_list",
       "projects": [
         {
           "id": "project",
@@ -629,7 +629,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -701,7 +701,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -774,7 +774,7 @@
       }
     ],
     "expected": {
-      "error": "Ce répertoire figure déjà dans les projets.",
+      "error": "message.this_directory_is_already_in_the_projects_list",
       "projects": [
         {
           "id": "project",
@@ -925,7 +925,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -996,7 +996,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -1067,7 +1067,7 @@
       }
     ],
     "expected": {
-      "error": "Répertoire requis.",
+      "error": "message.directory_required",
       "projects": [
         {
           "id": "project",
@@ -1138,7 +1138,7 @@
       }
     ],
     "expected": {
-      "error": "Répertoire requis.",
+      "error": "message.directory_required",
       "projects": [
         {
           "id": "project",
@@ -1440,7 +1440,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "error": "message.stop_agents_and_timers_and_wait_for_deliveries_to_finish_before",
       "projects": [
         {
           "id": "project",
@@ -1517,7 +1517,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "error": "message.stop_agents_and_timers_and_wait_for_deliveries_to_finish_before",
       "projects": [
         {
           "id": "project",
@@ -1837,7 +1837,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "error": "message.stop_agents_and_timers_and_wait_for_deliveries_to_finish_before",
       "projects": [
         {
           "id": "project",
@@ -2101,7 +2101,7 @@
       }
     ],
     "expected": {
-      "error": "Option d’archivage invalide.",
+      "error": "message.invalid_archiving_option",
       "projects": [
         {
           "id": "project",
@@ -2305,7 +2305,7 @@
       }
     ],
     "expected": {
-      "error": "Option d’archivage invalide.",
+      "error": "message.invalid_archiving_option",
       "projects": [
         {
           "id": "project",
@@ -2376,7 +2376,7 @@
       }
     ],
     "expected": {
-      "error": "Option d’archivage invalide.",
+      "error": "message.invalid_archiving_option",
       "projects": [
         {
           "id": "project",
@@ -2446,7 +2446,7 @@
       }
     ],
     "expected": {
-      "error": "Projet introuvable.",
+      "error": "message.project_not_found",
       "projects": [
         {
           "id": "project",
@@ -2521,7 +2521,7 @@
       }
     ],
     "expected": {
-      "error": "Attends la fin des opérations du projet.",
+      "error": "message.wait_for_project_operations_to_finish",
       "projects": [
         {
           "id": "project",
@@ -2593,7 +2593,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les serveurs Front / Back de ce projet.",
+      "error": "message.stop_this_projects_front_back_servers",
       "projects": [
         {
           "id": "project",
@@ -2670,7 +2670,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+      "error": "message.stop_agents_and_timers_and_wait_for_deliveries_to_finish_before",
       "projects": [
         {
           "id": "project",
@@ -3378,13 +3378,13 @@
         "card:card",
         {
           "invalidate": "card",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         },
         "timestamp",
         "card:archived",
         {
           "invalidate": "archived",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         }
       ]
     }
@@ -3560,7 +3560,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -3636,7 +3636,7 @@
       }
     ],
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "projects": [
         {
           "id": "project",
@@ -3850,7 +3850,7 @@
       }
     ],
     "expected": {
-      "error": "Choisis un autre projet enregistré pour les tests.",
+      "error": "message.choose_another_saved_project_for_testing",
       "projects": [
         {
           "id": "project",
@@ -3922,7 +3922,7 @@
       }
     ],
     "expected": {
-      "error": "Choisis un autre projet enregistré pour les tests.",
+      "error": "message.choose_another_saved_project_for_testing",
       "projects": [
         {
           "id": "project",
@@ -4130,7 +4130,7 @@
       }
     ],
     "expected": {
-      "error": "Projet introuvable.",
+      "error": "message.project_not_found",
       "projects": [
         {
           "id": "project",
@@ -4205,7 +4205,7 @@
       }
     ],
     "expected": {
-      "error": "Attends la fin des opérations du projet avant de modifier ses réglages.",
+      "error": "message.wait_for_project_operations_to_finish_before_changing_settings",
       "projects": [
         {
           "id": "project",
@@ -4515,13 +4515,13 @@
         "card:card",
         {
           "invalidate": "card",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         },
         "timestamp",
         "card:archived",
         {
           "invalidate": "archived",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         }
       ]
     }
@@ -4805,7 +4805,7 @@
       }
     ],
     "expected": {
-      "error": "Retire les worktrees de ce projet avant de modifier son emplacement. Aucun fichier ne sera déplacé automatiquement.",
+      "error": "message.remove_this_projects_worktrees_before_changing_its_location_no_f",
       "projects": [
         {
           "id": "project",
@@ -4873,7 +4873,7 @@
       }
     ],
     "expected": {
-      "error": "Arrête les applications de ce projet avant de modifier son emplacement.",
+      "error": "message.stop_this_projects_applications_before_changing_its_location",
       "projects": [
         {
           "id": "project",
@@ -5324,7 +5324,7 @@
       }
     ],
     "expected": {
-      "error": "Ce répertoire figure déjà dans les projets.",
+      "error": "message.this_directory_is_already_in_the_projects_list",
       "projects": [
         {
           "id": "project",
@@ -5546,7 +5546,7 @@
       }
     ],
     "expected": {
-      "error": "Ce module Git est absent ou ne gère pas les dépôts.",
+      "error": "message.this_git_module_is_missing_or_does_not_handle_repositories",
       "projects": [
         {
           "id": "project",
@@ -6002,7 +6002,7 @@
         "card:card",
         {
           "invalidate": "card",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         },
         "timestamp",
         "card:archived"
@@ -6090,7 +6090,7 @@
         "card:card",
         {
           "invalidate": "card",
-          "reason": "Emplacement du projet modifié : relancez les vérifications et la review."
+          "reason": "message.project_location_changed_review"
         }
       ]
     }

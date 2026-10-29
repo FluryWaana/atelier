@@ -78,17 +78,17 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
                     .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
         })
     {
-        return Err("Exécutable natif local et empreinte de connecteur valides requis.".into());
+        return Err("message.connector_binary_and_hash_required".into());
     }
     let path = path
         .canonicalize()
-        .map_err(|_| "Exécutable de connecteur introuvable.")?;
+        .map_err(|_| "message.connector_executable_missing")?;
     if !local(&path) {
-        return Err("Le connecteur doit être un exécutable natif local.".into());
+        return Err("message.connector_native_executable_required".into());
     }
     let metadata = plain_metadata(&path)?;
     if !metadata.is_file() || metadata.len() > 128 * 1024 * 1024 {
-        return Err("Exécutable de connecteur invalide ou supérieur à 128 Mio.".into());
+        return Err("message.connector_executable_invalid".into());
     }
     let mut options = std::fs::OpenOptions::new();
     options.read(true);
@@ -105,7 +105,7 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
     }
     let file = options.open(&path)?;
     if file.metadata()?.len() > 128 * 1024 * 1024 {
-        return Err("Exécutable de connecteur invalide ou supérieur à 128 Mio.".into());
+        return Err("message.connector_executable_invalid".into());
     }
     let file = CheckedFile::from_file(file)?;
     let mut digest = HashWriter {
@@ -115,7 +115,7 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
     file.copy_to(&mut digest)?;
     let hash = crate::infrastructure::session::hexadecimal(&digest.hash.finalize());
     if expected.as_ref().is_some_and(|expected| expected != &hash) {
-        return Err("Le binaire du connecteur a changé. Réinstalle-le et confirme sa nouvelle portée avant de transmettre des secrets.".into());
+        return Err("message.connector_binary_changed_reinstall".into());
     }
     file.open_same(&path)?;
     let binary = Binary {
@@ -123,7 +123,7 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
         sha256: hash,
     };
     if binary.path.len() > 32_000 || binary.path.chars().any(char::is_control) {
-        return Err("Chemin d’exécutable de connecteur invalide ou trop long.".into());
+        return Err("message.connector_executable_path_invalid".into());
     }
     Ok(Executable {
         binary,
@@ -161,8 +161,8 @@ pub(super) fn values(manifest: &Manifest, request: &Request) -> Result<()> {
             .and_then(Value::as_str)
             .filter(|value| !value.is_empty())
         {
-            let url =
-                reqwest::Url::parse(value).map_err(|_| "Adresse de connecteur HTTPS invalide.")?;
+            let url = reqwest::Url::parse(value)
+                .map_err(|_| "message.connector_https_address_invalid")?;
             if value.chars().any(char::is_control)
                 || url.scheme() != "https"
                 || url.host_str().is_none()
@@ -171,9 +171,7 @@ pub(super) fn values(manifest: &Manifest, request: &Request) -> Result<()> {
                 || url.query().is_some()
                 || url.fragment().is_some()
             {
-                return Err(
-                    "Adresse de connecteur HTTPS requise, sans identifiants ni paramètres.".into(),
-                );
+                return Err("message.connector_https_address_required".into());
             }
         }
     }
@@ -217,10 +215,7 @@ impl Executable {
         if crate::infrastructure::session::hexadecimal(&copy.hash.hash.finalize())
             != self.binary.sha256
         {
-            return Err(
-                "Le binaire du connecteur a changé avant sa copie privée. Aucun appel envoyé."
-                    .into(),
-            );
+            return Err("message.connector_binary_changed_before_copy".into());
         }
         copy.output
             .set_permissions(std::fs::Permissions::from_mode(0o500))?;
@@ -240,18 +235,18 @@ impl Executable {
         timeout: Duration,
     ) -> Result<PreparedCall> {
         if !self.pinned || request.method == Method::Describe {
-            return Err("Installe le connecteur et vérifie son empreinte avant cet appel.".into());
+            return Err("message.connector_installation_required".into());
         }
         values(manifest, &request)?;
         self.prepare_validated(request, timeout)
     }
     fn prepare_validated(self, request: Request, timeout: Duration) -> Result<PreparedCall> {
         if !(Duration::from_millis(100)..=Duration::from_secs(180)).contains(&timeout) {
-            return Err("Délai de connecteur invalide.".into());
+            return Err("message.connector_timeout_invalid".into());
         }
         let input = serde_json::to_vec(&request)?;
         if input.len() > protocol::INPUT_LIMIT {
-            return Err("Requête de connecteur trop volumineuse.".into());
+            return Err("message.connector_request_too_large".into());
         }
         let home = tempfile::tempdir()?;
         for name in ["home", "appdata", "local", "temp"] {
@@ -267,7 +262,7 @@ impl Executable {
     }
     pub async fn describe(self, module: &str) -> Result<(Binary, Manifest)> {
         if !protocol::identifier(module) {
-            return Err("Identifiant de connecteur invalide.".into());
+            return Err("message.connector_identifier_invalid".into());
         }
         let binary = self.binary();
         let request = Request {
@@ -286,13 +281,13 @@ impl Executable {
             .dispatch()
             .await?;
         if reply.status != Status::Ok {
-            return Err("Le connecteur n’a pas fourni son manifeste.".into());
+            return Err("message.connector_manifest_missing".into());
         }
         let manifest: Manifest = serde_json::from_value(reply.output)
-            .map_err(|_| "Manifeste de connecteur invalide.")?;
+            .map_err(|_| "message.connector_manifest_invalid")?;
         protocol::validate_manifest(&manifest)?;
         if manifest.id != module {
-            return Err("Le manifeste appartient à un autre connecteur.".into());
+            return Err("message.connector_manifest_wrong_owner".into());
         }
         Ok((binary, manifest))
     }
@@ -357,23 +352,21 @@ impl PreparedCall {
         if request.module == "azure-tickets" {
             command.arg("connector-azure");
         }
-        let output=process_tree::capture(&mut command,&input,timeout,protocol::OUTPUT_LIMIT).await.map_err(|_|"Appel de connecteur interrompu, trop long ou trop volumineux. Vérifie son état avant de réessayer.")?;
+        let output = process_tree::capture(&mut command, &input, timeout, protocol::OUTPUT_LIMIT)
+            .await
+            .map_err(|_| "message.connector_call_interrupted")?;
         if !output.status.success() {
-            return Err(
-                "Le connecteur n’a pas terminé correctement. Vérifie son installation.".into(),
-            );
+            return Err("message.connector_execution_failed".into());
         }
         let reply = protocol::decode_reply(&output.stdout, &request)?;
         if contains_secret(&serde_json::to_value(&reply)?, &request.secrets) {
-            return Err(
-                "La réponse du connecteur contient des données confidentielles inattendues.".into(),
-            );
+            return Err("message.connector_response_contains_secrets".into());
         }
         executable
             .file
             .open_same(Path::new(&executable.binary.path))?;
         home.close()
-            .map_err(|_| "Le dossier temporaire du connecteur n’a pas pu être nettoyé.")?;
+            .map_err(|_| "message.connector_temporary_cleanup_failed")?;
         Ok(reply)
     }
 }

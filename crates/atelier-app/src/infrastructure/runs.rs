@@ -18,34 +18,31 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
             .iter()
             .any(super::connector_effects::pending)
         {
-            return Err(
-                "Termine ou rapproche les écritures du connecteur avant de lancer une exécution."
-                    .into(),
-            );
+            return Err("message.complete_or_reconcile_module_writes_before_starting_a_run".into());
         }
         if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
-            return Err("Une mise à jour CLI est en cours. Aucun agent lancé.".into());
+            return Err("message.cli_update_blocks_agent".into());
         }
         let id = run
             .get::<String>("id")?
             .filter(|id| !id.is_empty())
-            .ok_or("Identifiant d’exécution absent.")?;
-        let card_id = run.get::<String>("cardId")?.ok_or("Carte absente.")?;
+            .ok_or("message.run_id_missing")?;
+        let card_id = run.get::<String>("cardId")?.ok_or("message.card_missing")?;
         let repo = run
             .get::<String>("repo")?
             .filter(|repo| !repo.is_empty())
-            .ok_or("Dossier d’exécution absent.")?;
+            .ok_or("message.run_directory_missing")?;
         if !run.string_equals("status", "starting")? {
-            return Err("État initial d’exécution invalide.".into());
+            return Err("message.initial_run_state_invalid".into());
         }
         if run.get::<bool>("queued")?.unwrap_or(false) {
             super::queue::require_claim(store, run)?;
         }
         let mut card = store
             .document::<Card>(Documents::Cards, &card_id)?
-            .ok_or("Carte introuvable.")?;
+            .ok_or("message.card_not_found")?;
         if card.fields.truthy("archived")? {
-            return Err("Restaure cette tâche avant de lancer un agent.".into());
+            return Err("message.restore_task_before_agent".into());
         }
         super::automation::require_run(
             store,
@@ -55,35 +52,33 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         )?;
         if atelier_core::application::jira::unresolved(&card.fields)? {
             return Err(
-                "Termine ou vérifie l’opération Jira avant de lancer une exécution.".into(),
+                "message.complete_or_reconcile_the_jira_operation_before_starting_a_run".into(),
             );
         }
         if atelier_core::application::forge::unresolved(&card.fields)? {
-            return Err("Vérifie l’opération de forge avant de lancer une exécution.".into());
+            return Err("message.check_the_forge_operation_before_starting_a_run".into());
         }
         if super::tempo_export::blocks(store, &format!("/api/cards/{card_id}/runs/start"))? {
-            return Err(
-                "Termine ou vérifie l’export de temps avant de lancer une exécution.".into(),
-            );
+            return Err("message.finish_or_check_the_time_export_before_starting_a_run".into());
         }
         if run.string_equals("purpose", "verification")? {
             let worktree = run
                 .get::<atelier_core::contracts::Worktree>("verificationWorktree")?
                 .filter(|worktree| worktree.state == atelier_core::contracts::WorktreeState::Ready)
-                .ok_or("Prépare le worktree avant la vérification.")?;
+                .ok_or("message.prepare_the_worktree_before_verification")?;
             if !atelier_core::domain::projects::same_repository(
                 &repo,
                 &worktree.path,
                 cfg!(windows),
             ) {
-                return Err("Le besoin ou le worktree a changé avant la vérification.".into());
+                return Err("message.requirements_or_worktree_changed_before_verification".into());
             }
             super::forge_association::snapshot(store, &card)?;
             super::verification::require_command(
                 store,
                 &card,
                 &run.get::<String>("verificationCommand")?
-                    .ok_or("Commande de vérification invalide.")?,
+                    .ok_or("message.invalid_verification_command")?,
             )?;
             if run.get::<serde_json::Value>("requirements")?.as_ref()
                 != Some(&atelier_core::application::preparation::requirements(
@@ -94,7 +89,7 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
                     .get::<atelier_core::contracts::Worktree>("worktree")?
                     != run.get::<atelier_core::contracts::Worktree>("verificationWorktree")?
             {
-                return Err("Le besoin ou le worktree a changé avant la vérification.".into());
+                return Err("message.requirements_or_worktree_changed_before_verification".into());
             }
         }
         if run.string_equals("kind", "pr-review")? {
@@ -106,13 +101,13 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
             } else {
                 let context = run
                     .get::<atelier_core::application::reviews::Context>("reviewContext")?
-                    .ok_or("Contexte de review absent.")?;
+                    .ok_or("message.missing_review_context")?;
                 super::reviews::matches(store, &card, &context)?;
             }
         }
         if run.string_equals("purpose", "correction")? {
             if !run.string_equals("mode", "edit")? {
-                return Err("Confirme la correction sélectionnée en mode Modification.".into());
+                return Err("message.confirm_the_selected_correction_in_edit_mode".into());
             }
             if let Some(context) = run
                 .get::<atelier_core::application::extensions::RepositoryReviewContext>(
@@ -120,34 +115,36 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
             )? {
                 let review = run
                     .get::<String>("correctionOf")?
-                    .ok_or("Review absente.")?;
+                    .ok_or("message.review_missing")?;
                 let indexes = run
                     .get::<Vec<usize>>("correctionIndexes")?
-                    .ok_or("Constats absents.")?;
+                    .ok_or("message.findings_missing")?;
                 if super::connector_repositories::correction(store, &card, &review, &indexes)?.0
                     != context
                 {
-                    return Err("Les commits ou critères du module ont changé.".into());
+                    return Err("message.connector_commits_criteria_changed".into());
                 }
             } else {
                 let context = run
                     .get::<atelier_core::application::reviews::Context>("reviewContext")?
-                    .ok_or("Contexte de review absent.")?;
+                    .ok_or("message.missing_review_context")?;
                 let review = run
                     .get::<String>("correctionOf")?
-                    .ok_or("Review introuvable.")?;
+                    .ok_or("message.review_not_found")?;
                 let indexes = run
                     .get::<Vec<usize>>("correctionIndexes")?
-                    .ok_or("Sélection de constats invalide.")?;
+                    .ok_or("message.invalid_finding_selection")?;
                 if super::reviews::correction(store, &card, &review, &indexes)?.0 != context {
-                    return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+                    return Err(
+                        "message.commits_or_requirements_changed_run_the_review_again".into(),
+                    );
                 }
             }
             let invalidation = atelier_core::application::task_editing::invalidate_reviews(
                 &card_id,
                 &mut card.fields,
                 store.documents::<Document>(Documents::Runs)?,
-                "Une correction a démarré. Relance la review sur les changements obtenus.",
+                "message.a_correction_started_review_the_resulting_changes_again",
             )?;
             for previous in invalidation.runs {
                 store.put(Documents::Runs, &previous)?;
@@ -161,13 +158,13 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         {
             let prerequisite = store
                 .document::<Card>(Documents::Cards, &dependency)?
-                .ok_or("Une tâche préalable est introuvable.")?;
+                .ok_or("message.prerequisite_task_missing")?;
             if !prerequisite.fields.string_equals("status", "done")? {
-                return Err("Termine les tâches préalables avant de lancer un agent.".into());
+                return Err("message.complete_prerequisite_tasks_before_starting_an_agent".into());
             }
         }
         if store.document::<Document>(Documents::Runs, &id)?.is_some() {
-            return Err("Identifiant d’exécution déjà utilisé.".into());
+            return Err("message.run_id_already_used".into());
         }
         for previous in store.documents::<Document>(Documents::Runs)? {
             if active(&previous)?
@@ -178,7 +175,9 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
                         cfg!(windows),
                     ))
             {
-                return Err("Un agent travaille déjà sur cette tâche ou dans ce dossier.".into());
+                return Err(
+                    "message.an_agent_is_already_working_on_this_task_or_in_this_directory".into(),
+                );
             }
         }
         let mut run = run.clone();
@@ -199,10 +198,10 @@ pub fn transition(
     store.transaction(|store| {
         let mut run = store
             .document::<Document>(Documents::Runs, id)?
-            .ok_or("Exécution introuvable.")?;
+            .ok_or("message.run_not_found")?;
         let current = run
             .get::<String>("status")?
-            .ok_or("État d’exécution absent.")?;
+            .ok_or("message.run_state_missing")?;
         let allowed = matches!(
             (current.as_str(), status),
             ("starting", "running" | "stopping" | "failed")
@@ -210,7 +209,7 @@ pub fn transition(
                 | ("stopping", "cancelled" | "failed")
         );
         if !allowed {
-            return Err("Transition d’exécution périmée ou invalide.".into());
+            return Err("message.run_transition_invalid".into());
         }
         run.set("status", &status)?;
         let purpose = run.get::<String>("purpose")?.unwrap_or_default();
@@ -223,7 +222,7 @@ pub fn transition(
                 run.get::<String>("summary")?.unwrap_or_default()
             };
             let parsed = if run.get::<bool>("structuredOverflow")?.unwrap_or(false) {
-                Err("Réponse structurée trop volumineuse.")
+                Err("message.structured_response_too_large")
             } else if purpose == "brainstorm" {
                 atelier_core::application::brainstorm::parse(&text)
                     .map(|value| serde_json::to_value(value).expect("brainstorm serialization"))
@@ -240,7 +239,7 @@ pub fn transition(
             } else {
                 let context = run
                     .get::<atelier_core::application::reviews::Context>("reviewContext")?
-                    .ok_or("Contexte de review absent.")?;
+                    .ok_or("message.missing_review_context")?;
                 atelier_core::application::reviews::parse(&text, &context)
                     .map(|value| serde_json::to_value(value).expect("review serialization"))
             };
@@ -272,14 +271,14 @@ pub fn transition(
 /// Only complete, already redacted messages may cross this storage boundary.
 pub fn append(store: &Store<'_>, id: &str, stream: &str, message: &str) -> Result<()> {
     if !["stdout", "stderr", "system"].contains(&stream) {
-        return Err("Flux de journal invalide.".into());
+        return Err("message.log_stream_invalid".into());
     }
     store.transaction(|store| {
         let mut run = store
             .document::<Document>(Documents::Runs, id)?
-            .ok_or("Exécution introuvable.")?;
+            .ok_or("message.run_not_found")?;
         if !active(&run)? {
-            return Err("Exécution terminée.".into());
+            return Err("message.run_finished".into());
         }
         if stream == "stdout"
             && matches!(
@@ -352,9 +351,7 @@ fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
         if !active(&run)? {
             continue;
         }
-        let id = run
-            .get::<String>("id")?
-            .ok_or("Identifiant d’exécution absent.")?;
+        let id = run.get::<String>("id")?.ok_or("message.run_id_missing")?;
         run.set("status", &"interrupted")?;
         run.set("endedAt", &timestamp)?;
         run.remove("interactions");

@@ -12,16 +12,16 @@ Le plan et les capacités restent décrits dans [rust-migration-plan.md](rust-mi
 
 | Périmètre | Fichiers |
 | --- | ---: |
-| crates/atelier-core | 66 |
-| crates/atelier-app | 184 |
-| crates/atelier-ui | 53 |
+| crates/atelier-core | 80 |
+| crates/atelier-app | 185 |
+| crates/atelier-ui | 54 |
 | xtask | 100 |
-| scripts | 4 |
+| scripts | 7 |
 | .github | 1 |
 | .cargo | 1 |
 | racine | 9 |
 
-Total : 418 fichiers.
+Total : 437 fichiers.
 
 ## Fichiers
 
@@ -32,10 +32,10 @@ Total : 418 fichiers.
 | [.github/workflows/rust.yml](../.github/workflows/rust.yml) | Configuration |
 | [.gitignore](../.gitignore) | Configuration |
 | [AGENTS.md](../AGENTS.md) | Ressource / documentation |
+| [Atelier.cmd](../Atelier.cmd) | Ressource / documentation |
 | [Cargo.lock](../Cargo.lock) | Configuration |
 | [Cargo.toml](../Cargo.toml) | Configuration |
 | [LICENSE](../LICENSE) | Ressource / documentation |
-| [Preview.cmd](../Preview.cmd) | Ressource / documentation |
 | [README.md](../README.md) | Ressource / documentation |
 | [crates/atelier-app/Cargo.toml](../crates/atelier-app/Cargo.toml) | Configuration |
 | [crates/atelier-app/examples/connector-demo.rs](../crates/atelier-app/examples/connector-demo.rs) | Test / support |
@@ -87,6 +87,7 @@ Total : 418 fichiers.
 | [crates/atelier-app/src/infrastructure/agent_cli.rs](../crates/atelier-app/src/infrastructure/agent_cli.rs) | Source Rust |
 | [crates/atelier-app/src/infrastructure/agent_context.rs](../crates/atelier-app/src/infrastructure/agent_context.rs) | Source Rust |
 | [crates/atelier-app/src/infrastructure/agent_diagnostics.rs](../crates/atelier-app/src/infrastructure/agent_diagnostics.rs) | Source Rust |
+| [crates/atelier-app/src/infrastructure/agent_models.rs](../crates/atelier-app/src/infrastructure/agent_models.rs) | Source Rust |
 | [crates/atelier-app/src/infrastructure/agent_providers.rs](../crates/atelier-app/src/infrastructure/agent_providers.rs) | Source Rust |
 | [crates/atelier-app/src/infrastructure/automation.rs](../crates/atelier-app/src/infrastructure/automation.rs) | Source Rust |
 | [crates/atelier-app/src/infrastructure/azure_tickets.rs](../crates/atelier-app/src/infrastructure/azure_tickets.rs) | Source Rust |
@@ -226,7 +227,11 @@ Total : 418 fichiers.
 | [crates/atelier-core/src/application/agent_account.rs](../crates/atelier-core/src/application/agent_account.rs) | Source Rust |
 | [crates/atelier-core/src/application/agent_cli.rs](../crates/atelier-core/src/application/agent_cli.rs) | Source Rust |
 | [crates/atelier-core/src/application/agent_protocol.rs](../crates/atelier-core/src/application/agent_protocol.rs) | Source Rust |
+| [crates/atelier-core/src/application/agent_protocol/acp.rs](../crates/atelier-core/src/application/agent_protocol/acp.rs) | Source Rust |
+| [crates/atelier-core/src/application/agent_protocol/claude.rs](../crates/atelier-core/src/application/agent_protocol/claude.rs) | Source Rust |
+| [crates/atelier-core/src/application/agent_protocol/codex.rs](../crates/atelier-core/src/application/agent_protocol/codex.rs) | Source Rust |
 | [crates/atelier-core/src/application/agent_providers.rs](../crates/atelier-core/src/application/agent_providers.rs) | Source Rust |
+| [crates/atelier-core/src/application/agent_status.rs](../crates/atelier-core/src/application/agent_status.rs) | Source Rust |
 | [crates/atelier-core/src/application/agent_usage.rs](../crates/atelier-core/src/application/agent_usage.rs) | Source Rust |
 | [crates/atelier-core/src/application/automation.rs](../crates/atelier-core/src/application/automation.rs) | Source Rust |
 | [crates/atelier-core/src/application/backups.rs](../crates/atelier-core/src/application/backups.rs) | Source Rust |
@@ -252,6 +257,15 @@ Total : 418 fichiers.
 | [crates/atelier-core/src/contracts.rs](../crates/atelier-core/src/contracts.rs) | Source Rust |
 | [crates/atelier-core/src/document.rs](../crates/atelier-core/src/document.rs) | Source Rust |
 | [crates/atelier-core/src/domain.rs](../crates/atelier-core/src/domain.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog.rs](../crates/atelier-core/src/domain/agent_catalog.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/acp.rs](../crates/atelier-core/src/domain/agent_catalog/acp.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/claude.rs](../crates/atelier-core/src/domain/agent_catalog/claude.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/codex.rs](../crates/atelier-core/src/domain/agent_catalog/codex.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/command.rs](../crates/atelier-core/src/domain/agent_catalog/command.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/copilot.rs](../crates/atelier-core/src/domain/agent_catalog/copilot.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/gemini.rs](../crates/atelier-core/src/domain/agent_catalog/gemini.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/grok.rs](../crates/atelier-core/src/domain/agent_catalog/grok.rs) | Source Rust |
+| [crates/atelier-core/src/domain/agent_catalog/opencode.rs](../crates/atelier-core/src/domain/agent_catalog/opencode.rs) | Source Rust |
 | [crates/atelier-core/src/domain/agent_context.rs](../crates/atelier-core/src/domain/agent_context.rs) | Source Rust |
 | [crates/atelier-core/src/domain/agent_options.rs](../crates/atelier-core/src/domain/agent_options.rs) | Source Rust |
 | [crates/atelier-core/src/domain/checklist.rs](../crates/atelier-core/src/domain/checklist.rs) | Source Rust |
@@ -263,6 +277,7 @@ Total : 418 fichiers.
 | [crates/atelier-core/tests/agent-account.rs](../crates/atelier-core/tests/agent-account.rs) | Test / support |
 | [crates/atelier-core/tests/agent-cli.rs](../crates/atelier-core/tests/agent-cli.rs) | Test / support |
 | [crates/atelier-core/tests/agent-protocol.rs](../crates/atelier-core/tests/agent-protocol.rs) | Test / support |
+| [crates/atelier-core/tests/agent-status.rs](../crates/atelier-core/tests/agent-status.rs) | Test / support |
 | [crates/atelier-core/tests/agent-usage.rs](../crates/atelier-core/tests/agent-usage.rs) | Test / support |
 | [crates/atelier-core/tests/brainstorm.rs](../crates/atelier-core/tests/brainstorm.rs) | Test / support |
 | [crates/atelier-core/tests/connector-ticket-transitions.rs](../crates/atelier-core/tests/connector-ticket-transitions.rs) | Test / support |
@@ -292,6 +307,7 @@ Total : 418 fichiers.
 | [crates/atelier-ui/atelier-kanban.png](../crates/atelier-ui/atelier-kanban.png) | Ressource / documentation |
 | [crates/atelier-ui/index.html](../crates/atelier-ui/index.html) | Ressource / documentation |
 | [crates/atelier-ui/locales/en-US.json](../crates/atelier-ui/locales/en-US.json) | Ressource / documentation |
+| [crates/atelier-ui/locales/fr-FR.json](../crates/atelier-ui/locales/fr-FR.json) | Ressource / documentation |
 | [crates/atelier-ui/src/agent_cli.rs](../crates/atelier-ui/src/agent_cli.rs) | Source Rust |
 | [crates/atelier-ui/src/agent_diagnostics.rs](../crates/atelier-ui/src/agent_diagnostics.rs) | Source Rust |
 | [crates/atelier-ui/src/agent_profiles.rs](../crates/atelier-ui/src/agent_profiles.rs) | Source Rust |
@@ -341,8 +357,11 @@ Total : 418 fichiers.
 | [crates/atelier-ui/src/worktree.rs](../crates/atelier-ui/src/worktree.rs) | Source Rust |
 | [crates/atelier-ui/style.css](../crates/atelier-ui/style.css) | Ressource / documentation |
 | [rust-toolchain.toml](../rust-toolchain.toml) | Configuration |
-| [scripts/preview-watch.tests.ps1](../scripts/preview-watch.tests.ps1) | Outil natif / fabrication |
-| [scripts/preview.ps1](../scripts/preview.ps1) | Outil natif / fabrication |
+| [scripts/agent-badges.tests.ps1](../scripts/agent-badges.tests.ps1) | Outil natif / fabrication |
+| [scripts/atelier-browser.tests.ps1](../scripts/atelier-browser.tests.ps1) | Outil natif / fabrication |
+| [scripts/atelier-watch.tests.ps1](../scripts/atelier-watch.tests.ps1) | Outil natif / fabrication |
+| [scripts/atelier-windows51.tests.ps1](../scripts/atelier-windows51.tests.ps1) | Outil natif / fabrication |
+| [scripts/atelier.ps1](../scripts/atelier.ps1) | Outil natif / fabrication |
 | [scripts/rust-keyring-accounts.sh](../scripts/rust-keyring-accounts.sh) | Outil natif / fabrication |
 | [scripts/rust-keyring-macos-accounts.sh](../scripts/rust-keyring-macos-accounts.sh) | Outil natif / fabrication |
 | [xtask/Cargo.toml](../xtask/Cargo.toml) | Configuration |

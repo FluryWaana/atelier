@@ -52,7 +52,7 @@ async fn dispatch(profile: &Installed, request: Request) -> Result<Reply> {
         .dispatch()
         .await?;
     if reply.status != Status::Ok {
-        return Err("Le module n’a pas fourni une observation de dépôt utilisable.".into());
+        return Err("message.the_module_did_not_provide_a_usable_repository_observation".into());
     }
     Ok(reply)
 }
@@ -60,7 +60,7 @@ pub async fn prepare_review(state: &Shared, card: &Card) -> Result<RepositoryRev
     let linked = card
         .fields
         .get::<ModulePullRequestLink>("connectorPullRequest")?
-        .ok_or("PR/MR du module non liée.")?;
+        .ok_or("message.no_module_pr_mr_is_associated")?;
     let expected = card.clone();
     let module = linked.module.clone();
     let revision = linked.revision;
@@ -82,7 +82,7 @@ pub async fn prepare_review(state: &Shared, card: &Card) -> Result<RepositoryRev
         .await?;
     let guard = prepare_read(state, &profile, &mut request)
         .await?
-        .ok_or("Préparation du module absente.")?;
+        .ok_or("message.the_module_preparation_is_missing")?;
     let reply = dispatch(&profile, request).await?;
     let proposal = guard.observe(&reply.output, true).await?;
     let context = proposal.context.clone();
@@ -112,7 +112,7 @@ pub async fn remote_guard(
         .call(move |store| {
             store
                 .document::<Card>(Documents::Cards, &id)?
-                .ok_or_else(|| "Carte absente.".into())
+                .ok_or_else(|| "message.card_missing".into())
         })
         .await?;
     let selection = Selection {
@@ -142,7 +142,9 @@ pub async fn remote_guard(
             || fresh.context != proposal.context
             || fresh.observation != proposal.observation
         {
-            return Err("Les sources ou la destination du module ont changé. Relis l’aperçu de publication.".into());
+            return Err(
+                "message.the_module_sources_or_destination_changed_read_the_publication_p".into(),
+            );
         }
     }
     Ok(Some(guard))
@@ -153,7 +155,7 @@ fn idle(state: &Shared) -> Result<()> {
         || !state.services.active_projects().is_empty()
     {
         return Err(
-            "Arrête les agents et services avant cette opération de dépôt du module.".into(),
+            "message.stop_agents_and_services_before_this_module_repository_operation".into(),
         );
     }
     Ok(())
@@ -179,10 +181,10 @@ pub async fn validate_review(
         .call(move |store| {
             let mut run = store
                 .document::<atelier_core::document::Document>(Documents::Runs, &selected)?
-                .ok_or("Review absente.")?;
+                .ok_or("message.review_missing")?;
             let context = run
                 .get::<RepositoryReviewContext>("connectorReviewContext")?
-                .ok_or("Contexte du module absent.")?;
+                .ok_or("message.connector_context_missing")?;
             if !run.string_equals("cardId", &expected.id)?
                 || !run.string_equals("kind", "pr-review")?
                 || !run.string_equals("status", "completed")?
@@ -190,7 +192,7 @@ pub async fn validate_review(
                     .get::<atelier_core::application::reviews::Review>("review")?
                     .is_none()
             {
-                return Err("Review de module incomplète.".into());
+                return Err("message.the_module_review_is_incomplete".into());
             }
             run.set(
                 "reviewStaleReason",
@@ -204,7 +206,7 @@ pub async fn validate_review(
     let current = prepare_review(state, card).await?;
     if recorded != current {
         return Err(
-            "Les commits, les critères ou la PR/MR du module ont changé. Relance la review.".into(),
+            "message.the_module_commits_criteria_or_pr_mr_changed_run_the_review_agai".into(),
         );
     }
     let expected = card.clone();

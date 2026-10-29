@@ -90,7 +90,7 @@ async fn compiled_synthetic_diagnostics_resolve_native_programs_without_shell_or
     let binary = root.path().join("synthetic-agent");
     std::fs::copy(env!("CARGO_BIN_EXE_native-fixture"), &binary).unwrap();
     let profile:Document=serde_json::from_str(&serde_json::json!({"id":"synthetic","type":"command","auth":"cli","command":binary,"statusArgs":["agent-status","present"]}).to_string()).unwrap();
-    let diagnostic = diagnose(profile).await.unwrap();
+    let diagnostic = diagnose(profile, None, false).await.unwrap();
     assert_eq!(diagnostic.version.as_deref(), Some("0.0.7"));
     assert_eq!(diagnostic.authentication, AgentAuthentication::Present);
     assert!(

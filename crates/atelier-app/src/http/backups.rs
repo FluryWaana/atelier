@@ -19,11 +19,11 @@ fn response(result: Result<Value>) -> Response {
             Some(BackupFailure::Conflict(message)) => failure(StatusCode::CONFLICT, message),
             Some(BackupFailure::Invalid(message)) => failure(StatusCode::BAD_REQUEST, message),
             None if error.is::<serde_json::Error>() => {
-                failure(StatusCode::BAD_REQUEST, "Sauvegarde endommagée.")
+                failure(StatusCode::BAD_REQUEST, "message.corrupted_backup")
             }
             None => failure(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Opération de sauvegarde impossible.",
+                "message.the_backup_operation_could_not_be_completed",
             ),
         },
     }
@@ -53,11 +53,31 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
                 for card in store.documents::<atelier_core::contracts::Card>(Documents::Cards)? {
                     interrupted |= atelier_core::application::worktrees::interrupted(&card)?;
                 }
-                if interrupted { return Err(BackupFailure::Conflict("Termine ou vérifie les opérations de worktree avant une sauvegarde ou une restauration.").into()); }
+                if interrupted {
+                    return Err(BackupFailure::Conflict(
+                        "message.finish_or_verify_worktree_operations_before_creating_or_restorin",
+                    )
+                    .into());
+                }
                 let mut active_runs = false;
-                for run in store.documents::<Document>(Documents::Runs)? { active_runs |= crate::infrastructure::runs::active(&run)?; }
-                if store.settings::<Document>()?.raw("jiraImportReservation").is_some() { return Err(BackupFailure::Conflict("Un import Jira est en cours.").into()); }
-                backups::require_idle(active_runs, false, false, &store.documents(Documents::Times)?)?;
+                for run in store.documents::<Document>(Documents::Runs)? {
+                    active_runs |= crate::infrastructure::runs::active(&run)?;
+                }
+                if store
+                    .settings::<Document>()?
+                    .raw("jiraImportReservation")
+                    .is_some()
+                {
+                    return Err(
+                        BackupFailure::Conflict("message.a_jira_import_is_in_progress").into(),
+                    );
+                }
+                backups::require_idle(
+                    active_runs,
+                    false,
+                    false,
+                    &store.documents(Documents::Times)?,
+                )?;
                 if !restore {
                     return Ok(serde_json::to_value(directory.create(store)?)?);
                 }

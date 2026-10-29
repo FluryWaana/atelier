@@ -38,7 +38,7 @@ pub(super) async fn preview(
                 )?;
                 if !profile.manifest.methods.contains(&Method::TicketsReset) {
                     return Err(
-                        "Ce connecteur ne déclare pas la resynchronisation complète.".into(),
+                        "message.this_module_does_not_declare_complete_resynchronization".into(),
                     );
                 }
                 let source = reset::source(store, &profile)?;
@@ -59,8 +59,7 @@ pub(super) async fn preview(
                 .await?;
             if reply.status != Status::Ok {
                 return Err(
-                    "Lecture complète interrompue par le connecteur ; aucune carte modifiée."
-                        .into(),
+                    "message.the_module_interrupted_the_complete_read_no_task_was_changed".into(),
                 );
             }
             let report = Report {
@@ -82,10 +81,14 @@ pub(super) async fn preview(
             .call(move |store| traversal.save(store, &profile, source))
             .await
     };
-    response(match tokio::time::timeout(Duration::from_secs(180),operation).await {
-        Ok(result)=>result,
-        Err(_)=>Err("Lecture complète trop longue ; aucune carte modifiée, aucun résultat partiel appliqué.".into()),
-    })
+    response(
+        match tokio::time::timeout(Duration::from_secs(180), operation).await {
+            Ok(result) => result,
+            Err(_) => Err(
+                "message.the_complete_read_timed_out_no_task_was_changed_and_no_partial_r".into(),
+            ),
+        },
+    )
 }
 
 pub(super) async fn apply(

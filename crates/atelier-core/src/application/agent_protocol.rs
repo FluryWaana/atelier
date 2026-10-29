@@ -1,3 +1,7 @@
+mod acp;
+mod claude;
+mod codex;
+
 use crate::contracts::{AgentAnswer, AgentInteraction, AgentQuestion};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -8,6 +12,36 @@ type Result<T> = std::result::Result<T, &'static str>;
 pub enum Kind {
     Codex,
     Claude,
+    Acp,
+}
+
+impl Kind {
+    pub fn from_id(id: &str) -> Option<Self> {
+        use crate::domain::agent_catalog::ProtocolKind;
+        match crate::domain::agent_catalog::find(id)?.protocol {
+            ProtocolKind::Codex => Some(Self::Codex),
+            ProtocolKind::Claude => Some(Self::Claude),
+            ProtocolKind::Acp => Some(Self::Acp),
+            ProtocolKind::Command => None,
+        }
+    }
+
+    pub fn launch_arguments(
+        self,
+        id: &str,
+        edit: bool,
+        model: &str,
+        effort: &str,
+        api_key: bool,
+    ) -> Vec<String> {
+        match self {
+            Self::Codex => codex::launch_arguments(api_key),
+            Self::Claude => claude::launch_arguments(edit, model, effort),
+            Self::Acp => crate::domain::agent_catalog::find(id)
+                .map(|agent| agent.launch_args.iter().map(|arg| (*arg).into()).collect())
+                .unwrap_or_default(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -17,6 +51,8 @@ enum Phase {
     CheckingCredentials,
     Authenticating,
     StartingThread,
+    SettingOptions,
+    SettingMode,
     Running,
 }
 
@@ -58,6 +94,7 @@ pub struct Protocol {
     preview: String,
     codex_usage: Option<Value>,
     cost_eligible: bool,
+    acp_setup: acp::Setup,
 }
 
 pub struct ProtocolConfig {
@@ -76,7 +113,7 @@ fn text(value: &Value, limit: usize) -> Result<String> {
         .as_str()
         .filter(|value| !value.is_empty() && value.len() <= limit && !value.contains('\0'))
         .map(str::to_owned)
-        .ok_or("Message de protocole invalide.")
+        .ok_or("message.protocol_message_invalid")
 }
 fn wire_id(value: &Value) -> Result<Value> {
     if value.is_i64()
@@ -87,7 +124,7 @@ fn wire_id(value: &Value) -> Result<Value> {
     {
         Ok(value.clone())
     } else {
-        Err("Identifiant de protocole invalide.")
+        Err("message.protocol_id_invalid")
     }
 }
 
@@ -122,6 +159,7 @@ impl Protocol {
             preview: String::new(),
             codex_usage: None,
             cost_eligible: true,
+            acp_setup: acp::Setup::default(),
         };
         for secret in secrets
             .into_iter()
@@ -178,9 +216,9 @@ impl Protocol {
         self.phase == Phase::Running
     }
     fn preview(&mut self, delta: &Value) -> Result<String> {
-        let delta = delta.as_str().ok_or("Fragment public invalide.")?;
+        let delta = delta.as_str().ok_or("message.public_fragment_invalid")?;
         if self.preview.len().saturating_add(delta.len()) > 1024 * 1024 {
-            return Err("Réponse de l’agent trop longue.");
+            return Err("message.agent_response_too_long");
         }
         self.preview.push_str(delta);
         // Mask the whole buffer before withholding the suffix that could contain an incomplete secret.
@@ -199,17 +237,14 @@ impl Protocol {
     }
     pub fn start(&mut self) -> Result<Effects> {
         if self.phase != Phase::New {
-            return Err("Session déjà initialisée.");
+            return Err("message.session_already_initialized");
         }
         self.phase = Phase::Initializing;
         Ok(Effects {
             send: vec![match self.kind {
-                Kind::Codex => {
-                    json!({"id":"initialize","method":"initialize","params":{"clientInfo":{"name":"atelier_kanban","title":"Atelier Kanban","version":env!("CARGO_PKG_VERSION")},"capabilities":{"experimentalApi":true}}})
-                }
-                Kind::Claude => {
-                    json!({"type":"control_request","request_id":"initialize","request":{"subtype":"initialize"}})
-                }
+                Kind::Codex => codex::initialize(),
+                Kind::Claude => claude::initialize(),
+                Kind::Acp => acp::initialize(),
             }],
             ..Effects::default()
         })
@@ -227,7 +262,7 @@ impl Protocol {
         blocking: bool,
     ) -> Result<()> {
         if self.pending.len() >= 32 || self.pending.values().any(|pending| pending.wire_id == id) {
-            return Err("Demandes de l’agent trop nombreuses ou dupliquées.");
+            return Err("message.agent_requests_invalid");
         }
         self.serial += 1;
         let key = format!("interaction-{}", self.serial);
@@ -248,11 +283,11 @@ impl Protocol {
         let list = value
             .as_array()
             .filter(|list| !list.is_empty() && list.len() <= 8)
-            .ok_or("Questions de l’agent invalides.")?;
+            .ok_or("message.agent_questions_invalid")?;
         let mut unique = std::collections::BTreeSet::new();
         for question in list {
             if !unique.insert(text(&question["question"], 4000)?) {
-                return Err("Question dupliquée.");
+                return Err("message.question_duplicate");
             }
         }
         list.iter()
@@ -263,18 +298,18 @@ impl Protocol {
                         .get(field)
                         .is_some_and(|value| !value.is_null() && !value.is_boolean())
                     {
-                        return Err("Questions de l’agent invalides.");
+                        return Err("message.agent_questions_invalid");
                     }
                 }
                 if value
                     .get("options")
                     .is_some_and(|value| !value.is_null() && !value.is_array())
                 {
-                    return Err("Questions de l’agent invalides.");
+                    return Err("message.agent_questions_invalid");
                 }
                 let options = value.get("options").and_then(Value::as_array);
                 if options.is_some_and(|options| options.len() > 20) {
-                    return Err("Trop de choix proposés par l’agent.");
+                    return Err("message.agent_choices_too_many");
                 }
                 let options = options
                     .into_iter()
@@ -296,7 +331,7 @@ impl Protocol {
                     .len()
                     != options.len()
                 {
-                    return Err("Choix de question dupliqué.");
+                    return Err("message.question_choice_duplicate");
                 }
                 Ok(AgentQuestion {
                     id: index.to_string(),
@@ -304,6 +339,7 @@ impl Protocol {
                     options,
                     multi_select: value["multiSelect"] == true,
                     is_secret: value["isSecret"] == true,
+                    required: true,
                 })
             })
             .collect()
@@ -313,13 +349,14 @@ impl Protocol {
             return Ok(Effects::default());
         }
         if !event.is_object() {
-            return Err("Message de protocole invalide.");
+            return Err("message.protocol_message_invalid");
         }
         let pending = self.pending.len();
         let serial = self.serial;
         let mut effects = match self.kind {
             Kind::Codex => self.codex(event)?,
             Kind::Claude => self.claude(event)?,
+            Kind::Acp => self.acp(event)?,
         };
         for text in &mut effects.text {
             *text = self.redact(text);
@@ -338,347 +375,6 @@ impl Protocol {
             effects.preview = Some(self.preview(&json!(""))?);
         }
         Ok(effects)
-    }
-    fn codex(&mut self, event: Value) -> Result<Effects> {
-        let mut out = Effects::default();
-        let p = &event["params"];
-        let method = event["method"].as_str().unwrap_or("");
-        if p.get("threadId").is_some()
-            && self
-                .thread
-                .as_ref()
-                .is_some_and(|thread| p["threadId"] != *thread)
-        {
-            return Ok(out);
-        }
-        if !method.is_empty() && event.get("id").is_some() {
-            if self.phase != Phase::Running {
-                return Err("Demande reçue avant le démarrage de l’agent.");
-            }
-            let id = wire_id(&event["id"])?;
-            let detail = serde_json::to_string_pretty(p).map_err(|_| "Demande invalide.")?;
-            if detail.len() > 48 * 1024 {
-                return Err("Demande de l’agent trop longue.");
-            }
-            if method == "item/tool/requestUserInput" {
-                let questions = self.questions(&p["questions"])?;
-                let original = p["questions"].as_array().ok_or("Questions invalides.")?;
-                let mut unique = std::collections::BTreeSet::new();
-                for question in original {
-                    if !unique.insert(text(&question["id"], 128)?) {
-                        return Err("Identifiant de question dupliqué.");
-                    }
-                }
-                self.ask(
-                    id,
-                    method,
-                    p.clone(),
-                    AgentInteraction {
-                        id: String::new(),
-                        title: "L’agent attend votre réponse".into(),
-                        detail: String::new(),
-                        can_allow: true,
-                        questions,
-                    },
-                    p["isBlocking"] != false,
-                )?;
-            } else if [
-                "item/commandExecution/requestApproval",
-                "item/fileChange/requestApproval",
-                "item/permissions/requestApproval",
-            ]
-            .contains(&method)
-            {
-                let item = p["itemId"].as_str().and_then(|id| self.items.get(id));
-                let allow = match method {
-                    "item/fileChange/requestApproval" => {
-                        self.edit
-                            && item
-                                .and_then(|item| item["changes"].as_array())
-                                .is_some_and(|changes| {
-                                    !changes.is_empty()
-                                        && changes.iter().all(|change| {
-                                            change["path"]
-                                                .as_str()
-                                                .is_some_and(|path| !path.is_empty())
-                                                && change["diff"].is_string()
-                                        })
-                                })
-                    }
-                    "item/permissions/requestApproval" => self.edit && p["permissions"].is_object(),
-                    _ => p["command"].is_string(),
-                } && p.get("availableDecisions").is_none_or(|values| {
-                    values.is_null()
-                        || values
-                            .as_array()
-                            .is_some_and(|values| values.iter().any(|value| value == "accept"))
-                });
-                let detail = serde_json::to_string_pretty(&json!({"request":p,"changes":item}))
-                    .map_err(|_| "Demande invalide.")?;
-                if detail.len() > 64 * 1024 {
-                    return Err("Demande de l’agent trop longue.");
-                }
-                self.ask(
-                    id,
-                    method,
-                    p.clone(),
-                    AgentInteraction {
-                        id: String::new(),
-                        title: "Autorisation demandée".into(),
-                        detail,
-                        can_allow: allow,
-                        questions: Vec::new(),
-                    },
-                    true,
-                )?;
-            } else {
-                out.send.push(json!({"id":id,"error":{"code":-32601,"message":"Interaction non prise en charge par Atelier."}}));
-                out.text.push("Interaction inconnue refusée.".into());
-            }
-            return Ok(out);
-        }
-        if method == "serverRequest/resolved" {
-            self.pending
-                .retain(|_, pending| pending.wire_id != p["requestId"]);
-        } else if event.get("id").is_some() {
-            if event.get("error").is_some_and(|value| !value.is_null()) {
-                return Err("Erreur signalée par le protocole Codex.");
-            }
-            match event["id"].as_str().unwrap_or("") {
-                "initialize" if self.phase == Phase::Initializing => {
-                    out.send.push(json!({"method":"initialized"}));
-                    if self.api_key.is_empty() {
-                        out.send.push(self.thread());
-                    } else {
-                        self.phase = Phase::CheckingCredentials;
-                        out.send.push(json!({"id":"credential-storage","method":"config/read","params":{"includeLayers":false}}));
-                    }
-                }
-                "credential-storage" if self.phase == Phase::CheckingCredentials => {
-                    if event["result"]["config"]["cli_auth_credentials_store"] != "ephemeral" {
-                        return Err(
-                            "Codex doit confirmer un stockage des identifiants uniquement en mémoire avant d’utiliser cette clé API.",
-                        );
-                    }
-                    self.phase = Phase::Authenticating;
-                    out.send.push(json!({"id":"login","method":"account/login/start","params":{"type":"apiKey","apiKey":self.api_key}}));
-                }
-                "login" if self.phase == Phase::Authenticating => out.send.push(self.thread()),
-                "thread" if self.phase == Phase::StartingThread => {
-                    let id = text(&event["result"]["thread"]["id"], 256)?;
-                    out.send.push(json!({"id":"turn","method":"turn/start","params":{"threadId":id,"input":[{"type":"text","text":self.prompt}],"effort":if self.effort.is_empty(){Value::Null}else{json!(self.effort)}}}));
-                    self.thread = Some(id);
-                    self.phase = Phase::Running;
-                }
-                "turn" if self.phase == Phase::Running => {}
-                _ => return Err("Réponse de protocole inattendue."),
-            }
-        } else if method == "item/agentMessage/delta" {
-            out.preview = Some(self.preview(&p["delta"])?);
-        } else if method == "item/started" && p["item"]["type"] == "agentMessage" {
-            self.preview.clear();
-            out.preview = Some(String::new());
-        } else if method == "item/started" && p["item"]["type"] == "commandExecution" {
-            if let Some(command) = p["item"]["command"].as_str() {
-                out.text.push(format!("→ {command}"));
-            }
-        } else if method == "item/started" && p["item"]["type"] == "fileChange" {
-            if self.items.len() >= 32 {
-                return Err("Trop de modifications simultanées.");
-            }
-            self.items
-                .insert(text(&p["item"]["id"], 128)?, p["item"].clone());
-        } else if method == "item/completed" {
-            if p["item"]["type"] == "commandExecution"
-                && p["item"]["aggregatedOutput"]
-                    .as_str()
-                    .is_some_and(|text| !text.is_empty())
-            {
-                out.text
-                    .push(text(&p["item"]["aggregatedOutput"], 64 * 1024)?);
-            }
-            if p["item"]["type"] == "agentMessage" {
-                let message = text(&p["item"]["text"], 64 * 1024)?;
-                out.text.push(message.clone());
-                out.summary = Some(message);
-                self.preview.clear();
-                out.preview = Some(String::new());
-            }
-            if let Some(id) = p["item"]["id"].as_str() {
-                self.items.remove(id);
-            }
-        } else if method == "thread/tokenUsage/updated" {
-            if !self
-                .thread
-                .as_ref()
-                .is_some_and(|thread| p["threadId"].as_str() == Some(thread.as_str()))
-            {
-                return Ok(out);
-            }
-            out.usage = usage(
-                &p["tokenUsage"]["total"],
-                &["inputTokens", "cachedInputTokens", "outputTokens"],
-            );
-            if self.cost_eligible
-                && let Some(usage) = &mut out.usage
-                && let Some(amount) = codex_cost(&self.model, usage)
-            {
-                usage["estimatedCostUsd"] = json!(amount);
-                usage["costSource"] = json!("openai-standard-api");
-                usage["costScope"] = json!("requested-model-thread");
-                usage["pricingModel"] = json!(self.model);
-                usage["pricingDate"] = json!("2026-10-26");
-            }
-            self.codex_usage = out.usage.clone();
-        } else if method == "model/rerouted"
-            && self
-                .thread
-                .as_ref()
-                .is_some_and(|thread| p["threadId"].as_str() == Some(thread.as_str()))
-        {
-            self.cost_eligible = false;
-            if let Some(mut usage) = self.codex_usage.clone() {
-                if let Some(fields) = usage.as_object_mut() {
-                    for key in [
-                        "estimatedCostUsd",
-                        "costSource",
-                        "costScope",
-                        "pricingModel",
-                        "pricingDate",
-                    ] {
-                        fields.remove(key);
-                    }
-                }
-                self.codex_usage = Some(usage.clone());
-                out.usage = Some(usage);
-            }
-        } else if method == "error" && p["willRetry"] != true {
-            self.failed = true;
-            out.text.push("Erreur signalée par Codex.".into());
-        } else if method == "turn/completed" {
-            if self.phase != Phase::Running {
-                return Err("Fin de tour inattendue.");
-            }
-            out.complete = Some(p["turn"]["status"] == "completed");
-        }
-        Ok(out)
-    }
-    fn claude(&mut self, event: Value) -> Result<Effects> {
-        let mut out = Effects::default();
-        match event["type"].as_str().unwrap_or("") {
-            "control_response" if event["response"]["request_id"] == "initialize" => {
-                if self.phase != Phase::Initializing || event["response"]["subtype"] != "success" {
-                    return Err("Initialisation Claude impossible.");
-                }
-                self.phase = Phase::Running;
-                out.send.push(json!({"type":"user","session_id":"","parent_tool_use_id":null,"message":{"role":"user","content":self.prompt}}));
-            }
-            "control_cancel_request" => {
-                self.pending
-                    .retain(|_, pending| pending.wire_id != event["request_id"]);
-            }
-            "control_request" => {
-                if self.phase != Phase::Running {
-                    return Err("Demande reçue avant le démarrage de l’agent.");
-                }
-                let id = wire_id(&event["request_id"])?;
-                let request = &event["request"];
-                if request["subtype"] != "can_use_tool" {
-                    out.send.push(json!({"type":"control_response","response":{"subtype":"error","request_id":id,"error":"Interaction non prise en charge par Atelier."}}));
-                    return Ok(out);
-                }
-                let tool = text(&request["tool_name"], 128)?;
-                let input = &request["input"];
-                if !input.is_object() {
-                    return Err("Paramètres d’outil invalides.");
-                }
-                let detail =
-                    serde_json::to_string_pretty(input).map_err(|_| "Demande invalide.")?;
-                if detail.len() > 48 * 1024 {
-                    return Err("Demande de l’agent trop longue.");
-                }
-                let questions = if tool == "AskUserQuestion" {
-                    self.questions(&input["questions"])?
-                } else {
-                    Vec::new()
-                };
-                let allow = self.edit
-                    || !["Write", "Edit", "MultiEdit", "NotebookEdit", "ExitPlanMode"]
-                        .contains(&tool.as_str());
-                self.ask(
-                    id,
-                    &tool,
-                    input.clone(),
-                    AgentInteraction {
-                        id: String::new(),
-                        title: tool.clone(),
-                        detail: if questions.is_empty() {
-                            detail
-                        } else {
-                            String::new()
-                        },
-                        can_allow: allow,
-                        questions,
-                    },
-                    true,
-                )?;
-            }
-            "assistant" => {
-                if let Some(content) = event["message"]["content"].as_array() {
-                    for item in content {
-                        if item["type"] == "text" {
-                            out.text.push(text(&item["text"], 64 * 1024)?);
-                        } else if item["type"] == "tool_use" {
-                            out.text.push(format!("→ {}", text(&item["name"], 128)?));
-                        }
-                    }
-                }
-            }
-            "stream_event" => {
-                if event["event"]["type"] == "content_block_start"
-                    && event["event"]["content_block"]["type"] == "text"
-                {
-                    self.preview.clear();
-                }
-                if event["event"]["delta"]["type"] == "text_delta" {
-                    out.preview = Some(self.preview(&event["event"]["delta"]["text"])?);
-                }
-            }
-            "result" => {
-                if self.phase != Phase::Running {
-                    return Err("Résultat Claude inattendu.");
-                }
-                if let Some(message) = event["result"]
-                    .as_str()
-                    .filter(|message| !message.is_empty())
-                {
-                    out.summary = Some(text(&json!(message), 64 * 1024)?);
-                }
-                out.usage = usage(
-                    &event["usage"],
-                    &["input_tokens", "cache_read_input_tokens", "output_tokens"],
-                );
-                if let Some(amount) = event["total_cost_usd"].as_f64().filter(|amount| {
-                    amount.is_finite()
-                        && (0.0..=1_000_000.0).contains(amount)
-                        && !(*amount == 0.0 && event["subtype"] == "error_during_execution")
-                }) {
-                    let usage = out.usage.get_or_insert_with(|| json!({}));
-                    usage["estimatedCostUsd"] = json!(amount);
-                    usage["costSource"] = json!("claude-cli");
-                    usage["costScope"] = json!("cli-session");
-                }
-                out.complete = Some(
-                    event["is_error"] == false
-                        && event["subtype"] == "success"
-                        && event.get("permission_denials").is_none_or(|value| {
-                            value.is_null() || value.as_array().is_some_and(Vec::is_empty)
-                        }),
-                );
-            }
-            _ => {}
-        }
-        Ok(out)
     }
     pub fn reply(&mut self, answer: AgentAnswer) -> Result<Effects> {
         if self.secrets.len()
@@ -703,12 +399,12 @@ impl Protocol {
                 )
                 > 256 * 1024
         {
-            return Err("Trop de réponses confidentielles dans cette session.");
+            return Err("message.session_secret_answers_too_many");
         }
         let pending = self
             .pending
             .get(&answer.request_id)
-            .ok_or("Cette demande n’est plus en attente.")?;
+            .ok_or("message.this_request_is_no_longer_pending")?;
         let deny = answer.decision == "deny";
         if !deny {
             if pending.view.questions.is_empty() {
@@ -716,50 +412,57 @@ impl Protocol {
                     || !pending.view.can_allow
                     || !answer.answers.is_empty()
                 {
-                    return Err("Autorisation invalide.");
+                    return Err("message.invalid_approval");
                 }
             } else {
                 if answer.decision != "answer"
                     || answer.answers.len() != pending.view.questions.len()
                 {
-                    return Err("Réponds à chaque question.");
+                    return Err("message.answer_every_question");
                 }
                 let mut size = 0;
                 for question in &pending.view.questions {
                     let values = answer
                         .answers
                         .get(&question.id)
-                        .filter(|values| {
-                            !values.is_empty()
-                                && values.len() <= if question.multi_select { 20 } else { 1 }
-                        })
-                        .ok_or("Réponds à chaque question.")?;
+                        .filter(|values| values.len() <= if question.multi_select { 20 } else { 1 })
+                        .ok_or("message.answer_every_question")?;
+                    if question.required
+                        && (values.is_empty() || values.iter().any(|value| value.trim().is_empty()))
+                    {
+                        return Err("message.answer_every_question");
+                    }
                     if values
                         .iter()
                         .collect::<std::collections::BTreeSet<_>>()
                         .len()
                         != values.len()
                     {
-                        return Err("Réponse invalide.");
+                        return Err("message.invalid_reply");
                     }
                     for value in values {
                         size += value.len();
-                        if value.trim().is_empty() || value.len() > 4000 || value.contains('\0') {
-                            return Err("Réponse invalide.");
+                        if value.len() > 4000 || value.contains('\0') {
+                            return Err("message.invalid_reply");
                         }
                     }
                 }
                 if size > 32 * 1024 {
-                    return Err("Réponse trop longue.");
+                    return Err("message.reply_is_too_long");
                 }
             }
         } else if !answer.answers.is_empty() {
-            return Err("Réponse de refus invalide.");
+            return Err("message.decline_response_invalid");
         }
+        let acp_result = if self.kind == Kind::Acp && pending.method == "elicitation/create" {
+            Some(acp::elicitation_reply(pending, &answer, deny)?)
+        } else {
+            None
+        };
         let pending = self
             .pending
             .remove(&answer.request_id)
-            .ok_or("Cette demande n’est plus en attente.")?;
+            .ok_or("message.this_request_is_no_longer_pending")?;
         for question in &pending.view.questions {
             if question.is_secret {
                 for value in answer.answers.get(&question.id).into_iter().flatten() {
@@ -768,47 +471,12 @@ impl Protocol {
             }
         }
         let result = match self.kind {
-            Kind::Codex => {
-                let response = if pending.method == "item/tool/requestUserInput" {
-                    let mut answers = serde_json::Map::new();
-                    for (index, question) in pending.input["questions"]
-                        .as_array()
-                        .ok_or("Questions invalides.")?
-                        .iter()
-                        .enumerate()
-                    {
-                        answers.insert(text(&question["id"],128)?,json!({"answers":if deny{Vec::new()}else{answer.answers[&index.to_string()].clone()}}));
-                    }
-                    json!({"answers":answers})
-                } else if pending.method == "item/permissions/requestApproval" {
-                    json!({"permissions":if deny{json!({})}else{pending.input["permissions"].clone()},"scope":"turn"})
-                } else {
-                    json!({"decision":if deny { if pending.input.get("availableDecisions").is_none_or(|values| values.is_null() || values.as_array().is_some_and(|values| values.iter().any(|value| value == "decline"))){"decline"}else{"cancel"} } else {"accept"}})
-                };
-                json!({"id":pending.wire_id,"result":response})
-            }
-            Kind::Claude => {
-                let response = if deny {
-                    json!({"behavior":"deny","message":"Demande refusée par l’utilisateur."})
-                } else {
-                    let mut input = pending.input;
-                    if !pending.view.questions.is_empty() {
-                        let questions = input["questions"]
-                            .as_array()
-                            .ok_or("Questions invalides.")?;
-                        let mut answers = serde_json::Map::new();
-                        for (index, question) in questions.iter().enumerate() {
-                            answers.insert(
-                                text(&question["question"], 4000)?,
-                                json!(answer.answers[&index.to_string()]),
-                            );
-                        }
-                        input["answers"] = json!(answers);
-                    }
-                    json!({"behavior":"allow","updatedInput":input})
-                };
-                json!({"type":"control_response","response":{"subtype":"success","request_id":pending.wire_id,"response":response}})
-            }
+            Kind::Codex => codex::reply(pending, &answer, deny)?,
+            Kind::Claude => claude::reply(pending, &answer, deny)?,
+            Kind::Acp => match acp_result {
+                Some(result) => result,
+                None => acp::reply(pending, deny)?,
+            },
         };
         Ok(Effects {
             send: vec![result],
@@ -828,27 +496,4 @@ fn usage(value: &Value, keys: &[&str; 3]) -> Option<Value> {
     Some(
         json!({"inputTokens":value[keys[0]].as_u64()?,"cachedInputTokens":value[keys[1]].as_u64(),"cacheCreationInputTokens":value["cache_creation_input_tokens"].as_u64(),"outputTokens":value[keys[2]].as_u64()?}),
     )
-}
-
-fn codex_cost(model: &str, usage: &Value) -> Option<f64> {
-    // shortcut: dated standard short-context API equivalent, excluding tier/context/region/tool charges; revisit when CLI reports them.
-    // Official snapshot: https://developers.openai.com/api/docs/pricing (2026-10-26), milli-USD per million tokens.
-    let [input_price, cached_price, output_price]: [u128; 3] = match model {
-        "gpt-6.1-sol" => [2000, 100, 10000],
-        "gpt-6.1-terra" => [1000, 50, 5000],
-        "gpt-6-astra" => [10000, 1000, 50000],
-        "gpt-6-luna" => [100, 10, 500],
-        "gpt-5.6-sol" => [4000, 400, 20000],
-        "gpt-5.3-codex" => [1750, 175, 14000],
-        _ => return None,
-    };
-    let input = usage["inputTokens"].as_u64()?;
-    let cached = usage["cachedInputTokens"].as_u64()?;
-    let output = usage["outputTokens"].as_u64()?;
-    let uncached = input.checked_sub(cached)?;
-    let amount = (u128::from(uncached) * input_price
-        + u128::from(cached) * cached_price
-        + u128::from(output) * output_price) as f64
-        / 1_000_000_000.0;
-    (amount.is_finite() && amount <= 1_000_000.0).then_some(amount)
 }

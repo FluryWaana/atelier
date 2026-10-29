@@ -62,7 +62,11 @@ pub(super) async fn read(
     let mut command = tokio::process::Command::new(binary);
     command
         .arg("app-server")
-        .current_dir(binary.parent().ok_or("Dossier de l’exécutable absent.")?)
+        .current_dir(
+            binary
+                .parent()
+                .ok_or("message.executable_directory_missing")?,
+        )
         .env_clear()
         .envs(environment)
         .stdin(Stdio::piped())

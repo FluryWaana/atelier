@@ -19,9 +19,9 @@ use std::{collections::BTreeSet, time::Duration};
 
 pub fn normalize_url(value: &str) -> std::result::Result<String, &'static str> {
     if value.len() > 2000 {
-        return Err("Adresse Jira trop longue.");
+        return Err("message.jira_address_is_too_long");
     }
-    let url = Url::parse(value).map_err(|_| "Adresse Jira HTTPS invalide.")?;
+    let url = Url::parse(value).map_err(|_| "message.invalid_jira_https_address")?;
     if url.scheme() != "https"
         || url.host_str().is_none()
         || !url.username().is_empty()
@@ -29,7 +29,7 @@ pub fn normalize_url(value: &str) -> std::result::Result<String, &'static str> {
         || url.query().is_some()
         || url.fragment().is_some()
     {
-        return Err("Adresse Jira HTTPS requise, sans identifiants ni paramètres.");
+        return Err("message.an_https_jira_address_without_credentials_or_parameters_is_requi");
     }
     Ok(url.as_str().trim_end_matches('/').into())
 }
@@ -104,12 +104,12 @@ pub fn credentials(
         return Err(jira::JiraFailure::Conflict.into());
     }
     if configuration.url.is_empty() {
-        return Err("Renseigne l’adresse Jira avant la lecture.".into());
+        return Err("message.enter_the_jira_address_before_reading".into());
     }
     let token = settings::load(store, protect)?
         .get::<String>("jira")?
         .filter(|token| !token.is_empty())
-        .ok_or("Renseigne le jeton Jira avant la recherche.")?;
+        .ok_or("message.enter_the_jira_token_before_searching")?;
     Ok((configuration, token))
 }
 
@@ -139,7 +139,7 @@ pub(super) fn invalidate_configuration(
         .revision
         .max(minimum.unwrap_or(0))
         .checked_add(1)
-        .ok_or("Révision Jira épuisée.")?;
+        .ok_or("message.jira_revision_limit_reached")?;
     settings.set("jiraConnection", &configuration)?;
     Ok(true)
 }
@@ -156,7 +156,7 @@ pub struct Jira {
 impl Jira {
     pub async fn account_id(&self) -> Result<String> {
         if self.configuration.mode != JiraMode::Cloud {
-            return Err("L’export Tempo nécessite Jira Cloud.".into());
+            return Err("message.tempo_export_requires_jira_cloud".into());
         }
         let row = self
             .request(self.endpoint(&["rest", "api", "3", "myself"])?, None)
@@ -169,7 +169,7 @@ impl Jira {
                     && !account.chars().any(|c| c.is_control() || c.is_whitespace())
                     && !account.contains(&self.token)
             })
-            .ok_or("Identifiant du compte Jira indisponible.")?;
+            .ok_or("message.jira_account_identity_unavailable")?;
         Ok(account.into())
     }
     pub fn new(configuration: JiraConfiguration, token: String) -> Result<Self> {
@@ -195,7 +195,7 @@ impl Jira {
             || base.fragment().is_some()
             || !token.starts_with("synthetic-")
         {
-            return Err("Serveur de test Jira synthétique requis.".into());
+            return Err("message.synthetic_jira_server_required".into());
         }
         Self::prepare(configuration, token, base, true, None)
     }
@@ -226,7 +226,7 @@ impl Jira {
                     || !configuration.email.contains('@')
                     || configuration.email.contains(':')))
         {
-            return Err("Identifiants Jira invalides.".into());
+            return Err("message.invalid_jira_credentials".into());
         }
         let authorization = match configuration.mode {
             JiraMode::Cloud => format!(
@@ -235,8 +235,8 @@ impl Jira {
             ),
             JiraMode::DataCenter => format!("Bearer {token}"),
         };
-        let mut authorization =
-            HeaderValue::from_str(&authorization).map_err(|_| "Identifiants Jira invalides.")?;
+        let mut authorization = HeaderValue::from_str(&authorization)
+            .map_err(|_| "message.invalid_jira_credentials")?;
         authorization.set_sensitive(true);
         let mut builder = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -264,7 +264,7 @@ impl Jira {
         {
             let mut path = url
                 .path_segments_mut()
-                .map_err(|_| "Adresse Jira invalide.")?;
+                .map_err(|_| "message.invalid_jira_address")?;
             path.pop_if_empty();
             for segment in segments {
                 path.push(segment);
@@ -285,9 +285,9 @@ impl Jira {
             .await
             .map_err(|error| {
                 if error.is_timeout() {
-                    "Jira ne répond pas dans le délai prévu."
+                    "message.jira_did_not_respond_within_the_time_limit"
                 } else {
-                    "Connexion Jira impossible."
+                    "message.unable_to_connect_to_jira"
                 }
             })
             .map_err(Into::into)
@@ -311,12 +311,12 @@ impl Jira {
                 .header(ACCEPT, "application/json")
                 .send()
                 .await
-                .map_err(|_| "Identification du site Jira impossible.")?;
+                .map_err(|_| "message.unable_to_identify_the_jira_site")?;
             let info = read_json(tenant, 64 * 1024).await?;
             let id = info["cloudId"]
                 .as_str()
                 .filter(|id| id.len() == 36 && !id.contains(&self.token))
-                .ok_or("Identifiant du site Jira invalide.")?;
+                .ok_or("message.invalid_jira_site_identifier")?;
             let gateway = gateway_base(id)?;
             let _ = self.gateway.set(gateway.clone());
             response = self.send(gateway_request(&gateway, &url)?, body).await?;
@@ -324,10 +324,14 @@ impl Jira {
         read_json(response, 4 * 1024 * 1024).await
     }
     fn issue(&self, row: &Value) -> Result<JiraIssue> {
-        let id = row["id"].as_str().ok_or("Identifiant Jira invalide.")?;
-        let key = row["key"].as_str().ok_or("Clé Jira invalide.")?;
+        let id = row["id"]
+            .as_str()
+            .ok_or("message.invalid_jira_issue_identifier")?;
+        let key = row["key"]
+            .as_str()
+            .ok_or("message.invalid_jira_issue_key")?;
         if !jira::issue_identity(id, key) {
-            return Err("La pagination Jira est incohérente. Réessaie la recherche.".into());
+            return Err("message.jira_pagination_is_inconsistent_try_the_search_again".into());
         }
         let title = row["fields"]["summary"]
             .as_str()
@@ -336,11 +340,11 @@ impl Jira {
                     && title.len() <= 1200
                     && !title.chars().any(char::is_control)
             })
-            .ok_or("Titre Jira invalide.")?;
+            .ok_or("message.invalid_jira_issue_title")?;
         let status = row["fields"]["status"]["name"]
             .as_str()
             .filter(|status| status.len() <= 400 && !status.chars().any(char::is_control))
-            .ok_or("Statut Jira invalide.")?;
+            .ok_or("message.invalid_jira_issue_status")?;
         let status_id = row["fields"]["status"]["id"]
             .as_str()
             .filter(|id| id.len() <= 100 && id.bytes().all(|byte| byte.is_ascii_digit()))
@@ -349,7 +353,7 @@ impl Jira {
             .iter()
             .any(|value| value.contains(&self.token))
         {
-            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+            return Err("message.the_jira_response_contains_unexpected_confidential_data".into());
         }
         let issue = JiraIssue {
             id: id.into(),
@@ -360,13 +364,13 @@ impl Jira {
             url: self.endpoint(&["browse", key])?.to_string(),
         };
         if issue.url.contains(&self.token) {
-            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+            return Err("message.the_jira_response_contains_unexpected_confidential_data".into());
         }
         Ok(issue)
     }
     pub async fn detail(&self, id: &str) -> Result<JiraIssueDetail> {
         if id.is_empty() || id.len() > 32 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
-            return Err("Identifiant Jira invalide.".into());
+            return Err("message.invalid_jira_issue_identifier".into());
         }
         let version = if self.configuration.mode == JiraMode::Cloud {
             "3"
@@ -378,18 +382,18 @@ impl Jira {
             .append_pair("fields", "summary,status,description");
         let row = tokio::time::timeout(Duration::from_secs(60), self.request(url, None))
             .await
-            .map_err(|_| "Lecture du ticket Jira trop longue.")??;
+            .map_err(|_| "message.reading_the_jira_issue_took_too_long")??;
         let issue = self.issue(&row)?;
         if issue.id != id {
-            return Err("Identifiant du ticket Jira incohérent.".into());
+            return Err("message.inconsistent_jira_issue_id".into());
         }
         let description = jira::description(
             row["fields"]
                 .get("description")
-                .ok_or("Description Jira absente.")?,
+                .ok_or("message.missing_jira_description")?,
         )?;
         if description.contains(&self.token) {
-            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+            return Err("message.the_jira_response_contains_unexpected_confidential_data".into());
         }
         Ok(JiraIssueDetail {
             connection_revision: self.configuration.revision,
@@ -399,7 +403,7 @@ impl Jira {
     }
     fn issue_endpoint(&self, id: &str, suffix: Option<&str>) -> Result<Url> {
         if id.is_empty() || id.len() > 32 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
-            return Err("Identifiant Jira invalide.".into());
+            return Err("message.invalid_jira_issue_identifier".into());
         }
         let version = if self.configuration.mode == JiraMode::Cloud {
             "3"
@@ -409,7 +413,7 @@ impl Jira {
         let mut url = self.endpoint(&["rest", "api", version, "issue", id])?;
         if let Some(suffix) = suffix {
             url.path_segments_mut()
-                .map_err(|_| "Adresse Jira invalide.")?
+                .map_err(|_| "message.invalid_jira_address")?
                 .push(suffix);
         }
         Ok(url)
@@ -420,15 +424,15 @@ impl Jira {
             .filter(|id| {
                 !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_digit())
             })
-            .ok_or("Identifiant de statut Jira invalide.")?;
+            .ok_or("message.invalid_jira_status_id")?;
         let name = value["name"]
             .as_str()
             .filter(|name| {
                 !name.is_empty() && name.len() <= 400 && !name.chars().any(char::is_control)
             })
-            .ok_or("Statut Jira invalide.")?;
+            .ok_or("message.invalid_jira_issue_status")?;
         if [id, name].iter().any(|value| value.contains(&self.token)) {
-            return Err("La réponse Jira contient des données confidentielles inattendues.".into());
+            return Err("message.the_jira_response_contains_unexpected_confidential_data".into());
         }
         Ok(JiraStatus {
             id: id.into(),
@@ -440,7 +444,7 @@ impl Jira {
         url.query_pairs_mut().append_pair("fields", "status");
         let row = self.request(url, None).await?;
         if row["id"].as_str() != Some(id) {
-            return Err("Identifiant du ticket Jira incohérent.".into());
+            return Err("message.inconsistent_jira_issue_id".into());
         }
         self.status_value(&row["fields"]["status"])
     }
@@ -453,7 +457,7 @@ impl Jira {
         let rows = value["transitions"]
             .as_array()
             .filter(|rows| rows.len() <= 100)
-            .ok_or("Liste de transitions Jira invalide.")?;
+            .ok_or("message.invalid_jira_transition_list")?;
         let mut transitions = Vec::new();
         let mut ids = BTreeSet::new();
         for row in rows {
@@ -462,25 +466,25 @@ impl Jira {
                 .filter(|id| {
                     !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_digit())
                 })
-                .ok_or("Transition Jira invalide.")?;
+                .ok_or("message.invalid_jira_transition")?;
             let name = row["name"]
                 .as_str()
                 .filter(|name| {
                     !name.is_empty() && name.len() <= 400 && !name.chars().any(char::is_control)
                 })
-                .ok_or("Transition Jira invalide.")?;
+                .ok_or("message.invalid_jira_transition")?;
             if !ids.insert(id) || [id, name].iter().any(|value| value.contains(&self.token)) {
-                return Err("Liste de transitions Jira invalide.".into());
+                return Err("message.invalid_jira_transition_list".into());
             }
             let fields = row["fields"]
                 .as_object()
                 .filter(|fields| fields.len() <= 100)
-                .ok_or("Champs de transition Jira absents ou invalides.")?;
+                .ok_or("message.missing_or_invalid_jira_transition_fields")?;
             let mut requires_fields = false;
             for field in fields.values() {
                 let required = field["required"]
                     .as_bool()
-                    .ok_or("Champs de transition Jira invalides.")?;
+                    .ok_or("message.invalid_jira_transition_fields")?;
                 requires_fields |= required && field["hasDefaultValue"].as_bool() != Some(true);
             }
             transitions.push(JiraTransition {
@@ -503,7 +507,7 @@ impl Jira {
             || transition.id.len() > 64
             || !transition.id.bytes().all(|byte| byte.is_ascii_digit())
         {
-            return Err("Transition Jira invalide ou exigeant des champs supplémentaires.".into());
+            return Err("message.invalid_jira_transition_or_additional_fields_required".into());
         }
         let url = self.issue_endpoint(issue, Some("transitions"))?;
         let target = if let Some(gateway) = self.gateway.get() {
@@ -516,14 +520,14 @@ impl Jira {
             .await?;
         if response.status() != reqwest::StatusCode::NO_CONTENT {
             return Err(
-                "Envoi Jira non confirmé. Vérifie le ticket avant toute nouvelle tentative.".into(),
+                "message.jira_submission_was_not_confirmed_check_the_issue_before_trying".into(),
             );
         }
         Ok(())
     }
     fn creation_endpoint(&self, project: &str, issue_type: Option<&str>) -> Result<Url> {
         if !jira::project_key(project) {
-            return Err("Clé de projet Jira invalide.".into());
+            return Err("message.jira_project_key_invalid".into());
         }
         let version = if self.configuration.mode == JiraMode::Cloud {
             "3"
@@ -541,10 +545,10 @@ impl Jira {
         ])?;
         if let Some(id) = issue_type {
             if id.is_empty() || id.len() > 64 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
-                return Err("Type de ticket Jira invalide.".into());
+                return Err("message.invalid_jira_issue_type".into());
             }
             url.path_segments_mut()
-                .map_err(|_| "Adresse Jira invalide.")?
+                .map_err(|_| "message.invalid_jira_address")?
                 .push(id);
         }
         Ok(url)
@@ -558,7 +562,7 @@ impl Jira {
                     && !value.chars().any(char::is_control)
                     && !value.contains(&self.token)
             })
-            .ok_or_else(|| "Métadonnées Jira invalides ou confidentielles.".into())
+            .ok_or_else(|| "message.invalid_or_confidential_jira_metadata".into())
     }
     async fn metadata_pages<T>(
         &self,
@@ -581,42 +585,42 @@ impl Jira {
             let expected = page["total"]
                 .as_u64()
                 .filter(|total| *total <= limit as u64)
-                .ok_or("Métadonnées Jira trop volumineuses ou invalides.")?;
+                .ok_or("message.jira_metadata_is_too_large_or_invalid")?;
             if total.is_some_and(|total| total != expected)
                 || page["startAt"].as_u64() != Some(result.len() as u64)
             {
-                return Err("Pagination des métadonnées Jira incohérente.".into());
+                return Err("message.inconsistent_jira_metadata_pagination".into());
             }
             total = Some(expected);
             let rows = page[row_key]
                 .as_array()
                 .filter(|rows| rows.len() <= 100)
-                .ok_or("Page de métadonnées Jira invalide.")?;
+                .ok_or("message.invalid_jira_metadata_page")?;
             for row in rows {
                 let id = self.public_metadata_text(&row[id_key], 128)?;
                 if !ids.insert(id.to_owned()) || result.len() >= limit {
-                    return Err("Métadonnées Jira dupliquées ou trop volumineuses.".into());
+                    return Err("message.duplicate_or_oversized_jira_metadata".into());
                 }
                 result.push(parse(row)?);
             }
             if let Some(last) = page.get("isLast")
                 && last.as_bool() != Some(result.len() as u64 == expected)
             {
-                return Err("Pagination des métadonnées Jira incohérente.".into());
+                return Err("message.inconsistent_jira_metadata_pagination".into());
             }
             if result.len() as u64 == expected {
                 return Ok(result);
             }
             if result.len() as u64 > expected || rows.is_empty() {
-                return Err("Pagination des métadonnées Jira incohérente.".into());
+                return Err("message.inconsistent_jira_metadata_pagination".into());
             }
         }
-        Err("Métadonnées Jira trop volumineuses.".into())
+        Err("message.jira_metadata_is_too_large".into())
     }
     pub async fn issue_types(&self, project: &str) -> Result<Vec<JiraIssueType>> {
         tokio::time::timeout(Duration::from_secs(60), self.issue_types_pages(project))
             .await
-            .map_err(|_| "Lecture des métadonnées Jira trop longue.")?
+            .map_err(|_| "message.reading_jira_metadata_took_too_long")?
     }
     async fn issue_types_pages(&self, project: &str) -> Result<Vec<JiraIssueType>> {
         let url = self.creation_endpoint(project, None)?;
@@ -628,14 +632,14 @@ impl Jira {
         self.metadata_pages(url, key, "id", 1000, |row| {
             let id = self.public_metadata_text(&row["id"], 64)?;
             if !id.bytes().all(|byte| byte.is_ascii_digit()) {
-                return Err("Type de ticket Jira invalide.".into());
+                return Err("message.invalid_jira_issue_type".into());
             }
             Ok(JiraIssueType {
                 id: id.into(),
                 name: self.public_metadata_text(&row["name"], 400)?.into(),
                 subtask: row["subtask"]
                     .as_bool()
-                    .ok_or("Type de ticket Jira invalide.")?,
+                    .ok_or("message.invalid_jira_issue_type")?,
             })
         })
         .await
@@ -650,7 +654,7 @@ impl Jira {
             self.creation_metadata_pages(project, issue_type),
         )
         .await
-        .map_err(|_| "Lecture des métadonnées Jira trop longue.")?
+        .map_err(|_| "message.reading_jira_metadata_took_too_long")?
     }
     async fn creation_metadata_pages(
         &self,
@@ -662,7 +666,7 @@ impl Jira {
             .await?
             .into_iter()
             .find(|kind| kind.id == issue_type && !kind.subtask)
-            .ok_or("Type de ticket Jira indisponible ou sous-tâche non prise en charge.")?;
+            .ok_or("message.jira_issue_type_unavailable_or_unsupported_subtask")?;
         let url = self.creation_endpoint(project, Some(issue_type))?;
         let key = if self.configuration.mode == JiraMode::Cloud {
             "fields"
@@ -676,7 +680,7 @@ impl Jira {
                     .bytes()
                     .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
                 {
-                    return Err("Champ de création Jira invalide.".into());
+                    return Err("message.invalid_jira_creation_field".into());
                 }
                 let operations = row["operations"]
                     .as_array()
@@ -688,19 +692,19 @@ impl Jira {
                                     .is_some_and(|operation| operation.len() <= 50)
                             })
                     })
-                    .ok_or("Opérations de champ Jira invalides.")?;
+                    .ok_or("message.invalid_jira_field_operations")?;
                 let has_default = match row.get("hasDefaultValue") {
                     None => false,
                     Some(value) => value
                         .as_bool()
-                        .ok_or("Valeur par défaut de champ Jira invalide.")?,
+                        .ok_or("message.invalid_jira_field_default_value")?,
                 };
                 Ok(JiraCreationField {
                     id: id.into(),
                     name: self.public_metadata_text(&row["name"], 400)?.into(),
                     required: row["required"]
                         .as_bool()
-                        .ok_or("Champ de création Jira invalide.")?,
+                        .ok_or("message.invalid_jira_creation_field")?,
                     has_default,
                     can_set: operations
                         .iter()
@@ -723,11 +727,14 @@ impl Jira {
         if metadata.revision != self.configuration.revision
             || !jira::project_key(&metadata.project_key)
         {
-            return Err("Métadonnées de création Jira périmées.".into());
+            return Err("message.jira_creation_metadata_is_stale".into());
         }
         jira::validate_creation(metadata, card)?;
         let description = jira::creation_text(card)?;
-        let title = card.title.utf8().map_err(|_| "Titre de carte invalide.")?;
+        let title = card
+            .title
+            .utf8()
+            .map_err(|_| "message.card_title_invalid")?;
         let mut fields = json!({"project":{"key":metadata.project_key},"issuetype":{"id":metadata.issue_type.id},"summary":title});
         if !description.is_empty() {
             fields["description"] = if self.configuration.mode == JiraMode::Cloud {
@@ -759,11 +766,11 @@ impl Jira {
             || key.rsplit_once('-').map(|(project, _)| project)
                 != Some(metadata.project_key.as_str())
         {
-            return Err("Réponse de création Jira incertaine. Vérifie le ticket dans Jira.".into());
+            return Err("message.uncertain_jira_creation_response_check_the_issue_in_jira".into());
         }
         let browse = self.endpoint(&["browse", key])?.to_string();
         if browse.contains(&self.token) {
-            return Err("Réponse de création Jira incertaine. Vérifie le ticket dans Jira.".into());
+            return Err("message.uncertain_jira_creation_response_check_the_issue_in_jira".into());
         }
         Ok(JiraIssue {
             id: id.into(),
@@ -781,13 +788,13 @@ impl Jira {
         let row = self.request(url, None).await?;
         let issue = self.issue(&row)?;
         if issue.id != id {
-            return Err("Identifiant du ticket Jira incohérent.".into());
+            return Err("message.inconsistent_jira_issue_id".into());
         }
         Ok(issue)
     }
     pub async fn issue_by_key(&self, key: &str) -> Result<JiraIssue> {
         if !jira::issue_identity("1", key) {
-            return Err("Clé Jira invalide.".into());
+            return Err("message.invalid_jira_issue_key".into());
         }
         let version = if self.configuration.mode == JiraMode::Cloud {
             "3"
@@ -800,7 +807,7 @@ impl Jira {
         let row = self.request(url, None).await?;
         let issue = self.issue(&row)?;
         if issue.key != key {
-            return Err("La clé Jira a changé. Utilise la clé actuelle du ticket.".into());
+            return Err("message.the_jira_key_changed_use_the_issues_current_key".into());
         }
         Ok(issue)
     }
@@ -809,11 +816,11 @@ impl Jira {
             || self.configuration.query.len() > 16000
             || self.configuration.query.chars().count() > 4000
         {
-            return Err("Requête JQL requise (4 000 caractères maximum).".into());
+            return Err("message.a_jql_query_is_required_4_000_characters_maximum".into());
         }
         tokio::time::timeout(Duration::from_secs(60), self.search_pages())
             .await
-            .map_err(|_| "La recherche Jira a dépassé une minute. Réduis son périmètre.")?
+            .map_err(|_| "message.jira_search_exceeded_one_minute_narrow_its_scope")?
     }
 }
 
@@ -837,9 +844,9 @@ fn tenant_site(base: &Url) -> bool {
 }
 fn gateway_base(id: &str) -> Result<Url> {
     if id.len() != 36 {
-        return Err("Identifiant du site Jira invalide.".into());
+        return Err("message.invalid_jira_site_identifier".into());
     }
-    let id = uuid::Uuid::parse_str(id).map_err(|_| "Identifiant du site Jira invalide.")?;
+    let id = uuid::Uuid::parse_str(id).map_err(|_| "message.invalid_jira_site_identifier")?;
     Ok(Url::parse(&format!(
         "https://api.atlassian.com/ex/jira/{}",
         id.hyphenated()
@@ -847,7 +854,7 @@ fn gateway_base(id: &str) -> Result<Url> {
 }
 fn gateway_request(gateway: &Url, request: &Url) -> Result<Url> {
     if !request.path().starts_with("/rest/api/3/") {
-        return Err("Chemin Jira Cloud invalide.".into());
+        return Err("message.jira_cloud_path_invalid".into());
     }
     let mut target = gateway.clone();
     target.set_path(&format!("{}{}", gateway.path(), request.path()));
@@ -865,16 +872,18 @@ async fn read_json_status(
     match response.status().as_u16() {
         status if status == success => {}
         401 | 403 => {
-            return Err("Jira refuse l’accès. Vérifie le compte, les droits et le jeton.".into());
+            return Err(
+                "message.jira_denied_access_check_the_account_permissions_and_token".into(),
+            );
         }
         429 => {
-            return Err("Limite de requêtes Jira atteinte. Attends avant de réessayer.".into());
+            return Err("message.jira_rate_limit_reached_wait_before_trying_again".into());
         }
         300..=399 => {
-            return Err("Redirection Jira refusée. Vérifie l’adresse configurée.".into());
+            return Err("message.jira_redirect_refused_check_the_configured_address".into());
         }
         _ => {
-            return Err("La recherche Jira a échoué. Vérifie la requête et le service.".into());
+            return Err("message.jira_search_failed_check_the_query_and_service".into());
         }
     }
     let json = response
@@ -892,20 +901,20 @@ async fn read_json_status(
             .content_length()
             .is_some_and(|length| length > limit as u64)
     {
-        return Err("Réponse Jira invalide ou trop volumineuse.".into());
+        return Err("message.jira_response_is_invalid_or_too_large".into());
     }
     let mut bytes = Vec::new();
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| "Lecture de la réponse Jira impossible.")?
+        .map_err(|_| "message.unable_to_read_the_jira_response")?
     {
         if bytes.len() + chunk.len() > limit {
-            return Err("Réponse Jira trop volumineuse.".into());
+            return Err("message.jira_response_is_too_large".into());
         }
         bytes.extend_from_slice(&chunk);
     }
-    serde_json::from_slice(&bytes).map_err(|_| "Réponse JSON Jira invalide.".into())
+    serde_json::from_slice(&bytes).map_err(|_| "message.invalid_jira_json_response".into())
 }
 
 impl Jira {
@@ -934,25 +943,27 @@ impl Jira {
             let rows = page["issues"]
                 .as_array()
                 .filter(|rows| rows.len() <= 100)
-                .ok_or("Page Jira invalide.")?;
+                .ok_or("message.invalid_jira_page")?;
             if !cloud && page["total"].as_u64().is_some_and(|total| total > 10_000) {
-                return Err("Recherche Jira trop large. Réduis la requête JQL.".into());
+                return Err("message.jira_search_is_too_broad_narrow_the_jql_query".into());
             }
             for row in rows {
                 let issue = self.issue(row)?;
                 if !ids.insert(issue.id.clone()) {
-                    return Err("La pagination Jira est incohérente. Réessaie la recherche.".into());
+                    return Err(
+                        "message.jira_pagination_is_inconsistent_try_the_search_again".into(),
+                    );
                 }
                 size += serde_json::to_vec(&issue)?.len() + 1;
                 if size > 8 * 1024 * 1024 || issues.len() >= 10_000 {
-                    return Err("Recherche Jira trop large. Réduis la requête JQL.".into());
+                    return Err("message.jira_search_is_too_broad_narrow_the_jql_query".into());
                 }
                 issues.push(issue);
             }
             if cloud {
                 if page["isLast"]
                     .as_bool()
-                    .ok_or("Fin de pagination Jira invalide.")?
+                    .ok_or("message.invalid_jira_pagination_completion_marker")?
                 {
                     return Ok(JiraSearch {
                         connection_revision: self.configuration.revision,
@@ -962,18 +973,20 @@ impl Jira {
                 let next = page["nextPageToken"]
                     .as_str()
                     .filter(|token| !token.is_empty() && token.len() <= 4000)
-                    .ok_or("Curseur Jira invalide.")?;
+                    .ok_or("message.invalid_jira_cursor")?;
                 if !cursors.insert(next.to_owned()) {
-                    return Err("La pagination Jira est incohérente. Réessaie la recherche.".into());
+                    return Err(
+                        "message.jira_pagination_is_inconsistent_try_the_search_again".into(),
+                    );
                 }
                 cursor = Some(next.into());
             } else {
-                let total = page["total"].as_u64().ok_or("Total Jira invalide.")?;
+                let total = page["total"].as_u64().ok_or("message.invalid_jira_total")?;
                 if page["startAt"].as_u64() != Some((issues.len() - rows.len()) as u64) {
-                    return Err("Décalage de page Jira incohérent.".into());
+                    return Err("message.inconsistent_jira_page_offset".into());
                 }
                 if issues.len() as u64 > total {
-                    return Err("Total Jira incohérent. Réessaie la recherche.".into());
+                    return Err("message.inconsistent_jira_total_try_the_search_again".into());
                 }
                 if issues.len() as u64 == total {
                     return Ok(JiraSearch {
@@ -982,11 +995,11 @@ impl Jira {
                     });
                 }
                 if rows.is_empty() {
-                    return Err("Page Jira vide avant la fin des résultats.".into());
+                    return Err("message.empty_jira_page_before_the_end_of_results".into());
                 }
             }
         }
-        Err("Recherche Jira trop large. Réduis la requête JQL.".into())
+        Err("message.jira_search_is_too_broad_narrow_the_jql_query".into())
     }
 }
 

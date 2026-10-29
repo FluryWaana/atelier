@@ -13,11 +13,11 @@ pub fn checklist(value: &RawValue) -> Result<Vec<Criterion>, &'static str> {
     let items = serde_json::from_str::<Vec<Box<RawValue>>>(value.get())
         .ok()
         .filter(|items| items.len() <= 20)
-        .ok_or("Maximum 20 critères de réussite.")?;
+        .ok_or("message.maximum_20_acceptance_criteria")?;
     items
         .iter()
         .map(|item| {
-            let invalid = "Chaque critère doit contenir un texte et un état valide.";
+            let invalid = "message.each_criterion_must_contain_text_and_a_valid_state";
             let item: Document = serde_json::from_str(item.get()).map_err(|_| invalid)?;
             let label = text_units(
                 &item

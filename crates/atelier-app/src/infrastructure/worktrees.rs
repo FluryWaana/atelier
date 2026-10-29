@@ -45,7 +45,7 @@ async fn entries(source: &Repository) -> Result<Vec<Entry>> {
             }
         }
         if entry.path.is_empty() {
-            return Err("Liste des worktrees Git invalide.".into());
+            return Err("message.invalid_git_worktree_list".into());
         }
         entries.push(entry);
     }
@@ -59,16 +59,16 @@ fn same(a: &str, b: &str) -> bool {
 fn managed_path(roots: &[PathBuf], worktree: &Worktree) -> Result<PathBuf> {
     let parent = roots
         .first()
-        .ok_or("Racine synthétique absente.")?
+        .ok_or("message.synthetic_root_missing")?
         .join("repositories/atelier-worktrees");
     let target = PathBuf::from(&worktree.path);
     let name = target
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or("Dossier de worktree invalide.")?;
-    let id = uuid::Uuid::parse_str(name).map_err(|_| "Dossier de worktree invalide.")?;
+        .ok_or("message.invalid_worktree_folder")?;
+    let id = uuid::Uuid::parse_str(name).map_err(|_| "message.invalid_worktree_folder")?;
     if name != id.to_string() || !same(&worktree.path, &path_string(&parent.join(name)).utf8()?) {
-        return Err("Le worktree sort de son dossier géré.".into());
+        return Err("message.the_worktree_is_outside_its_managed_folder".into());
     }
     Ok(PathBuf::from(path_string(&parent.join(name)).utf8()?))
 }
@@ -103,7 +103,7 @@ pub async fn prepare(
         .iter()
         .any(|entry| entry.branch == branch)
     {
-        return Err("Cette branche est déjà utilisée par un worktree.".into());
+        return Err("message.this_branch_is_already_used_by_a_worktree".into());
     }
     let base_commit = String::from_utf8(
         source
@@ -120,7 +120,7 @@ pub async fn prepare(
     if !matches!(base_commit.len(), 40 | 64)
         || !base_commit.bytes().all(|byte| byte.is_ascii_hexdigit())
     {
-        return Err("Commit de départ invalide.".into());
+        return Err("message.invalid_base_commit".into());
     }
     let _parent = managed_directory(root)?;
     let path = roots[0]
@@ -196,7 +196,7 @@ pub(super) async fn fetch_origin_commit(
         "HEAD".to_owned()
     } else {
         if remote_base.starts_with("refs/") {
-            return Err("Choisis une branche d’origin, pas une autre référence Git.".into());
+            return Err("message.choose_an_origin_branch_not_another_git_reference".into());
         }
         let name = format!("refs/heads/{remote_base}");
         source.git(&["check-ref-format", &name]).await?;
@@ -223,7 +223,9 @@ pub(super) async fn fetch_origin_commit(
             || key.starts_with("includeif.")
             || key == "extensions.worktreeconfig"
         {
-            return Err("Le téléchargement synthétique refuse les réécritures d’URL et inclusions de configuration Git.".into());
+            return Err(
+                "message.synthetic_fetching_refuses_git_url_rewrites_and_configuration_in".into(),
+            );
         }
     }
     let origin = String::from_utf8(
@@ -241,7 +243,9 @@ pub(super) async fn fetch_origin_commit(
     let remote_path = if let Some(authentication) = authentication {
         authentication.origin(origin)?
     } else {
-        let remote=Repository::synthetic(root,roots,&JsonString::from(origin)).map_err(|_|"Origin doit désigner un dépôt local autorisé ou une connexion HTTPS de forge explicitement choisie.")?;
+        let remote = Repository::synthetic(root, roots, &JsonString::from(origin)).map_err(
+            |_| "message.origin_must_identify_an_authorized_local_repository_or_an_explic",
+        )?;
         remote.verify_root().await?;
         path_string(&remote.path).utf8()?
     };
@@ -284,7 +288,7 @@ pub(super) async fn fetch_origin_commit(
         .to_owned();
         if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|byte| byte.is_ascii_hexdigit())
         {
-            return Err("Commit téléchargé invalide.".into());
+            return Err("message.invalid_fetched_commit".into());
         }
         Ok::<_, crate::Error>(commit)
     }
@@ -293,7 +297,9 @@ pub(super) async fn fetch_origin_commit(
         .without_programs(&["update-ref", "-d", &private_ref])
         .await;
     if cleanup.is_err() {
-        return Err("Nettoyage de la référence temporaire impossible. Le dépôt source et ses branches sont conservés ; vérifie les références refs/atelier-fetch avant de reprendre.".into());
+        return Err(
+            "message.could_not_clean_up_the_temporary_reference_the_source_repository".into(),
+        );
     }
     fetched
 }
@@ -305,7 +311,7 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
         .iter()
         .any(|entry| same(&entry.path, &worktree.path) && entry.branch == worktree.branch)
     {
-        return Err("Le worktree associé a disparu ou sa branche a changé.".into());
+        return Err("message.the_associated_worktree_is_missing_or_its_branch_has_changed".into());
     }
     let target =
         Repository::open_synthetic(root, roots, &JsonString::from(worktree.path.as_str()))?;
@@ -313,7 +319,7 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
     target.verify_root().await?;
     let branch = String::from_utf8(target.git(&["symbolic-ref", "HEAD"]).await?)?;
     if branch.trim() != format!("refs/heads/{}", worktree.branch) {
-        return Err("Le worktree associé a disparu ou sa branche a changé.".into());
+        return Err("message.the_associated_worktree_is_missing_or_its_branch_has_changed".into());
     }
     Ok(target)
 }
@@ -333,7 +339,7 @@ pub async fn inspect_status(
     let after = String::from_utf8(repository.git(&["rev-parse", "--verify", "HEAD"]).await?)?;
     if head != after.trim() {
         return Err(
-            "Le commit du worktree a changé pendant sa lecture. Actualise son état.".into(),
+            "message.the_worktree_commit_changed_during_inspection_refresh_its_status".into(),
         );
     }
     inspect(root, roots, worktree).await?;
@@ -346,16 +352,16 @@ pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> 
     let gitdir = link
         .trim_end_matches(['\r', '\n'])
         .strip_prefix("gitdir: ")
-        .ok_or("Association Git du worktree invalide.")?;
+        .ok_or("message.invalid_git_worktree_association")?;
     let gitdir_path = PathBuf::from(gitdir);
     let name = gitdir_path
         .file_name()
-        .ok_or("Association Git du worktree invalide.")?;
+        .ok_or("message.invalid_git_worktree_association")?;
     if !same(
         gitdir,
         &path_string(&source.path.join(".git/worktrees").join(name)).utf8()?,
     ) {
-        return Err("Le dépôt source ne correspond plus au worktree.".into());
+        return Err("message.the_source_repository_no_longer_matches_the_worktree".into());
     }
     let metadata = source
         .directory
@@ -372,7 +378,7 @@ pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> 
             &path_string(&target.path.join(".git")).utf8()?,
         )
     {
-        return Err("Association Git du worktree invalide.".into());
+        return Err("message.invalid_git_worktree_association".into());
     }
     Ok(metadata)
 }
@@ -392,14 +398,20 @@ pub async fn create(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resul
         .iter()
         .any(|entry| entry.branch == worktree.branch)
     {
-        return Err("Cette branche est déjà utilisée par un worktree.".into());
+        return Err("message.this_branch_is_already_used_by_a_worktree".into());
     }
     let parent = managed_directory(root)?;
     let target = managed_path(roots, worktree)?;
-    match parent.symlink_metadata(target.file_name().ok_or("Dossier de worktree invalide.")?) {
+    match parent.symlink_metadata(
+        target
+            .file_name()
+            .ok_or("message.invalid_worktree_folder")?,
+    ) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Ok(_) => {
-            return Err("Le dossier cible existe déjà. Aucun fichier n’a été remplacé.".into());
+            return Err(
+                "message.the_destination_folder_already_exists_no_files_were_replaced".into(),
+            );
         }
         Err(error) => return Err(error.into()),
     }
@@ -445,28 +457,29 @@ pub async fn remove(
         .find(|entry| same(&entry.path, &worktree.path));
     let parent = managed_directory(root)?;
     let target = managed_path(roots, worktree)?;
-    let missing =
-        match parent.symlink_metadata(target.file_name().ok_or("Dossier de worktree invalide.")?) {
-            Ok(metadata) => {
-                require_plain(&metadata)?;
-                false
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => true,
-            Err(error) => return Err(error.into()),
-        };
+    let missing = match parent.symlink_metadata(
+        target
+            .file_name()
+            .ok_or("message.invalid_worktree_folder")?,
+    ) {
+        Ok(metadata) => {
+            require_plain(&metadata)?;
+            false
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => true,
+        Err(error) => return Err(error.into()),
+    };
     let Some(found) = found else {
         if missing {
             return Ok(());
         }
         return Err(
-            "Ce dossier n’est plus enregistré comme worktree. Aucun fichier n’a été supprimé."
-                .into(),
+            "message.this_folder_is_no_longer_registered_as_a_worktree_no_files_were".into(),
         );
     };
     if found.branch != worktree.branch || found.locked {
         return Err(
-            "Le worktree est verrouillé ou sa branche a changé. Aucun fichier n’a été supprimé."
-                .into(),
+            "message.the_worktree_is_locked_or_its_branch_has_changed_no_files_were_d".into(),
         );
     }
     let detached = if !missing {
@@ -482,47 +495,51 @@ pub async fn remove(
         std::collections::BTreeSet::new()
     };
     let result = async {
-    if !missing {
-        let target = inspect(root, roots, worktree).await?;
-        if !discard {
-            let changed = !target
-                .without_programs(&["status", "--porcelain=v1", "--untracked-files=all", "-z"])
-                .await?
-                .is_empty();
-            let ignored = String::from_utf8(
-                target
-                    .git(&[
-                        "ls-files",
-                        "--others",
-                        "--ignored",
-                        "--exclude-standard",
-                        "-z",
-                    ])
-                    .await?,
-            )?
-            .split('\0')
-            .filter(|path| !path.is_empty())
-            .map(str::to_owned)
-            .collect();
-            let metadata = metadata(&source, &target)?;
-            let files = target.directory.try_clone()?;
-            let unowned = tokio::task::spawn_blocking(move || {
-                super::agent_context::has_unowned_ignored(metadata, files, ignored)
-            })
-            .await??;
-            if changed || unowned {
-                return Err("Ce worktree contient des fichiers modifiés, nouveaux ou ignorés. Confirme leur abandon pour le retirer.".into());
+        if !missing {
+            let target = inspect(root, roots, worktree).await?;
+            if !discard {
+                let changed = !target
+                    .without_programs(&["status", "--porcelain=v1", "--untracked-files=all", "-z"])
+                    .await?
+                    .is_empty();
+                let ignored = String::from_utf8(
+                    target
+                        .git(&[
+                            "ls-files",
+                            "--others",
+                            "--ignored",
+                            "--exclude-standard",
+                            "-z",
+                        ])
+                        .await?,
+                )?
+                .split('\0')
+                .filter(|path| !path.is_empty())
+                .map(str::to_owned)
+                .collect();
+                let metadata = metadata(&source, &target)?;
+                let files = target.directory.try_clone()?;
+                let unowned = tokio::task::spawn_blocking(move || {
+                    super::agent_context::has_unowned_ignored(metadata, files, ignored)
+                })
+                .await??;
+                if changed || unowned {
+                    return Err(
+                        "message.this_worktree_contains_modified_new_or_ignored_files_confirm_dis"
+                            .into(),
+                    );
+                }
             }
         }
+        let mut args = vec!["worktree", "remove"];
+        if discard || missing {
+            args.push("--force");
+        }
+        args.extend(["--", &worktree.path]);
+        source.without_programs(&args).await?;
+        Ok::<_, crate::Error>(())
     }
-    let mut args = vec!["worktree", "remove"];
-    if discard || missing {
-        args.push("--force");
-    }
-    args.extend(["--", &worktree.path]);
-    source.without_programs(&args).await?;
-    Ok::<_, crate::Error>(())
-    }.await;
+    .await;
     if let Err(error) = result {
         if !detached.is_empty() {
             let restored = async {

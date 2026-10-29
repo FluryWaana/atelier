@@ -30,17 +30,17 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
         );
     }
     if action == "route" {
-        return failure(StatusCode::BAD_REQUEST, "Route de temps inconnue.");
+        return failure(StatusCode::BAD_REQUEST, "message.unknown_time_route");
     }
     if action == "method" {
-        return failure(StatusCode::BAD_REQUEST, "Méthode non autorisée.");
+        return failure(StatusCode::BAD_REQUEST, "message.method_not_allowed");
     }
     if matches!(action, "update" | "remove")
         && body.get::<Document>("expected").ok().flatten().is_none()
     {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Relis la saisie de temps avant de la modifier.",
+            "message.read_the_time_entry_again_before_changing_it",
         );
     }
     if matches!(action, "create" | "update")
@@ -52,7 +52,7 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
     {
         return failure(
             StatusCode::BAD_REQUEST,
-            "La durée doit être un entier entre 1 seconde et 24 heures.",
+            "message.duration_must_be_an_integer_between_1_second_and_24_hours",
         );
     }
     let action = action.to_owned();

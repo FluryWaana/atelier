@@ -16,6 +16,35 @@ fn send(value: Value) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+pub fn acp() -> Result<(), Box<dyn std::error::Error>> {
+    if std::fs::read_to_string(".agent-run-fixture")? != "atelier-r03-synthetic-only" {
+        return Err("Not an agent run fixture".into());
+    }
+    let mut input = io::stdin().lock();
+    if receive(&mut input)?["method"] != "initialize" {
+        return Err("Missing ACP initialize".into());
+    }
+    send(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))?;
+    if receive(&mut input)?["method"] != "session/new" {
+        return Err("Missing ACP session".into());
+    }
+    send(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic"}}))?;
+    if receive(&mut input)?["method"] != "session/prompt" {
+        return Err("Missing ACP prompt".into());
+    }
+    send(
+        json!({"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"sessionId":"synthetic","toolCall":{"title":"Synthetic edit"},"options":[{"optionId":"allow","kind":"allow_once"},{"optionId":"deny","kind":"reject_once"}]}}),
+    )?;
+    if receive(&mut input)?["result"]["outcome"]["optionId"] != "allow" {
+        return Err("Synthetic permission not granted".into());
+    }
+    send(
+        json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"synthetic","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Public synthetic ACP reply"}}}}),
+    )?;
+    send(json!({"jsonrpc":"2.0","id":"prompt","result":{"stopReason":"end_turn"}}))?;
+    Ok(())
+}
+
 pub fn run(codex: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mode = std::fs::read_to_string(".agent-run-fixture")?;
     if ![

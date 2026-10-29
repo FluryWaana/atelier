@@ -19,8 +19,10 @@ use cap_std::fs::Dir;
 use reqwest::Url;
 use std::path::PathBuf;
 fn conflict() -> crate::Error {
-    ForgeFailure::OperationConflict("La tâche ou sa PR/MR a changé. Recharge avant de réessayer.")
-        .into()
+    ForgeFailure::OperationConflict(
+        "message.the_task_or_its_pr_mr_changed_reload_before_trying_again",
+    )
+    .into()
 }
 pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
     let card = store
@@ -36,7 +38,7 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
     }
     for run in store.documents::<Document>(Documents::Runs)? {
         if run.string_equals("cardId", &card.id)? && runs::active(&run)? {
-            return Err("Arrête l’exécution avant de modifier la liaison de PR/MR.".into());
+            return Err("message.stop_the_run_before_changing_the_pr_mr_link".into());
         }
     }
     for entry in store.documents::<Document>(Documents::Times)? {
@@ -44,21 +46,17 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
             && (entry.string_equals("exportState", "sending")?
                 || entry.string_equals("exportState", "uncertain")?)
         {
-            return Err(
-                "Termine ou vérifie l’export de temps avant de modifier cette tâche.".into(),
-            );
+            return Err("message.finish_or_check_the_time_export_before_changing_this_task".into());
         }
     }
     Ok(card)
 }
 pub fn prepare(store: &Store<'_>, input: &PullRequestAttach) -> Result<(Card, ForgeConfiguration)> {
     if input.expected.fields.raw("connectorPullRequest").is_some() {
-        return Err(
-            "Retire la liaison de PR/MR du module avant de choisir une forge native.".into(),
-        );
+        return Err("message.remove_connector_pr_before_native_forge".into());
     }
     if !input.confirmed {
-        return Err("Confirme l’association de cette PR/MR à la tâche.".into());
+        return Err("message.confirm_linking_this_pr_mr_to_the_task".into());
     }
     atelier_core::application::forge::repository(input.kind, &input.repository, input.number)?;
     Ok((
@@ -78,7 +76,7 @@ pub fn matches_origin(
     {
         let mut path = web
             .path_segments_mut()
-            .map_err(|_| "Adresse de forge invalide.")?;
+            .map_err(|_| "message.invalid_forge_address")?;
         path.pop_if_empty();
         for (index, part) in parts.iter().enumerate() {
             if configuration.kind == ForgeKind::Azure && index == 1 {
@@ -138,7 +136,7 @@ pub fn matches_origin(
         {
             let segments = web
                 .path_segments()
-                .ok_or("Chemin Azure invalide.")?
+                .ok_or("message.invalid_azure_path")?
                 .collect::<Vec<_>>();
             if segments.len() != 4 {
                 return Ok(false);
@@ -167,7 +165,7 @@ pub async fn verify(
     let worktree = card
         .fields
         .get::<Worktree>("worktree")?
-        .ok_or("Prépare le worktree avant de lier une PR/MR.")?;
+        .ok_or("message.prepare_the_worktree_before_linking_a_pr_mr")?;
     let repository_path = card.fields.get::<String>("repo")?.unwrap_or_default();
     let repository_path =
         super::task_creation::path_string(std::path::Path::new(&repository_path)).utf8()?;
@@ -180,7 +178,7 @@ pub async fn verify(
             cfg!(windows),
         )
     {
-        return Err("Le dépôt source ne correspond plus au worktree de la PR/MR.".into());
+        return Err("message.the_source_repository_no_longer_matches_the_pr_mr_worktree".into());
     }
     let directory = worktrees::inspect(root, roots, &worktree).await?;
     let origin = String::from_utf8(
@@ -194,9 +192,9 @@ pub async fn verify(
             ])
             .await?,
     )
-    .map_err(|_| "Remote origin de la PR/MR invalide.")?;
+    .map_err(|_| "message.invalid_pr_mr_origin_remote")?;
     if !matches_origin(configuration, repository, &origin)? {
-        return Err("Le remote origin ne correspond pas au dépôt de cette PR/MR.".into());
+        return Err("message.the_origin_remote_does_not_match_this_pr_mr_repository".into());
     }
     Ok(directory)
 }
@@ -211,14 +209,14 @@ pub fn attach(store: &Store<'_>, input: &PullRequestAttach, pr: PullRequest) -> 
             || pr.url != forge::browser_link(&configuration, &input.repository, input.number)?
             || pr.fork
         {
-            return Err("Cette PR/MR ne peut pas être associée à cette tâche.".into());
+            return Err("message.this_pr_mr_cannot_be_linked_to_this_task".into());
         }
         let worktree = card
             .fields
             .get::<Worktree>("worktree")?
-            .ok_or("Worktree de PR/MR absent.")?;
+            .ok_or("message.pr_mr_worktree_missing")?;
         if worktree.state != WorktreeState::Ready || pr.source_branch != worktree.branch {
-            return Err("La branche source de la PR/MR ne correspond pas au worktree.".into());
+            return Err("message.the_pr_mr_source_branch_does_not_match_the_worktree".into());
         }
         let previous = card.fields.get::<PullRequest>("pullRequest")?;
         if previous.as_ref().is_some_and(|previous| {
@@ -227,7 +225,7 @@ pub fn attach(store: &Store<'_>, input: &PullRequestAttach, pr: PullRequest) -> 
                 || previous.repository != pr.repository
                 || previous.number != pr.number
         }) {
-            return Err("Retire la liaison précédente avant d’associer une autre PR/MR.".into());
+            return Err("message.remove_the_previous_link_before_linking_another_pr_mr".into());
         }
         for other in store.documents::<Card>(Documents::Cards)? {
             if other.id != card.id
@@ -237,7 +235,7 @@ pub fn attach(store: &Store<'_>, input: &PullRequestAttach, pr: PullRequest) -> 
                 && link.repository == pr.repository
                 && link.number == pr.number
             {
-                return Err("Cette PR/MR est déjà associée à une autre tâche.".into());
+                return Err("message.this_pr_mr_is_already_linked_to_another_task".into());
             }
         }
         let changed = previous.as_ref().is_none_or(|previous| {
@@ -255,7 +253,7 @@ pub fn attach(store: &Store<'_>, input: &PullRequestAttach, pr: PullRequest) -> 
             invalidate(
                 store,
                 &mut card,
-                "La PR/MR ou ses commits ont changé. Relance la review.",
+                "message.the_pr_mr_or_its_commits_changed_run_the_review_again",
             )?;
         }
         store.put(Documents::Cards, &card)?;
@@ -277,13 +275,13 @@ pub(super) fn invalidate(store: &Store<'_>, card: &mut Card, reason: &str) -> Re
 pub fn detach(store: &Store<'_>, input: PullRequestDetach) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed {
-            return Err("Confirme le retrait de la liaison de PR/MR.".into());
+            return Err("message.confirm_removing_the_pr_mr_link".into());
         }
         let mut card = snapshot(store, &input.expected)?;
         if card.fields.raw("pullRequest").is_none()
             && card.fields.raw("connectorPullRequest").is_none()
         {
-            return Err("Cette tâche n’a aucune PR/MR associée.".into());
+            return Err("message.this_task_has_no_linked_pr_mr".into());
         }
         card.fields.remove("pullRequest");
         card.fields.remove("connectorPullRequest");
@@ -294,7 +292,7 @@ pub fn detach(store: &Store<'_>, input: PullRequestDetach) -> Result<Card> {
         invalidate(
             store,
             &mut card,
-            "La liaison de PR/MR a été retirée. Relance la review.",
+            "message.the_pr_mr_link_was_removed_run_the_review_again",
         )?;
         store.put(Documents::Cards, &card)?;
         Ok(card)

@@ -8,7 +8,7 @@ pub enum ForgeFailure {
 impl std::fmt::Display for ForgeFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
-            Self::Conflict => "Les connexions aux forges ont changé. Recharge avant de réessayer.",
+            Self::Conflict => "message.forge_connections_changed_reload_before_trying_again",
             Self::Invalid(message) => message,
             Self::OperationConflict(message) => message,
         })
@@ -101,11 +101,11 @@ pub fn repository(kind: ForgeKind, name: &str, number: u64) -> Result<Vec<&str>,
         || number == 0
         || number > i32::MAX as u64
     {
-        return Err(ForgeFailure::Invalid("Dépôt ou numéro de PR invalide."));
+        return Err(ForgeFailure::Invalid("message.invalid_repository_or_pr_number"));
     }
     if kind != ForgeKind::Gitlab && parts.len() != 2 {
         return Err(ForgeFailure::Invalid(
-            "Utilise propriétaire/dépôt ou projet/dépôt pour cette forge.",
+            "message.use_owner_repository_or_project_repository_for_this_forge",
         ));
     }
     Ok(parts)

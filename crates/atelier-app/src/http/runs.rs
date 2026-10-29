@@ -35,7 +35,12 @@ pub(super) fn guard(manager: &CommandRuns, path: &str) -> Option<Response> {
             let (id, action) = tail.split_once('/').unwrap_or((tail, ""));
             cards.iter().any(|card| card == id) && !action.starts_with("services")
         });
-    blocked.then(|| failure(StatusCode::CONFLICT, "Arrête les exécutions avant de modifier cette tâche, les projets, les profils ou les sauvegardes."))
+    blocked.then(|| {
+        failure(
+            StatusCode::CONFLICT,
+            "message.stop_runs_before_changing_this_task_projects_profiles_or_backups",
+        )
+    })
 }
 
 pub(super) async fn start(
@@ -62,15 +67,15 @@ pub(super) async fn launch(
     queued: bool,
 ) -> Result<Document> {
     let result: Result<Document> = async {
-        let mode = body.get::<String>("mode")?.ok_or("Mode requis.")?;
+        let mode = body.get::<String>("mode")?.ok_or("message.mode_required")?;
         if !["analyze", "edit"].contains(&mode.as_str()) {
-            return Err("Mode invalide.".into());
+            return Err("message.invalid_mode".into());
         }
         let purpose=body.get::<String>("purpose")?.unwrap_or_else(||"work".into());
-        if !["work","preparation","review","correction"].contains(&purpose.as_str()) {return Err("Objectif d’exécution invalide.".into());}
-        if purpose=="review" && mode!="analyze" {return Err("La review utilise uniquement le mode Analyse.".into());}
-        if purpose=="correction" && (mode!="edit" || body.get::<bool>("confirmed")?!=Some(true)) {return Err("Confirme la correction sélectionnée en mode Modification.".into());}
-        let agent = body.get::<String>("agent")?.ok_or("Profil requis.")?;
+        if !["work","preparation","review","correction"].contains(&purpose.as_str()) {return Err("message.invalid_run_purpose".into());}
+        if purpose=="review" && mode!="analyze" {return Err("message.review_only_uses_analyze_mode".into());}
+        if purpose=="correction" && (mode!="edit" || body.get::<bool>("confirmed")?!=Some(true)) {return Err("message.confirm_the_selected_correction_in_edit_mode".into());}
+        let agent = body.get::<String>("agent")?.ok_or("message.profile_required")?;
         let vault=state.vault.clone();
         let requested=body.clone();
         let conversation_body=body.clone();
@@ -79,9 +84,9 @@ pub(super) async fn launch(
             .call(move |store| {
                 let card = store
                     .document::<Card>(Documents::Cards, &id)?
-                    .ok_or("Carte introuvable.")?;
+                    .ok_or("message.card_not_found")?;
                 if let Some(expected)=requested.get::<Card>("expected")?
-                    && serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))? {return Err("La tâche a changé. Recharge avant de lancer l’exécution.".into());}
+                    && serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))? {return Err("message.the_task_changed_reload_before_starting_the_run".into());}
                 let (mut profile,api_key)=agent_providers::execution_profile(store,&agent,&mut |value,decrypt| vault.protect(value,decrypt))?;
                 let settings:serde_json::Value=serde_json::from_str(&serde_json::to_string(&store.settings::<Document>()?)?)?;
                 let settings=atelier_core::domain::projects::settings_for_project(&settings,&store.documents::<serde_json::Value>(Documents::Projects)?,&card.fields.get::<String>("repo")?.unwrap_or_default(),cfg!(windows));
@@ -90,18 +95,18 @@ pub(super) async fn launch(
                 let options=atelier_core::domain::agent_options::resolve_agent_options(&settings,&card_value,&requested)?;
                 profile.set("model",&options["model"])?; profile.set("effort",&options["effort"])?;
                 if card.fields.truthy("archived")? {
-                    return Err("Restaure cette tâche avant de lancer un agent.".into());
+                    return Err("message.restore_task_before_agent".into());
                 }
                 let rules=settings["projectRules"].as_str().unwrap_or_default().to_owned();
                 let conversation=if card.fields.truthy("brainstormSession")? {
-                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("Un brainstorm utilise uniquement le mode Analyse.".into());}
-                    let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de session requis.")?;
-                    let reply=conversation_body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?;
+                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("message.a_brainstorm_only_uses_analyze_mode".into());}
+                    let expected=conversation_body.get::<Card>("expected")?.ok_or("message.session_snapshot_required")?;
+                    let reply=conversation_body.get::<String>("message")?.ok_or("message.brainstorm_message_required")?;
                     Some(crate::infrastructure::brainstorm::conversation(store,&card,&expected,&reply)?)
                 }else if conversation_body.get::<String>("purpose")?.as_deref()==Some("preparation") {
-                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("La préparation utilise uniquement le mode Analyse.".into());}
-                    let expected=conversation_body.get::<Card>("expected")?.ok_or("Instantané de tâche requis.")?;
-                    if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("La tâche a changé. Recharge avant de préparer le ticket.".into());}
+                    if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("message.preparation_only_uses_analyze_mode".into());}
+                    let expected=conversation_body.get::<Card>("expected")?.ok_or("message.task_snapshot_required")?;
+                    if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("message.the_task_changed_reload_before_preparing_the_issue".into());}
                     Some(atelier_core::application::preparation::prompt(&card)?)
                 }else{None};
                 Ok((card, profile, api_key, rules, conversation))
@@ -109,57 +114,52 @@ pub(super) async fn launch(
             .await?;
         let connector_review=card.fields.raw("connectorPullRequest").is_some();
         let connector_correction=if purpose=="correction"&&connector_review {
-            let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("Review introuvable.")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("Sélection de constats invalide.")?;
+            let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("message.review_not_found")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("message.invalid_finding_selection")?;
             Some(state.database.call(move|store|crate::infrastructure::connector_repositories::correction(store,&input,&review,&indexes)).await?)
         }else{None};
         let connector_context=if connector_review&&["review","correction"].contains(&purpose.as_str()) {Some(super::connectors::repositories::prepare_review(state,&card).await?)}else{None};
         let correction=if purpose=="correction"&&!connector_review {
-            let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("Review introuvable.")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("Sélection de constats invalide.")?;
+            let input=card.clone();let review=body.get::<String>("reviewId")?.ok_or("message.review_not_found")?;let indexes=body.get::<Vec<usize>>("indexes")?.ok_or("message.invalid_finding_selection")?;
             Some(state.database.call(move|store|crate::infrastructure::reviews::correction(store,&input,&review,&indexes)).await?)
         }else{None};
         let review_context=if !connector_review&&["review","correction"].contains(&purpose.as_str()) {
-            let expected=body.get::<Card>("expected")?.ok_or("Instantané de tâche requis.")?;
-            if card.fields.truthy("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("La tâche a changé. Recharge avant la review.".into());}
-            let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
+            let expected=body.get::<Card>("expected")?.ok_or("message.task_snapshot_required")?;
+            if card.fields.truthy("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("message.the_task_changed_reload_before_reviewing".into());}
+            let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("message.a_pr_mr_and_its_worktree_are_required_for_review")?;
             let vault=state.vault.clone();let kind=linked.kind;let revision=linked.revision;
             let (configuration,token)=state.database.call(move|store|crate::infrastructure::forge::credentials(store,kind,revision,&mut|value,decrypt|vault.protect(value,decrypt))).await?;
             Some(crate::infrastructure::reviews::prepare(&state.prototype_directory,&state.prototype_paths,&card,configuration,token).await?)
         }else{None};
         let conversation=if let Some((expected,prompt))=connector_correction {
-            if connector_context.as_ref()!=Some(&expected){return Err("Les commits ou critères du module ont changé. Relance la review.".into());}Some(prompt)
+            if connector_context.as_ref()!=Some(&expected){return Err("message.connector_review_changed".into());}Some(prompt)
         }else if let Some(context)=&connector_context {Some(atelier_core::application::extensions::repository_prompt(context)?)}else if let Some((expected,prompt))=correction {
-            if review_context.as_ref()!=Some(&expected) {return Err("Les commits ou le besoin ont changé. Relance la review.".into());}
+            if review_context.as_ref()!=Some(&expected) {return Err("message.commits_or_requirements_changed_run_the_review_again".into());}
             Some(prompt)
         }else if let Some(context)=&review_context {Some(atelier_core::application::reviews::prompt(context)?)}else{conversation};
         let no_repository=(card.fields.truthy("brainstormSession")? || body.get::<String>("purpose")?.as_deref()==Some("preparation")) && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
         let (directory,branch)=if no_repository {
-            if card.fields.raw("worktree").is_some(){return Err("Retire le worktree avant de poursuivre sans dépôt.".into());}
+            if card.fields.raw("worktree").is_some(){return Err("message.remove_the_worktree_before_continuing_without_a_repository".into());}
             (RunDirectory::conversation()?,String::new())
         }else{
-            let worktree=card.fields.get::<Worktree>("worktree")?.ok_or("Prépare le worktree avant de lancer une commande.")?;
-            if worktree.state!=WorktreeState::Ready {return Err("Vérifie le worktree avant de lancer une commande.".into());}
-            let source=card.fields.get::<String>("repo")?.ok_or("Dépôt absent.")?;
-            if !same_repository(&source,&worktree.source,true){return Err("Le dépôt source ne correspond plus au worktree.".into());}
+            let worktree=card.fields.get::<Worktree>("worktree")?.ok_or("message.prepare_the_worktree_before_starting_a_command")?;
+            if worktree.state!=WorktreeState::Ready {return Err("message.verify_worktree_before_command".into());}
+            let source=card.fields.get::<String>("repo")?.ok_or("message.repository_missing")?;
+            if !same_repository(&source,&worktree.source,true){return Err("message.the_source_repository_no_longer_matches_the_worktree".into());}
             let repository=worktrees::inspect(&state.prototype_directory,&state.prototype_paths,&worktree).await?;
             (RunDirectory::Worktree(repository),worktree.branch)
         };
         let working_path=crate::infrastructure::task_creation::path_string(directory.path()).utf8()?;
-        let kind=profile.get::<String>("type")?.ok_or("Agent invalide.")?;
-        let (mut command,secrets)=if kind=="command" { (agent_diagnostics::command(&profile).await?,Vec::new()) } else { agent_diagnostics::agent_command(&profile,&api_key).await? };
+        let kind=profile.get::<String>("type")?.ok_or("message.invalid_agent")?;
         let model = profile.get::<String>("model")?.unwrap_or_default();
         let effort = profile.get::<String>("effort")?.unwrap_or_default();
+        let protocol_kind=Kind::from_id(&kind);
+        let (mut command,secrets)=if kind=="command" { (agent_diagnostics::command(&profile).await?,Vec::new()) } else { agent_diagnostics::agent_command(&profile,&api_key).await? };
         let args=match kind.as_str() {
-            "command"=>profile.get::<Vec<String>>(&format!("{mode}Args"))?.ok_or("Arguments de commande absents.")?,
-            "codex"=> { let mut args=vec!["app-server".to_owned()]; if !api_key.is_empty() { args.extend(["-c".into(),"cli_auth_credentials_store=\"ephemeral\"".into()]); } args },
-            "claude"=> {
-                let mut args=vec!["-p".into(),"--output-format".into(),"stream-json".into(),"--input-format".into(),"stream-json".into(),"--verbose".into(),"--include-partial-messages".into(),"--permission-mode".into(),if mode=="edit"{"default".into()}else{"plan".into()}];
-                if !model.is_empty() { args.extend(["--model".into(),model.clone()]); }
-                if !effort.is_empty() { args.extend(["--effort".into(),effort.clone()]); }
-                args
-            },
-            _=>return Err("Agent invalide.".into()),
+            "command"=>profile.get::<Vec<String>>(&format!("{mode}Args"))?.ok_or("message.command_arguments_missing")?,
+            "acp"=>profile.get::<Vec<String>>("protocolArgs")?.unwrap_or_default(),
+            _=>protocol_kind.ok_or("message.invalid_agent")?.launch_arguments(&kind,mode=="edit",&model,&effort,!api_key.is_empty()),
         };
-        if args.len()>128 || args.iter().any(|arg| arg.len()>16*1024 || arg.contains('\0')) { return Err("Arguments de commande invalides.".into()); }
+        if args.len()>128 || args.iter().any(|arg| arg.len()>16*1024 || arg.contains('\0')) { return Err("message.command_arguments_invalid".into()); }
         command
             .args(
                 args.iter()
@@ -180,7 +180,7 @@ pub(super) async fn launch(
                 .unwrap_or_default()
         )};
         if prompt.len() > 256 * 1024 {
-            return Err("Instructions trop longues.".into());
+            return Err("message.instructions_too_long".into());
         }
         let mut run = Document::default();
         run.set("id", &run_id)?; run.set("queued",&queued)?;
@@ -200,7 +200,7 @@ pub(super) async fn launch(
             if purpose=="review" {run.set("kind",&"pr-review")?;run.set("reviewStaleReason",&crate::infrastructure::reviews::UNCHECKED)?;}
             else {run.set("correctionOf",&body.get::<String>("reviewId")?)?;run.set("correctionIndexes",&body.get::<Vec<usize>>("indexes")?)?;}
         }
-        if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("Message de brainstorm requis.")?)?;}
+        if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("message.brainstorm_message_required")?)?;}
         if !card.fields.truthy("brainstormSession")? && body.get::<String>("purpose")?.as_deref()==Some("preparation"){run.set("purpose",&"preparation")?;run.set("requirements",&atelier_core::application::preparation::requirements(&card)?)?;}
         run.set("model", &model)?;
         run.set("effort", &effort)?;
@@ -212,8 +212,8 @@ pub(super) async fn launch(
             &time::OffsetDateTime::now_utc()
                 .format(&time::format_description::well_known::Rfc3339)?,
         )?;
-        let input=if kind=="command" { RunInput::Command(prompt) } else { RunInput::Agent(Box::new(Protocol::new(ProtocolConfig { kind:if kind=="codex"{Kind::Codex}else{Kind::Claude},edit:mode=="edit",repo:working_path,prompt,model,effort,api_key,secrets }))) };
-        if *state.shutdown.borrow(){return Err("Atelier est en cours d’arrêt.".into());}
+        let input=if kind=="command" { RunInput::Command(prompt) } else { RunInput::Agent(Box::new(Protocol::new(ProtocolConfig { kind:protocol_kind.ok_or("message.invalid_agent")?,edit:mode=="edit",repo:working_path,prompt,model,effort,api_key,secrets }))) };
+        if *state.shutdown.borrow(){return Err("message.atelier_is_shutting_down".into());}
         state
             .runs
             .start(state.database.clone(), run, command, input, directory)
@@ -235,7 +235,7 @@ pub(super) async fn reply(
     let answer: AgentAnswer =
         match serde_json::from_str(&serde_json::to_string(&body).unwrap_or_default()) {
             Ok(answer) => answer,
-            Err(_) => return failure(StatusCode::BAD_REQUEST, "Réponse interactive invalide."),
+            Err(_) => return failure(StatusCode::BAD_REQUEST, "message.invalid_interactive_reply"),
         };
     match state.runs.reply(&id, answer).await {
         Ok(()) => Json(serde_json::json!({"ok":true})).into_response(),
@@ -265,17 +265,17 @@ pub(super) async fn launch_verification(
 ) -> Result<Document> {
     let result: Result<Document> = async {
         if body.get::<bool>("confirmed")? != Some(true) {
-            return Err("Confirme la commande de vérification enregistrée dans le projet.".into());
+            return Err("message.confirm_the_verification_command_saved_in_the_project".into());
         }
         let expected = body
             .get::<Card>("expected")?
-            .ok_or("Instantané de tâche requis.")?;
+            .ok_or("message.task_snapshot_required")?;
         if expected.id != id {
-            return Err("Carte incohérente.".into());
+            return Err("message.inconsistent_card".into());
         }
         let command = body
             .get::<String>("command")?
-            .ok_or("Commande de vérification invalide.")?;
+            .ok_or("message.invalid_verification_command")?;
         let selected = command.clone();
         let card = state
             .database
@@ -289,13 +289,13 @@ pub(super) async fn launch_verification(
             .fields
             .get::<Worktree>("worktree")?
             .filter(|worktree| worktree.state == WorktreeState::Ready)
-            .ok_or("Prépare le worktree avant la vérification.")?;
+            .ok_or("message.prepare_the_worktree_before_verification")?;
         if !same_repository(
             &card.fields.get::<String>("repo")?.unwrap_or_default(),
             &worktree.source,
             true,
         ) {
-            return Err("Le dépôt source ne correspond plus au worktree.".into());
+            return Err("message.the_source_repository_no_longer_matches_the_worktree".into());
         }
         let repository = worktrees::inspect(
             &state.prototype_directory,
@@ -375,19 +375,19 @@ pub(super) async fn logs(
     Query(cursor): Query<Cursor>,
 ) -> Response {
     if cursor.after < 0 {
-        return failure(StatusCode::BAD_REQUEST, "Curseur de journal invalide.");
+        return failure(StatusCode::BAD_REQUEST, "message.log_cursor_invalid");
     }
     match state
         .database
         .call(move |store| {
             if store.document::<Document>(Documents::Runs, &id)?.is_none() {
-                return Err("Exécution introuvable.".into());
+                return Err("message.run_not_found".into());
             }
             store.logs(&id, cursor.after)
         })
         .await
     {
         Ok(logs) => Json(logs).into_response(),
-        Err(_) => failure(StatusCode::NOT_FOUND, "Journal indisponible."),
+        Err(_) => failure(StatusCode::NOT_FOUND, "message.log_unavailable"),
     }
 }

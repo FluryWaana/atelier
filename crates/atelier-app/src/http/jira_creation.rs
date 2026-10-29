@@ -28,12 +28,12 @@ pub(super) async fn create(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let operation = uuid::Uuid::new_v4().to_string();
@@ -55,7 +55,7 @@ pub(super) async fn create(
                 .creation_metadata(&input.project_key, &input.issue_type.id)
                 .await?;
             if metadata.issue_type != input.issue_type {
-                return Err("Le type de ticket Jira a changé. Recharge les métadonnées.".into());
+                return Err("message.the_jira_issue_type_changed_reload_the_metadata".into());
             }
             domain::validate_creation(&metadata, &input.expected)?;
             let original = input.expected.clone();
@@ -69,9 +69,9 @@ pub(super) async fn create(
         };
         let stopping = *stopped.borrow();
         if stopping {
-            Err("Atelier est en cours d’arrêt.".into())
+            Err("message.atelier_is_shutting_down".into())
         } else {
-            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),preparing)=>result.unwrap_or_else(|_|Err("Lecture des métadonnées Jira trop longue.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),preparing)=>result.unwrap_or_else(|_|Err("message.reading_jira_metadata_took_too_long".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
         }
     };
     let (client, metadata, card) = match ready {
@@ -114,12 +114,12 @@ pub(super) async fn reconcile(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     if input.close_uncertainty && input.existing_key.is_some() {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Choisis la vérification d’un ticket ou la clôture de l’incertitude.",
+            "message.choose_issue_verification_or_closing_uncertainty",
         );
     }
     if input.close_uncertainty {
@@ -135,12 +135,12 @@ pub(super) async fn reconcile(
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let operation = async {
         let expected = input.expected.clone();
@@ -152,13 +152,13 @@ pub(super) async fn reconcile(
                     .fields
                     .get::<JiraCreationIntent>("jiraCreation")?
                     .filter(|intent| intent.state == Phase::Uncertain)
-                    .ok_or("Aucune création Jira incertaine à vérifier.")?;
+                    .ok_or("message.no_uncertain_jira_creation_to_verify")?;
                 let configuration = store
                     .settings::<Document>()?
                     .get::<JiraConfiguration>("jiraConnection")?
-                    .ok_or("Connexion Jira absente.")?;
+                    .ok_or("message.jira_connection_missing")?;
                 if configuration.url != intent.base {
-                    return Err("Reconnecte le site Jira de la création incertaine.".into());
+                    return Err("message.reconnect_the_jira_site_of_the_uncertain_creation".into());
                 }
                 Ok((card, intent))
             })
@@ -170,14 +170,15 @@ pub(super) async fn reconcile(
                     != Some(intent.project_key.as_str())
             {
                 return Err(
-                    "La clé Jira doit appartenir au projet de la création incertaine.".into(),
+                    "message.the_jira_key_must_belong_to_the_project_of_the_uncertain_creatio"
+                        .into(),
                 );
             }
             client.issue_by_key(&key).await?
         } else if let Some(known) = &intent.result {
             client.issue_by_id(&known.id).await?
         } else {
-            return Err("Renseigne la clé du ticket retrouvé dans Jira.".into());
+            return Err("message.enter_the_key_of_the_issue_found_in_jira".into());
         };
         state
             .database
@@ -187,7 +188,7 @@ pub(super) async fn reconcile(
             })
             .await
     };
-    let result: Result<Card> = tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),operation)=>result.unwrap_or_else(|_|Err("Vérification Jira trop longue.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())};
+    let result: Result<Card> = tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),operation)=>result.unwrap_or_else(|_|Err("message.jira_verification_took_too_long".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())};
     let _ = state.changed.send(());
     response(result)
 }

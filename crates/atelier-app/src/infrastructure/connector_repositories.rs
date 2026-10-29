@@ -74,7 +74,9 @@ fn url(value: &str) -> Result<Url> {
         || url.fragment().is_some()
         || value.chars().any(|c| c.is_control() || c.is_whitespace())
     {
-        return Err("Adresse HTTPS de dépôt sans identifiants ni paramètres requise.".into());
+        return Err(
+            "message.a_repository_https_address_without_credentials_or_parameters_is".into(),
+        );
     }
     Ok(url)
 }
@@ -98,7 +100,9 @@ fn scope(profile: &Installed, observation: &RepositoryObservation) -> Result<()>
                     })
         })
     {
-        return Err("L’instance du dépôt n’appartient pas à la connexion sélectionnée.".into());
+        return Err(
+            "message.the_repository_instance_does_not_belong_to_the_selected_connecti".into(),
+        );
     }
     if let Some(pr) = &observation.pull_request {
         let link = url(&pr.url)?;
@@ -107,7 +111,7 @@ fn scope(profile: &Installed, observation: &RepositoryObservation) -> Result<()>
                 .path()
                 .starts_with(&format!("{}/", instance.path().trim_end_matches('/')))
         {
-            return Err("Lien de PR/MR hors de l’instance du module.".into());
+            return Err("message.the_pr_mr_link_is_outside_the_module_instance".into());
         }
     }
     Ok(())
@@ -151,10 +155,12 @@ async fn disk(repository: &Repository, source: &Repository) -> Result<Disk> {
 }
 pub fn selection(store: &Store<'_>, profile: &Installed, value: &Value) -> Result<Selection> {
     let mut selection: Selection = serde_json::from_str(&value.to_string())
-        .map_err(|_| "Sélection de dépôt du module invalide.")?;
+        .map_err(|_| "message.invalid_module_repository_selection")?;
     selection.expected = forge_association::snapshot(store, &selection.expected)?;
     if selection.expected.fields.raw("pullRequest").is_some() {
-        return Err("Cette tâche utilise déjà une forge native. Détache sa PR/MR avant de changer de connecteur.".into());
+        return Err(
+            "message.this_task_already_uses_a_native_forge_detach_its_pr_mr_before_sw".into(),
+        );
     }
     if let Some(link) = selection
         .expected
@@ -162,7 +168,7 @@ pub fn selection(store: &Store<'_>, profile: &Installed, value: &Value) -> Resul
         .get::<ModulePullRequestLink>("connectorPullRequest")?
         && link.module != profile.manifest.id
     {
-        return Err("Cette PR/MR appartient à un autre connecteur.".into());
+        return Err("message.this_pr_mr_belongs_to_another_module".into());
     }
     atelier_core::application::worktrees::validate_reference(&selection.target)?;
     if selection.title.trim().is_empty()
@@ -174,7 +180,7 @@ pub fn selection(store: &Store<'_>, profile: &Installed, value: &Value) -> Resul
             .chars()
             .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
     {
-        return Err("Titre ou description de publication invalide.".into());
+        return Err("message.publication_title_description_invalid".into());
     }
     Ok(selection)
 }
@@ -189,9 +195,9 @@ impl Guard {
             .expected
             .fields
             .get::<Worktree>("worktree")?
-            .ok_or("Prépare le worktree avant cette opération de dépôt.")?;
+            .ok_or("message.prepare_the_worktree_before_this_repository_operation")?;
         if selection.target == worktree.branch {
-            return Err("Choisis une branche cible différente de la branche du worktree.".into());
+            return Err("message.choose_distinct_target_branch".into());
         }
         let repository = worktrees::inspect(root, roots, &worktree).await?;
         let source =
@@ -203,7 +209,9 @@ impl Guard {
             .await?
             .is_empty()
         {
-            return Err("Prépare un commit local et garde le worktree propre avant la publication ou la review du module.".into());
+            return Err(
+                "message.prepare_a_local_commit_and_keep_the_worktree_clean_before_module".into(),
+            );
         }
         Ok(Self {
             selection,
@@ -220,7 +228,9 @@ impl Guard {
     }
     pub async fn unchanged(&self) -> Result<()> {
         if disk(&self.repository, &self.source).await? != self.disk {
-            return Err("Le module a modifié la branche, les fichiers, l’index, FETCH_HEAD ou l’origine. Vérifie le dépôt avant de poursuivre.".into());
+            return Err(
+                "message.the_module_changed_the_branch_files_index_fetch_head_or_origin_i".into(),
+            );
         }
         Ok(())
     }
@@ -235,14 +245,16 @@ impl Guard {
         if observation.reference.origin != origin
             || observation.target_branch != self.selection.target
         {
-            return Err("Le module a changé le dépôt ou la branche cible demandés.".into());
+            return Err(
+                "message.the_module_changed_the_requested_repository_or_target_branch".into(),
+            );
         }
         let worktree = self
             .selection
             .expected
             .fields
             .get::<Worktree>("worktree")?
-            .ok_or("Worktree absent.")?;
+            .ok_or("message.worktree_missing")?;
         if let Some(link) = self
             .selection
             .expected
@@ -252,14 +264,14 @@ impl Guard {
                 pr.reference != link.pull_request.reference || pr.id != link.pull_request.id
             })
         {
-            return Err("La réponse du module désigne une autre PR/MR.".into());
+            return Err("message.the_module_response_identifies_another_pr_mr".into());
         }
         if let Some(pr) = &observation.pull_request
             && (pr.source_branch != worktree.branch
                 || (review && pr.source_commit != source)
                 || pr.target_commit != observation.target_commit)
         {
-            return Err("La PR/MR ne désigne pas les commits de ce worktree.".into());
+            return Err("message.the_pr_mr_does_not_identify_this_worktree_s_commits".into());
         }
         if review
             && observation
@@ -267,9 +279,16 @@ impl Guard {
                 .as_ref()
                 .is_none_or(|pr| pr.status != "active")
         {
-            return Err("Une PR/MR active de ce worktree est requise pour la review.".into());
+            return Err("message.active_worktree_pr_required".into());
         }
-        self.repository.git(&["cat-file","-e",&format!("{}^{{commit}}",observation.target_commit)]).await.map_err(|_|"Le commit cible est absent. Actualise ses objets avec le module avant de demander la review.")?;
+        self.repository
+            .git(&[
+                "cat-file",
+                "-e",
+                &format!("{}^{{commit}}", observation.target_commit),
+            ])
+            .await
+            .map_err(|_| "message.target_commit_missing_refresh")?;
         let base = String::from_utf8(
             self.repository
                 .git(&["merge-base", "--", &source, &observation.target_commit])
@@ -278,7 +297,7 @@ impl Guard {
         .trim()
         .to_owned();
         if !protocol::repository_commit(&base) {
-            return Err("Base réelle de review indisponible.".into());
+            return Err("message.the_actual_review_merge_base_is_unavailable".into());
         }
         self.unchanged().await?;
         let context = RepositoryReviewContext {
@@ -331,17 +350,19 @@ pub fn prepare_preview(store: &Store<'_>, profile: &Installed, value: &Value) ->
     let selected: Selected = serde_json::from_str(&value.to_string())?;
     let card = forge_association::snapshot(store, &selected.expected)?;
     let proposal = if let Some(mut approved) = selected.approved {
-        let id = selected.automation_id.ok_or("Parcours approuvé requis.")?;
+        let id = selected
+            .automation_id
+            .ok_or("message.an_approved_workflow_is_required")?;
         let (_, _, plan) = super::automation::publication(store, &card.id, &id)?;
         if !matches!(plan,atelier_core::application::automation::PublicationPlan::Module(ref frozen) if serde_json::to_value(frozen)?==serde_json::to_value(&approved)?)
         {
-            return Err("Le plan de publication du module a changé.".into());
+            return Err("message.the_module_publication_plan_changed".into());
         }
         approved.automation_id = Some(id);
         approved
     } else {
         if selected.automation_id.is_some() {
-            return Err("Aperçu approuvé du parcours absent.".into());
+            return Err("message.the_approved_workflow_preview_is_missing".into());
         }
         let report = profile
             .report
@@ -350,20 +371,22 @@ pub fn prepare_preview(store: &Store<'_>, profile: &Installed, value: &Value) ->
                 Some(&report.id) == selected.report_id.as_ref()
                     && report.method == Method::RepositoriesPreview
             })
-            .ok_or("Relis l’aperçu de dépôt avant de publier.")?;
+            .ok_or("message.read_the_repository_preview_again_before_publishing")?;
         let age = time::OffsetDateTime::now_utc()
             - time::OffsetDateTime::parse(
                 &report.observed_at,
                 &time::format_description::well_known::Rfc3339,
             )?;
         if age > time::Duration::minutes(10) || age < time::Duration::seconds(-60) {
-            return Err("L’aperçu du dépôt a expiré. Relis-le avant de publier.".into());
+            return Err(
+                "message.the_repository_preview_expired_read_it_again_before_publishing".into(),
+            );
         }
         protocol::repository_proposal(&report.output)?
     };
     matches(store, &card, &proposal.context)?;
     if proposal.card_revision != revision(&card)? {
-        return Err("La tâche a changé depuis l’aperçu de publication.".into());
+        return Err("message.the_task_changed_since_the_publication_preview".into());
     }
     Ok(serde_json::to_value(proposal)?)
 }
@@ -381,14 +404,16 @@ pub fn publication_owner(
     let expected: Card = serde_json::from_str(
         &input
             .get("expected")
-            .ok_or("Carte du parcours absente.")?
+            .ok_or("message.workflow_card_missing")?
             .to_string(),
     )?;
     let (_, _, plan) = super::automation::publication(store, &expected.id, operation)?;
-    let approved = input.get("approved").ok_or("Plan du module absent.")?;
+    let approved = input
+        .get("approved")
+        .ok_or("message.connector_plan_missing")?;
     if !matches!(plan,atelier_core::application::automation::PublicationPlan::Module(ref frozen) if serde_json::to_value(frozen)?==*approved)
     {
-        return Err("Le plan de publication du module a changé.".into());
+        return Err("message.the_module_publication_plan_changed".into());
     }
     Ok(Some((expected.id, operation.into())))
 }
@@ -399,7 +424,7 @@ pub fn matches(store: &Store<'_>, card: &Card, context: &RepositoryReviewContext
         || context.requirements != reviews::requirements(card)?
         || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&context.worktree)
     {
-        return Err("Le besoin, le worktree ou la connexion du module a changé.".into());
+        return Err("message.the_requirements_worktree_or_module_connection_changed".into());
     }
     if let Some(link) = card
         .fields
@@ -408,7 +433,7 @@ pub fn matches(store: &Store<'_>, card: &Card, context: &RepositoryReviewContext
             || link.revision != context.revision
             || Some(&link.pull_request) != context.pull_request.as_ref())
     {
-        return Err("La PR/MR du module a changé.".into());
+        return Err("message.the_module_pr_mr_changed".into());
     }
     Ok(())
 }
@@ -417,30 +442,30 @@ pub fn record(store: &Store<'_>, profile: &Installed, report: &protocol::Report)
     if proposal.context.module != profile.manifest.id
         || proposal.context.revision != profile.revision
     {
-        return Err("Observation liée à une autre connexion de dépôt.".into());
+        return Err("message.the_observation_belongs_to_another_repository_connection".into());
     }
     let mut card = store
         .document::<Card>(Documents::Cards, &proposal.context.card_id)?
-        .ok_or("Carte absente.")?;
+        .ok_or("message.card_missing")?;
     forge_association::snapshot(store, &card)?;
     if revision(&card)? != proposal.card_revision {
-        return Err("La tâche a changé pendant l’appel du dépôt.".into());
+        return Err("message.the_task_changed_during_the_repository_call".into());
     }
     if report.method == Method::RepositoriesRefresh {
         let pr = proposal
             .observation
             .pull_request
             .clone()
-            .ok_or("PR/MR du module absente de l’actualisation.")?;
+            .ok_or("message.the_module_refresh_is_missing_its_pr_mr")?;
         let previous = card
             .fields
             .get::<ModulePullRequestLink>("connectorPullRequest")?
-            .ok_or("PR/MR du module non liée.")?;
+            .ok_or("message.no_module_pr_mr_is_associated")?;
         if previous.module != profile.manifest.id
             || previous.pull_request.id != pr.id
             || previous.pull_request.reference != pr.reference
         {
-            return Err("Actualisation liée à une autre PR/MR.".into());
+            return Err("message.this_refresh_belongs_to_another_pr_mr".into());
         }
         let link = ModulePullRequestLink {
             module: profile.manifest.id.clone(),
@@ -452,7 +477,7 @@ pub fn record(store: &Store<'_>, profile: &Installed, report: &protocol::Report)
             forge_association::invalidate(
                 store,
                 &mut card,
-                "La PR/MR du module ou ses commits ont changé. Relance la review.",
+                "message.the_module_pr_mr_or_its_commits_changed_run_the_review_again",
             )?;
             store.put(Documents::Cards, &card)?;
         }
@@ -472,9 +497,9 @@ pub fn review_matches(
     let link = card
         .fields
         .get::<ModulePullRequestLink>("connectorPullRequest")?
-        .ok_or("PR/MR du module non liée.")?;
+        .ok_or("message.no_module_pr_mr_is_associated")?;
     if Some(&link.pull_request) != context.pull_request.as_ref() {
-        return Err("La PR/MR du module a changé.".into());
+        return Err("message.the_module_pr_mr_changed".into());
     }
     Ok(())
 }
@@ -489,7 +514,7 @@ pub fn validate_review(
         review_matches(store, card, context)?;
         let mut run = store
             .document::<Document>(Documents::Runs, id)?
-            .ok_or("Review absente.")?;
+            .ok_or("message.review_missing")?;
         if !run.string_equals("cardId", &card.id)?
             || !run.string_equals("kind", "pr-review")?
             || !run.string_equals("status", "completed")?
@@ -499,7 +524,7 @@ pub fn validate_review(
                 != Some(context)
             || run.get::<reviews::Review>("review")?.is_none()
         {
-            return Err("Review de module incomplète ou périmée.".into());
+            return Err("message.the_module_review_is_incomplete_or_stale".into());
         }
         run.remove("reviewStaleReason");
         run.set("reviewValidatedAt", &timestamp)?;
@@ -515,22 +540,22 @@ pub fn correction(
 ) -> Result<(RepositoryReviewContext, String)> {
     let run = store
         .document::<Document>(Documents::Runs, id)?
-        .ok_or("Review absente.")?;
+        .ok_or("message.review_missing")?;
     if !run.string_equals("cardId", &card.id)?
         || !run.string_equals("kind", "pr-review")?
         || !run.string_equals("status", "completed")?
         || run.truthy("reviewStaleReason")?
         || !run.truthy("reviewValidatedAt")?
     {
-        return Err("Choisis une review du module aboutie et revalidée.".into());
+        return Err("message.select_a_completed_and_revalidated_module_review".into());
     }
     let context = run
         .get::<RepositoryReviewContext>("connectorReviewContext")?
-        .ok_or("Contexte de review du module absent.")?;
+        .ok_or("message.connector_review_context_missing")?;
     review_matches(store, card, &context)?;
     let review = run
         .get::<reviews::Review>("review")?
-        .ok_or("Bilan de review absent.")?;
+        .ok_or("message.review_report_missing")?;
     Ok((context, reviews::correction_prompt(&review, indexes)?))
 }
 pub fn before_send(store: &Store<'_>, operation: &protocol::RemoteOperation) -> Result<()> {
@@ -544,15 +569,17 @@ pub fn before_send(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
         frozen.automation_id = None;
         if !matches!(plan,atelier_core::application::automation::PublicationPlan::Module(ref approved) if serde_json::to_value(approved)?==serde_json::to_value(&frozen)?)
         {
-            return Err("La publication automatique du module a été arrêtée ou remplacée.".into());
+            return Err(
+                "message.the_module_s_automatic_publication_was_stopped_or_replaced".into(),
+            );
         }
     }
     let card = store
         .document::<Card>(Documents::Cards, &proposal.context.card_id)?
-        .ok_or("Carte absente.")?;
+        .ok_or("message.card_missing")?;
     matches(store, &card, &proposal.context)?;
     if revision(&card)? != proposal.card_revision {
-        return Err("La tâche a changé depuis l’aperçu de publication.".into());
+        return Err("message.the_task_changed_since_the_publication_preview".into());
     }
     Ok(())
 }
@@ -594,7 +621,7 @@ pub fn invalidate_connections(
             forge_association::invalidate(
                 store,
                 &mut card,
-                "La connexion ou les identifiants du module ont changé. Actualise la PR/MR puis relance la review.",
+                "message.the_module_connection_or_credentials_changed_refresh_the_pr_mr_a",
             )?;
             store.put(Documents::Cards, &card)?;
         }
@@ -615,12 +642,12 @@ pub fn synchronize(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
     let reply = operation
         .reply
         .as_ref()
-        .ok_or("Observation distante absente.")?;
+        .ok_or("message.remote_observation_missing")?;
     let observation = protocol::repository_observation(
         reply
             .output
             .get("repository")
-            .ok_or("PR/MR publiée absente de l’observation.")?,
+            .ok_or("message.the_observation_is_missing_the_published_pr_mr")?,
     )?;
     let installed = Installed {
         manifest: operation.manifest.clone(),
@@ -630,11 +657,13 @@ pub fn synchronize(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
         report: None,
     };
     scope(&installed, &observation)?;
-    let pr = observation.pull_request.ok_or("PR/MR publiée absente.")?;
+    let pr = observation
+        .pull_request
+        .ok_or("message.the_published_pr_mr_is_missing")?;
     if protocol::remote_receipt(&reply.output, &operation.id)?
         .is_none_or(|receipt| receipt.reference != pr.id)
     {
-        return Err("L’observation du module ne désigne pas la PR/MR déclarée.".into());
+        return Err("message.the_module_observation_does_not_identify_the_reported_pr_mr".into());
     }
     if observation.reference != proposal.observation.reference
         || pr.source_branch != proposal.context.worktree.branch
@@ -645,11 +674,11 @@ pub fn synchronize(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
         || pr.auto_merge
         || observation.remote_source.as_deref() != Some(proposal.context.source.as_str())
     {
-        return Err("La PR/MR observée ne correspond pas à la publication confirmée.".into());
+        return Err("message.the_observed_pr_mr_does_not_match_the_confirmed_publication".into());
     }
     let mut card = store
         .document::<Card>(Documents::Cards, &proposal.context.card_id)?
-        .ok_or("Carte absente.")?;
+        .ok_or("message.card_missing")?;
     let link = ModulePullRequestLink {
         module: operation.module.clone(),
         revision: operation.revision,
@@ -664,14 +693,16 @@ pub fn synchronize(store: &Store<'_>, operation: &protocol::RemoteOperation) -> 
         return Ok(());
     }
     if revision(&card)? != proposal.card_revision {
-        return Err("La tâche a changé. La publication reste à rapprocher sans écraser la modification humaine.".into());
+        return Err(
+            "message.the_task_changed_reconcile_the_publication_without_overwriting_t".into(),
+        );
     }
     card.fields.set("connectorPullRequest", &link)?;
     card.fields.remove("connectorRepositoryPreview");
     forge_association::invalidate(
         store,
         &mut card,
-        "La PR/MR du module a changé. Relance la review sur ses commits actuels.",
+        "message.the_module_pr_mr_changed_review_its_current_commits_again",
     )?;
     store.put(Documents::Cards, &card)
 }

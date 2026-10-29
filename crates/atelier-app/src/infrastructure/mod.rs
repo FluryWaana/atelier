@@ -2,6 +2,7 @@ mod agent_account;
 #[cfg(windows)]
 pub mod agent_cli;
 mod agent_context;
+mod agent_models;
 pub mod agent_diagnostics;
 pub mod agent_providers;
 pub mod automation;

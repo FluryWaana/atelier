@@ -44,8 +44,11 @@ async fn interaction(database: &Database, questions: bool) -> AgentInteraction {
 async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_on_the_common_engine()
  {
     let executable = std::path::Path::new(env!("CARGO_BIN_EXE_native-fixture"));
-    for kind in [Kind::Codex, Kind::Claude] {
+    for kind in [Kind::Codex, Kind::Claude, Kind::Acp] {
         for mode in ["success", "deny", "cancel", "malformed", "missing"] {
+            if kind == Kind::Acp && mode != "success" {
+                continue;
+            }
             let temporary = tempfile::tempdir().unwrap();
             let prototype = PrototypeDirectory::open(temporary.path()).unwrap();
             let path = prototype.path.join("repositories/synthetic");
@@ -86,7 +89,9 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
                 executable.to_owned()
             });
             command
-                .arg(if kind == Kind::Codex {
+                .arg(if kind == Kind::Acp {
+                    "acp"
+                } else if kind == Kind::Codex {
                     "app-server"
                 } else {
                     "-p"
@@ -132,19 +137,21 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
                     };
                     manager.reply("run", answer.clone()).await.unwrap();
                     assert!(manager.reply("run", answer).await.is_err());
-                    let question = interaction(&database, true).await;
-                    assert!(question.questions[0].is_secret);
-                    let invalid = AgentAnswer {
-                        request_id: question.id.clone(),
-                        decision: "answer".into(),
-                        answers: BTreeMap::new(),
-                    };
-                    assert!(manager.reply("run", invalid.clone()).await.is_err());
-                    let mut valid = invalid;
-                    valid
-                        .answers
-                        .insert("0".into(), vec!["synthetic-private-answer".into()]);
-                    manager.reply("run", valid).await.unwrap();
+                    if kind != Kind::Acp {
+                        let question = interaction(&database, true).await;
+                        assert!(question.questions[0].is_secret);
+                        let invalid = AgentAnswer {
+                            request_id: question.id.clone(),
+                            decision: "answer".into(),
+                            answers: BTreeMap::new(),
+                        };
+                        assert!(manager.reply("run", invalid.clone()).await.is_err());
+                        let mut valid = invalid;
+                        valid
+                            .answers
+                            .insert("0".into(), vec!["synthetic-private-answer".into()]);
+                        manager.reply("run", valid).await.unwrap();
+                    }
                 }
             }
             let deadline = tokio::time::Instant::now() + Duration::from_secs(15);
@@ -197,10 +204,12 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
             }
             if mode == "success" {
                 assert!(public.contains("Public synthetic"));
-                assert_eq!(
-                    run.get::<serde_json::Value>("usage").unwrap().unwrap()["inputTokens"],
-                    5
-                );
+                if kind != Kind::Acp {
+                    assert_eq!(
+                        run.get::<serde_json::Value>("usage").unwrap().unwrap()["inputTokens"],
+                        5
+                    );
+                }
             }
             manager.close().await.unwrap();
             database.close().await.unwrap();

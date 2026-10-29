@@ -16,11 +16,11 @@ use atelier_core::{
 pub fn apply(store: &Store<'_>, input: Apply) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed {
-            return Err("Confirme le remplacement des critères par cette préparation.".into());
+            return Err("message.confirm_replacing_the_criteria_with_this_preparation".into());
         }
         let mut card = store
             .document::<Card>(Documents::Cards, &input.expected.id)?
-            .ok_or("Carte introuvable.")?;
+            .ok_or("message.card_not_found")?;
         if card.fields.truthy("archived")?
             || card.fields.truthy("brainstormSession")?
             || atelier_core::application::jira::unresolved(&card.fields)?
@@ -29,37 +29,38 @@ pub fn apply(store: &Store<'_>, input: Apply) -> Result<Card> {
                     &input.expected,
                 ))?
         {
-            return Err("La tâche a changé. Recharge avant d’appliquer la préparation.".into());
+            return Err("message.the_task_changed_reload_before_applying_the_preparation".into());
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && runs::active(&run)? {
                 return Err(
-                    "Attends la fin des exécutions avant d’appliquer la préparation.".into(),
+                    "message.wait_for_runs_to_finish_before_applying_the_preparation".into(),
                 );
             }
         }
         let mut run = store
             .document::<Document>(Documents::Runs, &input.run_id)?
-            .ok_or("Exécution introuvable.")?;
+            .ok_or("message.run_not_found")?;
         if !run.string_equals("purpose", "preparation")?
             || !run.string_equals("cardId", &card.id)?
             || !run.string_equals("status", "completed")?
         {
-            return Err("Préparation indisponible.".into());
+            return Err("message.preparation_unavailable".into());
         }
         if run.get::<bool>("preparationApplied")?.unwrap_or(false) {
             return Err(
-                "Cette préparation a déjà été appliquée. Les validations humaines sont conservées."
-                    .into(),
+                "message.this_preparation_was_already_applied_human_validations_are_prese".into(),
             );
         }
         if run.get::<serde_json::Value>("requirements")? != Some(preparation::requirements(&card)?)
         {
-            return Err("Le besoin a changé depuis cette préparation. Relance l’analyse.".into());
+            return Err(
+                "message.requirements_changed_since_this_preparation_run_the_analysis_aga".into(),
+            );
         }
         let result = run
             .get::<Preparation>("preparation")?
-            .ok_or("Préparation indisponible.")?;
+            .ok_or("message.preparation_unavailable")?;
         card.fields
             .set("checklist", &preparation::criteria(&result)?)?;
         card.fields.set("preparationQuestions", &result.questions)?;

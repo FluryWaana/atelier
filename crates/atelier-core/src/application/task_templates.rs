@@ -26,7 +26,7 @@ pub fn create(
     body: &Document,
     new_id: impl FnOnce() -> String,
 ) -> Result<Document> {
-    let invalid = CardFailure::Invalid("Texte invalide ou trop long.");
+    let invalid = CardFailure::Invalid("message.invalid_or_overly_long_text");
     let name = body
         .get::<JsonString>("name")
         .ok()
@@ -34,7 +34,7 @@ pub fn create(
         .ok_or(invalid)?;
     let name = text_units(&name, 100).map_err(CardFailure::Invalid)?;
     if name.0.is_empty() {
-        return Err(CardFailure::Invalid("Nom de modèle requis.").into());
+        return Err(CardFailure::Invalid("message.template_name_required").into());
     }
     let card = repository
         .card(body.raw("cardId"))?
@@ -43,7 +43,7 @@ pub fn create(
     let mut templates = templates(&settings)?;
     if templates.len() >= 50 {
         return Err(
-            CardFailure::Invalid("Retire un modèle avant d’en ajouter (50 maximum).").into(),
+            CardFailure::Invalid("message.remove_a_template_before_adding_another_50_maximum").into(),
         );
     }
     let mut template = Document::default();

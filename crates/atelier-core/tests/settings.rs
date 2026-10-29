@@ -56,7 +56,7 @@ fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() 
             &body,
             |raw| {
                 let value = serde_json::from_str::<JsonString>(raw.get())
-                    .map_err(|_| "Texte invalide ou trop long.")?;
+                    .map_err(|_| "message.invalid_or_overly_long_text")?;
                 let value = text_units(&value, 2000)?;
                 if value == JsonString::from("missing") {
                     return Err("Dépôt synthétique absent.".into());
@@ -134,7 +134,7 @@ fn public_flags_and_removal_never_copy_vault_values_into_settings() {
     assert!(tokens.string_equals("jira", "synthetic-secret").unwrap());
     assert_eq!(
         remove_token(&tokens, "other").unwrap_err().to_string(),
-        "Service inconnu."
+        "message.unknown_service"
     );
     assert!(config(&stored).unwrap().raw("future").is_some());
 }

@@ -86,7 +86,7 @@ pub fn ConnectorTicketReset(
                     .await?
                     .json::<TicketResetPreview>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                    .map_err(|_| "message.invalid_server_response".to_owned())?;
                 if apply {
                     board.refresh(&credential).await?;
                 }
@@ -113,19 +113,19 @@ pub fn ConnectorTicketReset(
         });
     });
     view! {<fieldset id="connector-reset" hidden=move||!supported() disabled=move||pending.get()||blocked.get()>
-        <legend>{move||i18n.text("Resynchroniser le périmètre des tickets")}</legend>
-        <p class="field-help">{move||i18n.text("Lis toutes les pages avant confirmation. Les cartes absentes seront signalées hors périmètre ; leurs liens, textes, critères et colonnes sont conservés. Importe les nouveaux tickets et rafraîchis les textes séparément.")}</p>
-        <button id="preview-connector-ticket-reset" type="button" on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("Lire le périmètre complet")}</button>
+        <legend>{move||i18n.text("message.resynchronize_ticket_scope")}</legend>
+        <p class="field-help">{move||i18n.text("message.read_every_page_before_confirmation_missing_tickets_will_be_mark")}</p>
+        <button id="preview-connector-ticket-reset" type="button" on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.read_the_complete_scope")}</button>
         {move||preview.get().map(|value|view!{
             <p>{format!("{} · {} pages · {} tickets",value.observed_at,value.pages,value.tickets)}</p>
-            <p hidden={!value.rows.is_empty()}>{i18n.text("Aucune carte liée dans ce périmètre.")}</p>
-            <ul>{value.rows.into_iter().map(|row|view!{<li>{format!("{} · {} · {}",row.key,row.title,if row.present{i18n.text("Dans le périmètre")}else{i18n.text("Hors périmètre")})}</li>}).collect_view()}</ul>
+            <p hidden={!value.rows.is_empty()}>{i18n.text("message.no_linked_task_in_this_scope")}</p>
+            <ul>{value.rows.into_iter().map(|row|view!{<li>{format!("{} · {} · {}",row.key,row.title,if row.present{i18n.text("message.in_scope")}else{i18n.text("message.out_of_scope")})}</li>}).collect_view()}</ul>
         })}
-        <label hidden=move||preview.get().is_none()><input id="approve-connector-ticket-reset" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("Confirmer uniquement ces indicateurs de périmètre, sans supprimer de carte.")}</label>
-        <button id="apply-connector-ticket-reset" type="button" disabled=move||preview.get().is_none()||!approved.get() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("Appliquer le périmètre complet")}</button>
-        <button type="button" disabled=move||preview.get().is_none() on:click=move |_|{preview.set(None);approved.set(false);}>{move||i18n.text("Annuler l’aperçu")}</button>
-        <p role="status" hidden=move||!pending.get()>{move||i18n.text("Lecture complète ou application en cours…")}</p>
-        <p role="status" hidden=move||!done.get()>{move||i18n.text("Périmètre actualisé. Les cartes et leurs textes ont été conservés.")}</p>
+        <label hidden=move||preview.get().is_none()><input id="approve-connector-ticket-reset" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("message.confirm_these_scope_flags_only_preserving_every_task")}</label>
+        <button id="apply-connector-ticket-reset" type="button" disabled=move||preview.get().is_none()||!approved.get() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.apply_the_complete_scope")}</button>
+        <button type="button" disabled=move||preview.get().is_none() on:click=move |_|{preview.set(None);approved.set(false);}>{move||i18n.text("message.cancel_preview")}</button>
+        <p role="status" hidden=move||!pending.get()>{move||i18n.text("message.complete_read_or_application_in_progress")}</p>
+        <p role="status" hidden=move||!done.get()>{move||i18n.text("message.scope_updated_tasks_and_their_text_were_preserved")}</p>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </fieldset>}
 }

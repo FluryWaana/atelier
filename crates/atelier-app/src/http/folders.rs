@@ -13,7 +13,7 @@ pub(super) async fn choose(State(state): State<Shared>, request: Request) -> Res
     if !state.native {
         return failure(
             StatusCode::CONFLICT,
-            "Le sélecteur est disponible depuis le lanceur natif.",
+            "message.the_folder_picker_is_available_through_the_native_launcher",
         );
     }
     let input: Input = match super::jira_transitions::input(request).await {
@@ -23,16 +23,16 @@ pub(super) async fn choose(State(state): State<Shared>, request: Request) -> Res
     if !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme l’ouverture du sélecteur de dossiers.",
+            "message.confirm_opening_the_folder_picker",
         );
     }
     let mut shutdown = state.shutdown.subscribe();
     if *shutdown.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let result = tokio::select! {
         result=crate::infrastructure::folders::choose()=>result,
-        _=shutdown.changed()=>Err("Sélecteur interrompu par l’arrêt d’Atelier.".into())
+        _=shutdown.changed()=>Err("message.folder_picker_interrupted_by_atelier_shutdown".into())
     };
     response(result.map(|path| serde_json::json!({"path":path})))
 }

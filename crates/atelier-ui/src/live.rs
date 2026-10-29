@@ -82,7 +82,7 @@ impl BoardState {
 
     pub fn listen(self, token: String) -> Result<(), String> {
         let source = web_sys::EventSource::new(&format!("/api/events?session={token}"))
-            .map_err(|_| "Actualisation automatique indisponible.")?;
+            .map_err(|_| "message.automatic_refresh_is_unavailable")?;
         let pending = Rc::new(Cell::new(false));
         let again = Rc::new(Cell::new(false));
         let alive = Rc::new(Cell::new(true));
@@ -119,7 +119,7 @@ impl BoardState {
             self.connected.set(false);
             if connection.ready_state() == web_sys::EventSource::CLOSED {
                 self.sync_error
-                    .set("Connexion fermée. Rouvre Atelier avec son lanceur.".into());
+                    .set("message.connection_closed_reopen_atelier_using_its_launcher".into());
             }
         });
         source.set_onmessage(Some(message.as_ref().unchecked_ref()));

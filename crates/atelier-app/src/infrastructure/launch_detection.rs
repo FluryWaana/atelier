@@ -191,7 +191,7 @@ pub fn synthetic_repository(
     value: &serde_json::value::RawValue,
 ) -> Result<JsonString> {
     let input: JsonString =
-        serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
+        serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
     let repo = atelier_core::domain::text_units(&input, 2000)?;
     let relative = match synthetic_relative(roots, &repo) {
         Ok(relative) => relative,

@@ -41,7 +41,7 @@ fn manifest(metadata: &Dir) -> Result<BTreeSet<String>> {
             .read(128 * 1024)?,
     )?;
     if names.len() > LIMIT || names.iter().any(|name| !valid(name)) {
-        return Err("Inventaire des dépendances partagées invalide.".into());
+        return Err("message.invalid_shared_dependency_inventory".into());
     }
     Ok(names)
 }
@@ -87,13 +87,13 @@ fn verify(target: &Dir, source_path: &Path, name: &str) -> Result<bool> {
     }
     let destination = directory
         .read_link_contents(file)
-        .map_err(|_| "Le lien de dépendances a changé : opération refusée.")?;
+        .map_err(|_| "message.the_dependency_link_has_changed_operation_refused")?;
     if !same_repository(
         &path_string(&destination).utf8()?,
         &path_string(&source_path.join(name)).utf8()?,
         cfg!(windows),
     ) {
-        return Err("Le lien de dépendances a changé : opération refusée.".into());
+        return Err("message.the_dependency_link_has_changed_operation_refused".into());
     }
     Ok(true)
 }
@@ -101,7 +101,7 @@ fn verify(target: &Dir, source_path: &Path, name: &str) -> Result<bool> {
 fn nuget(directory: &Dir) -> Result<bool> {
     for (count, entry) in directory.entries()?.enumerate() {
         if count >= 2000 {
-            return Err("Trop de dossiers de paquets NuGet.".into());
+            return Err("message.too_many_nuget_package_folders".into());
         }
         let entry = entry?;
         let info = directory.symlink_metadata(entry.file_name())?;
@@ -111,7 +111,7 @@ fn nuget(directory: &Dir) -> Result<bool> {
         let package = directory.open_dir_nofollow(entry.file_name())?;
         for (count, file) in package.entries()?.enumerate() {
             if count >= 2000 {
-                return Err("Trop de fichiers dans un paquet NuGet.".into());
+                return Err("message.too_many_files_in_a_nuget_package".into());
             }
             let file = file?;
             if Path::new(&file.file_name())
@@ -153,7 +153,7 @@ fn candidates(
         while let Some((folder, _)) = path.rsplit_once('/') {
             folders.insert(format!("{folder}/"));
             if folders.len() > 50_000 {
-                return Err("Trop de dossiers dans ce dépôt.".into());
+                return Err("message.too_many_repository_directories".into());
             }
             path = folder;
         }
@@ -173,7 +173,7 @@ fn candidates(
             }
             names.insert(name);
             if names.len() > LIMIT {
-                return Err("Trop de dépendances partagées (256 maximum).".into());
+                return Err("message.too_many_shared_dependencies_maximum_256".into());
             }
         }
     }
@@ -193,8 +193,7 @@ pub(super) async fn sync(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> 
             .any(|file| file == name || file.starts_with(&prefix))
         {
             return Err(
-                "Une dépendance partagée est maintenant suivie par Git : vérifie le worktree."
-                    .into(),
+                "message.a_shared_dependency_is_now_tracked_by_git_check_the_worktree".into(),
             );
         }
     }
@@ -221,7 +220,7 @@ pub(super) async fn sync(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> 
         }
         owned.extend(eligible);
         if owned.len() > LIMIT {
-            return Err("Trop de dépendances partagées (256 maximum).".into());
+            return Err("message.too_many_shared_dependencies_maximum_256".into());
         }
         exclude(&source.directory, owned.iter().cloned())?;
         // Intent precedes links: retries can recognize only paths already recorded for this source.
@@ -247,9 +246,9 @@ pub(super) fn restore(
             continue;
         }
         let _source = source_directory(source, name)?
-            .ok_or("Dépendances sources absentes : restauration du lien impossible.")?;
+            .ok_or("message.source_dependencies_are_missing_the_link_cannot_be_restored")?;
         let (directory, file) =
-            parent(target, name, false)?.ok_or("Dossier de dépendances disparu.")?;
+            parent(target, name, false)?.ok_or("message.the_dependency_folder_is_missing")?;
         directory_link::create(&directory, &file, &source_path.join(name))?;
     }
     Ok(())
@@ -273,7 +272,7 @@ pub(super) fn detach(
                 continue;
             }
             let (directory, file) =
-                parent(target, name, false)?.ok_or("Dossier de dépendances disparu.")?;
+                parent(target, name, false)?.ok_or("message.the_dependency_folder_is_missing")?;
             directory_link::remove(&directory, &file)?;
         }
         Ok(())

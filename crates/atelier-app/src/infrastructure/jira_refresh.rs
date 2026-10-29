@@ -20,7 +20,7 @@ use atelier_core::{
 };
 fn conflict() -> crate::Error {
     JiraFailure::OperationConflict(
-        "La carte ou l’aperçu Jira a changé. Recharge l’aperçu avant de réessayer.",
+        "message.the_card_or_jira_preview_changed_reload_the_preview_before_tryin",
     )
     .into()
 }
@@ -51,7 +51,7 @@ pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
-                return Err("Arrête l’exécution avant de synchroniser le ticket Jira.".into());
+                return Err("message.stop_the_run_before_synchronizing_the_jira_issue".into());
             }
         }
         let base = store
@@ -165,11 +165,11 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
             .checked_sub(created)
             .is_none_or(|age| !(0..=600_000).contains(&age))
         {
-            return Err("Cet aperçu Jira a expiré. Recharge-le avant de l’appliquer.".into());
+            return Err("message.this_jira_preview_expired_reload_it_before_applying_it".into());
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
-                return Err("Arrête l’exécution avant de synchroniser le ticket Jira.".into());
+                return Err("message.stop_the_run_before_synchronizing_the_jira_issue".into());
             }
         }
         if input.apply_status {
@@ -188,7 +188,7 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
         let description = text_units(&detail.description.as_str().into(), 20_000)
             .map_err(JiraFailure::Invalid)?;
         if title.0.is_empty() {
-            return Err(JiraFailure::Invalid("Titre Jira requis.").into());
+            return Err(JiraFailure::Invalid("message.a_jira_title_is_required").into());
         }
         let changed = card.title != title
             || card

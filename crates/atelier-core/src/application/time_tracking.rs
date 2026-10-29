@@ -7,7 +7,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + S
 pub struct TimeConflict;
 impl std::fmt::Display for TimeConflict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Cette saisie de temps a changé ailleurs. Recharge-la avant de réessayer.")
+        f.write_str("message.this_time_entry_changed_elsewhere_reload_it_before_trying_again")
     }
 }
 impl std::error::Error for TimeConflict {}
@@ -66,7 +66,7 @@ pub fn tick(repository: &impl TimeRepository, clock: &impl TimeClock) -> Result<
         }
         let seconds = entry
             .get::<f64>("seconds")?
-            .ok_or("Durée enregistrée invalide.")?;
+            .ok_or("message.saved_duration_invalid")?;
         let seconds = (seconds + elapsed as f64).min(86400.0);
         entry.set("seconds", &seconds)?;
         if seconds == 86400.0 {
@@ -115,13 +115,13 @@ pub fn execute(
 ) -> Result<Document> {
     if action == "create" {
         let card_id = body.raw("cardId");
-        let card = repository.card(card_id)?.ok_or("Carte introuvable.")?;
+        let card = repository.card(card_id)?.ok_or("message.card_not_found")?;
         if card.truthy("archived")? {
-            return Err("Restaure cette tâche avant de saisir du temps.".into());
+            return Err("message.restore_this_task_before_logging_time".into());
         }
         let start = body
             .get::<bool>("start")
-            .map_err(|_| "Action de chronomètre invalide.")?
+            .map_err(|_| "message.invalid_timer_action")?
             .unwrap_or(false);
         let mut entry = Document::default();
         entry.set("cardId", &card_id)?;
@@ -129,7 +129,7 @@ pub fn execute(
         if start {
             for existing in repository.entries()? {
                 if existing.truthy("runningSince")? {
-                    return Err("Arrête le chronomètre actif avant d’en démarrer un autre.".into());
+                    return Err("message.stop_the_active_timer_before_starting_another".into());
                 }
             }
             entry.set("seconds", &0)?;
@@ -142,12 +142,12 @@ pub fn execute(
     }
     let mut entry = repository
         .entry(id)?
-        .ok_or("Entrée de temps introuvable.")?;
+        .ok_or("message.time_entry_not_found")?;
     let entry_id = entry
         .get::<String>("id")?
-        .ok_or("Identifiant de temps invalide.")?;
+        .ok_or("message.time_id_invalid")?;
     if exporting(&entry_id) {
-        return Err("Envoi en cours.".into());
+        return Err("message.sending".into());
     }
     if matches!(action, "update" | "remove")
         && let Some(expected) = body.get::<serde_json::Value>("expected")?
@@ -160,13 +160,13 @@ pub fn execute(
             tick(repository, clock)?;
             entry = repository
                 .entry(&entry_id)?
-                .ok_or("Entrée de temps introuvable.")?;
+                .ok_or("message.time_entry_not_found")?;
             entry.remove("runningSince");
         }
         "update" | "remove" => {
             if entry.truthy("runningSince")? || !entry.string_equals("exportState", "draft")? {
                 return Err(
-                    "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+                    "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
                         .into(),
                 );
             }
@@ -175,9 +175,7 @@ pub fn execute(
                     || entry.raw("tempoExportEffect").is_some()
                     || entry.raw("connectorExport").is_some()
                 {
-                    return Err(
-                        "Conserve cette saisie : elle contient l’historique d’exports.".into(),
-                    );
+                    return Err("message.keep_this_entry_it_contains_export_history".into());
                 }
                 repository.remove(&entry_id)?;
                 let mut response = Document::default();
@@ -192,24 +190,27 @@ pub fn execute(
         "reset-export" => {
             if entry.raw("connectorExport").is_some() {
                 return Err(
-                    "Rapproche cet export dans le journal du module ; aucun renvoi implicite."
+                    "message.reconcile_this_export_in_the_module_journal_no_implicit_resend_i"
                         .into(),
                 );
             }
             if entry.raw("tempoExport").is_some() {
-                return Err("Utilise la confirmation explicite avec historique pour débloquer cet export Tempo.".into());
+                return Err(
+                    "message.use_explicit_confirmation_with_history_to_unlock_this_tempo_expo"
+                        .into(),
+                );
             }
             if !entry.string_equals("exportState", "uncertain")?
                 || body.get::<bool>("confirmed").ok().flatten() != Some(true)
             {
-                return Err("Vérifie d’abord dans Tempo que cette entrée n’existe pas.".into());
+                return Err("message.first_check_in_tempo_that_this_entry_does_not_exist".into());
             }
             entry.set("exportState", &"draft")?;
             for key in ["exportPayload", "exportJira", "error"] {
                 entry.remove(key);
             }
         }
-        _ => return Err("Action inconnue.".into()),
+        _ => return Err("message.unknown_action".into()),
     }
     repository.save(&entry)?;
     Ok(entry)

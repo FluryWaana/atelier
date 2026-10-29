@@ -15,7 +15,7 @@ pub(super) async fn apply(
         Err(response) => return *response,
     };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_card");
     }
     super::responses::response(
         state

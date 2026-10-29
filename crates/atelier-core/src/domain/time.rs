@@ -18,16 +18,16 @@ pub struct TimeFields {
 fn array_text(raw: &RawValue) -> Result<String, &'static str> {
     match raw.get().as_bytes()[0] {
         b'[' => serde_json::from_str::<Vec<Box<RawValue>>>(raw.get())
-            .map_err(|_| "La durée doit être comprise entre 1 seconde et 24 heures.")?
+            .map_err(|_| "message.duration_must_be_between_1_second_and_24_hours")?
             .iter()
             .map(|item| array_text(item))
             .collect::<Result<Vec<_>, _>>()
             .map(|items| items.join(",")),
         b'{' => {
             let object: Document = serde_json::from_str(raw.get())
-                .map_err(|_| "La durée doit être comprise entre 1 seconde et 24 heures.")?;
+                .map_err(|_| "message.duration_must_be_between_1_second_and_24_hours")?;
             if object.raw("toString").is_some() {
-                Err("Cannot convert object to primitive value")
+                Err("message.invalid_duration_value")
             } else {
                 Ok("[object Object]".into())
             }
@@ -42,7 +42,7 @@ fn array_text(raw: &RawValue) -> Result<String, &'static str> {
 }
 
 fn seconds(raw: Option<&RawValue>) -> Result<u32, &'static str> {
-    const ERROR: &str = "La durée doit être comprise entre 1 seconde et 24 heures.";
+    const ERROR: &str = "message.duration_must_be_between_1_second_and_24_hours";
     let raw = raw.ok_or(ERROR)?;
     let value = match raw.get().as_bytes()[0] {
         b't' => 1.0,
@@ -89,7 +89,7 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
         .get::<String>("date")
         .ok()
         .flatten()
-        .ok_or("Date invalide.")?;
+        .ok_or("message.invalid_date")?;
     let bytes = date.as_bytes();
     if bytes.len() != 10
         || bytes[4] != b'-'
@@ -99,14 +99,19 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
             .enumerate()
             .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
     {
-        return Err("Date invalide.");
+        return Err("message.invalid_date");
     }
-    let year = date[..4].parse::<u32>().map_err(|_| "Date invalide.")?;
-    let month = date[5..7].parse::<usize>().map_err(|_| "Date invalide.")?;
-    let day = date[8..].parse::<u32>().map_err(|_| "Date invalide.")?;
-    // Preserve the historical Date.toISOString error before testing normalized dates.
+    let year = date[..4]
+        .parse::<u32>()
+        .map_err(|_| "message.invalid_date")?;
+    let month = date[5..7]
+        .parse::<usize>()
+        .map_err(|_| "message.invalid_date")?;
+    let day = date[8..]
+        .parse::<u32>()
+        .map_err(|_| "message.invalid_date")?;
     if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
-        return Err("Invalid time value");
+        return Err("message.invalid_time_value");
     }
     let leap = year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
     let days = [
@@ -124,9 +129,9 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
         31,
     ];
     if day > days[month - 1] {
-        return Err("Date invalide.");
+        return Err("message.invalid_date");
     }
-    const DESCRIPTION: &str = "Une description de 1 à 4 000 caractères est nécessaire.";
+    const DESCRIPTION: &str = "message.a_description_of_1_to_4_000_characters_is_required";
     let description = body
         .get::<JsonString>("description")
         .ok()
@@ -140,7 +145,7 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
         .get::<String>("startTime")
         .ok()
         .flatten()
-        .ok_or("Heure invalide.")?;
+        .ok_or("message.invalid_time")?;
     let bytes = start_time.as_bytes();
     if bytes.len() != 8
         || bytes[2] != b':'
@@ -153,7 +158,7 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
         || &bytes[3..5] > b"59"
         || &bytes[6..] > b"59"
     {
-        return Err("Heure invalide.");
+        return Err("message.invalid_time");
     }
     Ok(TimeFields {
         seconds,

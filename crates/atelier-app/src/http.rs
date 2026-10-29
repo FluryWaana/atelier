@@ -119,12 +119,12 @@ async fn security(State(state): State<Shared>, request: Request, next: Next) -> 
 async fn authorize(state: Shared, request: Request, next: Next) -> Response {
     let host = header_value(&request, "host").unwrap_or("");
     if host != format!("127.0.0.1:{}", state.port) && host != format!("localhost:{}", state.port) {
-        return failure(StatusCode::FORBIDDEN, "Hôte interdit.");
+        return failure(StatusCode::FORBIDDEN, "message.host_not_allowed");
     }
     if request.headers().contains_key("origin")
         && header_value(&request, "origin") != Some(format!("http://{host}").as_str())
     {
-        return failure(StatusCode::FORBIDDEN, "Origine interdite.");
+        return failure(StatusCode::FORBIDDEN, "message.origin_not_allowed");
     }
     let path = request.uri().path();
     let challenge = Query::<HealthQuery>::try_from_uri(request.uri())
@@ -146,17 +146,20 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
         if !session::same_secret(token, &state.token) {
             return failure(
                 StatusCode::UNAUTHORIZED,
-                "Session expirée ou absente. Rouvre Atelier avec son lanceur.",
+                "message.session_expired_or_missing_reopen_atelier_using_its_launcher",
             );
         }
         if request.method() != Method::GET
             && (header_value(&request, "x-local-request") != Some("1")
                 || header_value(&request, "content-type") != Some("application/json"))
         {
-            return failure(StatusCode::FORBIDDEN, "Requête locale JSON requise.");
+            return failure(
+                StatusCode::FORBIDDEN,
+                "message.a_local_json_request_is_required",
+            );
         }
         if request.method() != Method::GET && *state.shutdown.borrow() {
-            return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+            return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
         }
     }
     if request.method() != Method::GET && path.starts_with("/api/") {
@@ -201,8 +204,7 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
             || path == "/api/folders/choose"
             || (path.starts_with("/api/extensions/") && path.contains("/operations"))
             || path.ends_with("/review/validate")
-            || (path.starts_with("/api/runs/") && path.ends_with("/stop"))
-            || (path.starts_with("/api/agent-providers/") && path.ends_with("/diagnose"));
+            || (path.starts_with("/api/runs/") && path.ends_with("/stop"));
         let exclusive = exclusive
             || (path.starts_with("/api/agent-providers/") && path.ends_with("/cli-update"));
         let cancellation = request.method() == Method::POST && mutations::is_cancellation(path);
@@ -263,13 +265,13 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
                     Ok(true) => {
                         return failure(
                             StatusCode::CONFLICT,
-                            "Termine ou vérifie l’opération en cours avant de modifier cette tâche, les projets ou les sauvegardes.",
+                            "message.finish_or_inspect_the_current_operation_before_changing_this_tas",
                         );
                     }
                     Err(_) => {
                         return failure(
                             StatusCode::INTERNAL_SERVER_ERROR,
-                            "Lecture des opérations Jira impossible.",
+                            "message.unable_to_read_jira_operations",
                         );
                     }
                     Ok(false) => {}
@@ -309,7 +311,7 @@ async fn health(State(state): State<Shared>, Query(query): Query<HealthQuery>) -
             Ok(proof) => Json(json!({"proof":proof})).into_response(),
             Err(_) => failure(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Identité du serveur indisponible.",
+                "message.server_identity_unavailable",
             ),
         };
     }
@@ -349,7 +351,7 @@ async fn board(State(state): State<Shared>) -> Response {
         Ok(board) => Json(board).into_response(),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Lecture du stockage impossible.",
+            "message.storage_read_failed",
         ),
     }
 }
@@ -358,19 +360,19 @@ async fn object(body: Body) -> std::result::Result<Document, (StatusCode, &'stat
     // Node counts UTF-16 code units; the byte ceiling bounds allocation before the exact check.
     let bytes = to_bytes(body, 400_000)
         .await
-        .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "Requête trop volumineuse."))?;
-    let raw =
-        std::str::from_utf8(&bytes).map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))?;
+        .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "message.request_too_large"))?;
+    let raw = std::str::from_utf8(&bytes)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "message.invalid_json"))?;
     if raw.encode_utf16().count() > 100_000 {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "Requête trop volumineuse."));
+        return Err((StatusCode::PAYLOAD_TOO_LARGE, "message.request_too_large"));
     }
     let value: &serde_json::value::RawValue =
         serde_json::from_str(if raw.is_empty() { "{}" } else { raw })
-            .map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))?;
+            .map_err(|_| (StatusCode::BAD_REQUEST, "message.invalid_json"))?;
     if !value.get().starts_with('{') {
-        return Err((StatusCode::BAD_REQUEST, "Objet JSON requis."));
+        return Err((StatusCode::BAD_REQUEST, "message.a_json_object_is_required"));
     }
-    serde_json::from_str(value.get()).map_err(|_| (StatusCode::BAD_REQUEST, "JSON invalide."))
+    serde_json::from_str(value.get()).map_err(|_| (StatusCode::BAD_REQUEST, "message.invalid_json"))
 }
 
 fn timestamp() -> Result<String> {
@@ -391,7 +393,12 @@ async fn duplicate(
     }
     let timestamp = match timestamp() {
         Ok(value) => value,
-        Err(_) => return failure(StatusCode::INTERNAL_SERVER_ERROR, "Horloge indisponible."),
+        Err(_) => {
+            return failure(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message.clock_unavailable",
+            );
+        }
     };
     let copied = state
         .database
@@ -407,10 +414,10 @@ async fn duplicate(
         .await;
     match copied {
         Ok(Some(card)) => Json(card).into_response(),
-        Ok(None) => failure(StatusCode::NOT_FOUND, "Carte introuvable."),
+        Ok(None) => failure(StatusCode::NOT_FOUND, "message.card_not_found"),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Duplication de la carte impossible.",
+            "message.card_duplicate_failed",
         ),
     }
 }
@@ -428,7 +435,7 @@ async fn events(State(state): State<Shared>) -> Response {
 }
 
 async fn unavailable() -> Response {
-    failure(StatusCode::NOT_FOUND, "Route introuvable.")
+    failure(StatusCode::NOT_FOUND, "message.route_not_found")
 }
 
 // Headless HTTP journeys keep the same Rust assets and guards without opening desktop controls.
@@ -711,6 +718,10 @@ async fn serve_mode(
         .route(
             "/api/agent-providers",
             get(agent_providers::describe).post(agent_providers::save),
+        )
+        .route(
+            "/api/agent-providers/discover",
+            get(agent_providers::discover),
         )
         .route(
             "/api/agent-providers/{id}",

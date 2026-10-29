@@ -21,13 +21,13 @@ fn paths(paths: &[String]) -> Result<()> {
         || paths.len() > 100
         || paths.iter().map(String::len).sum::<usize>() > 16_384
     {
-        return Err("Choisis entre 1 et 100 fichiers, dans la limite de 16 Kio de chemins.".into());
+        return Err("message.choose_1_to_100_files_within_16_kib_of_paths".into());
     }
     let mut seen = std::collections::BTreeSet::new();
     for path in paths {
         validate_path(path, cfg!(windows))?;
         if !seen.insert(path) || path.chars().any(char::is_control) {
-            return Err("Liste de fichiers invalide ou répétée.".into());
+            return Err("message.invalid_or_duplicate_file_selection".into());
         }
     }
     Ok(())
@@ -52,9 +52,7 @@ pub fn identity(name: &str, email: &str, message: &str) -> Result<()> {
             .chars()
             .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
     {
-        return Err(
-            "Renseigne un auteur, une adresse e-mail et un message de commit valides.".into(),
-        );
+        return Err("message.enter_a_valid_author_email_and_commit_message".into());
     }
     Ok(())
 }
@@ -126,9 +124,7 @@ async fn run(
     )
     .await?;
     if !output.status.success() {
-        return Err(
-            "Opération de commit Git refusée. Les fichiers et l’index restent conservés.".into(),
-        );
+        return Err("message.git_commit_operation_refused_files_and_index_are_preserved".into());
     }
     Ok(output.stdout)
 }
@@ -158,7 +154,7 @@ async fn branch(repository: &Repository) -> Result<(String, String)> {
     let branch = String::from_utf8(repository.git(&["symbolic-ref", "--quiet", "HEAD"]).await?)?
         .trim()
         .strip_prefix("refs/heads/")
-        .ok_or("Le commit exige une branche locale attachée.")?
+        .ok_or("message.the_commit_requires_an_attached_local_branch")?
         .to_owned();
     for name in [
         "MERGE_HEAD",
@@ -170,7 +166,7 @@ async fn branch(repository: &Repository) -> Result<(String, String)> {
     ] {
         let path = String::from_utf8(repository.git(&["rev-parse", "--git-path", name]).await?)?;
         if repository.path.join(path.trim()).try_exists()? {
-            return Err("Termine l’opération Git en cours avant de créer un commit.".into());
+            return Err("message.finish_the_current_git_operation_before_creating_a_commit".into());
         }
     }
     if !repository
@@ -178,7 +174,7 @@ async fn branch(repository: &Repository) -> Result<(String, String)> {
         .await?
         .is_empty()
     {
-        return Err("Résous les conflits Git avant de créer un commit.".into());
+        return Err("message.resolve_git_conflicts_before_creating_a_commit".into());
     }
     let head = current(repository, &branch).await?;
     Ok((branch, head))
@@ -199,13 +195,13 @@ fn check_paths(repository: &Repository, paths: &[String]) -> Result<()> {
             require_plain(&metadata)?;
             if i + 1 == parts.len() {
                 if !metadata.is_file() || metadata.len() > 16 * 1024 * 1024 {
-                    return Err("Sélectionne des fichiers ordinaires de 16 Mio maximum.".into());
+                    return Err("message.select_regular_files_no_larger_than_16_mib".into());
                 }
                 total = total
                     .checked_add(metadata.len())
-                    .ok_or("Sélection trop volumineuse.")?;
+                    .ok_or("message.selection_is_too_large")?;
                 if total > 64 * 1024 * 1024 {
-                    return Err("La sélection dépasse 64 Mio.".into());
+                    return Err("message.selection_exceeds_64_mib".into());
                 }
             } else {
                 directory = directory.open_dir_nofollow(part)?;
@@ -223,7 +219,7 @@ pub async fn preview(repository: &Repository, selected: Vec<String>) -> Result<P
         .iter()
         .any(|path| !changes.files.iter().any(|entry| &entry.path == path))
     {
-        return Err("La sélection ne correspond plus aux fichiers modifiés.".into());
+        return Err("message.the_selection_no_longer_matches_changed_files".into());
     }
     check_paths(repository, &selected)?;
     let home = tempfile::tempdir()?;
@@ -254,10 +250,10 @@ pub async fn preview(repository: &Repository, selected: Vec<String>) -> Result<P
         .await?,
     )?;
     if patch.is_empty() {
-        return Err("La sélection ne produit aucun changement à commiter.".into());
+        return Err("message.the_selection_produces_no_changes_to_commit".into());
     }
     if branch(repository).await? != (branch_name.clone(), head.clone()) {
-        return Err("La branche a changé pendant l’aperçu du commit.".into());
+        return Err("message.the_branch_changed_during_the_commit_preview".into());
     }
     home.close()?;
     Ok(Preview {
@@ -310,7 +306,7 @@ pub async fn disk_matches_commit(repository: &Repository, source: &str) -> Resul
     if branch(repository).await? != (branch_name, head) || repository.fingerprint().await? != before
     {
         return Err(
-            "Les sources ont changé pendant leur comparaison au commit. Relance la review.".into(),
+            "message.sources_changed_while_they_were_being_compared_with_the_commit_s".into(),
         );
     }
     Ok(same)
@@ -328,7 +324,7 @@ pub async fn prepare(
     validate_commit(&expected.head)?;
     validate_commit(&expected.tree)?;
     if preview(repository, expected.paths.clone()).await?.snapshot != *expected {
-        return Err("Les fichiers ou la branche ont changé. Prépare un nouvel aperçu.".into());
+        return Err("message.files_or_branch_changed_prepare_a_new_preview".into());
     }
     let mut command = command(repository).await?;
     command
@@ -345,7 +341,7 @@ pub async fn prepare(
     )
     .await?;
     if !output.status.success() {
-        return Err("Création de l’objet commit refusée.".into());
+        return Err("message.commit_object_creation_refused".into());
     }
     oid(output.stdout)
 }
@@ -355,7 +351,7 @@ pub async fn publish(repository: &Repository, expected: &Snapshot, commit: &str)
     validate_commit(commit)?;
     validate_commit(&expected.head)?;
     if branch(repository).await? != (expected.branch.clone(), expected.head.clone()) {
-        return Err("La branche a changé avant le commit.".into());
+        return Err("message.the_branch_changed_before_the_commit".into());
     }
     let tree = oid(repository
         .git(&["rev-parse", "--verify", &format!("{commit}^{{tree}}")])
@@ -368,7 +364,7 @@ pub async fn publish(repository: &Repository, expected: &Snapshot, commit: &str)
     if tree != expected.tree
         || parents.split_whitespace().collect::<Vec<_>>() != [commit, expected.head.as_str()]
     {
-        return Err("L’objet commit ne correspond pas à l’aperçu confirmé.".into());
+        return Err("message.the_commit_object_does_not_match_the_confirmed_preview".into());
     }
     let mut command = command(repository).await?;
     command.args([
@@ -383,7 +379,7 @@ pub async fn publish(repository: &Repository, expected: &Snapshot, commit: &str)
     let output =
         process_tree::capture(&mut command, &[], Duration::from_secs(30), 4 * 1024 * 1024).await?;
     if !output.status.success() {
-        return Err("Le déplacement conditionnel de la branche a été refusé.".into());
+        return Err("message.the_conditional_branch_update_was_refused".into());
     }
     Ok(())
 }

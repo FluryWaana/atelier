@@ -10,7 +10,7 @@ use atelier_core::{
 };
 fn conflict() -> crate::Error {
     JiraFailure::OperationConflict(
-        "La carte ou la connexion Jira a changé. Recharge avant de réessayer.",
+        "message.the_card_or_jira_connection_changed_reload_before_trying_again",
     )
     .into()
 }
@@ -18,7 +18,7 @@ fn conflict() -> crate::Error {
 pub fn snapshot(store: &Store<'_>, id: &str, revision: u64) -> Result<(Card, String)> {
     let card = store
         .document::<Card>(Documents::Cards, id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let configuration = store
         .settings::<Document>()?
         .get::<JiraConfiguration>("jiraConnection")?
@@ -53,7 +53,7 @@ pub fn reserve(
                 || status.name.len() > 400
                 || status.name.chars().any(char::is_control)
             {
-                return Err("Statut Jira invalide.".into());
+                return Err("message.invalid_jira_issue_status".into());
             }
         }
         if input.transition.id.is_empty()
@@ -68,16 +68,16 @@ pub fn reserve(
             || input.transition.name.chars().any(char::is_control)
             || input.transition.requires_fields
         {
-            return Err("Transition Jira invalide ou exigeant des champs supplémentaires.".into());
+            return Err("message.invalid_jira_transition_or_additional_fields_required".into());
         }
         revalidate(store, &input.expected, input.revision)?;
         let (mut card, issue) = snapshot(store, &input.expected.id, input.revision)?;
         if jira::unresolved(&card.fields)? || card.fields.truthy("archived")? {
-            return Err("Termine ou vérifie l’opération Jira avant de continuer.".into());
+            return Err("message.finish_or_check_the_jira_operation_before_continuing".into());
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
-                return Err("Arrête l’exécution avant de modifier le ticket Jira.".into());
+                return Err("message.stop_the_run_before_changing_the_jira_issue".into());
             }
         }
         let base = store
@@ -124,8 +124,7 @@ pub fn sending(
                 .any(|transition| transition == &intent.transition && !transition.requires_fields)
         {
             return Err(
-                "La transition Jira n’est plus disponible ou exige des champs supplémentaires."
-                    .into(),
+                "message.the_jira_transition_is_no_longer_available_or_requires_additiona".into(),
             );
         }
         if snapshot(store, card_id, intent.revision)?.1 != intent.issue_id {

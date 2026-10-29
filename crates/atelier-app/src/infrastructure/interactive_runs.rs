@@ -50,12 +50,12 @@ async fn apply(
     for message in effects.send {
         let mut bytes = serde_json::to_vec(&message)?;
         if bytes.len() > 512 * 1024 {
-            return Err("Message destiné au CLI trop volumineux.".into());
+            return Err("message.cli_message_too_large".into());
         }
         bytes.push(b'\n');
         tokio::time::timeout(Duration::from_secs(5), stdin.write_all(&bytes))
             .await
-            .map_err(|_| "Le CLI ne reçoit plus les messages.")??;
+            .map_err(|_| "message.cli_no_longer_receives_messages")??;
     }
     let interactions = protocol.interactions();
     let waiting = protocol.waiting();
@@ -68,7 +68,7 @@ async fn apply(
             }
             let mut run = store
                 .document::<Document>(Documents::Runs, &id)?
-                .ok_or("Exécution introuvable.")?;
+                .ok_or("message.run_not_found")?;
             run.set("interactions", &interactions)?;
             run.set("waiting", &waiting)?;
             if let Some(summary) = effects.summary {
@@ -135,11 +135,11 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
     let mut preview_at = tokio::time::Instant::now();
     let operation: Result<()> = async {
         let effects=protocol.start().map_err(ProtocolFailure)?;
-        apply(database,id,input.as_mut().ok_or("Canal fermé.")?,&protocol,effects,changed).await?;
+        apply(database,id,input.as_mut().ok_or("message.channel_closed")?,&protocol,effects,changed).await?;
         loop {
             if *cancel.borrow() { cancelled=true; break; }
             if exited && stdout_done && stderr_done && output.is_empty() {
-                if complete.is_none() { return Err("Le CLI s’est arrêté sans résultat final.".into()); }
+                if complete.is_none() { return Err("message.cli_stopped_without_result".into()); }
                 break;
             }
             let waiting=protocol.waiting();
@@ -152,7 +152,7 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
             tokio::select! {
                 biased;
                 _=cancel.changed()=> { cancelled=true; break; },
-                _=tokio::time::sleep(delay)=>return Err("Durée maximale de la session ou délai d’arrêt dépassé.".into()),
+                _=tokio::time::sleep(delay)=>return Err("message.session_timeout".into()),
                 status=child.wait(), if !exited=> {
                     status?; exited=true;
                 },
@@ -162,14 +162,14 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
                     if let Some((stream,line))=message {
                         if complete.is_some() { if !waiting {active=active.saturating_add(began.elapsed());} continue; }
                         let mut effects=if stream=="stdout" {
-                            let event=serde_json::from_str(&line).map_err(|_| "Sortie du protocole invalide : contenu masqué.")?;
+                            let event=serde_json::from_str(&line).map_err(|_| "message.protocol_output_invalid")?;
                             protocol.receive(event).map_err(ProtocolFailure)?
                         } else { Effects { text:vec!["Le CLI a écrit sur sa sortie d’erreur ; contenu masqué.".into()], ..Effects::default() } };
                         let public_change=!effects.send.is_empty() || !effects.text.is_empty() || effects.summary.is_some() || effects.usage.is_some() || effects.complete.is_some() || effects.interactions_changed;
                         if !public_change && preview_at.elapsed()<Duration::from_millis(250) { effects.preview=None; }
                         if !public_change && effects.preview.is_none() { if !waiting {active=active.saturating_add(began.elapsed());} continue; }
                         if effects.preview.is_some() { preview_at=tokio::time::Instant::now(); }
-                        let result=apply(database,id,input.as_mut().ok_or("Canal fermé.")?,&protocol,effects,changed).await?;
+                        let result=apply(database,id,input.as_mut().ok_or("message.channel_closed")?,&protocol,effects,changed).await?;
                         if let Some(success)=result {
                             complete=Some(success);
                             drop(input.take());
@@ -178,11 +178,11 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
                     }
                 },
                 response=replies.recv(), if complete.is_none()=> {
-                    let Some(response)=response else { return Err("Canal de réponse fermé.".into()); };
+                    let Some(response)=response else { return Err("message.reply_channel_closed".into()); };
                     match protocol.reply(response.answer) {
                         Ok(effects)=> {
-                            let result=apply(database,id,input.as_mut().ok_or("Canal fermé.")?,&protocol,effects,changed).await;
-                            let _=response.result.send(if result.is_ok(){Ok(())}else{Err("La transmission de la réponse a échoué.")});
+                            let result=apply(database,id,input.as_mut().ok_or("message.channel_closed")?,&protocol,effects,changed).await;
+                            let _=response.result.send(if result.is_ok(){Ok(())}else{Err("message.response_send_failed")});
                             result?;
                         },
                         Err(message)=> { let _=response.result.send(Err(message)); },
@@ -214,16 +214,37 @@ pub(super) async fn drive(session: Session<'_>) -> Result<()> {
     let code = child.child.try_wait()?.and_then(|status| status.code());
     let id = id.to_owned();
     let timestamp = timestamp()?;
-    database.call(move |store| {
-        let attention=operation.as_ref().err().map(|error| error.downcast_ref::<ProtocolFailure>().map(|error| error.0).unwrap_or("Session arrêtée après une erreur de protocole, de flux, de stockage ou de délai."));
-        if let Some(message)=attention { runs::append(store,&id,"system",message)?; }
-        let status=if cancelled{"cancelled"}else if operation.is_ok() && complete==Some(true) && code==Some(0){"completed"}else{"failed"};
-        let mut run=runs::transition(store,&id,status,&timestamp,code)?;
-        if let Some(message)=attention { run.set("attention",&message)?; }
-        else if status=="failed" { run.set("attention",&"L’agent ou le CLI a signalé un échec. Consulte le journal et vérifie le dépôt avant de relancer.")?; }
-        run.set("activeMilliseconds",&u64::try_from(active.as_millis()).unwrap_or(u64::MAX))?;
-        store.put(Documents::Runs,&run)
-    }).await
+    database
+        .call(move |store| {
+            let attention = operation.as_ref().err().map(|error| {
+                error
+                    .downcast_ref::<ProtocolFailure>()
+                    .map(|error| error.0)
+                    .unwrap_or("message.session_stopped_after_error")
+            });
+            if let Some(message) = attention {
+                runs::append(store, &id, "system", message)?;
+            }
+            let status = if cancelled {
+                "cancelled"
+            } else if operation.is_ok() && complete == Some(true) && code == Some(0) {
+                "completed"
+            } else {
+                "failed"
+            };
+            let mut run = runs::transition(store, &id, status, &timestamp, code)?;
+            if let Some(message) = attention {
+                run.set("attention", &message)?;
+            } else if status == "failed" {
+                run.set("attention", &"message.agent_or_cli_failed")?;
+            }
+            run.set(
+                "activeMilliseconds",
+                &u64::try_from(active.as_millis()).unwrap_or(u64::MAX),
+            )?;
+            store.put(Documents::Runs, &run)
+        })
+        .await
 }
 
 fn timestamp() -> Result<String> {

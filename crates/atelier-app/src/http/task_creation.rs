@@ -28,7 +28,7 @@ pub(super) async fn create(State(state): State<Shared>, request: Request) -> Res
         Ok(card) => Json(card).into_response(),
         Err(error) if error.is::<serde_json::Error>() || error.is::<rusqlite::Error>() => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Création de la carte impossible.",
+            "message.card_creation_failed",
         ),
         Err(error) => {
             if matches!(
@@ -37,7 +37,7 @@ pub(super) async fn create(State(state): State<Shared>, request: Request) -> Res
             ) {
                 failure(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Création de la carte impossible.",
+                    "message.card_creation_failed",
                 )
             } else {
                 failure(StatusCode::BAD_REQUEST, &error.to_string())

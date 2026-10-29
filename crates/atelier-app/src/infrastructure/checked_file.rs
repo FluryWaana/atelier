@@ -238,7 +238,7 @@ impl CheckedFile {
     pub fn open(path: &Path, expected: &Identity) -> Result<Self> {
         let opened = Self::open_unchecked(path)?;
         if &opened.identity != expected {
-            return Err("Le fichier a changé pendant sa lecture.".into());
+            return Err("message.the_file_changed_while_it_was_being_read".into());
         }
         Ok(opened)
     }
@@ -292,14 +292,14 @@ impl CheckedFile {
 
     pub(crate) fn single_link(self) -> Result<Self> {
         if self.identity.links != 1 {
-            return Err("Configuration agent remplacée par un lien ou un dossier.".into());
+            return Err("message.agent_configuration_was_replaced_by_a_link_or_folder".into());
         }
         Ok(self)
     }
 
     pub fn read(self, limit: usize) -> Result<Vec<u8>> {
         if self.file.metadata()?.len() > u64::try_from(limit)? {
-            return Err("Fichier trop volumineux.".into());
+            return Err("message.file_too_large".into());
         }
         let mut bytes = Vec::new();
         self.file
@@ -308,7 +308,7 @@ impl CheckedFile {
             )?)
             .read_to_end(&mut bytes)?;
         if bytes.len() > limit {
-            return Err("Fichier trop volumineux.".into());
+            return Err("message.file_too_large".into());
         }
         Ok(bytes)
     }
@@ -316,11 +316,11 @@ impl CheckedFile {
     pub fn copy_to(&self, output: &mut impl Write) -> Result<()> {
         let size = self.file.metadata()?.len();
         let copied = std::io::copy(
-            &mut (&self.file).take(size.checked_add(1).ok_or("Fichier trop volumineux.")?),
+            &mut (&self.file).take(size.checked_add(1).ok_or("message.file_too_large")?),
             output,
         )?;
         if copied != size {
-            return Err("Le fichier a changé pendant sa lecture.".into());
+            return Err("message.the_file_changed_while_it_was_being_read".into());
         }
         Ok(())
     }

@@ -22,7 +22,7 @@ fn validate(input: &ForgePublicationRequest) -> Result<String> {
             .chars()
             .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
     {
-        return Err("Titre ou description de publication invalide ou trop long.".into());
+        return Err("message.invalid_or_excessive_publication_title_or_description".into());
     }
     atelier_core::application::worktrees::validate_reference(&input.target)?;
     let prefixed = ["draft:", "wip:", "[draft]", "(draft)", "[wip]", "(wip)"]
@@ -36,7 +36,7 @@ fn validate(input: &ForgePublicationRequest) -> Result<String> {
         });
     if input.kind == ForgeKind::Gitlab && !input.draft && prefixed {
         return Err(
-            "Retire le préfixe brouillon du titre pour créer une MR prête pour review.".into(),
+            "message.remove_the_draft_prefix_from_the_title_to_create_a_merge_request".into(),
         );
     }
     let title = if input.kind == ForgeKind::Gitlab && input.draft && !prefixed {
@@ -45,7 +45,7 @@ fn validate(input: &ForgePublicationRequest) -> Result<String> {
         input.title.clone()
     };
     if title.encode_utf16().count() > 255 {
-        return Err("Titre de publication trop long avec son préfixe brouillon.".into());
+        return Err("message.publication_title_too_long_with_its_draft_prefix".into());
     }
     Ok(title)
 }
@@ -78,11 +78,10 @@ pub async fn preview_with_adapters(
         .expected
         .fields
         .get::<Worktree>("worktree")?
-        .ok_or("Prépare le worktree avant de publier une PR/MR.")?;
+        .ok_or("message.prepare_the_worktree_before_publishing_a_pr_mr")?;
     if worktree.branch == input.target || input.expected.fields.raw("pullRequest").is_some() {
         return Err(
-            "Cette publication exige une branche de tâche distincte et aucune PR/MR déjà liée."
-                .into(),
+            "message.this_publication_requires_a_separate_task_branch_and_no_existing".into(),
         );
     }
     let directory = forge_association::verify(
@@ -124,14 +123,14 @@ pub async fn preview_with_adapters(
         directory
             .git(&["merge-base", "--is-ancestor", previous, &head])
             .await
-            .map_err(|_| "Push refusé : récupère et intègre d’abord la branche distante.")?;
+            .map_err(|_| "message.push_refused_fetch_and_integrate_the_remote_branch_first")?;
     }
     let source_commit = head;
     let target_commit = authentication
         .remote_head(&origin, &format!("refs/heads/{}", input.target))
         .await?;
     if source_commit == target_commit {
-        return Err("Les branches de publication désignent le même commit.".into());
+        return Err("message.the_publication_branches_point_to_the_same_commit".into());
     }
     let preview = ForgePublicationPreview {
         configuration: configuration.clone(),
@@ -163,7 +162,7 @@ pub async fn preview_with_adapters(
     .trim()
         != preview.source_commit
     {
-        return Err("HEAD a changé pendant l’aperçu de publication.".into());
+        return Err("message.head_changed_during_the_publication_preview".into());
     }
     Ok(preview)
 }
@@ -178,7 +177,7 @@ pub fn save_preview(
         if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
             || card.fields.raw("pullRequest").is_some()
         {
-            return Err("La tâche a changé pendant l’aperçu de publication.".into());
+            return Err("message.the_task_changed_during_the_publication_preview".into());
         }
         card.fields.set("forgePublicationPreview", &preview)?;
         store.put(Documents::Cards, &card)?;
@@ -191,8 +190,7 @@ pub fn reserve(store: &Store<'_>, input: &ForgePublicationRequest, id: &str) -> 
         let (mut card, preview) = checked_preview(store, input)?;
         if preview.remote_source.as_deref() != Some(preview.source_commit.as_str()) {
             return Err(
-                "Pousse la branche confirmée puis actualise l’aperçu avant de créer la PR/MR."
-                    .into(),
+                "message.push_the_confirmed_branch_then_refresh_the_preview_before_creati".into(),
             );
         }
         card.fields.set(
@@ -214,13 +212,13 @@ fn checked_preview(
     input: &ForgePublicationRequest,
 ) -> Result<(Card, ForgePublicationPreview)> {
     if !input.confirmed {
-        return Err("Confirme les branches et le contenu de la PR/MR à créer.".into());
+        return Err("message.confirm_the_branches_and_content_of_the_pr_mr_to_create".into());
     }
     let card = forge_association::snapshot(store, &input.expected)?;
     let preview = card
         .fields
         .get::<ForgePublicationPreview>("forgePublicationPreview")?
-        .ok_or("Prépare un aperçu avant de créer la PR/MR.")?;
+        .ok_or("message.prepare_a_preview_before_creating_the_pr_mr")?;
     let configuration = forge::configuration(store, input.kind, input.revision)?;
     if preview.configuration.kind != input.kind
         || preview.configuration.base != configuration.base
@@ -233,7 +231,7 @@ fn checked_preview(
         || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
         || card.fields.raw("pullRequest").is_some()
     {
-        return Err("L’aperçu de publication est périmé. Prépare-le à nouveau.".into());
+        return Err("message.the_publication_preview_is_stale_prepare_it_again".into());
     }
     Ok((card, preview))
 }
@@ -244,7 +242,9 @@ pub fn reserve_branch(
 ) -> Result<Card> {
     let (card, preview) = checked_preview(store, input)?;
     if preview.remote_source.as_deref() == Some(preview.source_commit.as_str()) {
-        return Err("La branche est déjà à jour. Actualise l’aperçu de publication.".into());
+        return Err(
+            "message.the_branch_is_already_up_to_date_refresh_the_publication_preview".into(),
+        );
     }
     let push = atelier_core::contracts::GitPushPreview {
         configuration: preview.configuration,
@@ -278,17 +278,17 @@ pub async fn prepare(
     let intent = card
         .fields
         .get::<ForgePublicationIntent>("forgePublication")?
-        .ok_or("Intention de publication absente.")?;
+        .ok_or("message.publication_intent_missing")?;
     let preview = intent.preview;
     if preview.remote_source.as_deref() != Some(preview.source_commit.as_str()) {
         return Err(
-            "Pousse la branche confirmée puis actualise l’aperçu avant de créer la PR/MR.".into(),
+            "message.push_the_confirmed_branch_then_refresh_the_preview_before_creati".into(),
         );
     }
     let directory =
         forge_association::verify(root, roots, card, configuration, &preview.repository).await?;
     if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree) {
-        return Err("Le worktree de publication a changé.".into());
+        return Err("message.the_publication_worktree_changed".into());
     }
     let head = String::from_utf8(
         directory
@@ -318,19 +318,19 @@ pub async fn prepare(
             .await?
             != preview.target_commit
     {
-        return Err("Les commits de publication ont changé. Prépare un nouvel aperçu.".into());
+        return Err("message.publication_commits_changed_prepare_a_new_preview".into());
     }
     Ok(())
 }
 fn active(store: &Store<'_>, card_id: &str, id: &str) -> Result<(Card, ForgePublicationIntent)> {
     let card = store
         .document::<Card>(Documents::Cards, card_id)?
-        .ok_or("Carte de publication absente.")?;
+        .ok_or("message.publication_card_missing")?;
     let intent = card
         .fields
         .get::<ForgePublicationIntent>("forgePublication")?
         .filter(|intent| intent.id == id)
-        .ok_or("L’intention de publication a changé.")?;
+        .ok_or("message.the_publication_intent_changed")?;
     Ok((card, intent))
 }
 pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
@@ -341,14 +341,14 @@ pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
             || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?
         {
-            return Err("L’intention de publication a changé.".into());
+            return Err("message.the_publication_intent_changed".into());
         }
         intent.state = Phase::Sending;
         card.fields.set("forgePublication", &intent)?;
         forge_association::invalidate(
             store,
             &mut card,
-            "Une publication a démarré. Relis la PR/MR avant toute review.",
+            "message.a_publication_started_read_the_pr_mr_before_any_review",
         )?;
         store.put(Documents::Cards, &card)
     })
@@ -357,7 +357,7 @@ pub fn remember_number(store: &Store<'_>, card_id: &str, id: &str, number: u64) 
     store.transaction(|store| {
         let (mut card, mut intent) = active(store, card_id, id)?;
         if intent.state != Phase::Sending || number == 0 || number > i32::MAX as u64 {
-            return Err("Identité de publication invalide.".into());
+            return Err("message.invalid_publication_identity".into());
         }
         intent.number = Some(number);
         card.fields.set("forgePublication", &intent)?;
@@ -370,7 +370,7 @@ pub fn interrupted(store: &Store<'_>, card_id: &str, id: &str) -> Result<Card> {
         intent.state = match intent.state {
             Phase::Preparing => Phase::Failed,
             Phase::Sending => Phase::Uncertain,
-            _ => return Err("L’intention de publication a changé.".into()),
+            _ => return Err("message.the_publication_intent_changed".into()),
         };
         card.fields.set("forgePublication", &intent)?;
         store.put(Documents::Cards, &card)?;
@@ -394,7 +394,7 @@ pub fn record(store: &Store<'_>, card_id: &str, id: &str, pr: PullRequest) -> Re
             || pr.url != forge::browser_link(&configuration, &preview.repository, pr.number)?
             || card.fields.raw("pullRequest").is_some()
         {
-            return Err("La PR/MR retrouvée ne correspond pas à cette publication.".into());
+            return Err("message.the_recovered_pr_mr_does_not_match_this_publication".into());
         }
         let mut duplicate = false;
         for other in store.documents::<Card>(Documents::Cards)? {
@@ -423,7 +423,7 @@ pub fn record(store: &Store<'_>, card_id: &str, id: &str, pr: PullRequest) -> Re
         forge_association::invalidate(
             store,
             &mut card,
-            "La PR/MR publiée a été relue. Les reviews doivent porter sur ses commits actuels.",
+            "message.the_published_pr_mr_was_read_again_reviews_must_cover_its_curren",
         )?;
         store.put(Documents::Cards, &card)?;
         Ok(card)

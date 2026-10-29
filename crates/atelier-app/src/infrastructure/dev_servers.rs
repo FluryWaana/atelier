@@ -129,7 +129,7 @@ impl DevServers {
             || prepared.plan.services.is_empty()
             || prepared.plan.services.len() > 4
         {
-            return Err("Plan de lancement invalide.".into());
+            return Err("message.launch_plan_invalid".into());
         }
         let card = prepared.plan.card_id.clone();
         let (leases, controls) = {
@@ -139,7 +139,10 @@ impl DevServers {
                 .values()
                 .any(|session| session.active() && !compatible(&prepared.plan, &session.plan))
             {
-                return Err("Arrête la pile déjà lancée pour ces projets, ou utilise {port} pour chaque service.".into());
+                return Err(
+                    "message.stop_the_stack_already_running_for_these_projects_or_use_port_fo"
+                        .into(),
+                );
             }
             if !inner.sessions.contains_key(&card) && inner.sessions.len() >= SESSION_LIMIT {
                 let stale = inner
@@ -147,7 +150,7 @@ impl DevServers {
                     .iter()
                     .find(|(_, session)| !session.active())
                     .map(|(id, _)| id.clone())
-                    .ok_or("Trop de piles actives (16 maximum).")?;
+                    .ok_or("message.too_many_running_stacks_maximum_16")?;
                 inner.sessions.remove(&stale);
             }
             let mut used = inner
@@ -170,7 +173,10 @@ impl DevServers {
                     let mut chosen = None;
                     for _ in 0..32 {
                         if launch.requested_port != 0 && used.contains(&launch.requested_port) {
-                            return Err("Ce port est déjà attribué à un service Atelier.".into());
+                            return Err(
+                                "message.this_port_is_already_assigned_to_an_atelier_service"
+                                    .into(),
+                            );
                         }
                         let lease = PortLease::reserve(launch.requested_port)?;
                         if !used.contains(&lease.port) {
@@ -178,7 +184,7 @@ impl DevServers {
                             break;
                         }
                     }
-                    Some(chosen.ok_or("Impossible de réserver un port local.")?)
+                    Some(chosen.ok_or("message.local_port_reservation_failed")?)
                 } else {
                     None
                 };
@@ -261,7 +267,7 @@ impl DevServers {
             .sessions
             .get(&card)
             .map(Session::snapshot)
-            .ok_or_else(|| "Session de services absente.".into())
+            .ok_or_else(|| "message.service_session_missing".into())
     }
 
     async fn launch(
@@ -301,10 +307,10 @@ impl DevServers {
             self.update(card, index, true, |state| {
                 state.status = ServiceStatus::Failed;
                 state.pid = if terminated { None } else { pid };
-                state.error = "Flux du service absents.".into();
+                state.error = "message.service_streams_missing".into();
             });
             let _ = done.send(terminated);
-            return Err("Flux du service absents.".into());
+            return Err("message.service_streams_missing".into());
         };
         self.update(card, index, true, |state| {
             state.status = ServiceStatus::Running;
@@ -355,7 +361,7 @@ impl DevServers {
                     }
                 }
                 if out.is_err() || err.is_err() {
-                    state.error = "Lecture des journaux interrompue.".into();
+                    state.error = "message.log_reading_was_interrupted".into();
                 }
             });
             drop(directory);
@@ -368,7 +374,7 @@ impl DevServers {
     pub async fn restart(self: &Arc<Self>, mut prepared: PreparedLaunch) -> Result<ServiceSession> {
         let _operation = self.operations.lock().await;
         if prepared.plan.services.len() != 1 || prepared.directories.len() != 1 {
-            return Err("Sélectionne un seul service à relancer.".into());
+            return Err("message.select_one_service_to_restart".into());
         }
         let card = prepared.plan.card_id.clone();
         let launch = prepared.plan.services.remove(0);
@@ -378,12 +384,12 @@ impl DevServers {
             let session = inner
                 .sessions
                 .get(&card)
-                .ok_or("Lance d’abord la pile depuis cette tâche.")?;
+                .ok_or("message.start_the_stack_from_this_task_first")?;
             let index = session
                 .services
                 .iter()
                 .position(|service| service.state.id == launch.id)
-                .ok_or("Service introuvable.")?;
+                .ok_or("message.service_not_found")?;
             let mut prospective = session.plan.clone();
             if let Some(previous) = prospective
                 .services
@@ -401,7 +407,10 @@ impl DevServers {
                     && other.active()
                     && !compatible(&prospective, &other.plan)
             }) {
-                return Err("Arrête la pile déjà lancée pour ces projets, ou utilise {port} pour chaque service.".into());
+                return Err(
+                    "message.stop_the_stack_already_running_for_these_projects_or_use_port_fo"
+                        .into(),
+                );
             }
             index
         };
@@ -417,7 +426,7 @@ impl DevServers {
                     .flat_map(|session| &session.services)
                     .any(|service| !*service.done.borrow() && service.state.port == Some(requested))
             {
-                return Err("Ce port est déjà attribué à un service Atelier.".into());
+                return Err("message.this_port_is_already_assigned_to_an_atelier_service".into());
             }
             Some(PortLease::reserve(requested)?)
         } else {
@@ -430,7 +439,7 @@ impl DevServers {
             let session = inner
                 .sessions
                 .get_mut(&card)
-                .ok_or("Session de services absente.")?;
+                .ok_or("message.service_session_missing")?;
             session.services[index] = Running {
                 state: ServiceState {
                     id: launch.id.clone(),
@@ -476,7 +485,7 @@ impl DevServers {
         )
         .await?;
         self.snapshot(&card)
-            .ok_or_else(|| "Session de services absente.".into())
+            .ok_or_else(|| "message.service_session_missing".into())
     }
 
     async fn inspect(&self, card: &str, index: usize, child: &mut ContainedChild) {
@@ -491,26 +500,40 @@ impl DevServers {
                 self.inspection.clone().acquire_owned(),
             )
             .await
-            .map_err(|_| "Inspection des ports occupée.")??;
+            .map_err(|_| "message.port_inspection_busy")??;
             let query = tokio::spawn(async move {
                 let _permit = permit;
                 super::process_inspection::listeners(&before).await
             });
             let queried = tokio::time::timeout(Duration::from_secs(2), query)
                 .await
-                .map_err(|_| "Inspection des ports trop lente.")?;
+                .map_err(|_| "message.port_inspection_timeout")?;
             let mut endpoints = queried??;
             let after = child.process_ids().await?;
             endpoints.retain(|endpoint| after.contains(&endpoint.pid));
             Ok::<_, crate::Error>((after, endpoints))
         }
         .await;
-        self.update(card,index,false,|state| match result {
-            Ok((processes,mut endpoints)) => {
-                for endpoint in &mut endpoints { endpoint.url = super::process_inspection::local_url(&endpoint.address,endpoint.port,&state.log); }
-                state.process_ids = processes; state.endpoints = endpoints; state.inspection_error.clear();
+        self.update(card, index, false, |state| match result {
+            Ok((processes, mut endpoints)) => {
+                for endpoint in &mut endpoints {
+                    endpoint.url = super::process_inspection::local_url(
+                        &endpoint.address,
+                        endpoint.port,
+                        &state.log,
+                    );
+                }
+                state.process_ids = processes;
+                state.endpoints = endpoints;
+                state.inspection_error.clear();
             }
-            Err(_) => { state.endpoints.clear(); state.process_ids.clear(); state.inspection_error = "Détection des ports indisponible. Les commandes de démarrage et d’arrêt restent disponibles.".into(); }
+            Err(_) => {
+                state.endpoints.clear();
+                state.process_ids.clear();
+                state.inspection_error =
+                    "message.port_detection_is_unavailable_start_and_stop_controls_remain_ava"
+                        .into();
+            }
         });
     }
 
@@ -553,14 +576,14 @@ impl DevServers {
             let session = inner
                 .sessions
                 .get_mut(card)
-                .ok_or("Session de services absente.")?;
+                .ok_or("message.service_session_missing")?;
             if selected.is_some_and(|id| {
                 !session
                     .services
                     .iter()
                     .any(|service| service.state.id == id)
             }) {
-                return Err("Service introuvable.".into());
+                return Err("message.service_not_found".into());
             }
             let mut completions = Vec::new();
             for service in &mut session.services {
@@ -578,12 +601,12 @@ impl DevServers {
                 while !*done.borrow() {
                     done.changed()
                         .await
-                        .map_err(|_| "Le superviseur du service s’est arrêté sans confirmation.")?;
+                        .map_err(|_| "message.service_supervisor_unconfirmed_stop")?;
                 }
                 Ok::<_, crate::Error>(())
             })
             .await
-            .map_err(|_| "L’arrêt du service n’est pas confirmé.")??;
+            .map_err(|_| "message.service_shutdown_is_not_confirmed")??;
         }
         Ok(())
     }

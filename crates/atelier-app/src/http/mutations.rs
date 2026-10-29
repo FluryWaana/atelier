@@ -23,7 +23,7 @@ pub(super) async fn run(
     let Ok(guard) = reservation else {
         return failure(
             StatusCode::CONFLICT,
-            "Une modification est en cours. Réessaie dans un instant.",
+            "message.a_change_is_in_progress_try_again_shortly",
         );
     };
     detached(async move {
@@ -60,7 +60,7 @@ pub(super) async fn detached(
         Ok(response) => response,
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "La modification a été interrompue. Actualise l’état avant de réessayer.",
+            "message.the_change_was_interrupted_refresh_the_current_state_before_tryi",
         ),
     }
 }

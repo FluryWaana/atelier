@@ -24,7 +24,12 @@ async fn mutate(state: Shared, id: String, action: Action, request: Request) -> 
     };
     let timestamp = match timestamp() {
         Ok(timestamp) => timestamp,
-        Err(_) => return failure(StatusCode::INTERNAL_SERVER_ERROR, "Horloge indisponible."),
+        Err(_) => {
+            return failure(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message.clock_unavailable",
+            );
+        }
     };
     let changed = state
         .database
@@ -73,7 +78,7 @@ async fn mutate(state: Shared, id: String, action: Action, request: Request) -> 
             } else {
                 failure(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Modification de la carte impossible.",
+                    "message.card_update_failed",
                 )
             }
         }

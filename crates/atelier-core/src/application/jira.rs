@@ -15,7 +15,7 @@ impl std::fmt::Display for JiraFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Conflict => {
-                "La connexion Jira a changé. Recharge les réglages avant de réessayer."
+                "message.the_jira_connection_changed_reload_settings_before_trying_again"
             }
             Self::Invalid(message) | Self::OperationConflict(message) => message,
         })
@@ -37,7 +37,7 @@ pub fn configure(
         || input.query.chars().count() > 4000
         || input.query.contains('\0')
     {
-        return Err("Paramètres Jira invalides.".into());
+        return Err("message.invalid_jira_settings".into());
     }
     let url = if input.url.trim().is_empty() {
         String::new()
@@ -49,7 +49,7 @@ pub fn configure(
         && !url.is_empty()
         && (email.is_empty() || !email.contains('@') || email.contains(':'))
     {
-        return Err("Renseigne l’adresse e-mail du compte Jira Cloud.".into());
+        return Err("message.enter_the_jira_cloud_account_email_address".into());
     }
     let token = input.token.filter(|token| !token.is_empty());
     if token
@@ -57,7 +57,7 @@ pub fn configure(
         .is_some_and(|token| token.len() > 4000 || token.chars().any(char::is_control))
         || (input.clear_token && token.is_some())
     {
-        return Err("Jeton Jira invalide.".into());
+        return Err("message.invalid_jira_token".into());
     }
     let scope_changed =
         previous.url != url || previous.email != email || previous.mode != input.mode;
@@ -75,7 +75,7 @@ pub fn configure(
             revision: previous
                 .revision
                 .checked_add(1)
-                .ok_or("Révision Jira épuisée.")?,
+                .ok_or("message.jira_revision_limit_reached")?,
         },
         token,
     ))
@@ -104,7 +104,7 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
     fn append(out: &mut String, text: &str) -> Result<(), JiraFailure> {
         if text.contains('\0') || out.encode_utf16().count() + text.encode_utf16().count() > 20_000
         {
-            return Err("Description Jira invalide ou trop longue.".into());
+            return Err("message.invalid_or_oversized_jira_description".into());
         }
         out.push_str(text);
         Ok(())
@@ -118,7 +118,7 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
         return Ok(out);
     }
     if value["type"] != "doc" || value["version"] != 1 || !value["content"].is_array() {
-        return Err("Document Jira invalide.".into());
+        return Err("message.invalid_jira_document".into());
     }
     let mut out = String::new();
     let mut stack = vec![(value, false)];
@@ -132,16 +132,16 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
         }
         nodes += 1;
         if nodes > 4096 {
-            return Err("Document Jira trop complexe.".into());
+            return Err("message.jira_document_is_too_complex".into());
         }
         let kind = node
             .get("type")
             .and_then(serde_json::Value::as_str)
-            .ok_or("Nœud Jira invalide.")?;
+            .ok_or("message.invalid_jira_node")?;
         match kind {
             "text" => append(
                 &mut out,
-                node["text"].as_str().ok_or("Texte Jira invalide.")?,
+                node["text"].as_str().ok_or("message.invalid_jira_text")?,
             )?,
             "hardBreak" => append(&mut out, "\n")?,
             "mention" | "emoji" | "inlineCard" | "status" => {
@@ -155,7 +155,7 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
                             None
                         }
                     })
-                    .ok_or("Attribut Jira invalide.")?;
+                    .ok_or("message.invalid_jira_attribute")?;
                 append(&mut out, text)?;
             }
             _ => {}
@@ -167,9 +167,9 @@ pub fn description(value: &serde_json::Value) -> Result<String, JiraFailure> {
             stack.push((node, true));
         }
         if let Some(content) = node.get("content") {
-            let children = content.as_array().ok_or("Contenu Jira invalide.")?;
+            let children = content.as_array().ok_or("message.invalid_jira_content")?;
             if nodes + stack.len() + children.len() > 8192 {
-                return Err("Document Jira trop complexe.".into());
+                return Err("message.jira_document_is_too_complex".into());
             }
             stack.extend(children.iter().rev().map(|child| (child, false)));
         }
@@ -207,8 +207,8 @@ pub fn linked_issue(card: &crate::contracts::Card, base: &str) -> Result<String,
     let ticket = card
         .fields
         .get::<crate::document::Document>("ticket")
-        .map_err(|_| JiraFailure::Invalid("Liaison Jira invalide."))?
-        .ok_or("Cette carte n’est pas liée à Jira.")?;
+        .map_err(|_| JiraFailure::Invalid("message.invalid_jira_link"))?
+        .ok_or("message.this_card_is_not_linked_to_jira")?;
     let site = ticket
         .get::<String>("instance")
         .ok()
@@ -218,17 +218,17 @@ pub fn linked_issue(card: &crate::contracts::Card, base: &str) -> Result<String,
         .get::<String>("id")
         .ok()
         .flatten()
-        .ok_or("Identifiant Jira invalide.")?;
+        .ok_or("message.invalid_jira_issue_identifier")?;
     let key = ticket
         .get::<String>("key")
         .ok()
         .flatten()
-        .ok_or("Clé Jira invalide.")?;
+        .ok_or("message.invalid_jira_issue_key")?;
     if !ticket.string_equals("connector", "jira").unwrap_or(false)
         || site.as_deref() != Some(base)
         || !issue_identity(&id, &key)
     {
-        return Err("Reconnecte le site Jira associé à cette carte.".into());
+        return Err("message.reconnect_the_jira_site_associated_with_this_card".into());
     }
     Ok(id)
 }
@@ -252,28 +252,28 @@ pub fn creation_text(card: &crate::contracts::Card) -> Result<String, JiraFailur
     let mut text = card
         .fields
         .get::<String>("description")
-        .map_err(|_| JiraFailure::Invalid("Description de carte invalide."))?
+        .map_err(|_| JiraFailure::Invalid("message.card_description_invalid"))?
         .unwrap_or_default();
     let criteria = card
         .fields
         .get::<Vec<crate::domain::checklist::Criterion>>("checklist")
-        .map_err(|_| JiraFailure::Invalid("Critères de carte invalides."))?
+        .map_err(|_| JiraFailure::Invalid("message.card_criteria_invalid"))?
         .unwrap_or_default();
     let checklist = crate::domain::checklist::checklist_text(&criteria)
         .utf8()
-        .map_err(|_| JiraFailure::Invalid("Critères de carte invalides."))?;
+        .map_err(|_| JiraFailure::Invalid("message.card_criteria_invalid"))?;
     text.push_str(&checklist);
     let instructions = card
         .fields
         .get::<String>("instructions")
-        .map_err(|_| JiraFailure::Invalid("Instructions de carte invalides."))?
+        .map_err(|_| JiraFailure::Invalid("message.card_instructions_invalid"))?
         .unwrap_or_default();
     if !instructions.is_empty() {
         text.push_str("\n\nInstructions pour l’agent :\n");
         text.push_str(&instructions);
     }
     if text.encode_utf16().count() > 60_000 || text.contains('\0') {
-        return Err("Contenu de carte trop volumineux ou invalide pour Jira.".into());
+        return Err("message.card_content_is_too_large_or_invalid_for_jira".into());
     }
     Ok(text)
 }
@@ -285,12 +285,12 @@ pub fn validate_creation(
     let title = card
         .title
         .utf8()
-        .map_err(|_| JiraFailure::Invalid("Titre de carte invalide."))?;
+        .map_err(|_| JiraFailure::Invalid("message.card_title_invalid"))?;
     if title.trim().is_empty()
         || title.encode_utf16().count() > 255
         || title.chars().any(char::is_control)
     {
-        return Err("Titre de carte invalide.".into());
+        return Err("message.card_title_invalid".into());
     }
     let description = creation_text(card)?;
     if metadata.issue_type.subtask
@@ -299,7 +299,7 @@ pub fn validate_creation(
             .iter()
             .any(|field| field.id == "summary" && field.can_set)
     {
-        return Err("Ce type de ticket ne peut pas être créé depuis Atelier.".into());
+        return Err("message.this_issue_type_cannot_be_created_from_atelier".into());
     }
     if !description.is_empty()
         && !metadata
@@ -307,7 +307,9 @@ pub fn validate_creation(
             .iter()
             .any(|field| field.id == "description" && field.can_set)
     {
-        return Err("Le projet Jira n’autorise pas la description prévue. Crée le ticket dans Jira puis associe-le.".into());
+        return Err(
+            "message.the_jira_project_does_not_allow_this_description_create_the_issu".into(),
+        );
     }
     for field in &metadata.fields {
         if field.required
@@ -315,10 +317,12 @@ pub fn validate_creation(
             && ((!field.can_set && ["summary", "description"].contains(&field.id.as_str()))
                 || !["project", "issuetype", "summary", "description"].contains(&field.id.as_str()))
         {
-            return Err("Ce projet exige des champs supplémentaires. Crée le ticket dans Jira puis associe-le.".into());
+            return Err(
+                "message.this_project_requires_additional_fields_create_the_issue_in_jira".into(),
+            );
         }
         if field.required && field.id == "description" && description.trim().is_empty() {
-            return Err("Une description est obligatoire pour ce projet Jira.".into());
+            return Err("message.this_jira_project_requires_a_description".into());
         }
     }
     Ok(())

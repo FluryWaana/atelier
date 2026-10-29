@@ -13,7 +13,7 @@ pub enum ProjectFailure {
 impl std::fmt::Display for ProjectFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
-            Self::Missing => "Projet introuvable.",
+            Self::Missing => "message.project_not_found",
             Self::Invalid(message) | Self::Conflict(message) => message,
         })
     }
@@ -29,8 +29,7 @@ pub trait ProjectRepository: CreationContext {
     fn delete_project(&self, id: &str) -> Result<()>;
 }
 
-pub const LOCATION_CHANGE_REASON: &str =
-    "Emplacement du projet modifié : relancez les vérifications et la review.";
+pub const LOCATION_CHANGE_REASON: &str = "message.project_location_changed_review";
 
 pub fn mapped_jira_transition<'a>(
     settings: &serde_json::Value,
@@ -123,7 +122,7 @@ pub fn detect(
         } else if body.string_equals("role", "back")? {
             Some("back")
         } else {
-            return Err(ProjectFailure::Invalid("Application à détecter invalide.").into());
+            return Err(ProjectFailure::Invalid("message.invalid_application_to_detect").into());
         }
     } else {
         None
@@ -205,7 +204,7 @@ pub fn prepare_update(
         .find(|project| project.string_equals("id", id).unwrap_or(false))
         .ok_or(ProjectFailure::Missing)?;
     if let Some(raw) = body.raw("expected") {
-        let invalid = || ProjectFailure::Invalid("Condition de modification invalide.");
+        let invalid = || ProjectFailure::Invalid("message.invalid_edit_condition");
         let expected: std::collections::BTreeMap<String, serde_json::Value> =
             serde_json::from_str(raw.get()).map_err(|_| invalid())?;
         let fields = EDITABLE_FIELDS;
@@ -249,7 +248,10 @@ pub fn prepare_update(
                 serde_json::json!(project.get::<String>(&key)?.unwrap_or_default())
             };
             if current != value {
-                return Err(ProjectFailure::Conflict("Ce projet a changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les projets pour charger la dernière version.").into());
+                return Err(ProjectFailure::Conflict(
+                    "message.this_project_changed_elsewhere_your_draft_is_preserved_close_and",
+                )
+                .into());
             }
         }
     }
@@ -257,13 +259,9 @@ pub fn prepare_update(
     let mut cards = Vec::new();
     for card in repository.cards()? {
         if same_repo(&card, &previous_repo, windows)? {
-            if busy(
-                &card
-                    .get::<String>("id")?
-                    .ok_or("Identifiant de carte absent.")?,
-            ) {
+            if busy(&card.get::<String>("id")?.ok_or("message.card_id_missing")?) {
                 return Err(ProjectFailure::Conflict(
-                    "Attends la fin des opérations du projet avant de modifier ses réglages.",
+                    "message.wait_for_project_operations_to_finish_before_changing_settings",
                 )
                 .into());
             }
@@ -278,9 +276,10 @@ pub fn prepare_update(
         && !options.repository_connector.0.is_empty()
         && !connector_available(&options.repository_connector)
     {
-        return Err(
-            ProjectFailure::Invalid("Ce module Git est absent ou ne gère pas les dépôts.").into(),
-        );
+        return Err(ProjectFailure::Invalid(
+            "message.this_git_module_is_missing_or_does_not_handle_repositories",
+        )
+        .into());
     }
     for (role, selected) in [
         ("front", &mut options.front_repo),
@@ -322,7 +321,7 @@ pub fn prepare_update(
             }))
     {
         return Err(
-            ProjectFailure::Invalid("Choisis un autre projet enregistré pour les tests.").into(),
+            ProjectFailure::Invalid("message.choose_another_saved_project_for_testing").into(),
         );
     }
     let repo = if let Some(value) = body.raw("repo") {
@@ -334,19 +333,22 @@ pub fn prepare_update(
     if moved {
         for card in &cards {
             if card.truthy("worktree")? {
-                return Err(ProjectFailure::Conflict("Retire les worktrees de ce projet avant de modifier son emplacement. Aucun fichier ne sera déplacé automatiquement.").into());
+                return Err(ProjectFailure::Conflict(
+                    "message.remove_this_projects_worktrees_before_changing_its_location_no_f",
+                )
+                .into());
             }
         }
         if servers_running {
             return Err(ProjectFailure::Conflict(
-                "Arrête les applications de ce projet avant de modifier son emplacement.",
+                "message.stop_this_projects_applications_before_changing_its_location",
             )
             .into());
         }
         for other in &projects {
             if !other.string_equals("id", id)? && same_repo(other, &repo, windows)? {
                 return Err(ProjectFailure::Conflict(
-                    "Ce répertoire figure déjà dans les projets.",
+                    "message.this_directory_is_already_in_the_projects_list",
                 )
                 .into());
             }
@@ -356,7 +358,7 @@ pub fn prepare_update(
     if body.raw("name").is_some() {
         let name = text(body.raw("name"), 100)?;
         if name.0.is_empty() {
-            return Err(ProjectFailure::Invalid("Un nom de projet est nécessaire.").into());
+            return Err(ProjectFailure::Invalid("message.a_project_name_is_required").into());
         }
         updated.set("name", &name)?;
     }
@@ -385,17 +387,17 @@ pub fn create(
 ) -> Result<Document> {
     let name = text(body.raw("name"), 100)?;
     if name.0.is_empty() {
-        return Err(ProjectFailure::Invalid("Un nom de projet est nécessaire.").into());
+        return Err(ProjectFailure::Invalid("message.a_project_name_is_required").into());
     }
-    let repo = repository.repository(
-        body.raw("repo")
-            .ok_or(ProjectFailure::Invalid("Texte invalide ou trop long."))?,
-    )?;
+    let repo = repository.repository(body.raw("repo").ok_or(ProjectFailure::Invalid(
+        "message.invalid_or_overly_long_text",
+    ))?)?;
     for project in repository.projects()? {
         if same_repo(&project, &repo, windows)? {
-            return Err(
-                ProjectFailure::Conflict("Ce répertoire figure déjà dans les projets.").into(),
-            );
+            return Err(ProjectFailure::Conflict(
+                "message.this_directory_is_already_in_the_projects_list",
+            )
+            .into());
         }
     }
     let mut project = Document::default();
@@ -416,16 +418,13 @@ fn archive_cards(
     let mut ids = Vec::new();
     for card in repository.cards()? {
         if same_repo(&card, repo, windows)? {
-            ids.push(
-                card.get::<String>("id")?
-                    .ok_or("Identifiant de carte absent.")?,
-            );
+            ids.push(card.get::<String>("id")?.ok_or("message.card_id_missing")?);
             selected.push(card);
         }
     }
     let conflict = || {
         ProjectFailure::Conflict(
-            "Arrête les agents et chronomètres et attends la fin des envois avant de retirer ce projet.",
+            "message.stop_agents_and_timers_and_wait_for_deliveries_to_finish_before",
         )
     };
     if ids.iter().any(|id| busy(id)) {
@@ -456,7 +455,7 @@ pub fn archive_tasks(
 ) -> Result<usize> {
     let repo = text(body.raw("repo"), 2000)?;
     if repo.0.is_empty() {
-        return Err(ProjectFailure::Invalid("Répertoire requis.").into());
+        return Err(ProjectFailure::Invalid("message.directory_required").into());
     }
     archive_cards(repository, &repo, windows, &busy)
 }
@@ -483,31 +482,27 @@ pub fn remove(
             .unwrap_or(false)
     }) {
         return Err(ProjectFailure::Conflict(
-            "Détache ce projet des projets qui l’utilisent pour les tests avant de le retirer.",
+            "message.unlink_this_project_from_projects_that_use_it_for_testing_before",
         )
         .into());
     }
     let repo = project.get::<JsonString>("repo")?.unwrap_or_default();
     for card in repository.cards()? {
         if same_repo(&card, &repo, windows)?
-            && busy(
-                &card
-                    .get::<String>("id")?
-                    .ok_or("Identifiant de carte absent.")?,
-            )
+            && busy(&card.get::<String>("id")?.ok_or("message.card_id_missing")?)
         {
             return Err(
-                ProjectFailure::Conflict("Attends la fin des opérations du projet.").into(),
+                ProjectFailure::Conflict("message.wait_for_project_operations_to_finish").into(),
             );
         }
     }
     if servers_running {
         return Err(
-            ProjectFailure::Conflict("Arrête les serveurs Front / Back de ce projet.").into(),
+            ProjectFailure::Conflict("message.stop_this_projects_front_back_servers").into(),
         );
     }
     if body.raw("archiveTasks").is_some() && body.get::<bool>("archiveTasks").is_err() {
-        return Err(ProjectFailure::Invalid("Option d’archivage invalide.").into());
+        return Err(ProjectFailure::Invalid("message.invalid_archiving_option").into());
     }
     let archived = if body.truthy("archiveTasks")? {
         archive_cards(repository, &repo, windows, &busy)?

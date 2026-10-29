@@ -112,7 +112,7 @@ pub fn ForgeTask(
                     .await?
                     .json::<ForgeConnections>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -202,7 +202,7 @@ pub fn ForgeTask(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -212,7 +212,7 @@ pub fn ForgeTask(
                             atelier_core::application::forge::unresolved(&card.fields)
                                 .unwrap_or(true);
                         replace_card(board.cards, card);
-                        notice.set(if still_uncertain{"État demandé non observé. L’écriture reste incertaine ; aucune nouvelle tentative automatique."}else{"État brouillon observé sur la forge. Revalide les reviews avant de poursuivre."}.into());
+                        notice.set(if still_uncertain{"message.requested_state_not_observed_the_write_remains_uncertain_no_auto"}else{"message.draft_state_observed_on_the_forge_revalidate_reviews_before_cont"}.into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -271,7 +271,7 @@ pub fn ForgeTask(
                 .ok()
                 .filter(|number| *number > 0 && *number <= i32::MAX as u64)
             else {
-                error.set("Numéro de PR/MR entier positif requis.".into());
+                error.set("message.a_positive_integer_pr_mr_number_is_required".into());
                 return;
             };
             serde_json::to_value(PullRequestAttach {
@@ -299,7 +299,7 @@ pub fn ForgeTask(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -317,7 +317,7 @@ pub fn ForgeTask(
                         replace_card(board.cards, card);
                         approved.set(None);
                         detach_ack.set(String::new());
-                        notice.set(if remove{"Liaison retirée. Aucune PR/MR distante modifiée."}else{"PR/MR associée après vérification du dépôt et de la branche. Aucun effet distant."}.into());
+                        notice.set(if remove{"message.link_removed_no_remote_pr_mr_changed"}else{"message.pr_mr_linked_after_repository_and_branch_verification_no_remote"}.into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -334,29 +334,29 @@ pub fn ForgeTask(
                 .is_some_and(|card| card.fields.truthy("brainstormSession").unwrap_or(false))
         })
     });
-    view! {<section class="task-files" hidden=move||brain.get() aria-labelledby="forge-task-heading" aria-busy=move||(pending.get()||loading.get()).to_string()><h3 id="forge-task-heading">{move||i18n.text("PR/MR de la tâche")}</h3>
-        {move||linked.get().map(|pr|view!{<p>{let label=format!("{} #{} · {}",pr.repository,pr.number,pr.title);if pr.url.starts_with("https://")&&!pr.url.chars().any(char::is_control){view!{<a href=pr.url target="_blank" rel="noopener noreferrer">{label}</a>}.into_any()}else{view!{<span>{label}</span>}.into_any()}}</p><p>{pr.source_branch}" → "{pr.target_branch}</p><p>{move||i18n.text("Dernière lecture : {0}").replace("{0}",&pr.checked_at)}</p>})}
-        <p class="field-help">{move||i18n.text("Associe une PR/MR existante dont le dépôt origin et la branche source correspondent au worktree vérifié. Relire une liaison met à jour ses commits et rend les anciennes reviews périmées si nécessaire. Aucune publication distante.")}</p>
+    view! {<section class="task-files" hidden=move||brain.get() aria-labelledby="forge-task-heading" aria-busy=move||(pending.get()||loading.get()).to_string()><h3 id="forge-task-heading">{move||i18n.text("message.task_pr_mr")}</h3>
+        {move||linked.get().map(|pr|view!{<p>{let label=format!("{} #{} · {}",pr.repository,pr.number,pr.title);if pr.url.starts_with("https://")&&!pr.url.chars().any(char::is_control){view!{<a href=pr.url target="_blank" rel="noopener noreferrer">{label}</a>}.into_any()}else{view!{<span>{label}</span>}.into_any()}}</p><p>{pr.source_branch}" → "{pr.target_branch}</p><p>{move||i18n.text("message.last_read_0").replace("{0}",&pr.checked_at)}</p>})}
+        <p class="field-help">{move||i18n.text("message.link_an_existing_pr_mr_whose_origin_repository_and_source_branch")}</p>
         <fieldset disabled=move||pending.get()||loading.get()||blocked.get()||archived||unresolved.get()||publication_dirty.get()||content_dirty.get()>
-            <label for="task-forge-kind">{move||i18n.text("Forge")}</label><select id="task-forge-kind" prop:value=move||draft.get().0.name() on:change=move|event|{draft.update(|draft|draft.0=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github});approved.set(None);} ><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
-            <label for="task-forge-repository">{move||i18n.text("Dépôt de la PR/MR")}</label><input id="task-forge-repository" maxlength="1000" prop:value=move||draft.get().1 on:input=move|event|{draft.update(|draft|draft.1=event_target_value(&event));approved.set(None);} />
-            <label for="task-forge-number">{move||i18n.text("Numéro de PR/MR")}</label><input id="task-forge-number" type="number" min="1" max="2147483647" step="1" prop:value=move||draft.get().2 on:input=move|event|{draft.update(|draft|draft.2=event_target_value(&event));approved.set(None);} />
-            <label><input id="confirm-task-forge" type="checkbox" prop:checked=move||configuration.with(|configuration|configuration.as_ref().is_some_and(|configuration|approved.get()==Some((draft.get(),configuration.revision)))) on:change=move|event|approved.set(if event_target_checked(&event){configuration.with(|configuration|configuration.as_ref().map(|configuration|(draft.get_untracked(),configuration.revision)))}else{None}) />{move||i18n.text("Vérifier et associer cette PR/MR sans rien modifier sur la forge.")}</label>
-            <button id="attach-task-forge" type="button" disabled=move||configuration.with(|configuration|configuration.as_ref().is_none_or(|configuration|approved.get()!=Some((draft.get(),configuration.revision)))) on:click=move|_|execute.with_value(|execute|execute(false))>{move||i18n.text("Vérifier et enregistrer la liaison")}</button>
-            <button id="cancel-task-forge" type="button" on:click=move|_|{draft.set(original.get_untracked());approved.set(None);}>{move||i18n.text("Annuler la préparation")}</button><button id="reload-task-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
+            <label for="task-forge-kind">{move||i18n.text("message.forge")}</label><select id="task-forge-kind" prop:value=move||draft.get().0.name() on:change=move|event|{draft.update(|draft|draft.0=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github});approved.set(None);} ><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
+            <label for="task-forge-repository">{move||i18n.text("message.pr_mr_repository")}</label><input id="task-forge-repository" maxlength="1000" prop:value=move||draft.get().1 on:input=move|event|{draft.update(|draft|draft.1=event_target_value(&event));approved.set(None);} />
+            <label for="task-forge-number">{move||i18n.text("message.pr_mr_number")}</label><input id="task-forge-number" type="number" min="1" max="2147483647" step="1" prop:value=move||draft.get().2 on:input=move|event|{draft.update(|draft|draft.2=event_target_value(&event));approved.set(None);} />
+            <label><input id="confirm-task-forge" type="checkbox" prop:checked=move||configuration.with(|configuration|configuration.as_ref().is_some_and(|configuration|approved.get()==Some((draft.get(),configuration.revision)))) on:change=move|event|approved.set(if event_target_checked(&event){configuration.with(|configuration|configuration.as_ref().map(|configuration|(draft.get_untracked(),configuration.revision)))}else{None}) />{move||i18n.text("message.verify_and_link_this_pr_mr_without_changing_anything_on_the_forg")}</label>
+            <button id="attach-task-forge" type="button" disabled=move||configuration.with(|configuration|configuration.as_ref().is_none_or(|configuration|approved.get()!=Some((draft.get(),configuration.revision)))) on:click=move|_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.verify_and_save_the_link")}</button>
+            <button id="cancel-task-forge" type="button" on:click=move|_|{draft.set(original.get_untracked());approved.set(None);}>{move||i18n.text("message.cancel_preparation")}</button><button id="reload-task-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.reload_forge_connections")}</button>
         </fieldset>
-        <fieldset hidden=move||linked.with(|linked|linked.is_none()) disabled=move||pending.get()||blocked.get()||draft.get()!=original.get()||archived||unresolved.get()||publication_dirty.get()||content_dirty.get()><label><input id="confirm-detach-forge" type="checkbox" prop:checked=move||linked.with(|linked|linked.as_ref().is_some_and(|linked|serde_json::to_string(linked).unwrap_or_default()==detach_ack.get())) on:change=move|event|detach_ack.set(if event_target_checked(&event){linked.with(|linked|linked.as_ref().map(|linked|serde_json::to_string(linked).unwrap_or_default()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("Retirer uniquement la liaison locale ; conserver la PR/MR et le worktree.")}</label><button id="detach-task-forge" type="button" disabled=move||linked.with(|linked|linked.as_ref().is_none_or(|linked|serde_json::to_string(linked).unwrap_or_default()!=detach_ack.get())) on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("Confirmer le retrait de la liaison")}</button></fieldset>
+        <fieldset hidden=move||linked.with(|linked|linked.is_none()) disabled=move||pending.get()||blocked.get()||draft.get()!=original.get()||archived||unresolved.get()||publication_dirty.get()||content_dirty.get()><label><input id="confirm-detach-forge" type="checkbox" prop:checked=move||linked.with(|linked|linked.as_ref().is_some_and(|linked|serde_json::to_string(linked).unwrap_or_default()==detach_ack.get())) on:change=move|event|detach_ack.set(if event_target_checked(&event){linked.with(|linked|linked.as_ref().map(|linked|serde_json::to_string(linked).unwrap_or_default()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("message.remove_only_the_local_link_keep_the_pr_mr_and_worktree")}</label><button id="detach-task-forge" type="button" disabled=move||linked.with(|linked|linked.as_ref().is_none_or(|linked|serde_json::to_string(linked).unwrap_or_default()!=detach_ack.get())) on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.confirm_removing_the_link")}</button></fieldset>
         <fieldset hidden=move||linked.with(|linked|linked.as_ref().is_none_or(|pr|pr.status!="active"))||unresolved.get() disabled=move||pending.get()||loading.get()||blocked.get()||archived||publication_dirty.get()||content_dirty.get()||draft.get()!=original.get()||configuration.with(|value|value.is_none())>
-            <p class="field-help">{move||i18n.text("Ce changement écrit sur la forge. Passer prête pour review peut notifier les reviewers ; aucune fusion ni CI n’est demandée par Atelier.")}</p>
-            <label><input id="confirm-forge-draft" type="checkbox" prop:checked=move||draft_key.get().is_some_and(|key|key==draft_ack.get()) on:change=move|event|draft_ack.set(if event_target_checked(&event){draft_key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Confirmer le passage de cette PR/MR prête pour review."}else{"Confirmer le passage de cette PR/MR en brouillon."})}</label>
-            <button id="change-forge-draft" type="button" disabled=move||draft_key.get().is_none_or(|key|key!=draft_ack.get()) on:click=move|_|change_draft.with_value(|change|change(false))>{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"Passer prête pour review"}else{"Passer en brouillon"})}</button>
+            <p class="field-help">{move||i18n.text("message.this_writes_to_the_forge_marking_ready_for_review_may_notify_rev")}</p>
+            <label><input id="confirm-forge-draft" type="checkbox" prop:checked=move||draft_key.get().is_some_and(|key|key==draft_ack.get()) on:change=move|event|draft_ack.set(if event_target_checked(&event){draft_key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"message.confirm_marking_this_pr_mr_ready_for_review"}else{"message.confirm_converting_this_pr_mr_to_a_draft"})}</label>
+            <button id="change-forge-draft" type="button" disabled=move||draft_key.get().is_none_or(|key|key!=draft_ack.get()) on:click=move|_|change_draft.with_value(|change|change(false))>{move||i18n.text(if linked.get().is_some_and(|pr|pr.draft){"message.mark_ready_for_review"}else{"message.convert_to_draft"})}</button>
         </fieldset>
-        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("Écriture de forge incertaine. Relis l’état distant ; Atelier ne renverra pas la demande.")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"État demandé : brouillon."}else{"État demandé : prête pour review."})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("Relire l’état brouillon distant")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button></div>
+        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("message.forge_write_uncertain_read_the_remote_state_atelier_will_not_res")}</p><p>{move||i18n.text(if intent.get().is_some_and(|intent|intent.draft){"message.requested_state_draft"}else{"message.requested_state_ready_for_review"})}</p><button id="reconcile-forge-draft" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|change_draft.with_value(|change|change(true))>{move||i18n.text("message.read_remote_draft_state")}</button><button type="button" disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.reload_forge_connections")}</button></div>
         <p class="error" id="forge-task-error" role="alert">{move||i18n.text(&error.get())}</p><p id="forge-task-notice" role="status">{move||i18n.text(&notice.get())}</p>
-        {move||intent.get().filter(|intent|intent.state==ForgeWriteState::Uncertain).and_then(|intent|intent.content).map(|content|view!{<details open><summary>{move||i18n.text("Contenu demandé par l’écriture incertaine")}</summary><p>{content.title}</p><pre>{content.body}</pre></details>})}
+        {move||intent.get().filter(|intent|intent.state==ForgeWriteState::Uncertain).and_then(|intent|intent.content).map(|content|view!{<details open><summary>{move||i18n.text("message.content_requested_by_the_uncertain_write")}</summary><p>{content.title}</p><pre>{content.body}</pre></details>})}
         <crate::forge_checks::ForgeChecksView card configuration=Signal::derive(move||configuration.get()) token />
         <crate::forge_content::ForgeContentEditor card configuration=Signal::derive(move||configuration.get()) board token pending dirty=content_dirty blocked=Memo::new(move |_|blocked.get()||draft.get()!=original.get()||publication_dirty.get())/>
-        <button type="button" hidden=move||!unresolved.get() disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("Recharger les connexions aux forges")}</button>
+        <button type="button" hidden=move||!unresolved.get() disabled=move||pending.get()||loading.get() on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.reload_forge_connections")}</button>
         <crate::git_push::GitPush card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()||publication_dirty.get()||content_dirty.get()) archived />
         <crate::forge_publication::ForgePublication card configuration=Signal::derive(move||configuration.get()) board token pending blocked=Memo::new(move|_|blocked.get()||draft.get()!=original.get()||content_dirty.get()) dirty=publication_dirty archived on_linked=Callback::new(move|pr:PullRequest|{if draft.get_untracked()==original.get_untracked(){let next=(pr.kind,pr.repository,pr.number.to_string());original.set(next.clone());draft.set(next);approved.set(None);detach_ack.set(String::new());}}) />
     </section>}

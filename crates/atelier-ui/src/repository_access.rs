@@ -65,7 +65,7 @@ pub fn RepositoryAccess(
                     .await?
                     .json::<Registry>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -106,7 +106,7 @@ pub fn RepositoryAccess(
                 .await?
                 .json::<FolderSelection>()
                 .await
-                .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -156,7 +156,7 @@ pub fn RepositoryAccess(
                     .await?
                     .json::<Registry>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -200,7 +200,7 @@ pub fn RepositoryAccess(
                     .await?
                     .json::<Registry>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -216,18 +216,18 @@ pub fn RepositoryAccess(
         });
     };
     view! {<section class="task-files" aria-labelledby="repository-access-heading" aria-busy=move||loading.get().to_string()>
-        <h3 id="repository-access-heading">{move||i18n.text("Dépôts autorisés sur cet ordinateur")}</h3>
-        <p class="field-help">{move||i18n.text("Autorise le dossier principal Git avant de le choisir dans un projet. Cette autorisation locale ne modifie aucun fichier du dépôt et ne lance aucune commande. Les sauvegardes de la base ne la transfèrent pas sur un autre ordinateur.")}</p>
-        <ul>{move||registry.get().map(|registry|registry.repositories).unwrap_or_default().into_iter().map(|path|{let selected=StoredValue::new(path.clone());view!{<li><code>{path}</code><label><input class="confirm-revoke-repository" type="checkbox" disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available) prop:checked=move||remove_ack.get()==selected.get_value() on:change=move|event|remove_ack.set(if event_target_checked(&event){selected.get_value()}else{String::new()})/>{move||i18n.text("Retirer seulement cette autorisation locale, sans supprimer le dépôt.")}</label><button class="revoke-repository" type="button" disabled=move||pending.get()||loading.get()||remove_ack.get()!=selected.get_value() on:click=move |_|revoke.with_value(|revoke|revoke(selected.get_value()))>{move||i18n.text("Retirer l’autorisation")}</button></li>}}).collect_view()}</ul>
-        <p hidden=move||registry.get().is_none_or(|registry|registry.available)>{move||i18n.text("Autorise les dépôts depuis le lanceur natif.")}</p>
+        <h3 id="repository-access-heading">{move||i18n.text("message.repositories_authorized_on_this_computer")}</h3>
+        <p class="field-help">{move||i18n.text("message.authorize_the_main_git_directory_before_choosing_it_in_a_project")}</p>
+        <ul>{move||registry.get().map(|registry|registry.repositories).unwrap_or_default().into_iter().map(|path|{let selected=StoredValue::new(path.clone());view!{<li><code>{path}</code><label><input class="confirm-revoke-repository" type="checkbox" disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available) prop:checked=move||remove_ack.get()==selected.get_value() on:change=move|event|remove_ack.set(if event_target_checked(&event){selected.get_value()}else{String::new()})/>{move||i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")}</label><button class="revoke-repository" type="button" disabled=move||pending.get()||loading.get()||remove_ack.get()!=selected.get_value() on:click=move |_|revoke.with_value(|revoke|revoke(selected.get_value()))>{move||i18n.text("message.remove_authorization")}</button></li>}}).collect_view()}</ul>
+        <p hidden=move||registry.get().is_none_or(|registry|registry.available)>{move||i18n.text("message.authorize_repositories_from_the_native_launcher")}</p>
         <fieldset disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available)>
-            <label for="repository-access-path">{move||i18n.text("Dossier du dépôt à autoriser")}</label><input id="repository-access-path" maxlength="2000" spellcheck="false" prop:value=move||path.get() on:input=move|event|path.set(event_target_value(&event))/>
-            <button id="choose-repository-folder" type="button" on:click=choose>{move||i18n.text("Choisir un dossier…")}</button>
-            <label><input id="confirm-repository-access" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()})/>{move||i18n.text("Autoriser Atelier à utiliser ce dépôt et ses futurs worktrees après mes confirmations.")}</label>
-            <button id="save-repository-access" type="button" disabled=move||path.get().is_empty()||key.get().is_none_or(|key|key!=approved.get()) on:click=save>{move||i18n.text("Autoriser ce dépôt")}</button>
+            <label for="repository-access-path">{move||i18n.text("message.repository_directory_to_authorize")}</label><input id="repository-access-path" maxlength="2000" spellcheck="false" prop:value=move||path.get() on:input=move|event|path.set(event_target_value(&event))/>
+            <button id="choose-repository-folder" type="button" on:click=choose>{move||i18n.text("message.choose_a_folder")}</button>
+            <label><input id="confirm-repository-access" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()})/>{move||i18n.text("message.authorize_atelier_to_use_this_repository_and_its_future_worktree")}</label>
+            <button id="save-repository-access" type="button" disabled=move||path.get().is_empty()||key.get().is_none_or(|key|key!=approved.get()) on:click=save>{move||i18n.text("message.authorize_this_repository")}</button>
         </fieldset>
-        <button type="button" disabled=move||pending.get()||loading.get() on:click=move |_|load.with_value(|load|load())>{move||i18n.text("Recharger les autorisations")}</button>
-        <button id="cancel-repository-access" type="button" disabled=move||pending.get()||path.get().is_empty() on:click=move |_|{path.set(String::new());approved.set(String::new());}>{move||i18n.text("Annuler la préparation")}</button>
+        <button type="button" disabled=move||pending.get()||loading.get() on:click=move |_|load.with_value(|load|load())>{move||i18n.text("message.reload_authorizations")}</button>
+        <button id="cancel-repository-access" type="button" disabled=move||pending.get()||path.get().is_empty() on:click=move |_|{path.set(String::new());approved.set(String::new());}>{move||i18n.text("message.cancel_preparation")}</button>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </section>}
 }

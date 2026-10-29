@@ -29,10 +29,7 @@ pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Respons
                 StatusCode::BAD_REQUEST
             };
             if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(
-                    status,
-                    "Lecture ou enregistrement impossible. Réessaie ou recharge.",
-                )
+                failure(status, "message.unable_to_read_or_save_retry_or_reload")
             } else {
                 failure(status, &error.to_string())
             }

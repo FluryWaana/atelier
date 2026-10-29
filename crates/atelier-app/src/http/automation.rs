@@ -45,11 +45,11 @@ pub(super) async fn stop(
     if body.get::<bool>("confirmed").ok().flatten() != Some(true) {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme l’arrêt du parcours automatique.",
+            "message.confirm_stopping_the_automatic_workflow",
         );
     }
     let Some(operation) = body.get::<String>("id").ok().flatten() else {
-        return failure(StatusCode::BAD_REQUEST, "Parcours absent.");
+        return failure(StatusCode::BAD_REQUEST, "message.workflow_missing");
     };
     let result = async {
         let card_id = id.clone();
@@ -72,13 +72,13 @@ pub(super) async fn tested_sources(state: &Shared, card: &Card, flow: &Flow) -> 
     let id = flow
         .verification_id
         .clone()
-        .ok_or("Vérification du parcours absente.")?;
+        .ok_or("message.workflow_verification_missing")?;
     let run = state
         .database
         .call(move |store| {
             store
                 .document::<Document>(Documents::Runs, &id)?
-                .ok_or_else(|| "Vérification du parcours absente.".into())
+                .ok_or_else(|| "message.workflow_verification_missing".into())
         })
         .await?;
     let repository = worktrees::inspect(
@@ -92,23 +92,28 @@ pub(super) async fn tested_sources(state: &Shared, card: &Card, flow: &Flow) -> 
         || run.get::<String>("sourceFingerprint")?.as_deref()
             != Some(repository.fingerprint().await?.as_str())
     {
-        return Err("Les sources du parcours ont changé depuis la vérification. Reprends les vérifications avant la review.".into());
+        return Err(
+            "message.workflow_sources_changed_after_verification_repeat_the_checks_be".into(),
+        );
     }
     Ok(())
 }
 async fn validate_review(state: &Shared, card: &Card, flow: &Flow) -> Result<()> {
-    let id = flow.run_id.clone().ok_or("Review du parcours absente.")?;
+    let id = flow
+        .run_id
+        .clone()
+        .ok_or("message.workflow_review_missing")?;
     let selected = id.clone();
     let run = state
         .database
         .call(move |store| {
             store
                 .document::<Document>(Documents::Runs, &selected)?
-                .ok_or_else(|| "Review du parcours absente.".into())
+                .ok_or_else(|| "message.workflow_review_missing".into())
         })
         .await?;
     if !run.string_equals("status", "completed")? || run.get::<i32>("exitCode")? != Some(0) {
-        return Err("La review du parcours n’a pas abouti. Consulte le journal.".into());
+        return Err("message.the_workflow_review_did_not_complete_read_the_log".into());
     }
     if run.raw("connectorReviewContext").is_some() {
         tested_sources(state, card, flow).await?;
@@ -117,7 +122,7 @@ async fn validate_review(state: &Shared, card: &Card, flow: &Flow) -> Result<()>
     }
     let recorded = run
         .get::<Context>("reviewContext")?
-        .ok_or("Contexte de review absent.")?;
+        .ok_or("message.missing_review_context")?;
     let vault = state.vault.clone();
     let kind = recorded.kind;
     let revision = recorded.revision;
@@ -138,7 +143,7 @@ async fn validate_review(state: &Shared, card: &Card, flow: &Flow) -> Result<()>
     )
     .await?;
     if current != recorded {
-        return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+        return Err("message.commits_or_requirements_changed_run_the_review_again".into());
     }
     tested_sources(state, card, flow).await?;
     let card = card.clone();
@@ -162,8 +167,7 @@ pub(super) async fn tick(state: &Shared) -> Result<bool> {
     let result = async {
         if super::updates::guard(state.installation_root.as_deref()).is_some() {
             return Err(
-                "Parcours suspendu pendant la maintenance. Vérifie le résultat avant de reprendre."
-                    .into(),
+                "message.workflow_suspended_during_maintenance_check_its_result_before_re".into(),
             );
         }
         if flow.step == Step::Publication && flow.publication_plan.is_some() {

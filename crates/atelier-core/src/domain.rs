@@ -1,3 +1,4 @@
+pub mod agent_catalog;
 pub mod agent_context;
 pub mod agent_options;
 pub mod checklist;
@@ -26,7 +27,7 @@ pub fn text_units(
     limit: usize,
 ) -> Result<crate::document::JsonString, &'static str> {
     if value.0.len() > limit {
-        return Err("Texte invalide ou trop long.");
+        return Err("message.invalid_or_overly_long_text");
     }
     let start = value
         .0
@@ -43,7 +44,7 @@ pub fn text_units(
 
 pub fn text(value: &str, limit: usize) -> Result<String, &'static str> {
     if value.encode_utf16().count() > limit {
-        return Err("Texte invalide ou trop long.");
+        return Err("message.invalid_or_overly_long_text");
     }
     // ECMAScript trim also removes BOM and does not remove NEL.
     Ok(value

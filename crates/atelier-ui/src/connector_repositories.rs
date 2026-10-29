@@ -159,13 +159,13 @@ pub fn ConnectorRepositories(
                     let operation = response
                         .json::<RemoteOperation>()
                         .await
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        .map_err(|_| "message.invalid_server_response".to_owned())?;
                     Ok::<_, String>((None, Some(operation)))
                 } else {
                     let report = response
                         .json::<Report>()
                         .await
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        .map_err(|_| "message.invalid_server_response".to_owned())?;
                     Ok((Some(report), None))
                 }
             }
@@ -183,7 +183,7 @@ pub fn ConnectorRepositories(
                                 report.set(None);
                                 frozen.set(None);
                                 touched.set(false);
-                                notice.set("Aperçu d’envoi enregistré. Confirme son envoi dans le journal ci-dessous.".into());
+                                notice.set("message.dispatch_preview_saved_confirm_sending_it_in_the_journal_below".into());
                             } else {
                                 report.set(next);
                                 frozen.set(Some(expected));
@@ -233,21 +233,21 @@ pub fn ConnectorRepositories(
         });
     };
     view! {<fieldset hidden=move||!supported.get() disabled=move||pending.get()||blocked.get()>
-        <legend>{move||i18n.text("PR/MR par ce module")}</legend>
-        <p class="field-help">{move||i18n.text("Prépare un commit local et conserve le worktree propre. Le module gère son transport ; Atelier vérifie les fichiers, l’origine et les commits avant d’accepter le résultat.")}</p>
-        <label for="connector-repository-card">{move||i18n.text("Tâche")}</label><select id="connector-repository-card" disabled=move||touched.get()||report.get().is_some() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))><option value="">{move||i18n.text("Choisir une tâche")}</option>{move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(true)&&card.fields.raw("worktree").is_some()&&card.fields.raw("pullRequest").is_none()).map(|card|view!{<option value=card.id>{card.title.utf8().unwrap_or_default()}</option>}).collect_view()}</select>
-        <label for="connector-repository-target">{move||i18n.text("Branche cible")}</label><input id="connector-repository-target" maxlength="180" prop:value=move||target.get() on:input=move|event|{target.set(event_target_value(&event));touched.set(true);report.set(None);}/>
-        <label for="connector-repository-title">{move||i18n.text("Titre")}</label><input id="connector-repository-title" maxlength="255" prop:value=move||title.get() on:input=move|event|{title.set(event_target_value(&event));touched.set(true);report.set(None);}/>
-        <label for="connector-repository-body">{move||i18n.text("Description")}</label><textarea id="connector-repository-body" maxlength="3500" prop:value=move||body.get() on:input=move|event|{body.set(event_target_value(&event));touched.set(true);report.set(None);}></textarea>
-        <label><input type="checkbox" prop:checked=move||draft.get() on:change=move|event|{draft.set(event_target_checked(&event));touched.set(true);report.set(None);}/>{move||i18n.text("Brouillon")}</label>
-        <button id="preview-connector-repository" type="button" disabled=move||card.get().is_none() on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesPreview))>{move||i18n.text("Préparer la publication de PR/MR")}</button>
-        <button id="refresh-connector-repository" type="button" disabled=move||card.get().is_none_or(|card|card.fields.raw("connectorPullRequest").is_none()) on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesRefresh))>{move||i18n.text("Actualiser la PR/MR du module")}</button>
-        <label hidden=move||card.get().is_none_or(|card|card.fields.raw("connectorPullRequest").is_none())><input type="checkbox" prop:checked=move||detach_approved.get() on:change=move|event|detach_approved.set(event_target_checked(&event))/>{move||i18n.text("Confirmer le retrait local de cette liaison de PR/MR")}</label><button type="button" disabled=move||!detach_approved.get() on:click=detach>{move||i18n.text("Retirer la liaison de PR/MR du module")}</button>
-        {move||report.get().and_then(|report|protocol::repository_proposal(&report.output).ok()).map(|proposal|view!{<dl><dt>{i18n.text("Dépôt distant")}</dt><dd>{proposal.observation.reference.origin}</dd><dt>{i18n.text("Commit source")}</dt><dd>{proposal.context.source}</dd><dt>{i18n.text("Commit cible")}</dt><dd>{proposal.context.target}</dd><dt>{i18n.text("Base commune")}</dt><dd>{proposal.context.base}</dd></dl>})}
-        <p role="status" hidden=move||!stale.get()>{move||i18n.text("La tâche a changé. Relis son aperçu avant de confirmer.")}</p>
-        <button id="prepare-connector-repository" type="button" disabled=move||stale.get()||report.get().is_none_or(|report|report.method!=Method::RepositoriesPreview) on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesPublish))>{move||i18n.text("Enregistrer l’aperçu d’envoi de PR/MR")}</button>
-        <button type="button" on:click=move |_|{report.set(None);frozen.set(None);touched.set(false);selected.set(String::new());notice.set(String::new());}>{move||i18n.text("Annuler le brouillon")}</button>
-        <p class="field-help">{move||i18n.text("Après publication, lance la review depuis les exécutions de la tâche. Son résultat doit être revalidé sur les commits et les critères actuels.")}</p>
+        <legend>{move||i18n.text("message.pr_mr_through_this_module")}</legend>
+        <p class="field-help">{move||i18n.text("message.prepare_a_local_commit_and_keep_the_worktree_clean_the_module_ha")}</p>
+        <label for="connector-repository-card">{move||i18n.text("message.task")}</label><select id="connector-repository-card" disabled=move||touched.get()||report.get().is_some() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))><option value="">{move||i18n.text("message.choose_a_task")}</option>{move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(true)&&card.fields.raw("worktree").is_some()&&card.fields.raw("pullRequest").is_none()).map(|card|view!{<option value=card.id>{card.title.utf8().unwrap_or_default()}</option>}).collect_view()}</select>
+        <label for="connector-repository-target">{move||i18n.text("message.target_branch")}</label><input id="connector-repository-target" maxlength="180" prop:value=move||target.get() on:input=move|event|{target.set(event_target_value(&event));touched.set(true);report.set(None);}/>
+        <label for="connector-repository-title">{move||i18n.text("message.title")}</label><input id="connector-repository-title" maxlength="255" prop:value=move||title.get() on:input=move|event|{title.set(event_target_value(&event));touched.set(true);report.set(None);}/>
+        <label for="connector-repository-body">{move||i18n.text("message.description")}</label><textarea id="connector-repository-body" maxlength="3500" prop:value=move||body.get() on:input=move|event|{body.set(event_target_value(&event));touched.set(true);report.set(None);}></textarea>
+        <label><input type="checkbox" prop:checked=move||draft.get() on:change=move|event|{draft.set(event_target_checked(&event));touched.set(true);report.set(None);}/>{move||i18n.text("message.draft")}</label>
+        <button id="preview-connector-repository" type="button" disabled=move||card.get().is_none() on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesPreview))>{move||i18n.text("message.prepare_pr_mr_publication")}</button>
+        <button id="refresh-connector-repository" type="button" disabled=move||card.get().is_none_or(|card|card.fields.raw("connectorPullRequest").is_none()) on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesRefresh))>{move||i18n.text("message.refresh_the_module_pr_mr")}</button>
+        <label hidden=move||card.get().is_none_or(|card|card.fields.raw("connectorPullRequest").is_none())><input type="checkbox" prop:checked=move||detach_approved.get() on:change=move|event|detach_approved.set(event_target_checked(&event))/>{move||i18n.text("message.confirm_removing_this_local_pr_mr_association")}</label><button type="button" disabled=move||!detach_approved.get() on:click=detach>{move||i18n.text("message.remove_the_module_pr_mr_association")}</button>
+        {move||report.get().and_then(|report|protocol::repository_proposal(&report.output).ok()).map(|proposal|view!{<dl><dt>{i18n.text("message.remote_repository")}</dt><dd>{proposal.observation.reference.origin}</dd><dt>{i18n.text("message.source_commit")}</dt><dd>{proposal.context.source}</dd><dt>{i18n.text("message.target_commit")}</dt><dd>{proposal.context.target}</dd><dt>{i18n.text("message.common_ancestor")}</dt><dd>{proposal.context.base}</dd></dl>})}
+        <p role="status" hidden=move||!stale.get()>{move||i18n.text("message.the_task_changed_read_its_preview_again_before_confirming")}</p>
+        <button id="prepare-connector-repository" type="button" disabled=move||stale.get()||report.get().is_none_or(|report|report.method!=Method::RepositoriesPreview) on:click=move |_|execute.with_value(|execute|execute(Method::RepositoriesPublish))>{move||i18n.text("message.save_the_pr_mr_dispatch_preview")}</button>
+        <button type="button" on:click=move |_|{report.set(None);frozen.set(None);touched.set(false);selected.set(String::new());notice.set(String::new());}>{move||i18n.text("message.cancel_draft")}</button>
+        <p class="field-help">{move||i18n.text("message.after_publication_start_a_review_from_the_task_runs_revalidate_i")}</p>
         <p role="status">{move||i18n.text(&notice.get())}</p><p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </fieldset>}
 }

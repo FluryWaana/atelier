@@ -11,7 +11,7 @@ fn domain_contract_examples_and_validation_errors_hold() {
         let result = match case["operation"].as_str().unwrap() {
             "text" => args[0]
                 .as_str()
-                .ok_or("Texte invalide ou trop long.")
+                .ok_or("message.invalid_or_overly_long_text")
                 .and_then(|value| text(value, args[1].as_u64().unwrap() as usize))
                 .map(|value| json!(value)),
             "checklist" => checklist(&serde_json::value::to_raw_value(&args[0]).unwrap())
@@ -78,6 +78,6 @@ fn dependency_walk_handles_long_chains_and_cycles_without_recursion() {
     cards.last_mut().unwrap()["blockedBy"] = json!(["new"]);
     assert_eq!(
         dependencies("new", &json!(["0"]), &cards),
-        Err("Cette dépendance créerait un cycle.")
+        Err("message.this_dependency_would_create_a_cycle")
     );
 }

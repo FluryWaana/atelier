@@ -15,6 +15,7 @@ fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
             let status = match error.downcast_ref::<ProviderFailure>() {
                 Some(ProviderFailure::Missing) => StatusCode::NOT_FOUND,
                 Some(ProviderFailure::Conflict(_)) => StatusCode::CONFLICT,
+                _ if error.to_string() == "message.agent_diagnostic_busy" => StatusCode::TOO_MANY_REQUESTS,
                 _ if error.is::<VaultFailure>() => StatusCode::SERVICE_UNAVAILABLE,
                 _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => {
                     StatusCode::INTERNAL_SERVER_ERROR
@@ -22,7 +23,7 @@ fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
                 _ => StatusCode::BAD_REQUEST,
             };
             if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "Modification des profils impossible.")
+                failure(status, "message.could_not_update_profiles")
             } else {
                 failure(status, &error.to_string())
             }
@@ -54,9 +55,17 @@ pub(super) async fn diagnose(
     if body.raw("expected").is_none() {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Recharge les profils avant de les modifier.",
+            "message.reload_the_profiles_before_editing_them",
         );
     }
+    let probe_model = match body.get::<String>("probeModel") {
+        Ok(value) => value,
+        Err(_) => return failure(StatusCode::BAD_REQUEST, "message.invalid_model"),
+    };
+    let status_only = match body.get::<bool>("statusOnly") {
+        Ok(value) => value.unwrap_or(false),
+        Err(_) => return failure(StatusCode::BAD_REQUEST, "message.invalid_server_response"),
+    };
     let vault = state.vault.clone();
     #[cfg(windows)]
     let provider = id.clone();
@@ -69,7 +78,9 @@ pub(super) async fn diagnose(
         })
         .await;
     let result = match profile {
-        Ok(profile) => crate::infrastructure::agent_diagnostics::diagnose(profile).await,
+        Ok(profile) => {
+            crate::infrastructure::agent_diagnostics::diagnose(profile, probe_model.as_deref(), status_only).await
+        }
         Err(error) => Err(error),
     };
     #[cfg(windows)]
@@ -81,11 +92,29 @@ pub(super) async fn diagnose(
             .filter(|version| crate::infrastructure::package::version_parts(version).is_ok())
     {
         let root = info.managed_root.clone();
-        let observed=state.database.call(move|store|{
-            if let Some(operation)=crate::infrastructure::agent_cli::read(store)?.filter(|operation|operation.provider==provider&&operation.phase==atelier_core::application::agent_cli::Phase::Uncertain&&operation.info.managed_root==root&&root.is_some()) {
-                crate::infrastructure::agent_cli::change(store,&operation.id,atelier_core::application::agent_cli::Phase::Observed,Some(actual),"Version relue après interruption ; l’issue de la commande précédente n’est pas vérifiée.")?;
-            }Ok(())
-        }).await;
+        let observed = state
+            .database
+            .call(move |store| {
+                if let Some(operation) =
+                    crate::infrastructure::agent_cli::read(store)?.filter(|operation| {
+                        operation.provider == provider
+                            && operation.phase
+                                == atelier_core::application::agent_cli::Phase::Uncertain
+                            && operation.info.managed_root == root
+                            && root.is_some()
+                    })
+                {
+                    crate::infrastructure::agent_cli::change(
+                        store,
+                        &operation.id,
+                        atelier_core::application::agent_cli::Phase::Observed,
+                        Some(actual),
+                        "message.version_read_after_interruption_the_previous_command_s_outcome_h",
+                    )?;
+                }
+                Ok(())
+            })
+            .await;
         if let Err(error) = observed {
             return response::<atelier_core::contracts::AgentDiagnostic>(Err(error));
         }
@@ -107,6 +136,10 @@ pub(super) async fn describe(State(state): State<Shared>) -> Response {
     )
 }
 
+pub(super) async fn discover() -> Response {
+    response(crate::infrastructure::agent_diagnostics::discover().await)
+}
+
 pub(super) async fn save(State(state): State<Shared>, request: Request) -> Response {
     let vault = state.vault.clone();
     let body = match object(request.into_body()).await {
@@ -116,7 +149,7 @@ pub(super) async fn save(State(state): State<Shared>, request: Request) -> Respo
     if body.raw("expected").is_none() {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Recharge les profils avant de les modifier.",
+            "message.reload_the_profiles_before_editing_them",
         );
     }
     response(
@@ -144,7 +177,7 @@ pub(super) async fn remove(
     if body.raw("expected").is_none() {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Recharge les profils avant de les modifier.",
+            "message.reload_the_profiles_before_editing_them",
         );
     }
     response(

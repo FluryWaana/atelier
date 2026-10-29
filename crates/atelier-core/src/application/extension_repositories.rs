@@ -83,7 +83,7 @@ pub struct RepositoryPublication {
 }
 pub fn repository_publication(value: &Value) -> Result<RepositoryPublication> {
     let payload: RepositoryPublication = serde_json::from_value(value.clone())
-        .map_err(|_| "Demande de publication du module invalide.")?;
+        .map_err(|_| "message.invalid_module_publication_request")?;
     if !repository_commit(&payload.source)
         || !repository_commit(&payload.target)
         || !text(&payload.title, 255, false)
@@ -95,7 +95,7 @@ pub fn repository_publication(value: &Value) -> Result<RepositoryPublication> {
             .as_ref()
             .is_some_and(|value| !repository_commit(value))
     {
-        return Err("Demande de publication du module invalide.");
+        return Err("message.invalid_module_publication_request");
     }
     Ok(payload)
 }
@@ -104,7 +104,7 @@ pub fn repository_commit(value: &str) -> bool {
 }
 pub fn repository_observation(value: &Value) -> Result<RepositoryObservation> {
     let observation: RepositoryObservation = serde_json::from_value(value.clone())
-        .map_err(|_| "Observation de dépôt du connecteur invalide.")?;
+        .map_err(|_| "message.invalid_module_repository_observation")?;
     let reference = &observation.reference;
     if !text(&reference.instance, 2000, false)
         || !text(&reference.repository, 1000, false)
@@ -116,7 +116,7 @@ pub fn repository_observation(value: &Value) -> Result<RepositoryObservation> {
             .as_ref()
             .is_some_and(|value| !repository_commit(value))
     {
-        return Err("Identité, branche ou commit du dépôt du connecteur invalide.");
+        return Err("message.invalid_module_repository_identity_branch_or_commit");
     }
     if let Some(pr) = &observation.pull_request
         && (pr.reference != *reference
@@ -128,15 +128,15 @@ pub fn repository_observation(value: &Value) -> Result<RepositoryObservation> {
             || !repository_commit(&pr.source_commit)
             || !["active", "completed", "abandoned"].contains(&pr.status.as_str()))
     {
-        return Err("PR/MR de connecteur incohérente avec son dépôt et ses commits.");
+        return Err("message.the_module_pr_mr_does_not_match_its_repository_and_commits");
     }
     Ok(observation)
 }
 pub fn repository_proposal(value: &Value) -> Result<RepositoryProposal> {
     let proposal: RepositoryProposal = serde_json::from_value(value.clone())
-        .map_err(|_| "Aperçu de publication du connecteur invalide.")?;
+        .map_err(|_| "message.invalid_module_publication_preview")?;
     repository_observation(
-        &serde_json::to_value(&proposal.observation).map_err(|_| "Observation invalide.")?,
+        &serde_json::to_value(&proposal.observation).map_err(|_| "message.observation_invalid")?,
     )?;
     if !identifier(&proposal.context.module)
         || proposal.context.revision == 0
@@ -175,7 +175,7 @@ pub fn repository_proposal(value: &Value) -> Result<RepositoryProposal> {
             .as_ref()
             .is_some_and(|id| !workflow_id(id))
     {
-        return Err("Aperçu de publication du connecteur invalide.");
+        return Err("message.invalid_module_publication_preview");
     }
     Ok(proposal)
 }

@@ -285,7 +285,7 @@ async fn captured_processes_drain_both_streams_and_clean_up_on_overflow_timeout_
                 }
                 "flood" => assert_eq!(
                     result.unwrap_err().to_string(),
-                    "Limite de sortie stderr dépassée."
+                    "message.stderr_limit_exceeded"
                 ),
                 "guard" => assert_eq!(
                     result.unwrap_err().to_string(),

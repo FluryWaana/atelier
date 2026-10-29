@@ -102,8 +102,10 @@ impl CommandRuns {
     ) -> Result<Document> {
         let id = record
             .get::<String>("id")?
-            .ok_or("Identifiant d’exécution absent.")?;
-        let card = record.get::<String>("cardId")?.ok_or("Carte absente.")?;
+            .ok_or("message.run_id_missing")?;
+        let card = record
+            .get::<String>("cardId")?
+            .ok_or("message.card_missing")?;
         let (stop, cancel) = watch::channel(false);
         let (finished, done) = watch::channel(false);
         let (replies, responses) = mpsc::channel(8);
@@ -124,13 +126,13 @@ impl CommandRuns {
             let mut entries = self.entries();
             entries.retain(|_, entry| !*entry.done.borrow());
             if entries.len() >= 4 {
-                return Err("Quatre exécutions sont déjà actives.".into());
+                return Err("message.four_runs_are_already_active".into());
             }
             if entries.contains_key(&id) {
-                return Err("Identifiant d’exécution déjà utilisé.".into());
+                return Err("message.run_id_already_used".into());
             }
             if entries.values().any(|entry| entry.card == card) {
-                return Err("Cette tâche a déjà une exécution active.".into());
+                return Err("message.this_task_already_has_an_active_run".into());
             }
             entries.insert(
                 id.clone(),
@@ -187,8 +189,8 @@ impl CommandRuns {
                 let _ = finished.send(true);
             } else {
                 let _ = database.call(move |store| {
-                    let mut run = store.document::<Document>(super::store::Documents::Runs, &id)?.ok_or("Exécution introuvable.")?;
-                    run.set("attention", &"La fin de l’exécution n’est pas confirmée. Redémarre Atelier et vérifie le dépôt avant de relancer.")?;
+                    let mut run = store.document::<Document>(super::store::Documents::Runs, &id)?.ok_or("message.run_not_found")?;
+                    run.set("attention", &"message.the_run_has_not_been_confirmed_finished_restart_atelier_and_chec")?;
                     store.put(super::store::Documents::Runs, &run)
                 }).await;
             }
@@ -212,10 +214,10 @@ impl CommandRuns {
         let (result, received) = oneshot::channel();
         sender
             .try_send(Reply { answer, result })
-            .map_err(|_| "Le canal de réponse est occupé ou fermé.")?;
+            .map_err(|_| "message.the_reply_channel_is_busy_or_closed")?;
         tokio::time::timeout(Duration::from_secs(10), received)
             .await
-            .map_err(|_| "La transmission de la réponse n’est pas confirmée.")?
+            .map_err(|_| "message.the_reply_has_not_been_confirmed_delivered")?
             .map_err(|_| "Le canal de réponse est fermé.")?
             .map_err(Into::into)
     }
@@ -235,7 +237,7 @@ impl CommandRuns {
             Ok::<(), crate::Error>(())
         })
         .await
-        .map_err(|_| "L’arrêt de l’exécution n’est pas confirmé.")?
+        .map_err(|_| "message.the_run_has_not_been_confirmed_stopped")?
     }
     pub async fn close(&self) -> Result<()> {
         let ids = {
@@ -369,7 +371,7 @@ async fn supervise(
     };
     // Preserve the actual root exit status separately from successful stream draining.
     let outcome = tokio::select! {
-        result = tokio::time::timeout(Duration::from_secs(duration), operation) => match result { Ok(result) => result.map(|()| false), Err(_) => Err("Durée maximale de l’exécution atteinte.".into()) },
+        result = tokio::time::timeout(Duration::from_secs(duration), operation) => match result { Ok(result) => result.map(|()| false), Err(_) => Err("message.run_time_limit_reached".into()) },
         _ = async { if !*cancel.borrow() { let _ = cancel.changed().await; } } => Ok(true),
     };
     let cancelled = matches!(outcome, Ok(true));

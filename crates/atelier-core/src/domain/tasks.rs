@@ -38,8 +38,7 @@ pub fn blockers(card: &Value, cards: &[Value]) -> Vec<Value> {
 }
 
 pub fn dependencies(id: &str, value: &Value, cards: &[Value]) -> Result<Vec<String>, &'static str> {
-    let invalid =
-        "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).";
+    let invalid = "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self";
     let by_id: HashMap<_, _> = cards
         .iter()
         .filter_map(|card| Some((card["id"].as_str()?, card)))
@@ -62,7 +61,7 @@ pub fn dependencies(id: &str, value: &Value, cards: &[Value]) -> Result<Vec<Stri
     let mut seen = HashSet::new();
     while let Some(key) = pending.pop() {
         if key == id {
-            return Err("Cette dépendance créerait un cycle.");
+            return Err("message.this_dependency_would_create_a_cycle");
         }
         if !seen.insert(key) {
             continue;

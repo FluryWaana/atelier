@@ -13,11 +13,16 @@ mod unix;
 #[cfg(unix)]
 pub use unix::ContainedChild;
 async fn bounded(reader: impl AsyncRead + Unpin, limit: usize, stream: &str) -> Result<Vec<u8>> {
-    let count = u64::try_from(limit.checked_add(1).ok_or("Limite de sortie invalide.")?)?;
+    let count = u64::try_from(limit.checked_add(1).ok_or("message.output_limit_invalid")?)?;
     let mut bytes = Vec::new();
     reader.take(count).read_to_end(&mut bytes).await?;
     if bytes.len() > limit {
-        return Err(format!("Limite de sortie {stream} dépassée.").into());
+        return Err(if stream == "stdout" {
+            "message.stdout_limit_exceeded"
+        } else {
+            "message.stderr_limit_exceeded"
+        }
+        .into());
     }
     Ok(bytes)
 }

@@ -18,12 +18,12 @@ pub fn credentials(
         .get::<TempoConfiguration>("tempoConnection")?
         .unwrap_or_default();
     if configuration.revision != expected {
-        return Err("La connexion Tempo a changé. Recharge avant de réessayer.".into());
+        return Err("message.the_tempo_connection_changed_reload_before_trying_again".into());
     }
     let token = settings::load(store, protect)?
         .get::<String>("tempo")?
         .filter(|token| !token.is_empty())
-        .ok_or("Renseigne le jeton Tempo Cloud dans les réglages.")?;
+        .ok_or("message.enter_the_tempo_cloud_token_in_settings")?;
     Ok((configuration, token))
 }
 
@@ -70,7 +70,7 @@ pub fn configure(
         })
     {
         return Err(
-            "Paramètres Tempo invalides. Choisis un site proposé et un jeton valide.".into(),
+            "message.invalid_tempo_settings_choose_a_listed_site_and_a_valid_token".into(),
         );
     }
     jira::require_revision(store, input.expected_jira_revision)?;
@@ -79,7 +79,7 @@ pub fn configure(
         .get::<TempoConfiguration>("tempoConnection")?
         .unwrap_or_default();
     if previous.revision != input.expected_revision {
-        return Err("La connexion Tempo a changé. Recharge avant de réessayer.".into());
+        return Err("message.the_tempo_connection_changed_reload_before_trying_again".into());
     }
     let mut tokens = settings::load(store, protect)?;
     if input.clear_token || input.base != previous.base {
@@ -93,7 +93,7 @@ pub fn configure(
         revision: previous
             .revision
             .checked_add(1)
-            .ok_or("Révision Tempo épuisée.")?,
+            .ok_or("message.tempo_revision_exhausted")?,
     };
     stored.set("tempoConnection", &configuration)?;
     settings::persist(
@@ -121,7 +121,7 @@ pub(super) fn invalidate(stored: &mut Document, previous: Option<&Document>) -> 
         .revision
         .max(minimum)
         .checked_add(1)
-        .ok_or("Révision Tempo épuisée.")?;
+        .ok_or("message.tempo_revision_exhausted")?;
     stored.set("tempoConnection", &configuration)?;
     Ok(())
 }

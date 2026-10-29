@@ -43,7 +43,7 @@ pub fn validate(payload: &TempoPayload) -> Result<()> {
             .chars()
             .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
     {
-        return Err("Données de temps Tempo invalides.".into());
+        return Err("message.invalid_tempo_time_data".into());
     }
     let fields: Document = serde_json::from_str(&serde_json::json!({"seconds":payload.time_spent_seconds,"date":payload.start_date,"startTime":payload.start_time,"description":"Date validation"}).to_string())?;
     atelier_core::domain::time::time_fields(&fields)?;
@@ -54,7 +54,7 @@ fn identifier(value: &Value) -> Result<u64> {
     value["tempoWorklogId"]
         .as_u64()
         .filter(|id| *id > 0 && *id <= i64::MAX as u64)
-        .ok_or_else(|| "Identité de journal Tempo invalide.".into())
+        .ok_or_else(|| "message.invalid_tempo_worklog_identity".into())
 }
 
 fn matches(payload: &TempoPayload, row: &Value) -> bool {
@@ -69,7 +69,7 @@ fn matches(payload: &TempoPayload, row: &Value) -> bool {
 impl Tempo {
     pub fn new(base: &str, token: String) -> Result<Self> {
         if !super::BASES.contains(&base) {
-            return Err("Site Tempo non autorisé.".into());
+            return Err("message.tempo_site_is_not_allowed".into());
         }
         Self::prepare(Url::parse(base)?, token, false, None)
     }
@@ -91,7 +91,7 @@ impl Tempo {
             || base.fragment().is_some()
             || !token.starts_with("synthetic-")
         {
-            return Err("Serveur Tempo synthétique loopback requis.".into());
+            return Err("message.a_synthetic_tempo_loopback_server_is_required".into());
         }
         Self::prepare(base, token, true, None)
     }
@@ -111,10 +111,10 @@ impl Tempo {
             || token.len() > 4000
             || token.chars().any(|c| c.is_whitespace() || c.is_control())
         {
-            return Err("Jeton Tempo invalide.".into());
+            return Err("message.invalid_tempo_token".into());
         }
         let mut authorization = HeaderValue::from_str(&format!("Bearer {token}"))
-            .map_err(|_| "Jeton Tempo invalide.")?;
+            .map_err(|_| "message.invalid_tempo_token")?;
         authorization.set_sensitive(true);
         let builder = reqwest::Client::builder()
             .no_proxy()
@@ -139,7 +139,7 @@ impl Tempo {
         let mut url = self.base.clone();
         let mut path = url
             .path_segments_mut()
-            .map_err(|_| "Adresse Tempo invalide.")?;
+            .map_err(|_| "message.invalid_tempo_address")?;
         path.pop_if_empty();
         for segment in segments {
             path.push(segment);
@@ -164,7 +164,7 @@ impl Tempo {
             .header("accept", "application/json")
             .send()
             .await
-            .map_err(|_| "Connexion Tempo interrompue ou indisponible.")?;
+            .map_err(|_| "message.tempo_connection_interrupted_or_unavailable")?;
         if !response.status().is_success() {
             return Err(format!("Tempo : HTTP {}. Vérifie les droits et les attributs requis ; aucun nouvel envoi automatique.",response.status().as_u16()).into());
         }
@@ -172,24 +172,24 @@ impl Tempo {
         while let Some(chunk) = response
             .chunk()
             .await
-            .map_err(|_| "Lecture Tempo interrompue.")?
+            .map_err(|_| "message.tempo_read_interrupted")?
         {
             if bytes.len().saturating_add(chunk.len()) > 4 * 1024 * 1024 {
-                return Err("Réponse Tempo trop volumineuse.".into());
+                return Err("message.tempo_response_is_too_large".into());
             }
             bytes.extend_from_slice(&chunk);
         }
         let value: Value =
-            serde_json::from_slice(&bytes).map_err(|_| "Réponse JSON Tempo invalide.")?;
+            serde_json::from_slice(&bytes).map_err(|_| "message.invalid_tempo_json_response")?;
         if confidential(&value, &self.token) {
-            return Err("Réponse Tempo contenant des données confidentielles inattendues.".into());
+            return Err("message.tempo_response_contains_unexpected_confidential_data".into());
         }
         Ok((value, bytes.len()))
     }
     pub fn validate(&self, payload: &TempoPayload) -> Result<()> {
         validate(payload)?;
         if confidential(&serde_json::to_value(payload)?, &self.token) {
-            return Err("Le temps contient des données confidentielles inattendues.".into());
+            return Err("message.time_data_contains_unexpected_confidential_information".into());
         }
         Ok(())
     }
@@ -204,24 +204,24 @@ impl Tempo {
     pub async fn read(&self, id: u64, payload: &TempoPayload) -> Result<u64> {
         self.validate(payload)?;
         if id == 0 || id > i64::MAX as u64 {
-            return Err("Identité de journal Tempo invalide.".into());
+            return Err("message.invalid_tempo_worklog_identity".into());
         }
         let (row, _) = self
             .request(self.endpoint(&["worklogs", &id.to_string()])?, None)
             .await?;
         if identifier(&row)? != id || !matches(payload, &row) {
-            return Err("Le journal Tempo ne correspond pas aux données de l’envoi.".into());
+            return Err("message.the_tempo_worklog_does_not_match_the_export_data".into());
         }
         Ok(id)
     }
     pub async fn find(&self, entry_id: &str, payload: &TempoPayload) -> Result<Option<u64>> {
         self.validate(payload)?;
         if uuid::Uuid::parse_str(entry_id).is_err() {
-            return Err("Identité de temps locale invalide.".into());
+            return Err("message.invalid_local_time_identity".into());
         }
         let marker = format!("[atelier:{entry_id}]");
         if !payload.description.ends_with(&marker) {
-            return Err("Marqueur d’export Tempo absent.".into());
+            return Err("message.missing_tempo_export_marker".into());
         }
         let mut ids = BTreeSet::new();
         let mut found = None;
@@ -237,41 +237,41 @@ impl Tempo {
             let (value, bytes) = self.request(url, None).await?;
             size = size
                 .checked_add(bytes)
-                .ok_or("Pagination Tempo trop volumineuse.")?;
+                .ok_or("message.tempo_pagination_is_too_large")?;
             if size > 8 * 1024 * 1024 {
-                return Err("Pagination Tempo trop volumineuse.".into());
+                return Err("message.tempo_pagination_is_too_large".into());
             }
             let rows = value["results"]
                 .as_array()
                 .filter(|rows| rows.len() <= 100)
-                .ok_or("Page Tempo invalide.")?;
+                .ok_or("message.invalid_tempo_page")?;
             if rows.is_empty() {
                 if value["metadata"]["next"]
                     .as_str()
                     .is_some_and(|next| !next.is_empty())
                 {
-                    return Err("Pagination Tempo incohérente.".into());
+                    return Err("message.inconsistent_tempo_pagination".into());
                 }
                 return Ok(found);
             }
             for row in rows {
                 let id = identifier(row)?;
                 if !ids.insert(id) {
-                    return Err("Pagination Tempo répétée ; résultat incomplet refusé.".into());
+                    return Err("message.repeated_tempo_pagination_incomplete_result_refused".into());
                 }
                 if row["description"]
                     .as_str()
                     .is_some_and(|description| description.contains(&marker))
                 {
                     if !matches(payload, row) || found.is_some() {
-                        return Err("Plusieurs journaux ou données différentes portent le marqueur Tempo. Vérifie l’envoi sans le rejouer.".into());
+                        return Err("message.multiple_worklogs_or_different_data_carry_the_tempo_marker_check".into());
                     }
                     found = Some(id);
                 }
             }
             offset += rows.len();
         }
-        Err("Trop de pages Tempo pour qualifier le rapprochement.".into())
+        Err("message.too_many_tempo_pages_to_qualify_reconciliation".into())
     }
 }
 

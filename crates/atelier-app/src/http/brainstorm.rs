@@ -16,7 +16,7 @@ pub(super) async fn convert(
         Err(response) => return *response,
     };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Session incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_session");
     }
     super::responses::response(
         state

@@ -20,17 +20,17 @@ pub(super) async fn attach(
         Err(response) => return *response,
     };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let operation = async {
         let expected = input.clone();
@@ -73,7 +73,7 @@ pub(super) async fn attach(
             .call(move |store| workflow::attach(store, &input, pr))
             .await
     };
-    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),operation)=>super::responses::response(result.unwrap_or_else(|_|Err("Association de PR/MR trop longue. Recharge la tâche avant de réessayer.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),operation)=>super::responses::response(result.unwrap_or_else(|_|Err("message.linking_the_pr_mr_took_too_long_reload_the_task_before_trying_ag".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down")}
 }
 pub(super) async fn detach(
     State(state): State<Shared>,
@@ -86,7 +86,7 @@ pub(super) async fn detach(
             Err(response) => return *response,
         };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Carte incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_card");
     }
     super::responses::response(
         state
@@ -159,12 +159,12 @@ async fn read_forge(state: Shared, query: PullQuery, operation: ReadOperation) -
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let reading = async {
         let vault = state.vault.clone();
@@ -196,5 +196,5 @@ async fn read_forge(state: Shared, query: PullQuery, operation: ReadOperation) -
             .await?;
         Ok(result)
     };
-    tokio::select! {result=reading=>super::responses::response(result),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=reading=>super::responses::response(result),_=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down")}
 }

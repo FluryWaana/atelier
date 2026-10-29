@@ -10,7 +10,7 @@ fn selected(value: &str) -> Result<Option<String>> {
         || value.chars().any(char::is_control)
         || !Path::new(value).is_absolute()
     {
-        return Err("Le sélecteur a retourné un chemin invalide.".into());
+        return Err("message.the_folder_picker_returned_an_invalid_path".into());
     }
     Ok(Some(value.into()))
 }
@@ -47,10 +47,12 @@ fn environment(command: &mut Command) {
 pub async fn choose() -> Result<Option<String>> {
     let output = helper("choose-folder", &[]).await?;
     if !output.status.success() {
-        return Err("Le sélecteur est indisponible. Saisis le chemin du dossier ; sous Linux, vérifie Zenity.".into());
+        return Err(
+            "message.the_folder_picker_is_unavailable_enter_the_folder_path_on_linux".into(),
+        );
     }
-    let path: Option<String> =
-        serde_json::from_slice(&output.stdout).map_err(|_| "Réponse du sélecteur invalide.")?;
+    let path: Option<String> = serde_json::from_slice(&output.stdout)
+        .map_err(|_| "message.invalid_folder_picker_reply")?;
     path.map(|path| selected(&path))
         .transpose()
         .map(Option::flatten)
@@ -199,7 +201,7 @@ fn native() -> Result<Option<String>> {
     }
     // This dedicated helper thread owns its STA until the modal dialog and PIDL are released.
     if unsafe { CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32) } < 0 {
-        return Err("Initialisation du sélecteur impossible.".into());
+        return Err("message.unable_to_initialize_the_folder_picker".into());
     }
     struct Apartment;
     impl Drop for Apartment {
@@ -228,13 +230,16 @@ fn native() -> Result<Option<String>> {
     let success = unsafe { SHGetPathFromIDListEx(pidl, path.as_mut_ptr(), path.len() as u32, 0) };
     unsafe { CoTaskMemFree(pidl.cast()) };
     if success == 0 {
-        return Err("Le sélecteur a retourné un chemin invalide.".into());
+        return Err("message.the_folder_picker_returned_an_invalid_path".into());
     }
     let length = path
         .iter()
         .position(|unit| *unit == 0)
-        .ok_or("Chemin de dossier trop long.")?;
-    selected(&String::from_utf16(&path[..length]).map_err(|_| "Chemin du dossier non Unicode.")?)
+        .ok_or("message.folder_path_is_too_long")?;
+    selected(
+        &String::from_utf16(&path[..length])
+            .map_err(|_| "message.the_folder_path_is_not_valid_unicode")?,
+    )
 }
 #[cfg(unix)]
 async fn native() -> Result<Option<String>> {
@@ -274,7 +279,7 @@ async fn native() -> Result<Option<String>> {
         {
             return Ok(None);
         }
-        return Err("Sélecteur de dossiers indisponible.".into());
+        return Err("message.folder_picker_unavailable".into());
     }
     let path = String::from_utf8(output.stdout)?;
     selected(path.strip_suffix('\n').unwrap_or(&path))

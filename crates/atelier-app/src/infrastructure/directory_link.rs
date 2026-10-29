@@ -19,13 +19,13 @@ fn junction_buffer(target: &Path) -> Result<Vec<u16>> {
         || &print.as_bytes()[1..3] != b":\\"
         || print.contains('\0')
     {
-        return Err("Les dépendances partagées nécessitent un disque local.".into());
+        return Err("message.shared_dependencies_require_a_local_drive".into());
     }
     let substitute = format!("\\??\\{print}").encode_utf16().collect::<Vec<_>>();
     let print = print.encode_utf16().collect::<Vec<_>>();
     let data_bytes = 8 + (substitute.len() + print.len() + 2) * 2;
     if data_bytes + 8 > 16 * 1024 {
-        return Err("Chemin de dépendances trop long.".into());
+        return Err("message.the_dependency_path_is_too_long".into());
     }
     // REPARSE_DATA_BUFFER: mount-point tag, header, byte offsets, then two terminated UTF-16 names.
     let mut buffer = vec![

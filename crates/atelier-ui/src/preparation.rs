@@ -98,7 +98,7 @@ pub fn PreparationResult(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -108,7 +108,7 @@ pub fn PreparationResult(
                         on_applied.run(card);
                         approved.set(String::new());
                         notice.set(
-                            "Préparation appliquée. Les critères restent à valider manuellement."
+                            "message.preparation_applied_criteria_still_require_human_validation"
                                 .into(),
                         );
                     }
@@ -121,9 +121,9 @@ pub fn PreparationResult(
             }
         });
     };
-    view! {<section class="task-files" hidden=move||run.with(|run|run.as_ref().is_none_or(|run|field(run,"purpose")!="preparation")) aria-labelledby="preparation-heading"><h4 id="preparation-heading">{move||i18n.text("Préparation du ticket")}</h4><p class="error" role="alert">{move||run.with(|run|run.as_ref().map(|run|i18n.text(&field(run,"preparationError"))).unwrap_or_default())}</p>
-        {move||result.get().map(|result|view!{<div><ul>{result.criteria.into_iter().map(|criterion|view!{<li>{criterion}</li>}).collect_view()}</ul><h5>{move||i18n.text("Questions à clarifier")}</h5><ul>{result.questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul></div>})}
-        <p role="status" hidden=move||!stale.get()||applied.get()>{move||i18n.text("Le besoin a changé depuis cette préparation. Relance l’analyse.")}</p><p role="status" hidden=move||!applied.get()>{move||i18n.text("Cette préparation a déjà été appliquée. Les validations humaines sont conservées.")}</p>
-        <fieldset disabled=move||pending.get()||blocked.get()||stale.get()||applied.get() hidden=move||result.with(|result|result.is_none())><label><input id="confirm-preparation" type="checkbox" prop:checked=move||run.with(|run|run.as_ref().is_some_and(|run|field(run,"id")==approved.get())) on:change=move|event|approved.set(if event_target_checked(&event){run.with(|run|run.as_ref().map(|run|field(run,"id")).unwrap_or_default())}else{String::new()}) />{move||i18n.text("Remplacer les critères actuels par cette proposition et remettre leur validation humaine à zéro.")}</label><button id="apply-preparation" type="button" disabled=move||run.with(|run|run.as_ref().is_none_or(|run|field(run,"id")!=approved.get())) on:click=apply>{move||i18n.text("Confirmer l’application de la préparation")}</button></fieldset><p class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="preparation-notice" role="status">{move||i18n.text(&notice.get())}</p>
+    view! {<section class="task-files" hidden=move||run.with(|run|run.as_ref().is_none_or(|run|field(run,"purpose")!="preparation")) aria-labelledby="preparation-heading"><h4 id="preparation-heading">{move||i18n.text("message.issue_preparation")}</h4><p class="error" role="alert">{move||run.with(|run|run.as_ref().map(|run|i18n.text(&field(run,"preparationError"))).unwrap_or_default())}</p>
+        {move||result.get().map(|result|view!{<div><ul>{result.criteria.into_iter().map(|criterion|view!{<li>{criterion}</li>}).collect_view()}</ul><h5>{move||i18n.text("message.questions_to_clarify")}</h5><ul>{result.questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul></div>})}
+        <p role="status" hidden=move||!stale.get()||applied.get()>{move||i18n.text("message.requirements_changed_since_this_preparation_run_the_analysis_aga")}</p><p role="status" hidden=move||!applied.get()>{move||i18n.text("message.this_preparation_was_already_applied_human_validations_are_prese")}</p>
+        <fieldset disabled=move||pending.get()||blocked.get()||stale.get()||applied.get() hidden=move||result.with(|result|result.is_none())><label><input id="confirm-preparation" type="checkbox" prop:checked=move||run.with(|run|run.as_ref().is_some_and(|run|field(run,"id")==approved.get())) on:change=move|event|approved.set(if event_target_checked(&event){run.with(|run|run.as_ref().map(|run|field(run,"id")).unwrap_or_default())}else{String::new()}) />{move||i18n.text("message.replace_current_criteria_with_this_proposal_and_reset_their_huma")}</label><button id="apply-preparation" type="button" disabled=move||run.with(|run|run.as_ref().is_none_or(|run|field(run,"id")!=approved.get())) on:click=apply>{move||i18n.text("message.confirm_applying_the_preparation")}</button></fieldset><p class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="preparation-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}
 }

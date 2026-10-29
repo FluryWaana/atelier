@@ -134,16 +134,16 @@ pub fn JiraCreation(
                 .await?
                 .json::<Document>()
                 .await
-                .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                .map_err(|_| "message.invalid_server_response".to_owned())?;
                 if response.get::<u64>("revision").ok().flatten() != Some(revision)
                     || field(&response, "projectKey") != requested
                 {
-                    return Err("Métadonnées de création Jira périmées.".to_owned());
+                    return Err("message.jira_creation_metadata_is_stale".to_owned());
                 }
                 response
                     .get::<Vec<JiraIssueType>>("types")
-                    .map_err(|_| "Types de tickets Jira invalides.".to_owned())?
-                    .ok_or("Types de tickets Jira absents.".to_owned())
+                    .map_err(|_| "message.invalid_jira_issue_types".to_owned())?
+                    .ok_or("message.missing_jira_issue_types".to_owned())
             }
             .await;
             if alive.get() {
@@ -191,8 +191,8 @@ pub fn JiraCreation(
         error.set(String::new());
         let alive = preparing_alive.clone();
         spawn_local(async move {
-            let result=async{let metadata=read(&credential,&format!("/api/jira/creation-metadata?revision={revision}&project={requested}&issueType={}",kind.id)).await?.json::<JiraCreationMetadata>().await.map_err(|_|"Réponse du serveur invalide.".to_owned())?;
-            if metadata.revision!=revision||metadata.project_key!=requested||metadata.issue_type!=kind{return Err("Métadonnées de création Jira périmées.".to_owned());}Ok(metadata)}.await;
+            let result=async{let metadata=read(&credential,&format!("/api/jira/creation-metadata?revision={revision}&project={requested}&issueType={}",kind.id)).await?.json::<JiraCreationMetadata>().await.map_err(|_|"message.invalid_server_response".to_owned())?;
+            if metadata.revision!=revision||metadata.project_key!=requested||metadata.issue_type!=kind{return Err("message.jira_creation_metadata_is_stale".to_owned());}Ok(metadata)}.await;
             if alive.get() {
                 loading.set(false);
                 match result {
@@ -235,7 +235,7 @@ pub fn JiraCreation(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -255,7 +255,7 @@ pub fn JiraCreation(
                         approved.set(None);
                         key.set(String::new());
                         close_ack.set(String::new());
-                        notice.set(match(action,phase){(Action::Create,Some(Phase::Confirmed))=>"Ticket créé et associé à la carte. Son statut reste à relire.",(Action::Link,Some(Phase::Confirmed))=>"Ticket retrouvé et associé. Aucun nouveau ticket créé.",(Action::Close,Some(Phase::Dismissed))=>"Incertitude close après vérification. Aucun ticket distant supprimé.",_=>"Création ou association non confirmée. Vérifie Jira avant de réessayer."}.into());
+                        notice.set(match(action,phase){(Action::Create,Some(Phase::Confirmed))=>"message.issue_created_and_linked_to_the_card_its_status_still_needs_to_b",(Action::Link,Some(Phase::Confirmed))=>"message.issue_found_and_linked_no_new_issue_created",(Action::Close,Some(Phase::Dismissed))=>"message.uncertainty_closed_after_verification_no_remote_issue_deleted",_=>"message.creation_or_linking_is_unconfirmed_check_jira_before_trying_agai"}.into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -317,24 +317,24 @@ pub fn JiraCreation(
         execute.with_value(|execute| execute(Action::Close, body));
     };
     view! {<section class="task-files" hidden=move||linked.get()&&intent.with(|intent|intent.is_none()) aria-labelledby="jira-create-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="jira-create-heading">{move||i18n.text("Création de ticket Jira")}</h3><p class="field-help">{move||i18n.text("Prépare un ticket depuis le titre, la description, les critères et les instructions enregistrés de cette carte. Aucun envoi sans confirmation.")}</p>
-        <p role="status">{move||intent.get().map(|intent|i18n.text(match intent.state{Phase::Preparing=>"Préparation de la création Jira…",Phase::Sending=>"Demande de création Jira en cours…",Phase::Uncertain=>"Création Jira incertaine : aucun renvoi automatique.",Phase::Confirmed=>"Liaison au ticket Jira enregistrée.",Phase::Failed=>"Préparation Jira interrompue avant l’envoi.",Phase::Dismissed=>"Incertitude Jira close après vérification."})).unwrap_or_default()}</p>
+        <h3 id="jira-create-heading">{move||i18n.text("message.create_a_jira_issue")}</h3><p class="field-help">{move||i18n.text("message.prepare_an_issue_from_this_cards_saved_title_description_criteri")}</p>
+        <p role="status">{move||intent.get().map(|intent|i18n.text(match intent.state{Phase::Preparing=>"message.preparing_jira_creation",Phase::Sending=>"message.jira_creation_request_in_progress",Phase::Uncertain=>"message.jira_creation_is_uncertain_no_automatic_resubmission",Phase::Confirmed=>"message.jira_issue_link_saved",Phase::Failed=>"message.jira_preparation_interrupted_before_sending",Phase::Dismissed=>"message.jira_uncertainty_closed_after_verification"})).unwrap_or_default()}</p>
         {move||intent.get().and_then(|intent|intent.result).map(|issue|view!{<p><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}</a></p>})}
         <fieldset hidden=move||linked.get()||uncertain.get()||writing.get() disabled=move||pending.get()||loading.get()||blocked.get()||archived>
-            <label for="jira-create-project">{move||i18n.text("Clé du projet Jira")}</label><input id="jira-create-project" maxlength="64" placeholder="SYN" prop:value=move||project.get() on:input=move|event|{project.set(event_target_value(&event).trim().to_ascii_uppercase());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);} />
-            <button id="load-jira-types" type="button" disabled=move||!domain::project_key(&project.get()) on:click=load_types>{move||i18n.text("Charger les types de ticket")}</button>
-            <label for="jira-create-type">{move||i18n.text("Type de ticket")}</label><select id="jira-create-type" prop:value=move||selected.get() on:change=move|event|{selected.set(event_target_value(&event));prepared.set(None);approved.set(None);} ><option value="">{move||i18n.text("Choisir un type de ticket")}</option><For each=move||types.get() key=|kind|kind.id.clone() children=move|kind|view!{<option value=kind.id disabled=kind.subtask>{kind.name}</option>} /></select>
-            <p class="field-help">{move||i18n.text("Les sous-tâches et champs obligatoires supplémentaires se préparent dans Jira, puis s’associent à la carte.")}</p><button id="prepare-jira-create" type="button" disabled=move||selected.get().is_empty() on:click=prepare>{move||i18n.text("Préparer l’aperçu du ticket")}</button>
+            <label for="jira-create-project">{move||i18n.text("message.jira_project_key")}</label><input id="jira-create-project" maxlength="64" placeholder="SYN" prop:value=move||project.get() on:input=move|event|{project.set(event_target_value(&event).trim().to_ascii_uppercase());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);} />
+            <button id="load-jira-types" type="button" disabled=move||!domain::project_key(&project.get()) on:click=load_types>{move||i18n.text("message.load_issue_types")}</button>
+            <label for="jira-create-type">{move||i18n.text("message.ticket_type")}</label><select id="jira-create-type" prop:value=move||selected.get() on:change=move|event|{selected.set(event_target_value(&event));prepared.set(None);approved.set(None);} ><option value="">{move||i18n.text("message.choose_an_issue_type")}</option><For each=move||types.get() key=|kind|kind.id.clone() children=move|kind|view!{<option value=kind.id disabled=kind.subtask>{kind.name}</option>} /></select>
+            <p class="field-help">{move||i18n.text("message.create_subtasks_and_issues_requiring_additional_fields_in_jira_t")}</p><button id="prepare-jira-create" type="button" disabled=move||selected.get().is_empty() on:click=prepare>{move||i18n.text("message.prepare_issue_preview")}</button>
             {move||prepared.get().map(|(source,_,_)|view!{<div><h4>{String::from_utf16_lossy(&source.title.0)}</h4><pre class="service-log">{domain::creation_text(&source).unwrap_or_default()}</pre></div>})}
             <p class="error" role="alert">{move||i18n.text(&validation.get())}</p>
-            <label hidden=move||prepared.with(|prepared|prepared.is_none())><input id="confirm-jira-create" type="checkbox" prop:checked=move||prepared.with(|prepared|prepared.as_ref().is_some_and(|(_,_,proposal)|approved.get()==Some(*proposal))) on:change=move|event|approved.set(if event_target_checked(&event){prepared.with(|prepared|prepared.as_ref().map(|(_,_,proposal)|*proposal))}else{None}) />{move||i18n.text("Créer ce ticket dans le projet Jira choisi et l’associer à cette carte.")}</label>
-            <button id="send-jira-create" type="button" disabled=move||prepared.with(|prepared|prepared.as_ref().is_none_or(|(_,_,proposal)|approved.get()!=Some(*proposal)))||!validation.get().is_empty() on:click=create>{move||i18n.text("Confirmer la création dans Jira")}</button>
-            <button id="cancel-jira-preparation" type="button" on:click=move|_|{project.set(String::new());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);}>{move||i18n.text("Annuler la préparation")}</button>
+            <label hidden=move||prepared.with(|prepared|prepared.is_none())><input id="confirm-jira-create" type="checkbox" prop:checked=move||prepared.with(|prepared|prepared.as_ref().is_some_and(|(_,_,proposal)|approved.get()==Some(*proposal))) on:change=move|event|approved.set(if event_target_checked(&event){prepared.with(|prepared|prepared.as_ref().map(|(_,_,proposal)|*proposal))}else{None}) />{move||i18n.text("message.create_this_issue_in_the_selected_jira_project_and_link_it_to_th")}</label>
+            <button id="send-jira-create" type="button" disabled=move||prepared.with(|prepared|prepared.as_ref().is_none_or(|(_,_,proposal)|approved.get()!=Some(*proposal)))||!validation.get().is_empty() on:click=create>{move||i18n.text("message.confirm_creation_in_jira")}</button>
+            <button id="cancel-jira-preparation" type="button" on:click=move|_|{project.set(String::new());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);}>{move||i18n.text("message.cancel_preparation")}</button>
         </fieldset>
-        <fieldset hidden=move||!uncertain.get() disabled=move||pending.get()||loading.get()||blocked.get()><p>{move||i18n.text("Vérifie le projet dans Jira. Si le ticket existe, indique sa clé ; si un identifiant a été reçu, tu peux le vérifier directement.")}</p><label for="jira-created-key">{move||i18n.text("Clé du ticket retrouvé")}</label><input id="jira-created-key" maxlength="100" placeholder="SYN-1" prop:value=move||key.get() on:input=move|event|key.set(event_target_value(&event).to_ascii_uppercase()) />
-            <button id="resolve-jira-creation" type="button" disabled=move||key.get().trim().is_empty()&&intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.result.is_none())) on:click=reconcile>{move||i18n.text("Vérifier et associer sans recréer")}</button>
-            <p class="field-help">{move||i18n.text("Clore l’incertitude ne supprime aucun ticket distant. Une nouvelle création resterait une action explicite après vérification du risque de doublon.")}</p><label><input id="close-jira-creation-ack" type="checkbox" prop:checked=move||intent.with(|intent|intent.as_ref().is_some_and(|intent|intent.id==close_ack.get())) on:change=move|event|close_ack.set(if event_target_checked(&event){intent.with(|intent|intent.as_ref().map(|intent|intent.id.clone()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("J’ai vérifié Jira et souhaite clore cette incertitude sans nouvel envoi.")}</label><button id="close-jira-creation" type="button" disabled=move||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.id!=close_ack.get())) on:click=close_uncertainty>{move||i18n.text("Clore l’incertitude après vérification")}</button>
+        <fieldset hidden=move||!uncertain.get() disabled=move||pending.get()||loading.get()||blocked.get()><p>{move||i18n.text("message.check_the_project_in_jira_if_the_issue_exists_enter_its_key_if_a")}</p><label for="jira-created-key">{move||i18n.text("message.existing_issue_key")}</label><input id="jira-created-key" maxlength="100" placeholder="SYN-1" prop:value=move||key.get() on:input=move|event|key.set(event_target_value(&event).to_ascii_uppercase()) />
+            <button id="resolve-jira-creation" type="button" disabled=move||key.get().trim().is_empty()&&intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.result.is_none())) on:click=reconcile>{move||i18n.text("message.verify_and_link_without_creating_again")}</button>
+            <p class="field-help">{move||i18n.text("message.closing_uncertainty_does_not_delete_any_remote_issue_creating_ag")}</p><label><input id="close-jira-creation-ack" type="checkbox" prop:checked=move||intent.with(|intent|intent.as_ref().is_some_and(|intent|intent.id==close_ack.get())) on:change=move|event|close_ack.set(if event_target_checked(&event){intent.with(|intent|intent.as_ref().map(|intent|intent.id.clone()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("message.i_checked_jira_and_want_to_close_this_uncertainty_without_sendin")}</label><button id="close-jira-creation" type="button" disabled=move||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.id!=close_ack.get())) on:click=close_uncertainty>{move||i18n.text("message.close_uncertainty_after_verification")}</button>
         </fieldset>
-        <p class="field-help" hidden=move||!loading.get()>{move||i18n.text("Lecture des métadonnées Jira…")}</p><p id="jira-create-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="jira-create-notice" role="status">{move||i18n.text(&notice.get())}</p>
+        <p class="field-help" hidden=move||!loading.get()>{move||i18n.text("message.reading_jira_metadata")}</p><p id="jira-create-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="jira-create-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}
 }

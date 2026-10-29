@@ -30,13 +30,13 @@ pub(super) async fn input<T: DeserializeOwned>(
     serde_json::from_str(&serde_json::to_string(&body).map_err(|_| {
         Box::new(failure(
             StatusCode::BAD_REQUEST,
-            "Paramètres de requête invalides.",
+            "message.invalid_request_parameters",
         ))
     })?)
     .map_err(|_| {
         Box::new(failure(
             StatusCode::BAD_REQUEST,
-            "Paramètres de requête invalides.",
+            "message.invalid_request_parameters",
         ))
     })
 }
@@ -59,12 +59,12 @@ pub(super) async fn choices(
 ) -> Response {
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let operation = async {
@@ -81,8 +81,8 @@ pub(super) async fn choices(
         Ok(result)
     };
     tokio::select! {
-        result=tokio::time::timeout(Duration::from_secs(60),operation)=>response(result.unwrap_or_else(|_|Err("Lecture des transitions Jira trop longue.".into()))),
-        _=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt."),
+        result=tokio::time::timeout(Duration::from_secs(60),operation)=>response(result.unwrap_or_else(|_|Err("message.reading_jira_transitions_took_too_long".into()))),
+        _=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down"),
     }
 }
 pub(super) async fn send(
@@ -95,12 +95,12 @@ pub(super) async fn send(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let operation = uuid::Uuid::new_v4().to_string();
@@ -133,9 +133,9 @@ pub(super) async fn send(
         };
         let stopping = *stopped.borrow();
         if stopping {
-            Err("Atelier est en cours d’arrêt.".into())
+            Err("message.atelier_is_shutting_down".into())
         } else {
-            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),preparing)=>result.unwrap_or_else(|_|Err("Lecture des transitions Jira trop longue.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),preparing)=>result.unwrap_or_else(|_|Err("message.reading_jira_transitions_took_too_long".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
         }
     };
     let client = match ready {
@@ -147,11 +147,11 @@ pub(super) async fn send(
                     // A cancelled SQLite job may already have recorded Sending; preserve that uncertainty.
                     let card = store
                         .document::<Card>(crate::infrastructure::store::Documents::Cards, &id)?
-                        .ok_or("Carte introuvable.")?;
+                        .ok_or("message.card_not_found")?;
                     let intent = card
                         .fields
                         .get::<JiraTransitionIntent>("jiraTransition")?
-                        .ok_or("Opération Jira absente.")?;
+                        .ok_or("message.missing_jira_operation")?;
                     let phase = if intent.state == Phase::Preparing {
                         Phase::Failed
                     } else {
@@ -202,12 +202,12 @@ pub(super) async fn reconcile(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let intent = match input
@@ -219,13 +219,13 @@ pub(super) async fn reconcile(
         _ => {
             return failure(
                 StatusCode::CONFLICT,
-                "Aucun envoi Jira incertain à vérifier.",
+                "message.there_is_no_uncertain_jira_submission_to_check",
             );
         }
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let operation = async {
         let expected = input.expected.clone();
@@ -254,7 +254,7 @@ pub(super) async fn reconcile(
             })
             .await
     };
-    let result = tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),operation)=>result.unwrap_or_else(|_|Err("Vérification Jira trop longue.".into())),_=stopped.changed()=>Err(JiraFailure::OperationConflict("Atelier est en cours d’arrêt.").into())};
+    let result = tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),operation)=>result.unwrap_or_else(|_|Err("message.jira_verification_took_too_long".into())),_=stopped.changed()=>Err(JiraFailure::OperationConflict("message.atelier_is_shutting_down").into())};
     let _ = state.changed.send(());
     response(result)
 }

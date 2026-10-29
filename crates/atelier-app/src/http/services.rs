@@ -37,7 +37,12 @@ pub(super) fn guard(manager: &DevServers, path: &str) -> Option<Response> {
                 && !action.starts_with("jira/")
                 && !["forge/attach", "forge/detach"].contains(&action)
         });
-    blocked.then(|| failure(StatusCode::CONFLICT, "Arrête les services concernés avant de modifier la tâche, le projet ou les sauvegardes."))
+    blocked.then(|| {
+        failure(
+            StatusCode::CONFLICT,
+            "message.stop_the_affected_services_before_changing_the_task_project_or_b",
+        )
+    })
 }
 
 pub(super) async fn get(State(state): State<Shared>, Path(id): Path<String>) -> Response {
@@ -90,13 +95,13 @@ pub(super) async fn stop(
     let result = async {
         let service = body.get::<String>("serviceId")?;
         if service.as_ref().is_some_and(String::is_empty) {
-            return Err("Service introuvable.".into());
+            return Err("message.service_not_found".into());
         }
         state.services.stop(&id, service.as_deref()).await?;
         state
             .services
             .snapshot(&id)
-            .ok_or_else(|| "Session de services absente.".into())
+            .ok_or_else(|| "message.service_session_missing".into())
     }
     .await;
     respond(result)
@@ -115,11 +120,11 @@ pub(super) async fn restart(
         let service = body
             .get::<String>("serviceId")?
             .filter(|value| !value.is_empty())
-            .ok_or("Service introuvable.")?;
+            .ok_or("message.service_not_found")?;
         let standalone = state
             .services
             .snapshot(&id)
-            .ok_or("Lance d’abord la pile depuis cette tâche.")?
+            .ok_or("message.start_the_stack_from_this_task_first")?
             .project_ids
             .len()
             == 1;
@@ -140,8 +145,7 @@ pub(super) async fn restart(
         plan.services.retain(|launch| launch.id == service);
         if plan.services.len() != 1 {
             return Err(
-                "Ce service n’est plus configuré. Relance la pile avec les nouveaux réglages."
-                    .into(),
+                "message.this_service_is_no_longer_configured_start_the_stack_with_the_ne".into(),
             );
         }
         let prepared =

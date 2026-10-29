@@ -20,23 +20,23 @@ pub fn conversation(
     if !card.fields.truthy("brainstormSession")?
         || serde_json::to_value(card)? != serde_json::to_value(expected)?
     {
-        return Err("La session a changé. Recharge-la avant de poursuivre.".into());
+        return Err("message.the_session_changed_reload_it_before_continuing".into());
     }
     let mut runs = Vec::new();
     for run in store.documents::<Document>(Documents::Runs)? {
         if run.string_equals("cardId", &card.id)? && run.string_equals("purpose", "brainstorm")? {
             let started = run
                 .get::<String>("startedAt")?
-                .ok_or("Historique de brainstorm invalide.")?;
+                .ok_or("message.invalid_brainstorm_history")?;
             let timestamp = time::OffsetDateTime::parse(
                 &started,
                 &time::format_description::well_known::Rfc3339,
             )
-            .map_err(|_| "Historique de brainstorm invalide.")?
+            .map_err(|_| "message.invalid_brainstorm_history")?
             .unix_timestamp_nanos();
             let id = run
                 .get::<String>("id")?
-                .ok_or("Historique de brainstorm invalide.")?;
+                .ok_or("message.invalid_brainstorm_history")?;
             runs.push((timestamp, id, run));
         }
     }
@@ -49,7 +49,7 @@ pub fn conversation(
             history.push(Exchange {
                 user: run
                     .get::<String>("userMessage")?
-                    .ok_or("Historique de brainstorm invalide.")?,
+                    .ok_or("message.invalid_brainstorm_history")?,
                 assistant,
             });
         }
@@ -86,47 +86,47 @@ pub fn convert(store: &Store<'_>, input: Convert) -> Result<Vec<Card>> {
             || input.indices.len() > 8
             || input.indices.iter().copied().collect::<BTreeSet<_>>().len() != input.indices.len()
         {
-            return Err("Confirme les propositions à convertir en tâches.".into());
+            return Err("message.confirm_the_proposals_to_convert_into_tasks".into());
         }
         let card = store
             .document::<Card>(Documents::Cards, &input.expected.id)?
-            .ok_or("Session introuvable.")?;
+            .ok_or("message.session_not_found")?;
         if !card.fields.truthy("brainstormSession")?
             || card.fields.truthy("archived")?
             || atelier_core::application::jira::unresolved(&card.fields)?
             || serde_json::to_value(&card)? != serde_json::to_value(&input.expected)?
         {
-            return Err("La session a changé. Recharge-la avant de poursuivre.".into());
+            return Err("message.the_session_changed_reload_it_before_continuing".into());
         }
         let project_id = input
             .project
             .get::<String>("id")?
-            .ok_or("Projet introuvable.")?;
+            .ok_or("message.project_not_found")?;
         let project = store
             .document::<Document>(Documents::Projects, &project_id)?
-            .ok_or("Projet introuvable.")?;
+            .ok_or("message.project_not_found")?;
         if serde_json::to_value(&project)? != serde_json::to_value(&input.project)? {
-            return Err("Le projet a changé. Sélectionne-le à nouveau.".into());
+            return Err("message.the_project_changed_select_it_again".into());
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
                 return Err(
-                    "Attends la fin du brainstorm avant de convertir ses propositions.".into(),
+                    "message.wait_for_the_brainstorm_to_finish_before_converting_proposals".into(),
                 );
             }
         }
         let mut run = store
             .document::<Document>(Documents::Runs, &input.run_id)?
-            .ok_or("Exécution introuvable.")?;
+            .ok_or("message.run_not_found")?;
         if !run.string_equals("cardId", &card.id)?
             || !run.string_equals("purpose", "brainstorm")?
             || !run.string_equals("status", "completed")?
         {
-            return Err("Propositions de brainstorm indisponibles.".into());
+            return Err("message.brainstorm_proposals_unavailable".into());
         }
         let answer = run
             .get::<Answer>("brainstormAnswer")?
-            .ok_or("Propositions de brainstorm indisponibles.")?;
+            .ok_or("message.brainstorm_proposals_unavailable")?;
         let mut converted = run
             .get::<BTreeMap<usize, String>>("convertedProposals")?
             .unwrap_or_default();
@@ -135,7 +135,7 @@ pub fn convert(store: &Store<'_>, input: Convert) -> Result<Vec<Card>> {
             let proposal = answer
                 .tickets
                 .get(index)
-                .ok_or("Proposition de brainstorm introuvable.")?;
+                .ok_or("message.brainstorm_proposal_not_found")?;
             if let Some(id) = converted.get(&index) {
                 // Never recreate a converted proposal, even if its task has since been removed.
                 if let Some(card) = store.document::<Card>(Documents::Cards, id)? {
@@ -150,7 +150,7 @@ pub fn convert(store: &Store<'_>, input: Convert) -> Result<Vec<Card>> {
                 "repo",
                 &project
                     .get::<String>("repo")?
-                    .ok_or("Dépôt du projet absent.")?,
+                    .ok_or("message.missing_project_repository")?,
             )?;
             body.set(
                 "checklist",

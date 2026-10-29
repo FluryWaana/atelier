@@ -49,7 +49,7 @@ pub fn associate_services(
             != *expected
     {
         return Err(CardFailure::Conflict(
-            "L’association du worktree a changé. Actualise la tâche.",
+            "message.the_worktree_association_changed_refresh_the_task",
         )
         .into());
     }
@@ -63,7 +63,7 @@ pub fn associate_services(
             })
         {
             return Err(
-                CardFailure::Invalid("Association des worktrees de service incohérente.").into(),
+                CardFailure::Invalid("message.inconsistent_service_worktree_association").into(),
             );
         }
     }
@@ -105,21 +105,21 @@ pub fn validate_reference(value: &str) -> Result<()> {
         || value.contains(['\0', '\n', '\r'])
         || value.contains("@{")
     {
-        return Err(CardFailure::Invalid("Nom de branche ou référence de départ invalide.").into());
+        return Err(
+            CardFailure::Invalid("message.invalid_branch_name_or_starting_reference").into(),
+        );
     }
     Ok(())
 }
 
 pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Result<CreateOptions> {
     if card.fields.truthy("archived")? {
-        return Err(
-            CardFailure::Conflict("Restaure cette tâche avant de reprendre le travail.").into(),
-        );
+        return Err(CardFailure::Conflict("message.restore_this_task_before_resuming_work").into());
     }
     let repo = card
         .fields
         .get::<JsonString>("repo")?
-        .ok_or("Choisis le dépôt Git source de cette carte.")?
+        .ok_or("message.choose_the_source_git_repository_for_this_card")?
         .utf8()?;
     let branch = body
         .get::<String>("branch")?
@@ -149,13 +149,12 @@ pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Resu
     if let Some(kind) = fetch_forge {
         if !fetch_origin || forge_revision.is_none() {
             return Err(
-                "Confirme l’actualisation et recharge la connexion de forge avant le fetch HTTPS."
-                    .into(),
+                "message.confirm_refreshing_and_reload_the_forge_connection_before_the_ht".into(),
             );
         }
         super::forge::repository(kind, &fetch_repository, 1)?;
     } else if !fetch_repository.is_empty() || forge_revision.is_some() {
-        return Err("Choisis la forge du téléchargement HTTPS ou retire ses paramètres.".into());
+        return Err("message.select_the_forge_for_the_https_fetch_or_remove_its_parameters".into());
     }
     Ok(CreateOptions {
         repo,
@@ -171,7 +170,7 @@ pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Resu
 pub fn removal(body: &Document) -> Result<bool> {
     if body.get::<bool>("confirmed")? != Some(true) {
         return Err(CardFailure::Invalid(
-            "Confirme le retrait du worktree. Sa branche sera conservée.",
+            "message.confirm_worktree_removal_its_branch_will_be_preserved",
         )
         .into());
     }
@@ -187,7 +186,7 @@ pub fn associate(
 ) -> Result<Card> {
     if card.fields.get::<Worktree>("worktree")?.as_ref() != expected {
         return Err(CardFailure::Conflict(
-            "L’association du worktree a changé. Actualise la tâche.",
+            "message.the_worktree_association_changed_refresh_the_task",
         )
         .into());
     }
@@ -195,11 +194,11 @@ pub fn associate(
         let repo = card
             .fields
             .get::<JsonString>("repo")?
-            .ok_or("Dépôt absent.")?
+            .ok_or("message.repository_missing")?
             .utf8()?;
         if !same_repository(&repo, &worktree.source, windows) {
             return Err(CardFailure::Conflict(
-                "Le dépôt de la tâche a changé pendant l’opération.",
+                "message.the_task_repository_changed_during_the_operation",
             )
             .into());
         }
@@ -213,7 +212,7 @@ pub fn associate(
             .is_empty()
         {
             return Err(CardFailure::Conflict(
-                "Retire les worktrees de service avant le worktree principal.",
+                "message.remove_the_service_worktrees_before_the_main_worktree",
             )
             .into());
         }

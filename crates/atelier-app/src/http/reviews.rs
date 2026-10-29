@@ -24,13 +24,13 @@ pub(super) async fn validate(
     };
     let result: Result<Document> = async {
         if body.get::<bool>("confirmed")? != Some(true) {
-            return Err("Confirme la revalidation de cette review.".into());
+            return Err("message.confirm_revalidating_this_review".into());
         }
         let expected = body
             .get::<Card>("expected")?
-            .ok_or("Instantané de tâche requis.")?;
+            .ok_or("message.task_snapshot_required")?;
         if card_id != expected.id {
-            return Err("Carte incohérente.".into());
+            return Err("message.inconsistent_card".into());
         }
         if expected.fields.raw("connectorPullRequest").is_some() {
             return super::connectors::repositories::validate_review(&state, &expected, &run_id)
@@ -45,7 +45,7 @@ pub(super) async fn validate(
                 let card = crate::infrastructure::forge_association::snapshot(store, &input)?;
                 let mut run = store
                     .document::<Document>(Documents::Runs, &selected)?
-                    .ok_or("Review introuvable.")?;
+                    .ok_or("message.review_not_found")?;
                 if !run.string_equals("cardId", &card.id)?
                     || !run.string_equals("kind", "pr-review")?
                     || !run.string_equals("status", "completed")?
@@ -53,19 +53,19 @@ pub(super) async fn validate(
                         .get::<atelier_core::application::reviews::Review>("review")?
                         .is_none()
                 {
-                    return Err("Review incomplète ou périmée. Relance la review.".into());
+                    return Err("message.review_is_incomplete_or_stale_run_it_again".into());
                 }
                 // A failed refresh must never leave the previous validation looking current.
                 run.set("reviewStaleReason", &reviews::UNCHECKED)?;
                 store.put(Documents::Runs, &run)?;
                 let recorded = run
                     .get::<Context>("reviewContext")?
-                    .ok_or("Contexte de review absent.")?;
+                    .ok_or("message.missing_review_context")?;
                 reviews::matches(store, &card, &recorded)?;
                 let linked = card
                     .fields
                     .get::<PullRequest>("pullRequest")?
-                    .ok_or("Liaison de PR/MR retirée.")?;
+                    .ok_or("message.pr_mr_link_removed")?;
                 let (configuration, token) = forge::credentials(
                     store,
                     linked.kind,
@@ -84,7 +84,7 @@ pub(super) async fn validate(
         )
         .await?;
         if current != recorded {
-            return Err("Les commits ou le besoin ont changé. Relance la review.".into());
+            return Err("message.commits_or_requirements_changed_run_the_review_again".into());
         }
         let now = time::OffsetDateTime::now_utc()
             .format(&time::format_description::well_known::Rfc3339)?;

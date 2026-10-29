@@ -57,7 +57,7 @@ impl Repository {
                     digest.update([0]);
                     continue;
                 }
-                let name = std::path::Path::new(parts.last().ok_or("Chemin de fichier invalide.")?);
+                let name = std::path::Path::new(parts.last().ok_or("message.invalid_file_path")?);
                 match directory.symlink_metadata(name) {
                     Ok(metadata) => require_plain(&metadata)?,
                     Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -70,9 +70,9 @@ impl Repository {
                 digest.update([1]);
                 total = total
                     .checked_add(content.len())
-                    .ok_or("Sources trop volumineuses pour la vérification.")?;
+                    .ok_or("message.sources_exceed_verification_size_limits")?;
                 if total > 256 * 1024 * 1024 {
-                    return Err("Sources trop volumineuses pour la vérification.".into());
+                    return Err("message.sources_exceed_verification_size_limits".into());
                 }
                 digest.update((content.len() as u64).to_le_bytes());
                 digest.update(&content);
@@ -87,7 +87,7 @@ impl Repository {
             .await?
             != head
         {
-            return Err("Les sources ont changé pendant leur inspection.".into());
+            return Err("message.sources_changed_during_inspection".into());
         }
         Ok(hash)
     }
@@ -96,8 +96,7 @@ impl Repository {
         let repository = Self::open_synthetic(root, roots, repo)?;
         if !repository.directory.symlink_metadata(".git")?.is_dir() {
             return Err(
-                "L’inspection des worktrees nécessite leur association vérifiée à une tâche."
-                    .into(),
+                "message.worktree_inspection_requires_a_verified_association_with_a_task".into(),
             );
         }
         Ok(repository)
@@ -113,7 +112,7 @@ impl Repository {
         let directory = launch_detection::open_repository(root, roots, repo)?;
         let metadata = directory
             .symlink_metadata(".git")
-            .map_err(|_| "Ce dossier n’est pas une racine Git accessible.")?;
+            .map_err(|_| "message.this_folder_is_not_an_accessible_git_repository_root")?;
         require_plain(&metadata)?;
         Ok(Self { path, directory })
     }
@@ -130,7 +129,7 @@ impl Repository {
             &path_string(&selected).utf8()?,
             cfg!(windows),
         ) {
-            return Err("Le dossier de travail ne correspond plus à la racine du dépôt.".into());
+            return Err("message.worktree_root_mismatch".into());
         }
         Ok(())
     }
@@ -148,7 +147,7 @@ impl Repository {
             ])
             .await?;
         let mut files = String::from_utf8(output)
-            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?
+            .map_err(|_| "message.some_filenames_are_not_encoded_in_utf_8")?
             .split('\0')
             .filter(|name| !name.is_empty())
             .map(str::to_owned)
@@ -156,7 +155,9 @@ impl Repository {
         files.sort();
         files.dedup();
         if files.len() > 50_000 {
-            return Err("Le dépôt dépasse la limite de 50 000 fichiers de l’explorateur.".into());
+            return Err(
+                "message.the_repository_exceeds_the_explorer_s_limit_of_50_000_files".into(),
+            );
         }
         Ok(FileListing { files })
     }
@@ -177,7 +178,7 @@ impl Repository {
         validate_commit(&base)?;
         let tracked = self.diff(&["--name-status", "-z", &base, "--"]).await?;
         let tracked = String::from_utf8(tracked)
-            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?;
+            .map_err(|_| "message.some_filenames_are_not_encoded_in_utf_8")?;
         let parts = tracked
             .strip_suffix('\0')
             .unwrap_or(&tracked)
@@ -186,7 +187,7 @@ impl Repository {
         let mut files = Vec::new();
         if !tracked.is_empty() {
             if !parts.len().is_multiple_of(2) {
-                return Err("Réponse Git invalide pour les changements.".into());
+                return Err("message.git_returned_an_invalid_change_list".into());
             }
             for pair in parts.as_chunks::<2>().0 {
                 files.push(FileChange {
@@ -200,7 +201,7 @@ impl Repository {
             .git(&["ls-files", "--others", "--exclude-standard", "-z"])
             .await?;
         for path in String::from_utf8(untracked)
-            .map_err(|_| "Certains noms de fichiers ne sont pas en UTF-8.")?
+            .map_err(|_| "message.some_filenames_are_not_encoded_in_utf_8")?
             .split('\0')
             .filter(|path| !path.is_empty())
         {
@@ -211,7 +212,9 @@ impl Repository {
             });
         }
         if files.len() > 50_000 {
-            return Err("Le dépôt dépasse la limite de 50 000 fichiers de l’explorateur.".into());
+            return Err(
+                "message.the_repository_exceeds_the_explorer_s_limit_of_50_000_files".into(),
+            );
         }
         files.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(ChangeListing { base, files })
@@ -231,7 +234,7 @@ impl Repository {
             .find(|entry| {
                 entry.path == path && untracked.is_none_or(|expected| expected == entry.untracked)
             })
-            .ok_or("Ce fichier ne fait plus partie des changements. Actualise la liste.")?;
+            .ok_or("message.this_file_is_no_longer_part_of_the_changes_refresh_the_list")?;
         let mut result = FileDiff {
             path: path.clone(),
             patch: None,
@@ -252,7 +255,7 @@ impl Repository {
                 }
                 if patch.len() > PREVIEW_LIMIT {
                     result.unavailable =
-                        Some("Différence trop volumineuse pour l’aperçu (512 Kio maximum).".into());
+                        Some("message.the_diff_is_too_large_to_preview_512_kib_maximum".into());
                 } else {
                     result.patch = Some(if content.is_empty() {
                         String::new()
@@ -267,13 +270,13 @@ impl Repository {
                 .await?;
             if patch.len() > PREVIEW_LIMIT {
                 result.unavailable =
-                    Some("Différence trop volumineuse pour l’aperçu (512 Kio maximum).".into());
+                    Some("message.the_diff_is_too_large_to_preview_512_kib_maximum".into());
             } else {
                 match String::from_utf8(patch) {
                     Ok(patch) => result.patch = Some(patch),
                     Err(_) => {
                         result.unavailable =
-                            Some("Encodage non UTF-8 : aperçu textuel indisponible.".into())
+                            Some("message.non_utf_8_encoding_text_preview_unavailable".into())
                     }
                 }
             }
@@ -324,7 +327,8 @@ impl Repository {
             {
                 if key.contains('=') {
                     return Err(
-                        "Configuration de filtre Git incompatible avec l’aperçu sécurisé.".into(),
+                        "message.this_git_filter_configuration_is_incompatible_with_safe_previews"
+                            .into(),
                     );
                 }
                 options.push("-c".to_owned());
@@ -351,7 +355,7 @@ impl Repository {
     pub async fn preview(self, path: String) -> Result<FilePreview> {
         validate_path(&path, cfg!(windows))?;
         if !self.list().await?.files.contains(&path) {
-            return Err("Fichier absent du projet ou ignoré par Git.".into());
+            return Err("message.the_file_is_missing_or_ignored_by_git".into());
         }
         tokio::task::spawn_blocking(move || self.read(path)).await?
     }
@@ -363,7 +367,7 @@ impl Repository {
             require_plain(&directory.symlink_metadata(part)?)?;
             directory = directory.open_dir_nofollow(part)?;
         }
-        let name = PathBuf::from(*parts.last().ok_or("Chemin de fichier invalide.")?);
+        let name = PathBuf::from(*parts.last().ok_or("message.invalid_file_path")?);
         let metadata = directory.symlink_metadata(&name)?;
         require_plain(&metadata)?;
         let mut preview = FilePreview {
@@ -372,21 +376,21 @@ impl Repository {
             unavailable: None,
         };
         if !metadata.is_file() {
-            return Err("Ce chemin ne désigne pas un fichier ordinaire.".into());
+            return Err("message.path_not_regular_file".into());
         }
         if metadata.len() > PREVIEW_LIMIT as u64 {
             preview.unavailable =
-                Some("Fichier trop volumineux pour l’aperçu (512 Kio maximum).".into());
+                Some("message.the_file_is_too_large_to_preview_512_kib_maximum".into());
         } else {
             let bytes = CheckedFile::open_in(&directory, &name)?.read(PREVIEW_LIMIT)?;
             if bytes.contains(&0) {
-                preview.unavailable = Some("Fichier binaire : aperçu textuel indisponible.".into());
+                preview.unavailable = Some("message.binary_file_text_preview_unavailable".into());
             } else {
                 match String::from_utf8(bytes) {
                     Ok(content) => preview.content = Some(content),
                     Err(_) => {
                         preview.unavailable =
-                            Some("Encodage non UTF-8 : aperçu textuel indisponible.".into())
+                            Some("message.non_utf_8_encoding_text_preview_unavailable".into())
                     }
                 }
             }
@@ -471,7 +475,7 @@ impl Repository {
         }
         if !output.status.success() {
             return Err(
-                "Lecture Git impossible. Vérifie le dépôt et l’installation de Git.".into(),
+                "message.git_could_not_read_this_repository_check_the_repository_and_git".into(),
             );
         }
         Ok(Some(output.stdout))
@@ -480,7 +484,7 @@ impl Repository {
 
 pub(super) fn validate_commit(commit: &str) -> Result<()> {
     if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err("Commit de départ invalide.".into());
+        return Err("message.invalid_base_commit".into());
     }
     Ok(())
 }

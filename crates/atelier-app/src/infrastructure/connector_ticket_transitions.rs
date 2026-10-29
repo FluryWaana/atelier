@@ -28,10 +28,10 @@ fn identity(link: &Document) -> Result<TicketIdentity> {
     Ok(TicketIdentity {
         instance: link
             .get::<String>("instance")?
-            .ok_or("Instance de ticket absente.")?,
+            .ok_or("message.ticket_instance_missing")?,
         id: link
             .get::<String>("id")?
-            .ok_or("Identité de ticket absente.")?,
+            .ok_or("message.ticket_identity_missing")?,
     })
 }
 fn validate_identity(ticket: &TicketIdentity) -> Result<()> {
@@ -39,7 +39,7 @@ fn validate_identity(ticket: &TicketIdentity) -> Result<()> {
         || ticket.instance.contains(['\\', '%'])
         || super::jira::normalize_url(&ticket.instance)? != ticket.instance
     {
-        return Err("Instance de transition du connecteur invalide.".into());
+        return Err("message.connector_transition_instance_invalid".into());
     }
     Ok(())
 }
@@ -66,7 +66,7 @@ fn select(
     value: &Value,
 ) -> Result<(Selection, Card, TicketIdentity)> {
     let selected: Selection = serde_json::from_str(&value.to_string())
-        .map_err(|_| "Sélection de transition du connecteur invalide.")?;
+        .map_err(|_| "message.invalid_module_transition_selection")?;
     let card = super::forge_association::snapshot(store, &selected.expected)?;
     let ticket = identity(&connector_tickets::linked(profile, &card)?)?;
     validate_identity(&ticket)?;
@@ -75,7 +75,7 @@ fn select(
 pub fn read_input(store: &Store<'_>, profile: &Installed, value: &Value) -> Result<Value> {
     let (selection, _, ticket) = select(store, profile, value)?;
     if selection.report_id.is_some() || selection.transition_id.is_some() {
-        return Err("Lecture des transitions invalide.".into());
+        return Err("message.transition_read_invalid".into());
     }
     Ok(serde_json::to_value(ticket)?)
 }
@@ -88,18 +88,18 @@ pub fn prepare_preview(store: &Store<'_>, profile: &Installed, value: &Value) ->
             report.method == Method::TicketsTransitions
                 && Some(&report.id) == selection.report_id.as_ref()
         })
-        .ok_or("Relis les transitions du ticket avant de confirmer.")?;
+        .ok_or("message.reread_the_ticket_transitions_before_confirming")?;
     let age = time::OffsetDateTime::now_utc()
         - time::OffsetDateTime::parse(
             &observed.observed_at,
             &time::format_description::well_known::Rfc3339,
         )?;
     if age > time::Duration::minutes(10) || age < time::Duration::seconds(-60) {
-        return Err("La liste des transitions a expiré. Relis le ticket.".into());
+        return Err("message.the_transition_list_expired_reread_the_ticket".into());
     }
     let observed = report(&observed.output)?;
     if observed.ticket != ticket {
-        return Err("Ces transitions appartiennent à un autre ticket.".into());
+        return Err("message.these_transitions_belong_to_another_ticket".into());
     }
     let transition = observed
         .transitions
@@ -108,10 +108,10 @@ pub fn prepare_preview(store: &Store<'_>, profile: &Installed, value: &Value) ->
             Some(&transition.id) == selection.transition_id.as_ref() && !transition.requires_fields
         })
         .cloned()
-        .ok_or("Choisis une transition disponible sans champ supplémentaire.")?;
+        .ok_or("message.choose_an_available_transition_requiring_no_additional_fields")?;
     let ticket_key = connector_tickets::linked(profile, &card)?
         .get::<String>("key")?
-        .ok_or("Clé de ticket absente.")?;
+        .ok_or("message.ticket_key_absent")?;
     let payload = TicketTransitionPayload {
         card_id: card.id.clone(),
         card_title: card.title.utf8()?,
@@ -134,12 +134,12 @@ pub fn before_send(
     let payload = payload(&operation.input)?;
     let card = store
         .document::<Card>(Documents::Cards, &payload.card_id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let card = super::forge_association::snapshot(store, &card)?;
     if identity(&connector_tickets::linked(profile, &card)?)? != payload.ticket
         || revision(&card)? != payload.card_revision
     {
-        return Err("La carte ou sa liaison a changé depuis l’aperçu de transition.".into());
+        return Err("message.the_task_or_its_link_changed_since_the_transition_preview".into());
     }
     Ok(())
 }
@@ -158,7 +158,7 @@ pub fn preflight(request: &Request) -> Result<Option<Request>> {
 pub fn validate_preflight(input: &Value, reply: &Reply) -> Result<()> {
     let payload = payload(input)?;
     if reply.status != Status::Ok || reply.method != Method::TicketsTransitions {
-        return Err("Le module n’a pas confirmé la relecture des transitions.".into());
+        return Err("message.the_module_did_not_confirm_the_transition_reread".into());
     }
     let current = report(&reply.output)?;
     if current.ticket != payload.ticket
@@ -168,7 +168,7 @@ pub fn validate_preflight(input: &Value, reply: &Reply) -> Result<()> {
             .iter()
             .any(|transition| transition == &payload.transition)
     {
-        return Err("L’état ou la transition distante a changé. Aucun envoi effectué.".into());
+        return Err("message.the_remote_status_or_transition_changed_nothing_was_sent".into());
     }
     Ok(())
 }
@@ -178,7 +178,7 @@ pub fn observed_ticket(operation: &RemoteOperation) -> Result<protocol::Ticket> 
         .reply
         .as_ref()
         .and_then(|reply| reply.output.get("ticket"))
-        .ok_or("Observation du ticket après transition absente.")?;
+        .ok_or("message.no_ticket_observation_after_transition")?;
     let report = Report {
         id: operation.id.clone(),
         method: Method::TicketsRead,
@@ -192,9 +192,9 @@ pub fn observed_ticket(operation: &RemoteOperation) -> Result<protocol::Ticket> 
         .items
         .into_iter()
         .next()
-        .ok_or("Observation du ticket après transition absente.")?;
+        .ok_or("message.no_ticket_observation_after_transition")?;
     if ticket.identity() != payload.ticket || ticket.status != payload.transition.status {
-        return Err("Le ticket observé ne correspond pas à la transition confirmée.".into());
+        return Err("message.the_observed_ticket_does_not_match_the_confirmed_transition".into());
     }
     Ok(ticket)
 }
@@ -208,7 +208,7 @@ pub fn synchronize(store: &Store<'_>, operation: &RemoteOperation) -> Result<()>
     let observed = observed_ticket(operation)?;
     let mut card = store
         .document::<Card>(Documents::Cards, &payload.card_id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let profile = Installed {
         manifest: operation.manifest.clone(),
         binary: operation.binary.clone(),
@@ -218,7 +218,7 @@ pub fn synchronize(store: &Store<'_>, operation: &RemoteOperation) -> Result<()>
     };
     let mut link = connector_tickets::linked(&profile, &card)?;
     if identity(&link)? != payload.ticket {
-        return Err("La liaison du ticket a changé. L’effet reste dans son journal.".into());
+        return Err("message.the_ticket_link_changed_the_effect_remains_in_its_journal".into());
     }
     link.set("status", &observed.status)?;
     link.set("key", &observed.key)?;

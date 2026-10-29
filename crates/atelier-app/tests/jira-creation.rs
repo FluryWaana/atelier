@@ -28,7 +28,10 @@ fn assert_backup_blocked(
         .create(store)
         .err()
         .expect("Jira creation must block backup creation");
-    assert!(error.to_string().contains("Jira"));
+    assert_eq!(
+        error.to_string(),
+        "message.complete_or_reconcile_jira_operations_before_creating_a_backup"
+    );
     assert_eq!(serde_json::to_value(directory.list()?)?, before);
     assert_eq!(store.documents::<Value>(Documents::Cards)?, cards);
     Ok(())

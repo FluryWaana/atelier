@@ -130,7 +130,7 @@
       }
     },
     "expected": {
-      "error": "Titre requis.",
+      "error": "message.title_required",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -185,7 +185,7 @@
       }
     },
     "expected": {
-      "error": "Titre requis.",
+      "error": "message.title_required",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -240,7 +240,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -295,7 +295,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -561,7 +561,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -1149,7 +1149,7 @@
       }
     },
     "expected": {
-      "error": "Statut invalide.",
+      "error": "message.invalid_status",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -1204,7 +1204,7 @@
       }
     },
     "expected": {
-      "error": "Statut invalide.",
+      "error": "message.invalid_status",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2024,7 +2024,7 @@
       }
     },
     "expected": {
-      "error": "Maximum 20 critères de réussite.",
+      "error": "message.maximum_20_acceptance_criteria",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2185,7 +2185,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2240,7 +2240,7 @@
       }
     },
     "expected": {
-      "error": "Mode invalide.",
+      "error": "message.invalid_mode",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2613,7 +2613,7 @@
       }
     },
     "expected": {
-      "error": "Agent invalide.",
+      "error": "message.invalid_agent",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2668,7 +2668,7 @@
       }
     },
     "expected": {
-      "error": "Agent invalide.",
+      "error": "message.invalid_agent",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2830,7 +2830,7 @@
       }
     },
     "expected": {
-      "error": "Modèle invalide.",
+      "error": "message.invalid_model",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -2993,7 +2993,7 @@
       }
     },
     "expected": {
-      "error": "Modèle invalide.",
+      "error": "message.invalid_model",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3152,7 +3152,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3213,7 +3213,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3274,7 +3274,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3335,7 +3335,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3516,7 +3516,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -3577,7 +3577,7 @@
       }
     },
     "expected": {
-      "error": "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+      "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4063,7 +4063,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4235,7 +4235,7 @@
       }
     },
     "expected": {
-      "error": "Texte invalide ou trop long.",
+      "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4353,7 +4353,7 @@
       }
     },
     "expected": {
-      "error": "Arrête l’agent avant de modifier cette carte.",
+      "error": "message.stop_the_agent_before_editing_this_card",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4410,7 +4410,7 @@
       "archived": true
     },
     "expected": {
-      "error": "Restaure cette tâche avant de reprendre le travail.",
+      "error": "message.restore_this_task_before_resuming_work",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4465,7 +4465,7 @@
       }
     },
     "expected": {
-      "error": "Carte introuvable.",
+      "error": "message.card_not_found",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4746,7 +4746,7 @@
       }
     },
     "expected": {
-      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4803,7 +4803,7 @@
       }
     },
     "expected": {
-      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4861,7 +4861,7 @@
       }
     },
     "expected": {
-      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4916,7 +4916,7 @@
       }
     },
     "expected": {
-      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -4971,7 +4971,7 @@
       }
     },
     "expected": {
-      "error": "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+      "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
         "title": "Title \ud800",
@@ -5036,7 +5036,7 @@
       }
     },
     "expected": {
-      "error": "Cette dépendance créerait un cycle.",
+      "error": "message.this_dependency_would_create_a_cycle",
       "saved": {
         "id": "card",
         "title": "Title \ud800",

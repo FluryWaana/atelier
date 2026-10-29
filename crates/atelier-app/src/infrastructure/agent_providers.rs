@@ -21,7 +21,7 @@ pub fn execution_profile(
     let profile = agent_providers::describe(&store.settings()?, &tokens)?
         .into_iter()
         .find(|profile| profile.string_equals("id", id).unwrap_or(false))
-        .ok_or("Agent invalide.")?;
+        .ok_or("message.invalid_agent")?;
     let key = if profile.string_equals("auth", "api")? {
         let name = format!("agent:{id}:key");
         let alias = format!("connector:{name}:token");
@@ -36,7 +36,7 @@ pub fn execution_profile(
         tokens
             .get::<String>(&selected)?
             .filter(|key| !key.is_empty())
-            .ok_or("Renseigne la clé API de ce profil avant de lancer un agent.")?
+            .ok_or("message.enter_this_profile_s_api_key_before_starting_an_agent")?
     } else {
         String::new()
     };

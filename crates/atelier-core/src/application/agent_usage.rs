@@ -12,7 +12,7 @@ impl Counter {
             self.total = self
                 .total
                 .checked_add(value)
-                .ok_or("Compteurs d’usage trop volumineux.")?;
+                .ok_or("message.usage_counters_too_large")?;
             self.samples += 1;
         }
         Ok(())
@@ -36,15 +36,15 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
     for run in runs {
         let text = |key| {
             run.get::<String>(key)
-                .map_err(|_| "Exécution invalide pour la synthèse d’usage.")
+                .map_err(|_| "message.invalid_run_in_the_usage_summary")
         };
-        let id = text("id")?.ok_or("Exécution sans identifiant dans la synthèse d’usage.")?;
+        let id = text("id")?.ok_or("message.run_without_an_identifier_in_the_usage_summary")?;
         if !ids.insert(id) {
-            return Err("Exécutions dupliquées dans la synthèse d’usage.");
+            return Err("message.duplicate_runs_in_the_usage_summary");
         }
         if run
             .string_equals("purpose", "verification")
-            .map_err(|_| "Exécution invalide pour la synthèse d’usage.")?
+            .map_err(|_| "message.invalid_run_in_the_usage_summary")?
         {
             continue;
         }
@@ -62,14 +62,14 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
         entry.runs += 1;
         let usage = run
             .get::<Option<Document>>("usage")
-            .map_err(|_| "Compteurs d’usage invalides.")?
+            .map_err(|_| "message.invalid_usage_counters")?
             .flatten()
             .unwrap_or_default();
         let metric = |key| {
             usage
                 .get::<Option<u64>>(key)
                 .map(|value| value.flatten())
-                .map_err(|_| "Compteurs d’usage invalides.")
+                .map_err(|_| "message.invalid_usage_counters")
         };
         entry.input.add(metric("inputTokens")?)?;
         entry.cache_read.add(metric("cachedInputTokens")?)?;
@@ -79,10 +79,10 @@ pub fn summarize(runs: &[Document]) -> Result<Vec<Summary>, &'static str> {
         entry.output.add(metric("outputTokens")?)?;
         entry.active_milliseconds.add(
             run.get::<u64>("activeMilliseconds")
-                .map_err(|_| "Durée active invalide.")?,
+                .map_err(|_| "message.invalid_active_duration")?,
         )?;
         if groups.len() > 1000 {
-            return Err("Synthèse d’usage limitée à 1 000 groupes. Réduis la sélection.");
+            return Err("message.usage_summary_limited_to_1_000_groups_narrow_the_selection");
         }
     }
     Ok(groups.into_values().collect())

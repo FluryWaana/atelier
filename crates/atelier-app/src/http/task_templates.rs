@@ -42,7 +42,7 @@ async fn execute(state: Shared, remove: Option<String>, request: Request) -> Res
                 _ => StatusCode::BAD_REQUEST,
             };
             if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "Modification des modèles impossible.")
+                failure(status, "message.templates_update_failed")
             } else {
                 failure(status, &error.to_string())
             }

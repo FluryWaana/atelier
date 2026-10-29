@@ -25,7 +25,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": []
       },
@@ -39,7 +39,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": []
       },
@@ -53,7 +53,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": []
       },
@@ -67,7 +67,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Restaure cette tâche avant de saisir du temps."
+          "error": "message.restore_this_task_before_logging_time"
         },
         "times": []
       },
@@ -82,7 +82,7 @@
           "start": null
         },
         "expected": {
-          "error": "Action de chronomètre invalide."
+          "error": "message.invalid_timer_action"
         },
         "times": []
       },
@@ -97,7 +97,7 @@
           "start": 1
         },
         "expected": {
-          "error": "Action de chronomètre invalide."
+          "error": "message.invalid_timer_action"
         },
         "times": []
       },
@@ -112,7 +112,7 @@
           "start": "true"
         },
         "expected": {
-          "error": "Action de chronomètre invalide."
+          "error": "message.invalid_timer_action"
         },
         "times": []
       },
@@ -126,7 +126,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "La durée doit être comprise entre 1 seconde et 24 heures."
+          "error": "message.duration_must_be_between_1_second_and_24_hours"
         },
         "times": []
       },
@@ -268,7 +268,7 @@
           "start": true
         },
         "expected": {
-          "error": "Arrête le chronomètre actif avant d’en démarrer un autre."
+          "error": "message.stop_the_active_timer_before_starting_another"
         },
         "times": [
           {
@@ -490,7 +490,7 @@
         "action": "remove",
         "id": "entry-3",
         "expected": {
-          "error": "Entrée de temps introuvable."
+          "error": "message.time_entry_not_found"
         },
         "times": [
           {
@@ -567,7 +567,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+          "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
         },
         "times": [
           {
@@ -614,7 +614,7 @@
           "confirmed": "true"
         },
         "expected": {
-          "error": "Vérifie d’abord dans Tempo que cette entrée n’existe pas."
+          "error": "message.first_check_in_tempo_that_this_entry_does_not_exist"
         },
         "times": [
           {
@@ -662,7 +662,7 @@
         },
         "busy": true,
         "expected": {
-          "error": "Envoi en cours."
+          "error": "message.sending"
         },
         "times": [
           {
@@ -820,7 +820,7 @@
           "confirmed": true
         },
         "expected": {
-          "error": "Vérifie d’abord dans Tempo que cette entrée n’existe pas."
+          "error": "message.first_check_in_tempo_that_this_entry_does_not_exist"
         },
         "times": [
           {
@@ -857,7 +857,7 @@
         "action": "remove",
         "id": "empty",
         "expected": {
-          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+          "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
         },
         "times": [
           {
@@ -895,7 +895,7 @@
         "id": "empty",
         "busy": true,
         "expected": {
-          "error": "Envoi en cours."
+          "error": "message.sending"
         },
         "times": [
           {
@@ -933,7 +933,7 @@
         "id": "seed",
         "busy": false,
         "expected": {
-          "error": "Action inconnue."
+          "error": "message.unknown_action"
         },
         "times": [
           {
@@ -977,7 +977,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Entrée de temps introuvable."
+          "error": "message.time_entry_not_found"
         },
         "times": [
           {
@@ -1149,7 +1149,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+          "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
         },
         "times": [
           {
@@ -1186,7 +1186,7 @@
         "action": "remove",
         "id": "other",
         "expected": {
-          "error": "Arrête le chronomètre. Seules les entrées non envoyées sont modifiables."
+          "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
         },
         "times": [
           {
@@ -1459,7 +1459,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": [
           {
@@ -1574,7 +1574,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": [
           {
@@ -1616,7 +1616,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": [
           {
@@ -1658,7 +1658,7 @@
           "description": " Work \ud800 "
         },
         "expected": {
-          "error": "Carte introuvable."
+          "error": "message.card_not_found"
         },
         "times": [
           {

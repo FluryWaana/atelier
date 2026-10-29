@@ -10,20 +10,20 @@ use atelier_core::{
 
 fn conflict() -> crate::Error {
     atelier_core::application::forge::ForgeFailure::OperationConflict(
-        "La tâche ou son opération de forge a changé. Recharge avant de réessayer.",
+        "message.the_task_or_its_forge_operation_changed_reload_before_trying_aga",
     )
     .into()
 }
 pub fn reserve(store: &Store<'_>, input: &ForgeDraftRequest, id: &str) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed || uuid::Uuid::parse_str(id).is_err() {
-            return Err("Confirme le changement d’état brouillon de la PR/MR.".into());
+            return Err("message.confirm_changing_the_pr_mr_draft_state".into());
         }
         let mut card = forge_association::snapshot(store, &input.expected)?;
         let expected = card
             .fields
             .get::<PullRequest>("pullRequest")?
-            .ok_or("Associe une PR/MR avant de modifier son état brouillon.")?;
+            .ok_or("message.link_a_pr_mr_before_changing_its_draft_state")?;
         let configuration = forge::configuration(store, expected.kind, input.revision)?;
         if expected.base_url != configuration.base
             || expected.revision != input.revision
@@ -37,11 +37,11 @@ pub fn reserve(store: &Store<'_>, input: &ForgeDraftRequest, id: &str) -> Result
                 expected.draft == input.draft
             }
         {
-            return Err("Relis une PR/MR ouverte avant de modifier son état brouillon.".into());
+            return Err("message.read_an_open_pr_mr_before_changing_its_draft_state".into());
         }
         if let Some(content) = &input.content {
             if !atelier_core::application::forge::valid_content(expected.kind, content) {
-                return Err("Titre ou description de PR/MR invalide.".into());
+                return Err("message.invalid_pr_mr_title_or_description".into());
             }
             if let Some(ticket) = card.fields.get::<Document>("ticket")? {
                 let key = ticket.get::<String>("key")?.unwrap_or_default();
@@ -50,7 +50,7 @@ pub fn reserve(store: &Store<'_>, input: &ForgeDraftRequest, id: &str) -> Result
                     || (!url.is_empty() && !content.body.contains(&url))
                 {
                     return Err(
-                        "Conserve la clé du ticket dans le titre et son lien dans la description."
+                        "message.keep_the_ticket_key_in_the_title_and_its_link_in_the_description"
                             .into(),
                     );
                 }
@@ -88,11 +88,20 @@ pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
     store.transaction(|store| {
         let (mut card, mut intent) = active(store, &expected.id, id)?;
         forge::require_revision(store, intent.expected.revision)?;
-        if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))? != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))? || intent.state != Phase::Preparing { return Err(conflict()); }
+        if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
+            != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?
+            || intent.state != Phase::Preparing
+        {
+            return Err(conflict());
+        }
         intent.state = Phase::Sending;
         card.fields.set("forgeDraft", &intent)?;
         // A lost response may already have changed the remote state.
-        forge_association::invalidate(store, &mut card, "L’état distant de la PR/MR est en cours de modification. Revalide la review après relecture.")?;
+        forge_association::invalidate(
+            store,
+            &mut card,
+            "message.the_remote_pr_mr_state_is_being_changed_revalidate_the_review_af",
+        )?;
         store.put(Documents::Cards, &card)
     })
 }
@@ -134,7 +143,7 @@ pub fn record(
             || observed.url
                 != forge::browser_link(&configuration, &observed.repository, observed.number)?
         {
-            return Err("La PR/MR relue ne correspond pas à l’opération incertaine.".into());
+            return Err("message.the_observed_pr_mr_does_not_match_the_uncertain_operation".into());
         }
         // A contrary read cannot prove a timed-out request will never be applied later.
         if observed.draft == intent.draft
@@ -159,7 +168,7 @@ pub fn record(
         forge_association::invalidate(
             store,
             &mut card,
-            "L’état distant de la PR/MR a été relu. Revalide la review sur ses commits actuels.",
+            "message.the_remote_pr_mr_state_was_read_again_revalidate_the_review_agai",
         )?;
         store.put(Documents::Cards, &card)?;
         Ok(card)

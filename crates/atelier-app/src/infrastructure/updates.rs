@@ -118,14 +118,14 @@ fn data_identity(data: &Path) -> Result<(PathBuf, String, Dir)> {
 fn validate_data(journal: &Journal) -> Result<()> {
     let (path, identity, _directory) = data_identity(&journal.data)?;
     if path != journal.data || identity != journal.data_identity {
-        return Err("Le dossier de données a changé depuis la confirmation.".into());
+        return Err("message.the_data_directory_changed_since_confirmation".into());
     }
     Ok(())
 }
 async fn data_lock(journal: &Journal) -> Result<DataLock> {
     let (data, identity, directory) = data_identity(&journal.data)?;
     if identity != journal.data_identity {
-        return Err("Le dossier de données a changé depuis la confirmation.".into());
+        return Err("message.the_data_directory_changed_since_confirmation".into());
     }
     let deadline = Instant::now() + Duration::from_secs(60);
     loop {
@@ -166,10 +166,7 @@ async fn require_connector_idle(journal: &Journal) -> Result<()> {
             .iter()
             .any(super::connector_effects::pending)
             {
-                return Err(
-                    "Termine ou rapproche les écritures de connecteurs avant une mise à jour."
-                        .into(),
-                );
+                return Err("message.finish_or_reconcile_connector_writes_before_updating".into());
             }
             Ok(())
         })
@@ -184,7 +181,7 @@ pub fn expected_data_identity(root: &Path, data: &Path) -> Result<Option<String>
         return Ok(None);
     };
     if std::fs::canonicalize(data)? != journal.data {
-        return Err("La maintenance est liée à un autre dossier de données.".into());
+        return Err("message.maintenance_is_linked_to_another_data_directory".into());
     }
     validate_data(&journal)?;
     Ok(Some(journal.data_identity))
@@ -220,7 +217,9 @@ fn system_managed(root: &Path) -> Result<bool> {
 
 fn require_user_update(root: &Path) -> Result<()> {
     if system_managed(root)? {
-        return Err("Cette installation système se met à jour avec le gestionnaire de paquets, après l’arrêt de toutes les instances. Les données sont conservées.".into());
+        return Err(
+            "message.update_this_system_installation_using_the_package_manager_after".into(),
+        );
     }
     Ok(())
 }
@@ -241,8 +240,7 @@ pub async fn preview(
     let _lock = lock(&installation)?;
     if load(installation.directory())?.is_some_and(|journal| journal.operation.state.pending()) {
         return Err(
-            "Une préparation ou mise à jour existe déjà. Relis-la ou annule-la avant de continuer."
-                .into(),
+            "message.a_preparation_or_update_already_exists_review_or_cancel_it_first".into(),
         );
     }
     let (data, data_identity, _directory) = data_identity(data)?;
@@ -254,7 +252,7 @@ pub async fn preview(
     if package::version_parts(&signed.version)?
         <= package::version_parts(&installation.current().active.version)?
     {
-        return Err("Cette mise à jour n’est pas plus récente que la version active.".into());
+        return Err("message.this_update_is_not_newer_than_the_active_version".into());
     }
     let next = Version::from_payload(&signed);
     let operation = Operation {
@@ -266,7 +264,7 @@ pub async fn preview(
         sha256: next.id.clone(),
         created_at: time::OffsetDateTime::now_utc()
             .format(&time::format_description::well_known::Rfc3339)?,
-        message: "Préparation de la version signée ; la version active reste disponible.".into(),
+        message: "message.preparing_the_signed_version_the_active_version_remains_availabl".into(),
         files: Vec::new(),
     };
     let mut journal = Journal {
@@ -292,7 +290,7 @@ pub async fn preview(
                 || observed["version"] != journal.expected.active.version)
         {
             return Err(
-                "La version exécutée ne correspond pas à la version active installée.".into(),
+                "message.the_running_version_does_not_match_the_installed_active_version".into(),
             );
         }
         journal.restart = observed.is_some();
@@ -305,7 +303,7 @@ pub async fn preview(
             installation.root(),
         )?;
         if Version::from_payload(prepared.payload()) != journal.next {
-            return Err("Le paquet signé a changé pendant sa préparation.".into());
+            return Err("message.the_signed_package_changed_while_it_was_being_prepared".into());
         }
         installation.stage_update(&prepared)?;
         journal.operation.files = prepared.package().manifest()["files"]
@@ -326,13 +324,13 @@ pub async fn preview(
             .collect::<Result<Vec<_>>>()?;
         installation.refresh_current()?;
         if installation.current() != &journal.expected {
-            return Err("La version active a changé pendant la préparation.".into());
+            return Err("message.the_active_version_changed_during_preparation".into());
         }
         phase(
             &installation,
             &mut journal,
             Phase::Prepared,
-            "Version vérifiée et préparée. Aucun service arrêté et aucune donnée remplacée.",
+            "message.version_verified_and_prepared_no_service_stopped_and_no_data_rep",
         )
     }
     .await;
@@ -361,19 +359,19 @@ pub async fn apply(root: &Path, id: &str, confirmed: bool) -> Result<Operation> 
     let _lock = lock(&installation)?;
     let mut journal = load(installation.directory())?
         .filter(|journal| journal.operation.id == id && journal.operation.state == Phase::Prepared)
-        .ok_or("Cette préparation de mise à jour n’est plus disponible.")?;
+        .ok_or("message.this_update_preparation_is_no_longer_available")?;
     if installation.current() != &journal.expected {
-        return Err("La version active a changé depuis l’aperçu.".into());
+        return Err("message.the_active_version_changed_since_the_preview".into());
     }
     installation.verify_version(&journal.next)?;
     if data_identity(&journal.data)?.1 != journal.data_identity {
-        return Err("Le dossier de données a changé depuis l’aperçu.".into());
+        return Err("message.the_data_directory_changed_since_the_preview".into());
     }
     let http = LocalHttp::new()?;
     if let Some(observed) = launcher::health(&http, &journal.data, journal.port).await? {
         if observed["version"] != journal.expected.active.version {
             return Err(
-                "La version exécutée ne correspond pas à la version active installée.".into(),
+                "message.the_running_version_does_not_match_the_installed_active_version".into(),
             );
         }
         let mut headers = reqwest::header::HeaderMap::new();
@@ -391,16 +389,14 @@ pub async fn apply(root: &Path, id: &str, confirmed: bool) -> Result<Operation> 
             )
             .await?;
         if !reply.status.is_success() || reply.json()?["pending"].as_bool() != Some(false) {
-            return Err(
-                "Termine ou rapproche les écritures de connecteurs avant une mise à jour.".into(),
-            );
+            return Err("message.finish_or_reconcile_connector_writes_before_updating".into());
         }
     }
     phase(
         &installation,
         &mut journal,
         Phase::Waiting,
-        "Arrêt contrôlé avant changement de version.",
+        "message.stopping_safely_before_switching_version",
     )?;
     let executable = installation
         .slot_path(&journal.next)?
@@ -458,7 +454,7 @@ pub fn cancel(root: &Path, id: &str, confirmed: bool) -> Result<Operation> {
         &installation,
         &mut journal,
         Phase::Cancelled,
-        "Préparation annulée. Les données et la version active sont conservées.",
+        "message.preparation_cancelled_data_and_active_version_kept",
     )?;
     Ok(journal.operation)
 }
@@ -478,7 +474,7 @@ async fn running_version(journal: &Journal, expected: &str) -> Result<()> {
         .await?
         .ok_or("La version démarrée ne répond pas.")?;
     if observed["version"] != expected {
-        return Err("La version exécutée ne correspond pas à la version signée.".into());
+        return Err("message.the_running_version_does_not_match_the_signed_version".into());
     }
     Ok(())
 }
@@ -489,9 +485,7 @@ async fn rollback(
 ) -> Result<()> {
     installation.refresh_current()?;
     if installation.current() != &switched(journal) && installation.current() != &journal.expected {
-        return Err(
-            "Le pointeur a changé hors de cette mise à jour. Il est conservé pour examen.".into(),
-        );
+        return Err("message.the_pointer_changed_outside_this_update_it_is_kept_for_review".into());
     }
     validate_data(journal)?;
     phase(
@@ -506,9 +500,7 @@ async fn rollback(
     if installation.current() == &switched(journal) {
         installation.write_current(&switched(journal), journal.expected.clone())?;
     } else if installation.current() != &journal.expected {
-        return Err(
-            "Le pointeur a changé hors de cette mise à jour. Il est conservé pour examen.".into(),
-        );
+        return Err("message.the_pointer_changed_outside_this_update_it_is_kept_for_review".into());
     }
     drop(guard);
     if journal.restart {
@@ -528,9 +520,7 @@ async fn rollback(
                 "Mise à jour refusée : {reason} Version précédente rétablie ; données conservées."
             )
         })
-        .unwrap_or_else(|| {
-            "Version précédente rétablie. Aucune donnée restaurée ni supprimée.".into()
-        });
+        .unwrap_or_else(|| "message.previous_version_restored_no_data_restored_or_deleted".into());
     phase(installation, journal, Phase::RolledBack, &message)
 }
 
@@ -577,14 +567,14 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
                 &installation,
                 &mut journal,
                 Phase::Activating,
-                "Activation de la version vérifiée.",
+                "message.activating_the_verified_version",
             )?;
             installation.write_current(&journal.expected, switched(&journal))?;
             phase(
                 &installation,
                 &mut journal,
                 Phase::Trying,
-                "Vérification du démarrage sans navigateur.",
+                "message.verifying_startup_without_a_browser",
             )?;
             drop(guard);
             launcher::start(
@@ -599,8 +589,7 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
             installation.refresh_current()?;
             if installation.current() != &switched(&journal) {
                 return Err(
-                    "Le pointeur a changé pendant la vérification. Il est conservé pour examen."
-                        .into(),
+                    "message.the_pointer_changed_during_verification_it_is_kept_for_review".into(),
                 );
             }
             if !journal.restart {
@@ -610,7 +599,7 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
                 &installation,
                 &mut journal,
                 Phase::Committed,
-                "Mise à jour démarrée et vérifiée. Données conservées.",
+                "message.updated_version_started_and_verified_data_kept",
             )
         }
         .await
@@ -666,7 +655,7 @@ pub async fn recover_if_needed(executable: &Path) -> Result<()> {
                     &installation,
                     &mut journal,
                     Phase::Failed,
-                    "Préparation interrompue. La version active et les données sont conservées.",
+                    "message.preparation_interrupted_active_version_and_data_kept",
                 )?;
             }
         } else if journal.operation.state.maintenance() {
@@ -716,7 +705,7 @@ pub async fn request_recovery(root: &Path, id: &str, confirmed: bool) -> Result<
         &installation,
         &mut journal,
         Phase::RollingBack,
-        "Récupération demandée ; arrêt contrôlé avant retour de version.",
+        "message.recovery_requested_stopping_safely_before_reverting_the_version",
     )?;
     let mut command = Command::new(
         installation
@@ -750,7 +739,7 @@ pub async fn request_recovery(root: &Path, id: &str, confirmed: bool) -> Result<
 pub async fn command(name: &str, args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
     let executable = std::env::current_exe()?;
     let installation = installed::locate(&executable, package::native_target()?)?
-        .ok_or("Cette commande exige une installation Rust versionnée.")?;
+        .ok_or("message.this_command_requires_a_versioned_rust_installation")?;
     let mut values = std::collections::BTreeMap::new();
     let mut confirmed = false;
     let mut args = args;

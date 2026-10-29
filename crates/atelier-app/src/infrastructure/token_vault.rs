@@ -89,7 +89,7 @@ async fn keyring_protect_service(
         let envelope: Envelope = serde_json::from_str(value)?;
         if envelope.format != "keyring-aes-256-gcm-v1" || envelope.platform != platform.name() {
             return Err(
-                "Ce coffre appartient à un autre système. Renseignez de nouveau les jetons.".into(),
+                "message.this_vault_belongs_to_another_system_enter_the_tokens_again".into(),
             );
         }
         Some(envelope)
@@ -146,16 +146,16 @@ async fn keyring_protect_service(
             }
         };
         if saved != 0 {
-            return Err("Impossible d’enregistrer la clé dans le trousseau système.".into());
+            return Err("message.cannot_save_the_key_to_the_system_keyring".into());
         }
         (status, key) = execute(command, &lookup, None).await?;
     }
     if status != 0 {
-        return Err("Déverrouillez le trousseau système pour accéder aux jetons.".into());
+        return Err("message.unlock_the_system_keyring_to_access_tokens".into());
     }
     let key = unhex::<32>(key.trim())?;
     let key = LessSafeKey::new(
-        UnboundKey::new(&AES_256_GCM, &key).map_err(|_| "Clé du trousseau système invalide.")?,
+        UnboundKey::new(&AES_256_GCM, &key).map_err(|_| "message.invalid_system_keyring_key")?,
     );
     if let Some(envelope) = envelope {
         let nonce = Nonce::assume_unique_for_key(unhex(&envelope.iv)?);
@@ -296,7 +296,9 @@ pub async fn execute_keyring(
         .kill_on_drop(true);
     #[cfg(windows)]
     command.creation_flags(0x08000000);
-    let mut child = command.spawn().map_err(|_| "Coffre système inaccessible. Sur Linux, installez secret-tool (libsecret) et déverrouillez le trousseau.")?;
+    let mut child = command
+        .spawn()
+        .map_err(|_| "message.system_vault_inaccessible_on_linux_install_secret_tool_libsecret")?;
     let mut stdin = child.stdin.take().ok_or("Entrée du trousseau absente.")?;
     let stdout = child.stdout.take().ok_or("Sortie du trousseau absente.")?;
     let stderr = child.stderr.take().ok_or("Sortie du trousseau absente.")?;

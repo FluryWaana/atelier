@@ -29,7 +29,7 @@ pub struct LaunchPlan {
 }
 
 pub fn directory(value: &str) -> Result<String> {
-    let invalid = "Le dossier du service doit être relatif et rester dans le worktree.";
+    let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
     if value.len() > 2000
         || value.starts_with(['/', '\\'])
         || value.contains([':', '\0', '\r', '\n'])
@@ -60,16 +60,16 @@ pub fn plan(
 ) -> Result<LaunchPlan> {
     if card.fields.truthy("archived")? {
         return Err(
-            CardFailure::Conflict("Restaure cette tâche avant de reprendre le travail.").into(),
+            CardFailure::Conflict("message.restore_this_task_before_resuming_work").into(),
         );
     }
     let primary = card
         .fields
         .get::<Worktree>("worktree")?
-        .ok_or("Prépare le worktree avant de lancer le projet.")?;
+        .ok_or("message.prepare_worktree_before_project")?;
     let repo = card.fields.get::<String>("repo")?.unwrap_or_default();
     if primary.state != WorktreeState::Ready || !same_repository(&primary.source, &repo, windows) {
-        return Err("Vérifie le worktree principal avant de lancer les services.".into());
+        return Err("message.verify_primary_worktree_before_services".into());
     }
     let owned = card
         .fields
@@ -84,23 +84,23 @@ pub fn plan(
                 .flatten()
                 .is_some_and(|source| same_repository(&source, &repo, windows))
         })
-        .ok_or("Enregistre le projet et ses commandes Front/Back avant de le lancer.")?;
+        .ok_or("message.save_project_commands_before_launch")?;
     let id = project
         .get::<String>("id")?
-        .ok_or("Identifiant de projet absent.")?;
+        .ok_or("message.project_id_missing")?;
     let mut selected = vec![project];
     let linked = project
         .get::<String>("linkedProjectId")?
         .unwrap_or_default();
     if !standalone && !linked.is_empty() {
         if linked == id {
-            return Err("Un projet ne peut pas être lié à lui-même.".into());
+            return Err("message.project_self_link_forbidden".into());
         }
         selected.push(
             projects
                 .iter()
                 .find(|project| project.string_equals("id", &linked).unwrap_or(false))
-                .ok_or("Le projet lié est introuvable. Vérifie les réglages du projet.")?,
+                .ok_or("message.linked_project_missing")?,
         );
     }
     let mut result = LaunchPlan {
@@ -112,14 +112,14 @@ pub fn plan(
     for project in selected {
         let project_id = project
             .get::<String>("id")?
-            .ok_or("Identifiant de projet absent.")?;
+            .ok_or("message.project_id_missing")?;
         let name = project
             .get::<String>("name")?
             .unwrap_or_else(|| project_id.clone());
         let main = project_id == id;
         let source = project
             .get::<String>("repo")?
-            .ok_or("Dépôt du projet absent.")?;
+            .ok_or("message.missing_project_repository")?;
         let before = result.services.len();
         for (role, label) in [("front", "Front"), ("back", "Back")] {
             let command = project
@@ -129,7 +129,7 @@ pub fn plan(
                 continue;
             }
             if command.len() > 8000 || command.contains('\0') {
-                return Err("Commande de lancement invalide.".into());
+                return Err("message.launch_command_invalid".into());
             }
             let dedicated = project
                 .get::<String>(&format!("{role}Repo"))?
@@ -141,20 +141,20 @@ pub fn plan(
                 } else {
                     let service = owned
                         .get(role)
-                        .ok_or("Prépare les worktrees Front/Back avant de lancer les services.")?;
+                        .ok_or("message.prepare_service_worktrees")?;
                     if service.state != WorktreeState::Ready
                         || service.branch != primary.branch
                         || !same_repository(&service.source, &dedicated, windows)
                     {
                         return Err(
-                            "Vérifie les worktrees Front/Back avant de lancer les services.".into(),
+                            "message.verify_service_worktrees".into(),
                         );
                     }
                     Some(service.clone())
                 }
             } else {
                 if !same_repository(&dedicated, &source, windows) {
-                    return Err("Les dépôts distincts du projet lié doivent être lancés depuis leur propre carte.".into());
+                    return Err("message.linked_project_repositories_separate".into());
                 }
                 None
             };
@@ -162,8 +162,7 @@ pub fn plan(
             let isolated = command.contains("{port}");
             if port != 0 && !isolated {
                 return Err(
-                    "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier."
-                        .into(),
+                    "message.add_port_to_the_command_to_apply_the_port_provided_by_atelier".into(),
                 );
             }
             result.isolated_ports &= isolated;

@@ -138,7 +138,7 @@ impl Installation {
                 previous.target != next.active.target || previous.id == next.active.id
             })
         {
-            return Err("Le choix de version a changé. Aucun pointeur remplacé.".into());
+            return Err("message.the_version_selection_changed_no_pointer_replaced".into());
         }
         self.verify_version(&next.active)?;
         if let Some(previous) = &next.previous {
@@ -221,7 +221,9 @@ impl Installation {
             });
         }
         if slots.len() >= 3 {
-            return Err("Trois versions ou préparations sont déjà conservées. Examine les anciennes versions avant de poursuivre.".into());
+            return Err(
+                "message.three_versions_or_preparations_are_already_retained_review_old_v".into(),
+            );
         }
         let mut count = 0usize;
         let mut bytes = 0u64;
@@ -244,8 +246,7 @@ impl Installation {
             .is_none_or(|total| total > 1024 * 1024 * 1024)
         {
             return Err(
-                "La réserve de versions dépasserait 1 Gio. Aucun fichier supprimé automatiquement."
-                    .into(),
+                "message.the_version_reserve_would_exceed_1_gib_no_files_were_deleted_aut".into(),
             );
         }
         let temporary = tempfile::Builder::new()

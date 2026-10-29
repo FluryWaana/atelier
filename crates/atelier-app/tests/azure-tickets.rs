@@ -12,6 +12,29 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 const PROJECT: &str = "00000000-0000-4000-8000-000000000001";
+#[test]
+fn azure_manifest_uses_translatable_keys() {
+    let manifest = manifest();
+    protocol::validate_manifest(&manifest).unwrap();
+    assert_eq!(manifest.description, "description");
+    assert_eq!(
+        manifest.translations["fr-FR"]["description"],
+        "Recherche, lecture et création confirmée de tickets Azure DevOps."
+    );
+    assert_eq!(
+        manifest.translations["en-US"]["description"],
+        "Search, read and confirm creation of Azure DevOps tickets."
+    );
+    let error = Azure::new("invalid url", PROJECT, "synthetic".into())
+        .err()
+        .unwrap()
+        .to_string();
+    assert_eq!(error, "azure-invalid-https-azure-organization");
+    assert_eq!(
+        manifest.translations["fr-FR"][&error],
+        "Organisation Azure HTTPS invalide."
+    );
+}
 #[derive(Clone)]
 struct Remote {
     fault: &'static str,

@@ -21,7 +21,11 @@ pub fn providers(settings: &Document) -> serde_json::Result<Vec<Document>> {
         serde_json::from_str(providers.get())
     } else {
         let mut providers = Vec::new();
-        for (id, name) in [("codex", "Codex"), ("claude", "Claude Code")] {
+        for agent in super::agent_catalog::AGENTS
+            .iter()
+            .filter(|agent| agent.default_profile)
+        {
+            let (id, name) = (agent.id, agent.name);
             let mut provider = Document::default();
             provider.set("id", &id)?;
             provider.set("name", &name)?;
@@ -46,11 +50,11 @@ pub fn agent_providers(settings: &Value) -> Result<Vec<Value>> {
         .get("agentProviders")
         .filter(|value| !value.is_null())
     {
-        return providers.as_array().cloned().ok_or("Agent invalide.");
+        return providers.as_array().cloned().ok_or("message.invalid_agent");
     }
-    Ok([("codex", "Codex"), ("claude", "Claude Code")]
-        .into_iter()
-        .map(|(id, name)| {
+    Ok(super::agent_catalog::AGENTS.iter().filter(|agent| agent.default_profile)
+        .map(|agent| {
+            let (id, name) = (agent.id, agent.name);
             let default = |suffix| settings.get(format!("{id}{suffix}")).filter(|value| truthy(value)).cloned().unwrap_or(json!(""));
             json!({"id": id, "name": name, "type": id, "auth": "cli", "model": default("Model"), "effort": default("Effort")})
         })
@@ -61,7 +65,7 @@ pub fn agent_provider(settings: &Value, id: &str) -> Result<Value> {
     agent_providers(settings)?
         .into_iter()
         .find(|provider| provider["id"] == id)
-        .ok_or("Agent invalide.")
+        .ok_or("message.invalid_agent")
 }
 
 pub fn agent_options(agent: &str, body: &Value, settings: Option<&Value>) -> Result<Value> {
@@ -69,41 +73,37 @@ pub fn agent_options(agent: &str, body: &Value, settings: Option<&Value>) -> Res
         .map(|settings| agent_provider(settings, agent))
         .transpose()?;
     let kind = match provider.as_ref() {
-        Some(provider) => provider["type"].as_str().ok_or("Agent invalide.")?,
+        Some(provider) => provider["type"].as_str().ok_or("message.invalid_agent")?,
         None => agent,
     };
-    let efforts: &[&str] = match kind {
-        "codex" => &["none", "minimal", "low", "medium", "high", "xhigh"],
-        "claude" => &["low", "medium", "high", "xhigh", "max"],
-        "command" => &[],
-        _ => return Err("Agent invalide."),
-    };
+    let agent_type = super::agent_catalog::find(kind).ok_or("message.invalid_agent")?;
     let model = body
         .get("model")
         .map_or(Some(""), Value::as_str)
-        .ok_or("Modèle invalide.")?;
-    let model = text(model, 180).map_err(|_| "Modèle invalide.")?;
-    if !model.is_empty()
+        .ok_or("message.invalid_model")?;
+    let model = text(model, 180).map_err(|_| "message.invalid_model")?;
+    if model.chars().any(char::is_control) { return Err("message.invalid_model"); }
+    if agent_type.protocol != super::agent_catalog::ProtocolKind::Acp && !model.is_empty()
         && (!model.as_bytes()[0].is_ascii_alphanumeric()
             || !model
                 .bytes()
-                .all(|c| c.is_ascii_alphanumeric() || b"._:/-".contains(&c)))
+                .all(|c| c.is_ascii_alphanumeric() || b"._:/-[]".contains(&c)))
     {
-        return Err("Modèle invalide.");
+        return Err("message.invalid_model");
     }
-    let invalid_effort = "Niveau de réflexion invalide pour cet agent.";
+    let invalid_effort = "message.invalid_reasoning_effort_for_this_agent";
     let effort = body
         .get("effort")
         .map_or(Some(""), Value::as_str)
         .ok_or(invalid_effort)?;
     if !effort.is_empty()
-        && if kind == "command" {
+        && if agent_type.custom_effort {
             effort.len() > 40
                 || !effort
                     .bytes()
                     .all(|c| c.is_ascii_alphanumeric() || b"_-".contains(&c))
         } else {
-            !efforts.contains(&effort)
+            !agent_type.efforts.contains(&effort)
         }
     {
         return Err(invalid_effort);
@@ -112,7 +112,7 @@ pub fn agent_options(agent: &str, body: &Value, settings: Option<&Value>) -> Res
 }
 
 pub fn resolve_agent_options(settings: &Value, card: &Value, body: &Value) -> Result<Value> {
-    let agent = body["agent"].as_str().ok_or("Agent invalide.")?;
+    let agent = body["agent"].as_str().ok_or("message.invalid_agent")?;
     let provider = agent_provider(settings, agent)?;
     let selected = |key| {
         body.get(key)
@@ -161,7 +161,7 @@ pub fn options_document(kind: &str, body: &Document) -> Result<Value> {
 }
 
 fn provider_text(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
-    let invalid = "Réglage du fournisseur invalide.";
+    let invalid = "message.invalid_provider_setting";
     let value = body
         .get::<JsonString>(key)
         .map_err(|_| invalid)?
@@ -195,17 +195,17 @@ fn arguments(value: Option<&RawValue>) -> Result<Vec<JsonString>> {
     let Some(value) = value else {
         return Ok(Vec::new());
     };
-    let list: Vec<Box<RawValue>> = serde_json::from_str(value.get())
-        .map_err(|_| "Les arguments doivent être une liste JSON.")?;
+    let list: Vec<Box<RawValue>> =
+        serde_json::from_str(value.get()).map_err(|_| "message.arguments_must_be_a_json_array")?;
     if list.len() > 100 {
-        return Err("Les arguments doivent être une liste JSON.");
+        return Err("message.arguments_must_be_a_json_array");
     }
     list.iter()
         .map(|raw| {
             let value: JsonString =
-                serde_json::from_str(raw.get()).map_err(|_| "Argument invalide.")?;
+                serde_json::from_str(raw.get()).map_err(|_| "message.invalid_argument")?;
             if value.0.len() > 4000 || value.0.contains(&0) {
-                return Err("Argument invalide.");
+                return Err("message.invalid_argument");
             }
             Ok(value)
         })
@@ -213,10 +213,10 @@ fn arguments(value: Option<&RawValue>) -> Result<Vec<JsonString>> {
 }
 
 pub fn provider_settings(raw: &RawValue) -> Result<Document> {
-    let body: Document = serde_json::from_str(raw.get()).map_err(|_| "Fournisseur invalide.")?;
+    let body: Document = serde_json::from_str(raw.get()).map_err(|_| "message.invalid_provider")?;
     let id = provider_text(&body, "id", 64)?;
     let name = provider_text(&body, "name", 100)?;
-    let id = id.utf8().map_err(|_| "Fournisseur invalide.")?;
+    let id = id.utf8().map_err(|_| "message.invalid_provider")?;
     let kind = body
         .get::<String>("type")
         .ok()
@@ -229,20 +229,23 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
         || ["constructor", "prototype", "__proto__"].contains(&id.as_str())
         || name.0.is_empty()
-        || !["codex", "claude", "command"].contains(&kind)
+        || super::agent_catalog::find(kind).is_none()
     {
-        return Err("Fournisseur invalide.");
+        return Err("message.invalid_provider");
     }
     let auth = body
         .raw("auth")
         .filter(|value| value.get() != "null")
         .map(|raw| serde_json::from_str::<String>(raw.get()))
         .transpose()
-        .map_err(|_| "Authentification invalide.")?
+        .map_err(|_| "message.invalid_authentication")?
         .unwrap_or_else(|| "cli".into());
     let auth = Some(auth.as_str())
-        .filter(|auth| ["cli", "api"].contains(auth) && (*auth != "api" || kind == "codex"))
-        .ok_or("Authentification invalide.")?;
+        .filter(|auth| {
+            *auth == "cli"
+                || (*auth == "api" && super::agent_catalog::find(kind).is_some_and(|a| a.api_auth))
+        })
+        .ok_or("message.invalid_authentication")?;
     let command = provider_text(&body, "command", 2000)?;
     let config_dir = provider_text(&body, "configDir", 2000)?;
     let account_label = provider_text(&body, "accountLabel", 200)?;
@@ -254,15 +257,25 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
         .iter()
         .any(|path| path.len() >= 2 && path.as_bytes()[..2].iter().all(|c| b"/\\".contains(c)))
     {
-        return Err("Les chemins réseau et périphériques ne sont pas autorisés.");
+        return Err("message.network_and_device_paths_are_not_allowed");
     }
     if !config_view.is_empty() && !absolute(&config_view) {
-        return Err("Le dossier de configuration doit être absolu.");
+        return Err("message.the_configuration_folder_path_must_be_absolute");
+    }
+    if !config_view.is_empty()
+        && super::agent_catalog::find(kind).is_some_and(|agent| {
+            agent.protocol == super::agent_catalog::ProtocolKind::Acp
+                && agent.config_environment.is_none()
+        })
+    {
+        return Err("message.this_agent_type_does_not_support_selecting_a_configuration_direc");
     }
     if command_view.contains(['/', '\\']) && !absolute(&command_view) {
-        return Err("Le chemin de l’exécutable doit être absolu.");
+        return Err("message.the_executable_path_must_be_absolute");
     }
-    let npm_package = npm_package.utf8().map_err(|_| "Paquet npm invalide.")?;
+    let npm_package = npm_package
+        .utf8()
+        .map_err(|_| "message.invalid_npm_package")?;
     if !npm_package.is_empty()
         && !match npm_package.strip_prefix('@') {
             Some(scoped) => scoped
@@ -271,10 +284,13 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
             None => package_part(&npm_package),
         }
     {
-        return Err("Paquet npm invalide.");
+        return Err("message.invalid_npm_package");
     }
-    if command_view.starts_with('-') || (kind == "command" && command_view.is_empty()) {
-        return Err("Exécutable requis.");
+    if command_view.starts_with('-')
+        || (super::agent_catalog::find(kind).is_some_and(|agent| agent.executable.is_none())
+            && command_view.is_empty())
+    {
+        return Err("message.executable_required");
     }
     let options = options_document(kind, &body)?;
     let mut provider = Document::default();
@@ -289,18 +305,18 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
     ] {
         provider
             .set(key, &value)
-            .map_err(|_| "Fournisseur invalide.")?;
+            .map_err(|_| "message.invalid_provider")?;
     }
     for key in ["model", "effort"] {
         provider
             .set(key, &options[key])
-            .map_err(|_| "Fournisseur invalide.")?;
+            .map_err(|_| "message.invalid_provider")?;
     }
     if kind == "command" {
         for key in ["analyzeArgs", "editArgs"] {
             provider
                 .set(key, &arguments(body.raw(key))?)
-                .map_err(|_| "Fournisseur invalide.")?;
+                .map_err(|_| "message.invalid_provider")?;
         }
         let version = match body
             .raw("versionArgs")
@@ -311,13 +327,18 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
         };
         provider
             .set("versionArgs", &version)
-            .map_err(|_| "Fournisseur invalide.")?;
+            .map_err(|_| "message.invalid_provider")?;
         provider
             .set("statusArgs", &arguments(body.raw("statusArgs"))?)
-            .map_err(|_| "Fournisseur invalide.")?;
+            .map_err(|_| "message.invalid_provider")?;
         provider
             .set("npmPackage", &npm_package)
-            .map_err(|_| "Fournisseur invalide.")?;
+            .map_err(|_| "message.invalid_provider")?;
+    }
+    if kind == "acp" {
+        provider
+            .set("protocolArgs", &arguments(body.raw("protocolArgs"))?)
+            .map_err(|_| "message.invalid_provider")?;
     }
     Ok(provider)
 }

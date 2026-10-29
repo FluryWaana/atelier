@@ -67,7 +67,7 @@ pub(super) fn parent(root: &Dir, name: &str, create: bool) -> Result<Option<(Dir
         }
         directory = directory.open_dir_nofollow(part)?;
     }
-    Err("Chemin de configuration agent invalide.".into())
+    Err("message.invalid_agent_configuration_path".into())
 }
 
 fn read(root: &Dir, name: &str, limit: usize) -> Result<Option<Vec<u8>>> {
@@ -102,7 +102,7 @@ fn manifest(metadata: &Dir) -> Result<Manifest> {
                     })
         })
     {
-        return Err("Inventaire du contexte agent invalide.".into());
+        return Err("message.invalid_agent_context_inventory".into());
     }
     Ok(value)
 }
@@ -147,7 +147,7 @@ pub(super) fn exclude(source: &Dir, names: impl Iterator<Item = String>) -> Resu
         }
     }
     if bytes.len() > TOTAL_LIMIT {
-        return Err("Règles d’exclusion Git trop volumineuses.".into());
+        return Err("message.git_exclusion_rules_are_too_large".into());
     }
     if changed {
         publish::write_private(&info, Path::new("exclude"), &bytes, false)?;
@@ -175,14 +175,14 @@ fn synchronize(
         total += bytes.len();
         if total > TOTAL_LIMIT {
             return Err(
-                "Configuration agent trop volumineuse (1 Mio par fichier, 8 Mio au total).".into(),
+                "message.agent_configuration_is_too_large_1_mib_per_file_8_mib_total".into(),
             );
         }
         #[cfg(unix)]
         let executable = {
             use cap_std::fs::PermissionsExt;
             let (directory, file) =
-                parent(&source, &name, false)?.ok_or("Configuration agent disparue.")?;
+                parent(&source, &name, false)?.ok_or("message.agent_configuration_is_missing")?;
             directory.symlink_metadata(file)?.permissions().mode() & 0o100 != 0
         };
         #[cfg(not(unix))]
@@ -195,7 +195,7 @@ fn synchronize(
         .cloned()
         .collect::<BTreeSet<_>>();
     if names.len() > COUNT_LIMIT {
-        return Err("Configuration agent trop volumineuse (2 000 fichiers maximum).".into());
+        return Err("message.agent_configuration_is_too_large_2_000_files_maximum".into());
     }
     let mut planned = Manifest::new();
     let mut finished = Manifest::new();
@@ -243,10 +243,12 @@ fn synchronize(
     save(&metadata, &planned)?;
     for change in changes {
         if read(&target, &change.name, FILE_LIMIT)?.map(|bytes| digest(&bytes)) != change.before {
-            return Err("Le contexte agent a changé pendant la synchronisation. Réessaie après vérification.".into());
+            return Err(
+                "message.agent_context_changed_during_synchronization_verify_it_before_tr".into(),
+            );
         }
         let (directory, name) = parent(&target, &change.name, change.next.is_some())?
-            .ok_or("Configuration agent disparue.")?;
+            .ok_or("message.agent_configuration_is_missing")?;
         if let Some(file) = change.next {
             // Private temporary bytes stay in Git metadata, never as publishable untracked files.
             publish::write_private_from(
@@ -307,7 +309,7 @@ pub(super) async fn sync(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> 
         .map(str::to_owned)
         .collect::<BTreeSet<_>>();
     if names.len() > COUNT_LIMIT {
-        return Err("Configuration agent trop volumineuse (2 000 fichiers maximum).".into());
+        return Err("message.agent_configuration_is_too_large_2_000_files_maximum".into());
     }
     let tracked = String::from_utf8(target.git(&["ls-files", "--cached", "-z"]).await?)?
         .split('\0')

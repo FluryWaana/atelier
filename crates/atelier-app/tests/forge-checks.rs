@@ -288,7 +288,11 @@ async fn observed_checks_bind_commits_latest_decisions_and_explicit_unavailable_
                     assert_eq!(policy.scope, Scope::Unscoped);
                     assert_eq!(policy.commit, None);
                     assert_eq!(policy.state, State::Succeeded);
-                    assert!(policy.description.contains("bloquante"));
+                    assert!(policy.description.is_empty());
+                    assert_eq!(
+                        policy.description_key.as_deref(),
+                        Some("message.active_blocking_policy_pr_result_with_no_commit_provided")
+                    );
                     assert_eq!(report.other_snapshot_count, 1);
                     assert!(
                         report

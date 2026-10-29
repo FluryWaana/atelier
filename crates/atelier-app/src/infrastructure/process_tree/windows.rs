@@ -148,6 +148,27 @@ pub struct ContainedChild {
     job: Job,
 }
 
+fn safe_script_argument(value: &std::ffi::OsStr) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    value.encode_wide().all(|unit| {
+        unit >= 0x20
+            && !matches!(
+                unit,
+                0x22 | 0x25 | 0x26 | 0x28 | 0x29 | 0x3c | 0x3e | 0x5e | 0x7c | 0x21
+            )
+    })
+}
+
+#[cfg(test)]
+#[test]
+fn batch_arguments_reject_shell_expansion_and_control_characters() {
+    use std::ffi::OsStr;
+    assert!(safe_script_argument(OsStr::new("model name-v2")));
+    for value in ["a&b", "a|b", "%PATH%", "!name!", "a\nb", "a\"b", "(x)"] {
+        assert!(!safe_script_argument(OsStr::new(value)));
+    }
+}
+
 impl ContainedChild {
     pub async fn process_ids(&self) -> Result<Vec<u32>> {
         use windows_sys::Win32::{
@@ -189,7 +210,7 @@ impl ContainedChild {
                 .map(|id| u32::try_from(*id).map_err(Into::into))
                 .collect();
         }
-        Err("Trop de processus dans le service (4 096 maximum).".into())
+        Err("message.service_processes_too_many".into())
     }
 
     pub async fn spawn(command: &mut Command) -> Result<Self> {
@@ -199,13 +220,27 @@ impl ContainedChild {
         command: &mut Command,
         ready: impl FnOnce() -> Result<()>,
     ) -> Result<Self> {
+        let program = std::path::Path::new(command.as_std().get_program());
+        if program
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| {
+                extension.eq_ignore_ascii_case("cmd") || extension.eq_ignore_ascii_case("bat")
+            })
+            && (!safe_script_argument(program.as_os_str())
+                || !command.as_std().get_args().all(safe_script_argument))
+        {
+            return Err(
+                "Ce lanceur Windows ne peut pas recevoir ces caractères dans ses arguments.".into(),
+            );
+        }
         let job = Job::new()?;
         command
             .creation_flags(CREATE_NO_WINDOW | CREATE_SUSPENDED)
             .kill_on_drop(true);
         let mut child = command.spawn()?;
         let attach = (|| -> Result<()> {
-            let pid = child.id().ok_or("Processus de démarrage absent.")?;
+            let pid = child.id().ok_or("message.startup_process_missing")?;
             job.attach(child.raw_handle().ok_or("Handle de démarrage absent.")?)?;
             let thread = primary_thread(pid)?;
             ready()?;
@@ -233,6 +268,6 @@ impl ContainedChild {
         self.job.terminate()?;
         tokio::time::timeout(Duration::from_secs(10), self.wait())
             .await
-            .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
+            .map_err(|_| "message.process_stop_unconfirmed")?
     }
 }

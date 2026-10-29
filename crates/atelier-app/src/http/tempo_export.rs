@@ -21,20 +21,20 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
         None => {
             return super::failure(
                 StatusCode::BAD_REQUEST,
-                "Paramètres d’export Tempo invalides.",
+                "message.invalid_tempo_export_parameters",
             );
         }
     };
     if input.expected.get::<String>("id").ok().flatten().as_deref() != Some(id.as_str()) {
         return super::failure(
             StatusCode::BAD_REQUEST,
-            "Identité de temps locale invalide.",
+            "message.invalid_local_time_identity",
         );
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return super::failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     if action == "export-preview" {
@@ -43,7 +43,7 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
     if !input.confirmed {
         return super::failure(
             StatusCode::BAD_REQUEST,
-            "Confirme l’auteur, le ticket et les données du temps à envoyer.",
+            "message.confirm_the_author_ticket_and_time_data_to_send",
         );
     }
     let reconcile = action == "reconcile";
@@ -68,7 +68,7 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
                     .expected
                     .get::<TempoExportPreview>("tempoExportPreview")?
             }
-            .ok_or("Prépare un aperçu avant l’export Tempo.")?;
+            .ok_or("message.prepare_a_preview_before_exporting_to_tempo")?;
             let jira = store
                 .settings::<Document>()?
                 .get::<JiraConfiguration>("jiraConnection")?
@@ -77,26 +77,28 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
                 || preview.jira_url != jira.url
                 || jira.mode != JiraMode::Cloud
             {
-                return Err("Reconnecte les sites Jira et Tempo de l’envoi incertain.".into());
+                return Err(
+                    "message.reconnect_the_jira_and_tempo_sites_of_the_uncertain_export".into(),
+                );
             }
             let entry = if !reconcile {
                 workflow::reserve(store, &requested, &operation_id)?
             } else {
                 let entry = store
                     .document::<Document>(Documents::Times, &id)?
-                    .ok_or("Entrée de temps introuvable.")?;
+                    .ok_or("message.time_entry_not_found")?;
                 if serde_json::to_value(&entry)? != serde_json::to_value(&requested.expected)?
                     || !entry.string_equals("exportState", "uncertain")?
                 {
-                    return Err("La saisie de temps a changé. Relis-la avant l’export.".into());
+                    return Err("message.the_time_entry_changed_read_it_again_before_export".into());
                 }
                 entry
             };
             let intent = entry
                 .get::<TempoExportIntent>("tempoExport")?
-                .ok_or("Intention d’export Tempo absente.")?;
+                .ok_or("message.missing_tempo_export_intent")?;
             if reconcile && intent.state != Phase::Uncertain {
-                return Err("Aucun export Tempo incertain à vérifier.".into());
+                return Err("message.no_uncertain_tempo_export_to_check".into());
             }
             Ok((entry, intent, configuration, token))
         })
@@ -125,7 +127,10 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
         } else if let Some(worklog) = intent.worklog_id {
             client.read(worklog, &intent.preview.payload).await?
         } else {
-            client.find(&entry_id,&intent.preview.payload).await?.ok_or("Aucun journal Tempo retrouvé. L’envoi reste incertain ; aucun renvoi automatique.")?
+            client
+                .find(&entry_id, &intent.preview.payload)
+                .await?
+                .ok_or("message.no_tempo_worklog_found_export_remains_uncertain_no_automatic_res")?
         };
         let entry_id = entry_id.clone();
         let operation_id = intent.id.clone();
@@ -147,11 +152,11 @@ pub(super) async fn action(state: Shared, id: String, action: &str, body: Docume
     let stopping = *closing.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
         tokio::select! {
-            result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("Export Tempo interrompu ou trop long. Relis le journal avant toute nouvelle tentative.".into())),
-            _=closing.changed()=>Err("Atelier est en cours d’arrêt.".into()),
+            result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("message.tempo_export_interrupted_or_timed_out_read_the_worklog_before_tr".into())),
+            _=closing.changed()=>Err("message.atelier_is_shutting_down".into()),
         }
     };
     let result = match result {
@@ -181,10 +186,7 @@ async fn preview(state: &Shared, input: TempoExportRequest) -> Result<Document> 
             .call(move |store| {
                 let (entry, _, ticket) = workflow::selected(store, &requested)?;
                 if !entry.string_equals("exportState", "draft")? || entry.truthy("runningSince")? {
-                    return Err(
-                        "Arrête le chronomètre ; seul un temps non envoyé peut être préparé."
-                            .into(),
-                    );
+                    return Err("message.stop_the_timer_only_unsent_time_can_be_prepared".into());
                 }
                 let (configuration, tempo_token) =
                     tempo::credentials(store, requested.tempo_revision, &mut |value, decrypt| {
@@ -206,20 +208,23 @@ async fn preview(state: &Shared, input: TempoExportRequest) -> Result<Document> 
             .await?;
         let id = entry
             .get::<String>("id")?
-            .ok_or("Identité de temps locale invalide.")?;
-        uuid::Uuid::parse_str(&id).map_err(|_| "Identité de temps locale invalide.")?;
+            .ok_or("message.invalid_local_time_identity")?;
+        uuid::Uuid::parse_str(&id).map_err(|_| "message.invalid_local_time_identity")?;
         let client = jira::Jira::new(jira_configuration, jira_token)?;
         let issue_id = ticket
             .get::<String>("id")?
-            .ok_or("Identifiant Jira invalide.")?;
+            .ok_or("message.invalid_jira_issue_identifier")?;
         let issue = client.issue_by_id(&issue_id).await?;
         if !ticket.string_equals("key", &issue.key)? {
-            return Err("La clé Jira a changé. Relis le ticket avant l’export.".into());
+            return Err("message.the_jira_key_changed_read_the_ticket_again_before_export".into());
         }
         let account = client.account_id().await?;
         let fields = atelier_core::domain::time::time_fields(&entry)?;
         let payload = TempoPayload {
-            issue_id: issue.id.parse().map_err(|_| "Identifiant Jira invalide.")?,
+            issue_id: issue
+                .id
+                .parse()
+                .map_err(|_| "message.invalid_jira_issue_identifier")?,
             author_account_id: account,
             time_spent_seconds: fields.seconds,
             start_date: fields.date,
@@ -234,5 +239,5 @@ async fn preview(state: &Shared, input: TempoExportRequest) -> Result<Document> 
     };
     tokio::time::timeout(std::time::Duration::from_secs(90), operation)
         .await
-        .unwrap_or_else(|_| Err("Préparation de l’export Tempo trop longue.".into()))
+        .unwrap_or_else(|_| Err("message.tempo_export_preparation_timed_out".into()))
 }

@@ -24,7 +24,7 @@ pub(super) async fn inspect_status(
     let Ok(_permit) = state.file_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "La lecture des dépôts est occupée. Réessaie dans un instant.",
+            "message.repository_inspection_is_busy_try_again_shortly",
         );
     };
     let lookup = id.clone();
@@ -34,7 +34,7 @@ pub(super) async fn inspect_status(
         .await
     {
         Ok(Some(card)) => card,
-        Ok(None) => return failure(StatusCode::NOT_FOUND, "Carte introuvable."),
+        Ok(None) => return failure(StatusCode::NOT_FOUND, "message.card_not_found"),
         Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
     };
     let worktree = match card.fields.get::<Worktree>("worktree") {
@@ -42,7 +42,7 @@ pub(super) async fn inspect_status(
         _ => {
             return failure(
                 StatusCode::CONFLICT,
-                "Vérifie ou termine l’opération interrompue sur ce worktree.",
+                "message.verify_or_finish_the_interrupted_operation_on_this_worktree",
             );
         }
     };
@@ -55,7 +55,7 @@ pub(super) async fn inspect_status(
     if !atelier_core::domain::projects::same_repository(&repo, &worktree.source, cfg!(windows)) {
         return failure(
             StatusCode::CONFLICT,
-            "Le dépôt source ne correspond plus au worktree.",
+            "message.the_source_repository_no_longer_matches_the_worktree",
         );
     }
     let (head, clean) = match worktrees::inspect_status(
@@ -78,7 +78,7 @@ pub(super) async fn inspect_status(
             if current.fields.get::<Worktree>("worktree")?.as_ref() != Some(&expected)
                 || current.fields.get::<String>("repo")?.unwrap_or_default() != repo
             {
-                return Err("L’association du worktree a changé pendant sa lecture.".into());
+                return Err("message.the_worktree_association_changed_during_inspection".into());
             }
             store.timestamp()
         })
@@ -147,12 +147,14 @@ async fn prepare_services(
             .get(&role)
             .is_some_and(|worktree| !same(&worktree.source))
         {
-            return Err("Le dépôt du service a changé. Retire les worktrees associés avant de le remplacer.".into());
+            return Err(
+                "message.the_service_repository_has_changed_remove_the_associated_worktre".into(),
+            );
         }
         let mut worktree =
             if let Some(worktree) = owned.values().find(|worktree| same(&worktree.source)) {
                 if worktree.branch != primary.branch {
-                    return Err("Association des worktrees de service incohérente.".into());
+                    return Err("message.inconsistent_service_worktree_association".into());
                 }
                 worktree.clone()
             } else {
@@ -280,7 +282,7 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
     let roots = &state.prototype_paths;
     if remove {
         let discard = usecase::removal(&body)?;
-        let worktree = original.ok_or("Aucun worktree associé.")?;
+        let worktree = original.ok_or("message.no_associated_worktree")?;
         let mut removing = worktree.clone();
         removing.state = WorktreeState::Removing;
         save(state, id.clone(), Some(worktree), Some(removing.clone())).await?;
@@ -295,7 +297,7 @@ async fn change(state: &Shared, id: String, body: Document, remove: bool) -> Res
             let worktree = if let Some(kind) = options.fetch_forge {
                 let revision = options
                     .forge_revision
-                    .ok_or("Révision de forge requise pour le fetch HTTPS.")?;
+                    .ok_or("message.a_forge_revision_is_required_for_the_https_fetch")?;
                 let vault = state.vault.clone();
                 let (configuration, token) = state
                     .database
@@ -375,7 +377,7 @@ async fn mutate(state: Shared, id: String, request: Request, remove: bool) -> Re
     let Ok(_readers) = state.file_reads.try_acquire_many(2) else {
         return failure(
             StatusCode::CONFLICT,
-            "Attends la fin de la lecture des fichiers avant de modifier le worktree.",
+            "message.wait_for_file_reading_to_finish_before_changing_the_worktree",
         );
     };
     let body = match object(request.into_body()).await {
@@ -395,7 +397,7 @@ async fn mutate(state: Shared, id: String, request: Request, remove: bool) -> Re
                 _ => StatusCode::BAD_REQUEST,
             };
             let message = if status == StatusCode::INTERNAL_SERVER_ERROR {
-                "Enregistrement du worktree impossible.".to_owned()
+                "message.the_worktree_could_not_be_saved".to_owned()
             } else {
                 error.to_string()
             };

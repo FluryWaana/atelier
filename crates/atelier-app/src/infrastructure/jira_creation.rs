@@ -17,7 +17,7 @@ use atelier_core::{
 };
 fn conflict() -> crate::Error {
     JiraFailure::OperationConflict(
-        "La carte ou la création Jira a changé. Recharge avant de réessayer.",
+        "message.the_card_or_jira_creation_changed_reload_before_trying_again",
     )
     .into()
 }
@@ -49,7 +49,7 @@ pub fn reserve(store: &Store<'_>, request: &JiraCreateRequest, operation: &str) 
             || request.issue_type.name.len() > 400
             || request.issue_type.name.chars().any(char::is_control)
         {
-            return Err("Confirme le projet et le type du ticket Jira à créer.".into());
+            return Err("message.confirm_the_jira_project_and_issue_type_to_create".into());
         }
         let mut card = revalidate(store, &request.expected, request.revision)?;
         if card.fields.truthy("archived")?
@@ -57,12 +57,12 @@ pub fn reserve(store: &Store<'_>, request: &JiraCreateRequest, operation: &str) 
             || domain::unresolved(&card.fields)?
         {
             return Err(
-                "Restaure la carte et termine les opérations avant de créer un ticket Jira.".into(),
+                "message.restore_the_card_and_finish_pending_operations_before_creating_a".into(),
             );
         }
         for run in store.documents::<Document>(Documents::Runs)? {
             if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
-                return Err("Arrête l’exécution avant de créer le ticket Jira.".into());
+                return Err("message.stop_the_run_before_creating_the_jira_issue".into());
             }
         }
         domain::creation_text(&card)?;
@@ -71,7 +71,7 @@ pub fn reserve(store: &Store<'_>, request: &JiraCreateRequest, operation: &str) 
             .get::<JiraConfiguration>("jiraConnection")?
             .ok_or_else(conflict)?;
         if configuration.url.is_empty() {
-            return Err("Renseigne la connexion Jira dans les paramètres.".into());
+            return Err("message.configure_the_jira_connection_in_settings".into());
         }
         let intent = JiraCreationIntent {
             id: operation.into(),
@@ -136,7 +136,7 @@ pub fn record(store: &Store<'_>, card_id: &str, operation: &str, issue: JiraIssu
     store.transaction(|store|{
         let (mut card,mut intent)=active(store,card_id,operation)?;
         if !matches!(intent.state,Phase::Sending|Phase::Uncertain) || !domain::issue_identity(&issue.id,&issue.key) || issue.url!=format!("{}/browse/{}",intent.base.trim_end_matches('/'),issue.key) || card.fields.truthy("ticket")?{return Err(conflict());}
-        if intent.result.as_ref().is_some_and(|known|known.id!=issue.id){return Err("Ce ticket ne correspond pas à la création identifiée.".into());}
+        if intent.result.as_ref().is_some_and(|known|known.id!=issue.id){return Err("message.this_issue_does_not_match_the_identified_creation".into());}
         let mut duplicate=false;
         for other in store.documents::<Card>(Documents::Cards)? {
             if other.id==card.id{continue;}
@@ -163,7 +163,7 @@ pub fn close_uncertainty(store: &Store<'_>, expected: &Card, revision: u64) -> R
             .get::<JiraConfiguration>("jiraConnection")?
             .ok_or_else(conflict)?;
         if current.url != intent.base {
-            return Err("Reconnecte le site Jira de la création incertaine.".into());
+            return Err("message.reconnect_the_jira_site_of_the_uncertain_creation".into());
         }
         intent.state = Phase::Dismissed;
         card.fields.set("jiraCreation", &intent)?;

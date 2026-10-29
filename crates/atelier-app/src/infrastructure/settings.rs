@@ -33,7 +33,9 @@ pub fn jira_base(value: &JsonString) -> Result<JsonString> {
         || url.query().is_some_and(|value| !value.is_empty())
         || url.fragment().is_some_and(|value| !value.is_empty())
     {
-        return Err("Adresse Jira HTTPS requise, sans identifiants ni paramètres.".into());
+        return Err(
+            "message.an_https_jira_address_without_credentials_or_parameters_is_requi".into(),
+        );
     }
     let value = url.as_str();
     Ok(JsonString::from(value.strip_suffix('/').unwrap_or(value)))

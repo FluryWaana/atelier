@@ -37,26 +37,26 @@ pub fn selected(
     let id = input
         .expected
         .get::<String>("id")?
-        .ok_or("Identité de temps locale invalide.")?;
+        .ok_or("message.invalid_local_time_identity")?;
     let entry = store
         .document::<Document>(Documents::Times, &id)?
-        .ok_or("Entrée de temps introuvable.")?;
+        .ok_or("message.time_entry_not_found")?;
     if entry.raw("connectorExport").is_some() {
         return Err(
-            "Rapproche cet export dans le journal du module ; aucun envoi Tempo concurrent.".into(),
+            "message.reconcile_this_export_in_the_module_journal_no_overlapping_tempo".into(),
         );
     }
     if serde_json::to_value(&entry)? != serde_json::to_value(&input.expected)?
         || !entry.string_equals("cardId", &input.expected_card.id)?
     {
-        return Err("La saisie de temps a changé. Relis-la avant l’export.".into());
+        return Err("message.the_time_entry_changed_read_it_again_before_export".into());
     }
     let card = forge_association::snapshot(store, &input.expected_card)?;
     let ticket = card
         .fields
         .get::<Document>("ticket")?
         .filter(|ticket| ticket.string_equals("connector", "jira").unwrap_or(false))
-        .ok_or("Associe un ticket Jira à cette tâche avant l’export.")?;
+        .ok_or("message.link_a_jira_ticket_to_this_task_before_export")?;
     jira::require_revision(store, input.jira_revision)?;
     let configuration = store
         .settings::<Document>()?
@@ -65,7 +65,7 @@ pub fn selected(
     if configuration.mode != JiraMode::Cloud
         || !ticket.string_equals("instance", &configuration.url)?
     {
-        return Err("Reconnecte le site Jira Cloud associé à ce ticket.".into());
+        return Err("message.reconnect_the_jira_cloud_site_linked_to_this_ticket".into());
     }
     Ok((entry, card, ticket))
 }
@@ -79,26 +79,26 @@ pub fn save_preview(
         tempo::validate_payload(&payload)?;
         let (mut entry, card, ticket) = selected(store, input)?;
         if !entry.string_equals("exportState", "draft")? || entry.truthy("runningSince")? {
-            return Err(
-                "Arrête le chronomètre ; seul un temps non envoyé peut être préparé.".into(),
-            );
+            return Err("message.stop_the_timer_only_unsent_time_can_be_prepared".into());
         }
         let id = entry
             .get::<String>("id")?
-            .ok_or("Identité de temps locale invalide.")?;
-        uuid::Uuid::parse_str(&id).map_err(|_| "Identité de temps locale invalide.")?;
+            .ok_or("message.invalid_local_time_identity")?;
+        uuid::Uuid::parse_str(&id).map_err(|_| "message.invalid_local_time_identity")?;
         let fields = atelier_core::domain::time::time_fields(&entry)?;
         let issue = ticket
             .get::<String>("id")?
             .and_then(|id| id.parse::<u64>().ok())
-            .ok_or("Identifiant Jira invalide.")?;
+            .ok_or("message.invalid_jira_issue_identifier")?;
         if payload.issue_id != issue
             || payload.time_spent_seconds != fields.seconds
             || payload.start_date != fields.date
             || payload.start_time != fields.start_time
             || payload.description != format!("{}\n[atelier:{id}]", fields.description.utf8()?)
         {
-            return Err("L’aperçu Tempo ne correspond pas à la saisie et au ticket.".into());
+            return Err(
+                "message.the_tempo_preview_does_not_match_the_time_entry_and_ticket".into(),
+            );
         }
         let settings = store.settings::<Document>()?;
         let current = settings
@@ -108,7 +108,7 @@ pub fn save_preview(
             .get::<JiraConfiguration>("jiraConnection")?
             .unwrap_or_default();
         if current != configuration || configuration.revision != input.tempo_revision {
-            return Err("La connexion Tempo a changé. Recharge avant de réessayer.".into());
+            return Err("message.the_tempo_connection_changed_reload_before_trying_again".into());
         }
         let preview = TempoExportPreview {
             entry: entry_snapshot(&entry)?,
@@ -127,12 +127,12 @@ pub fn save_preview(
 pub fn reserve(store: &Store<'_>, input: &TempoExportRequest, id: &str) -> Result<Document> {
     store.transaction(|store| {
         if !input.confirmed || uuid::Uuid::parse_str(id).is_err() {
-            return Err("Confirme l’auteur, le ticket et les données du temps à envoyer.".into());
+            return Err("message.confirm_the_author_ticket_and_time_data_to_send".into());
         }
         let (mut entry, card, ticket) = selected(store, input)?;
         let preview = entry
             .get::<TempoExportPreview>("tempoExportPreview")?
-            .ok_or("Prépare un aperçu avant l’export Tempo.")?;
+            .ok_or("message.prepare_a_preview_before_exporting_to_tempo")?;
         let configuration = store
             .settings::<Document>()?
             .get::<TempoConfiguration>("tempoConnection")?
@@ -147,7 +147,7 @@ pub fn reserve(store: &Store<'_>, input: &TempoExportRequest, id: &str) -> Resul
             || configuration.revision != input.tempo_revision
             || preview.jira_revision != input.jira_revision
         {
-            return Err("L’aperçu de l’export est périmé. Prépare-le à nouveau.".into());
+            return Err("message.the_export_preview_is_stale_prepare_it_again".into());
         }
         entry.set(
             "tempoExport",
@@ -168,13 +168,13 @@ pub fn reserve(store: &Store<'_>, input: &TempoExportRequest, id: &str) -> Resul
 fn active(store: &Store<'_>, entry_id: &str, id: &str) -> Result<(Document, TempoExportIntent)> {
     let entry = store
         .document::<Document>(Documents::Times, entry_id)?
-        .ok_or("Entrée de temps introuvable.")?;
+        .ok_or("message.time_entry_not_found")?;
     let intent = entry
         .get::<TempoExportIntent>("tempoExport")?
         .filter(|intent| {
             intent.id == id && matches!(intent.state, Phase::Sending | Phase::Uncertain)
         })
-        .ok_or("L’intention d’export Tempo a changé.")?;
+        .ok_or("message.the_tempo_export_intent_changed")?;
     Ok((entry, intent))
 }
 pub fn remember(store: &Store<'_>, entry_id: &str, id: &str, worklog: u64) -> Result<()> {
@@ -186,7 +186,7 @@ pub fn remember(store: &Store<'_>, entry_id: &str, id: &str, worklog: u64) -> Re
                 .worklog_id
                 .is_some_and(|previous| previous != worklog)
         {
-            return Err("Identité de journal Tempo invalide.".into());
+            return Err("message.invalid_tempo_worklog_identity".into());
         }
         intent.worklog_id = Some(worklog);
         entry.set("tempoExport", &intent)?;
@@ -201,7 +201,7 @@ pub fn uncertain(store: &Store<'_>, entry_id: &str, id: &str) -> Result<Document
         entry.set("exportState", &"uncertain")?;
         entry.set(
             "error",
-            &"Envoi Tempo incertain. Relis le journal avant toute nouvelle tentative.",
+            &"message.uncertain_tempo_export_read_the_worklog_before_trying_again",
         )?;
         store.put(Documents::Times, &entry)?;
         Ok(entry)
@@ -230,7 +230,9 @@ pub fn record(
             || jira.url != intent.preview.jira_url
             || jira.mode != JiraMode::Cloud
         {
-            return Err("Reconnecte les sites Jira et Tempo de l’envoi incertain.".into());
+            return Err(
+                "message.reconnect_the_jira_and_tempo_sites_of_the_uncertain_export".into(),
+            );
         }
         if intent
             .worklog_id
@@ -238,7 +240,7 @@ pub fn record(
             || worklog == 0
             || worklog > i64::MAX as u64
         {
-            return Err("Le journal Tempo relu ne correspond pas à l’export.".into());
+            return Err("message.the_observed_tempo_worklog_does_not_match_the_export".into());
         }
         intent.state = Phase::Confirmed;
         intent.observed_at = Some(
@@ -276,18 +278,18 @@ pub fn blocks(store: &Store<'_>, path: &str) -> Result<bool> {
 
 pub fn reset(store: &Store<'_>, entry_id: &str, body: &Document) -> Result<Document> {
     store.transaction(|store| {
-        let mut entry=store.document::<Document>(Documents::Times,entry_id)?.ok_or("Entrée de temps introuvable.")?;
-        let expected=body.get::<Document>("expected")?.ok_or("Relis la saisie de temps avant de la débloquer.")?;
-        let reason=body.get::<String>("manualEvidence")?.filter(|reason|!reason.trim().is_empty()&&reason.encode_utf16().count()<=1000&&!reason.chars().any(|c|c.is_control()&&!matches!(c,'\n'|'\r'|'\t'))).ok_or("Décris la vérification manuelle effectuée dans Tempo.")?;
+        let mut entry=store.document::<Document>(Documents::Times,entry_id)?.ok_or("message.time_entry_not_found")?;
+        let expected=body.get::<Document>("expected")?.ok_or("message.read_the_time_entry_again_before_unlocking_it")?;
+        let reason=body.get::<String>("manualEvidence")?.filter(|reason|!reason.trim().is_empty()&&reason.encode_utf16().count()<=1000&&!reason.chars().any(|c|c.is_control()&&!matches!(c,'\n'|'\r'|'\t'))).ok_or("message.describe_the_manual_check_performed_in_tempo")?;
         if serde_json::to_value(&entry)?!=serde_json::to_value(expected)? || !entry.string_equals("exportState","uncertain")?
             || body.get::<bool>("confirmed")?!=Some(true)||body.get::<bool>("acceptDuplicateRisk")?!=Some(true) {
-            return Err("Confirme la vérification manuelle et le risque de doublon avant de débloquer l’export.".into());
+            return Err("message.confirm_the_manual_check_and_risk_of_duplication_before_unlockin".into());
         }
-        let intent=entry.get::<TempoExportIntent>("tempoExport")?.filter(|intent|intent.state==Phase::Uncertain).ok_or("Aucun export Tempo incertain à vérifier.")?;
+        let intent=entry.get::<TempoExportIntent>("tempoExport")?.filter(|intent|intent.state==Phase::Uncertain).ok_or("message.no_uncertain_tempo_export_to_check")?;
         let mut history=entry.get::<Vec<serde_json::Value>>("tempoExportHistory")?.unwrap_or_default();
-        if history.len()>=16 {return Err("L’historique d’exports est plein. Résous les envois incertains avant de continuer.".into());}
+        if history.len()>=16 {return Err("message.the_export_history_is_full_resolve_uncertain_exports_before_cont".into());}
         history.push(serde_json::json!({"intent":intent,"manualEvidence":reason,"acknowledgedAt":time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?}));
-        if serde_json::to_vec(&history)?.len()>64*1024 {return Err("L’historique d’exports est plein. Résous les envois incertains avant de continuer.".into());}
+        if serde_json::to_vec(&history)?.len()>64*1024 {return Err("message.the_export_history_is_full_resolve_uncertain_exports_before_cont".into());}
         entry.set("tempoExportHistory",&history)?;entry.set("exportState",&"draft")?;
         for key in ["tempoExport","tempoExportPreview","error"] {entry.remove(key);}
         store.put(Documents::Times,&entry)?;Ok(entry)

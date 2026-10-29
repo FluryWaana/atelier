@@ -17,7 +17,7 @@ pub trait CreationContext {
 }
 
 pub(super) fn text(value: Option<&RawValue>, limit: usize) -> Result<JsonString> {
-    let invalid = || CardFailure::Invalid("Texte invalide ou trop long.");
+    let invalid = || CardFailure::Invalid("message.invalid_or_overly_long_text");
     let value = value.ok_or_else(invalid)?;
     let value = serde_json::from_str::<JsonString>(value.get()).map_err(|_| invalid())?;
     Ok(text_units(&value, limit).map_err(CardFailure::Invalid)?)
@@ -66,8 +66,8 @@ pub fn default_agent(
             if project.truthy("agent")? {
                 return Ok(project
                     .get::<JsonString>("agent")
-                    .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-                    .ok_or(CardFailure::Invalid("Agent invalide."))?);
+                    .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+                    .ok_or(CardFailure::Invalid("message.invalid_agent"))?);
             }
             break;
         }
@@ -75,8 +75,8 @@ pub fn default_agent(
     if settings.truthy("agent")? {
         Ok(settings
             .get::<JsonString>("agent")
-            .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-            .ok_or(CardFailure::Invalid("Agent invalide."))?)
+            .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+            .ok_or(CardFailure::Invalid("message.invalid_agent"))?)
     } else {
         Ok(JsonString::from("codex"))
     }
@@ -84,15 +84,15 @@ pub fn default_agent(
 
 pub(super) fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
     crate::domain::agent_options::find_provider(settings, agent)?
-        .ok_or_else(|| CardFailure::Invalid("Agent invalide.").into())
+        .ok_or_else(|| CardFailure::Invalid("message.invalid_agent").into())
 }
 
 pub(super) fn options(agent: &JsonString, body: &Document, settings: &Document) -> Result<Value> {
     let provider = provider(settings, agent)?;
     let kind = provider
         .get::<String>("type")
-        .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-        .ok_or(CardFailure::Invalid("Agent invalide."))?;
+        .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+        .ok_or(CardFailure::Invalid("message.invalid_agent"))?;
     Ok(options_document(&kind, body).map_err(CardFailure::Invalid)?)
 }
 
@@ -103,7 +103,7 @@ pub fn create(
 ) -> Result<Card> {
     let title = text(body.raw("title"), 300)?;
     if title.0.is_empty() {
-        return Err(CardFailure::Invalid("Un titre est nécessaire.").into());
+        return Err(CardFailure::Invalid("message.a_title_is_required").into());
     }
     let template = if body.truthy("templateId")? {
         let templates = context.settings()?;
@@ -123,14 +123,14 @@ pub fn create(
                 }
             }
         }
-        Some(found.ok_or(CardFailure::Invalid("Modèle introuvable."))?)
+        Some(found.ok_or(CardFailure::Invalid("message.template_not_found"))?)
     } else {
         None
     };
     let agent = if body.truthy("agent")? {
         body.get::<JsonString>("agent")
-            .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-            .ok_or(CardFailure::Invalid("Agent invalide."))?
+            .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+            .ok_or(CardFailure::Invalid("message.invalid_agent"))?
     } else {
         context.agent_for(body)?
     };
@@ -153,7 +153,7 @@ pub fn create(
     };
     provider(&context.settings()?, &agent)?;
     if ![JsonString::from("analyze"), JsonString::from("edit")].contains(&mode) {
-        return Err(CardFailure::Invalid("Agent ou mode invalide.").into());
+        return Err(CardFailure::Invalid("message.invalid_agent_or_mode").into());
     }
     let status = if brainstorming {
         JsonString::from("todo")
@@ -169,7 +169,7 @@ pub fn create(
     ]
     .contains(&status)
     {
-        return Err(CardFailure::Invalid("Statut initial invalide.").into());
+        return Err(CardFailure::Invalid("message.invalid_initial_status").into());
     }
     let id = context.new_id();
     let empty = RawValue::from_string("\"\"".into())?;

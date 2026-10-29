@@ -72,7 +72,7 @@ pub fn Files(
             let result = async {
                 if let Some(entry) = selection {
                     let params = web_sys::UrlSearchParams::new()
-                        .map_err(|_| "Adresse de fichier invalide.")?;
+                        .map_err(|_| "message.invalid_file_address")?;
                     params.set("path", &entry.path);
                     if changes {
                         params.set("untracked", &entry.untracked.to_string());
@@ -90,13 +90,13 @@ pub fn Files(
                         let response: FileDiff = response
                             .json()
                             .await
-                            .map_err(|_| "Réponse du serveur invalide.")?;
+                            .map_err(|_| "message.invalid_server_response")?;
                         (response.patch, response.unavailable)
                     } else {
                         let response: FilePreview = response
                             .json()
                             .await
-                            .map_err(|_| "Réponse du serveur invalide.")?;
+                            .map_err(|_| "message.invalid_server_response")?;
                         (response.content, response.unavailable)
                     };
                     if pending.try_get_untracked().is_some() {
@@ -109,7 +109,7 @@ pub fn Files(
                             .await?
                             .json()
                             .await
-                            .map_err(|_| "Réponse du serveur invalide.")?;
+                            .map_err(|_| "message.invalid_server_response")?;
                     if pending.try_get_untracked().is_some() {
                         base.set(response.base);
                         files.set(response.files);
@@ -119,7 +119,7 @@ pub fn Files(
                         .await?
                         .json()
                         .await
-                        .map_err(|_| "Réponse du serveur invalide.")?;
+                        .map_err(|_| "message.invalid_server_response")?;
                     if pending.try_get_untracked().is_some() {
                         files.set(
                             response
@@ -155,20 +155,20 @@ pub fn Files(
     });
     view! {
             <div class="file-explorer" aria-busy=move || (pending.get() || stale.get()).to_string()>
-                <div class="file-toolbar"><div><h3>{move ||i18n.text(if mode.get()==FileMode::Changes {"Changements de la tâche"} else {"Fichiers du projet"})}</h3><p class="hint file-context">{move || i18n.text("Lecture seule : fichiers suivis et nouveaux fichiers non ignorés par Git.")}</p></div><button id="refresh-files" class="refresh-files" type="button" disabled=move || pending.get() on:click=move |_| load(None)>{move || i18n.text("Actualiser")}</button></div>
-                <p class="field-help" hidden=move || mode.get() != FileMode::Changes>{move || i18n.text("Comparaison avec le point de départ du worktree, ou le dernier commit du dépôt principal : ajouts (A), modifications (M), suppressions (D). Les renommages apparaissent comme une suppression et un ajout.")}</p>
-                <p class="field-help" hidden=move || base.get().is_empty()>{move || i18n.text("Commit de référence : {0}").replace("{0}", &base.get())}</p>
+                <div class="file-toolbar"><div><h3>{move ||i18n.text(if mode.get()==FileMode::Changes {"message.task_changes"} else {"message.project_files"})}</h3><p class="hint file-context">{move || i18n.text("message.read_only_tracked_files_and_new_files_not_ignored_by_git")}</p></div><button id="refresh-files" class="refresh-files" type="button" disabled=move || pending.get() on:click=move |_| load(None)>{move || i18n.text("message.refresh")}</button></div>
+                <p class="field-help" hidden=move || mode.get() != FileMode::Changes>{move || i18n.text("message.compared_with_the_worktree_s_starting_point_or_the_main_reposito")}</p>
+                <p class="field-help" hidden=move || base.get().is_empty()>{move || i18n.text("message.base_commit_0").replace("{0}", &base.get())}</p>
                 <p id="file-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
                 <div class="file-browser" hidden=move || stale.get()><aside class="file-sidebar">
-                    <div class="file-sidebar-heading">{move ||i18n.text(if mode.get()==FileMode::Changes {"Changements"} else {"Explorateur"})}<span class="file-count">{move ||matching.with(Vec::len)}</span></div>
-                    <label class="file-search" for="file-search"><span class="sr-only">{move || i18n.text("Filtrer les fichiers")}</span><input id="file-search" class="file-filter" type="search" placeholder=move ||i18n.text("Filtrer les fichiers") prop:value=move || filter.get() on:input=move |event| { filter.set(event_target_value(&event)); page.set(0); } /></label>
-                    <p class="file-message" role="status">{move ||if pending.get(){i18n.text("Chargement des fichiers…")}else{String::new()}}</p>
-                    <nav class="file-list" aria-label=move || i18n.text("Fichiers du projet")><For each={move || matching.with(|files| files.iter().skip(page.get()*PAGE_SIZE).take(PAGE_SIZE).cloned().collect::<Vec<_>>())} key=|entry| (entry.path.clone(), entry.untracked, entry.status.clone()) children=move |entry| {
+                    <div class="file-sidebar-heading">{move ||i18n.text(if mode.get()==FileMode::Changes {"message.changes"} else {"message.explorer"})}<span class="file-count">{move ||matching.with(Vec::len)}</span></div>
+                    <label class="file-search" for="file-search"><span class="sr-only">{move || i18n.text("message.filter_files")}</span><input id="file-search" class="file-filter" type="search" placeholder=move ||i18n.text("message.filter_files") prop:value=move || filter.get() on:input=move |event| { filter.set(event_target_value(&event)); page.set(0); } /></label>
+                    <p class="file-message" role="status">{move ||if pending.get(){i18n.text("message.loading_files")}else{String::new()}}</p>
+                    <nav class="file-list" aria-label=move || i18n.text("message.project_files")><For each={move || matching.with(|files| files.iter().skip(page.get()*PAGE_SIZE).take(PAGE_SIZE).cloned().collect::<Vec<_>>())} key=|entry| (entry.path.clone(), entry.untracked, entry.status.clone()) children=move |entry| {
                         let name = StoredValue::new(entry);
                         view! { <button type="button" class="file-entry" title=name.get_value().path data-file=name.get_value().path aria-current=move || (selected.get() == Some((name.get_value().path, name.get_value().untracked))).to_string() disabled=move || pending.get() on:click=move |_| load(Some(name.get_value()))><svg class="file-icon file-code-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h6"/></svg><span class="file-name">{if name.get_value().status.is_empty() { String::new() } else { format!("{} · ", name.get_value().status) }}{name.get_value().path}</span></button> }
-                    } /><p class="field-help" hidden=move || pending.get() || matching.with(|files| !files.is_empty())>{move || i18n.text("Aucun fichier trouvé.")}</p></nav>
-                    <div class="file-pages"><button id="previous-files" type="button" disabled=move || page.get()==0 on:click=move |_| page.update(|page| *page = page.saturating_sub(1))>{move || i18n.text("Précédent")}</button><span>{move || format!("{} / {}",page.get()+1,matching.with(Vec::len).div_ceil(PAGE_SIZE).max(1))}</span><button id="next-files" type="button" disabled={move || (page.get()+1)*PAGE_SIZE >= matching.with(Vec::len)} on:click=move |_| page.update(|page| *page += 1)>{move || i18n.text("Suivant")}</button></div>
-                </aside><section class="file-preview" aria-label=move || i18n.text("Aperçu du fichier")><h4 class="file-title">{move || selected.get().map(|(path, _)| path).unwrap_or_default()}</h4><p class="hint" hidden=move || selected.get().is_some()>{move || i18n.text("Sélectionne un fichier pour le lire.")}</p><p id="file-unavailable" role="status">{move || i18n.text(&unavailable.get())}</p><p class="hint" hidden=move || pending.get() || selected.get().is_none() || !content.get().is_empty() || !unavailable.get().is_empty() || !error.get().is_empty()>{move || i18n.text("Aucun contenu textuel à afficher.")}</p><div id="file-content" class="code-view" tabindex="0" hidden=move || selected.get().is_none() || !unavailable.get().is_empty()>{move || {
+                    } /><p class="field-help" hidden=move || pending.get() || matching.with(|files| !files.is_empty())>{move || i18n.text("message.no_files_found")}</p></nav>
+                    <div class="file-pages"><button id="previous-files" type="button" disabled=move || page.get()==0 on:click=move |_| page.update(|page| *page = page.saturating_sub(1))>{move || i18n.text("message.previous")}</button><span>{move || format!("{} / {}",page.get()+1,matching.with(Vec::len).div_ceil(PAGE_SIZE).max(1))}</span><button id="next-files" type="button" disabled={move || (page.get()+1)*PAGE_SIZE >= matching.with(Vec::len)} on:click=move |_| page.update(|page| *page += 1)>{move || i18n.text("message.next")}</button></div>
+                </aside><section class="file-preview" aria-label=move || i18n.text("message.file_preview")><h4 class="file-title">{move || selected.get().map(|(path, _)| path).unwrap_or_default()}</h4><p class="hint" hidden=move || selected.get().is_some()>{move || i18n.text("message.select_a_file_to_read_it")}</p><p id="file-unavailable" role="status">{move || i18n.text(&unavailable.get())}</p><p class="hint" hidden=move || pending.get() || selected.get().is_none() || !content.get().is_empty() || !unavailable.get().is_empty() || !error.get().is_empty()>{move || i18n.text("message.no_text_content_to_display")}</p><div id="file-content" class="code-view" tabindex="0" hidden=move || selected.get().is_none() || !unavailable.get().is_empty()>{move || {
         let text = content.get();
         let changes = mode.get() == FileMode::Changes;
         let numbers = if changes { atelier_core::domain::files::diff_line_numbers(&text) } else { Vec::new() };

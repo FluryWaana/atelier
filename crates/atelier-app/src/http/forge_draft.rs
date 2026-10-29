@@ -29,13 +29,13 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     if input.expected.id != id || !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme le changement d’état brouillon de la PR/MR.",
+            "message.confirm_changing_the_pr_mr_draft_state",
         );
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let prepared = input.clone();
@@ -50,13 +50,13 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
                         crate::infrastructure::store::Documents::Cards,
                         &prepared.expected.id,
                     )?
-                    .ok_or("Carte introuvable.")?;
+                    .ok_or("message.card_not_found")?;
                 if serde_json::to_value(atelier_core::application::jira::card_snapshot(&current))?
                     != serde_json::to_value(atelier_core::application::jira::card_snapshot(
                         &prepared.expected,
                     ))?
                 {
-                    return Err("La tâche a changé. Recharge avant de vérifier la forge.".into());
+                    return Err("message.the_task_changed_reload_before_checking_the_forge".into());
                 }
                 let intent = current
                     .fields
@@ -66,11 +66,13 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
                             && intent.draft == prepared.draft
                             && intent.content == prepared.content
                     })
-                    .ok_or("Aucune écriture de forge incertaine à vérifier.")?;
+                    .ok_or("message.no_uncertain_forge_write_to_check")?;
                 let configuration =
                     forge::configuration(store, intent.expected.kind, prepared.revision)?;
                 if configuration.base != intent.expected.base_url {
-                    return Err("Reconnecte le site de forge de l’opération incertaine.".into());
+                    return Err(
+                        "message.reconnect_the_forge_site_of_the_uncertain_operation".into(),
+                    );
                 }
                 Ok(current)
             })
@@ -90,7 +92,7 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
         _ => {
             return failure(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Intention de forge absente.",
+                "message.forge_intent_missing",
             );
         }
     };
@@ -153,9 +155,9 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     let stopping = *stopped.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
-        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),work)=>result.unwrap_or_else(|_|Err("Écriture de forge trop longue. Relis l’état distant sans réenvoyer.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),work)=>result.unwrap_or_else(|_|Err("message.forge_write_timed_out_read_the_remote_state_without_resending".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
     };
     let result = match result {
         Err(error) if !reconcile => {

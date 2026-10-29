@@ -149,7 +149,7 @@ impl CreationContext for Context {
             .borrow_mut()
             .push(serde_json::value::to_raw_value(&event)?);
         let value: JsonString =
-            serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
+            serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
         let value = text_units(&value, 2000)?;
         let mut repo = JsonString::from("checked:");
         repo.0.extend(value.0);

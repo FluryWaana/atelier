@@ -11,11 +11,11 @@ async fn list(token: &str) -> Result<Vec<Document>, String> {
         .await?
         .json()
         .await
-        .map_err(|_| "Réponse du serveur invalide.")?;
+        .map_err(|_| "message.invalid_server_response")?;
     response
         .get("backups")
-        .map_err(|_| "Liste des sauvegardes invalide.")?
-        .ok_or_else(|| "Liste des sauvegardes absente.".into())
+        .map_err(|_| "message.the_backup_list_is_invalid")?
+        .ok_or_else(|| "message.the_backup_list_is_missing".into())
 }
 
 #[component]
@@ -29,7 +29,7 @@ pub fn Backups(
     let selected = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
     let error = RwSignal::new(String::new());
-    let notice = RwSignal::new(String::new());
+    let notice = RwSignal::new(None::<(&'static str, String)>);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
     dialog.on_load(move |node| {
         let _ = node.show_modal();
@@ -90,19 +90,38 @@ pub fn Backups(
         }
         pending.set(true);
         error.set(String::new());
-        notice.set(String::new());
+        notice.set(None);
         spawn_local(async move {
             let result = async {
                 let (path, body) = if restore {
-                    ("/api/backups/restore", serde_json::json!({"name":name,"confirmed":true}))
-                } else { ("/api/backups", serde_json::json!({})) };
-                let response: Document = write(&token, Method::POST, path, &body).await?.json().await.map_err(|_| "Réponse du serveur invalide.")?;
-                notice.set(if restore { format!("Restauration terminée. État précédent conservé dans {}. Les connexions devront être reconfigurées.",field(&response,"rescue")) } else { "Sauvegarde créée.".into() });
+                    (
+                        "/api/backups/restore",
+                        serde_json::json!({"name":name,"confirmed":true}),
+                    )
+                } else {
+                    ("/api/backups", serde_json::json!({}))
+                };
+                let response: Document = write(&token, Method::POST, path, &body)
+                    .await?
+                    .json()
+                    .await
+                    .map_err(|_| "message.invalid_server_response")?;
+                notice.set(Some(if restore {
+                    (
+                        "message.restore_complete_the_previous_state_was_saved_in_0_connections_m",
+                        field(&response, "rescue"),
+                    )
+                } else {
+                    ("message.backup_created", String::new())
+                }));
                 selected.set(String::new());
-                if restore { let _ = board.refresh(&token).await; }
+                if restore {
+                    let _ = board.refresh(&token).await;
+                }
                 items.set(list(&token).await?);
                 Ok::<(), String>(())
-            }.await;
+            }
+            .await;
             if let Err(message) = result {
                 error.set(message);
             }
@@ -118,17 +137,17 @@ pub fn Backups(
     on_cleanup(move || unload.remove());
     view! {
         <dialog id="backups-dialog" class="editor" node_ref=dialog aria-labelledby="backups-title" on:cancel=move |event: web_sys::Event| { event.prevent_default(); close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("VOS DONNÉES")}</p><h2 id="backups-title">{move || i18n.text("Sauvegardes et restauration")}</h2></div><button id="close-backups" type="button" disabled=move || pending.get() on:click=move |_| close()>{move || i18n.text("Fermer")}</button></header>
-            <p class="field-help">{move || i18n.text("Les sauvegardes conservent les données de l’application. Les fichiers des dépôts et worktrees restent à leur emplacement et ne sont pas restaurés.")}</p>
-            <div class="editor-actions"><button id="create-backup" class="primary" type="button" autofocus disabled=move || pending.get() on:click=move |_| execute(false)>{move || i18n.text("Créer une sauvegarde")}</button><button id="refresh-backups" type="button" disabled=move || pending.get() on:click=move |_| refresh()>{move || i18n.text("Actualiser")}</button></div>
-            <p id="backups-notice" class="field-help" role="status">{move || i18n.text(&(if pending.get() { "Opération en cours…".to_owned() } else { notice.get() }))}</p><p id="backups-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <div class="backup-list" aria-label=move || i18n.text("Sauvegardes locales") aria-busy=move || pending.get().to_string()><For each=move || items.get() key=|backup| field(backup,"name") children=move |backup| {
+            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("message.your_data")}</p><h2 id="backups-title">{move || i18n.text("message.backups_and_restore")}</h2></div><button id="close-backups" type="button" disabled=move || pending.get() on:click=move |_| close()>{move || i18n.text("message.close")}</button></header>
+            <p class="field-help">{move || i18n.text("message.backups_preserve_application_data_repository_and_worktree_files")}</p>
+            <div class="editor-actions"><button id="create-backup" class="primary" type="button" autofocus disabled=move || pending.get() on:click=move |_| execute(false)>{move || i18n.text("message.create_backup")}</button><button id="refresh-backups" type="button" disabled=move || pending.get() on:click=move |_| refresh()>{move || i18n.text("message.refresh")}</button></div>
+            <p id="backups-notice" class="field-help" role="status">{move || if pending.get() { i18n.text("message.working") } else { notice.get().map(|(key, value)| i18n.text(key).replace("{0}", &value)).unwrap_or_default() }}</p><p id="backups-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
+            <div class="backup-list" aria-label=move || i18n.text("message.local_backups") aria-busy=move || pending.get().to_string()><For each=move || items.get() key=|backup| field(backup,"name") children=move |backup| {
                 let name = StoredValue::new(field(&backup,"name"));
                 let date = field(&backup,"date").replace('T'," ").replace('Z'," UTC");
                 let size = backup.get::<u64>("bytes").ok().flatten().unwrap_or(0).div_ceil(1024);
                 view! { <button type="button" class="project-choice" data-backup=name.get_value() aria-pressed=move || (selected.get() == name.get_value()).to_string() disabled=move || pending.get() on:click=move |_| selected.set(name.get_value())><strong>{move || format!("{date} · {size} {}", if i18n.code() == "en-US" { "KiB" } else { "Kio" })}</strong><small>{name.get_value()}</small></button> }
-            } /><p class="field-help" hidden=move || pending.get() || !items.get().is_empty()>{move || i18n.text("Aucune sauvegarde disponible.")}</p></div>
-            <div class="confirmation" role="alert" hidden=move || selected.get().is_empty()><p>{move || i18n.text("Restaurer cette sauvegarde remplacera les tâches, projets, réglages et temps actuels. Une sauvegarde de secours conservera l’état précédent. Les connexions seront réinitialisées et les automatisations mises en pause.")}</p><p class="backup-name">{move || selected.get()}</p><button id="restore-backup" class="danger" type="button" disabled=move || pending.get() on:click=move |_| execute(true)>{move || i18n.text("Restaurer cette sauvegarde")}</button><button id="cancel-restore" type="button" disabled=move || pending.get() on:click=move |_| selected.set(String::new())>{move || i18n.text("Annuler")}</button></div>
+            } /><p class="field-help" hidden=move || pending.get() || !items.get().is_empty()>{move || i18n.text("message.no_backups_available")}</p></div>
+            <div class="confirmation" role="alert" hidden=move || selected.get().is_empty()><p>{move || i18n.text("message.restoring_this_backup_will_replace_current_tasks_projects_settin")}</p><p class="backup-name">{move || selected.get()}</p><button id="restore-backup" class="danger" type="button" disabled=move || pending.get() on:click=move |_| execute(true)>{move || i18n.text("message.restore_this_backup")}</button><button id="cancel-restore" type="button" disabled=move || pending.get() on:click=move |_| selected.set(String::new())>{move || i18n.text("message.cancel")}</button></div>
         </dialog>
     }
 }

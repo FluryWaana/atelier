@@ -76,8 +76,7 @@ pub fn Results(
         };
         if combined.encode_utf16().count() > 12_000 {
             error.set(
-                "Message trop long : envoie les réponses déjà préparées avant de poursuivre."
-                    .into(),
+                "message.message_too_long_send_the_answers_already_prepared_before_contin".into(),
             );
             return;
         }
@@ -129,7 +128,7 @@ pub fn Results(
                     .await?
                     .json::<Vec<Card>>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -137,7 +136,7 @@ pub fn Results(
                     Ok(_) => {
                         selected.set(BTreeSet::new());
                         approved.set(false);
-                        notice.set("Propositions converties. Les tâches déjà créées sont conservées sans duplication.".into());
+                        notice.set("message.proposals_converted_previously_created_tasks_are_preserved_witho".into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -149,19 +148,19 @@ pub fn Results(
         });
     };
     view! {<section class="task-files" aria-labelledby="brainstorm-answer-heading">
-        <h4 id="brainstorm-answer-heading" hidden=hide_history>{move||i18n.text("Conversation et propositions")}</h4>
+        <h4 id="brainstorm-answer-heading" hidden=hide_history>{move||i18n.text("message.conversation_and_proposals")}</h4>
         <p class="error" role="alert">{move||run.with(|run|run.as_ref().map(|run|i18n.text(&field(run,"brainstormError"))).unwrap_or_default())}</p>
         <p hidden=hide_history>{move||run.with(|run|run.as_ref().map(|run|field(run,"userMessage")).unwrap_or_default())}</p>
         <pre class="service-log" hidden=hide_history>{move||answer.with(|answer|answer.as_ref().map(|answer|answer.message.clone()).unwrap_or_default())}</pre>
         <div hidden=move||hide_questions||pending.get()||run.with(|run|run.as_ref().is_some_and(|run|matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")))>
-            {move||answer.get().and_then(|answer|answer.questions.get(question.get()).cloned()).map(|item|{let label=StoredValue::new(item.question.clone());view!{<div class="task-files"><p>{item.question}</p><For each=move||item.options.clone() key=|option|option.clone() children=move|option|{let text=option.clone();view!{<button class="brainstorm-option" type="button" disabled=move||blocked.get() on:click=move|_|choose.run(format!("{} : {}",label.get_value(),option))>{text}</button>}}/><p class="field-help">{move||i18n.text("Tu peux aussi répondre librement dans le message.")}</p><button type="button" on:click=move|_|question.update(|index|*index+=1)>{move||i18n.text("Question suivante")}</button></div>}})}
-            <button type="button" hidden=move||question.get()==0 on:click=move|_|question.set(0)>{move||i18n.text("Revoir les questions")}</button>
+            {move||answer.get().and_then(|answer|answer.questions.get(question.get()).cloned()).map(|item|{let label=StoredValue::new(item.question.clone());view!{<div class="task-files"><p>{item.question}</p><For each=move||item.options.clone() key=|option|option.clone() children=move|option|{let text=option.clone();view!{<button class="brainstorm-option" type="button" disabled=move||blocked.get() on:click=move|_|choose.run(format!("{} : {}",label.get_value(),option))>{text}</button>}}/><p class="field-help">{move||i18n.text("message.you_can_also_enter_a_free_form_answer_in_the_message")}</p><button type="button" on:click=move|_|question.update(|index|*index+=1)>{move||i18n.text("message.next_question")}</button></div>}})}
+            <button type="button" hidden=move||question.get()==0 on:click=move|_|question.set(0)>{move||i18n.text("message.review_questions")}</button>
         </div>
         <fieldset disabled=move||pending.get()||blocked.get() hidden=move||answer.with(|answer|answer.as_ref().is_none_or(|answer|answer.tickets.is_empty()))>
-            <legend>{move||i18n.text("Propositions à convertir")}</legend>
-            <For each=move||answer.get().map(|answer|answer.tickets.into_iter().enumerate().collect::<Vec<_>>()).unwrap_or_default() key=move|(index,_)|(identity.get_untracked(),*index) children=move|(index,proposal)|view!{<article class="task-files"><label><input class="brainstorm-proposal" type="checkbox" prop:checked=move||selected.with(|selected|selected.contains(&index)) disabled=move||converted.with(|converted|converted.contains_key(&index)) on:change=move|event|{selected.update(|selected|{if event_target_checked(&event){selected.insert(index);}else{selected.remove(&index);}});approved.set(false);}/>{proposal.title}</label><p>{proposal.description}</p><ul>{proposal.criteria.into_iter().map(|criterion|view!{<li>{criterion}</li>}).collect_view()}</ul><ul>{proposal.questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul>{move||converted.with(|converted|converted.get(&index).cloned()).map(|id|view!{<button type="button" on:click=move|_|on_open.run(id.clone())>{move||i18n.text("Ouvrir la tâche créée")}</button>})}</article>}/>
-            <label for="brainstorm-project">{move||i18n.text("Projet des nouvelles tâches")}</label><select id="brainstorm-project" prop:value=move||project.with(|project|project.as_ref().map(|project|field(project,"id")).unwrap_or_default()) on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.with(|projects|projects.iter().find(|project|field(project,"id")==id).cloned()));approved.set(false);} ><option value="">{move||i18n.text("Choisir un projet")}</option><For each=move||board.projects.get() key=|project|field(project,"id") children=move|project|view!{<option value=field(&project,"id")>{field(&project,"name")}</option>}/></select>
-            <label><input id="confirm-brainstorm-convert" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event)) />{move||i18n.text("Créer les tâches sélectionnées avec leurs critères à valider manuellement.")}</label><button id="convert-brainstorm" type="button" disabled=move||!approved.get()||project.with(|project|project.is_none())||selected.with(BTreeSet::is_empty) on:click=convert>{move||i18n.text("Confirmer la conversion en tâches")}</button>
+            <legend>{move||i18n.text("message.proposals_to_convert")}</legend>
+            <For each=move||answer.get().map(|answer|answer.tickets.into_iter().enumerate().collect::<Vec<_>>()).unwrap_or_default() key=move|(index,_)|(identity.get_untracked(),*index) children=move|(index,proposal)|view!{<article class="task-files"><label><input class="brainstorm-proposal" type="checkbox" prop:checked=move||selected.with(|selected|selected.contains(&index)) disabled=move||converted.with(|converted|converted.contains_key(&index)) on:change=move|event|{selected.update(|selected|{if event_target_checked(&event){selected.insert(index);}else{selected.remove(&index);}});approved.set(false);}/>{proposal.title}</label><p>{proposal.description}</p><ul>{proposal.criteria.into_iter().map(|criterion|view!{<li>{criterion}</li>}).collect_view()}</ul><ul>{proposal.questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul>{move||converted.with(|converted|converted.get(&index).cloned()).map(|id|view!{<button type="button" on:click=move|_|on_open.run(id.clone())>{move||i18n.text("message.open_the_created_task")}</button>})}</article>}/>
+            <label for="brainstorm-project">{move||i18n.text("message.project_for_new_tasks")}</label><select id="brainstorm-project" prop:value=move||project.with(|project|project.as_ref().map(|project|field(project,"id")).unwrap_or_default()) on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.with(|projects|projects.iter().find(|project|field(project,"id")==id).cloned()));approved.set(false);} ><option value="">{move||i18n.text("message.choose_a_project")}</option><For each=move||board.projects.get() key=|project|field(project,"id") children=move|project|view!{<option value=field(&project,"id")>{field(&project,"name")}</option>}/></select>
+            <label><input id="confirm-brainstorm-convert" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event)) />{move||i18n.text("message.create_the_selected_tasks_with_criteria_requiring_human_validati")}</label><button id="convert-brainstorm" type="button" disabled=move||!approved.get()||project.with(|project|project.is_none())||selected.with(BTreeSet::is_empty) on:click=convert>{move||i18n.text("message.confirm_conversion_into_tasks")}</button>
         </fieldset>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p><p role="status">{move||i18n.text(&notice.get())}</p>
     </section>}

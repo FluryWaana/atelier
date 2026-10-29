@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
-const FIELDS: [&str; 14] = [
+const FIELDS: [&str; 15] = [
     "id",
     "name",
     "type",
@@ -21,6 +21,7 @@ const FIELDS: [&str; 14] = [
     "editArgs",
     "versionArgs",
     "statusArgs",
+    "protocolArgs",
 ];
 
 #[derive(Clone, PartialEq)]
@@ -53,7 +54,10 @@ impl Draft {
             values.insert(key, value);
         }
         if values["type"].is_empty() {
-            values.insert("type", "codex".into());
+            values.insert(
+                "type",
+                atelier_core::domain::agent_catalog::AGENTS[0].id.into(),
+            );
         }
         if values["auth"].is_empty() {
             values.insert("auth", "cli".into());
@@ -69,9 +73,11 @@ impl Draft {
         let mut body = serde_json::json!({"expected":original, "apiKey":self.key, "clearApiKey":self.clear_key});
         for key in FIELDS {
             if key.ends_with("Args") {
-                if self.values["type"] == "command" {
+                if (self.values["type"] == "command" && key != "protocolArgs")
+                    || (self.values["type"] == "acp" && key == "protocolArgs")
+                {
                     let args: Vec<String> = serde_json::from_str(&self.values[key])
-                        .map_err(|_| "Les arguments doivent être une liste JSON.".to_owned())?;
+                        .map_err(|_| "message.arguments_must_be_a_json_array".to_owned())?;
                     body[key] = serde_json::json!(args);
                 }
             } else {
@@ -99,7 +105,31 @@ async fn catalog(token: &str) -> Result<Vec<Document>, String> {
         .await?
         .json()
         .await
-        .map_err(|_| "Réponse du serveur invalide.".into())
+        .map_err(|_| "message.invalid_server_response".into())
+}
+
+pub async fn discover_profiles(token: &str, board: BoardState) -> Result<(Vec<Document>, Vec<atelier_core::contracts::DiscoveredAgent>), String> {
+    let mut profiles = catalog(token).await?;
+    let agents = read(token, "/api/agent-providers/discover").await?
+        .json::<Vec<atelier_core::contracts::DiscoveredAgent>>().await
+        .map_err(|_| "message.invalid_server_response".to_owned())?;
+    let mut created = false;
+    for agent in &agents {
+        if !agent.installed || !agent.supported || agent.script_only
+            || profiles.iter().any(|profile| field(profile, "type") == agent.id) { continue; }
+        let body = serde_json::json!({"expected":null,"id":agent.id,"name":agent.name,"type":agent.id,"auth":"cli","model":"","effort":"","command":"","configDir":"","accountLabel":"","npmPackage":"","apiKey":"","clearApiKey":false});
+        match write(token, Method::POST, "/api/agent-providers", &body).await {
+            Ok(response) => { profiles = response.json().await.map_err(|_| "message.invalid_server_response".to_owned())?; created = true; },
+            Err(message) => {
+                profiles = catalog(token).await?;
+                if !profiles.iter().any(|profile| field(profile, "type") == agent.id) {
+                    return Err(message);
+                }
+            },
+        }
+    }
+    if created { board.refresh(token).await?; }
+    Ok((profiles, agents))
 }
 
 #[component]
@@ -110,6 +140,12 @@ pub fn AgentProfiles(
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let items = RwSignal::new(Vec::<Document>::new());
+    let discovered = RwSignal::new(None::<Vec<atelier_core::contracts::DiscoveredAgent>>);
+    let statuses = RwSignal::new(BTreeMap::<
+        String,
+        Option<atelier_core::contracts::AgentDiagnostic>,
+    >::new());
+    let status_generation = RwSignal::new(0u64);
     let original = RwSignal::new(None::<Document>);
     let baseline = RwSignal::new(Draft::new(None));
     let draft = RwSignal::new(baseline.get_untracked());
@@ -178,10 +214,17 @@ pub fn AgentProfiles(
             }
         };
         let id = draft.get_untracked().values["id"].clone();
+        let generation = status_generation.get_untracked().wrapping_add(1);
+        status_generation.set(generation);
+        statuses.set(BTreeMap::new());
         pending.set(true);
         error.set(String::new());
         spawn_local(async move {
-            let result = catalog(&token).await;
+            let result = async {
+                let (profiles, agents) = discover_profiles(&token, board).await?;
+                let _ = discovered.try_set(Some(agents));
+                Ok::<_, String>(profiles)
+            }.await;
             if pending.try_get_untracked().is_none() {
                 return;
             }
@@ -200,7 +243,43 @@ pub fn AgentProfiles(
                             focus("new-profile");
                         }
                     }
-                    items.set(profiles);
+                    items.set(profiles.clone());
+                    let detected = discovered.get_untracked().unwrap_or_default();
+                    spawn_local(async move {
+                        for agent in detected.into_iter().filter(|agent| {
+                            agent.installed && agent.supported && !agent.script_only
+                        }) {
+                            let Some(profile) = profiles
+                                .iter()
+                                .find(|profile| field(profile, "type") == agent.id)
+                                .cloned()
+                            else {
+                                continue;
+                            };
+                            let path =
+                                format!("/api/agent-providers/{}/diagnose", field(&profile, "id"));
+                            let response = match write(
+                                &token,
+                                Method::POST,
+                                &path,
+                                &serde_json::json!({"expected":profile,"statusOnly":true}),
+                            )
+                            .await
+                            {
+                                Ok(response) => response
+                                    .json::<atelier_core::contracts::AgentDiagnostic>()
+                                    .await
+                                    .ok(),
+                                Err(_) => None,
+                            };
+                            if status_generation.try_get_untracked() != Some(generation) {
+                                return;
+                            }
+                            statuses.update(|statuses| {
+                                statuses.insert(agent.id, response);
+                            });
+                        }
+                    });
                 }
                 Err(message) => error.set(message),
             }
@@ -208,6 +287,7 @@ pub fn AgentProfiles(
         });
     };
     refresh(false);
+    let discover = move |_| refresh(false);
     let execute = move |remove: bool| {
         if pending.get_untracked() {
             return;
@@ -249,7 +329,7 @@ pub fn AgentProfiles(
                     .await?
                     .json::<Vec<Document>>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             let _ = board.refresh(&token).await;
@@ -273,9 +353,9 @@ pub fn AgentProfiles(
                     items.set(profiles);
                     notice.set(
                         if remove {
-                            "Profil retiré."
+                            "message.profile_removed"
                         } else {
-                            "Profil enregistré."
+                            "message.profile_saved"
                         }
                         .into(),
                     );
@@ -294,45 +374,85 @@ pub fn AgentProfiles(
     on_cleanup(move || unload.remove());
     view! {
         <dialog id="agents-dialog" class="editor" node_ref=dialog aria-labelledby="agents-title" aria-busy=move || pending.get().to_string() on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("AGENTS")}</p><h2 id="agents-title">{move || i18n.text("Profils d’agents")}</h2></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("Fermer")}</button></header>
-            <p class="field-help">{move || i18n.text("Un profil définit un agent et ses réglages. L’enregistrer ne lance aucune commande. Les contrôles d’installation et de connexion sont explicites.")}</p>
+            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("message.agents")}</p><h2 id="agents-title">{move || i18n.text("message.agent_profiles")}</h2></div><button id="close-agents" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.close")}</button></header>
+            <p class="field-help">{move || i18n.text("message.a_profile_defines_an_agent_and_its_settings_saving_it_does_not_r")}</p>
+            <button id="discover-agents" type="button" disabled=move || pending.get() || dirty.get() on:click=discover>{move || i18n.text(if pending.get() { "message.searching_for_agents" } else { "message.find_installed_agents" })}</button>
+            <div id="agent-discovery" aria-live="polite">{move || discovered.get().map(|agents| view! {
+                <ul>{agents.into_iter().map(|agent| {
+                    let id = agent.id.clone();
+                    let status_id = agent.id.clone();
+                    let name = agent.name.clone();
+                    let can_configure = agent.installed && agent.supported && !agent.script_only;
+                    view! {
+                        <li>{agent.name}" : "{i18n.text(if agent.script_only { "message.script_detected" } else if agent.installed { "message.installed" } else { "message.not_detected" })}{if agent.script_only { format!(" — {}", i18n.text("message.launching_it_is_not_supported")) } else if agent.installed && !agent.supported { format!(" — {}", i18n.text("message.integration_unavailable")) } else { String::new() }}
+                            {move || statuses.with(|statuses| statuses.get(&status_id).cloned()).map(|status| match status { Some(status) => {
+                                let state = match status.authentication {
+                                    atelier_core::contracts::AgentAuthentication::Present => "message.cli_login_present_service_access_has_not_been_verified",
+                                    atelier_core::contracts::AgentAuthentication::Absent => "message.no_cli_login",
+                                    atelier_core::contracts::AgentAuthentication::Configured => "message.key_present_validity_has_not_been_verified",
+                                    atelier_core::contracts::AgentAuthentication::MissingKey => "message.no_saved_api_key",
+                                    atelier_core::contracts::AgentAuthentication::Unavailable => "message.login_not_checked",
+                                };
+                                let version = status.version.unwrap_or_else(|| i18n.text("message.unavailable"));
+                                view! { <span>" — "{i18n.text("message.version")} " : " {version} " — " {i18n.text(state)} {status.account.map(|account| format!(" — {account}"))}</span> }.into_any()
+                            }, None => view! { <span>" — " {i18n.text("message.login_not_checked")}</span> }.into_any() })}
+                            <button type="button" hidden=!can_configure disabled=move || pending.get() || dirty.get() on:click=move |_| {
+                                let current = items.with_untracked(|items| items.iter().find(|item| field(item, "id") == id).cloned());
+                                if current.is_some() {
+                                    select(current);
+                                } else {
+                                    select(None);
+                                    draft.update(|draft| {
+                                        draft.values.insert("id", id.clone());
+                                        draft.values.insert("name", name.clone());
+                                        draft.values.insert("type", id.clone());
+                                    });
+                                }
+                            }>{move || i18n.text("message.configure")}</button>
+                        </li>
+                    }
+                }).collect_view()}</ul>
+            })}</div>
             <div class="agent-profile-layout">
-            <aside class="agent-profile-sidebar" aria-label=move || i18n.text("Profils d’agents")>
-            <div class="editor-actions"><button id="new-profile" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(None)>{move || i18n.text("Nouveau profil")}</button><button id="refresh-profiles" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| refresh(false)>{move || i18n.text("Actualiser la liste")}</button></div>
+            <aside class="agent-profile-sidebar" aria-label=move || i18n.text("message.agent_profiles")>
+            <div class="editor-actions"><button id="new-profile" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| select(None)>{move || i18n.text("message.new_profile")}</button><button id="refresh-profiles" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| refresh(false)>{move || i18n.text("message.refresh_list")}</button></div>
             <ul class="profile-list"><For each=move || items.get() key=|profile| field(profile,"id") children=move |profile| {
                 let id = StoredValue::new(field(&profile,"id"));
                 let current = move || items.with(|items| items.iter().find(|profile| field(profile,"id") == id.get_value()).cloned());
                 view! { <li><button type="button" data-profile=id.get_value() aria-pressed=move || original.get().is_some_and(|profile| field(&profile,"id") == id.get_value()).to_string() disabled=move || pending.get() || dirty.get() on:click=move |_| select(current())>{move || current().map(|profile| format!("{} · {}", field(&profile,"name"), field(&profile,"type"))).unwrap_or_default()}</button></li> }
             } /></ul>
-            <p hidden=move || !dirty.get() class="field-help">{move || i18n.text("Enregistre ou recharge ce profil avant d’en choisir un autre.")}</p>
+            <p hidden=move || !dirty.get() class="field-help">{move || i18n.text("message.save_or_reload_this_profile_before_selecting_another_one")}</p>
             </aside>
             <div class="agent-profile-content">
-            <p class="agent-profile-empty" hidden=move || editing.get()>{move || i18n.text("Choisis un profil ou crée-en un pour commencer.")}</p>
+            <p class="agent-profile-empty" hidden=move || editing.get()>{move || i18n.text("message.choose_a_profile_or_create_one_to_get_started")}</p>
             <form hidden=move || !editing.get() on:submit=move |event| { event.prevent_default(); execute(false); }>
                 <fieldset disabled=move || pending.get()>
-                    <label for="profile-id">{move || i18n.text("Identifiant du profil")}</label><input id="profile-id" required maxlength="64" pattern="[a-z][a-z0-9-]*" readonly=move || original.get().is_some() prop:value=move || draft.get().values["id"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("id", event_target_value(&event)); }) />
-                    <label for="profile-name">{move || i18n.text("Nom du profil")}</label><input id="profile-name" required maxlength="100" prop:value=move || draft.get().values["name"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("name", event_target_value(&event)); }) />
-                    <label for="profile-type">{move || i18n.text("Type d’agent")}</label><select id="profile-type" disabled=move || original.get().is_some() prop:value=move || draft.get().values["type"].clone() on:change=move |event| draft.update(|draft| { draft.values.insert("type",event_target_value(&event)); draft.values.insert("auth","cli".into()); draft.values.insert("effort",String::new()); draft.key.clear(); draft.clear_key=false; })><option value="codex">"Codex"</option><option value="claude">"Claude Code"</option><option value="command">{move || i18n.text("Commande personnalisée")}</option></select>
-                    {[ ("command", "Exécutable (facultatif pour Codex et Claude)", "2000"), ("configDir", "Dossier de configuration (facultatif)", "2000"), ("accountLabel", "Libellé du compte (facultatif)", "200"), ("model", "Modèle de l’agent", "180"), ("effort", "Niveau de réflexion", "40") ].into_iter().map(move |(key,label,limit)| view! { <label for=format!("profile-{key}")>{move || i18n.text(label)}</label><input id=format!("profile-{key}") maxlength=limit spellcheck="false" prop:value=move || draft.get().values[key].clone() on:input=move |event| draft.update(|draft| { draft.values.insert(key,event_target_value(&event)); }) /> }).collect_view()}
-                    <p class="field-help">{move || i18n.text("L’exécutable ne contient pas ses arguments. Le modèle et le niveau de réflexion peuvent rester vides pour utiliser les valeurs de l’agent.")}</p>
-                    <div hidden=move || draft.get().values["type"] != "codex">
-                        <label for="profile-auth">{move || i18n.text("Authentification")}</label><select id="profile-auth" prop:value=move || draft.get().values["auth"].clone() on:change=move |event| draft.update(|draft| { draft.values.insert("auth",event_target_value(&event)); draft.key.clear(); draft.clear_key=false; })><option value="cli">{move || i18n.text("Connexion CLI existante")}</option><option value="api">{move || i18n.text("Clé API via Codex CLI")}</option></select>
-                        <p class="field-help" hidden=move || draft.get().values["auth"] == "api">{move || i18n.text("Enregistrer une connexion CLI supprime la clé API de ce profil.")}</p>
-                        <div hidden=move || draft.get().values["auth"] != "api"><label for="profile-key">{move || i18n.text("Clé API")}</label><input id="profile-key" type="password" autocomplete="new-password" maxlength="4000" disabled=move || draft.get().clear_key prop:value=move || draft.get().key on:input=move |event| draft.update(|draft| draft.key=event_target_value(&event)) />
-                            <p id="profile-key-state" class="field-help">{move || i18n.text(if original.get().is_some_and(|profile| profile.get::<bool>("apiKeySet").ok().flatten() == Some(true)) { "Secret enregistré. Laisser vide pour le conserver." } else { "Aucun secret enregistré." })}</p>
-                            <label class="check-filter"><input id="profile-clear-key" type="checkbox" prop:checked=move || draft.get().clear_key on:change=move |event| draft.update(|draft| { draft.clear_key=event_target_checked(&event); if draft.clear_key { draft.key.clear(); } }) />{move || i18n.text("Oublier la clé API")}</label>
+                    <label for="profile-id">{move || i18n.text("message.profile_id")}</label><input id="profile-id" required maxlength="64" pattern="[a-z][a-z0-9-]*" readonly=move || original.get().is_some() prop:value=move || draft.get().values["id"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("id", event_target_value(&event)); }) />
+                    <label for="profile-name">{move || i18n.text("message.profile_name")}</label><input id="profile-name" required maxlength="100" prop:value=move || draft.get().values["name"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("name", event_target_value(&event)); }) />
+                    <label for="profile-type">{move || i18n.text("message.agent_type")}</label><select id="profile-type" disabled=move || original.get().is_some() prop:value=move || draft.get().values["type"].clone() on:change=move |event| draft.update(|draft| { draft.values.insert("type",event_target_value(&event)); draft.values.insert("auth","cli".into()); draft.values.insert("model",String::new()); draft.values.insert("effort",String::new()); draft.values.insert("configDir",String::new()); draft.key.clear(); draft.clear_key=false; })>{atelier_core::domain::agent_catalog::AGENTS.iter().filter(|agent| agent.supported).map(|agent| view! { <option value=agent.id>{move || match agent.id { "acp" => i18n.text("message.custom_acp_agent"), "command" => i18n.text("message.custom_command"), _ => agent.name.to_owned() }}</option> }).collect_view()}</select>
+                    {[ ("command", "message.executable_optional_for_built_in_agents", "2000"), ("configDir", "message.configuration_folder_optional", "2000"), ("accountLabel", "message.account_label_optional", "200") ].into_iter().map(move |(key,label,limit)| { let hidden = move || atelier_core::domain::agent_catalog::find(&draft.get().values["type"]).is_some_and(|agent| agent.protocol == atelier_core::domain::agent_catalog::ProtocolKind::Acp && key == "configDir" && agent.config_environment.is_none()); view! { <label hidden=hidden for=format!("profile-{key}")>{move || i18n.text(label)}</label><input hidden=hidden id=format!("profile-{key}") maxlength=limit spellcheck="false" prop:value=move || draft.get().values[key].clone() on:input=move |event| draft.update(|draft| { draft.values.insert(key,event_target_value(&event)); }) /> } }).collect_view()}
+                    <p class="field-help">{move || i18n.text("message.the_executable_does_not_include_its_arguments_leave_model_and_re")}</p>
+                    <div hidden=move || !atelier_core::domain::agent_catalog::find(&draft.get().values["type"]).is_some_and(|agent| agent.api_auth)>
+                        <label for="profile-auth">{move || i18n.text("message.authentication")}</label><select id="profile-auth" prop:value=move || draft.get().values["auth"].clone() on:change=move |event| draft.update(|draft| { draft.values.insert("auth",event_target_value(&event)); draft.key.clear(); draft.clear_key=false; })><option value="cli">{move || i18n.text("message.existing_cli_login")}</option><option value="api">{move || i18n.text("message.api_key_through_the_cli")}</option></select>
+                        <p class="field-help" hidden=move || draft.get().values["auth"] == "api">{move || i18n.text("message.saving_a_cli_login_removes_this_profile_s_api_key")}</p>
+                        <div hidden=move || draft.get().values["auth"] != "api"><label for="profile-key">{move || i18n.text("message.api_key")}</label><input id="profile-key" type="password" autocomplete="new-password" maxlength="4000" disabled=move || draft.get().clear_key prop:value=move || draft.get().key on:input=move |event| draft.update(|draft| draft.key=event_target_value(&event)) />
+                            <p id="profile-key-state" class="field-help">{move || i18n.text(if original.get().is_some_and(|profile| profile.get::<bool>("apiKeySet").ok().flatten() == Some(true)) { "message.secret_saved_leave_blank_to_keep_it" } else { "message.no_secret_saved" })}</p>
+                            <label class="check-filter"><input id="profile-clear-key" type="checkbox" prop:checked=move || draft.get().clear_key on:change=move |event| draft.update(|draft| { draft.clear_key=event_target_checked(&event); if draft.clear_key { draft.key.clear(); } }) />{move || i18n.text("message.forget_api_key")}</label>
                         </div>
                     </div>
                     <div hidden=move || draft.get().values["type"] != "command">
-                        <p class="field-help">{move || i18n.text("Arguments en listes JSON de textes, sans shell intermédiaire. Le prompt sera transmis sur l’entrée standard ; {model} et {effort} seront remplacés.")}</p>
-                        {[("analyzeArgs","Arguments pour analyser"),("editArgs","Arguments pour modifier"),("versionArgs","Arguments pour lire la version"),("statusArgs","Arguments pour lire le compte")].into_iter().map(move |(key,label)| view! { <label for=format!("profile-{key}")>{move || i18n.text(label)}</label><textarea id=format!("profile-{key}") rows="2" maxlength="410000" spellcheck="false" prop:value=move || draft.get().values[key].clone() on:input=move |event| draft.update(|draft| { draft.values.insert(key,event_target_value(&event)); }) /> }).collect_view()}
-                        <label for="profile-npmPackage">{move || i18n.text("Paquet npm pour vérifier les mises à jour (facultatif)")}</label><input id="profile-npmPackage" maxlength="200" prop:value=move || draft.get().values["npmPackage"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("npmPackage",event_target_value(&event)); }) />
+                        <p class="field-help">{move || i18n.text("message.arguments_are_json_arrays_of_strings_without_an_intermediate_she")}</p>
+                        {[("analyzeArgs","message.analysis_arguments"),("editArgs","message.editing_arguments"),("versionArgs","message.version_arguments"),("statusArgs","message.account_status_arguments")].into_iter().map(move |(key,label)| view! { <label for=format!("profile-{key}")>{move || i18n.text(label)}</label><textarea id=format!("profile-{key}") rows="2" maxlength="410000" spellcheck="false" prop:value=move || draft.get().values[key].clone() on:input=move |event| draft.update(|draft| { draft.values.insert(key,event_target_value(&event)); }) /> }).collect_view()}
+                        <label for="profile-npmPackage">{move || i18n.text("message.npm_package_for_update_checks_optional")}</label><input id="profile-npmPackage" maxlength="200" prop:value=move || draft.get().values["npmPackage"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("npmPackage",event_target_value(&event)); }) />
+                    </div>
+                    <div hidden=move || draft.get().values["type"] != "acp">
+                        <label for="profile-protocolArgs">{move || i18n.text("message.acp_protocol_arguments_json_array")}</label><textarea id="profile-protocolArgs" rows="2" maxlength="410000" spellcheck="false" prop:value=move || draft.get().values["protocolArgs"].clone() on:input=move |event| draft.update(|draft| { draft.values.insert("protocolArgs", event_target_value(&event)); }) />
                     </div>
                 </fieldset>
-                <div class="editor-actions"><button id="save-profile" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text("Enregistrer")}</button><button id="reload-profile" type="button" disabled=move || pending.get() on:click=move |_| { if dirty.get_untracked() { ask(Confirmation::Reload); } else { refresh(true); } }>{move || i18n.text("Recharger le profil")}</button><button id="remove-profile" type="button" class="danger" hidden=move || original.get().is_none() disabled=move || pending.get() || dirty.get() on:click=move |_| ask(Confirmation::Remove)>{move || i18n.text("Retirer le profil…")}</button></div>
+                <div class="editor-actions"><button id="save-profile" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text("message.save")}</button><button id="reload-profile" type="button" disabled=move || pending.get() on:click=move |_| { if dirty.get_untracked() { ask(Confirmation::Reload); } else { refresh(true); } }>{move || i18n.text("message.reload_profile")}</button><button id="remove-profile" type="button" class="danger" hidden=move || original.get().is_none() disabled=move || pending.get() || dirty.get() on:click=move |_| ask(Confirmation::Remove)>{move || i18n.text("message.remove_profile")}</button></div>
             </form>
             <crate::agent_diagnostics::AgentDiagnostics profile=original token pending blocked=dirty />
-            <div class="confirmation" hidden=move || confirmation.get().is_none()><p>{move || i18n.text(if matches!(confirmation.get(),Some(Confirmation::Remove)) { "Retirer ce profil et sa clé ? Les profils utilisés par des tâches ou projets doivent d’abord être remplacés." } else { "Abandonner les modifications non enregistrées ?" })}</p><button id="confirm-profile-action" type="button" class="danger" disabled=move || pending.get() on:click=move |_| { let action=confirmation.get_untracked(); confirmation.set(None); match action { Some(Confirmation::Close)=>close(), Some(Confirmation::Reload)=>refresh(true), Some(Confirmation::Remove)=>execute(true), None=>{} } }>{move || i18n.text("Confirmer")}</button><button id="cancel-profile-action" type="button" disabled=move || pending.get() on:click=move |_| { confirmation.set(None); focus("profile-name"); }>{move || i18n.text("Annuler")}</button></div>
+            <div class="confirmation" hidden=move || confirmation.get().is_none()><p>{move || i18n.text(if matches!(confirmation.get(),Some(Confirmation::Remove)) { "message.remove_this_profile_and_its_key_profiles_used_by_tasks_or_projec" } else { "message.discard_unsaved_changes" })}</p><button id="confirm-profile-action" type="button" class="danger" disabled=move || pending.get() on:click=move |_| { let action=confirmation.get_untracked(); confirmation.set(None); match action { Some(Confirmation::Close)=>close(), Some(Confirmation::Reload)=>refresh(true), Some(Confirmation::Remove)=>execute(true), None=>{} } }>{move || i18n.text("message.confirm")}</button><button id="cancel-profile-action" type="button" disabled=move || pending.get() on:click=move |_| { confirmation.set(None); focus("profile-name"); }>{move || i18n.text("message.cancel")}</button></div>
             <p id="profiles-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="profiles-notice" role="status">{move || i18n.text(&notice.get())}</p>
             </div>
             </div>

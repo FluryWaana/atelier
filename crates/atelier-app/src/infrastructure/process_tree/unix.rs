@@ -11,7 +11,7 @@ impl ContainedChild {
     pub async fn spawn(command: &mut Command) -> Result<Self> {
         command.process_group(0).kill_on_drop(true);
         let child = command.spawn()?;
-        let group = libc::pid_t::try_from(child.id().ok_or("Processus de démarrage absent.")?)?;
+        let group = libc::pid_t::try_from(child.id().ok_or("message.startup_process_missing")?)?;
         Ok(Self {
             child,
             group: Some(group),
@@ -20,14 +20,14 @@ impl ContainedChild {
     pub async fn process_ids(&self) -> Result<Vec<u32>> {
         let group = self
             .group
-            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+            .ok_or("message.the_process_group_owner_is_missing")?;
         members(group).await
     }
     #[cfg(target_os = "macos")]
     fn exited(&mut self) -> Result<bool> {
         let group = self
             .group
-            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+            .ok_or("message.the_process_group_owner_is_missing")?;
         // Darwin's waitid(WNOHANG) can fail its MAC check when no child is ready.
         // Query only our unreaped leader; arg=1 includes zombies, without consuming its exit status.
         let mut information = std::mem::MaybeUninit::<libc::proc_bsdshortinfo>::zeroed();
@@ -50,7 +50,7 @@ impl ContainedChild {
             return Err(error.into());
         }
         if usize::try_from(written)? != size {
-            return Err("État du processus propriétaire incomplet.".into());
+            return Err("message.process_owner_state_incomplete".into());
         }
         // A full successful proc_pidinfo call initialized the fields used below.
         let information = unsafe { information.assume_init() };
@@ -59,7 +59,7 @@ impl ContainedChild {
             || information.pbsi_ppid != std::process::id()
             || information.pbsi_pgid != pid
         {
-            return Err("L’identité du groupe propriétaire a changé.".into());
+            return Err("message.process_group_owner_changed".into());
         }
         Ok(information.pbsi_status == libc::SZOMB)
     }
@@ -67,7 +67,7 @@ impl ContainedChild {
     fn exited(&mut self) -> Result<bool> {
         let group = self
             .group
-            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+            .ok_or("message.the_process_group_owner_is_missing")?;
         // waitid initializes this POD; si_pid is zero when the owned child has not exited.
         let mut status = unsafe { std::mem::zeroed::<libc::siginfo_t>() };
         // WNOWAIT keeps the leader unreaped, preventing its PID/group ID from being reused before cleanup.
@@ -96,7 +96,7 @@ impl ContainedChild {
         let _ = self.exited()?;
         let group = self
             .group
-            .ok_or("Le propriétaire du groupe de processus est absent.")?;
+            .ok_or("message.the_process_group_owner_is_missing")?;
         // This unreaped leader was created by us with process_group(0); no external group is selected.
         if unsafe { libc::kill(-group, libc::SIGKILL) } != 0 {
             let error = io::Error::last_os_error();
@@ -140,9 +140,7 @@ impl ContainedChild {
         let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
         while !self.process_ids().await?.is_empty() {
             if tokio::time::Instant::now() >= deadline {
-                return Err(
-                    "L’arrêt des membres du groupe de processus n’est pas confirmé.".into(),
-                );
+                return Err("message.process_group_stop_unconfirmed".into());
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
@@ -159,7 +157,7 @@ impl ContainedChild {
             self.wait().await
         })
         .await
-        .map_err(|_| "L’arrêt du processus n’est pas confirmé.")?
+        .map_err(|_| "message.process_stop_unconfirmed")?
     }
 }
 
@@ -177,13 +175,16 @@ async fn members(group: libc::pid_t) -> Result<Vec<u32>> {
         .process_group(0)
         .kill_on_drop(true);
     let mut child = command.spawn()?;
-    let output = child.stdout.take().ok_or("Sortie d’inspection absente.")?;
+    let output = child
+        .stdout
+        .take()
+        .ok_or("message.process_inspection_output_missing")?;
     let mut output = output.take(4 * 1024 * 1024 + 1);
     let mut bytes = Vec::new();
     let result = tokio::time::timeout(Duration::from_secs(2), async {
         let (_, status) = tokio::try_join!(output.read_to_end(&mut bytes), child.wait())?;
         if !status.success() || bytes.len() > 4 * 1024 * 1024 {
-            return Err("Inspection des processus indisponible ou excessive.".into());
+            return Err("message.process_inspection_unavailable".into());
         }
         parse_members(&bytes, group)
     })
@@ -195,7 +196,7 @@ async fn members(group: libc::pid_t) -> Result<Vec<u32>> {
             let _ = child.wait().await;
             match result {
                 Ok(Err(error)) => Err(error),
-                _ => Err("Délai d’inspection des processus dépassé.".into()),
+                _ => Err("message.process_inspection_timeout".into()),
             }
         }
     }
@@ -219,20 +220,20 @@ fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
     let mut members = Vec::new();
     for (index, line) in text.lines().enumerate() {
         if index >= 100_000 {
-            return Err("Trop de processus pour une inspection complète.".into());
+            return Err("message.process_inspection_too_many".into());
         }
         let mut fields = line.split_whitespace();
-        let pid = fields.next().ok_or("PID absent.")?;
+        let pid = fields.next().ok_or("message.pid_missing")?;
         let pid: u32 = pid
             .parse()
             .map_err(|_| invalid_process_number("PID", pid))?;
-        let observed = fields.next().ok_or("Groupe absent.")?;
+        let observed = fields.next().ok_or("message.process_group_missing")?;
         let observed: libc::pid_t = observed
             .parse()
             .map_err(|_| invalid_process_number("PGID", observed))?;
-        let state = fields.next().ok_or("État du processus absent.")?;
+        let state = fields.next().ok_or("message.process_state_missing")?;
         if fields.next().is_some() || pid == 0 || state.is_empty() {
-            return Err("Réponse d’inspection des processus invalide.".into());
+            return Err("message.process_inspection_response_invalid".into());
         }
         if observed == group && !state.starts_with('Z') {
             // A reused PID or a member that moved groups cannot be attributed to this owner.
@@ -244,7 +245,7 @@ fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
     members.sort_unstable();
     members.dedup();
     if members.len() > 4096 {
-        return Err("Trop de processus dans le service (4 096 maximum).".into());
+        return Err("message.service_processes_too_many".into());
     }
     Ok(members)
 }

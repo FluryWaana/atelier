@@ -33,10 +33,7 @@ async fn bounded_tools_stop_on_timeout_overflow_and_guard_cancellation() {
     let overflow = process_tree::capture(&mut command, &[], Duration::from_secs(5), 100)
         .await
         .unwrap_err();
-    assert!(
-        overflow.to_string().contains("Limite de sortie"),
-        "{overflow}"
-    );
+    assert_eq!(overflow.to_string(), "message.stdout_limit_exceeded");
     let mut command = Command::new("/bin/sh");
     command.args(["-c", "sleep 30 & wait"]);
     let guard = async {

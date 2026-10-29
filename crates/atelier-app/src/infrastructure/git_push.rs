@@ -46,9 +46,9 @@ pub async fn preview(
     let linked = card
         .fields
         .get::<PullRequest>("pullRequest")?
-        .ok_or("Associe une PR/MR avant de préparer le push.")?;
+        .ok_or("message.link_a_pr_mr_before_preparing_the_push")?;
     if linked.kind != configuration.kind || linked.base_url != configuration.base {
-        return Err("La connexion de PR/MR a changé. Relis sa liaison.".into());
+        return Err("message.the_pr_mr_connection_changed_read_its_link_again".into());
     }
     let repository =
         forge_association::verify(root, roots, card, &configuration, &linked.repository).await?;
@@ -60,32 +60,32 @@ pub async fn preview(
         || remote.status != "active"
         || remote.source_branch == remote.target_branch
     {
-        return Err("Relis la PR/MR ouverte de la branche de tâche avant le push.".into());
+        return Err("message.read_the_open_pr_mr_for_the_task_branch_before_pushing".into());
     }
     let worktree = card
         .fields
         .get::<Worktree>("worktree")?
-        .ok_or("Worktree de push absent.")?;
+        .ok_or("message.push_worktree_missing")?;
     if remote.source_branch != worktree.branch
         || remote.source_branch != linked.source_branch
         || remote.target_branch != linked.target_branch
     {
         return Err(
-            "Les branches de la PR/MR ont changé. Relis sa liaison avant de pousser.".into(),
+            "message.the_pr_mr_branches_changed_check_its_association_before_pushing".into(),
         );
     }
     let previous = remote
         .source_commit
         .clone()
-        .ok_or("Commit source distant indisponible.")?;
+        .ok_or("message.remote_source_commit_unavailable")?;
     let commit = head(&repository).await?;
     if commit == previous {
-        return Err("Aucun nouveau commit à pousser.".into());
+        return Err("message.no_new_commit_to_push".into());
     }
     repository
         .git(&["merge-base", "--is-ancestor", &previous, &commit])
         .await
-        .map_err(|_| "Push refusé : récupère et intègre d’abord la branche distante.")?;
+        .map_err(|_| "message.push_refused_fetch_and_integrate_the_remote_branch_first")?;
     let authentication = HttpsAuthentication::new(configuration.clone(), linked.repository, token)?;
     let origin = authentication.origin(&origin(&repository).await?)?;
     if authentication
@@ -93,14 +93,14 @@ pub async fn preview(
         .await?
         != previous
     {
-        return Err("La branche distante a changé. Relis la PR/MR.".into());
+        return Err("message.the_remote_branch_changed_read_the_pr_mr_again".into());
     }
     let local_changes = !repository
         .without_programs(&["status", "--porcelain=v1", "--untracked-files=all"])
         .await?
         .is_empty();
     if head(&repository).await? != commit {
-        return Err("HEAD a changé pendant l’aperçu du push.".into());
+        return Err("message.head_changed_during_the_push_preview".into());
     }
     Ok(GitPushPreview {
         configuration,
@@ -124,7 +124,7 @@ pub fn save_preview(
         forge::require_revision(store, revision)?;
         let mut card = forge_association::snapshot(store, expected)?;
         if card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree) {
-            return Err("Le worktree a changé pendant l’aperçu du push.".into());
+            return Err("message.the_worktree_changed_during_the_push_preview".into());
         }
         card.fields.set("gitPushPreview", &preview)?;
         store.put(Documents::Cards, &card)?;
@@ -136,7 +136,7 @@ pub fn reserve(store: &Store<'_>, input: &GitPushRequest, id: &str) -> Result<Ca
         .expected
         .fields
         .get::<GitPushPreview>("gitPushPreview")?
-        .ok_or("Prépare un aperçu avant de pousser.")?;
+        .ok_or("message.prepare_a_preview_before_pushing")?;
     reserve_preview(store, input, id, preview)
 }
 pub(super) fn reserve_preview(
@@ -147,7 +147,7 @@ pub(super) fn reserve_preview(
 ) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed || uuid::Uuid::parse_str(id).is_err() {
-            return Err("Confirme le commit et la branche à pousser.".into());
+            return Err("message.confirm_the_commit_and_branch_to_push".into());
         }
         let mut card = forge_association::snapshot(store, &input.expected)?;
         let configuration =
@@ -171,7 +171,7 @@ pub(super) fn reserve_preview(
             || card.fields.get::<Worktree>("worktree")?.as_ref() != Some(&preview.worktree)
             || !link_matches
         {
-            return Err("L’aperçu du push est périmé. Prépare-le à nouveau.".into());
+            return Err("message.the_push_preview_is_stale_prepare_it_again".into());
         }
         card.fields.set(
             "gitPush",
@@ -190,7 +190,7 @@ pub fn require_pull_request(preview: &GitPushPreview, remote: &PullRequest) -> R
     let expected = preview
         .pull_request
         .as_ref()
-        .ok_or("PR/MR du push absente.")?;
+        .ok_or("message.push_pr_mr_missing")?;
     if !forge::same_pull_request(expected, remote)
         || remote.revision != preview.revision
         || remote.source_branch != preview.worktree.branch
@@ -199,7 +199,7 @@ pub fn require_pull_request(preview: &GitPushPreview, remote: &PullRequest) -> R
         || remote.fork
     {
         return Err(
-            "La PR/MR ou ses commits ont changé depuis l’aperçu. Relis-la avant de pousser.".into(),
+            "message.the_pr_mr_or_its_commits_changed_after_the_preview_read_it_again".into(),
         );
     }
     Ok(())
@@ -211,7 +211,7 @@ pub fn require_pushed_pull_request(preview: &GitPushPreview, remote: &PullReques
     require_pull_request(preview, &comparable)?;
     if remote.source_commit.as_deref() != Some(preview.commit.as_str()) {
         return Err(
-            "La PR/MR n’expose pas le commit poussé. Relis ses commits avant de reprendre.".into(),
+            "message.the_pr_mr_does_not_expose_the_pushed_commit_check_its_commits_be".into(),
         );
     }
     Ok(())
@@ -227,7 +227,7 @@ pub async fn prepare(
     let intent = card
         .fields
         .get::<GitPushIntent>("gitPush")?
-        .ok_or("Intention de push absente.")?;
+        .ok_or("message.push_intent_missing")?;
     let preview = intent.preview;
     let repository =
         forge_association::verify(root, roots, card, configuration, &preview.repository).await?;
@@ -235,7 +235,7 @@ pub async fn prepare(
         || head(&repository).await? != preview.commit
         || authentication.origin(&origin(&repository).await?)? != preview.origin
     {
-        return Err("Le dépôt ou HEAD a changé. Prépare un nouvel aperçu du push.".into());
+        return Err("message.the_repository_or_head_changed_prepare_a_new_push_preview".into());
     }
     authentication
         .prepare_push(
@@ -255,14 +255,14 @@ pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
             || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?
         {
-            return Err("L’intention de push a changé.".into());
+            return Err("message.the_push_intent_changed".into());
         }
         intent.state = Phase::Sending;
         card.fields.set("gitPush", &intent)?;
         forge_association::invalidate(
             store,
             &mut card,
-            "Un push a démarré. Relis la PR/MR et revalide ses reviews.",
+            "message.a_push_started_read_the_pr_mr_again_and_revalidate_its_reviews",
         )?;
         store.put(Documents::Cards, &card)
     })
@@ -270,12 +270,12 @@ pub fn sending(store: &Store<'_>, expected: &Card, id: &str) -> Result<()> {
 fn active(store: &Store<'_>, card_id: &str, id: &str) -> Result<(Card, GitPushIntent)> {
     let card = store
         .document::<Card>(Documents::Cards, card_id)?
-        .ok_or("Carte de push absente.")?;
+        .ok_or("message.push_card_missing")?;
     let intent = card
         .fields
         .get::<GitPushIntent>("gitPush")?
         .filter(|intent| intent.id == id)
-        .ok_or("L’intention de push a changé.")?;
+        .ok_or("message.the_push_intent_changed")?;
     Ok((card, intent))
 }
 pub fn interrupted(store: &Store<'_>, card_id: &str, id: &str) -> Result<Card> {
@@ -284,7 +284,7 @@ pub fn interrupted(store: &Store<'_>, card_id: &str, id: &str) -> Result<Card> {
         intent.state = match intent.state {
             Phase::Preparing => Phase::Failed,
             Phase::Sending => Phase::Uncertain,
-            _ => return Err("L’intention de push a changé.".into()),
+            _ => return Err("message.the_push_intent_changed".into()),
         };
         card.fields.set("gitPush", &intent)?;
         store.put(Documents::Cards, &card)?;
@@ -306,12 +306,12 @@ pub fn record(
         if !matches!(intent.state, Phase::Sending | Phase::Uncertain)
             || configuration.base != intent.preview.configuration.base
         {
-            return Err("L’intention de push a changé.".into());
+            return Err("message.the_push_intent_changed".into());
         }
         if ![40, 64].contains(&observed.len())
             || !observed.bytes().all(|byte| byte.is_ascii_hexdigit())
         {
-            return Err("Commit distant invalide.".into());
+            return Err("message.invalid_remote_commit".into());
         }
         intent.observed = Some(observed.clone());
         intent.state =

@@ -21,13 +21,13 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
         .raw("connectorEffects")
         .is_some_and(|raw| raw.get().len() > LIMIT)
     {
-        return Err("Historique des écritures de connecteurs trop volumineux.".into());
+        return Err("message.connector_write_history_is_too_large".into());
     }
     let operations = settings
         .get::<Vec<Operation>>("connectorEffects")?
         .unwrap_or_default();
     if operations.len() > 1024 {
-        return Err("Historique des écritures de connecteurs plein.".into());
+        return Err("message.connector_write_history_is_full".into());
     }
     let mut seen = std::collections::BTreeSet::new();
     for operation in &operations {
@@ -46,7 +46,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
             Method::RepositoriesPublish if operation.action.is_empty() => {
                 protocol::repository_proposal(&operation.input)?;
             }
-            _ => return Err("Opération distante de connecteur non prise en charge.".into()),
+            _ => return Err("message.unsupported_connector_remote_operation".into()),
         }
         if operation.module != operation.manifest.id
             || !protocol::identifier(&operation.id)
@@ -72,7 +72,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                 .all(|byte| byte.is_ascii_hexdigit())
             || protocol::effect(&operation.manifest, &request(operation, false))? != Effect::Remote
         {
-            return Err("Historique des écritures de connecteurs invalide.".into());
+            return Err("message.invalid_connector_write_history".into());
         }
         if let Some(reply) = &operation.reply {
             if reply.protocol != protocol::PROTOCOL
@@ -85,7 +85,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                     && (reply.status != Status::Ok
                         || operation.request_id.as_deref() != Some(reply.request_id.as_str()))
             {
-                return Err("Résultat d’écriture de connecteur invalide.".into());
+                return Err("message.invalid_connector_write_result".into());
             }
             protocol::report_items(&protocol::Report {
                 id: operation.id.clone(),
@@ -101,7 +101,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                     &receipt.observed_at,
                     &time::format_description::well_known::Rfc3339,
                 )
-                .map_err(|_| "Date d’observation du connecteur invalide.")?;
+                .map_err(|_| "message.invalid_connector_observation_date")?;
             }
             if matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
                 && receipt
@@ -109,7 +109,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                     .is_none_or(|receipt| receipt.outcome != protocol::RemoteOutcome::Applied)
             {
                 return Err(
-                    "Une écriture confirmée exige une observation positive du module.".into(),
+                    "message.a_confirmed_write_requires_a_positive_module_observation".into(),
                 );
             }
             if operation.method == Method::TimeSend
@@ -122,9 +122,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                     .as_ref()
                     != Some(&super::connector_time::proposal(&operation.input)?)
             {
-                return Err(
-                    "Observation d’export de temps différente de la saisie confirmée.".into(),
-                );
+                return Err("message.observed_time_export_mismatch".into());
             }
             if operation.state == Phase::Failed
                 && (receipt
@@ -133,7 +131,7 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                     || reply.status == Status::Uncertain
                     || operation.request_id.as_deref() != Some(reply.request_id.as_str()))
             {
-                return Err("Résultat d’écriture de connecteur invalide.".into());
+                return Err("message.invalid_connector_write_result".into());
             }
             if operation.method == Method::TicketsTransition
                 && matches!(operation.state, Phase::Confirmed | Phase::Reconciled)
@@ -141,14 +139,14 @@ pub fn read(settings: &Document) -> Result<Vec<Operation>> {
                 super::connector_ticket_transitions::observed_ticket(operation)?;
             }
         } else if matches!(operation.state, Phase::Confirmed | Phase::Reconciled) {
-            return Err("Une écriture confirmée exige une observation positive du module.".into());
+            return Err("message.a_confirmed_write_requires_a_positive_module_observation".into());
         }
     }
     Ok(operations)
 }
 fn save(store: &Store<'_>, operations: &[Operation]) -> Result<()> {
     if serde_json::to_vec(operations)?.len() > LIMIT {
-        return Err("Historique des écritures de connecteurs trop volumineux.".into());
+        return Err("message.connector_write_history_is_too_large".into());
     }
     let mut settings = store.settings::<Document>()?;
     settings.set("connectorEffects", &operations)?;
@@ -161,7 +159,7 @@ fn touch(operation: &mut Operation) -> Result<()> {
     operation.version = operation
         .version
         .checked_add(1)
-        .ok_or("Version d’opération épuisée.")?;
+        .ok_or("message.operation_version_exhausted")?;
     operation.updated_at = now()?;
     Ok(())
 }
@@ -176,7 +174,9 @@ pub fn require_configuration(store: &Store<'_>, profile: &Installed) -> Result<(
         .filter(|operation| operation.module == profile.manifest.id && pending(operation))
     {
         if !same_scope(profile, operation)? {
-            return Err("La portée du connecteur possède une écriture inachevée. Rapproche-la avant de modifier ses paramètres publics.".into());
+            return Err(
+                "message.this_connector_scope_has_an_unfinished_write_reconcile_it_before".into(),
+            );
         }
     }
     Ok(())
@@ -186,21 +186,21 @@ pub fn require_removal(store: &Store<'_>, module: &str) -> Result<()> {
         .iter()
         .any(|operation| operation.module == module && pending(operation))
     {
-        return Err("Rapproche l’écriture du connecteur avant de le retirer.".into());
+        return Err("message.reconcile_the_connector_write_before_removing_it".into());
     }
     Ok(())
 }
 pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result<Operation> {
     store.transaction(|store|{
         let owner=super::connector_repositories::publication_owner(store,input.method,&input.input)?;
-        for run in store.documents::<Document>(super::store::Documents::Runs)?{if super::runs::active(&run)?{return Err("Arrête les agents avant de préparer une écriture distante de connecteur.".into());}}
-        for entry in store.documents::<Document>(super::store::Documents::Times)?{if entry.truthy("runningSince")?||entry.string_equals("exportState","sending")?||entry.string_equals("exportState","uncertain")?{return Err("Arrête les chronomètres et rapproche les exports avant cette action de connecteur.".into());}}
-        for card in store.documents::<Document>(super::store::Documents::Cards)?{if atelier_core::application::jira::unresolved(&card)?||atelier_core::application::forge::unresolved(&card)?||card.get::<Document>("automation")?.is_some_and(|flow|flow.string_equals("state","running").unwrap_or(true)&&!owner.as_ref().is_some_and(|(id,operation)|card.string_equals("id",id).unwrap_or(false)&&flow.string_equals("id",operation).unwrap_or(false))){return Err("Termine les opérations de tâches avant cette action de connecteur.".into());}}
+        for run in store.documents::<Document>(super::store::Documents::Runs)?{if super::runs::active(&run)?{return Err("message.stop_agents_before_preparing_a_connector_remote_write".into());}}
+        for entry in store.documents::<Document>(super::store::Documents::Times)?{if entry.truthy("runningSince")?||entry.string_equals("exportState","sending")?||entry.string_equals("exportState","uncertain")?{return Err("message.stop_timers_and_reconcile_exports_before_this_connector_action".into());}}
+        for card in store.documents::<Document>(super::store::Documents::Cards)?{if atelier_core::application::jira::unresolved(&card)?||atelier_core::application::forge::unresolved(&card)?||card.get::<Document>("automation")?.is_some_and(|flow|flow.string_equals("state","running").unwrap_or(true)&&!owner.as_ref().is_some_and(|(id,operation)|card.string_equals("id",id).unwrap_or(false)&&flow.string_equals("id",operation).unwrap_or(false))){return Err("message.finish_task_operations_before_this_connector_action".into());}}
         let queue=super::queue::read(store)?;
-        if queue.active.as_ref().is_some_and(|active|!owner.as_ref().is_some_and(|(id,_)|*id==active.card_id))||(!queue.paused&&!queue.ids.is_empty()&&owner.is_none()){return Err("Mets la file en pause et termine sa tâche active avant cette action de connecteur.".into());}
+        if queue.active.as_ref().is_some_and(|active|!owner.as_ref().is_some_and(|(id,_)|*id==active.card_id))||(!queue.paused&&!queue.ids.is_empty()&&owner.is_none()){return Err("message.pause_the_queue_and_finish_its_active_task_before_this_connector".into());}
         let mut operations=read(&store.settings::<Document>()?)?;
-        if operations.iter().any(pending){return Err("Termine ou rapproche l’écriture de connecteur en cours.".into());}
-        if operations.len()>=1024{return Err("Historique des écritures de connecteurs plein.".into());}
+        if operations.iter().any(pending){return Err("message.finish_or_reconcile_the_current_connector_write".into());}
+        if operations.len()>=1024{return Err("message.connector_write_history_is_full".into());}
         let profile=connectors::profile(store,module,input.expected_revision)?;
         let payload=match input.method {
             Method::Action if input.input.is_null()=>serde_json::json!({"importedCount":super::connector_tickets::imported_count(store,&profile)?}),
@@ -208,14 +208,14 @@ pub fn preview(store: &Store<'_>, module: &str, input: &RemotePreview) -> Result
             Method::TimeSend if input.action.is_empty()=>super::connector_time::prepare_preview(store,&profile,&input.input)?,
             Method::TicketsTransition if input.action.is_empty()=>super::connector_ticket_transitions::prepare_preview(store,&profile,&input.input)?,
             Method::RepositoriesPublish if input.action.is_empty()=>super::connector_repositories::prepare_preview(store,&profile,&input.input)?,
-            _=>return Err("Opération distante de connecteur non prise en charge.".into())
+            _=>return Err("message.unsupported_connector_remote_operation".into())
         };
         let timestamp=now()?;
         let operation=Operation{id:format!("effect-{}",uuid::Uuid::new_v4()),module:module.into(),version:1,revision:profile.revision,manifest:profile.manifest.clone(),binary:profile.binary.clone(),values:profile.values.clone(),method:input.method,action:input.action.clone(),input:payload,state:Phase::Preparing,started_at:timestamp.clone(),updated_at:timestamp,reply:None,request_id:None};
         let request=request(&operation,false);
-        if protocol::effect(&profile.manifest,&request)?!=Effect::Remote{return Err("Cette action n’est pas une écriture distante déclarée.".into());}
+        if protocol::effect(&profile.manifest,&request)?!=Effect::Remote{return Err("message.this_action_is_not_a_declared_remote_write".into());}
         operations.push(operation.clone());
-        if serde_json::to_vec(&operations)?.len().saturating_add(protocol::OUTPUT_LIMIT+16*1024)>LIMIT{return Err("Historique plein : aucune nouvelle écriture distante lancée.".into());}
+        if serde_json::to_vec(&operations)?.len().saturating_add(protocol::OUTPUT_LIMIT+16*1024)>LIMIT{return Err("message.history_is_full_no_new_remote_write_was_started".into());}
         save(store,&operations)?;Ok(operation)
     })
 }
@@ -225,13 +225,13 @@ pub fn operation(store: &Store<'_>, module: &str, id: &str, version: u64) -> Res
         .find(|operation| {
             operation.module == module && operation.id == id && operation.version == version
         })
-        .ok_or_else(|| "L’opération de connecteur a changé. Recharge son aperçu.".into())
+        .ok_or_else(|| "message.the_connector_operation_changed_reload_its_preview".into())
 }
 pub fn current(store: &Store<'_>, module: &str, id: &str) -> Result<Operation> {
     read(&store.settings::<Document>()?)?
         .into_iter()
         .find(|operation| operation.module == module && operation.id == id)
-        .ok_or_else(|| "Opération de connecteur introuvable.".into())
+        .ok_or_else(|| "message.connector_operation_not_found".into())
 }
 fn reconcile_method(method: Method) -> Method {
     if method == Method::TimeSend {
@@ -284,12 +284,14 @@ pub fn prepare(
             Phase::Preparing
         }
     {
-        return Err("Cette écriture ne peut pas être envoyée à nouveau.".into());
+        return Err("message.this_write_cannot_be_sent_again".into());
     }
     let profile = connectors::profile(store, module, revision)?;
     if !same_scope(&profile, &operation)? || (!reconcile && profile.revision != operation.revision)
     {
-        return Err("La portée ou les identifiants du connecteur ont changé. Recharge puis vérifie l’opération.".into());
+        return Err(
+            "message.connector_scope_or_credentials_changed_reload_and_check_the_oper".into(),
+        );
     }
     let mut request = request(&operation, reconcile);
     request.request_id = format!("request-{}", uuid::Uuid::new_v4());
@@ -321,7 +323,7 @@ fn change(
         let operation = operations
             .iter_mut()
             .find(|operation| operation.id == id && operation.version == version)
-            .ok_or("L’opération de connecteur a changé. Recharge son aperçu.")?;
+            .ok_or("message.the_connector_operation_changed_reload_its_preview")?;
         action(operation)?;
         super::connector_time::synchronize(store, operation)?;
         super::connector_ticket_transitions::synchronize(store, operation)?;
@@ -347,10 +349,10 @@ pub fn sending(
             || profile.revision != operation.revision
             || !same_scope(&profile, operation)?
         {
-            return Err("L’opération ou la portée du connecteur a changé.".into());
+            return Err("message.the_connector_operation_or_scope_changed".into());
         }
         if !protocol::identifier(request_id) {
-            return Err("Identité de requête de connecteur invalide.".into());
+            return Err("message.invalid_connector_request_identity".into());
         }
         super::connector_time::before_send(store, operation)?;
         super::connector_ticket_transitions::before_send(store, &profile, operation)?;
@@ -375,7 +377,7 @@ pub fn observing(
             || !same_scope(&profile, operation)?
             || !protocol::identifier(request_id)
         {
-            return Err("L’opération ou la portée du connecteur a changé.".into());
+            return Err("message.the_connector_operation_or_scope_changed".into());
         }
         operation.request_id = Some(request_id.into());
         Ok(())
@@ -386,7 +388,7 @@ pub fn interrupted(store: &Store<'_>, id: &str, version: u64) -> Result<Operatio
         operation.state = match operation.state {
             Phase::Preparing => Phase::Failed,
             Phase::Sending => Phase::Uncertain,
-            _ => return Err("Aucune écriture en cours à interrompre.".into()),
+            _ => return Err("message.no_active_write_to_interrupt".into()),
         };
         Ok(())
     })
@@ -394,7 +396,7 @@ pub fn interrupted(store: &Store<'_>, id: &str, version: u64) -> Result<Operatio
 pub fn cancel(store: &Store<'_>, module: &str, id: &str, version: u64) -> Result<Operation> {
     change(store, id, version, |operation| {
         if operation.module != module || operation.state != Phase::Preparing {
-            return Err("Seul un aperçu non envoyé peut être annulé.".into());
+            return Err("message.only_an_unsubmitted_preview_can_be_cancelled".into());
         }
         operation.state = Phase::Failed;
         Ok(())
@@ -414,7 +416,7 @@ pub fn record(
             || operation.request_id.as_deref() != Some(reply.request_id.as_str())
             || serde_json::to_vec(&reply)?.len() > protocol::OUTPUT_LIMIT
         {
-            return Err("Le résultat ne correspond pas à cette écriture de connecteur.".into());
+            return Err("message.the_result_does_not_match_this_connector_write".into());
         }
         let profile = connectors::profile(store, module, revision)?;
         if operation.module != module
@@ -433,7 +435,7 @@ pub fn record(
                     operation.method
                 }
         {
-            return Err("Le résultat ne correspond pas à cette écriture de connecteur.".into());
+            return Err("message.the_result_does_not_match_this_connector_write".into());
         }
         let report = protocol::Report {
             id: operation.id.clone(),
@@ -450,10 +452,10 @@ pub fn record(
                 &receipt.observed_at,
                 &time::format_description::well_known::Rfc3339,
             )
-            .map_err(|_| "Date d’observation du connecteur invalide.")?;
+            .map_err(|_| "message.invalid_connector_observation_date")?;
             let age = time::OffsetDateTime::now_utc() - date;
             if age < time::Duration::seconds(-60) || age > time::Duration::minutes(10) {
-                return Err("Observation du connecteur expirée ou située dans le futur.".into());
+                return Err("message.connector_observation_expired_or_dated_in_the_future".into());
             }
             receipt.outcome
         } else {

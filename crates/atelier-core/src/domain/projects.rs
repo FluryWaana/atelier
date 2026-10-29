@@ -34,7 +34,7 @@ pub fn same_repository_units(a: &JsonString, b: &JsonString, windows: bool) -> b
 }
 
 fn setting(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
-    let invalid = "Réglage de projet invalide.";
+    let invalid = "message.invalid_project_setting";
     let value = body
         .raw(key)
         .filter(|value| value.get() != "null")
@@ -46,7 +46,7 @@ fn setting(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
 }
 
 fn directory(path: JsonString) -> Result<JsonString> {
-    let invalid = "Le dossier du service doit être relatif et rester dans le worktree.";
+    let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
     // Replacing a surrogate cannot introduce ASCII traversal; keep the original units in the result.
     let view = String::from_utf16_lossy(&path.0);
     let bytes = view.as_bytes();
@@ -68,8 +68,7 @@ fn directory(path: JsonString) -> Result<JsonString> {
 }
 
 fn port(body: &Document, key: &str) -> Result<u16> {
-    let invalid =
-        "Port invalide : indique un nombre de 1 à 65535, ou laisse vide pour un port automatique.";
+    let invalid = "message.invalid_port_enter_a_number_from_1_to_65535_or_leave_empty_for_a";
     let Some(value) = body.raw(key) else {
         return Ok(0);
     };
@@ -116,29 +115,31 @@ pub struct ProjectSettings {
 }
 
 pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectSettings> {
-    let invalid = "Réglage de projet invalide.";
+    let invalid = "message.invalid_project_setting";
     let base_branch = setting(body, "baseBranch", 180)?;
     let connector = setting(body, "repositoryConnector", 64)?;
-    let connector_text = connector.utf8().map_err(|_| "Fournisseur Git invalide.")?;
+    let connector_text = connector
+        .utf8()
+        .map_err(|_| "message.invalid_git_provider")?;
     if !connector.0.is_empty()
         && (!connector_text.as_bytes()[0].is_ascii_lowercase()
             || !connector_text
                 .bytes()
                 .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-'))
     {
-        return Err("Fournisseur Git invalide.");
+        return Err("message.invalid_git_provider");
     }
-    let agent = if body.truthy("agent").map_err(|_| "Agent invalide.")? {
+    let agent = if body.truthy("agent").map_err(|_| "message.invalid_agent")? {
         body.get::<JsonString>("agent")
-            .map_err(|_| "Agent invalide.")?
+            .map_err(|_| "message.invalid_agent")?
             .unwrap_or_default()
     } else {
         JsonString::default()
     };
     if !agent.0.is_empty() {
         find_provider(settings, &agent)
-            .map_err(|_| "Agent invalide.")?
-            .ok_or("Agent invalide.")?;
+            .map_err(|_| "message.invalid_agent")?
+            .ok_or("message.invalid_agent")?;
     }
     let jira_mode = if body.truthy("jiraMode").map_err(|_| invalid)? {
         body.get::<String>("jiraMode")
@@ -150,21 +151,21 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
     if !["inherit", "off", "custom"].contains(&jira_mode.as_str())
         || base_branch.0.first() == Some(&u16::from(b'-'))
     {
-        return Err("Réglage de projet invalide.");
+        return Err("message.invalid_project_setting");
     }
     let mapping = body
         .raw("jiraStatusMap")
         .filter(|value| value.get() != "null")
         .map(|value| serde_json::from_str::<Document>(value.get()))
         .transpose()
-        .map_err(|_| "Correspondance Jira invalide.")?
+        .map_err(|_| "message.invalid_jira_mapping")?
         .unwrap_or_default();
     if mapping.keys().any(|key| {
         !STATUSES
             .iter()
             .any(|status| key == &JsonString::from(*status))
     }) {
-        return Err("Correspondance Jira invalide.");
+        return Err("message.invalid_jira_mapping");
     }
     let mut status_map = Document::default();
     let mut has_status = false;
@@ -174,11 +175,11 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
         status_map.set(status, &value).map_err(|_| invalid)?;
     }
     if jira_mode == "custom" && !has_status {
-        return Err("Renseigne au moins un statut Jira.");
+        return Err("message.enter_at_least_one_jira_status");
     }
     for key in ["automationEnabled", "autoFix"] {
         if body.get::<bool>(key).is_err() {
-            return Err("Option automatique invalide.");
+            return Err("message.invalid_automatic_option");
         }
     }
     let pr_target = setting(body, "prTarget", 180)?;
@@ -191,21 +192,17 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
                 .windows(placeholder.0.len())
                 .any(|units| units == placeholder.0)
         {
-            return Err(
-                "Ajoute {port} dans la commande pour appliquer le port fourni par Atelier.",
-            );
+            return Err("message.add_port_to_the_command_to_apply_the_port_provided_by_atelier");
         }
     }
     let automation_enabled = body
         .get::<bool>("automationEnabled")
-        .map_err(|_| "Option automatique invalide.")?
+        .map_err(|_| "message.invalid_automatic_option")?
         .unwrap_or(false);
     if pr_target.0.first() == Some(&u16::from(b'-'))
         || (automation_enabled && (pr_target.0.is_empty() || test_command.0.is_empty()))
     {
-        return Err(
-            "Renseigne la branche cible et la commande de vérification avant d’activer le mode automatique.",
-        );
+        return Err("message.enter_the_target_branch_and_verification_command_before_enabling");
     }
     Ok(ProjectSettings {
         project_rules: setting(body, "projectRules", 12000)?,
@@ -226,7 +223,7 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
         automation_enabled,
         auto_fix: body
             .get::<bool>("autoFix")
-            .map_err(|_| "Option automatique invalide.")?
+            .map_err(|_| "message.invalid_automatic_option")?
             .unwrap_or(true),
         pr_target,
         test_command,

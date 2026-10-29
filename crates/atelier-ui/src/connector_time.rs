@@ -145,14 +145,14 @@ pub fn ConnectorTime(
                     response
                         .json::<RemoteOperation>()
                         .await
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        .map_err(|_| "message.invalid_server_response".to_owned())?;
                     Ok(None)
                 } else {
                     response
                         .json::<Report>()
                         .await
                         .map(Some)
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                        .map_err(|_| "message.invalid_server_response".to_owned())
                 }
             }
             .await;
@@ -173,29 +173,29 @@ pub fn ConnectorTime(
         });
     });
     view! {<fieldset hidden=move||!supported() disabled=move||pending.get()||blocked.get()>
-        <legend>{move||i18n.text("Exporter une saisie de temps par ce module")}</legend>
-        <p class="field-help">{move||i18n.text("Choisis un temps humain arrêté. Le module lit sa destination ; aucun envoi avant confirmation dans le journal.")}</p>
-        <p hidden=move||!eligible.with(Vec::is_empty)>{move||i18n.text("Aucune saisie humaine arrêtée et non envoyée disponible.")}</p>
-        <label for="connector-time-entry">{move||i18n.text("Saisie de temps")}</label>
+        <legend>{move||i18n.text("message.export_a_time_entry_through_this_module")}</legend>
+        <p class="field-help">{move||i18n.text("message.choose_a_stopped_human_time_entry_the_module_reads_its_destinati")}</p>
+        <p hidden=move||!eligible.with(Vec::is_empty)>{move||i18n.text("message.no_stopped_unsent_human_time_entry_is_available")}</p>
+        <label for="connector-time-entry">{move||i18n.text("message.time_entry")}</label>
         <select id="connector-time-entry" prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))>
-            <option value="">{move||i18n.text("Choisir une saisie")}</option>
+            <option value="">{move||i18n.text("message.choose_an_entry")}</option>
             {move||eligible.get().into_iter().map(|entry|{
                 let id=field(&entry,"id");let title=board.cards.with(|cards|cards.iter().find(|card|card.id==field(&entry,"cardId")).map(|card|card.title.utf8().unwrap_or_default()).unwrap_or_default());
                 view!{<option value=id>{format!("{} {} · {} s · {}",field(&entry,"date"),field(&entry,"startTime"),atelier_core::domain::time::time_fields(&entry).map(|fields|fields.seconds).unwrap_or(0),title)}</option>}
             }).collect_view()}
         </select>
-        <button id="preview-connector-time" type="button" disabled=move||!ready.get() on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("Lire la destination de l’export")}</button>
+        <button id="preview-connector-time" type="button" disabled=move||!ready.get() on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.read_the_export_destination")}</button>
         {move||report.get().and_then(|report|protocol::time_proposal(&report.output).ok()).map(|proposal|view!{<dl>
-            <dt>{i18n.text("Destination")}</dt><dd>{proposal.instance}</dd>
-            <dt>{i18n.text("Compte")}</dt><dd>{proposal.account}</dd>
-            <dt>{i18n.text("Référence distante")}</dt><dd>{proposal.reference}</dd>
-            {proposal.source.ticket.map(|ticket|view!{<dt>{i18n.text("Ticket source")}</dt><dd>{format!("{} · {}",ticket.key,ticket.instance)}</dd>})}
-            <dt>{i18n.text("Durée")}</dt><dd>{format!("{} s",proposal.source.seconds)}</dd>
-            <dt>{i18n.text("Description")}</dt><dd class="pre-wrap">{proposal.source.description}</dd>
+            <dt>{i18n.text("message.destination")}</dt><dd>{proposal.instance}</dd>
+            <dt>{i18n.text("message.account")}</dt><dd>{proposal.account}</dd>
+            <dt>{i18n.text("message.remote_reference")}</dt><dd>{proposal.reference}</dd>
+            {proposal.source.ticket.map(|ticket|view!{<dt>{i18n.text("message.source_ticket")}</dt><dd>{format!("{} · {}",ticket.key,ticket.instance)}</dd>})}
+            <dt>{i18n.text("message.duration")}</dt><dd>{format!("{} s",proposal.source.seconds)}</dd>
+            <dt>{i18n.text("message.description")}</dt><dd class="pre-wrap">{proposal.source.description}</dd>
         </dl>})}
-        <button id="prepare-connector-time" type="button" disabled=move||report.get().is_none()||!ready.get() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("Préparer cet export dans le journal")}</button>
-        <button type="button" disabled=move||selected.get().is_empty() on:click=move |_|{selected.set(String::new());report.set(None);}>{move||i18n.text("Annuler la sélection")}</button>
-        <p role="status" hidden=move||!notice.get()>{move||i18n.text("Aperçu ajouté au journal. Vérifie sa portée puis confirme l’envoi séparément.")}</p>
+        <button id="prepare-connector-time" type="button" disabled=move||report.get().is_none()||!ready.get() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.prepare_this_export_in_the_journal")}</button>
+        <button type="button" disabled=move||selected.get().is_empty() on:click=move |_|{selected.set(String::new());report.set(None);}>{move||i18n.text("message.cancel_selection")}</button>
+        <p role="status" hidden=move||!notice.get()>{move||i18n.text("message.preview_added_to_the_journal_check_its_scope_then_confirm_sendin")}</p>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </fieldset>}
 }

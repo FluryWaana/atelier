@@ -138,6 +138,12 @@ pub struct AgentQuestion {
     pub options: Vec<String>,
     pub multi_select: bool,
     pub is_secret: bool,
+    #[serde(default = "agent_question_required")]
+    pub required: bool,
+}
+
+fn agent_question_required() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -145,7 +151,10 @@ pub struct AgentQuestion {
 pub struct AgentInteraction {
     pub id: String,
     pub title: String,
+    pub title_key: Option<String>,
     pub detail: String,
+    #[serde(default)]
+    pub secret_warning: bool,
     pub can_allow: bool,
     pub questions: Vec<AgentQuestion>,
 }
@@ -259,6 +268,33 @@ pub struct AgentDiagnostic {
     pub account_report: Option<crate::application::agent_account::Report>,
     #[serde(default)]
     pub update_info: Option<crate::application::agent_cli::UpdateInfo>,
+    #[serde(default)]
+    pub models: Vec<AgentModel>,
+}
+
+impl AgentDiagnostic {
+    pub fn cli_connected(&self) -> bool {
+        self.authentication == AgentAuthentication::Present && self.authentication_error.is_none()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentModel {
+    pub id: String,
+    pub name: String,
+    pub efforts: Vec<String>,
+    pub is_default: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoveredAgent {
+    pub id: String,
+    pub name: String,
+    pub installed: bool,
+    pub supported: bool,
+    pub script_only: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -853,6 +889,7 @@ pub struct ForgeCheck {
     pub scope: ForgeCheckScope,
     pub commit: Option<String>,
     pub description: String,
+    pub description_key: Option<String>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

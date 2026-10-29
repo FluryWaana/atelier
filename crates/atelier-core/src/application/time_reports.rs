@@ -1,7 +1,7 @@
 use crate::{contracts::Card, document::Document};
 fn cell(out: &mut String, value: &str) -> Result<(), &'static str> {
     if value.len() > 64 * 1024 {
-        return Err("Champ CSV trop volumineux.");
+        return Err("message.csv_field_is_too_large");
     }
     let formula = value.starts_with(['\t', '\r', '\n'])
         || value
@@ -14,7 +14,7 @@ fn cell(out: &mut String, value: &str) -> Result<(), &'static str> {
     out.push_str(&value.replace('"', "\"\""));
     out.push('"');
     if out.len() > 8 * 1024 * 1024 {
-        return Err("Export CSV trop volumineux. Réduis la période.");
+        return Err("message.csv_export_is_too_large_reduce_the_period");
     }
     Ok(())
 }
@@ -24,7 +24,7 @@ pub fn csv(
     cards: &[Card],
 ) -> Result<String, &'static str> {
     if entries.len() > 10_000 {
-        return Err("Export CSV limité à 10 000 saisies. Réduis la période.");
+        return Err("message.csv_export_is_limited_to_10_000_entries_reduce_the_period");
     }
     let by_id = cards
         .iter()
@@ -41,42 +41,42 @@ pub fn csv(
     for entry in entries {
         if entry
             .truthy("runningSince")
-            .map_err(|_| "Saisie de temps invalide.")?
+            .map_err(|_| "message.invalid_time_entry")?
         {
             continue;
         }
         let text = |key: &str| {
             entry
                 .get::<String>(key)
-                .map_err(|_| "Saisie de temps invalide.")?
-                .ok_or("Saisie de temps incomplète.")
+                .map_err(|_| "message.invalid_time_entry")?
+                .ok_or("message.incomplete_time_entry")
         };
         let card_id = text("cardId")?;
         let card = by_id.get(card_id.as_str()).copied();
         let title = card
-            .map(|card| card.title.utf8().map_err(|_| "Titre de tâche invalide."))
+            .map(|card| card.title.utf8().map_err(|_| "message.invalid_task_title"))
             .transpose()?
             .unwrap_or_default();
         let ticket = card
             .map(|card| card.fields.get::<Document>("ticket"))
             .transpose()
-            .map_err(|_| "Ticket invalide.")?
+            .map_err(|_| "message.invalid_issue")?
             .flatten()
             .map(|ticket| ticket.get::<String>("key"))
             .transpose()
-            .map_err(|_| "Ticket invalide.")?
+            .map_err(|_| "message.invalid_issue")?
             .flatten()
             .unwrap_or_default();
         let seconds = entry
             .get::<f64>("seconds")
-            .map_err(|_| "Durée invalide.")?
+            .map_err(|_| "message.invalid_duration")?
             .filter(|seconds| {
                 seconds.is_finite() && seconds.fract() == 0.0 && (0.0..=86400.0).contains(seconds)
             })
-            .ok_or("Durée invalide.")? as u64;
+            .ok_or("message.invalid_duration")? as u64;
         let tempo = entry
             .get::<String>("tempoId")
-            .map_err(|_| "Identifiant Tempo invalide.")?
+            .map_err(|_| "message.invalid_tempo_id")?
             .unwrap_or_default();
         let values = [
             text("date")?,
@@ -97,7 +97,7 @@ pub fn csv(
         out.push_str("\r\n");
     }
     if out.len() > 8 * 1024 * 1024 {
-        return Err("Export CSV trop volumineux. Réduis la période.");
+        return Err("message.csv_export_is_too_large_reduce_the_period");
     }
     Ok(out)
 }

@@ -23,7 +23,7 @@ async fn templates_keep_settings_and_utf16_copy_only_editable_content_and_enforc
         for index in 1..50 {
             store.transaction(|store| task_templates::create(store, &body, || index.to_string()))?;
         }
-        assert_eq!(task_templates::create(store, &body, || "overflow".into()).unwrap_err().to_string(), "Retire un modèle avant d’en ajouter (50 maximum).");
+        assert_eq!(task_templates::create(store, &body, || "overflow".into()).unwrap_err().to_string(), "message.remove_a_template_before_adding_another_50_maximum");
         store.transaction(|store| task_templates::remove(store, "missing"))?;
         let loaded = store.settings::<Document>()?;
         assert_eq!(loaded.get::<Vec<Document>>("taskTemplates")?.unwrap().len(), 50);
@@ -32,9 +32,9 @@ async fn templates_keep_settings_and_utf16_copy_only_editable_content_and_enforc
         let mut boundary = body.clone(); boundary.set("name", &"🔧".repeat(50))?;
         store.transaction(|store| task_templates::create(store, &boundary, || "boundary".into()))?;
         boundary.set("name", &"🔧".repeat(51))?;
-        assert_eq!(task_templates::create(store, &boundary, || "overflow".into()).unwrap_err().to_string(), "Texte invalide ou trop long.");
+        assert_eq!(task_templates::create(store, &boundary, || "overflow".into()).unwrap_err().to_string(), "message.invalid_or_overly_long_text");
         boundary.set("name", &" ")?;
-        assert_eq!(task_templates::create(store, &boundary, || "empty".into()).unwrap_err().to_string(), "Nom de modèle requis.");
+        assert_eq!(task_templates::create(store, &boundary, || "empty".into()).unwrap_err().to_string(), "message.template_name_required");
         assert_eq!(store.document::<Document>(Documents::Cards, "card")?.unwrap().raw("checklist").unwrap().get(), card.raw("checklist").unwrap().get());
         Ok(())
     }).await.unwrap();

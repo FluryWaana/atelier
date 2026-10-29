@@ -21,12 +21,12 @@ pub(super) async fn preview(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let operation = uuid::Uuid::new_v4().to_string();
@@ -53,9 +53,9 @@ pub(super) async fn preview(
                 .await
         };
         if stopping {
-            Err("Atelier est en cours d’arrêt.".into())
+            Err("message.atelier_is_shutting_down".into())
         } else {
-            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("Lecture du ticket Jira trop longue.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+            tokio::select! {result=tokio::time::timeout(Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("message.reading_the_jira_issue_took_too_long".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
         }
     };
     if result.is_err()
@@ -79,7 +79,7 @@ pub(super) async fn apply(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte Jira incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_jira_card");
     }
     response(
         state

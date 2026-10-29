@@ -28,7 +28,7 @@ fn historical_project_detection_preserves_sources_drafts_roles_caching_and_utf16
             event.set("repository", &value)?;
             events.borrow_mut().push(event);
             let input: JsonString =
-                serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
+                serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
             let mut result = JsonString::from("checked:");
             result.0.extend(text_units(&input, 2000)?.0);
             Ok(result)

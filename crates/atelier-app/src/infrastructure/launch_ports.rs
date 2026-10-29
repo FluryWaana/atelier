@@ -11,7 +11,7 @@ impl PortLease {
     pub fn reserve(port: u16) -> Result<Self> {
         Self::bind(port).map_err(|_| {
             if port == 0 {
-                "Impossible de réserver un port local.".into()
+                "message.local_port_reservation_failed".into()
             } else {
                 format!("Le port {port} est indisponible. Choisissez un autre port ou laissez Atelier le choisir.").into()
             }

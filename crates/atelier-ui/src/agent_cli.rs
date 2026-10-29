@@ -34,7 +34,12 @@ pub fn AgentCliUpdate(
     let key = Memo::new(move |_| {
         profile.get().and_then(|profile| {
             info.get()
-                .filter(|info| info.availability == Availability::Available && info.image.is_some())
+                .filter(|info| {
+                    matches!(
+                        info.availability,
+                        Availability::Available | Availability::Manual
+                    ) && info.image.is_some()
+                })
                 .map(|info| serde_json::json!({"expected":profile,"info":info}).to_string())
         })
     });
@@ -64,7 +69,7 @@ pub fn AgentCliUpdate(
                     .await?
                     .json::<Option<Operation>>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() && generation.get_untracked() == expected {
@@ -116,7 +121,7 @@ pub fn AgentCliUpdate(
                     .await?
                     .json::<Operation>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -143,17 +148,17 @@ pub fn AgentCliUpdate(
         })
     };
     view! {<section class="task-files" aria-labelledby="cli-update-heading" aria-busy=move||(loading.get()||pending.get()).to_string()>
-        <h4 id="cli-update-heading">{move||i18n.text("Mise à jour du CLI")}</h4>
-        <p>{move||info.get().map(|info|i18n.text(match info.availability{Availability::Available=>"Une version plus récente est disponible.",Availability::Current=>"Aucune version stable plus récente signalée.",Availability::Unknown=>"Version publiée indisponible ; aucune mise à jour proposée.",Availability::Managed=>"Cette installation utilise son gestionnaire habituel pour les mises à jour.",Availability::Custom=>"Programme personnalisé : utilise son gestionnaire habituel pour les mises à jour."})).unwrap_or_else(||i18n.text("Lance le diagnostic du profil pour vérifier sa version et ses mises à jour."))}</p>
-        <p>{move||info.get().and_then(|info|info.latest_version).map(|version|i18n.text("Version publiée : {0}").replace("{0}",&version)).unwrap_or_default()}</p>
+        <h4 id="cli-update-heading">{move||i18n.text("message.cli_update")}</h4>
+        <p>{move||info.get().map(|info|i18n.text(match info.availability{Availability::Available=>"message.a_newer_version_is_available",Availability::Manual=>"message.the_update_command_is_available_its_target_version_is_unknown",Availability::Current=>"message.no_newer_stable_version_reported",Availability::Unknown=>"message.published_version_unavailable_no_update_offered",Availability::Managed=>"message.use_this_installation_s_usual_manager_for_updates",Availability::Custom=>"message.custom_program_use_its_usual_manager_for_updates"})).unwrap_or_else(||i18n.text("message.run_profile_diagnostics_to_check_its_version_and_updates"))}</p>
+        <p>{move||info.get().and_then(|info|info.latest_version).map(|version|i18n.text("message.published_version_0").replace("{0}",&version)).unwrap_or_default()}</p>
         <div hidden=move||key.get().is_none()>
-            <p class="field-help">{move||i18n.text("Ferme les autres sessions de ce CLI et arrête les opérations Atelier. La commande native peut installer une version stable plus récente que celle affichée. Aucun retour automatique à une ancienne version du CLI.")}</p>
-            <label><input id="confirm-cli-update" type="checkbox" disabled=move||pending.get()||loading.get()||blocked.get()||busy() prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()})/>{move||i18n.text("Mettre à jour uniquement le CLI du profil et de l’installation affichés.")}</label>
-            <button id="update-agent-cli" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||busy()||key.get().is_none_or(|key|key!=approved.get()) on:click=execute>{move||i18n.text("Confirmer la mise à jour du CLI")}</button>
+            <p class="field-help">{move||i18n.text(if info.get().is_some_and(|info|info.availability==Availability::Manual){"message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the"}else{"message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the_af010593"})}</p>
+            <label><input id="confirm-cli-update" type="checkbox" disabled=move||pending.get()||loading.get()||blocked.get()||busy() prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()})/>{move||i18n.text("message.update_only_the_cli_for_the_displayed_profile_and_installation")}</label>
+            <button id="update-agent-cli" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||busy()||key.get().is_none_or(|key|key!=approved.get()) on:click=execute>{move||i18n.text("message.confirm_cli_update")}</button>
         </div>
-        <p hidden=move||!busy()>{move||i18n.text("Une mise à jour CLI est en cours. Relis son état avant une autre action.")}</p>
-        {move||selected().map(|operation|view!{<article class="task-files" id="cli-update-result"><p>{i18n.text(match operation.phase{Phase::Preparing=>"Mise à jour CLI préparée",Phase::Running=>"Mise à jour CLI en cours",Phase::Observed=>"Version CLI observée",Phase::Failed=>"Mise à jour CLI non lancée",Phase::Uncertain=>"Résultat CLI incertain"})}</p><p>{operation.updated_at}</p><p>{i18n.text(&operation.message)}</p><p>{i18n.text("Version réellement observée : {0}").replace("{0}",operation.actual_version.as_deref().unwrap_or("—"))}</p><p>{operation.target_reached.map(|reached|i18n.text(if reached{"Version cible atteinte selon le CLI."}else{"La version cible n’a pas été observée."})).unwrap_or_default()}</p></article>})}
-        <button id="reload-cli-update" type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("Relire l’état de la mise à jour CLI")}</button>
+        <p hidden=move||!busy()>{move||i18n.text("message.a_cli_update_is_running_refresh_its_status_before_another_action")}</p>
+        {move||selected().map(|operation|view!{<article class="task-files" id="cli-update-result"><p>{i18n.text(match operation.phase{Phase::Preparing=>"message.cli_update_prepared",Phase::Running=>"message.cli_update_running",Phase::Observed=>"message.cli_version_observed",Phase::Failed=>"message.cli_update_not_started",Phase::Uncertain=>"message.cli_outcome_uncertain"})}</p><p>{operation.updated_at}</p><p>{i18n.text(&operation.message)}</p><p>{i18n.text("message.actually_observed_version_0").replace("{0}",operation.actual_version.as_deref().unwrap_or("—"))}</p><p>{operation.target_reached.map(|reached|i18n.text(if reached{"message.target_version_reached_according_to_the_cli"}else{"message.the_target_version_was_not_observed"})).unwrap_or_default()}</p></article>})}
+        <button id="reload-cli-update" type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("message.refresh_cli_update_status")}</button>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </section>}
 }

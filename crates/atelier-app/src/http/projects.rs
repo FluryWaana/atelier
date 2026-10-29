@@ -78,7 +78,7 @@ fn response(result: Result<Document>) -> Response {
                 _ => StatusCode::BAD_REQUEST,
             };
             if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "Modification du projet impossible.")
+                failure(status, "message.the_project_could_not_be_updated")
             } else {
                 failure(status, &error.to_string())
             }
@@ -115,14 +115,15 @@ pub(super) async fn update(
             store.transaction(|store| {
                 store.put(Documents::Projects, &edit.project)?;
                 if edit.moved {
-                    let repo = edit.project.raw("repo").ok_or("Répertoire absent.")?;
+                    let repo = edit
+                        .project
+                        .raw("repo")
+                        .ok_or("message.directory_missing")?;
                     for mut card in edit.cards {
                         card.set("repo", &repo)?;
                         card.set("updatedAt", &store.timestamp()?)?;
                         store.put(Documents::Cards, &card)?;
-                        let id = card
-                            .get::<String>("id")?
-                            .ok_or("Identifiant de carte absent.")?;
+                        let id = card.get::<String>("id")?.ok_or("message.card_id_missing")?;
                         let invalidation = task_editing::invalidate_reviews(
                             &id,
                             &mut card,
@@ -177,7 +178,7 @@ pub(super) async fn detect(
         Err(_) => {
             return failure(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Lecture du projet impossible.",
+                "message.project_read_failed",
             );
         }
     };
@@ -199,7 +200,7 @@ pub(super) async fn detect(
         Ok(result) => response(result),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Détection du projet impossible.",
+            "message.project_detection_failed",
         ),
     }
 }

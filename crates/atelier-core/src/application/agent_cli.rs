@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub enum Availability {
     Available,
+    Manual,
     Current,
     Unknown,
     Managed,
@@ -53,11 +54,11 @@ pub fn operation(settings: &crate::document::Document) -> Result<Option<Operatio
         .raw("agentCliUpdate")
         .is_some_and(|raw| raw.get().len() > 65_536)
     {
-        return Err("Journal de mise à jour CLI trop volumineux.");
+        return Err("message.cli_update_log_too_large");
     }
     let operation = settings
         .get::<Operation>("agentCliUpdate")
-        .map_err(|_| "Journal de mise à jour CLI invalide.")?;
+        .map_err(|_| "message.cli_update_log_invalid")?;
     if let Some(operation) = &operation
         && (!super::extensions::identifier(&operation.id)
             || operation.provider.is_empty()
@@ -68,16 +69,25 @@ pub fn operation(settings: &crate::document::Document) -> Result<Option<Operatio
                     version.is_empty()
                         || version.len() > 100
                         || version.chars().any(char::is_control)
-                }) || operation.target_reached.is_none()
+                }) || (operation.info.availability == Availability::Manual)
+                    != operation.target_reached.is_none()
             } else {
                 operation.actual_version.is_some() || operation.target_reached.is_some()
             }
-            || !matches!(
-                operation.info.package.as_str(),
-                "@openai/codex" | "@anthropic-ai/claude-code"
-            ))
+            || if operation.info.availability == Availability::Manual {
+                operation.info.latest_version.is_some()
+                    || !crate::domain::agent_catalog::update_package_supported(
+                        &operation.info.package,
+                        true,
+                    )
+            } else {
+                !crate::domain::agent_catalog::update_package_supported(
+                    &operation.info.package,
+                    false,
+                )
+            })
     {
-        return Err("Journal de mise à jour CLI invalide.");
+        return Err("message.cli_update_log_invalid");
     }
     Ok(operation)
 }
@@ -96,13 +106,49 @@ pub fn recover(settings: &mut crate::document::Document, now: &str) -> Result<bo
     };
     operation.updated_at = now.into();
     operation.message = if operation.phase == Phase::Failed {
-        "Préparation CLI interrompue avant envoi."
+        "message.cli_preparation_interrupted_before_sending"
     } else {
-        "Mise à jour CLI interrompue. Relis la version installée ; aucune commande rejouée."
+        "message.cli_update_interrupted_check_the_installed_version_no_command_wa"
     }
     .into();
     settings
         .set("agentCliUpdate", &operation)
-        .map_err(|_| "Journal de mise à jour CLI invalide.")?;
+        .map_err(|_| "message.cli_update_log_invalid")?;
     Ok(true)
+}
+
+#[cfg(test)]
+mod manual_tests {
+    use super::*;
+    use crate::document::Document;
+
+    #[test]
+    fn manual_update_journal_never_claims_an_unobserved_target() {
+        let info = UpdateInfo {
+            package: "grok-native".into(),
+            latest_version: None,
+            managed_root: Some("C:/synthetic/.grok".into()),
+            observed_at: "2026-10-28T00:00:00Z".into(),
+            availability: Availability::Manual,
+            installed_version: Some("1.0.0".into()),
+            image: None,
+        };
+        let mut operation = Operation {
+            id: "synthetic".into(),
+            provider: "grok".into(),
+            info,
+            phase: Phase::Observed,
+            started_at: String::new(),
+            updated_at: String::new(),
+            actual_version: Some("1.0.1".into()),
+            target_reached: None,
+            message: String::new(),
+        };
+        let mut settings = Document::default();
+        settings.set("agentCliUpdate", &operation).unwrap();
+        assert!(super::operation(&settings).unwrap().is_some());
+        operation.target_reached = Some(true);
+        settings.set("agentCliUpdate", &operation).unwrap();
+        assert!(super::operation(&settings).is_err());
+    }
 }

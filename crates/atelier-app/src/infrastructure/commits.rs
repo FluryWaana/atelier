@@ -13,9 +13,9 @@ pub fn worktree(card: &Card) -> Result<Worktree> {
         .fields
         .get::<Worktree>("worktree")?
         .filter(|worktree| worktree.state == WorktreeState::Ready)
-        .ok_or("Prépare le worktree de la tâche avant de créer un commit.")?;
+        .ok_or("message.prepare_the_task_worktree_before_creating_a_commit")?;
     if card.fields.get::<String>("repo")?.as_deref() != Some(worktree.source.as_str()) {
-        return Err("Le dépôt de la tâche et le worktree ne correspondent plus.".into());
+        return Err("message.the_task_repository_and_worktree_no_longer_match".into());
     }
     Ok(worktree)
 }
@@ -30,7 +30,7 @@ pub fn save_preview(
         if worktree(&card)? != preview.worktree
             || preview.worktree.branch != preview.snapshot.branch
         {
-            return Err("Le worktree a changé pendant l’aperçu du commit.".into());
+            return Err("message.the_worktree_changed_during_the_commit_preview".into());
         }
         card.fields.set("localCommitPreview", &preview)?;
         store.put(Documents::Cards, &card)?;
@@ -41,20 +41,20 @@ pub fn save_preview(
 pub fn reserve(store: &Store<'_>, input: &LocalCommitRequest, id: &str) -> Result<Card> {
     store.transaction(|store| {
         if !input.confirmed || uuid::Uuid::parse_str(id).is_err() {
-            return Err("Confirme les fichiers et le message du commit.".into());
+            return Err("message.confirm_the_files_and_commit_message".into());
         }
         let mut card = forge_association::snapshot(store, &input.expected)?;
         let preview = card
             .fields
             .get::<LocalCommitPreview>("localCommitPreview")?
-            .ok_or("Prépare un aperçu avant de créer le commit.")?;
+            .ok_or("message.prepare_a_preview_before_creating_the_commit")?;
         if worktree(&card)? != preview.worktree
             || input.paths != preview.snapshot.paths
             || input.author_name != preview.author_name
             || input.author_email != preview.author_email
             || input.message != preview.message
         {
-            return Err("Le brouillon du commit a changé. Prépare un nouvel aperçu.".into());
+            return Err("message.the_commit_draft_changed_prepare_a_new_preview".into());
         }
         card.fields.set(
             "localCommit",
@@ -74,28 +74,34 @@ pub fn reserve(store: &Store<'_>, input: &LocalCommitRequest, id: &str) -> Resul
 fn active(store: &Store<'_>, card_id: &str, id: &str) -> Result<(Card, LocalCommitIntent)> {
     let card = store
         .document::<Card>(Documents::Cards, card_id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let intent = card
         .fields
         .get::<LocalCommitIntent>("localCommit")?
         .filter(|intent| intent.id == id)
-        .ok_or("L’intention de commit a changé.")?;
+        .ok_or("message.the_commit_intent_changed")?;
     Ok((card, intent))
 }
 
 pub fn sending(store: &Store<'_>, expected: &Card, id: &str, commit: String) -> Result<()> {
     store.transaction(|store| {
         let (mut card, mut intent) = active(store, &expected.id, id)?;
-        if intent.state != Phase::Preparing || serde_json::to_value(&card)? != serde_json::to_value(expected)? {
-            return Err("L’intention de commit a changé.".into());
+        if intent.state != Phase::Preparing
+            || serde_json::to_value(&card)? != serde_json::to_value(expected)?
+        {
+            return Err("message.the_commit_intent_changed".into());
         }
         if !matches!(commit.len(), 40 | 64) || !commit.bytes().all(|c| c.is_ascii_hexdigit()) {
-            return Err("Identité du commit invalide.".into());
+            return Err("message.invalid_commit_identity".into());
         }
         intent.state = Phase::Sending;
         intent.commit = Some(commit);
         card.fields.set("localCommit", &intent)?;
-        forge_association::invalidate(store, &mut card, "Un commit local a démarré. Revalide les reviews et vérifications sur les sources actuelles.")?;
+        forge_association::invalidate(
+            store,
+            &mut card,
+            "message.a_local_commit_started_revalidate_reviews_and_verification_again",
+        )?;
         // Every subsequent push/publication requires a fresh explicit preview.
         card.fields.remove("gitPushPreview");
         card.fields.remove("forgePublicationPreview");
@@ -125,7 +131,7 @@ pub fn record(store: &Store<'_>, card_id: &str, id: &str, observed: String) -> R
             || !matches!(observed.len(), 40 | 64)
             || !observed.bytes().all(|c| c.is_ascii_hexdigit())
         {
-            return Err("L’intention de commit ou son observation a changé.".into());
+            return Err("message.the_commit_intent_or_its_observation_changed".into());
         }
         intent.state = if intent.commit.as_deref() == Some(observed.as_str()) {
             Phase::Confirmed

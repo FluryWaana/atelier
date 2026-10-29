@@ -25,7 +25,7 @@ pub(super) async fn pause(State(state): State<Shared>, request: Request) -> Resp
     }
     let result = state
         .database
-        .call(|store| queue::pause(store, "File en pause ; la tâche active peut se terminer."))
+        .call(|store| queue::pause(store, "message.queue_paused_the_active_task_may_finish"))
         .await;
     let _ = state.changed.send(());
     super::responses::response(result)
@@ -56,7 +56,7 @@ pub(super) async fn run(state: Shared) -> Result<()> {
             if super::updates::guard(state.installation_root.as_deref()).is_some() {
                 let changed = state.database.call(|store| {
                     if queue::read(store)?.paused { return Ok(false); }
-                    queue::pause(store, "File en pause pendant la mise à jour. Vérifie son résultat avant de reprendre.")?;
+                    queue::pause(store, "message.queue_paused_during_the_update_check_its_result_before_resuming")?;
                     Ok(true)
                 }).await?;
                 if changed { let _ = state.changed.send(()); }
@@ -83,7 +83,15 @@ pub(super) async fn run(state: Shared) -> Result<()> {
         }
         .await;
         if operation.is_err() {
-            state.database.call(|store|queue::pause(store,"Exécution arrêtée, incertaine ou en échec. Vérifie la tâche avant de reprendre la file.")).await?;
+            state
+                .database
+                .call(|store| {
+                    queue::pause(
+                        store,
+                        "message.run_stopped_uncertain_or_failed_check_the_task_before_resuming_t",
+                    )
+                })
+                .await?;
             let _ = state.changed.send(());
         }
     }
@@ -99,7 +107,7 @@ pub(super) async fn run(state: Shared) -> Result<()> {
         .call(|store| {
             queue::pause(
                 store,
-                "File en pause après redémarrage. Vérifie les tâches avant de reprendre.",
+                "message.queue_paused_after_restart_check_tasks_before_resuming",
             )
         })
         .await?;

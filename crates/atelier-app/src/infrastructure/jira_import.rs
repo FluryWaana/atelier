@@ -17,7 +17,10 @@ struct Reservation {
     project: Document,
 }
 fn conflict() -> crate::Error {
-    JiraFailure::OperationConflict("Les données de cet import ont changé. Recharge les réglages et sélectionne à nouveau la carte ou le projet.").into()
+    JiraFailure::OperationConflict(
+        "message.the_data_for_this_import_has_changed_reload_the_settings_and_sel",
+    )
+    .into()
 }
 
 fn target(
@@ -51,18 +54,18 @@ fn target(
         return Err(conflict());
     }
     if atelier_core::application::jira::unresolved(&card.fields)? {
-        return Err("Vérifie l’envoi Jira incertain avant de lier ce ticket.".into());
+        return Err("message.check_the_uncertain_jira_submission_before_linking_this_issue".into());
     }
     let repo = card.fields.get::<String>("repo")?.unwrap_or_default();
     let project_repo = project.get::<String>("repo")?.unwrap_or_default();
     if repo.is_empty()
         || !atelier_core::domain::projects::same_repository(&repo, &project_repo, cfg!(windows))
     {
-        return Err("La carte ne fait pas partie du projet choisi.".into());
+        return Err("message.the_card_does_not_belong_to_the_selected_project".into());
     }
     for run in store.documents::<Document>(Documents::Runs)? {
         if run.string_equals("cardId", &card.id)? && super::runs::active(&run)? {
-            return Err("Arrête l’exécution avant de lier ce ticket.".into());
+            return Err("message.stop_the_run_before_linking_this_issue".into());
         }
     }
     Ok(Some(card))
@@ -74,11 +77,11 @@ pub fn reserve(store: &Store<'_>, input: JiraImport, id: String) -> Result<()> {
 
 pub fn reserve_batch(store: &Store<'_>, input: JiraBatchImport, id: String) -> Result<()> {
     if !input.confirmed || input.issue_ids.is_empty() || input.issue_ids.len() > 20 {
-        return Err("Confirme un lot de 1 à 20 tickets Jira.".into());
+        return Err("message.confirm_a_batch_of_1_to_20_jira_issues".into());
     }
     let unique: std::collections::BTreeSet<_> = input.issue_ids.iter().collect();
     if unique.len() != input.issue_ids.len() {
-        return Err("Sélection Jira dupliquée.".into());
+        return Err("message.duplicate_jira_selection".into());
     }
     let inputs = input
         .issue_ids
@@ -105,7 +108,7 @@ fn reserve_inputs(store: &Store<'_>, inputs: Vec<JiraImport>, id: String) -> Res
         let first = inputs.first().ok_or_else(conflict)?;
         let project = store
             .document::<Document>(Documents::Projects, &first.project_id)?
-            .ok_or("Projet introuvable.")?;
+            .ok_or("message.project_not_found")?;
         for input in &inputs {
             if input.issue_id.is_empty()
                 || input.issue_id.len() > 32
@@ -113,7 +116,7 @@ fn reserve_inputs(store: &Store<'_>, inputs: Vec<JiraImport>, id: String) -> Res
                 || input.project_id.is_empty()
                 || input.project_id.len() > 100
             {
-                return Err("Ticket ou projet Jira invalide.".into());
+                return Err("message.invalid_jira_issue_or_project".into());
             }
             if connection.revision != input.revision || input.project_id != first.project_id {
                 return Err(conflict());
@@ -196,7 +199,7 @@ fn finish_one(
     detail: JiraIssueDetail,
 ) -> Result<JiraImported> {
     if !atelier_core::application::jira::issue_identity(&detail.issue.id, &detail.issue.key) {
-        return Err("Ticket Jira invalide.".into());
+        return Err("message.invalid_jira_issue".into());
     }
     let settings = store.settings::<Document>()?;
     let connection = settings
@@ -216,7 +219,7 @@ fn finish_one(
             detail.issue.key
         )
     {
-        return Err("Adresse du ticket Jira incohérente.".into());
+        return Err("message.inconsistent_jira_issue_address".into());
     }
     let project = store
         .document::<Document>(Documents::Projects, &input.project_id)?
@@ -236,7 +239,7 @@ fn finish_one(
                 && ticket.string_equals("id", &detail.issue.id)?
             {
                 if existing.is_some() {
-                    return Err("Plusieurs cartes sont liées au même ticket Jira.".into());
+                    return Err("message.multiple_cards_are_linked_to_the_same_jira_issue".into());
                 }
                 existing = Some(card);
             }
@@ -252,14 +255,14 @@ fn finish_one(
             .as_ref()
             .is_some_and(|existing: &Card| existing.id != card.id)
         {
-            return Err("Ce ticket est déjà lié à une autre carte.".into());
+            return Err("message.this_issue_is_already_linked_to_another_card".into());
         }
         if card.fields.truthy("ticket")? {
             if existing
                 .as_ref()
                 .is_none_or(|existing| existing.id != card.id)
             {
-                return Err("Cette carte est déjà liée à un autre ticket.".into());
+                return Err("message.this_card_is_already_linked_to_another_issue".into());
             }
             JiraImported {
                 card,
@@ -293,7 +296,7 @@ fn finish_one(
             "repo",
             &project
                 .get::<String>("repo")?
-                .ok_or("Dépôt du projet absent.")?,
+                .ok_or("message.missing_project_repository")?,
         )?;
         let mut card = task_creation::create(store, &body, false)?;
         card.fields.set("ticket", &ticket)?;

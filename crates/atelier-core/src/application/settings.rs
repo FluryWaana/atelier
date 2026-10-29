@@ -14,9 +14,11 @@ pub enum SettingsFailure {
 impl std::fmt::Display for SettingsFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
-            Self::UnknownService => "Service inconnu.",
+            Self::UnknownService => "message.unknown_service",
             Self::Invalid(message) => message,
-            Self::Conflict => "Ces réglages ont changé ailleurs. Ton brouillon est conservé ; ferme puis rouvre les paramètres pour charger la dernière version.",
+            Self::Conflict => {
+                "message.these_settings_changed_elsewhere_your_draft_is_preserved_close_a"
+            }
         })
     }
 }
@@ -105,7 +107,7 @@ pub fn prepare_update(
 ) -> Result<SettingsUpdate> {
     let previous = config(stored)?;
     if let Some(raw) = supplied.raw("expected") {
-        let invalid = || SettingsFailure::Invalid("Condition de modification invalide.");
+        let invalid = || SettingsFailure::Invalid("message.invalid_edit_condition");
         let expected: std::collections::BTreeMap<String, serde_json::Value> =
             serde_json::from_str(raw.get()).map_err(|_| invalid())?;
         let fields = [
@@ -188,7 +190,7 @@ pub fn prepare_update(
         .or_else(|| present(previous.raw("agent")))
         .map(|raw| serde_json::from_str::<JsonString>(raw.get()))
         .transpose()
-        .map_err(|_| SettingsFailure::Invalid("Agent invalide."))?
+        .map_err(|_| SettingsFailure::Invalid("message.invalid_agent"))?
         .unwrap_or_else(|| JsonString::from("codex"));
     provider(&previous, &agent)?;
     next.set("agent", &agent)?;
@@ -197,7 +199,7 @@ pub fn prepare_update(
     for mut profile in providers {
         let id = profile
             .get::<JsonString>("id")?
-            .ok_or(SettingsFailure::Invalid("Agent invalide."))?;
+            .ok_or(SettingsFailure::Invalid("message.invalid_agent"))?;
         let mut input = Document::default();
         for (key, suffix) in [("model", "Model"), ("effort", "Effort")] {
             let mut field = id.clone();
@@ -229,20 +231,18 @@ pub fn prepare_update(
     let automatic = present(body.raw("jiraAutoTransition"))
         .or_else(|| previous.raw("jiraAutoTransition"))
         .and_then(|raw| serde_json::from_str::<bool>(raw.get()).ok())
-        .ok_or(SettingsFailure::Invalid(
-            "Option de synchronisation invalide.",
-        ))?;
+        .ok_or(SettingsFailure::Invalid("message.invalid_sync_option"))?;
     next.set("jiraAutoTransition", &automatic)?;
     let mapping = present(body.raw("jiraStatusMap"))
         .or_else(|| previous.raw("jiraStatusMap"))
         .and_then(|raw| serde_json::from_str::<Document>(raw.get()).ok())
-        .ok_or(SettingsFailure::Invalid("Correspondance Jira invalide."))?;
+        .ok_or(SettingsFailure::Invalid("message.invalid_jira_mapping"))?;
     if mapping.keys().any(|key| {
         !STATUSES
             .iter()
             .any(|status| key == &JsonString::from(*status))
     }) {
-        return Err(SettingsFailure::Invalid("Correspondance Jira invalide.").into());
+        return Err(SettingsFailure::Invalid("message.invalid_jira_mapping").into());
     }
     let empty = RawValue::from_string("\"\"".into())?;
     let mut normalized = Document::default();
@@ -257,11 +257,13 @@ pub fn prepare_update(
         next.set("jiraAutoTransition", &false)?;
         normalized = Document::default();
     } else if automatic && !has_status {
-        return Err(SettingsFailure::Invalid("Renseigne au moins un statut Jira cible.").into());
+        return Err(
+            SettingsFailure::Invalid("message.enter_at_least_one_target_jira_status").into(),
+        );
     }
     next.set("jiraStatusMap", &normalized)?;
     if !next.string_equals("jiraType", "cloud")? && !next.string_equals("jiraType", "server")? {
-        return Err(SettingsFailure::Invalid("Type de Jira invalide.").into());
+        return Err(SettingsFailure::Invalid("message.invalid_jira_type").into());
     }
     let mut credentials = tokens.clone();
     if url_changed

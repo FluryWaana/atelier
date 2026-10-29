@@ -8,7 +8,7 @@ fn id(row: &Value) -> Result<u64> {
     row["id"]
         .as_u64()
         .filter(|id| *id > 0)
-        .ok_or_else(|| "Identifiant de contrôle distant invalide.".into())
+        .ok_or_else(|| "message.invalid_remote_check_identifier".into())
 }
 impl Forge {
     pub async fn checks(&self, repository: &str, number: u64) -> Result<ForgeChecks> {
@@ -17,7 +17,7 @@ impl Forge {
             self.read_checks(repository, number),
         )
         .await
-        .map_err(|_| "Lecture des contrôles trop longue. Aucun résultat partiel affiché.")?
+        .map_err(|_| "message.checks_read_timed_out_no_partial_results_displayed")?
     }
     async fn read_checks(&self, repository: &str, number: u64) -> Result<ForgeChecks> {
         let (pr, _, raw) = self
@@ -26,7 +26,7 @@ impl Forge {
         let source = pr
             .source_commit
             .as_deref()
-            .ok_or("Commit source indisponible pour lire les contrôles.")?;
+            .ok_or("message.source_commit_unavailable_for_reading_checks")?;
         let mut report = match self.configuration.kind {
             ForgeKind::Github => self.github_checks(&pr, source).await?,
             ForgeKind::Gitlab => self.gitlab_checks(&pr, source).await?,
@@ -35,14 +35,12 @@ impl Forge {
         let refreshed = self.pull_request(repository, number).await?;
         if !same_pull_request(&pr, &refreshed) {
             return Err(
-                "La PR/MR a changé pendant la lecture des contrôles. Relis sa liaison.".into(),
+                "message.the_pr_mr_changed_while_reading_checks_read_its_link_again".into(),
             );
         }
         report.pull_request = refreshed;
         if serde_json::to_vec(&report)?.len() > 4 * 1024 * 1024 {
-            return Err(
-                "Contrôles de forge trop volumineux. Aucun résultat partiel affiché.".into(),
-            );
+            return Err("message.forge_checks_too_large_no_partial_results_displayed".into());
         }
         Ok(report)
     }
@@ -59,8 +57,7 @@ impl Forge {
             bytes = bytes.saturating_add(serde_json::to_vec(&value)?.len());
             if bytes > 8 * 1024 * 1024 {
                 return Err(
-                    "Pagination des contrôles trop volumineuse. Aucun résultat partiel affiché."
-                        .into(),
+                    "message.check_pagination_too_large_no_partial_results_displayed".into(),
                 );
             }
             let page = if let Some(key) = key {
@@ -68,36 +65,37 @@ impl Forge {
             } else {
                 value.as_array()
             }
-            .ok_or("Pagination des contrôles invalide.")?;
+            .ok_or("message.invalid_check_pagination")?;
             if page.len() > 100 {
-                return Err("Pagination des contrôles invalide.".into());
+                return Err("message.invalid_check_pagination".into());
             }
             if page.is_empty() {
                 return Ok(rows);
             }
             for row in page {
                 if !ids.insert(id(row)?) {
-                    return Err("Pagination des contrôles répétée ou modifiée. Aucun résultat partiel affiché.".into());
+                    return Err(
+                        "message.check_pagination_repeated_or_changed_no_partial_results_displaye"
+                            .into(),
+                    );
                 }
                 rows.push(row.clone());
             }
         }
-        Err("Lecture des contrôles limitée à 100 pages. Aucun résultat partiel affiché.".into())
+        Err("message.check_read_limited_to_100_pages_no_partial_results_displayed".into())
     }
     fn check_text(&self, value: &Value, limit: usize) -> Result<String> {
         if value.is_null() {
             return Ok(String::new());
         }
-        let text = value
-            .as_str()
-            .ok_or("Texte de contrôle distant invalide.")?;
+        let text = value.as_str().ok_or("message.invalid_remote_check_text")?;
         if text.len() > limit
             || text.contains(&self.token)
             || text
                 .chars()
                 .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
         {
-            return Err("Texte de contrôle distant invalide ou confidentiel.".into());
+            return Err("message.invalid_or_confidential_remote_check_text".into());
         }
         Ok(text.into())
     }
@@ -135,6 +133,7 @@ impl Forge {
                             scope: Scope::SourceCommit,
                             commit: Some(source.into()),
                             description: self.check_text(&row["description"], 8000)?,
+                            description_key: None,
                         },
                     ),
                 );
@@ -152,7 +151,7 @@ impl Forge {
         for row in self.check_pages(url, Some("check_runs")).await? {
             let id = id(&row)?;
             if self.commit(&row["head_sha"])?.as_deref() != Some(source) {
-                return Err("Un contrôle ne porte pas sur le commit source demandé.".into());
+                return Err("message.a_check_does_not_refer_to_the_requested_source_commit".into());
             }
             let status = self.text(&row["status"], 100)?;
             let conclusion = if row["conclusion"].is_null() {
@@ -184,6 +183,7 @@ impl Forge {
                 scope: Scope::SourceCommit,
                 commit: Some(source.into()),
                 description: self.check_text(&row["output"]["title"], 8000)?,
+                description_key: None,
             });
         }
         let reviews = self
@@ -217,7 +217,7 @@ impl Forge {
                     self.text(&row["submitted_at"], 100)?,
                     &time::format_description::well_known::Rfc3339,
                 )
-                .map_err(|_| "Date d’avis GitHub invalide.")?
+                .map_err(|_| "message.invalid_github_review_date")?
                 .unix_timestamp_nanos();
                 let order = (submitted, id);
                 let name = self.text(&row["user"]["login"], 1000)?.to_owned();
@@ -243,7 +243,19 @@ impl Forge {
                 }
             }
         }
-        Ok(ForgeChecks{pull_request:pr.clone(),checks,reviewers:reviewers.into_values().map(|(_,reviewer)|reviewer).collect(),reviewers_available:available,other_snapshot_count:0,limits:vec!["GitHub limite cet endpoint aux 1 000 suites de checks les plus récentes. Les règles de fusion ne sont pas qualifiées.".into()]})
+        Ok(ForgeChecks {
+            pull_request: pr.clone(),
+            checks,
+            reviewers: reviewers
+                .into_values()
+                .map(|(_, reviewer)| reviewer)
+                .collect(),
+            reviewers_available: available,
+            other_snapshot_count: 0,
+            limits: vec![
+                "message.github_limits_this_endpoint_to_the_1_000_most_recent_check_suite".into(),
+            ],
+        })
     }
     async fn gitlab_checks(&self, pr: &PullRequest, source: &str) -> Result<ForgeChecks> {
         let rows = self
@@ -267,7 +279,7 @@ impl Forge {
             let id = id(&row)?;
             let commit = self
                 .commit(&row["sha"])?
-                .ok_or("Commit de pipeline absent.")?;
+                .ok_or("message.pipeline_commit_missing")?;
             if commit != source {
                 other += 1;
                 continue;
@@ -299,6 +311,7 @@ impl Forge {
                 scope: Scope::SourceCommit,
                 commit: Some(source.into()),
                 description: self.check_text(&row["ref"], 1000)?,
+                description_key: None,
             });
         }
         let approvals = self
@@ -318,15 +331,15 @@ impl Forge {
         if let Ok(value) = approvals {
             let rows = value["approved_by"]
                 .as_array()
-                .ok_or("Liste des approbations GitLab invalide.")?;
+                .ok_or("message.invalid_gitlab_approval_list")?;
             if rows.len() > 10000 {
-                return Err("Liste des approbations GitLab trop volumineuse.".into());
+                return Err("message.gitlab_approval_list_too_large".into());
             }
             let mut ids = BTreeSet::new();
             for row in rows {
                 let id = id(&row["user"])?;
                 if !ids.insert(id) {
-                    return Err("Approbation GitLab répétée.".into());
+                    return Err("message.repeated_gitlab_approval".into());
                 }
                 let name = self.text(&row["user"]["username"], 1000)?.to_owned();
                 reviewers.push(ForgeReviewer {
@@ -337,7 +350,16 @@ impl Forge {
                 });
             }
         }
-        Ok(ForgeChecks{pull_request:pr.clone(),checks,reviewers,reviewers_available:available,other_snapshot_count:other,limits:vec!["Le pipeline retenu est le plus récent pour le SHA source. Les approbations GitLab ne prouvent pas le commit examiné.".into()]})
+        Ok(ForgeChecks {
+            pull_request: pr.clone(),
+            checks,
+            reviewers,
+            reviewers_available: available,
+            other_snapshot_count: other,
+            limits: vec![
+                "message.the_selected_pipeline_is_the_latest_for_the_source_sha_gitlab_ap".into(),
+            ],
+        })
     }
     async fn azure_checks(
         &self,
@@ -365,11 +387,11 @@ impl Forge {
         for row in rows {
             let id = id(row)?;
             if !seen.insert(id) {
-                return Err("Itération Azure répétée.".into());
+                return Err("message.repeated_azure_iteration".into());
             }
             let commit = self
                 .commit(&row["sourceRefCommit"]["commitId"])?
-                .ok_or("Commit d’itération Azure absent.")?;
+                .ok_or("message.azure_iteration_commit_missing")?;
             if latest.as_ref().is_none_or(|(known, _)| id > *known) {
                 latest = Some((id, commit));
             }
@@ -377,10 +399,8 @@ impl Forge {
         let latest = latest
             .filter(|(_, commit)| commit == source)
             .map(|(id, _)| id)
-            .ok_or("L’itération Azure ne correspond pas au commit source. Relis la PR.")?;
-        *path
-            .last_mut()
-            .ok_or("Chemin de contrôle Azure invalide.")? = "statuses";
+            .ok_or("message.the_azure_iteration_does_not_match_the_source_commit_read_the_pr")?;
+        *path.last_mut().ok_or("message.invalid_azure_check_path")? = "statuses";
         let statuses = self.get_unpaged(self.endpoint(true, &path)?).await?;
         let mut seen = BTreeSet::new();
         let mut other = 0;
@@ -388,7 +408,7 @@ impl Forge {
         for row in azure_rows(&statuses)? {
             let id = id(row)?;
             if !seen.insert(id) {
-                return Err("Statut Azure répété.".into());
+                return Err("message.repeated_azure_status".into());
             }
             let iteration =
                 if row["iterationId"].is_null() || row["iterationId"].as_u64() == Some(0) {
@@ -398,7 +418,7 @@ impl Forge {
                         row["iterationId"]
                             .as_u64()
                             .filter(|id| *id > 0)
-                            .ok_or("Itération de statut Azure invalide.")?,
+                            .ok_or("message.invalid_azure_status_iteration")?,
                     )
                 };
             if iteration.is_some_and(|id| id != latest) {
@@ -432,6 +452,7 @@ impl Forge {
                             scope,
                             commit,
                             description: self.check_text(&row["description"], 8000)?,
+                            description_key: None,
                         },
                     ),
                 );
@@ -441,15 +462,15 @@ impl Forge {
         let available = raw["reviewers"].is_array();
         if let Some(rows) = raw["reviewers"].as_array() {
             if rows.len() > 10000 {
-                return Err("Liste des reviewers Azure trop volumineuse.".into());
+                return Err("message.azure_reviewer_list_too_large".into());
             }
             let mut seen = BTreeSet::new();
             for row in rows {
                 let id = self.text(&row["id"], 100)?;
                 if !seen.insert(id) {
-                    return Err("Reviewer Azure répété.".into());
+                    return Err("message.repeated_azure_reviewer".into());
                 }
-                let decision = match row["vote"].as_i64().ok_or("Vote Azure invalide.")? {
+                let decision = match row["vote"].as_i64().ok_or("message.invalid_azure_vote")? {
                     10 => Decision::Approved,
                     5 => Decision::ApprovedWithSuggestions,
                     -10 => Decision::ChangesRequested,
@@ -470,12 +491,21 @@ impl Forge {
             .map(|(_, check)| check)
             .collect::<Vec<_>>();
         checks.extend(self.azure_policies(pr, raw).await?);
-        Ok(ForgeChecks{pull_request:pr.clone(),checks,reviewers,reviewers_available:available,other_snapshot_count:other,limits:vec!["Les statuts Azure sans itération, les votes et les politiques restent non attribués à un commit. Les politiques décrivent la PR au moment de la lecture, sans autoriser sa fusion.".into()]})
+        Ok(ForgeChecks {
+            pull_request: pr.clone(),
+            checks,
+            reviewers,
+            reviewers_available: available,
+            other_snapshot_count: other,
+            limits: vec![
+                "message.azure_statuses_without_an_iteration_votes_and_policies_are_not_a".into(),
+            ],
+        })
     }
     async fn azure_policies(&self, pr: &PullRequest, raw: &Value) -> Result<Vec<ForgeCheck>> {
         let project = self.text(&raw["repository"]["project"]["id"], 100)?;
         let project = uuid::Uuid::parse_str(project)
-            .map_err(|_| "Projet des politiques Azure invalide.")?
+            .map_err(|_| "message.invalid_azure_policy_project")?
             .to_string();
         let artifact = format!("vstfs:///CodeReview/CodeReviewId/{project}/{}", pr.number);
         let mut checks = Vec::new();
@@ -492,11 +522,11 @@ impl Forge {
             let value = self.get_unpaged(url).await?;
             bytes = bytes.saturating_add(serde_json::to_vec(&value)?.len());
             if bytes > 4 * 1024 * 1024 {
-                return Err("Politiques Azure trop volumineuses.".into());
+                return Err("message.azure_policies_are_too_large".into());
             }
             let rows = azure_rows(&value)?;
             if rows.len() > 100 {
-                return Err("Pagination des politiques Azure invalide.".into());
+                return Err("message.invalid_azure_policy_pagination".into());
             }
             if rows.is_empty() {
                 return Ok(checks);
@@ -504,22 +534,21 @@ impl Forge {
             for row in rows {
                 let evaluation = self.text(&row["evaluationId"], 100)?;
                 let evaluation = uuid::Uuid::parse_str(evaluation)
-                    .map_err(|_| "Évaluation Azure invalide.")?
+                    .map_err(|_| "message.invalid_azure_evaluation")?
                     .to_string();
                 if !seen.insert(evaluation.clone())
                     || self.text(&row["artifactId"], 500)? != artifact
                 {
                     return Err(
-                        "Les politiques Azure ne correspondent pas à cette PR ou se répètent."
-                            .into(),
+                        "message.azure_policies_do_not_match_this_pr_or_are_repeated".into(),
                     );
                 }
                 let enabled = row["configuration"]["isEnabled"]
                     .as_bool()
-                    .ok_or("État de politique Azure absent.")?;
+                    .ok_or("message.azure_policy_state_missing")?;
                 let blocking = row["configuration"]["isBlocking"]
                     .as_bool()
-                    .ok_or("Portée de politique Azure absente.")?;
+                    .ok_or("message.azure_policy_scope_missing")?;
                 let state = match self.text(&row["status"], 100)? {
                     "queued" | "running" => State::Pending,
                     "approved" => State::Succeeded,
@@ -527,20 +556,40 @@ impl Forge {
                     "notApplicable" => State::Skipped,
                     _ => State::Unknown,
                 };
-                checks.push(ForgeCheck{id:format!("policy:{evaluation}"),name:self.text(&row["configuration"]["type"]["displayName"],1000)?.into(),state:if enabled{state}else{State::Skipped},scope:Scope::Unscoped,commit:None,description:match(enabled,blocking){(false,_)=>"Politique désactivée ; aucune obligation déduite.",(true,true)=>"Politique bloquante active ; résultat relatif à la PR, commit non fourni.",(true,false)=>"Politique indicative active ; résultat relatif à la PR, commit non fourni."}.into()});
+                checks.push(ForgeCheck {
+                    id: format!("policy:{evaluation}"),
+                    name: self
+                        .text(&row["configuration"]["type"]["displayName"], 1000)?
+                        .into(),
+                    state: if enabled { state } else { State::Skipped },
+                    scope: Scope::Unscoped,
+                    commit: None,
+                    description: String::new(),
+                    description_key: Some(
+                        match (enabled, blocking) {
+                            (false, _) => "message.disabled_policy_no_requirement_inferred",
+                            (true, true) => {
+                                "message.active_blocking_policy_pr_result_with_no_commit_provided"
+                            }
+                            (true, false) => {
+                                "message.active_advisory_policy_pr_result_with_no_commit_provided"
+                            }
+                        }
+                        .into(),
+                    ),
+                });
             }
         }
-        Err(
-            "Lecture des politiques Azure limitée à 100 pages. Aucun résultat partiel affiché."
-                .into(),
-        )
+        Err("message.azure_policy_reading_is_limited_to_100_pages_no_partial_result_i".into())
     }
 }
 fn azure_rows(value: &Value) -> Result<&[Value]> {
-    let rows = value["value"].as_array().ok_or("Liste Azure invalide.")?;
+    let rows = value["value"]
+        .as_array()
+        .ok_or("message.invalid_azure_list")?;
     if rows.len() > 10000 || value["count"].as_u64() != Some(rows.len() as u64) {
         return Err(
-            "Liste Azure incomplète ou trop volumineuse. Aucun résultat partiel affiché.".into(),
+            "message.azure_list_incomplete_or_too_large_no_partial_results_displayed".into(),
         );
     }
     Ok(rows)

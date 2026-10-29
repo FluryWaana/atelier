@@ -16,7 +16,7 @@ pub enum ProviderFailure {
 impl std::fmt::Display for ProviderFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
-            Self::Missing => "Fournisseur introuvable.",
+            Self::Missing => "message.provider_not_found",
             Self::Invalid(message) | Self::Conflict(message) => message,
         })
     }
@@ -26,13 +26,13 @@ impl std::error::Error for ProviderFailure {}
 fn check_expected(stored: &Document, tokens: &Document, body: &Document, id: &str) -> Result<()> {
     if let Some(expected) = body.raw("expected") {
         let expected: Option<serde_json::Value> = serde_json::from_str(expected.get())
-            .map_err(|_| ProviderFailure::Invalid("Version du profil invalide."))?;
+            .map_err(|_| ProviderFailure::Invalid("message.invalid_profile_version"))?;
         let current = describe(stored, tokens)?
             .into_iter()
             .find(|profile| profile.string_equals("id", id).unwrap_or(false));
         let current = current.as_ref().map(serde_json::to_value).transpose()?;
         if expected != current {
-            return Err(ProviderFailure::Conflict("Ce profil a changé ailleurs. Ton brouillon est conservé ; recharge le profil avant de réessayer.").into());
+            return Err(ProviderFailure::Conflict("message.this_profile_changed_elsewhere_your_draft_is_preserved_reload_th").into());
         }
     }
     Ok(())
@@ -49,10 +49,10 @@ pub fn prepare_save(
     let mut settings = config(stored)?;
     let mut profiles = providers(&settings)?;
     if body.get::<JsonString>("apiKey").is_err() || body.get::<bool>("clearApiKey").is_err() {
-        return Err(ProviderFailure::Invalid("Clé API invalide.").into());
+        return Err(ProviderFailure::Invalid("message.invalid_api_key").into());
     }
-    let id: String = profile.get("id")?.ok_or("Identifiant de profil absent.")?;
-    let kind: String = profile.get("type")?.ok_or("Type de profil absent.")?;
+    let id: String = profile.get("id")?.ok_or("message.profile_id_missing")?;
+    let kind: String = profile.get("type")?.ok_or("message.profile_type_missing")?;
     let previous = profiles
         .iter()
         .position(|profile| profile.string_equals("id", &id).unwrap_or(false));
@@ -60,18 +60,18 @@ pub fn prepare_save(
         && !profiles[index].string_equals("type", &kind)?
     {
         return Err(ProviderFailure::Invalid(
-            "Le type d’un profil existant ne peut pas changer. Créez un autre profil.",
+            "message.an_existing_profile_s_type_cannot_change_create_another_profile",
         )
         .into());
     }
     if busy {
         return Err(ProviderFailure::Conflict(
-            "Attendez la fin des exécutions et mises à jour avant de modifier les fournisseurs.",
+            "message.wait_for_runs_and_updates_to_finish_before_editing_providers",
         )
         .into());
     }
     if previous.is_none() && profiles.len() >= 50 {
-        return Err(ProviderFailure::Invalid("50 fournisseurs maximum.").into());
+        return Err(ProviderFailure::Invalid("message.maximum_50_providers").into());
     }
     check_expected(stored, tokens, body, &id)?;
     let key = if body.truthy("apiKey")? {
@@ -82,11 +82,11 @@ pub fn prepare_save(
     let api = profile.string_equals("auth", "api")?;
     if !key.0.is_empty() && !api {
         return Err(
-            ProviderFailure::Invalid("Sélectionnez l’authentification par clé API.").into(),
+            ProviderFailure::Invalid("message.select_api_key_authentication").into(),
         );
     }
     if key.0.iter().any(|unit| [0, 10, 13].contains(unit)) {
-        return Err(ProviderFailure::Invalid("Clé API invalide.").into());
+        return Err(ProviderFailure::Invalid("message.invalid_api_key").into());
     }
     let mut tokens = tokens.clone();
     let name = format!("agent:{id}:key");
@@ -100,7 +100,7 @@ pub fn prepare_save(
         .get::<u64>("agentProvidersRevision")?
         .unwrap_or(0)
         .checked_add(1)
-        .ok_or("Révision des profils épuisée.")?;
+        .ok_or("message.profile_revision_limit_reached")?;
     settings.set("agentProvidersRevision", &revision)?;
     profile.set("revision", &revision)?;
     settings.set(&format!("{id}Model"), &profile.raw("model"))?;
@@ -143,7 +143,7 @@ pub fn prepare_remove(
             .chain(projects)
             .any(|record| record.string_equals("agent", id).unwrap_or(false))
     {
-        return Err(ProviderFailure::Conflict("Ce fournisseur est utilisé. Changez les tâches, les projets et le réglage par défaut avant de le retirer.").into());
+        return Err(ProviderFailure::Conflict("message.this_provider_is_in_use_change_tasks_projects_and_the_default_se").into());
     }
     let mut tokens = tokens.clone();
     tokens.set(&format!("agent:{id}:key"), &"")?;
@@ -158,7 +158,7 @@ pub fn prepare_remove(
 pub fn describe(stored: &Document, tokens: &Document) -> Result<Vec<Document>> {
     let mut profiles = providers(&config(stored)?)?;
     for profile in &mut profiles {
-        let id: JsonString = profile.get("id")?.ok_or("Identifiant de profil absent.")?;
+        let id: JsonString = profile.get("id")?.ok_or("message.profile_id_missing")?;
         let mut key = JsonString::from("agent:");
         key.0.extend(id.0);
         key.0.extend(":key".encode_utf16());
@@ -338,7 +338,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string(),
-            "Le type d’un profil existant ne peut pas changer. Créez un autre profil."
+            "message.an_existing_profile_s_type_cannot_change_create_another_profile"
         );
         body.set("clearApiKey", &"false").unwrap();
         assert_eq!(
@@ -346,7 +346,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string(),
-            "Clé API invalide."
+            "message.invalid_api_key"
         );
         let removed = prepare_remove(
             &next.settings,
@@ -379,7 +379,7 @@ mod tests {
             .err()
             .unwrap()
             .to_string(),
-            "Fournisseur introuvable."
+            "message.provider_not_found"
         );
     }
 
@@ -397,7 +397,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string(),
-            "50 fournisseurs maximum."
+            "message.maximum_50_providers"
         );
         body.set("id", &"p0").unwrap();
         assert_eq!(
@@ -405,7 +405,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string(),
-            "Clé API invalide."
+            "message.invalid_api_key"
         );
         body.set("auth", &"cli").unwrap();
         assert_eq!(
@@ -413,7 +413,7 @@ mod tests {
                 .err()
                 .unwrap()
                 .to_string(),
-            "Sélectionnez l’authentification par clé API."
+            "message.select_api_key_authentication"
         );
         body.set("apiKey", &"").unwrap();
         let next = prepare_save(&stored, &tokens, &body, false).unwrap();

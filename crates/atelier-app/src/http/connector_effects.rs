@@ -55,7 +55,7 @@ pub(super) async fn cancel(
     if !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme l’annulation de cet aperçu non envoyé.",
+            "message.confirm_cancellation_of_this_unsubmitted_preview",
         );
     }
     let result = state
@@ -100,7 +100,7 @@ pub(super) async fn perform(
     reconcile: bool,
 ) -> crate::Result<RemoteOperation> {
     if !input.confirmed {
-        return Err("Confirme l’opération de connecteur affichée.".into());
+        return Err("message.confirm_the_displayed_connector_operation".into());
     }
     let vault = state.vault.clone();
     let selected = module.clone();
@@ -209,9 +209,9 @@ pub(super) async fn perform(
     let stopping = *stopped.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
-        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(60),work)=>result.unwrap_or_else(|_|Err("Écriture de connecteur interrompue ; rapproche son état sans renvoyer la demande.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(60),work)=>result.unwrap_or_else(|_|Err("message.connector_write_interrupted_reconcile_its_state_without_resendin".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
     };
     let result = match result {
         Err(error) if !reconcile => {

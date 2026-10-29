@@ -35,7 +35,7 @@ pub(super) fn browser_link(
     {
         let mut path = url
             .path_segments_mut()
-            .map_err(|_| "Adresse de forge invalide.")?;
+            .map_err(|_| "message.invalid_forge_address")?;
         path.pop_if_empty();
         for (index, part) in parts.iter().enumerate() {
             if configuration.kind == ForgeKind::Azure && index == 1 {
@@ -116,7 +116,7 @@ fn describe(
     })
 }
 pub fn normalize(configuration: &ForgeConfiguration) -> Result<ForgeConfiguration> {
-    let url = Url::parse(&configuration.base).map_err(|_| "Adresse de forge invalide.")?;
+    let url = Url::parse(&configuration.base).map_err(|_| "message.invalid_forge_address")?;
     if configuration.base.len() > 2000
         || url.scheme() != "https"
         || url.host_str().is_none()
@@ -126,24 +126,26 @@ pub fn normalize(configuration: &ForgeConfiguration) -> Result<ForgeConfiguratio
         || url.fragment().is_some()
         || configuration.base.chars().any(char::is_control)
     {
-        return Err("Adresse de forge HTTPS requise, sans identifiants ni paramètres.".into());
+        return Err(
+            "message.an_https_forge_address_without_credentials_or_parameters_is_requ".into(),
+        );
     }
     if configuration.kind == ForgeKind::Github
         && (url.host_str() == Some("api.github.com")
             || (url.host_str() == Some("github.com") && url.port_or_known_default() != Some(443)))
     {
-        return Err("Renseigne l’adresse du site GitHub, pas celle de son API.".into());
+        return Err("message.enter_the_github_site_address_not_its_api_address".into());
     }
     let path = url.path().trim_end_matches('/');
     if path.to_ascii_lowercase().contains("%2f")
         || path.to_ascii_lowercase().contains("%5c")
         || path.contains('\\')
     {
-        return Err("Chemin de forge invalide.".into());
+        return Err("message.invalid_forge_path".into());
     }
     match configuration.kind {
         ForgeKind::Github if !path.is_empty() => {
-            return Err("Une connexion GitHub attend la racine du site.".into());
+            return Err("message.a_github_connection_requires_the_site_root".into());
         }
         ForgeKind::Azure
             if url.host_str() != Some("dev.azure.com")
@@ -151,7 +153,7 @@ pub fn normalize(configuration: &ForgeConfiguration) -> Result<ForgeConfiguratio
                 || path.split('/').filter(|part| !part.is_empty()).count() != 1 =>
         {
             return Err(
-                "Renseigne https://dev.azure.com/ORGANISATION pour Azure DevOps Services.".into(),
+                "message.enter_https_dev_azure_com_organization_for_azure_devops_services".into(),
             );
         }
         _ => {}
@@ -169,23 +171,21 @@ pub fn configure(
     require_revision(store, input.expected_revision)?;
     let configuration = normalize(&input.configuration)?;
     if input.clear_token && input.token.is_some() {
-        return Err(
-            "Choisis la conservation, le remplacement ou le retrait du jeton de forge.".into(),
-        );
+        return Err("message.choose_whether_to_keep_replace_or_remove_the_forge_token".into());
     }
     if input.token.as_ref().is_some_and(|token| {
         token.is_empty()
             || token.len() > 4000
             || token.chars().any(|c| c.is_control() || c.is_whitespace())
     }) {
-        return Err("Jeton de forge invalide.".into());
+        return Err("message.invalid_forge_token".into());
     }
     if input
         .token
         .as_ref()
         .is_some_and(|token| configuration.base.contains(token))
     {
-        return Err("Ne place pas le jeton dans l’adresse de forge.".into());
+        return Err("message.do_not_put_the_token_in_the_forge_address".into());
     }
     let mut stored = store.settings::<Document>()?;
     let mut configurations = configurations(store)?;
@@ -204,7 +204,7 @@ pub fn configure(
         &input
             .expected_revision
             .checked_add(1)
-            .ok_or("Révision de forge épuisée.")?,
+            .ok_or("message.forge_revision_exhausted")?,
     )?;
     let result = describe(input.expected_revision + 1, &configurations, &tokens)?;
     settings::persist(
@@ -227,7 +227,7 @@ pub fn credentials(
     let token = settings::load(store, protect)?
         .get::<String>(&token_key(kind))?
         .filter(|token| !token.is_empty())
-        .ok_or("Renseigne le jeton de cette forge avant la lecture.")?;
+        .ok_or("message.enter_this_forges_token_before_reading")?;
     Ok((configuration, token))
 }
 pub(crate) fn configuration(
@@ -238,9 +238,9 @@ pub(crate) fn configuration(
     require_revision(store, expected)?;
     let configuration = configurations(store)?
         .remove(&kind)
-        .ok_or("Configure cette forge avant la lecture.")?;
+        .ok_or("message.configure_this_forge_before_reading")?;
     if configuration.kind != kind {
-        return Err("Configuration de forge incohérente.".into());
+        return Err("message.inconsistent_forge_configuration".into());
     }
     Ok(configuration)
 }
@@ -253,7 +253,7 @@ pub(super) fn invalidate(stored: &mut Document, previous: &Document) -> Result<(
         .unwrap_or(0)
         .max(previous.get::<u64>("forgeRevision")?.unwrap_or(0))
         .checked_add(1)
-        .ok_or("Révision de forge épuisée.")?;
+        .ok_or("message.forge_revision_exhausted")?;
     stored.set("forgeRevision", &revision)?;
     Ok(())
 }
@@ -292,7 +292,7 @@ impl Forge {
             self.read_pull_requests(repository, false),
         )
         .await
-        .map_err(|_| "Liste de PR/MR trop longue.")?
+        .map_err(|_| "message.pr_mr_list_request_timed_out")?
     }
     async fn read_pull_requests(
         &self,
@@ -302,7 +302,7 @@ impl Forge {
         let parts =
             atelier_core::application::forge::repository(self.configuration.kind, repository, 1)?;
         if repository.contains(&self.token) {
-            return Err("Dépôt ou numéro de PR invalide.".into());
+            return Err("message.invalid_repository_or_pr_number".into());
         }
         let identity = match self.configuration.kind {
             ForgeKind::Github => None,
@@ -312,13 +312,13 @@ impl Forge {
                     .await?;
                 if self.text(&project["path_with_namespace"], 1000)? != repository {
                     return Err(
-                        "Le dépôt GitLab a changé de chemin. Utilise son chemin actuel.".into(),
+                        "message.the_gitlab_repository_path_changed_use_its_current_path".into(),
                     );
                 }
                 Some(
                     project["id"]
                         .as_u64()
-                        .ok_or("Identifiant de projet GitLab invalide.")?
+                        .ok_or("message.invalid_gitlab_project_identifier")?
                         .to_string(),
                 )
             }
@@ -379,7 +379,8 @@ impl Forge {
             bytes = bytes.saturating_add(serde_json::to_vec(&value)?.len());
             if bytes > 8 * 1024 * 1024 {
                 return Err(
-                    "Liste de PR/MR trop volumineuse. Aucun résultat partiel affiché.".into(),
+                    "message.pr_mr_list_exceeds_size_limits_no_partial_results_are_displayed"
+                        .into(),
                 );
             }
             let rows = if self.configuration.kind == ForgeKind::Azure {
@@ -387,9 +388,9 @@ impl Forge {
             } else {
                 value.as_array()
             }
-            .ok_or("Pagination de PR/MR invalide.")?;
+            .ok_or("message.invalid_pr_mr_pagination")?;
             if rows.len() > 100 {
-                return Err("Pagination de PR/MR invalide.".into());
+                return Err("message.invalid_pr_mr_pagination".into());
             }
             for row in rows {
                 let (number, source, target, draft) = match self.configuration.kind {
@@ -402,7 +403,8 @@ impl Forge {
                             }
                         {
                             return Err(
-                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                                "message.the_pr_mr_list_does_not_match_the_requested_repository"
+                                    .into(),
                             );
                         }
                         (
@@ -424,7 +426,8 @@ impl Forge {
                             }
                         {
                             return Err(
-                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                                "message.the_pr_mr_list_does_not_match_the_requested_repository"
+                                    .into(),
                             );
                         }
                         (
@@ -446,7 +449,8 @@ impl Forge {
                             }
                         {
                             return Err(
-                                "La liste de PR/MR ne correspond pas au dépôt demandé.".into()
+                                "message.the_pr_mr_list_does_not_match_the_requested_repository"
+                                    .into(),
                             );
                         }
                         (
@@ -457,7 +461,7 @@ impl Forge {
                         )
                     }
                 };
-                let number = number.ok_or("Identité de PR/MR invalide.")?;
+                let number = number.ok_or("message.invalid_pr_mr_identity")?;
                 atelier_core::application::forge::repository(
                     self.configuration.kind,
                     repository,
@@ -465,7 +469,7 @@ impl Forge {
                 )?;
                 if !ids.insert(number) {
                     return Err(
-                        "Pagination de PR/MR répétée ou modifiée. Relance la lecture.".into(),
+                        "message.pr_mr_pagination_repeated_or_changed_read_the_list_again".into(),
                     );
                 }
                 let branch = |value: &Value| -> Result<String> {
@@ -474,7 +478,7 @@ impl Forge {
                         value
                             .strip_prefix("refs/heads/")
                             .filter(|value| !value.is_empty())
-                            .ok_or("Référence de branche Azure invalide.")?
+                            .ok_or("message.invalid_azure_branch_reference")?
                     } else {
                         value
                     }
@@ -484,7 +488,7 @@ impl Forge {
                     number,
                     title: self.text(&row["title"], 8000)?.to_owned(),
                     url: browser_link(&self.configuration, repository, number)?,
-                    draft: draft.ok_or("État brouillon de PR absent.")?,
+                    draft: draft.ok_or("message.pr_draft_state_missing")?,
                     source_branch: branch(source)?,
                     target_branch: branch(target)?,
                 });
@@ -493,13 +497,14 @@ impl Forge {
             if rows.is_empty() {
                 if serde_json::to_vec(&result)?.len() > 8 * 1024 * 1024 {
                     return Err(
-                        "Liste de PR/MR trop volumineuse. Aucun résultat partiel affiché.".into(),
+                        "message.pr_mr_list_exceeds_size_limits_no_partial_results_are_displayed"
+                            .into(),
                     );
                 }
                 return Ok(result);
             }
         }
-        Err("Liste de PR/MR limitée à 100 pages ; aucun résultat partiel affiché.".into())
+        Err("message.pr_mr_list_is_limited_to_100_pages_no_partial_results_are_displa".into())
     }
     pub fn new(configuration: ForgeConfiguration, token: String, revision: u64) -> Result<Self> {
         let normalized = normalize(&configuration)?;
@@ -527,7 +532,7 @@ impl Forge {
             || base.fragment().is_some()
             || !token.starts_with("synthetic-")
         {
-            return Err("Forge synthétique loopback requise.".into());
+            return Err("message.a_synthetic_loopback_forge_is_required".into());
         }
         Self::prepare(configuration, token, revision, true, None)
     }
@@ -552,14 +557,14 @@ impl Forge {
             || token.len() > 4000
             || token.chars().any(|c| c.is_control() || c.is_whitespace())
         {
-            return Err("Jeton de forge invalide.".into());
+            return Err("message.invalid_forge_token".into());
         }
         let authorization = match configuration.kind {
             ForgeKind::Azure => format!("Basic {}", STANDARD.encode(format!(":{token}"))),
             _ => format!("Bearer {token}"),
         };
         let mut authorization =
-            HeaderValue::from_str(&authorization).map_err(|_| "Jeton de forge invalide.")?;
+            HeaderValue::from_str(&authorization).map_err(|_| "message.invalid_forge_token")?;
         authorization.set_sensitive(true);
         let mut client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -595,7 +600,7 @@ impl Forge {
         {
             let mut path = url
                 .path_segments_mut()
-                .map_err(|_| "Adresse de forge invalide.")?;
+                .map_err(|_| "message.invalid_forge_address")?;
             path.pop_if_empty();
             if api {
                 match self.configuration.kind {
@@ -623,7 +628,7 @@ impl Forge {
                     && !value.chars().any(char::is_control)
                     && !value.contains(&self.token)
             })
-            .ok_or_else(|| "Métadonnées de PR invalides ou confidentielles.".into())
+            .ok_or_else(|| "message.invalid_or_confidential_pr_metadata".into())
     }
     fn commit(&self, value: &Value) -> Result<Option<String>> {
         if value.is_null() {
@@ -631,7 +636,7 @@ impl Forge {
         }
         let text = self.text(value, 64)?;
         if ![40, 64].contains(&text.len()) || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("Commit de PR invalide.".into());
+            return Err("message.invalid_pr_commit".into());
         }
         Ok(Some(text.to_ascii_lowercase()))
     }
@@ -681,25 +686,25 @@ impl Forge {
         let mut response = request
             .send()
             .await
-            .map_err(|_| "Connexion à la forge impossible ou trop longue.")?;
+            .map_err(|_| "message.forge_connection_failed_or_timed_out")?;
         match response.status().as_u16() {
             200 => {}
             201 if creating => {}
             401 | 403 => {
                 return Err(
-                    "La forge refuse l’accès. Vérifie le jeton et les droits de lecture.".into(),
+                    "message.the_forge_denied_access_check_the_token_and_read_permissions".into(),
                 );
             }
-            404 => return Err("Dépôt ou PR introuvable, ou accès non autorisé.".into()),
+            404 => return Err("message.repository_or_pr_not_found_or_access_denied".into()),
             429 => {
-                return Err(
-                    "Limite de requêtes de la forge atteinte. Attends avant de réessayer.".into(),
-                );
+                return Err("message.forge_request_limit_reached_wait_before_trying_again".into());
             }
             300..=399 => {
-                return Err("Redirection de forge refusée. Vérifie l’adresse et le dépôt.".into());
+                return Err(
+                    "message.forge_redirect_refused_check_the_address_and_repository".into(),
+                );
             }
-            _ => return Err("Lecture de la PR impossible sur la forge.".into()),
+            _ => return Err("message.unable_to_read_the_pr_on_the_forge".into()),
         }
         if unpaged
             && response
@@ -708,7 +713,7 @@ impl Forge {
                 .iter()
                 .any(|value| !value.to_str().is_ok_and(|value| value.trim().is_empty()))
         {
-            return Err("Pagination de forge inattendue. Aucun résultat partiel affiché.".into());
+            return Err("message.unexpected_forge_pagination_no_partial_results_displayed".into());
         }
         if response
             .content_length()
@@ -720,20 +725,20 @@ impl Forge {
                 .and_then(|value| value.split(';').next())
                 .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"))
         {
-            return Err("Réponse de forge invalide ou trop volumineuse.".into());
+            return Err("message.forge_response_is_invalid_or_too_large".into());
         }
         let mut bytes = Vec::new();
         while let Some(chunk) = response
             .chunk()
             .await
-            .map_err(|_| "Lecture de la réponse de forge impossible.")?
+            .map_err(|_| "message.unable_to_read_the_forge_response")?
         {
             if bytes.len().saturating_add(chunk.len()) > 4 * 1024 * 1024 {
-                return Err("Réponse de forge trop volumineuse.".into());
+                return Err("message.forge_response_too_large".into());
             }
             bytes.extend_from_slice(&chunk);
         }
-        serde_json::from_slice(&bytes).map_err(|_| "Réponse JSON de forge invalide.".into())
+        serde_json::from_slice(&bytes).map_err(|_| "message.invalid_forge_json_response".into())
     }
     fn graphql_endpoint(&self) -> Result<Url> {
         match self.configuration.kind {
@@ -742,7 +747,7 @@ impl Forge {
             }
             ForgeKind::Github => self.endpoint(false, &["api", "graphql"]),
             ForgeKind::Gitlab => self.endpoint(false, &["api", "graphql"]),
-            ForgeKind::Azure => Err("GraphQL indisponible pour cette forge.".into()),
+            ForgeKind::Azure => Err("message.forge_graphql_unavailable".into()),
         }
     }
     /// Reads only; the caller persists `sending` after this preflight and before `send_draft`.
@@ -757,7 +762,7 @@ impl Forge {
             || expected.revision != self.revision
             || uuid::Uuid::parse_str(operation).is_err()
         {
-            return Err("Intention de forge incohérente.".into());
+            return Err("message.inconsistent_forge_intent".into());
         }
         let current = self
             .pull_request(&expected.repository, expected.number)
@@ -767,7 +772,9 @@ impl Forge {
             || current.fork
             || current.draft == draft
         {
-            return Err("La PR/MR a changé. Relis-la avant de modifier son état brouillon.".into());
+            return Err(
+                "message.the_pr_mr_changed_read_it_again_before_changing_its_draft_state".into(),
+            );
         }
         let parts = atelier_core::application::forge::repository(
             current.kind,
@@ -789,7 +796,8 @@ impl Forge {
                     || row["state"] != "open"
                 {
                     return Err(
-                        "La PR/MR a changé. Relis-la avant de modifier son état brouillon.".into(),
+                        "message.the_pr_mr_changed_read_it_again_before_changing_its_draft_state"
+                            .into(),
                     );
                 }
                 let id = self.text(&row["node_id"], 256)?;
@@ -866,10 +874,10 @@ impl Forge {
             || content.title.contains(&self.token)
             || content.body.contains(&self.token)
         {
-            return Err("Intention de forge incohérente.".into());
+            return Err("message.inconsistent_forge_intent".into());
         }
         if !atelier_core::application::forge::valid_content(expected.kind, content) {
-            return Err("Titre ou description de PR/MR invalide.".into());
+            return Err("message.invalid_pr_mr_title_or_description".into());
         }
         let current = self
             .pull_request(&expected.repository, expected.number)
@@ -879,7 +887,9 @@ impl Forge {
             || current.status != "active"
             || current.fork
         {
-            return Err("La PR/MR a changé. Relis-la avant de modifier son contenu.".into());
+            return Err(
+                "message.the_pr_mr_changed_read_it_again_before_editing_its_content".into(),
+            );
         }
         let parts = atelier_core::application::forge::repository(
             current.kind,
@@ -927,7 +937,7 @@ impl Forge {
             }] = serde_json::json!(content.body);
         }
         if body.as_object().is_none_or(|body| body.is_empty()) {
-            return Err("Aucun changement de contenu à envoyer.".into());
+            return Err("message.no_content_changes_to_send".into());
         }
         // shortcut: remote APIs lack an atomic comparison of edited fields; recheck immediately before sending when they gain one.
         Ok(PreparedDraft {
@@ -957,7 +967,7 @@ impl Forge {
             || current.base_url != self.configuration.base
             || current.revision != self.revision
         {
-            return Err("Intention de forge incohérente.".into());
+            return Err("message.inconsistent_forge_intent".into());
         }
         let result = self.request(method, url, Some(body)).await?;
         if let Some(mutation) = mutation {
@@ -976,7 +986,7 @@ impl Forge {
                 || observed_draft != Some(draft)
             {
                 return Err(
-                    "Écriture de forge incertaine. Relis l’état distant sans réenvoyer.".into(),
+                    "message.forge_write_uncertain_read_the_remote_state_without_resending".into(),
                 );
             }
         }
@@ -989,7 +999,7 @@ impl Forge {
             })
         {
             return Err(
-                "Écriture de forge incertaine. Relis l’état distant sans réenvoyer.".into(),
+                "message.forge_write_uncertain_read_the_remote_state_without_resending".into(),
             );
         }
         Ok(observed)
@@ -1027,14 +1037,14 @@ impl Forge {
             .iter()
             .any(|value| value.contains(&self.token))
         {
-            return Err("Aperçu de publication invalide ou confidentiel.".into());
+            return Err("message.invalid_or_confidential_publication_preview".into());
         }
         for branch in [&preview.worktree.branch, &preview.target] {
             atelier_core::application::worktrees::validate_reference(branch)?;
         }
         for commit in [&preview.source_commit, &preview.target_commit] {
             self.commit(&Value::String(commit.clone()))?
-                .ok_or("Commit de publication absent.")?;
+                .ok_or("message.publication_commit_missing")?;
         }
         let candidates = self
             .list_pull_requests(&preview.repository)
@@ -1046,8 +1056,7 @@ impl Forge {
             .collect::<Vec<_>>();
         if candidates.len() > 20 {
             return Err(
-                "Trop de PR/MR candidates. La publication est refusée sans résultat partiel."
-                    .into(),
+                "message.too_many_candidate_prs_mrs_publication_refused_without_partial_r".into(),
             );
         }
         for candidate in candidates {
@@ -1059,7 +1068,10 @@ impl Forge {
                 && pr.source_branch == preview.worktree.branch
                 && pr.target_branch == preview.target
             {
-                return Err("Une PR/MR ouverte existe déjà pour ces branches. Associe-la au lieu de créer un doublon.".into());
+                return Err(
+                    "message.an_open_pr_mr_already_exists_for_these_branches_link_it_instead"
+                        .into(),
+                );
             }
         }
         let body = format!("{}\n\n{marker}", preview.body);
@@ -1100,7 +1112,7 @@ impl Forge {
             || prepared.configuration.base != self.configuration.base
             || prepared.revision != self.revision
         {
-            return Err("Intention de publication incohérente.".into());
+            return Err("message.inconsistent_publication_intent".into());
         }
         let row = self
             .request(reqwest::Method::POST, prepared.url, Some(prepared.body))
@@ -1114,7 +1126,7 @@ impl Forge {
             .as_u64()
             .filter(|number| *number > 0 && *number <= i32::MAX as u64)
             .ok_or_else(|| {
-                "Création de PR/MR incertaine. Relis la forge sans renvoyer la demande.".into()
+                "message.pr_mr_creation_uncertain_read_the_forge_without_resending_the_re".into()
             })
     }
     pub async fn reconcile_publication(
@@ -1128,7 +1140,7 @@ impl Forge {
             self.find_publication(preview, operation, known),
         )
         .await
-        .map_err(|_| "Recherche de publication trop longue. L’incertitude est conservée.")?
+        .map_err(|_| "message.publication_search_timed_out_uncertainty_is_retained")?
     }
     async fn find_publication(
         &self,
@@ -1139,7 +1151,7 @@ impl Forge {
         if self.configuration.kind != preview.configuration.kind
             || self.configuration.base != preview.configuration.base
         {
-            return Err("Reconnecte le site de forge de la publication incertaine.".into());
+            return Err("message.reconnect_the_forge_site_of_the_uncertain_publication".into());
         }
         let marker = publication_marker(operation)?;
         let candidates = if let Some(number) = known {
@@ -1155,7 +1167,7 @@ impl Forge {
                 .map(|pr| pr.number)
                 .collect::<Vec<_>>();
             if candidates.len() > 20 {
-                return Err("Trop de PR/MR candidates. L’incertitude est conservée.".into());
+                return Err("message.too_many_candidate_prs_mrs_uncertainty_is_retained".into());
             }
             candidates
         };
@@ -1171,7 +1183,7 @@ impl Forge {
                     || found.is_some()
                 {
                     return Err(
-                        "Publication retrouvée ambiguë ou déplacée. L’incertitude est conservée."
+                        "message.recovered_publication_is_ambiguous_or_moved_uncertainty_is_retai"
                             .into(),
                     );
                 }
@@ -1186,7 +1198,7 @@ impl Forge {
             self.read_pull_request_content(repository, number, false),
         )
         .await
-        .map_err(|_| "Lecture de PR trop longue.")?
+        .map_err(|_| "message.pr_read_timed_out")?
         .map(|(pr, _, _)| pr)
     }
     async fn read_pull_request_content(
@@ -1201,7 +1213,7 @@ impl Forge {
             number,
         )?;
         if repository.contains(&self.token) {
-            return Err("Dépôt ou numéro de PR invalide.".into());
+            return Err("message.invalid_repository_or_pr_number".into());
         }
         let number_text = number.to_string();
         let (row, url) = match self.configuration.kind {
@@ -1218,12 +1230,12 @@ impl Forge {
                     .await?;
                 if self.text(&project["path_with_namespace"], 1000)? != repository {
                     return Err(
-                        "Le dépôt GitLab a changé de chemin. Utilise son chemin actuel.".into(),
+                        "message.the_gitlab_repository_path_changed_use_its_current_path".into(),
                     );
                 }
                 let project_id = project["id"]
                     .as_u64()
-                    .ok_or("Identifiant de projet GitLab invalide.")?;
+                    .ok_or("message.invalid_gitlab_project_identifier")?;
                 let row = self
                     .get(self.endpoint(
                         true,
@@ -1231,7 +1243,7 @@ impl Forge {
                     )?)
                     .await?;
                 if row["target_project_id"].as_u64() != Some(project_id) {
-                    return Err("La MR ne correspond pas au dépôt demandé.".into());
+                    return Err("message.the_mr_does_not_match_the_requested_repository".into());
                 }
                 let mut web = parts.clone();
                 web.extend(["-", "merge_requests", &number_text]);
@@ -1259,7 +1271,7 @@ impl Forge {
                     )?)
                     .await?;
                 if self.text(&row["repository"]["id"], 64)? != repo_id {
-                    return Err("La PR ne correspond pas au dépôt demandé.".into());
+                    return Err("message.the_pr_does_not_match_the_requested_repository".into());
                 }
                 (
                     row,
@@ -1277,7 +1289,7 @@ impl Forge {
                         .text(&row["base"]["repo"]["full_name"], 1000)?
                         .eq_ignore_ascii_case(repository)
                     {
-                        return Err("La PR ne correspond pas au dépôt demandé.".into());
+                        return Err("message.the_pr_does_not_match_the_requested_repository".into());
                     }
                     let fork = self.text(&row["head"]["repo"]["full_name"], 1000)?
                         != self.text(&row["base"]["repo"]["full_name"], 1000)?;
@@ -1286,7 +1298,7 @@ impl Forge {
                         &row["title"],
                         if row["merged"]
                             .as_bool()
-                            .ok_or("État de fusion GitHub absent.")?
+                            .ok_or("message.github_merge_state_missing")?
                         {
                             "completed"
                         } else {
@@ -1342,7 +1354,7 @@ impl Forge {
                 ),
             };
         if id != Some(number) || url.as_str().contains(&self.token) {
-            return Err("Identité de PR incohérente ou confidentielle.".into());
+            return Err("message.inconsistent_or_confidential_pr_identity".into());
         }
         let source = self.text(source, 1000)?;
         let target = self.text(target, 1000)?;
@@ -1351,7 +1363,7 @@ impl Forge {
                 Ok(value
                     .strip_prefix("refs/heads/")
                     .filter(|value| !value.is_empty())
-                    .ok_or("Référence de branche Azure invalide.")?
+                    .ok_or("message.invalid_azure_branch_reference")?
                     .into())
             } else {
                 Ok(value.into())
@@ -1366,7 +1378,7 @@ impl Forge {
             let text = if value.is_null() {
                 ""
             } else {
-                value.as_str().ok_or("Contenu de PR/MR invalide.")?
+                value.as_str().ok_or("message.invalid_pr_mr_content")?
             };
             if text.len() > 128 * 1024
                 || text.contains(&self.token)
@@ -1374,7 +1386,7 @@ impl Forge {
                     .chars()
                     .any(|c| c.is_control() && !matches!(c, '\r' | '\n' | '\t'))
             {
-                return Err("Contenu de PR/MR invalide ou confidentiel.".into());
+                return Err("message.invalid_or_confidential_pr_mr_content".into());
             }
             text.to_owned()
         };
@@ -1388,7 +1400,7 @@ impl Forge {
                 body: body.clone(),
                 url: browser_link(&self.configuration, repository, number)?,
                 status: status.into(),
-                draft: draft.ok_or("État brouillon de PR absent.")?,
+                draft: draft.ok_or("message.pr_draft_state_missing")?,
                 source_branch: branch(source)?,
                 target_branch: branch(target)?,
                 source_commit: self.commit(source_commit)?,
@@ -1406,9 +1418,9 @@ impl Forge {
 
 pub fn publication_marker(operation: &str) -> Result<String> {
     let id =
-        uuid::Uuid::parse_str(operation).map_err(|_| "Identifiant de publication invalide.")?;
+        uuid::Uuid::parse_str(operation).map_err(|_| "message.invalid_publication_identifier")?;
     if id.to_string() != operation {
-        return Err("Identifiant de publication invalide.".into());
+        return Err("message.invalid_publication_identifier".into());
     }
     Ok(format!("<!-- atelier-publication:{operation} -->"))
 }

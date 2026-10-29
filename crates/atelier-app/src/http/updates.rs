@@ -12,11 +12,11 @@ pub(super) fn guard(root: Option<&std::path::Path>) -> Option<Response> {
     match root.map(updates::maintenance).transpose() {
         Ok(Some(true)) => Some(failure(
             StatusCode::CONFLICT,
-            "Mise à jour en cours. Les modifications sont suspendues jusqu’à sa validation ou sa récupération.",
+            "message.update_in_progress_changes_are_paused_until_verification_or_reco",
         )),
         Err(_) => Some(failure(
             StatusCode::CONFLICT,
-            "Le journal de mise à jour doit être examiné avant de modifier les données.",
+            "message.the_update_journal_needs_attention_before_data_can_be_changed",
         )),
         _ => None,
     }
@@ -63,7 +63,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
     let Some(root) = state.installation_root.clone() else {
         return failure(
             StatusCode::CONFLICT,
-            "Cette commande exige une installation Rust versionnée.",
+            "message.this_command_requires_a_versioned_rust_installation",
         );
     };
     let path = request.uri().path().to_owned();
@@ -80,7 +80,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
         }) {
             return failure(
                 StatusCode::BAD_REQUEST,
-                "Choisis une archive et sa signature sur ce poste.",
+                "message.choose_an_archive_and_its_signature_on_this_computer",
             );
         }
         let data = state.prototype_paths[0].clone();
@@ -96,7 +96,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
         })
         .await;
         response(operation.unwrap_or_else(|_| {
-            Err("La préparation de mise à jour a été interrompue. Relis son état.".into())
+            Err("message.update_preparation_was_interrupted_read_its_status_again".into())
         }))
     } else {
         let input: Confirmation = match super::jira_transitions::input(request).await {
@@ -104,10 +104,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
             Err(response) => return *response,
         };
         if uuid::Uuid::parse_str(&input.id).is_err() {
-            return failure(
-                StatusCode::BAD_REQUEST,
-                "Identifiant de mise à jour invalide.",
-            );
+            return failure(StatusCode::BAD_REQUEST, "message.update_id_invalid");
         }
         let operation = tokio::task::spawn_blocking(move || {
             let runtime = tokio::runtime::Handle::current();
@@ -119,11 +116,13 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
                 "/api/updates/recover" => {
                     runtime.block_on(updates::request_recovery(&root, &input.id, input.confirmed))
                 }
-                _ => Err("Action de mise à jour inconnue.".into()),
+                _ => Err("message.update_action_unknown".into()),
             }
         })
         .await;
-        let result:Result<_>=operation.unwrap_or_else(|_|Err("La commande de mise à jour a été interrompue. Relis son état avant toute nouvelle action.".into()));
+        let result: Result<_> = operation.unwrap_or_else(|_| {
+            Err("message.the_update_command_was_interrupted_read_its_status_before_taking".into())
+        });
         response(result)
     }
 }

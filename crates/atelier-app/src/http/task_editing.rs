@@ -49,7 +49,7 @@ pub(super) async fn update(
                 _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => StatusCode::INTERNAL_SERVER_ERROR,
                 _ => StatusCode::BAD_REQUEST,
             };
-            if status == StatusCode::INTERNAL_SERVER_ERROR { failure(status, "Modification de la carte impossible.") }
+            if status == StatusCode::INTERNAL_SERVER_ERROR { failure(status, "message.card_update_failed") }
             else { failure(status, &error.to_string()) }
         }
     }

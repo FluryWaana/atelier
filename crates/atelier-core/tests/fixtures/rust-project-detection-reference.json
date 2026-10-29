@@ -123,7 +123,7 @@
         "role": null
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -133,7 +133,7 @@
         "role": false
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -143,7 +143,7 @@
         "role": 0
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -153,7 +153,7 @@
         "role": {}
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -163,7 +163,7 @@
         "role": []
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -173,7 +173,7 @@
         "role": ""
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -183,7 +183,7 @@
         "role": "other"
       },
       "expected": {
-        "error": "Application à détecter invalide.",
+        "error": "message.invalid_application_to_detect",
         "events": []
       }
     },
@@ -194,7 +194,7 @@
       },
       "project": null,
       "expected": {
-        "error": "Projet introuvable.",
+        "error": "message.project_not_found",
         "events": []
       }
     },
@@ -610,7 +610,7 @@
       },
       "useDraft": true,
       "expected": {
-        "error": "Texte invalide ou trop long.",
+        "error": "message.invalid_or_overly_long_text",
         "events": [
           {
             "repository": null
@@ -625,7 +625,7 @@
       },
       "useDraft": true,
       "expected": {
-        "error": "Texte invalide ou trop long.",
+        "error": "message.invalid_or_overly_long_text",
         "events": [
           {
             "repository": []

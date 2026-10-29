@@ -63,16 +63,20 @@ pub fn source(store: &Store<'_>, profile: &Installed) -> Result<Vec<Source>> {
             card_id: card.id,
             key: ticket
                 .get::<String>("key")?
-                .ok_or("Clé du ticket absente.")?,
+                .ok_or("message.ticket_key_missing")?,
             identity: TicketIdentity {
                 instance: ticket
                     .get::<String>("instance")?
-                    .ok_or("Instance absente.")?,
-                id: ticket.get::<String>("id")?.ok_or("Identifiant absent.")?,
+                    .ok_or("message.instance_missing")?,
+                id: ticket
+                    .get::<String>("id")?
+                    .ok_or("message.identifier_missing")?,
             },
         });
         if source.len() > 1000 {
-            return Err("Plus de 1 000 cartes liées : resynchronisation complète refusée sans modification.".into());
+            return Err(
+                "message.more_than_1_000_linked_tasks_complete_synchronization_refused_wi".into(),
+            );
         }
     }
     source.sort_by(|a, b| a.card_id.cmp(&b.card_id));
@@ -81,9 +85,7 @@ pub fn source(store: &Store<'_>, profile: &Installed) -> Result<Vec<Source>> {
 
 pub fn same_source(store: &Store<'_>, profile: &Installed, expected: &[Source]) -> Result<()> {
     if serde_json::to_value(source(store, profile)?)? != serde_json::to_value(expected)? {
-        return Err(
-            "Les cartes liées ont changé. Relis entièrement le périmètre du connecteur.".into(),
-        );
+        return Err("message.linked_tasks_changed_reread_the_module_s_complete_scope".into());
     }
     Ok(())
 }
@@ -101,7 +103,7 @@ pub struct Traversal {
 impl Traversal {
     pub fn page(&mut self, report: &protocol::Report) -> Result<Option<String>> {
         if self.failed {
-            return Err("Lecture complète invalidée par une erreur précédente.".into());
+            return Err("message.the_complete_read_was_invalidated_by_an_earlier_error".into());
         }
         let result = self.page_inner(report);
         if result.is_err() {
@@ -111,30 +113,32 @@ impl Traversal {
     }
     fn page_inner(&mut self, report: &protocol::Report) -> Result<Option<String>> {
         if report.method != protocol::Method::TicketsSearch {
-            return Err("La lecture du périmètre exige une page de recherche de tickets.".into());
+            return Err("message.scope_reading_requires_a_ticket_search_page".into());
         }
         if self.complete {
-            return Err("Lecture complète déjà terminée.".into());
+            return Err("message.the_complete_read_has_already_finished".into());
         }
         let page = connector_tickets::page(report)?;
         self.pages += 1;
         self.bytes += serde_json::to_vec(&report.output)?.len();
         if self.pages > 100 || self.bytes > 8 * 1024 * 1024 {
             return Err(
-                "Le périmètre dépasse la limite de lecture complète ; aucune carte modifiée."
-                    .into(),
+                "message.the_scope_exceeds_the_complete_read_limit_no_task_was_changed".into(),
             );
         }
         for ticket in page.items {
             if !self.identities.insert((ticket.instance, ticket.id))
                 || self.identities.len() > 10_000
             {
-                return Err("Périmètre trop grand ou ticket répété entre les pages ; aucune carte modifiée.".into());
+                return Err(
+                    "message.the_scope_is_too_large_or_repeats_a_ticket_between_pages_no_task"
+                        .into(),
+                );
             }
         }
         if let Some(cursor) = &page.next {
             if !self.cursors.insert(cursor.clone()) {
-                return Err("Boucle de pagination du connecteur ; aucune carte modifiée.".into());
+                return Err("message.module_pagination_loop_no_task_was_changed".into());
             }
         } else {
             self.complete = true;
@@ -148,10 +152,7 @@ impl Traversal {
         source: Vec<Source>,
     ) -> Result<TicketResetPreview> {
         if !self.complete || self.failed {
-            return Err(
-                "Un résultat partiel ne permet pas de déterminer les tickets hors périmètre."
-                    .into(),
-            );
+            return Err("message.a_partial_result_cannot_identify_out_of_scope_tickets".into());
         }
         connectors::profile(store, &profile.manifest.id, profile.revision)?;
         same_source(store, profile, &source)?;
@@ -195,43 +196,84 @@ pub fn apply(
     input: &protocol::TicketResetApply,
 ) -> Result<TicketResetPreview> {
     if !input.confirmed {
-        return Err("Confirme la mise à jour locale des indicateurs de périmètre.".into());
+        return Err("message.confirm_the_local_scope_flag_update".into());
     }
     store.transaction(|store| {
-        let profile=connectors::profile(store,module,input.expected_revision)?;
-        if super::connector_effects::read(&store.settings::<Document>()?)?.iter().any(super::connector_effects::pending) {
-            return Err("Termine ou rapproche les écritures de connecteurs avant de resynchroniser le périmètre.".into());
+        let profile = connectors::profile(store, module, input.expected_revision)?;
+        if super::connector_effects::read(&store.settings::<Document>()?)?
+            .iter()
+            .any(super::connector_effects::pending)
+        {
+            return Err(
+                "message.complete_or_reconcile_module_writes_before_resynchronizing_scope".into(),
+            );
         }
-        let mut settings=store.settings::<Document>()?;
-        let mut cached=settings.get::<Cached>(KEY)?.ok_or("Relis entièrement le périmètre avant de confirmer.")?;
-        if cached.preview.id!=input.preview_id || cached.preview.module!=module || cached.preview.revision!=profile.revision {
-            return Err("L’aperçu du périmètre a changé. Relance sa lecture complète.".into());
+        let mut settings = store.settings::<Document>()?;
+        let mut cached = settings
+            .get::<Cached>(KEY)?
+            .ok_or("message.reread_the_complete_scope_before_confirming")?;
+        if cached.preview.id != input.preview_id
+            || cached.preview.module != module
+            || cached.preview.revision != profile.revision
+        {
+            return Err("message.the_scope_preview_changed_restart_the_complete_read".into());
         }
-        if cached.applied {return Ok(cached.preview);}
-        let observed=time::OffsetDateTime::parse(&cached.preview.observed_at,&time::format_description::well_known::Rfc3339)?;
-        if !(0..=600).contains(&(time::OffsetDateTime::now_utc()-observed).whole_seconds()) {return Err("Cet aperçu de périmètre a expiré. Relis le connecteur.".into());}
-        same_source(store,&profile,&cached.source)?;
-        let flags:BTreeMap<_,_>=cached.preview.rows.iter().map(|row|(row.card_id.as_str(),!row.present)).collect();
-        let runs=store.documents::<Document>(Documents::Runs)?;
-        let entries=store.documents::<Document>(Documents::Times)?;
+        if cached.applied {
+            return Ok(cached.preview);
+        }
+        let observed = time::OffsetDateTime::parse(
+            &cached.preview.observed_at,
+            &time::format_description::well_known::Rfc3339,
+        )?;
+        if !(0..=600).contains(&(time::OffsetDateTime::now_utc() - observed).whole_seconds()) {
+            return Err("message.this_scope_preview_expired_reread_the_module".into());
+        }
+        same_source(store, &profile, &cached.source)?;
+        let flags: BTreeMap<_, _> = cached
+            .preview
+            .rows
+            .iter()
+            .map(|row| (row.card_id.as_str(), !row.present))
+            .collect();
+        let runs = store.documents::<Document>(Documents::Runs)?;
+        let entries = store.documents::<Document>(Documents::Times)?;
         for row in &cached.source {
-            let card=store.document::<Card>(Documents::Cards,&row.card_id)?.ok_or("Carte introuvable.")?;
-            let mut card=card;
-            if atelier_core::application::jira::unresolved(&card.fields)? || atelier_core::application::forge::unresolved(&card.fields)?
-                || card.fields.get::<Document>("automation")?.is_some_and(|flow|flow.string_equals("state","running").unwrap_or(true)) {
-                return Err("Termine les opérations de la tâche avant de resynchroniser son périmètre.".into());
+            let card = store
+                .document::<Card>(Documents::Cards, &row.card_id)?
+                .ok_or("message.card_not_found")?;
+            let mut card = card;
+            if atelier_core::application::jira::unresolved(&card.fields)?
+                || atelier_core::application::forge::unresolved(&card.fields)?
+                || card
+                    .fields
+                    .get::<Document>("automation")?
+                    .is_some_and(|flow| flow.string_equals("state", "running").unwrap_or(true))
+            {
+                return Err(
+                    "message.complete_task_operations_before_resynchronizing_its_scope".into(),
+                );
             }
             for run in &runs {
-                if run.string_equals("cardId",&card.id)? && super::runs::active(run)? {return Err("Arrête l’exécution avant de resynchroniser le périmètre des tickets.".into());}
+                if run.string_equals("cardId", &card.id)? && super::runs::active(run)? {
+                    return Err("message.stop_the_run_before_resynchronizing_ticket_scope".into());
+                }
             }
             for entry in &entries {
-                if entry.string_equals("cardId",&card.id)? && (entry.string_equals("exportState","sending")? || entry.string_equals("exportState","uncertain")?) {return Err("Rapproche l’export de temps avant de resynchroniser le périmètre.".into());}
+                if entry.string_equals("cardId", &card.id)?
+                    && (entry.string_equals("exportState", "sending")?
+                        || entry.string_equals("exportState", "uncertain")?)
+                {
+                    return Err(
+                        "message.reconcile_the_time_export_before_resynchronizing_scope".into(),
+                    );
+                }
             }
-            card.fields.set("ticketOutOfScope",&flags[card.id.as_str()])?;
-            store.put(Documents::Cards,&card)?;
+            card.fields
+                .set("ticketOutOfScope", &flags[card.id.as_str()])?;
+            store.put(Documents::Cards, &card)?;
         }
-        cached.applied=true;
-        settings.set(KEY,&cached)?;
+        cached.applied = true;
+        settings.set(KEY, &cached)?;
         store.save_settings(&settings)?;
         Ok(cached.preview)
     })

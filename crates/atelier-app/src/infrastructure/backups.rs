@@ -116,23 +116,20 @@ impl BackupDirectory {
 
     pub fn create(&self, store: &Store<'_>) -> Result<CreatedBackup> {
         if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
-            return Err(BackupFailure::Conflict(
-                "Termine la mise à jour du CLI avant une sauvegarde.",
-            )
-            .into());
+            return Err(BackupFailure::Conflict("message.finish_cli_update_before_backup").into());
         }
         if super::connector_effects::read(&store.settings::<Document>()?)?
             .iter()
             .any(super::connector_effects::pending)
         {
             return Err(BackupFailure::Conflict(
-                "Termine ou rapproche les écritures de connecteurs avant une sauvegarde.",
+                "message.reconcile_connector_writes_before_backup",
             )
             .into());
         }
         if super::jira_transition::blocks(store, "/api/backups")? {
             return Err(BackupFailure::Conflict(
-                "Termine ou rapproche les opérations Jira avant une sauvegarde.",
+                "message.complete_or_reconcile_jira_operations_before_creating_a_backup",
             )
             .into());
         }
@@ -155,7 +152,7 @@ impl BackupDirectory {
         after: impl FnOnce(&Store<'_>) -> Result<()>,
     ) -> Result<RestoredBackup> {
         if !valid_name(name) || !self.list()?.iter().any(|backup| backup.name == name) {
-            return Err(BackupFailure::Invalid("Sauvegarde locale introuvable.").into());
+            return Err(BackupFailure::Invalid("message.local_backup_not_found").into());
         }
         let rescue = new_name()?;
         restore_checked(
@@ -195,12 +192,12 @@ fn documents(source: &Connection, table: Documents) -> Result<Vec<SavedDocument>
 
 pub fn restore(store: &Store<'_>, source: &Path, rescue: &Path) -> Result<()> {
     let directory = Dir::open_ambient_dir(
-        source.parent().ok_or("Dossier de sauvegarde absent.")?,
+        source.parent().ok_or("message.backup_directory_missing")?,
         ambient_authority(),
     )?;
     let source = CheckedFile::open_in(
         &directory,
-        Path::new(source.file_name().ok_or("Nom de sauvegarde absent.")?),
+        Path::new(source.file_name().ok_or("message.backup_name_missing")?),
     )?;
     restore_checked(store, source, || store.backup(rescue), |_| Ok(()))
 }
@@ -213,38 +210,34 @@ fn restore_checked(
 ) -> Result<()> {
     let current_effects = super::connector_effects::read(&store.settings::<Document>()?)?;
     if atelier_core::application::agent_cli::busy(&store.settings::<Document>()?)? {
-        return Err(BackupFailure::Conflict(
-            "Termine la mise à jour du CLI avant une restauration.",
-        )
-        .into());
+        return Err(BackupFailure::Conflict("message.finish_cli_update_before_restore").into());
     }
     if current_effects
         .iter()
         .any(super::connector_effects::pending)
     {
-        return Err(BackupFailure::Conflict(
-            "Rapproche les écritures de connecteurs avant une restauration.",
-        )
-        .into());
+        return Err(
+            BackupFailure::Conflict("message.reconcile_connector_writes_before_restore").into(),
+        );
     }
     for card in store.documents::<Document>(Documents::Cards)? {
         if let Some(flow) = card.get::<Document>("automation")?
             && flow.string_equals("state", "running")?
         {
             return Err(BackupFailure::Conflict(
-                "Arrête les parcours automatiques avant une restauration.",
+                "message.stop_automatic_workflows_before_restoring_a_backup",
             )
             .into());
         }
         if atelier_core::application::forge::unresolved(&card)? {
             return Err(BackupFailure::Conflict(
-                "Vérifie les écritures de forge incertaines avant une restauration.",
+                "message.check_uncertain_forge_writes_before_restoring",
             )
             .into());
         }
         if atelier_core::application::jira::unresolved(&card)? {
             return Err(BackupFailure::Conflict(
-                "Vérifie les envois Jira incertains avant une restauration.",
+                "message.check_uncertain_jira_submissions_before_restoring",
             )
             .into());
         }
@@ -254,11 +247,13 @@ fn restore_checked(
     checked.copy_to(snapshot.as_file_mut())?;
     let source = Connection::open_with_flags(snapshot.path(), OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     super::store::validate_format(&source).map_err(|_| {
-        BackupFailure::Invalid("Sauvegarde incompatible avec cette version d’Atelier Rust.")
+        BackupFailure::Invalid(
+            "message.this_backup_is_incompatible_with_this_version_of_atelier_rust",
+        )
     })?;
     let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
     if integrity != "ok" {
-        return Err(BackupFailure::Invalid("Sauvegarde endommagée.").into());
+        return Err(BackupFailure::Invalid("message.corrupted_backup").into());
     }
     let source_settings: Option<String> = source
         .query_row("SELECT data FROM settings WHERE id=1", [], |row| row.get(0))
@@ -272,23 +267,19 @@ fn restore_checked(
             )
         })
     {
-        return Err(BackupFailure::Conflict(
-            "Cette restauration perdrait l’historique d’une écriture distante de connecteur.",
-        )
-        .into());
+        return Err(BackupFailure::Conflict("message.restore_loses_connector_history").into());
     }
     if let Some(settings) = source_settings {
         let settings: Document = serde_json::from_str(&settings)?;
         if atelier_core::application::agent_cli::busy(&settings)? {
-            return Err(BackupFailure::Invalid(
-                "Cette sauvegarde contient une mise à jour CLI inachevée.",
-            )
-            .into());
+            return Err(
+                BackupFailure::Invalid("message.backup_contains_unfinished_cli_update").into(),
+            );
         }
         let saved_effects = super::connector_effects::read(&settings)?;
         if saved_effects.iter().any(super::connector_effects::pending) {
             return Err(BackupFailure::Invalid(
-                "Cette sauvegarde contient une écriture de connecteur inachevée.",
+                "message.backup_contains_unfinished_connector_write",
             )
             .into());
         }
@@ -303,12 +294,14 @@ fn restore_checked(
                 saved.id == current.id
                     && serde_json::to_value(saved).ok() == serde_json::to_value(current).ok()
             }) {
-                return Err(BackupFailure::Conflict("Cette restauration perdrait l’historique d’une écriture distante de connecteur.").into());
+                return Err(
+                    BackupFailure::Conflict("message.restore_loses_connector_history").into(),
+                );
             }
         }
         if settings.raw("jiraImportReservation").is_some() {
             return Err(BackupFailure::Invalid(
-                "Cette sauvegarde contient un import Jira inachevé.",
+                "message.this_backup_contains_an_unfinished_jira_import",
             )
             .into());
         }
@@ -327,7 +320,7 @@ fn restore_checked(
             if let Some(effect) = current.get::<serde_json::Value>(key)? {
                 let id = current
                     .get::<String>("id")?
-                    .ok_or("Identifiant de carte absent.")?;
+                    .ok_or("message.card_id_missing")?;
                 let saved = cards
                     .iter()
                     .find(|saved| saved.id == id)
@@ -335,7 +328,12 @@ fn restore_checked(
                     .transpose()?
                     .flatten();
                 if saved != Some(effect) {
-                    return Err(BackupFailure::Invalid(if key=="connectorTicketEffect" {"Restauration refusée : cette sauvegarde ne conserve pas la dernière transition du connecteur."} else {"Restauration refusée : cette sauvegarde ne conserve pas les dernières écritures de forge."}).into());
+                    return Err(BackupFailure::Invalid(if key == "connectorTicketEffect" {
+                        "message.restore_refused_this_backup_does_not_preserve_the_last_module_tr"
+                    } else {
+                        "message.restore_refused_this_backup_does_not_preserve_the_latest_forge_w"
+                    })
+                    .into());
                 }
             }
         }
@@ -343,7 +341,7 @@ fn restore_checked(
             if let Some(intent) = current.get::<Document>(key)? {
                 let state = intent
                     .get::<atelier_core::contracts::JiraWriteState>("state")?
-                    .ok_or("État d’opération Jira absent.")?;
+                    .ok_or("message.jira_operation_state_missing")?;
                 if matches!(
                     state,
                     atelier_core::contracts::JiraWriteState::Confirmed
@@ -351,7 +349,7 @@ fn restore_checked(
                 ) {
                     let id = current
                         .get::<String>("id")?
-                        .ok_or("Identifiant de carte absent.")?;
+                        .ok_or("message.card_id_missing")?;
                     let saved = cards
                         .iter()
                         .find(|saved| saved.id == id)
@@ -359,7 +357,7 @@ fn restore_checked(
                         .transpose()?
                         .flatten();
                     if saved != Some(serde_json::to_value(&intent)?) {
-                        return Err(BackupFailure::Invalid("Restauration refusée : cette sauvegarde ne conserve pas les derniers effets Jira. Choisis une sauvegarde récente.").into());
+                        return Err(BackupFailure::Invalid("message.restore_refused_this_backup_does_not_preserve_the_latest_jira_ef").into());
                     }
                 }
             }
@@ -380,7 +378,7 @@ fn restore_checked(
             if let Some(effect) = current.get::<Value>(key)? {
                 let id = current
                     .get::<String>("id")?
-                    .ok_or("Identifiant de temps invalide.")?;
+                    .ok_or("message.time_id_invalid")?;
                 if times
                     .get(id.as_str())
                     .map(|saved| saved.get::<Value>(key))
@@ -389,7 +387,7 @@ fn restore_checked(
                     != Some(effect)
                 {
                     return Err(BackupFailure::Invalid(
-                        "Restauration refusée : l’historique des exports doit être conservé.",
+                        "message.restore_refused_export_history_must_be_preserved",
                     )
                     .into());
                 }
@@ -408,18 +406,24 @@ fn restore_checked(
             false
         };
         if !same {
-            return Err(BackupFailure::Invalid("Restauration refusée : des envois plus récents ou incertains doivent être conservés. Choisissez une sauvegarde récente.").into());
+            return Err(BackupFailure::Invalid(
+                "message.restore_refused_newer_or_uncertain_exports_must_be_preserved_cho",
+            )
+            .into());
         }
         if current.raw("connectorExport").is_some() {
-            let saved = saved.ok_or("Saisie d’export du module absente de la sauvegarde.")?;
+            let saved = saved.ok_or("message.backup_missing_module_export_entry")?;
             for key in ["cardId", "seconds", "date", "startTime", "description"] {
                 if saved.get::<Value>(key)? != current.get::<Value>(key)? {
-                    return Err(BackupFailure::Invalid("Restauration refusée : la saisie réellement exportée par le module doit être conservée.").into());
+                    return Err(BackupFailure::Invalid(
+                        "message.restore_refused_the_entry_actually_exported_through_the_module_m",
+                    )
+                    .into());
                 }
             }
         }
     }
-    let unfinished = "Cette sauvegarde contient des opérations inachevées.";
+    let unfinished = "message.this_backup_contains_unfinished_operations";
     for run in &runs {
         if super::runs::active(&run.value)? {
             return Err(BackupFailure::Invalid(unfinished).into());
@@ -470,42 +474,77 @@ fn restore_checked(
         .map(|configuration| configuration.revision);
     rescue()?;
     store.transaction(|store| {
-        for (kind, rows) in [(Documents::Projects, projects), (Documents::Cards, cards), (Documents::Runs, runs), (Documents::Times, entries)] {
+        for (kind, rows) in [
+            (Documents::Projects, projects),
+            (Documents::Cards, cards),
+            (Documents::Runs, runs),
+            (Documents::Times, entries),
+        ] {
             let table = kind.table();
-            store.connection.execute(&format!("DELETE FROM {table}"), [])?;
-            let mut insert = store.connection.prepare(&format!("INSERT INTO {table}(id,data) VALUES (?,?)"))?;
-            for row in rows { insert.execute(params![row.id, row.data])?; }
+            store
+                .connection
+                .execute(&format!("DELETE FROM {table}"), [])?;
+            let mut insert = store
+                .connection
+                .prepare(&format!("INSERT INTO {table}(id,data) VALUES (?,?)"))?;
+            for row in rows {
+                insert.execute(params![row.id, row.data])?;
+            }
         }
-        store.connection.execute_batch("DELETE FROM logs; DELETE FROM settings;")?;
-        for (seq, id, stream, text) in logs { store.connection.execute("INSERT INTO logs(seq,runId,stream,text) VALUES (?,?,?,?)", params![seq, id, stream, text])?; }
-        for (id, data) in settings { store.connection.execute("INSERT INTO settings(id,data) VALUES (?,?)", params![id, data])?; }
-        let vault: bool = store.connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='token_vault')", [], |row| row.get(0))?;
-        if vault { store.connection.execute("DELETE FROM token_vault", [])?; }
+        store
+            .connection
+            .execute_batch("DELETE FROM logs; DELETE FROM settings;")?;
+        for (seq, id, stream, text) in logs {
+            store.connection.execute(
+                "INSERT INTO logs(seq,runId,stream,text) VALUES (?,?,?,?)",
+                params![seq, id, stream, text],
+            )?;
+        }
+        for (id, data) in settings {
+            store.connection.execute(
+                "INSERT INTO settings(id,data) VALUES (?,?)",
+                params![id, data],
+            )?;
+        }
+        let vault: bool = store.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='token_vault')",
+            [],
+            |row| row.get(0),
+        )?;
+        if vault {
+            store.connection.execute("DELETE FROM token_vault", [])?;
+        }
         let mut settings = store.settings::<Document>()?;
-        super::jira::invalidate_configuration(&mut settings,jira_revision)?;
-        super::forge::invalidate(&mut settings,&previous_settings)?;
-        super::tempo::invalidate(&mut settings,Some(&previous_settings))?;
-        super::connectors::invalidate(&mut settings,&previous_settings)?;
+        super::jira::invalidate_configuration(&mut settings, jira_revision)?;
+        super::forge::invalidate(&mut settings, &previous_settings)?;
+        super::tempo::invalidate(&mut settings, Some(&previous_settings))?;
+        super::connectors::invalidate(&mut settings, &previous_settings)?;
         settings.set("credentialsReset", &true)?;
         store.save_settings(&settings)?;
         for mut run in store.documents::<Document>(Documents::Runs)? {
-            if run.string_equals("purpose","verification")? {
-                run.set("verificationState",&"stale")?;
-                store.put(Documents::Runs,&run)?;
+            if run.string_equals("purpose", "verification")? {
+                run.set("verificationState", &"stale")?;
+                store.put(Documents::Runs, &run)?;
             }
             if run.string_equals("kind", "pr-review")? {
-                run.set("reviewStaleReason", &"Données restaurées : relancez la review pour vérifier les commits actuels.")?;
+                run.set("reviewStaleReason", &"message.restored_data_review")?;
                 store.put(Documents::Runs, &run)?;
             }
         }
         for mut card in store.documents::<Document>(Documents::Cards)? {
             if card.truthy("automation")? {
-                let mut automation = Document::spread(card.raw("automation").ok_or("Automatisation absente.")?)?;
+                let mut automation =
+                    Document::spread(card.raw("automation").ok_or("message.automation_missing")?)?;
                 automation.set("state", &"interrupted")?;
                 automation.set("step", &"tests")?;
-                automation.set("message", &"Données restaurées : reprends les vérifications et la review sur le worktree actuel.")?;
+                automation.set(
+                    "message",
+                    &"message.data_restored_resume_verification_and_review_on_the_current_work",
+                )?;
                 card.set("automation", &automation)?;
-                if !card.truthy("archived")? && !card.string_equals("status", "done")? { card.set("status", &"standby")?; }
+                if !card.truthy("archived")? && !card.string_equals("status", "done")? {
+                    card.set("status", &"standby")?;
+                }
                 store.put(Documents::Cards, &card)?;
             }
         }

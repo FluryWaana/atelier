@@ -45,7 +45,7 @@ impl CreationContext for Context {
     fn repository(&self, value: &RawValue) -> Result<JsonString> {
         self.event(&("repository", value));
         let value: JsonString =
-            serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
+            serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
         let value = text_units(&value, 2000)?;
         if self.scenario.truthy("repositoryError")? {
             return Err("Synthetic repository failure".into());

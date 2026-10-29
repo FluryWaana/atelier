@@ -150,9 +150,7 @@ pub fn install(
     require_registry(store, input.expected_revision)?;
     if !input.confirmed || serde_json::to_value(&actual)? != serde_json::to_value(&input.candidate)?
     {
-        return Err(
-            "Confirme le binaire et le manifeste exacts avant d’installer le connecteur.".into(),
-        );
+        return Err("message.confirm_connector_manifest".into());
     }
     protocol::validate_manifest(&actual.manifest)?;
     let mut stored = store.settings::<Document>()?;

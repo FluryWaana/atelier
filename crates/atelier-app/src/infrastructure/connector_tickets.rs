@@ -42,7 +42,7 @@ pub fn page(report: &Report) -> Result<TicketPage> {
             || ticket.instance.contains(['\\', '%'])
             || super::jira::normalize_url(&ticket.instance)? != ticket.instance
         {
-            return Err("Portée HTTPS du ticket de connecteur invalide.".into());
+            return Err("message.invalid_connector_ticket_https_scope".into());
         }
         let instance = reqwest::Url::parse(&ticket.instance)?;
         let url = reqwest::Url::parse(&ticket.url)?;
@@ -61,7 +61,7 @@ pub fn page(report: &Report) -> Result<TicketPage> {
                     .strip_prefix(boundary)
                     .is_some_and(|path| path.starts_with('/')))
         {
-            return Err("Adresse du ticket hors de la portée du connecteur.".into());
+            return Err("message.ticket_address_is_outside_the_connector_scope".into());
         }
     }
     Ok(page)
@@ -71,11 +71,13 @@ pub(super) fn linked(profile: &Installed, card: &Card) -> Result<Document> {
     let ticket = card
         .fields
         .get::<Document>("ticket")?
-        .ok_or("Ticket de connecteur absent.")?;
+        .ok_or("message.no_connector_ticket_is_linked")?;
     if !ticket.string_equals("connector", &format!("extension:{}", profile.manifest.id))?
         || !ticket.string_equals("scope", &scope(profile)?)?
     {
-        return Err("La portée du connecteur a changé. Rétablis sa configuration avant de synchroniser cette carte.".into());
+        return Err(
+            "message.the_connector_scope_changed_restore_its_configuration_before_syn".into(),
+        );
     }
     Ok(ticket)
 }
@@ -97,7 +99,7 @@ pub fn imported_count(store: &Store<'_>, profile: &Installed) -> Result<usize> {
 
 pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh) -> Result<Card> {
     if !input.confirmed {
-        return Err("Confirme les champs du ticket à synchroniser.".into());
+        return Err("message.confirm_the_ticket_fields_to_synchronize".into());
     }
     store.transaction(|store| {
         let profile = connectors::profile(store, module, input.expected_revision)?;
@@ -106,7 +108,7 @@ pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh)
             .methods
             .contains(&protocol::Method::TicketsRead)
         {
-            return Err("Ce connecteur ne déclare pas la lecture des tickets.".into());
+            return Err("message.this_connector_does_not_declare_ticket_reading".into());
         }
         let report = profile
             .report
@@ -114,14 +116,14 @@ pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh)
             .filter(|report| {
                 report.id == input.report_id && report.method == protocol::Method::TicketsRead
             })
-            .ok_or("Le rapport du connecteur a changé. Relis le ticket avant de confirmer.")?;
+            .ok_or("message.the_connector_report_changed_read_the_ticket_again_before_confir")?;
         let observed = time::OffsetDateTime::parse(
             &report.observed_at,
             &time::format_description::well_known::Rfc3339,
         )?;
         if !(0..=600).contains(&(time::OffsetDateTime::now_utc() - observed).whole_seconds()) {
             return Err(
-                "Cet aperçu de connecteur a expiré. Relis le ticket avant de confirmer.".into(),
+                "message.this_connector_preview_expired_read_the_ticket_again_before_conf".into(),
             );
         }
         let page = page(report)?;
@@ -131,7 +133,7 @@ pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh)
         if !ticket.string_equals("instance", &remote.instance)?
             || !ticket.string_equals("id", &remote.id)?
         {
-            return Err("Le rapport ne correspond pas au ticket lié à cette carte.".into());
+            return Err("message.the_report_does_not_match_the_ticket_linked_to_this_card".into());
         }
         let changed = (input.replace_title && card.title != remote.title.as_str().into())
             || (input.replace_description
@@ -181,32 +183,32 @@ pub fn import(
         || input.tickets.len() > 20
         || input.tickets.iter().collect::<BTreeSet<_>>().len() != input.tickets.len()
     {
-        return Err("Confirme une sélection de 1 à 20 tickets distincts du connecteur.".into());
+        return Err("message.confirm_a_selection_of_1_to_20_distinct_connector_tickets".into());
     }
     store.transaction(|store|{
         let profile=connectors::profile(store,module,input.expected_revision)?;
         let report=profile.report.as_ref().filter(|report|report.id==input.report_id)
-            .ok_or("Les résultats du connecteur ont changé. Relance la recherche.")?;
+            .ok_or("message.connector_results_changed_run_the_search_again")?;
         let page=page(report)?;
-        let project_id=input.project.get::<String>("id")?.ok_or("Projet introuvable.")?;
-        let project=store.document::<Document>(Documents::Projects,&project_id)?.ok_or("Projet introuvable.")?;
+        let project_id=input.project.get::<String>("id")?.ok_or("message.project_not_found")?;
+        let project=store.document::<Document>(Documents::Projects,&project_id)?.ok_or("message.project_not_found")?;
         if serde_json::to_value(&project)?!=serde_json::to_value(&input.project)? {
-            return Err("Le projet a changé. Sélectionne à nouveau sa version actuelle.".into());
+            return Err("message.the_project_changed_select_its_current_version_again".into());
         }
-        let repository=project.get::<String>("repo")?.filter(|repo|!repo.is_empty()).ok_or("Dépôt du projet absent.")?;
+        let repository=project.get::<String>("repo")?.filter(|repo|!repo.is_empty()).ok_or("message.missing_project_repository")?;
         let scope=scope(&profile)?;
         let connector=format!("extension:{module}");
         let mut cards=store.documents::<Card>(Documents::Cards)?;
         let mut imported=Vec::new();
         for identity in &input.tickets {
             let ticket=page.items.iter().find(|ticket|ticket.identity()==*identity)
-                .ok_or("Le ticket sélectionné est absent du rapport courant.")?;
+                .ok_or("message.the_selected_ticket_is_missing_from_the_current_report")?;
             let mut existing=None;
             for card in &cards {
                 if let Some(link)=card.fields.get::<Document>("ticket")?
                     && link.string_equals("connector",&connector)? && link.string_equals("scope",&scope)?
                     && link.string_equals("instance",&ticket.instance)? && link.string_equals("id",&ticket.id)? {
-                    if existing.is_some(){return Err("Plusieurs cartes sont liées au même ticket de connecteur.".into());}
+                    if existing.is_some(){return Err("message.multiple_cards_are_linked_to_the_same_connector_ticket".into());}
                     existing=Some(card.clone());
                 }
             }

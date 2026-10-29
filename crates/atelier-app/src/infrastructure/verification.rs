@@ -21,7 +21,7 @@ pub fn project(store: &Store<'_>, card: &Card) -> Result<Document> {
                         )
                 })
         })
-        .ok_or_else(|| "Choisis un projet pour configurer les vérifications de cette tâche.".into())
+        .ok_or_else(|| "message.choose_a_project_to_configure_verification_for_this_task".into())
 }
 pub fn require_command(store: &Store<'_>, card: &Card, command: &str) -> Result<()> {
     if command.trim().is_empty()
@@ -32,8 +32,7 @@ pub fn require_command(store: &Store<'_>, card: &Card, command: &str) -> Result<
             != Some(command)
     {
         return Err(
-            "La commande du projet a changé ou n’est pas configurée. Recharge avant de vérifier."
-                .into(),
+            "message.the_project_command_changed_or_is_not_configured_reload_before_v".into(),
         );
     }
     Ok(())
@@ -42,10 +41,10 @@ pub fn finish(store: &Store<'_>, id: &str, fingerprint: Option<&str>) -> Result<
     store.transaction(|store| {
         let mut run = store
             .document::<Document>(Documents::Runs, id)?
-            .ok_or("Exécution introuvable.")?;
+            .ok_or("message.run_not_found")?;
         let card = store.document::<Card>(
             Documents::Cards,
-            &run.get::<String>("cardId")?.ok_or("Carte absente.")?,
+            &run.get::<String>("cardId")?.ok_or("message.card_missing")?,
         )?;
         let state = if !run.string_equals("status", "completed")?
             || run.get::<i32>("exitCode")? != Some(0)

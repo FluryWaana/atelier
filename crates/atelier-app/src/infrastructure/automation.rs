@@ -23,7 +23,7 @@ pub(super) fn profile(store: &Store<'_>, id: &str) -> Result<Document> {
     )?)?
     .into_iter()
     .find(|profile| profile.string_equals("id", id).unwrap_or(false))
-    .ok_or_else(|| "Profil du parcours introuvable.".into())
+    .ok_or_else(|| "message.workflow_profile_not_found".into())
 }
 pub fn read(card: &Card) -> Result<Option<Flow>> {
     let Some(value) = card.fields.get::<Document>("automation")? else {
@@ -32,8 +32,7 @@ pub fn read(card: &Card) -> Result<Option<Flow>> {
     if !value.truthy("id")? {
         if value.string_equals("state", "running")? {
             return Err(
-                "Parcours actif sans identifiant : examine les processus avant de poursuivre."
-                    .into(),
+                "message.active_workflow_has_no_identifier_inspect_processes_before_conti".into(),
             );
         }
         return Ok(None);
@@ -73,7 +72,9 @@ fn current(store: &Store<'_>, card: &Card, flow: &Flow) -> Result<()> {
         || serde_json::to_value(verification::project(store, card)?)?
             != serde_json::to_value(&flow.project)?
     {
-        return Err("Le besoin, le profil, le worktree ou le projet du parcours a changé. Lance un nouveau parcours après vérification.".into());
+        return Err(
+            "message.workflow_requirements_profile_worktree_or_project_changed_start".into(),
+        );
     }
     Ok(())
 }
@@ -84,12 +85,12 @@ pub fn change(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
 
 pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document) -> Result<Card> {
     if body.get::<bool>("confirmed")? != Some(true) {
-        return Err("Confirme l’étape du parcours automatique.".into());
+        return Err("message.confirm_the_automatic_workflow_step".into());
     }
     let expected = body
         .get::<Card>("expected")?
         .filter(|card| card.id == id)
-        .ok_or("Instantané de tâche requis.")?;
+        .ok_or("message.task_snapshot_required")?;
     let mut card = super::forge_association::snapshot(store, &expected)?;
     let mut flow = read(&card)?;
     match body.get::<String>("action")?.as_deref() {
@@ -98,7 +99,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 .as_ref()
                 .is_some_and(|flow| matches!(flow.state, State::Running | State::Waiting))
             {
-                return Err("Arrête le parcours précédent avant d’en démarrer un autre.".into());
+                return Err("message.stop_the_previous_workflow_before_starting_another".into());
             }
             let project = verification::project(store, &card)?;
             if body
@@ -109,8 +110,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 != Some(serde_json::to_value(&project)?)
             {
                 return Err(
-                    "Les réglages du parcours ont changé. Recharge le projet avant de confirmer."
-                        .into(),
+                    "message.workflow_settings_changed_reload_the_project_before_confirming".into(),
                 );
             }
             if project.get::<bool>("automationEnabled")? != Some(true)
@@ -121,18 +121,21 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                     .get::<String>("prTarget")?
                     .is_none_or(|value| value.trim().is_empty())
             {
-                return Err("Active le parcours et renseigne la commande de vérification et la cible dans le projet.".into());
+                return Err(
+                    "message.enable_workflows_and_set_the_verification_command_and_target_in"
+                        .into(),
+                );
             }
             let worktree = card
                 .fields
                 .get::<Worktree>("worktree")?
                 .filter(|worktree| worktree.state == WorktreeState::Ready)
-                .ok_or("Prépare le worktree avant le parcours automatique.")?;
+                .ok_or("message.prepare_the_worktree_before_starting_the_workflow")?;
             let agent = card
                 .fields
                 .get::<String>("agent")?
                 .filter(|value| !value.is_empty())
-                .ok_or("Profil requis.")?;
+                .ok_or("message.profile_required")?;
             let auto_fix = project.get::<bool>("autoFix")?.unwrap_or(true);
             let profile = profile(store, &agent)?;
             if body
@@ -143,7 +146,8 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 != Some(serde_json::to_value(&profile)?)
             {
                 return Err(
-                    "Le profil du parcours a changé. Relis ses réglages avant de confirmer.".into(),
+                    "message.the_workflow_profile_changed_review_its_settings_before_confirmi"
+                        .into(),
                 );
             }
             let stamp = now()?;
@@ -177,12 +181,12 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
             });
         }
         Some("resume") => {
-            let active = flow.as_mut().ok_or("Aucun parcours à reprendre.")?;
+            let active = flow.as_mut().ok_or("message.no_workflow_to_resume")?;
             if !matches!(
                 active.state,
                 State::Interrupted | State::Error | State::Cancelled
             ) {
-                return Err("Ce parcours ne peut pas être repris à cette étape.".into());
+                return Err("message.this_workflow_cannot_resume_at_this_step".into());
             }
             current(store, &card, active)?;
             // Repeating an interrupted local step requires this new explicit confirmation.
@@ -199,7 +203,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
             let active = flow
                 .as_mut()
                 .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
-                .ok_or("Le parcours n’attend pas de publication.")?;
+                .ok_or("message.the_workflow_is_not_awaiting_publication")?;
             current(store, &card, active)?;
             let branches = if let Some(linked) =
                 card.fields
@@ -214,13 +218,13 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 let linked = card
                     .fields
                     .get::<atelier_core::contracts::PullRequest>("pullRequest")?
-                    .ok_or("Publie ou lie une PR/MR avant de poursuivre la review.")?;
+                    .ok_or("message.publish_or_link_a_pr_mr_before_continuing_the_review")?;
                 (linked.source_branch, linked.target_branch)
             };
             if active.project.get::<String>("prTarget")?.as_deref() != Some(branches.1.as_str())
                 || branches.0 != active.worktree.branch
             {
-                return Err("Les branches de la PR/MR ne correspondent pas au parcours.".into());
+                return Err("message.the_pr_mr_branches_do_not_match_the_workflow".into());
             }
             active.review_requested = true;
             active.step = Step::Tests;
@@ -232,16 +236,16 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
             let active = flow
                 .as_mut()
                 .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
-                .ok_or("Le parcours n’attend pas de publication.")?;
+                .ok_or("message.the_workflow_is_not_awaiting_publication")?;
             current(store, &card, active)?;
             let preview = card
                 .fields
                 .get::<atelier_core::contracts::LocalCommitPreview>("localCommitPreview")?
-                .ok_or("Prépare l’aperçu du commit avant d’autoriser son enchaînement.")?;
+                .ok_or("message.prepare_the_commit_preview_before_authorizing_the_workflow")?;
             if preview.worktree != active.worktree
                 || preview.snapshot.branch != active.worktree.branch
             {
-                return Err("Le commit ne correspond pas au worktree du parcours.".into());
+                return Err("message.the_commit_does_not_match_the_workflow_worktree".into());
             }
             active.commit_plan = Some(Box::new(preview));
             active.publication_plan = None;
@@ -255,12 +259,12 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
             let active = flow
                 .as_mut()
                 .filter(|flow| flow.state == State::Waiting && flow.step == Step::Publication)
-                .ok_or("Le parcours n’attend pas de publication.")?;
+                .ok_or("message.the_workflow_is_not_awaiting_publication")?;
             current(store, &card, active)?;
             let target = active
                 .project
                 .get::<String>("prTarget")?
-                .ok_or("Branche cible absente.")?;
+                .ok_or("message.target_branch_missing")?;
             let plan = if let Some(preview) =
                 card.fields
                     .get::<atelier_core::application::extensions::RepositoryProposal>(
@@ -276,7 +280,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                     || !preview.draft
                     || preview.card_revision != super::connector_repositories::revision(&card)?
                 {
-                    return Err("L’aperçu du module ne correspond plus au parcours ou n’est pas un brouillon.".into());
+                    return Err("message.connector_preview_workflow_mismatch".into());
                 }
                 super::connector_repositories::matches(store, &card, &preview.context)?;
                 PublicationPlan::Module(Box::new(preview))
@@ -284,11 +288,11 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                 let preview = card
                     .fields
                     .get::<atelier_core::contracts::GitPushPreview>("gitPushPreview")?
-                    .ok_or("Prépare l’aperçu du push avant d’autoriser son enchaînement.")?;
+                    .ok_or("message.prepare_the_push_preview_before_authorizing_the_workflow")?;
                 let linked = card
                     .fields
                     .get::<atelier_core::contracts::PullRequest>("pullRequest")?
-                    .ok_or("PR/MR absente.")?;
+                    .ok_or("message.pull_request_missing")?;
                 if preview.worktree != active.worktree
                     || preview
                         .pull_request
@@ -296,7 +300,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                         .is_none_or(|remote| !super::forge::same_pull_request(remote, &linked))
                     || linked.target_branch != target
                 {
-                    return Err("L’aperçu ne correspond pas aux branches du parcours.".into());
+                    return Err("message.the_preview_does_not_match_the_workflow_branches".into());
                 }
                 super::forge::configuration(store, preview.configuration.kind, preview.revision)?;
                 PublicationPlan::Push(Box::new(preview))
@@ -306,11 +310,13 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                     .get::<atelier_core::contracts::ForgePublicationPreview>(
                         "forgePublicationPreview",
                     )?
-                    .ok_or("Prépare l’aperçu de publication avant d’autoriser son enchaînement.")?;
+                    .ok_or(
+                        "message.prepare_the_publication_preview_before_authorizing_the_workflow",
+                    )?;
                 if preview.worktree != active.worktree || preview.target != target || !preview.draft
                 {
                     return Err(
-                        "Le parcours exige les branches prévues et une publication en brouillon."
+                        "message.the_workflow_requires_the_expected_branches_and_a_draft_publicat"
                             .into(),
                     );
                 }
@@ -318,7 +324,7 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
                     && body.get::<bool>("allowCreateBranch")? != Some(true)
                 {
                     return Err(
-                        "Confirme séparément la création de la branche distante absente.".into(),
+                        "message.separately_confirm_creation_of_the_missing_remote_branch".into(),
                     );
                 }
                 super::forge::configuration(store, preview.configuration.kind, preview.revision)?;
@@ -331,10 +337,14 @@ pub(super) fn change_in_transaction(store: &Store<'_>, id: &str, body: &Document
             active.run_id = None;
             active.message.clear();
         }
-        _ => return Err("Action de parcours inconnue.".into()),
+        _ => return Err("message.unknown_workflow_action".into()),
     }
     card.fields.set("status", &"doing")?;
-    save(store, &mut card, flow.as_mut().ok_or("Parcours absent.")?)?;
+    save(
+        store,
+        &mut card,
+        flow.as_mut().ok_or("message.workflow_missing")?,
+    )?;
     Ok(card)
 }
 
@@ -342,16 +352,15 @@ pub fn cancel(store: &Store<'_>, id: &str, operation: &str) -> Result<Option<Str
     store.transaction(|store| {
         let mut card = store
             .document::<Card>(Documents::Cards, id)?
-            .ok_or("Carte introuvable.")?;
+            .ok_or("message.card_not_found")?;
         let mut flow = read(&card)?
             .filter(|flow| {
                 flow.id == operation && matches!(flow.state, State::Running | State::Waiting)
             })
-            .ok_or("Le parcours a changé ou est déjà arrêté.")?;
+            .ok_or("message.the_workflow_changed_or_is_already_stopped")?;
         flow.state = State::Cancelled;
         flow.message =
-            "Parcours arrêté. Vérifie les fichiers et les effets distants avant de reprendre."
-                .into();
+            "message.workflow_stopped_check_files_and_remote_effects_before_resuming".into();
         let run = flow.run_id.clone();
         save(store, &mut card, &mut flow)?;
         Ok(run)
@@ -364,7 +373,8 @@ pub fn recover_in_transaction(store: &Store<'_>) -> Result<()> {
             && flow.state == State::Running
         {
             flow.state = State::Interrupted;
-            flow.message="Parcours interrompu après redémarrage. Aucun lancement ni publication n’a été rejoué.".into();
+            flow.message =
+                "message.workflow_interrupted_after_restart_no_run_or_publication_was_rep".into();
             save(store, &mut card, &mut flow)?;
         }
     }
@@ -387,10 +397,12 @@ pub fn require_run(
                     && flow.state == State::Running
                     && flow.run_id.as_deref() == Some(run_id)
             })
-            .ok_or("Le lancement du parcours a été arrêté ou remplacé.")?;
+            .ok_or("message.the_workflow_launch_was_stopped_or_replaced")?;
         current(store, card, &flow)?;
     } else if flow.is_some_and(|flow| flow.state == State::Running) {
-        return Err("Le parcours réserve cette tâche. Arrête-le avant un lancement manuel.".into());
+        return Err(
+            "message.the_workflow_reserves_this_task_stop_it_before_starting_a_manual".into(),
+        );
     }
     Ok(())
 }
@@ -432,7 +444,7 @@ pub fn fail(store: &Store<'_>, id: &str, operation: &str, message: &str) -> Resu
     store.transaction(|store| {
         let mut card = store
             .document::<Card>(Documents::Cards, id)?
-            .ok_or("Carte introuvable.")?;
+            .ok_or("message.card_not_found")?;
         let Some(mut flow) =
             read(&card)?.filter(|flow| flow.id == operation && flow.state == State::Running)
         else {
@@ -451,7 +463,7 @@ pub fn commit(
 ) -> Result<(Card, atelier_core::contracts::LocalCommitPreview)> {
     let card = store
         .document::<Card>(Documents::Cards, id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let card = super::forge_association::snapshot(store, &card)?;
     let flow = read(&card)?
         .filter(|flow| {
@@ -460,26 +472,42 @@ pub fn commit(
                 && flow.step == Step::Commit
                 && flow.run_id.is_none()
         })
-        .ok_or("Le commit du parcours a été arrêté ou remplacé.")?;
+        .ok_or("message.the_workflow_commit_was_stopped_or_replaced")?;
     current(store, &card, &flow)?;
     Ok((
         card,
         *flow
             .commit_plan
-            .ok_or("Aperçu du commit du parcours absent.")?,
+            .ok_or("message.workflow_commit_preview_missing")?,
     ))
 }
 pub fn commit_complete(store: &Store<'_>, expected: &Card, operation: &str) -> Result<()> {
     store.transaction(|store| {
-        super::forge_association::snapshot(store,expected)?;
-        let (mut card,approved)=commit(store,&expected.id,operation)?;
-        let effect=card.fields.get::<atelier_core::contracts::LocalCommitIntent>("localCommit")?.ok_or("Intention de commit absente.")?;
-        if effect.state!=atelier_core::contracts::ForgeWriteState::Confirmed || effect.commit.is_none() || effect.observed!=effect.commit || serde_json::to_value(effect.preview)?!=serde_json::to_value(approved)? {
-            return Err("Le commit du parcours n’est pas confirmé sur son aperçu. Relis la branche avant de poursuivre.".into());
+        super::forge_association::snapshot(store, expected)?;
+        let (mut card, approved) = commit(store, &expected.id, operation)?;
+        let effect = card
+            .fields
+            .get::<atelier_core::contracts::LocalCommitIntent>("localCommit")?
+            .ok_or("message.missing_commit_intent")?;
+        if effect.state != atelier_core::contracts::ForgeWriteState::Confirmed
+            || effect.commit.is_none()
+            || effect.observed != effect.commit
+            || serde_json::to_value(effect.preview)? != serde_json::to_value(approved)?
+        {
+            return Err(
+                "message.the_workflow_commit_is_not_confirmed_against_its_preview_read_th".into(),
+            );
         }
-        let mut flow=read(&card)?.ok_or("Parcours absent.")?;
-        flow.commit_plan=None;flow.publication_plan=None;flow.verification_id=None;flow.step=Step::Tests;flow.run_id=None;flow.review_requested=false;flow.message="Commit observé. Les sources vont être revérifiées avant toute publication.".into();
-        save(store,&mut card,&mut flow)
+        let mut flow = read(&card)?.ok_or("message.workflow_missing")?;
+        flow.commit_plan = None;
+        flow.publication_plan = None;
+        flow.verification_id = None;
+        flow.step = Step::Tests;
+        flow.run_id = None;
+        flow.review_requested = false;
+        flow.message =
+            "message.commit_observed_sources_will_be_checked_again_before_publication".into();
+        save(store, &mut card, &mut flow)
     })
 }
 
@@ -490,7 +518,7 @@ pub fn publication(
 ) -> Result<(Card, Flow, PublicationPlan)> {
     let card = store
         .document::<Card>(Documents::Cards, id)?
-        .ok_or("Carte introuvable.")?;
+        .ok_or("message.card_not_found")?;
     let card = super::forge_association::snapshot(store, &card)?;
     let flow = read(&card)?
         .filter(|flow| {
@@ -499,35 +527,90 @@ pub fn publication(
                 && flow.step == Step::Publication
                 && flow.run_id.is_none()
         })
-        .ok_or("La publication du parcours a été arrêtée ou remplacée.")?;
+        .ok_or("message.workflow_publication_was_stopped_or_replaced")?;
     current(store, &card, &flow)?;
     let plan = flow
         .publication_plan
         .clone()
-        .ok_or("Aperçu de publication du parcours absent.")?;
+        .ok_or("message.workflow_publication_preview_missing")?;
     Ok((card, flow, plan))
 }
 
 pub fn publication_complete(store: &Store<'_>, expected: &Card, operation: &str) -> Result<()> {
     store.transaction(|store| {
-        super::forge_association::snapshot(store,expected)?;
-        let (mut card,mut flow,plan)=publication(store,&expected.id,operation)?;
-        if let PublicationPlan::Module(approved)=&plan {
-            let linked=card.fields.get::<atelier_core::application::extensions::ModulePullRequestLink>("connectorPullRequest")?.ok_or("PR/MR du module absente.")?;
-            if linked.module!=approved.context.module||linked.revision!=approved.context.revision||linked.pull_request.reference!=approved.observation.reference||linked.pull_request.source_commit!=approved.context.source||linked.pull_request.target_commit!=approved.context.target||linked.pull_request.status!="active"||!linked.pull_request.draft||linked.pull_request.auto_merge{return Err("La PR/MR du module ne correspond pas à la publication approuvée.".into());}
-            flow.publication_plan=None;flow.review_requested=true;flow.step=Step::Review;flow.run_id=None;flow.message="Publication du module observée. La review va examiner ses commits vérifiés.".into();return save(store,&mut card,&mut flow);
+        super::forge_association::snapshot(store, expected)?;
+        let (mut card, mut flow, plan) = publication(store, &expected.id, operation)?;
+        if let PublicationPlan::Module(approved) = &plan {
+            let linked = card
+                .fields
+                .get::<atelier_core::application::extensions::ModulePullRequestLink>(
+                    "connectorPullRequest",
+                )?
+                .ok_or("message.connector_pull_request_missing")?;
+            if linked.module != approved.context.module
+                || linked.revision != approved.context.revision
+                || linked.pull_request.reference != approved.observation.reference
+                || linked.pull_request.source_commit != approved.context.source
+                || linked.pull_request.target_commit != approved.context.target
+                || linked.pull_request.status != "active"
+                || !linked.pull_request.draft
+                || linked.pull_request.auto_merge
+            {
+                return Err("message.connector_pull_request_mismatch".into());
+            }
+            flow.publication_plan = None;
+            flow.review_requested = true;
+            flow.step = Step::Review;
+            flow.run_id = None;
+            flow.message = "message.module_publication_observed_review".into();
+            return save(store, &mut card, &mut flow);
         }
-        let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("PR/MR publiée absente.")?;
-        let (kind,revision,repository,commit,target_commit)=match &plan {
-            PublicationPlan::Create(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.source_commit,Some(preview.target_commit.as_str())),
-            PublicationPlan::Push(preview)=>(preview.configuration.kind,preview.revision,&preview.repository,&preview.commit,preview.pull_request.as_ref().and_then(|remote|remote.target_commit.as_deref())),
-            PublicationPlan::Module(_)=>unreachable!("module publication handled above"),
+        let linked = card
+            .fields
+            .get::<atelier_core::contracts::PullRequest>("pullRequest")?
+            .ok_or("message.the_published_pr_mr_is_missing")?;
+        let (kind, revision, repository, commit, target_commit) = match &plan {
+            PublicationPlan::Create(preview) => (
+                preview.configuration.kind,
+                preview.revision,
+                &preview.repository,
+                &preview.source_commit,
+                Some(preview.target_commit.as_str()),
+            ),
+            PublicationPlan::Push(preview) => (
+                preview.configuration.kind,
+                preview.revision,
+                &preview.repository,
+                &preview.commit,
+                preview
+                    .pull_request
+                    .as_ref()
+                    .and_then(|remote| remote.target_commit.as_deref()),
+            ),
+            PublicationPlan::Module(_) => unreachable!("module publication handled above"),
         };
-        if linked.kind!=kind || linked.revision!=revision || linked.repository!=*repository || linked.source_commit.as_ref()!=Some(commit) || linked.target_commit.as_deref()!=target_commit || linked.source_branch!=flow.worktree.branch || flow.project.get::<String>("prTarget")?.as_deref()!=Some(linked.target_branch.as_str()) || linked.status!="active" || linked.fork {
-            return Err("La PR/MR observée ne correspond pas à la publication approuvée. Relis ses commits avant de poursuivre.".into());
+        if linked.kind != kind
+            || linked.revision != revision
+            || linked.repository != *repository
+            || linked.source_commit.as_ref() != Some(commit)
+            || linked.target_commit.as_deref() != target_commit
+            || linked.source_branch != flow.worktree.branch
+            || flow.project.get::<String>("prTarget")?.as_deref()
+                != Some(linked.target_branch.as_str())
+            || linked.status != "active"
+            || linked.fork
+        {
+            return Err(
+                "message.the_observed_pr_mr_does_not_match_the_approved_publication_check".into(),
+            );
         }
-        flow.publication_plan=None;flow.review_requested=true;flow.step=Step::Review;flow.run_id=None;flow.message="Publication observée. La review va examiner les commits vérifiés.".into();
-        save(store,&mut card,&mut flow)
+        flow.publication_plan = None;
+        flow.review_requested = true;
+        flow.step = Step::Review;
+        flow.run_id = None;
+        flow.message =
+            "message.publication_observed_review_will_examine_the_verified_commits".into();
+        save(store, &mut card, &mut flow)
     })
 }
 
@@ -540,13 +623,13 @@ pub fn claim(
     store.transaction(|store| {
         let card = store
             .document::<Card>(Documents::Cards, id)?
-            .ok_or("Carte introuvable.")?;
+            .ok_or("message.card_not_found")?;
         let mut card = super::forge_association::snapshot(store, &card)?;
         let mut flow = read(&card)?
             .filter(|flow| {
                 flow.id == operation && flow.state == State::Running && flow.run_id.is_none()
             })
-            .ok_or("L’étape du parcours a changé.")?;
+            .ok_or("message.the_workflow_step_changed")?;
         current(store, &card, &flow)?;
         flow.run_id = Some(run_id);
         save(store, &mut card, &mut flow)?;
@@ -568,7 +651,7 @@ pub fn claim(
                     &flow
                         .project
                         .get::<String>("testCommand")?
-                        .ok_or("Commande de vérification absente.")?,
+                        .ok_or("message.verification_command_missing")?,
                 )?;
             }
             Step::Review => {
@@ -581,8 +664,8 @@ pub fn claim(
                 body.set("reviewId", &flow.review_id)?;
                 body.set("indexes", &flow.correction_indexes)?;
             }
-            Step::Publication => return Err("La publication exige un contrôle explicite.".into()),
-            Step::Commit => return Err("Le commit exige un aperçu confirmé.".into()),
+            Step::Publication => return Err("message.publication_requires_explicit_review".into()),
+            Step::Commit => return Err("message.the_commit_requires_a_confirmed_preview".into()),
         }
         Ok((card, flow, body))
     })
@@ -590,38 +673,117 @@ pub fn claim(
 
 pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
     store.transaction(|store| {
-        let mut card=store.document::<Card>(Documents::Cards,id)?.ok_or("Carte introuvable.")?;
-        let mut flow=read(&card)?.filter(|flow|flow.id==operation && flow.state==State::Running).ok_or("L’étape du parcours a changé.")?;
-        current(store,&card,&flow)?;
-        let run_id=flow.run_id.as_ref().ok_or("Exécution du parcours absente.")?;
-        let run=store.document::<Document>(Documents::Runs,run_id)?.ok_or("Lancement interrompu. Vérifie le worktree avant de reprendre.")?;
-        if runs::active(&run)? {return Ok(());}
-        if !run.string_equals("automationId",operation)? || !run.string_equals("cardId",id)? || !run.string_equals("status","completed")? || run.get::<i32>("exitCode")?!=Some(0) || run.truthy("attention")? {return Err("L’étape du parcours n’a pas abouti. Consulte le journal avant de reprendre.".into());}
-        match flow.step {
-            Step::Development|Step::Correction => {flow.step=Step::Tests;flow.review_requested=false;flow.publication_plan=None;flow.commit_plan=None;},
-            Step::Tests => {
-                if !run.string_equals("purpose","verification")? || !run.string_equals("verificationState","passed")? {return Err("La vérification du parcours a échoué ou ses sources ont changé.".into());}
-                flow.verification_id=Some(run_id.clone());
-                if flow.publication_plan.is_some() {flow.step=Step::Publication;}
-                else if flow.review_requested { flow.step=Step::Review; }
-                else {flow.step=Step::Publication;flow.state=State::Waiting;flow.message="Vérification réussie. Contrôle le commit, le push et la PR/MR avant de poursuivre la review.".into();}
-            },
-            Step::Review => {
-                if run.truthy("reviewStaleReason")? || !run.truthy("reviewValidatedAt")? {return Err("La review du parcours doit être revalidée sur les commits actuels.".into());}
-                let review=run.get::<Review>("review")?.ok_or("Review incomplète.")?;
-                if review.criteria.len()!=flow.requirements["criteria"].as_array().map_or(0,Vec::len) || review.criteria.iter().enumerate().any(|(index,criterion)|criterion.index!=index) {return Err("Le bilan du parcours ne couvre pas exactement les critères enregistrés.".into());}
-                flow.review_id=Some(run_id.clone());
-                let indexes=review.findings.iter().enumerate().filter(|(_,finding)|matches!(finding.priority,Priority::P0|Priority::P1)).map(|(index,_)|index).collect::<Vec<_>>();
-                if !indexes.is_empty() && flow.auto_fix && flow.cycles<2 {flow.cycles+=1;flow.correction_indexes=indexes;flow.step=Step::Correction;}
-                else {
-                    let blocked=!indexes.is_empty() || review.criteria.is_empty() || review.criteria.iter().any(|criterion|criterion.status!=Coverage::Covered);
-                    flow.state=if blocked {State::Blocked}else{State::Ready};flow.message=if blocked {"Contrôle humain nécessaire : constats bloquants ou critères incomplets."}else{"PR/MR analysée. Le contrôle humain des critères reste nécessaire."}.into();
-                }
-            },
-            Step::Publication => return Err("La publication exige un contrôle explicite.".into()),
-            Step::Commit => return Err("Le commit exige un aperçu confirmé.".into()),
+        let mut card = store
+            .document::<Card>(Documents::Cards, id)?
+            .ok_or("message.card_not_found")?;
+        let mut flow = read(&card)?
+            .filter(|flow| flow.id == operation && flow.state == State::Running)
+            .ok_or("message.the_workflow_step_changed")?;
+        current(store, &card, &flow)?;
+        let run_id = flow.run_id.as_ref().ok_or("message.workflow_run_missing")?;
+        let run = store
+            .document::<Document>(Documents::Runs, run_id)?
+            .ok_or("message.launch_interrupted_check_the_worktree_before_resuming")?;
+        if runs::active(&run)? {
+            return Ok(());
         }
-        flow.run_id=None;save(store,&mut card,&mut flow)
+        if !run.string_equals("automationId", operation)?
+            || !run.string_equals("cardId", id)?
+            || !run.string_equals("status", "completed")?
+            || run.get::<i32>("exitCode")? != Some(0)
+            || run.truthy("attention")?
+        {
+            return Err(
+                "message.the_workflow_step_did_not_complete_read_the_log_before_resuming".into(),
+            );
+        }
+        match flow.step {
+            Step::Development | Step::Correction => {
+                flow.step = Step::Tests;
+                flow.review_requested = false;
+                flow.publication_plan = None;
+                flow.commit_plan = None;
+            }
+            Step::Tests => {
+                if !run.string_equals("purpose", "verification")?
+                    || !run.string_equals("verificationState", "passed")?
+                {
+                    return Err(
+                        "message.workflow_verification_failed_or_its_sources_changed".into(),
+                    );
+                }
+                flow.verification_id = Some(run_id.clone());
+                if flow.publication_plan.is_some() {
+                    flow.step = Step::Publication;
+                } else if flow.review_requested {
+                    flow.step = Step::Review;
+                } else {
+                    flow.step = Step::Publication;
+                    flow.state = State::Waiting;
+                    flow.message =
+                        "message.verification_passed_review_the_commit_push_and_pr_mr_before_cont"
+                            .into();
+                }
+            }
+            Step::Review => {
+                if run.truthy("reviewStaleReason")? || !run.truthy("reviewValidatedAt")? {
+                    return Err(
+                        "message.revalidate_the_workflow_review_against_the_current_commits".into(),
+                    );
+                }
+                let review = run
+                    .get::<Review>("review")?
+                    .ok_or("message.review_incomplete")?;
+                if review.criteria.len()
+                    != flow.requirements["criteria"].as_array().map_or(0, Vec::len)
+                    || review
+                        .criteria
+                        .iter()
+                        .enumerate()
+                        .any(|(index, criterion)| criterion.index != index)
+                {
+                    return Err(
+                        "message.the_workflow_report_does_not_exactly_cover_the_saved_criteria"
+                            .into(),
+                    );
+                }
+                flow.review_id = Some(run_id.clone());
+                let indexes = review
+                    .findings
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, finding)| matches!(finding.priority, Priority::P0 | Priority::P1))
+                    .map(|(index, _)| index)
+                    .collect::<Vec<_>>();
+                if !indexes.is_empty() && flow.auto_fix && flow.cycles < 2 {
+                    flow.cycles += 1;
+                    flow.correction_indexes = indexes;
+                    flow.step = Step::Correction;
+                } else {
+                    let blocked = !indexes.is_empty()
+                        || review.criteria.is_empty()
+                        || review
+                            .criteria
+                            .iter()
+                            .any(|criterion| criterion.status != Coverage::Covered);
+                    flow.state = if blocked {
+                        State::Blocked
+                    } else {
+                        State::Ready
+                    };
+                    flow.message = if blocked {
+                        "message.human_review_required_blocking_findings_or_incomplete_criteria"
+                    } else {
+                        "message.pr_mr_analyzed_human_acceptance_of_the_criteria_is_still_require"
+                    }
+                    .into();
+                }
+            }
+            Step::Publication => return Err("message.publication_requires_explicit_review".into()),
+            Step::Commit => return Err("message.the_commit_requires_a_confirmed_preview".into()),
+        }
+        flow.run_id = None;
+        save(store, &mut card, &mut flow)
     })
 }
 

@@ -29,7 +29,7 @@ pub(super) async fn save(State(state): State<Shared>, request: Request) -> Respo
         .and_then(|body| serde_json::from_str(&body).ok())
     {
         Some(input) => input,
-        None => return failure(StatusCode::BAD_REQUEST, "Paramètres Jira invalides."),
+        None => return failure(StatusCode::BAD_REQUEST, "message.invalid_jira_settings"),
     };
     let vault = state.vault.clone();
     response(
@@ -61,12 +61,12 @@ pub(super) async fn detail(
 async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Response {
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let vault = state.vault.clone();
@@ -103,7 +103,7 @@ async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Respo
     };
     tokio::select! {
         result=operation=>response(result),
-        _=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt."),
+        _=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down"),
     }
 }
 
@@ -119,13 +119,18 @@ pub(super) async fn import(State(state): State<Shared>, request: Request) -> Res
         .and_then(|body| serde_json::from_str(&body).ok())
     {
         Some(input) => input,
-        None => return failure(StatusCode::BAD_REQUEST, "Ticket ou projet Jira invalide."),
+        None => {
+            return failure(
+                StatusCode::BAD_REQUEST,
+                "message.invalid_jira_issue_or_project",
+            );
+        }
     };
     let mut stopped = state.shutdown.subscribe();
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let id = uuid::Uuid::new_v4().to_string();
@@ -153,9 +158,9 @@ pub(super) async fn import(State(state): State<Shared>, request: Request) -> Res
     };
     let stopping = *stopped.borrow();
     let fetched = if stopping {
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
-        tokio::select! { result=reading=>result,_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into()) }
+        tokio::select! { result=reading=>result,_=stopped.changed()=>Err("message.atelier_is_shutting_down".into()) }
     };
     let result = match fetched {
         Ok(detail) => {
@@ -176,7 +181,7 @@ pub(super) async fn import(State(state): State<Shared>, request: Request) -> Res
     {
         return failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Import Jira interrompu. Redémarre Atelier avant de réessayer.",
+            "message.jira_import_interrupted_restart_atelier_before_trying_again",
         );
     }
     response(result)
@@ -199,12 +204,12 @@ pub(super) async fn import_batch(State(state): State<Shared>, request: Request) 
     };
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let id = uuid::Uuid::new_v4().to_string();
@@ -226,8 +231,8 @@ pub(super) async fn import_batch(State(state): State<Shared>, request: Request) 
         Ok(details)
     };
     let fetched = tokio::select! {
-        result=tokio::time::timeout(std::time::Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("Lecture du lot Jira trop longue. Réduis la sélection.".into())),
-        _=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into()),
+        result=tokio::time::timeout(std::time::Duration::from_secs(60),reading)=>result.unwrap_or_else(|_|Err("message.reading_the_jira_batch_took_too_long_select_fewer_issues".into())),
+        _=stopped.changed()=>Err("message.atelier_is_shutting_down".into()),
     };
     let result = match fetched {
         Ok(details) => {
@@ -248,7 +253,7 @@ pub(super) async fn import_batch(State(state): State<Shared>, request: Request) 
     {
         return failure(
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Import Jira interrompu. Redémarre Atelier avant de réessayer.",
+            "message.jira_import_interrupted_restart_atelier_before_trying_again",
         );
     }
     response(result)
@@ -259,12 +264,12 @@ pub(super) async fn creation_metadata(
 ) -> Response {
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let operation = async {
@@ -284,5 +289,5 @@ pub(super) async fn creation_metadata(
             .await?;
         Ok(result)
     };
-    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(60),operation)=>response(result.unwrap_or_else(|_|Err("Lecture des métadonnées Jira trop longue.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(60),operation)=>response(result.unwrap_or_else(|_|Err("message.reading_jira_metadata_took_too_long".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down")}
 }

@@ -28,7 +28,7 @@ async fn inspect(
     let Ok(_permit) = state.file_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "L’explorateur est occupé. Réessaie dans un instant.",
+            "message.the_file_explorer_is_busy_try_again_shortly",
         );
     };
     let card = match state
@@ -37,11 +37,11 @@ async fn inspect(
         .await
     {
         Ok(Some(card)) => card,
-        Ok(None) => return failure(StatusCode::NOT_FOUND, "Carte introuvable."),
+        Ok(None) => return failure(StatusCode::NOT_FOUND, "message.card_not_found"),
         Err(_) => {
             return failure(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Lecture de la tâche impossible.",
+                "message.the_task_could_not_be_read",
             );
         }
     };
@@ -50,7 +50,7 @@ async fn inspect(
         Err(_) => {
             return failure(
                 StatusCode::BAD_REQUEST,
-                "Association Git du worktree invalide.",
+                "message.invalid_git_worktree_association",
             );
         }
     };
@@ -59,7 +59,7 @@ async fn inspect(
         _ => {
             return failure(
                 StatusCode::BAD_REQUEST,
-                "Choisis un dépôt Git pour consulter ses fichiers.",
+                "message.choose_a_git_repository_to_browse_its_files",
             );
         }
     };
@@ -67,7 +67,7 @@ async fn inspect(
         if worktree.state != WorktreeState::Ready {
             return failure(
                 StatusCode::CONFLICT,
-                "Vérifie ou termine l’opération interrompue sur ce worktree.",
+                "message.verify_or_finish_the_interrupted_operation_on_this_worktree",
             );
         }
         if !same_repository(
@@ -77,7 +77,7 @@ async fn inspect(
         ) {
             return failure(
                 StatusCode::CONFLICT,
-                "Le dépôt source ne correspond plus au worktree.",
+                "message.the_source_repository_no_longer_matches_the_worktree",
             );
         }
         worktrees::inspect(&state.prototype_directory, &state.prototype_paths, worktree).await
@@ -118,7 +118,7 @@ async fn inspect(
         Ok(value) => Json(value).into_response(),
         Err(error) if error.is::<std::io::Error>() => failure(
             StatusCode::BAD_REQUEST,
-            "Le fichier a disparu ou n’est plus accessible. Actualise la liste.",
+            "message.the_file_is_missing_or_no_longer_accessible_refresh_the_list",
         ),
         Err(error) => failure(StatusCode::BAD_REQUEST, &error.to_string()),
     }

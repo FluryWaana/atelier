@@ -306,11 +306,15 @@ impl<'a> Store<'a> {
     pub fn backup(&self, destination: &Path) -> Result<()> {
         let parent = destination
             .parent()
-            .ok_or("Dossier de sauvegarde absent.")?;
+            .ok_or("message.backup_directory_missing")?;
         let directory = cap_std::fs::Dir::open_ambient_dir(parent, cap_std::ambient_authority())?;
         self.backup_in(
             &directory,
-            Path::new(destination.file_name().ok_or("Nom de sauvegarde absent.")?),
+            Path::new(
+                destination
+                    .file_name()
+                    .ok_or("message.backup_name_missing")?,
+            ),
         )
     }
 

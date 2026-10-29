@@ -70,11 +70,11 @@ mod diff_preview_tests {
 
 pub fn validate_path(path: &str, windows: bool) -> Result<(), &'static str> {
     if path.is_empty() || path.len() > 4096 || path.contains(['\\', '\0', ':']) {
-        return Err("Chemin de fichier invalide.");
+        return Err("message.invalid_file_path");
     }
     for part in path.split('/') {
         if part.is_empty() || part == "." || part == ".." || part.eq_ignore_ascii_case(".git") {
-            return Err("Chemin de fichier invalide.");
+            return Err("message.invalid_file_path");
         }
         if windows {
             let stem = part
@@ -93,7 +93,7 @@ pub fn validate_path(path: &str, windows: bool) -> Result<(), &'static str> {
                     })
                 })
             {
-                return Err("Chemin de fichier invalide.");
+                return Err("message.invalid_file_path");
             }
         }
     }

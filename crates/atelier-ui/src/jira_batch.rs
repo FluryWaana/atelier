@@ -93,7 +93,7 @@ pub fn JiraBatch(
                         result: if ready {
                             String::new()
                         } else {
-                            "Aperçu Jira absent.".into()
+                            "message.jira_preview_missing".into()
                         },
                     }
                 })
@@ -122,7 +122,7 @@ pub fn JiraBatch(
             .filter(|card| ids.contains(&card.id))
             .collect::<Vec<_>>();
         if cards.len() != ids.len() {
-            error.set("La sélection Jira a changé. Vérifie les cartes.".into());
+            error.set("message.the_jira_selection_changed_check_the_cards".into());
             return;
         }
         let revision = board
@@ -149,7 +149,7 @@ pub fn JiraBatch(
                         revision,
                         expected: atelier_core::application::jira::card_snapshot(&card),
                     })
-                    .map_err(|_| "Requête invalide.".to_owned())?;
+                    .map_err(|_| "message.invalid_request".to_owned())?;
                     write(
                         &credential,
                         Method::POST,
@@ -159,7 +159,7 @@ pub fn JiraBatch(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
                 }
                 .await;
                 if !alive.get() {
@@ -223,16 +223,16 @@ pub fn JiraBatch(
                         .card
                         .fields
                         .get::<JiraRefreshPreview>("jiraRefresh")
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())?
+                        .map_err(|_| "message.invalid_server_response".to_owned())?
                         .filter(|preview| preview.state == JiraRefreshState::Ready)
-                        .ok_or_else(|| "Aperçu Jira absent.".to_owned())?;
+                        .ok_or_else(|| "message.jira_preview_missing".to_owned())?;
                     let body = serde_json::to_value(JiraRefreshApply {
                         revision: preview.revision,
                         expected: atelier_core::application::jira::card_snapshot(&row.card),
                         preview_id: preview.id,
                         apply_status: row.status,
                     })
-                    .map_err(|_| "Requête invalide.".to_owned())?;
+                    .map_err(|_| "message.invalid_request".to_owned())?;
                     write(
                         &credential,
                         Method::POST,
@@ -242,7 +242,7 @@ pub fn JiraBatch(
                     .await?
                     .json::<Card>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
                 }
                 .await;
                 if !alive.get() {
@@ -254,7 +254,7 @@ pub fn JiraBatch(
                         saved.attempted = true;
                         saved.selected = false;
                         saved.result = match result {
-                            Ok(_) => "Aperçu appliqué.".into(),
+                            Ok(_) => "message.preview_applied".into(),
                             Err(message) => message,
                         };
                     }
@@ -267,11 +267,11 @@ pub fn JiraBatch(
         });
     };
     view! {<section class="task-files" aria-labelledby="jira-batch-heading">
-        <h3 id="jira-batch-heading">{move||i18n.text("Synchroniser plusieurs cartes Jira")}</h3>
-        <p class="field-help">{move||i18n.text("Sélectionne au plus vingt cartes, relis leurs aperçus puis choisis lesquels appliquer. Chaque carte est vérifiée et enregistrée séparément ; les erreurs restent visibles et ne sont pas rejouées.")}</p>
+        <h3 id="jira-batch-heading">{move||i18n.text("message.synchronize_several_jira_cards")}</h3>
+        <p class="field-help">{move||i18n.text("message.select_up_to_twenty_cards_read_their_previews_then_choose_which")}</p>
         <fieldset disabled=move||pending.get()||blocked.get()><For each=move||candidates.get() key=|card|card.id.clone() children=move|card|{let id=StoredValue::new(card.id);view!{<label><input class="jira-batch-select" data-jira-card=id.get_value() type="checkbox" prop:checked=move||selected.with(|selected|selected.contains(&id.get_value())) disabled=move||selected.with(|selected|selected.len()>=20&&!selected.contains(&id.get_value())) on:change=move|event|{confirmed.set(false);selected.update(|selected|{if event_target_checked(&event){selected.insert(id.get_value());}else{selected.remove(&id.get_value());}});}/>{String::from_utf16_lossy(&card.title.0)}</label>}}/>
-        <button id="prepare-jira-batch" type="button" disabled=move||selected.with(BTreeSet::is_empty) on:click=prepare>{move||i18n.text("Relire la sélection Jira")}</button>
-        <button id="recover-jira-batch" type="button" disabled=move||selected.with(BTreeSet::is_empty) on:click=recover>{move||i18n.text("Reprendre les aperçus existants")}</button></fieldset>
+        <button id="prepare-jira-batch" type="button" disabled=move||selected.with(BTreeSet::is_empty) on:click=prepare>{move||i18n.text("message.read_the_jira_selection_again")}</button>
+        <button id="recover-jira-batch" type="button" disabled=move||selected.with(BTreeSet::is_empty) on:click=recover>{move||i18n.text("message.resume_existing_previews")}</button></fieldset>
         <For each=move||rows.get() key=|row|(row.card.id.clone(),row.attempted) children=move|row|{
             let id=StoredValue::new(row.card.id.clone());
             let preview=row.card.fields.get::<JiraRefreshPreview>("jiraRefresh").ok().flatten();
@@ -279,14 +279,14 @@ pub fn JiraBatch(
             let mapped=preview.as_ref().and_then(|preview|preview.mapped_status.clone());
             let old_title=String::from_utf16_lossy(&row.card.title.0);
             view!{<article class="task-files" data-jira-card=id.get_value()><h4>{old_title}</h4><p>{field(&row.card.fields,"description")}</p>{preview.and_then(|preview|preview.detail).map(|detail|view!{<p>{detail.issue.title}</p><pre>{detail.description}</pre>})}
-                <label><input class="jira-batch-apply" type="checkbox" disabled=move||!ready||pending.get()||blocked.get() prop:checked=move||rows.with(|rows|rows.iter().any(|row|row.card.id==id.get_value()&&row.selected)) on:change=move|event|{confirmed.set(false);rows.update(|rows|{if let Some(row)=rows.iter_mut().find(|row|row.card.id==id.get_value()){row.selected=event_target_checked(&event);}});}/>{move||i18n.text("Appliquer cet aperçu à la carte")}</label>
-                {mapped.map(|status|{let label=i18n.text(crate::STATUSES.iter().find(|(key,_)|*key==status).map(|(_,label)|*label).unwrap_or("En attente"));view!{<label><input class="jira-batch-status" type="checkbox" disabled=move||!ready||pending.get()||blocked.get() prop:checked=move||rows.with(|rows|rows.iter().any(|row|row.card.id==id.get_value()&&row.status)) on:change=move|event|{confirmed.set(false);rows.update(|rows|{if let Some(row)=rows.iter_mut().find(|row|row.card.id==id.get_value()){row.status=event_target_checked(&event);}});}/>{move||i18n.text("Appliquer aussi la colonne proposée : ")}{label}</label>}})}
+                <label><input class="jira-batch-apply" type="checkbox" disabled=move||!ready||pending.get()||blocked.get() prop:checked=move||rows.with(|rows|rows.iter().any(|row|row.card.id==id.get_value()&&row.selected)) on:change=move|event|{confirmed.set(false);rows.update(|rows|{if let Some(row)=rows.iter_mut().find(|row|row.card.id==id.get_value()){row.selected=event_target_checked(&event);}});}/>{move||i18n.text("message.apply_this_preview_to_the_card")}</label>
+                {mapped.map(|status|{let label=i18n.text(crate::STATUSES.iter().find(|(key,_)|*key==status).map(|(_,label)|*label).unwrap_or("message.on_hold"));view!{<label><input class="jira-batch-status" type="checkbox" disabled=move||!ready||pending.get()||blocked.get() prop:checked=move||rows.with(|rows|rows.iter().any(|row|row.card.id==id.get_value()&&row.status)) on:change=move|event|{confirmed.set(false);rows.update(|rows|{if let Some(row)=rows.iter_mut().find(|row|row.card.id==id.get_value()){row.status=event_target_checked(&event);}});}/>{move||i18n.text("message.also_apply_the_proposed_column")}{label}</label>}})}
                 <p role="status">{i18n.text(&row.result)}</p></article>}
         }/>
-        <label><input id="confirm-jira-batch" type="checkbox" disabled=move||pending.get()||blocked.get()||!rows.with(|rows|rows.iter().any(|row|row.selected&&!row.attempted)) prop:checked=move||confirmed.get() on:change=move|event|confirmed.set(event_target_checked(&event))/>{move||i18n.text("Appliquer les aperçus cochés, avec les changements de colonne sélectionnés.")}</label>
-        <button id="apply-jira-batch" type="button" disabled=move||pending.get()||blocked.get()||!confirmed.get() on:click=apply>{move||i18n.text("Appliquer la sélection Jira")}</button>
-        <button type="button" hidden=move||!pending.get() on:click=move |_|cancelled.set(true)>{move||i18n.text("Arrêter après la carte en cours")}</button>
-        <button id="clear-jira-batch" type="button" disabled=move||pending.get() on:click=move |_|{rows.set(Vec::new());selected.set(BTreeSet::new());confirmed.set(false);}>{move||i18n.text("Effacer la sélection")}</button>
+        <label><input id="confirm-jira-batch" type="checkbox" disabled=move||pending.get()||blocked.get()||!rows.with(|rows|rows.iter().any(|row|row.selected&&!row.attempted)) prop:checked=move||confirmed.get() on:change=move|event|confirmed.set(event_target_checked(&event))/>{move||i18n.text("message.apply_the_checked_previews_with_the_selected_column_changes")}</label>
+        <button id="apply-jira-batch" type="button" disabled=move||pending.get()||blocked.get()||!confirmed.get() on:click=apply>{move||i18n.text("message.apply_the_jira_selection")}</button>
+        <button type="button" hidden=move||!pending.get() on:click=move |_|cancelled.set(true)>{move||i18n.text("message.stop_after_the_current_card")}</button>
+        <button id="clear-jira-batch" type="button" disabled=move||pending.get() on:click=move |_|{rows.set(Vec::new());selected.set(BTreeSet::new());confirmed.set(false);}>{move||i18n.text("message.clear_selection_5b6950be")}</button>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
     </section>}
 }

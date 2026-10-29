@@ -31,14 +31,15 @@ impl CreationContext for Store<'_> {
     }
     fn repository(&self, value: &RawValue) -> Result<JsonString> {
         let value: JsonString = serde_json::from_str(value.get())
-            .map_err(|_| CardFailure::Invalid("Texte invalide ou trop long."))?;
+            .map_err(|_| CardFailure::Invalid("message.invalid_or_overly_long_text"))?;
         let value = text_units(&value, 2000).map_err(CardFailure::Invalid)?;
         let value = String::from_utf16_lossy(&value.0);
-        let unavailable = |_| CardFailure::Invalid("Le dépôt est introuvable ou inaccessible.");
+        let unavailable =
+            |_| CardFailure::Invalid("message.the_repository_could_not_be_found_or_accessed");
         let path = std::fs::canonicalize(if value.is_empty() { "." } else { &value })
             .map_err(unavailable)?;
         if !path.metadata().map_err(unavailable)?.is_dir() {
-            return Err(CardFailure::Invalid("Le dépôt doit être un dossier.").into());
+            return Err(CardFailure::Invalid("message.the_repository_must_be_a_folder").into());
         }
         Ok(path_string(&path))
     }

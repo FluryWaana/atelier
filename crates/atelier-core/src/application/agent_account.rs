@@ -49,14 +49,14 @@ fn text(value: &Value, max: usize) -> Result<Option<String>, &'static str> {
     let text = value
         .as_str()
         .filter(|text| text.encode_utf16().count() <= max && !text.chars().any(char::is_control))
-        .ok_or("Métadonnée de compte invalide.")?;
+        .ok_or("message.account_metadata_invalid")?;
     Ok((!text.trim().is_empty()).then(|| text.into()))
 }
 pub fn windows(value: &Value) -> Result<Vec<Window>, &'static str> {
     let buckets = match value.get("rateLimitsByLimitId") {
         Some(Value::Object(values)) if values.len() <= 20 => values.values().collect::<Vec<_>>(),
         Some(Value::Null) | None => vec![&value["rateLimits"]],
-        _ => return Err("Relevé des quotas invalide ou trop volumineux."),
+        _ => return Err("message.quota_report_invalid"),
     };
     let mut windows = Vec::new();
     for bucket in buckets {
@@ -64,7 +64,7 @@ pub fn windows(value: &Value) -> Result<Vec<Window>, &'static str> {
             continue;
         }
         if !bucket.is_object() {
-            return Err("Relevé des quotas invalide ou trop volumineux.");
+            return Err("message.quota_report_invalid");
         }
         let name = text(&bucket["limitName"], 100)?
             .or(text(&bucket["limitId"], 100)?)
@@ -77,7 +77,7 @@ pub fn windows(value: &Value) -> Result<Vec<Window>, &'static str> {
             let used = window["usedPercent"]
                 .as_f64()
                 .filter(|used| used.is_finite() && (0.0..=100.0).contains(used))
-                .ok_or("Pourcentage de quota invalide.")?;
+                .ok_or("message.quota_percentage_invalid")?;
             let minutes = if window["windowDurationMins"].is_null() {
                 None
             } else {
@@ -85,7 +85,7 @@ pub fn windows(value: &Value) -> Result<Vec<Window>, &'static str> {
                     window["windowDurationMins"]
                         .as_u64()
                         .filter(|value| *value > 0 && *value <= 525_600)
-                        .ok_or("Durée de quota invalide.")? as u32,
+                        .ok_or("message.quota_duration_invalid")? as u32,
                 )
             };
             let resets_at = if window["resetsAt"].is_null() {
@@ -95,7 +95,7 @@ pub fn windows(value: &Value) -> Result<Vec<Window>, &'static str> {
                     window["resetsAt"]
                         .as_i64()
                         .filter(|value| *value > 0 && *value < 253_402_300_800)
-                        .ok_or("Date de quota invalide.")?,
+                        .ok_or("message.quota_date_invalid")?,
                 )
             };
             windows.push(Window {
@@ -134,10 +134,10 @@ impl Probe {
     }
     pub fn receive(&mut self, value: Value) -> Result<(Vec<Value>, Option<Report>), &'static str> {
         if self.phase == Phase::Done {
-            return Err("Lecture du compte déjà terminée.");
+            return Err("message.account_read_already_finished");
         }
         if !value.is_object() {
-            return Err("Réponse de compte invalide.");
+            return Err("message.account_response_invalid");
         }
         if value.get("method").is_some() {
             return Ok((value.get("id").map(|id|json!({"id":id,"error":{"code":-32601,"message":"Read-only account probe"}})).into_iter().collect(),None));
@@ -151,7 +151,7 @@ impl Probe {
             return Ok((Vec::new(), None));
         }
         if value.get("error").is_some() || !value["result"].is_object() {
-            return Err("Lecture du compte refusée par le CLI.");
+            return Err("message.account_read_refused");
         }
         match self.phase {
             Phase::Initialize => {

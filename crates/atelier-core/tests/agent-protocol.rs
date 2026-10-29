@@ -2,6 +2,50 @@ use atelier_core::{
     application::agent_protocol::{Kind, Protocol, ProtocolConfig},
     contracts::AgentAnswer,
 };
+
+#[test]
+fn launch_configuration_preserves_provider_modes() {
+    assert!(Kind::from_id("unknown").is_none());
+    assert_eq!(
+        Kind::Codex.launch_arguments("codex", false, "", "", true),
+        [
+            "app-server",
+            "-c",
+            "cli_auth_credentials_store=\"ephemeral\""
+        ]
+    );
+    let args = Kind::Claude.launch_arguments("claude", false, "model", "high", false);
+    assert!(
+        args.windows(2)
+            .any(|pair| pair == ["--permission-mode", "plan"])
+    );
+    assert!(args.windows(2).any(|pair| pair == ["--model", "model"]));
+    assert!(args.windows(2).any(|pair| pair == ["--effort", "high"]));
+    assert_eq!(
+        Kind::from_id("grok")
+            .unwrap()
+            .launch_arguments("grok", true, "", "", false),
+        ["agent", "stdio"]
+    );
+    assert_eq!(
+        Kind::from_id("opencode")
+            .unwrap()
+            .launch_arguments("opencode", true, "", "", false),
+        ["acp"]
+    );
+    assert_eq!(
+        Kind::from_id("gemini")
+            .unwrap()
+            .launch_arguments("gemini", true, "", "", false),
+        ["--acp"]
+    );
+    assert_eq!(
+        Kind::from_id("copilot")
+            .unwrap()
+            .launch_arguments("copilot", true, "", "", false),
+        ["--acp", "--stdio"]
+    );
+}
 use serde_json::{Value, json};
 
 fn priced_codex(model: &str) -> Protocol {
@@ -155,6 +199,216 @@ fn answer(id: &str, decision: &str) -> AgentAnswer {
         decision: decision.into(),
         answers: BTreeMap::new(),
     }
+}
+
+#[test]
+fn acp_session_requires_user_approval_and_rejects_wrong_session() {
+    let mut protocol = Protocol::new(ProtocolConfig {
+        kind: Kind::Acp,
+        edit: true,
+        repo: "/synthetic".into(),
+        prompt: "task".into(),
+        model: String::new(),
+        effort: String::new(),
+        api_key: String::new(),
+        secrets: vec![],
+    });
+    assert_eq!(protocol.start().unwrap().send[0]["method"], "initialize");
+    assert_eq!(
+        protocol
+            .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+            .unwrap()
+            .send[0]["method"],
+        "session/new"
+    );
+    assert_eq!(
+        protocol
+            .receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic"}}))
+            .unwrap()
+            .send[0]["method"],
+        "session/prompt"
+    );
+    let request = json!({"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"sessionId":"synthetic","toolCall":{"title":"Edit"},"options":[{"optionId":"allow","kind":"allow_once"},{"optionId":"deny","kind":"reject_once"}]}});
+    protocol.receive(request).unwrap();
+    let interaction = protocol.interactions().pop().unwrap();
+    assert_eq!(interaction.title, "Edit");
+    assert!(interaction.title_key.is_none());
+    assert!(interaction.can_allow);
+    assert!(
+        protocol
+            .receive(json!({"jsonrpc":"2.0","id":"prompt","result":{"stopReason":"end_turn"}}))
+            .is_err()
+    );
+    let response = protocol.reply(answer(&interaction.id, "allow")).unwrap();
+    assert_eq!(response.send[0]["result"]["outcome"]["optionId"], "allow");
+    assert!(protocol.receive(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"wrong","update":{}}})).is_err());
+    let usage = protocol.receive(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"synthetic","update":{"sessionUpdate":"usage_update","used":25,"size":100}}})).unwrap();
+    assert_eq!(usage.usage.unwrap()["contextUsedTokens"], 25);
+    assert!(protocol.receive(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"synthetic","update":{"sessionUpdate":"usage_update","used":101,"size":100}}})).is_err());
+    protocol.receive(json!({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"synthetic","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"done"}}}})).unwrap();
+    let result = protocol
+        .receive(json!({"jsonrpc":"2.0","id":"prompt","result":{"stopReason":"end_turn"}}))
+        .unwrap();
+    assert_eq!(result.complete, Some(true));
+    assert_eq!(result.summary.as_deref(), Some("done"));
+}
+
+#[test]
+fn acp_analysis_requires_a_known_plan_mode() {
+    let new = || {
+        Protocol::new(ProtocolConfig {
+            kind: Kind::Acp,
+            edit: false,
+            repo: "/synthetic".into(),
+            prompt: "task".into(),
+            model: String::new(),
+            effort: String::new(),
+            api_key: String::new(),
+            secrets: vec![],
+        })
+    };
+    let mut absent = new();
+    absent.start().unwrap();
+    absent
+        .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+        .unwrap();
+    assert!(
+        absent
+            .receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic"}}))
+            .is_err()
+    );
+    let mut protocol = new();
+    protocol.start().unwrap();
+    protocol
+        .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+        .unwrap();
+    let mode = protocol.receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic","modes":{"availableModes":[{"id":"plan"}]}}})).unwrap();
+    assert_eq!(mode.send[0]["method"], "session/set_mode");
+    let prompt = protocol
+        .receive(json!({"jsonrpc":"2.0","id":"mode","result":{}}))
+        .unwrap();
+    assert_eq!(prompt.send[0]["method"], "session/prompt");
+    protocol.receive(json!({"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"sessionId":"synthetic","toolCall":{"title":"Edit"},"options":[{"optionId":"allow","kind":"allow_once"},{"optionId":"deny","kind":"reject_once"}]}})).unwrap();
+    let interaction = protocol.interactions().pop().unwrap();
+    assert!(!interaction.can_allow);
+    assert!(protocol.reply(answer(&interaction.id, "allow")).is_err());
+    assert_eq!(
+        protocol
+            .reply(answer(&interaction.id, "deny"))
+            .unwrap()
+            .send[0]["result"]["outcome"]["optionId"],
+        "deny"
+    );
+
+    let mut configured = new();
+    configured.start().unwrap();
+    configured
+        .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+        .unwrap();
+    let setup = configured.receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic","configOptions":[{"id":"mode","category":"mode","options":[{"value":"plan"}]}]}})).unwrap();
+    assert_eq!(setup.send[0]["method"], "session/set_config_option");
+    assert!(configured.receive(json!({"jsonrpc":"2.0","id":"config-mode","result":{"configOptions":[{"id":"mode","currentValue":"edit"}]}})).is_err());
+}
+
+#[test]
+fn acp_model_and_effort_are_confirmed_before_the_prompt() {
+    let mut protocol = Protocol::new(ProtocolConfig {
+        kind: Kind::Acp,
+        edit: true,
+        repo: "/synthetic".into(),
+        prompt: "task".into(),
+        model: "model-2".into(),
+        effort: "high".into(),
+        api_key: String::new(),
+        secrets: vec![],
+    });
+    protocol.start().unwrap();
+    protocol
+        .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+        .unwrap();
+    let options = json!([
+        {"id":"model","category":"model","currentValue":"model-1","options":[{"group":"models","options":[{"value":"model-1"},{"value":"model-2"}]}]},
+        {"id":"effort","category":"thought_level","currentValue":"low","options":[{"value":"low"},{"value":"high"}]}
+    ]);
+    let first = protocol.receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic","configOptions":options}})).unwrap();
+    assert_eq!(first.send[0]["params"]["value"], "model-2");
+    let updated = json!([
+        {"id":"model","category":"model","currentValue":"model-2","options":[{"value":"model-2"}]},
+        {"id":"effort","category":"thought_level","currentValue":"low","options":[{"value":"low"},{"value":"high"}]}
+    ]);
+    let second = protocol
+        .receive(json!({"jsonrpc":"2.0","id":"config-option","result":{"configOptions":updated}}))
+        .unwrap();
+    assert_eq!(second.send[0]["params"]["value"], "high");
+    let final_options = json!([
+        {"id":"model","category":"model","currentValue":"model-2","options":[{"value":"model-2"}]},
+        {"id":"effort","category":"thought_level","currentValue":"high","options":[{"value":"high"}]}
+    ]);
+    let prompt = protocol
+        .receive(
+            json!({"jsonrpc":"2.0","id":"config-option","result":{"configOptions":final_options}}),
+        )
+        .unwrap();
+    assert_eq!(prompt.send[0]["method"], "session/prompt");
+}
+
+#[test]
+fn acp_form_elicitation_validates_answers_and_rejects_unsupported_modes() {
+    let mut protocol = Protocol::new(ProtocolConfig {
+        kind: Kind::Acp,
+        edit: true,
+        repo: "/synthetic".into(),
+        prompt: "task".into(),
+        model: String::new(),
+        effort: String::new(),
+        api_key: String::new(),
+        secrets: vec![],
+    });
+    assert!(
+        protocol.start().unwrap().send[0]["params"]["clientCapabilities"]["elicitation"]["form"]
+            .is_object()
+    );
+    protocol
+        .receive(json!({"jsonrpc":"2.0","id":"initialize","result":{"protocolVersion":1}}))
+        .unwrap();
+    protocol
+        .receive(json!({"jsonrpc":"2.0","id":"session","result":{"sessionId":"synthetic"}}))
+        .unwrap();
+    let effects = protocol.receive(json!({"jsonrpc":"2.0","id":45,"method":"elicitation/create","params":{"sessionId":"synthetic","mode":"url"}})).unwrap();
+    assert_eq!(effects.send[0]["error"]["code"], -32602);
+    assert!(protocol.interactions().is_empty());
+    assert!(!protocol.waiting());
+    let form = json!({"jsonrpc":"2.0","id":46,"method":"elicitation/create","params":{"sessionId":"synthetic","mode":"form","message":"Configure","requestedSchema":{"type":"object","properties":{"count":{"type":"integer","minimum":2},"name":{"type":"string","enum":["one","two"],"minLength":3},"optional":{"type":"boolean"}},"required":["count","name"]}}});
+    protocol.receive(form).unwrap();
+    let view = protocol.interactions().pop().unwrap();
+    assert_eq!(
+        view.title_key.as_deref(),
+        Some("message.the_agent_needs_your_reply")
+    );
+    assert!(view.title.is_empty());
+    assert_eq!(view.detail, "Configure");
+    assert!(view.secret_warning);
+    let mut reply = answer(&view.id, "answer");
+    reply.answers.insert("0".into(), vec!["bad".into()]);
+    reply.answers.insert("1".into(), vec!["one".into()]);
+    reply.answers.insert("2".into(), vec![String::new()]);
+    assert!(protocol.reply(reply.clone()).is_err());
+    assert!(protocol.waiting());
+    reply.answers.insert("0".into(), vec!["1".into()]);
+    assert!(protocol.reply(reply.clone()).is_err());
+    assert!(protocol.waiting());
+    reply.answers.insert("0".into(), vec!["3".into()]);
+    let result = protocol.reply(reply).unwrap();
+    assert_eq!(
+        result.send[0]["result"],
+        json!({"action":"accept","content":{"count":3,"name":"one"}})
+    );
+    assert!(!protocol.waiting());
+    let unsupported = json!({"jsonrpc":"2.0","id":47,"method":"elicitation/create","params":{"sessionId":"synthetic","mode":"form","message":"Constrained","requestedSchema":{"type":"object","properties":{"name":{"type":"string","format":"email"}}}}});
+    assert_eq!(
+        protocol.receive(unsupported).unwrap().send[0]["result"]["action"],
+        "decline"
+    );
 }
 
 #[test]

@@ -15,18 +15,18 @@ use cap_std::fs::Dir;
 use std::path::PathBuf;
 
 pub const UNCHECKED: &str =
-    "Review non revalidée après exécution. Vérifie les commits et le besoin actuels.";
+    "message.review_has_not_been_revalidated_after_execution_check_current_co";
 
 fn commit(value: Option<&str>) -> Result<&str> {
     value
         .filter(|value| {
             [40, 64].contains(&value.len()) && value.bytes().all(|byte| byte.is_ascii_hexdigit())
         })
-        .ok_or_else(|| "Commits de PR/MR indisponibles. Actualise la PR/MR avant la review.".into())
+        .ok_or_else(|| "message.pr_mr_commits_are_unavailable_refresh_the_pr_mr_before_reviewing".into())
 }
 async fn clean(repository: &Repository, source: &str) -> Result<()> {
     if !super::local_commit::disk_matches_commit(repository, source).await? {
-        return Err("Publie les changements et garde le worktree propre sur le commit de la PR/MR avant la review.".into());
+        return Err("message.publish_changes_and_keep_the_worktree_clean_at_the_pr_mr_commit".into());
     }
     Ok(())
 }
@@ -42,7 +42,7 @@ pub async fn prepare(
     let linked = card
         .fields
         .get::<PullRequest>("pullRequest")?
-        .ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
+        .ok_or("message.a_pr_mr_and_its_worktree_are_required_for_review")?;
     let forge = forge::Forge::new(configuration.clone(), token.clone(), linked.revision)?;
     let authentication =
         HttpsAuthentication::new(configuration.clone(), linked.repository.clone(), token)?;
@@ -62,9 +62,9 @@ pub async fn prepare_with_adapters(
     let linked = card
         .fields
         .get::<PullRequest>("pullRequest")?
-        .ok_or("Une PR/MR et son worktree sont nécessaires pour la review.")?;
+        .ok_or("message.a_pr_mr_and_its_worktree_are_required_for_review")?;
     if configuration.kind != linked.kind || configuration.base != linked.base_url {
-        return Err("La connexion de PR/MR a changé. Actualise sa liaison avant la review.".into());
+        return Err("message.the_pr_mr_connection_changed_refresh_its_link_before_reviewing".into());
     }
     let repository =
         forge_association::verify(root, roots, card, &configuration, &linked.repository).await?;
@@ -77,7 +77,7 @@ pub async fn prepare_with_adapters(
         || remote.repository != linked.repository
         || remote.number != linked.number
     {
-        return Err("La portée de la connexion de review a changé.".into());
+        return Err("message.review_connection_scope_changed".into());
     }
     if remote.fork
         || remote.status != "active"
@@ -85,10 +85,10 @@ pub async fn prepare_with_adapters(
             != card
                 .fields
                 .get::<atelier_core::contracts::Worktree>("worktree")?
-                .ok_or("Worktree de PR/MR absent.")?
+                .ok_or("message.pr_mr_worktree_missing")?
                 .branch
     {
-        return Err("La review exige une PR/MR ouverte de cette branche, sans fork.".into());
+        return Err("message.review_requires_an_open_pr_mr_from_this_branch_without_a_fork".into());
     }
     let source = commit(remote.source_commit.as_deref())?.to_owned();
     let target = commit(remote.target_commit.as_deref())?.to_owned();
@@ -96,7 +96,7 @@ pub async fn prepare_with_adapters(
     let worktree = card
         .fields
         .get::<atelier_core::contracts::Worktree>("worktree")?
-        .ok_or("Worktree de PR/MR absent.")?;
+        .ok_or("message.pr_mr_worktree_missing")?;
     let principal =
         Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
     principal.verify_root().await?;
@@ -111,7 +111,7 @@ pub async fn prepare_with_adapters(
     .await?;
     if fetched != target {
         return Err(
-            "La cible de la PR/MR a évolué. Actualise la PR/MR avant de relancer la review.".into(),
+            "message.the_pr_mr_target_changed_refresh_the_pr_mr_before_reviewing_agai".into(),
         );
     }
     let base = String::from_utf8(
@@ -144,7 +144,7 @@ pub fn matches(store: &Store<'_>, card: &Card, context: &Context) -> Result<()> 
     let linked = card
         .fields
         .get::<PullRequest>("pullRequest")?
-        .ok_or("Liaison de PR/MR retirée.")?;
+        .ok_or("message.pr_mr_link_removed")?;
     if reviews::requirements(card)? != context.requirements
         || card
             .fields
@@ -156,7 +156,7 @@ pub fn matches(store: &Store<'_>, card: &Card, context: &Context) -> Result<()> 
         || linked.number != context.number
         || linked.revision != context.revision
     {
-        return Err("Le besoin, le worktree ou la PR/MR de la review ont changé.".into());
+        return Err("message.the_reviewed_requirements_worktree_or_pr_mr_changed".into());
     }
     Ok(())
 }
@@ -172,14 +172,14 @@ pub fn validate(
         matches(store, card, context)?;
         let mut run = store
             .document::<Document>(Documents::Runs, id)?
-            .ok_or("Review introuvable.")?;
+            .ok_or("message.review_not_found")?;
         if !run.string_equals("cardId", &card.id)?
             || !run.string_equals("kind", "pr-review")?
             || !run.string_equals("status", "completed")?
             || run.get::<Context>("reviewContext")?.as_ref() != Some(context)
             || run.get::<Review>("review")?.is_none()
         {
-            return Err("Review incomplète ou périmée. Relance la review.".into());
+            return Err("message.review_is_incomplete_or_stale_run_it_again".into());
         }
         run.remove("reviewStaleReason");
         run.set("reviewValidatedAt", &timestamp)?;
@@ -196,7 +196,7 @@ pub fn correction(
 ) -> Result<(Context, String)> {
     let run = store
         .document::<Document>(Documents::Runs, id)?
-        .ok_or("Review introuvable.")?;
+        .ok_or("message.review_not_found")?;
     if !run.string_equals("cardId", &card.id)?
         || !run.string_equals("kind", "pr-review")?
         || !run.string_equals("status", "completed")?
@@ -204,16 +204,16 @@ pub fn correction(
         || !run.truthy("reviewValidatedAt")?
     {
         return Err(
-            "Choisis une review aboutie et revalidée avant de corriger ses constats.".into(),
+            "message.choose_a_completed_and_revalidated_review_before_correcting_its".into(),
         );
     }
     let context = run
         .get::<Context>("reviewContext")?
-        .ok_or("Contexte de review absent.")?;
+        .ok_or("message.missing_review_context")?;
     matches(store, card, &context)?;
     let review = run
         .get::<Review>("review")?
-        .ok_or("Review incomplète ou périmée. Relance la review.")?;
+        .ok_or("message.review_is_incomplete_or_stale_run_it_again")?;
     Ok((context, reviews::correction_prompt(&review, indexes)?))
 }
 

@@ -7,12 +7,12 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
 const TABS: [(&str, &str); 6] = [
-    ("general", "Général"),
+    ("general", "message.general"),
     ("jira", "Jira"),
-    ("forges", "Forges"),
+    ("forges", "message.forges"),
     ("tempo", "Tempo"),
-    ("connectors", "Connecteurs"),
-    ("updates", "Mises à jour"),
+    ("connectors", "message.connectors"),
+    ("updates", "message.updates"),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -190,10 +190,10 @@ pub fn Settings(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <section id="settings-page" aria-label=move ||i18n.text("Paramètres de l’application") on:keydown=move |event: web_sys::KeyboardEvent| { if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none() {event.prevent_default(); request_close();} }>
-            <div class="detail-actions"><button id="close-settings" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()><span aria-hidden="true">"←"</span>" "{move || i18n.text("Retour")}</button></div>
+        <section id="settings-page" aria-label=move ||i18n.text("message.application_settings") on:keydown=move |event: web_sys::KeyboardEvent| { if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none() {event.prevent_default(); request_close();} }>
+            <div class="detail-actions"><button id="close-settings" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()><span aria-hidden="true">"←"</span>" "{move || i18n.text("message.back_ef23a594")}</button></div>
             <div id="settings-dialog" class="settings-page">
-            <nav id="settings-navigation" class="settings-navigation" role="tablist" aria-orientation="vertical" aria-label=move || i18n.text("Rubriques des paramètres")>
+            <nav id="settings-navigation" class="settings-navigation" role="tablist" aria-orientation="vertical" aria-label=move || i18n.text("message.settings_sections")>
                 {TABS.into_iter().enumerate().map(move |(index,(id,label))| view! {
                     <button class="view-tab" class:selected-tab=move ||tab.get()==index type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
                         if pending.get_untracked() { return; }
@@ -205,7 +205,7 @@ pub fn Settings(
             </nav>
             <div class="settings-content">
             <section id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" hidden=move || tab.get()!=0>
-            <section class="form-section"><label for="interface-language">{move || i18n.text("Langue")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="hint">{move || i18n.text("La langue est conservée dans ce navigateur.")}</p></section>
+            <section class="form-section"><label for="interface-language">{move || i18n.text("message.language")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="hint">{move || i18n.text("message.the_language_is_saved_in_this_browser")}</p></section>
             <form id="settings-form" on:submit=move |event| {
                 event.prevent_default();
                 if pending.get_untracked() || !dirty.get_untracked() { return; }
@@ -215,10 +215,10 @@ pub fn Settings(
                 spawn_local(async move {
                     let result = async {
                         let response = write(&token, Method::PUT, "/api/settings", &body).await?;
-                        let saved: Document = response.json().await.map_err(|_| "Réponse du serveur invalide.".to_owned())?;
+                        let saved: Document = response.json().await.map_err(|_| "message.invalid_server_response".to_owned())?;
                         let saved = Draft::from_document(&saved);
                         original.set(saved.clone()); draft.set(saved);
-                        notice.set("Paramètres enregistrés.".into());
+                        notice.set("message.settings_saved".into());
                         Ok::<(), String>(())
                     }.await;
                     let _ = board.refresh(&token).await;
@@ -227,27 +227,27 @@ pub fn Settings(
                 });
             }>
                 <fieldset disabled=move || pending.get()>
-                    <section class="form-section"><div class="section-heading"><span class="section-number">"01"</span><div><h3>{move ||i18n.text("Agents & modèles")}</h3><p class="hint">{move ||i18n.text("Vos préférences pour les nouvelles tâches.")}</p></div></div>
-                    <label for="settings-agent">{move || i18n.text("Agent par défaut")}</label><select id="settings-agent" autofocus prop:value=move || draft.get().agent on:change=move |event| draft.update(|value| value.agent = event_target_value(&event))>
+                    <section class="form-section"><div class="section-heading"><span class="section-number">"01"</span><div><h3>{move ||i18n.text("message.agents_models")}</h3><p class="hint">{move ||i18n.text("message.your_preferences_for_new_tasks")}</p></div></div>
+                    <label for="settings-agent">{move || i18n.text("message.default_agent")}</label><select id="settings-agent" autofocus prop:value=move || draft.get().agent on:change=move |event| draft.update(|value| value.agent = event_target_value(&event))>
                         <For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } />
                     </select>
-                    <p class="hint">{move || i18n.text("Utilisé pour les nouvelles tâches, sauf si le projet définit un agent préféré.")}</p></section>
-                    <section class="form-section"><div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("Répertoires & branches")}</h3></div></div>
-                    <label for="settings-repo">{move || i18n.text("Dépôt Git source par défaut")}</label><input id="settings-repo" maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|value| value.repo = event_target_value(&event)) />
-                    <p class="field-help">{move || i18n.text("Chemin complet d’un dossier existant. Laisser vide pour choisir le projet à chaque création.")}</p>
-                    <label for="settings-branch">{move || i18n.text("Référence Git de départ par défaut")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />
+                    <p class="hint">{move || i18n.text("message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent")}</p></section>
+                    <section class="form-section"><div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("message.directories_branches")}</h3></div></div>
+                    <label for="settings-repo">{move || i18n.text("message.default_source_git_repository")}</label><input id="settings-repo" maxlength="2000" spellcheck="false" prop:value=move || draft.get().repo on:input=move |event| draft.update(|value| value.repo = event_target_value(&event)) />
+                    <p class="field-help">{move || i18n.text("message.full_path_to_an_existing_folder_leave_blank_to_choose_a_project")}</p>
+                    <label for="settings-branch">{move || i18n.text("message.default_starting_git_reference")}</label><input id="settings-branch" maxlength="180" placeholder="HEAD" spellcheck="false" prop:value=move || draft.get().branch on:input=move |event| draft.update(|value| value.branch = event_target_value(&event)) />
                     </section><section class="form-section">
-                    <h3>{move||i18n.text("Correspondances Jira globales")}</h3>
-                    <label><input id="settings-jira-enabled" type="checkbox" prop:checked=move||draft.get().jira_enabled on:change=move|event|draft.update(|draft|draft.jira_enabled=event_target_checked(&event))/>{move||i18n.text("Proposer les statuts Jira correspondants")}</label>
+                    <h3>{move||i18n.text("message.global_jira_mappings")}</h3>
+                    <label><input id="settings-jira-enabled" type="checkbox" prop:checked=move||draft.get().jira_enabled on:change=move|event|draft.update(|draft|draft.jira_enabled=event_target_checked(&event))/>{move||i18n.text("message.suggest_matching_jira_statuses")}</label>
                     <For each=||crate::STATUSES key=|(status,_)|*status children=move|(status,label)|view!{
                         <label for=format!("settings-jira-{status}")>{move||i18n.text(label)}</label>
                         <input id=format!("settings-jira-{status}") maxlength="100" prop:value=move||draft.get().jira_mapping.get(status).cloned().unwrap_or_default() on:input=move|event|draft.update(|draft|{draft.jira_mapping.insert(status.into(),event_target_value(&event));})/>
                     }/>
-                    <p class="field-help">{move||i18n.text("Identifiant ou nom du statut Jira cible. Une correspondance ne déclenche aucun envoi lors de son enregistrement.")}</p>
+                    <p class="field-help">{move||i18n.text("message.target_jira_status_id_or_name_saving_a_mapping_does_not_send_any")}</p>
                     </section>
                 </fieldset>
                 <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
-                <div class="form-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "Enregistrement…" } else { "Enregistrer les paramètres généraux" })}</button></div>
+                <div class="form-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "message.saving" } else { "message.save_general_settings" })}</button></div>
             </form>
             <crate::repository_access::RepositoryAccess token pending dirty=repositories_dirty/>
             </section>
@@ -258,7 +258,7 @@ pub fn Settings(
             <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
             </div></div>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("Abandonner")}</button><button id="keep-settings" type="button" on:click=move |_| {navigation.set_value(None);discard.set(false);if let Some(element)=document().get_element_by_id(&close_focus.get_value()).and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}} >{move || i18n.text("Continuer à modifier")}</button></div>
+            <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("message.discard_unsaved_changes")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("message.discard")}</button><button id="keep-settings" type="button" on:click=move |_| {navigation.set_value(None);discard.set(false);if let Some(element)=document().get_element_by_id(&close_focus.get_value()).and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}} >{move || i18n.text("message.keep_editing")}</button></div>
         </section>
     }
 }

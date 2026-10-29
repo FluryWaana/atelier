@@ -22,7 +22,7 @@ pub struct WorkingDirectory {
 pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
     use std::os::windows::process::CommandExt;
     if command.trim().is_empty() || command.len() > 8000 || command.contains('\0') {
-        return Err("Commande de vérification invalide.".into());
+        return Err("message.invalid_verification_command".into());
     }
     let system = std::env::var_os("SystemRoot").ok_or("Dossier système Windows absent.")?;
     let mut profile = atelier_core::document::Document::default();
@@ -41,7 +41,7 @@ pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
 #[cfg(unix)]
 pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
     if command.trim().is_empty() || command.len() > 8000 || command.contains('\0') {
-        return Err("Commande de vérification invalide.".into());
+        return Err("message.invalid_verification_command".into());
     }
     let mut profile = atelier_core::document::Document::default();
     profile.set("type", &"command")?;

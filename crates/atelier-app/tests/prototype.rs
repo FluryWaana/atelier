@@ -870,7 +870,7 @@ async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transact
         drop(database);
         drop(directory);
         if fault {
-            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_queue BEFORE UPDATE ON settings WHEN json_extract(NEW.data,'$.taskQueue.message')='File en pause ; la tâche active peut se terminer.' BEGIN SELECT RAISE(ABORT, 'private synthetic queue failure'); END;").unwrap();
+            rusqlite::Connection::open(data.path().join("kanban.sqlite")).unwrap().execute_batch("CREATE TRIGGER refuse_queue BEFORE UPDATE ON settings WHEN json_extract(NEW.data,'$.taskQueue.message')='message.queue_paused_the_active_task_may_finish' BEGIN SELECT RAISE(ABORT, 'private synthetic queue failure'); END;").unwrap();
         }
         let (address, token, task) = start(data.path(), assets.path()).await;
         let client = reqwest::Client::new();
@@ -982,7 +982,7 @@ async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transact
         if fault {
             assert_eq!(
                 restored,
-                json!({"error":"Opération de sauvegarde impossible."})
+                json!({"error":"message.the_backup_operation_could_not_be_completed"})
             );
             assert_eq!(state["cards"][0]["title"], "Current task");
             assert_eq!(state["settings"]["baseBranch"], "current");
@@ -999,7 +999,7 @@ async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transact
             assert_eq!(state["settings"]["credentialsReset"], true);
             assert_eq!(
                 state["settings"]["taskQueue"],
-                json!({"ids":[],"paused":true,"future":"preserved","message":"File en pause ; la tâche active peut se terminer."})
+                json!({"ids":[],"paused":true,"future":"preserved","message":"message.queue_paused_the_active_task_may_finish"})
             );
             assert_eq!(state["times"].as_array().unwrap().len(), 0);
             let rescue = rusqlite::Connection::open_with_flags(
@@ -1327,7 +1327,7 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
             assert_eq!(response.status(), 500);
             assert_eq!(
                 response.json::<Value>().await.unwrap()["error"],
-                "Modification des réglages impossible."
+                "message.the_settings_could_not_be_updated"
             );
             stop(&address, &token, task).await;
             let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
@@ -1707,7 +1707,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
     assert_eq!(rejected.status(), 400);
     assert_eq!(
         rejected.json::<Value>().await.unwrap()["error"],
-        "Paramètres d’export Tempo invalides."
+        "message.invalid_tempo_export_parameters"
     );
     assert_eq!(
         request(reqwest::Method::POST, "/api/time")
@@ -1974,7 +1974,7 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
         if fault != "none" {
             assert_eq!(
                 response.json::<Value>().await.unwrap(),
-                json!({"error":"Modification du projet impossible."})
+                json!({"error":"message.the_project_could_not_be_updated"})
             );
         }
         let board: Board = client
@@ -2341,7 +2341,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
     assert_eq!(response.status(), 500);
     assert_eq!(
         response.json::<Value>().await.unwrap(),
-        json!({"error":"Modification du projet impossible."})
+        json!({"error":"message.the_project_could_not_be_updated"})
     );
     let board: Board = client
         .get(format!("{address}/api/state"))
@@ -2569,7 +2569,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
     assert_eq!(rejected.status(), 500);
     assert_eq!(
         rejected.json::<Value>().await.unwrap(),
-        json!({"error":"Modification de la carte impossible."})
+        json!({"error":"message.card_update_failed"})
     );
     stop(&address, &token, task).await;
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
@@ -2747,7 +2747,7 @@ async fn complete_creation_uses_templates_projects_native_paths_and_atomic_stora
     assert_eq!(failed.status(), 500);
     assert_eq!(
         failed.json::<Value>().await.unwrap(),
-        json!({"error":"Création de la carte impossible."})
+        json!({"error":"message.card_creation_failed"})
     );
     stop(&address, &token, task).await;
     let (address, token, task) = start(data.path(), assets.path()).await;
@@ -3225,7 +3225,18 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
     assert_eq!(missing.status(), 404);
     assert_eq!(
         missing.json::<Value>().await.unwrap(),
-        json!({"error":"Carte introuvable."})
+        json!({"error":"message.card_not_found"})
+    );
+    let missing_files = client
+        .get(format!("{address}/api/cards/missing/files"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(missing_files.status(), 404);
+    assert_eq!(
+        missing_files.json::<Value>().await.unwrap(),
+        json!({"error":"message.card_not_found"})
     );
     stop(&address, &token, server).await;
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();

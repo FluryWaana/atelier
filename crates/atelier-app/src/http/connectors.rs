@@ -51,19 +51,19 @@ pub(super) async fn refresh_ticket(
             .database
             .call(move |store| {
                 if input.expected.id != id {
-                    return Err("Carte de synchronisation incohérente.".into());
+                    return Err("message.the_synchronization_card_does_not_match".into());
                 }
                 let link = input
                     .expected
                     .fields
                     .get::<atelier_core::document::Document>("ticket")?
-                    .ok_or("Ticket de connecteur absent.")?;
+                    .ok_or("message.no_connector_ticket_is_linked")?;
                 let connector = link
                     .get::<String>("connector")?
-                    .ok_or("Ticket de connecteur absent.")?;
+                    .ok_or("message.no_connector_ticket_is_linked")?;
                 let module = connector
                     .strip_prefix("extension:")
-                    .ok_or("Ticket de connecteur absent.")?;
+                    .ok_or("message.no_connector_ticket_is_linked")?;
                 crate::infrastructure::connector_tickets::refresh(store, module, &input)
             })
             .await,
@@ -106,10 +106,7 @@ pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Resp
         || input.path.chars().any(char::is_control)
         || input.path.len() > 32_000
     {
-        return super::failure(
-            StatusCode::BAD_REQUEST,
-            "Confirme l’exécution de ce programme de confiance avant de lire son manifeste.",
-        );
+        return super::failure(StatusCode::BAD_REQUEST, "message.confirm_trusted_program");
     }
     let operation = async {
         state
@@ -127,7 +124,7 @@ pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Resp
     response(
         tokio::time::timeout(Duration::from_secs(30), operation)
             .await
-            .unwrap_or_else(|_| Err("Découverte du connecteur trop longue.".into())),
+            .unwrap_or_else(|_| Err("message.connector_discovery_timeout".into())),
     )
 }
 
@@ -139,7 +136,7 @@ pub(super) async fn install(State(state): State<Shared>, request: Request) -> Re
     if !input.confirmed {
         return super::failure(
             StatusCode::BAD_REQUEST,
-            "Confirme le binaire et le manifeste exacts avant d’installer le connecteur.",
+            "message.confirm_connector_manifest",
         );
     }
     let operation = async {
@@ -170,7 +167,7 @@ pub(super) async fn install(State(state): State<Shared>, request: Request) -> Re
     response(
         tokio::time::timeout(Duration::from_secs(30), operation)
             .await
-            .unwrap_or_else(|_| Err("Installation du connecteur trop longue.".into())),
+            .unwrap_or_else(|_| Err("message.connector_install_timeout".into())),
     )
 }
 
@@ -252,7 +249,7 @@ pub(super) async fn invoke(
                     let object = request
                         .input
                         .as_object_mut()
-                        .ok_or("L’entrée d’une action de connecteur doit être un objet.")?;
+                        .ok_or("message.connector_action_input_object")?;
                     object.insert("importedCount".into(), serde_json::json!(count));
                 }
                 Ok((profile, request))
@@ -300,7 +297,9 @@ pub(super) async fn invoke(
                 crate::infrastructure::connector_time::proposal(&reply.output)?.source,
             )? != source
         {
-            return Err("Le module a changé la saisie demandée dans son aperçu de temps.".into());
+            return Err(
+                "message.the_module_changed_the_requested_entry_in_its_time_preview".into(),
+            );
         }
         if let Some(source) = transitions_source
             && serde_json::to_value(
@@ -308,8 +307,7 @@ pub(super) async fn invoke(
             )? != source
         {
             return Err(
-                "Le module a répondu pour un autre ticket pendant la lecture des transitions."
-                    .into(),
+                "message.the_module_answered_for_another_ticket_while_reading_transitions".into(),
             );
         }
         let report = Report {
@@ -333,11 +331,11 @@ pub(super) async fn invoke(
     let stopping = *closing.borrow();
     let result: Result<Report> = if stopping {
         drop(operation);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
         tokio::select! {
-            result=tokio::time::timeout(Duration::from_secs(45),operation)=>result.unwrap_or_else(|_|Err("Appel de connecteur trop long.".into())),
-            _=closing.changed()=>Err("Atelier est en cours d’arrêt.".into()),
+            result=tokio::time::timeout(Duration::from_secs(45),operation)=>result.unwrap_or_else(|_|Err("message.connector_call_timeout".into())),
+            _=closing.changed()=>Err("message.atelier_is_shutting_down".into()),
         }
     };
     response(result)

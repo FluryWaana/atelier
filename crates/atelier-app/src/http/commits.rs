@@ -19,7 +19,7 @@ pub(super) async fn changes(State(state): State<Shared>, Path(id): Path<String>)
     let Ok(_permit) = state.file_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "L’explorateur est occupé. Réessaie dans un instant.",
+            "message.the_file_explorer_is_busy_try_again_shortly",
         );
     };
     let operation = async {
@@ -28,7 +28,7 @@ pub(super) async fn changes(State(state): State<Shared>, Path(id): Path<String>)
             .call(move |store| {
                 store
                     .document::<Card>(Documents::Cards, &id)?
-                    .ok_or_else(|| "Carte introuvable.".into())
+                    .ok_or_else(|| "message.card_not_found".into())
             })
             .await?;
         let worktree = workflow::worktree(&card)?;
@@ -43,7 +43,7 @@ pub(super) async fn changes(State(state): State<Shared>, Path(id): Path<String>)
     response(
         tokio::time::timeout(std::time::Duration::from_secs(60), operation)
             .await
-            .unwrap_or_else(|_| Err("Lecture des changements trop longue.".into())),
+            .unwrap_or_else(|_| Err("message.reading_changes_timed_out".into())),
     )
 }
 
@@ -57,7 +57,7 @@ pub(super) async fn preview(
         Err(response) => return *response,
     };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Carte de commit incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_commit_card");
     }
     let operation = async {
         local_commit::identity(&input.author_name, &input.author_email, &input.message)?;
@@ -93,7 +93,7 @@ pub(super) async fn preview(
     response(
         tokio::time::timeout(std::time::Duration::from_secs(180), operation)
             .await
-            .unwrap_or_else(|_| Err("Aperçu du commit trop long.".into())),
+            .unwrap_or_else(|_| Err("message.commit_preview_timed_out".into())),
     )
 }
 
@@ -119,7 +119,7 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     if id != input.expected.id || !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme les fichiers et le message du commit.",
+            "message.confirm_the_files_and_commit_message",
         );
     }
     response(perform(&state, id, input, reconcile).await)
@@ -132,7 +132,7 @@ pub(super) async fn perform(
     reconcile: bool,
 ) -> Result<Card> {
     if id != input.expected.id || !input.confirmed {
-        return Err("Confirme les fichiers et le message du commit.".into());
+        return Err("message.confirm_the_files_and_commit_message".into());
     }
     let operation_id = uuid::Uuid::new_v4().to_string();
     let card = state
@@ -143,14 +143,14 @@ pub(super) async fn perform(
             }
             let card = store
                 .document::<Card>(Documents::Cards, &input.expected.id)?
-                .ok_or("Carte introuvable.")?;
+                .ok_or("message.card_not_found")?;
             if serde_json::to_value(&card)? != serde_json::to_value(&input.expected)?
                 || !card
                     .fields
                     .get::<LocalCommitIntent>("localCommit")?
                     .is_some_and(|intent| intent.state == Phase::Uncertain)
             {
-                return Err("Aucun commit incertain sur cet instantané de tâche.".into());
+                return Err("message.no_uncertain_commit_on_this_task_snapshot".into());
             }
             Ok(card)
         })
@@ -158,7 +158,7 @@ pub(super) async fn perform(
     let intent = card
         .fields
         .get::<LocalCommitIntent>("localCommit")?
-        .ok_or("Intention de commit absente.")?;
+        .ok_or("message.missing_commit_intent")?;
     let _ = state.changed.send(());
     let work = async {
         // Reconciliation verifies the original managed worktree, never an arbitrary path.
@@ -202,11 +202,11 @@ pub(super) async fn perform(
     let stopping = *stopped.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
         tokio::select! {
-            result = tokio::time::timeout(std::time::Duration::from_secs(180), work) => result.unwrap_or_else(|_| Err("Commit interrompu. Vérifie sa branche avant toute nouvelle tentative.".into())),
-            _ = stopped.changed() => Err("Atelier est en cours d’arrêt.".into()),
+            result = tokio::time::timeout(std::time::Duration::from_secs(180), work) => result.unwrap_or_else(|_| Err("message.commit_interrupted_inspect_its_branch_before_trying_again".into())),
+            _ = stopped.changed() => Err("message.atelier_is_shutting_down".into()),
         }
     };
     let result = match result {

@@ -9,16 +9,16 @@
     {"body":{"analyzeArgs":[" \ud800 ","\udc00","\n","{model}"]},"settings":{"analyzeArgs":[" \ud800 ","\udc00","\n","{model}"]}},
     {"body":{"editArgs":["\ud800"],"versionArgs":null,"statusArgs":["\udc00"]},"settings":{"editArgs":["\ud800"],"statusArgs":["\udc00"]}},
     {"body":{"ignored":{"\ud800":"\udc00"}},"settings":{}},
-    {"body":{"id":"\ud800","name":null},"error":"Réglage du fournisseur invalide."},
-    {"body":{"id":"\ud800"},"error":"Fournisseur invalide."},
-    {"body":{"auth":"\ud800"},"error":"Authentification invalide."},
-    {"body":{"command":"\\\\\ud800\\share","npmPackage":"\ud800"},"error":"Les chemins réseau et périphériques ne sont pas autorisés."},
-    {"body":{"configDir":"\ud800/relative","npmPackage":"\ud800"},"error":"Le dossier de configuration doit être absolu."},
-    {"body":{"command":"\ud800/relative"},"error":"Le chemin de l’exécutable doit être absolu."},
-    {"body":{"npmPackage":"\ud800","model":false},"error":"Paquet npm invalide."},
-    {"body":{"model":"\ud800","effort":false},"error":"Modèle invalide."},
-    {"body":{"effort":"\ud800","analyzeArgs":[null]},"error":"Niveau de réflexion invalide pour cet agent."},
-    {"body":{"analyzeArgs":["\ud800\u0000"],"editArgs":false},"error":"Argument invalide."},
-    {"body":{"name":"\ud800\n"},"error":"Réglage du fournisseur invalide."}
+    {"body":{"id":"\ud800","name":null},"error":"message.invalid_provider_setting"},
+    {"body":{"id":"\ud800"},"error":"message.invalid_provider"},
+    {"body":{"auth":"\ud800"},"error":"message.invalid_authentication"},
+    {"body":{"command":"\\\\\ud800\\share","npmPackage":"\ud800"},"error":"message.network_and_device_paths_are_not_allowed"},
+    {"body":{"configDir":"\ud800/relative","npmPackage":"\ud800"},"error":"message.the_configuration_folder_path_must_be_absolute"},
+    {"body":{"command":"\ud800/relative"},"error":"message.the_executable_path_must_be_absolute"},
+    {"body":{"npmPackage":"\ud800","model":false},"error":"message.invalid_npm_package"},
+    {"body":{"model":"\ud800","effort":false},"error":"message.invalid_model"},
+    {"body":{"effort":"\ud800","analyzeArgs":[null]},"error":"message.invalid_reasoning_effort_for_this_agent"},
+    {"body":{"analyzeArgs":["\ud800\u0000"],"editArgs":false},"error":"message.invalid_argument"},
+    {"body":{"name":"\ud800\n"},"error":"message.invalid_provider_setting"}
   ]
 }

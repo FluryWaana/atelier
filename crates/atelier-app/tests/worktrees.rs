@@ -386,7 +386,7 @@ async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
         ],
     )
     .await;
-    assert!(
+    assert_eq!(
         worktrees::prepare_from_origin(
             &root,
             &roots,
@@ -396,8 +396,8 @@ async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
         )
         .await
         .unwrap_err()
-        .to_string()
-        .contains("réécritures")
+        .to_string(),
+        "message.synthetic_fetching_refuses_git_url_rewrites_and_configuration_in"
     );
     git(
         &repo,
@@ -413,7 +413,7 @@ async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
         ],
     )
     .await;
-    assert!(
+    assert_eq!(
         worktrees::prepare_from_origin(
             &root,
             &roots,
@@ -423,8 +423,8 @@ async fn fetched_bases_are_pinned_without_moving_source_refs_or_fetch_head() {
         )
         .await
         .unwrap_err()
-        .to_string()
-        .contains("connexion HTTPS de forge explicitement choisie")
+        .to_string(),
+        "message.origin_must_identify_an_authorized_local_repository_or_an_explic"
     );
 }
 

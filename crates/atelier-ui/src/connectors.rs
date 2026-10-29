@@ -33,8 +33,20 @@ pub(super) fn translated(i18n: I18n, manifest: &Manifest, message: &str) -> Stri
         .translations
         .get(i18n.code())
         .and_then(|messages| messages.get(message))
+        .or_else(|| {
+            manifest
+                .translations
+                .get(&manifest.source_locale)
+                .and_then(|messages| messages.get(message))
+        })
         .cloned()
-        .unwrap_or_else(|| message.to_owned())
+        .unwrap_or_else(|| {
+            if message.starts_with("message.") {
+                i18n.text(message)
+            } else {
+                message.to_owned()
+            }
+        })
 }
 
 #[derive(Clone)]
@@ -259,7 +271,7 @@ pub fn Connectors(
                 response
                     .json::<Value>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if !alive.get() {
@@ -271,16 +283,16 @@ pub fn Connectors(
                         match action {
                             Action::Probe => {
                                 let found = serde_json::from_value::<Candidate>(value)
-                                    .map_err(|_| "Réponse du serveur invalide.")?;
+                                    .map_err(|_| "message.invalid_server_response")?;
                                 candidate.set(Some((
-                                    probe_revision.ok_or("Réponse du serveur invalide.")?,
+                                    probe_revision.ok_or("message.invalid_server_response")?,
                                     found,
                                 )));
                                 approved.set(false);
                             }
                             Action::Invoke(_, _) | Action::Search(_) => {
                                 let report = serde_json::from_value::<Report>(value)
-                                    .map_err(|_| "Réponse du serveur invalide.")?;
+                                    .map_err(|_| "message.invalid_server_response")?;
                                 registry.update(|registry| {
                                     if let Some(registry) = registry
                                         && let Some(connection) =
@@ -304,21 +316,19 @@ pub fn Connectors(
                             Action::Import => {
                                 let imported =
                                     serde_json::from_str::<Vec<ImportedTicket>>(&value.to_string())
-                                        .map_err(|_| "Réponse du serveur invalide.")?;
+                                        .map_err(|_| "message.invalid_server_response")?;
                                 if imported.len() != tickets.get_untracked().len() {
-                                    return Err("Réponse du serveur invalide.".into());
+                                    return Err("message.invalid_server_response".into());
                                 }
-                                notice.set(
-                                    "Import terminé. Les cartes existantes ont été conservées."
-                                        .into(),
-                                );
+                                notice
+                                    .set("message.import_finished_existing_cards_were_kept".into());
                                 tickets.set(BTreeSet::new());
                                 project.set(None);
                                 import_approved.set(false);
                             }
                             _ => {
                                 let saved = serde_json::from_value::<Registry>(value)
-                                    .map_err(|_| "Réponse du serveur invalide.")?;
+                                    .map_err(|_| "message.invalid_server_response")?;
                                 let id = selected
                                     .as_ref()
                                     .map(|connection| connection.installed.manifest.id.as_str());
@@ -339,7 +349,7 @@ pub fn Connectors(
                                     approved.set(false);
                                 }
                                 reload.set(false);
-                                notice.set("Connecteurs enregistrés ou relus. Aucun accès distant vérifié par Atelier.".into());
+                                notice.set("message.connectors_saved_or_reloaded_atelier_has_not_verified_remote_acc".into());
                             }
                         }
                         Ok(())
@@ -375,14 +385,14 @@ pub fn Connectors(
         })
     };
     view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="connectors-heading">{move||i18n.text("Connecteurs locaux")}</h3>
-        <p class="field-help">{move||i18n.text("Sous Linux/macOS, l’arrêt vise le groupe de processus. Un programme qui se détache peut lui échapper ; évite les commandes qui lancent des démons et vérifie leur fermeture avant une restauration ou une mise à jour.")}</p>
+        <h3 id="connectors-heading">{move||i18n.text("message.local_connectors")}</h3>
+        <p class="field-help">{move||i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")}</p>
         <fieldset disabled=move||loading.get()>
-        <p>{move||i18n.text("Un connecteur est un programme de confiance exécuté avec les droits de ton compte. Ses secrets restent dans le coffre et lui sont transmis pour les opérations explicites.")}</p>
-        <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("L’exécution de connecteurs n’est pas encore disponible sur cette plateforme.")}</p>
-        <button id="reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(Action::Reload));}}>{move||i18n.text("Recharger les connecteurs")}</button>
-        <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("Abandonner les brouillons des connecteurs et recharger ?")}</p><button id="confirm-reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Reload))>{move||i18n.text("Abandonner et recharger")}</button><button type="button" disabled=move||pending.get() on:click=move|_|reload.set(false)>{move||i18n.text("Revenir")}</button></div>
-        <p hidden=move||registry.get().is_none_or(|value|!value.modules.is_empty())>{move||i18n.text("Aucun connecteur local installé.")}</p>
+        <p>{move||i18n.text("message.a_connector_is_a_trusted_program_running_with_your_account_permi")}</p>
+        <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}</p>
+        <button id="reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(Action::Reload));}}>{move||i18n.text("message.reload_connectors")}</button>
+        <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("message.discard_connector_drafts_and_reload")}</p><button id="confirm-reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Reload))>{move||i18n.text("message.discard_and_reload")}</button><button type="button" disabled=move||pending.get() on:click=move|_|reload.set(false)>{move||i18n.text("message.back")}</button></div>
+        <p hidden=move||registry.get().is_none_or(|value|!value.modules.is_empty())>{move||i18n.text("message.no_local_connector_installed")}</p>
         <div class="editor-actions"><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
             let manifest=StoredValue::new(connection.installed.manifest.clone());
             let connection=StoredValue::new(connection);
@@ -403,56 +413,56 @@ pub fn Connectors(
                     let controls=match kind {
                         FieldKind::Password=>view!{
                             <input id=input_id.clone() type="password" autocomplete="new-password" maxlength="4000" prop:value=move||draft.get().secrets.get(&key.get_value()).cloned().unwrap_or_default() disabled=move||draft.get().forget.contains(&key.get_value()) on:input=move|event|draft.update(|draft|{let value=event_target_value(&event);if value.is_empty(){draft.secrets.remove(&key.get_value());}else{draft.secrets.insert(key.get_value(),value);}})/>
-                            <p>{move||i18n.text(if original.get().is_some_and(|connection|connection.secret_fields.contains(&key.get_value())){"Secret enregistré. Laisser vide pour le conserver."}else{"Aucun secret enregistré."})}</p>
-                            <label><input type="checkbox" prop:checked=move||draft.get().forget.contains(&key.get_value()) on:change=move|event|draft.update(|draft|{if event_target_checked(&event){draft.forget.insert(key.get_value());draft.secrets.remove(&key.get_value());}else{draft.forget.remove(&key.get_value());}})/>{move||i18n.text("Oublier ce secret")}</label>
+                            <p>{move||i18n.text(if original.get().is_some_and(|connection|connection.secret_fields.contains(&key.get_value())){"message.secret_saved_leave_blank_to_keep_it"}else{"message.no_secret_saved"})}</p>
+                            <label><input type="checkbox" prop:checked=move||draft.get().forget.contains(&key.get_value()) on:change=move|event|draft.update(|draft|{if event_target_checked(&event){draft.forget.insert(key.get_value());draft.secrets.remove(&key.get_value());}else{draft.forget.remove(&key.get_value());}})/>{move||i18n.text("message.forget_this_secret")}</label>
                         }.into_any(),
                         FieldKind::Checkbox=>view!{<input id=input_id.clone() type="checkbox" prop:checked=move||draft.get().values.get(&key.get_value()).and_then(Value::as_bool).unwrap_or(false) on:change=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_checked(&event)));})/>}.into_any(),
-                        FieldKind::Select=>view!{<select id=input_id.clone() prop:value=move||{let value=draft.get().values.get(&key.get_value()).and_then(Value::as_str).map(str::to_owned);field.with_value(|field|field.options.iter().position(|choice|Some(choice.value.as_str())==value.as_deref()).map(|index|index.to_string()).unwrap_or_default())} on:change=move|event|draft.update(|draft|{let selected=event_target_value(&event).parse::<usize>().ok().and_then(|index|field.with_value(|field|field.options.get(index).map(|choice|choice.value.clone())));if let Some(value)=selected{draft.values.insert(key.get_value(),json!(value));}else{draft.values.remove(&key.get_value());}})><option value="">{move||i18n.text("Non défini")}</option>{field.with_value(|field|field.options.clone()).into_iter().enumerate().map(move|(index,choice)|view!{<option value=index.to_string()>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&choice.label))}</option>}).collect_view()}</select>}.into_any(),
+                        FieldKind::Select=>view!{<select id=input_id.clone() prop:value=move||{let value=draft.get().values.get(&key.get_value()).and_then(Value::as_str).map(str::to_owned);field.with_value(|field|field.options.iter().position(|choice|Some(choice.value.as_str())==value.as_deref()).map(|index|index.to_string()).unwrap_or_default())} on:change=move|event|draft.update(|draft|{let selected=event_target_value(&event).parse::<usize>().ok().and_then(|index|field.with_value(|field|field.options.get(index).map(|choice|choice.value.clone())));if let Some(value)=selected{draft.values.insert(key.get_value(),json!(value));}else{draft.values.remove(&key.get_value());}})><option value="">{move||i18n.text("message.not_set")}</option>{field.with_value(|field|field.options.clone()).into_iter().enumerate().map(move|(index,choice)|view!{<option value=index.to_string()>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&choice.label))}</option>}).collect_view()}</select>}.into_any(),
                         FieldKind::Textarea=>view!{<textarea id=input_id.clone() rows="3" maxlength="8000" prop:value=move||draft.get().values.get(&key.get_value()).and_then(Value::as_str).unwrap_or_default().to_owned() on:input=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_value(&event)));})/>}.into_any(),
                         _=>view!{<input id=input_id.clone() type=if kind==FieldKind::Url{"url"}else{"text"} maxlength="8000" spellcheck="false" prop:value=move||draft.get().values.get(&key.get_value()).and_then(Value::as_str).unwrap_or_default().to_owned() on:input=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_value(&event)));})/>}.into_any(),
                     };
-                    view!{<label for=input_id>{label}</label>{controls}<button type="button" hidden=kind==FieldKind::Password disabled=move||!draft.get().values.contains_key(&key.get_value()) on:click=move|_|draft.update(|draft|{draft.values.remove(&key.get_value());})>{move||i18n.text("Retirer cette valeur")}</button>}
+                    view!{<label for=input_id>{label}</label>{controls}<button type="button" hidden=kind==FieldKind::Password disabled=move||!draft.get().values.contains_key(&key.get_value()) on:click=move|_|draft.update(|draft|{draft.values.remove(&key.get_value());})>{move||i18n.text("message.remove_this_value")}</button>}
                 }/>
-                <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("Enregistrer le connecteur")}</button>
-                <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("Exécuter le contrôle du connecteur")}</button>
+                <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("message.save_connector")}</button>
+                <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("message.run_connector_check")}</button>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==ConnectorEffect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
-                <button id="remove-connector" class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("Retirer le connecteur…")}</button>
+                <button id="remove-connector" class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("message.remove_connector")}</button>
             </fieldset>
-            <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("Retirer le connecteur et ses secrets ? Les tâches importées seront conservées.")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("Confirmer")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("Annuler")}</button></div>
+            <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("message.remove_this_connector_and_its_secrets_imported_tasks_will_be_kep")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("message.confirm")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("message.cancel")}</button></div>
             <div role="status"><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|report.observed_at))}</p><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|translated(i18n,&connection.installed.manifest,&report.message)))}</p></div>
             <dl>{move||original.get().map(|connection|connection.installed.report.as_ref().and_then(|report|protocol::report_items(report).ok()).unwrap_or_default().into_iter().map(|item|view!{<dt>{translated(i18n,&connection.installed.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view())}</dl>
             <fieldset disabled=move||pending.get()||profile_dirty.get()>
-                <button id="search-connector-tickets" type="button" hidden=move||original.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&ConnectorMethod::TicketsSearch)) disabled=move||!tickets.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Search(None)))>{move||i18n.text("Rechercher les tickets du connecteur")}</button>
+                <button id="search-connector-tickets" type="button" hidden=move||original.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&ConnectorMethod::TicketsSearch)) disabled=move||!tickets.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Search(None)))>{move||i18n.text("message.search_connector_tickets")}</button>
                 <div hidden=move||page().is_none()>
-                    <p>{move||i18n.text("Sélectionne au plus 20 tickets de cette page. Les cartes déjà liées seront conservées, même archivées ou dans un autre projet.")}</p>
-                    <p hidden=move||page().is_none_or(|page|!page.items.is_empty())>{move||i18n.text("Aucun ticket dans cette page.")}</p>
+                    <p>{move||i18n.text("message.select_up_to_20_tickets_from_this_page_linked_cards_will_be_kept")}</p>
+                    <p hidden=move||page().is_none_or(|page|!page.items.is_empty())>{move||i18n.text("message.no_tickets_on_this_page")}</p>
                     <For each=move||page().map(|page|page.items).unwrap_or_default() key=move|ticket|(original.get_untracked().and_then(|connection|connection.installed.report.map(|report|report.id)),ticket.instance.clone(),ticket.id.clone()) children=move|ticket|{
                         let ticket=StoredValue::new(ticket);
                         view!{<article><label><input type="checkbox" data-connector-ticket=ticket.with_value(|ticket|ticket.id.clone()) prop:checked=move||ticket.with_value(|ticket|tickets.get().contains(&ticket.identity())) disabled=move||ticket.with_value(|ticket|!tickets.get().contains(&ticket.identity())&&tickets.get().len()>=20) on:change=move|event|{let checked=event_target_checked(&event);tickets.update(|selected|{let identity=ticket.with_value(|ticket|ticket.identity());if checked{selected.insert(identity);}else{selected.remove(&identity);}});import_approved.set(false);}/>{ticket.with_value(|ticket|format!("{} — {}",ticket.key,ticket.title))}</label><p>{ticket.with_value(|ticket|ticket.instance.clone())}</p><p>{ticket.with_value(|ticket|ticket.status.clone())}</p><p class="task-description">{ticket.with_value(|ticket|ticket.description.clone())}</p></article>}
                     }/>
-                    <p hidden=move||page().is_none_or(|page|page.next.is_none())>{move||i18n.text("D’autres résultats sont disponibles ; cette page ne représente pas toute la recherche.")}</p>
-                    <button id="next-connector-tickets" type="button" hidden=move||page().is_none_or(|page|page.next.is_none()) disabled=move||!tickets.get().is_empty() on:click=move|_|{if let Some(cursor)=page().and_then(|page|page.next){execute.with_value(|execute|execute(Action::Search(Some(cursor))));}}>{move||i18n.text("Page suivante")}</button>
-                    <label for="connector-import-project">{move||i18n.text("Projet de destination")}</label><select id="connector-import-project" prop:value=move||project.get().and_then(|project|project.get::<String>("id").ok().flatten()).unwrap_or_default() on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.get_untracked().into_iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(id.as_str())));import_approved.set(false);}><option value="">{move||i18n.text("Choisir un projet")}</option><For each=move||board.projects.get() key=|project|(crate::field(project,"id"),crate::field(project,"name")) children=move|project|view!{<option value=crate::field(&project,"id")>{crate::field(&project,"name")}</option>}/></select>
-                    <label><input id="approve-connector-import" type="checkbox" disabled=move||tickets.get().is_empty()||project.get().is_none() prop:checked=move||import_approved.get() on:change=move|event|import_approved.set(event_target_checked(&event))/>{move||i18n.text("Créer les cartes manquantes à partir de cette sélection et de ce projet exacts.")}</label>
-                    <button id="import-connector-tickets" type="button" disabled=move||!import_approved.get()||tickets.get().is_empty()||project.get().is_none() on:click=move|_|execute.with_value(|execute|execute(Action::Import))>{move||i18n.text("Importer la sélection")}</button>
-                    <button id="cancel-connector-import" type="button" disabled=move||!import_dirty.get() on:click=move|_|{tickets.set(BTreeSet::new());project.set(None);import_approved.set(false);}>{move||i18n.text("Annuler la sélection d’import")}</button>
+                    <p hidden=move||page().is_none_or(|page|page.next.is_none())>{move||i18n.text("message.more_results_are_available_this_page_does_not_represent_the_whol")}</p>
+                    <button id="next-connector-tickets" type="button" hidden=move||page().is_none_or(|page|page.next.is_none()) disabled=move||!tickets.get().is_empty() on:click=move|_|{if let Some(cursor)=page().and_then(|page|page.next){execute.with_value(|execute|execute(Action::Search(Some(cursor))));}}>{move||i18n.text("message.next_page")}</button>
+                    <label for="connector-import-project">{move||i18n.text("message.destination_project")}</label><select id="connector-import-project" prop:value=move||project.get().and_then(|project|project.get::<String>("id").ok().flatten()).unwrap_or_default() on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.get_untracked().into_iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(id.as_str())));import_approved.set(false);}><option value="">{move||i18n.text("message.choose_a_project")}</option><For each=move||board.projects.get() key=|project|(crate::field(project,"id"),crate::field(project,"name")) children=move|project|view!{<option value=crate::field(&project,"id")>{crate::field(&project,"name")}</option>}/></select>
+                    <label><input id="approve-connector-import" type="checkbox" disabled=move||tickets.get().is_empty()||project.get().is_none() prop:checked=move||import_approved.get() on:change=move|event|import_approved.set(event_target_checked(&event))/>{move||i18n.text("message.create_missing_cards_from_this_exact_selection_and_project")}</label>
+                    <button id="import-connector-tickets" type="button" disabled=move||!import_approved.get()||tickets.get().is_empty()||project.get().is_none() on:click=move|_|execute.with_value(|execute|execute(Action::Import))>{move||i18n.text("message.import_selection")}</button>
+                    <button id="cancel-connector-import" type="button" disabled=move||!import_dirty.get() on:click=move|_|{tickets.set(BTreeSet::new());project.set(None);import_approved.set(false);}>{move||i18n.text("message.cancel_import_selection")}</button>
                 </div>
             </fieldset>
         </div>
         <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
-        <h4>{move||i18n.text("Ajouter un connecteur")}</h4>
+        <h4>{move||i18n.text("message.add_a_connector")}</h4>
         <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
-            <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("Préparer Azure Work Items intégré")}</button>
-            <p class="field-help">{move||i18n.text("Le connecteur Azure utilise le programme Atelier livré. Lis son manifeste et confirme son installation ; le PAT sera demandé ensuite, sans connexion implicite.")}</p>
-            <label for="connector-module">{move||i18n.text("Identifiant du module")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>
-            <label for="connector-path">{move||i18n.text("Programme du connecteur")}</label><input id="connector-path" maxlength="32000" spellcheck="false" prop:value=move||path.get() on:input=move|event|{path.set(event_target_value(&event));invalidate();}/>
-            <label><input id="connector-trusted" type="checkbox" prop:checked=move||trusted.get() on:change=move|event|{trusted.set(event_target_checked(&event));candidate.set(None);approved.set(false);}/>{move||i18n.text("Je fais confiance à ce programme et autorise sa lecture de manifeste.")}</label>
-            <button id="probe-connector" type="button" disabled=move||!trusted.get()||module.get().is_empty()||path.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Probe))>{move||i18n.text("Lire le manifeste")}</button>
+            <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("message.prepare_bundled_azure_work_items")}</button>
+            <p class="field-help">{move||i18n.text("message.the_azure_connector_uses_the_shipped_atelier_program_read_its_ma")}</p>
+            <label for="connector-module">{move||i18n.text("message.module_identifier")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>
+            <label for="connector-path">{move||i18n.text("message.connector_program")}</label><input id="connector-path" maxlength="32000" spellcheck="false" prop:value=move||path.get() on:input=move|event|{path.set(event_target_value(&event));invalidate();}/>
+            <label><input id="connector-trusted" type="checkbox" prop:checked=move||trusted.get() on:change=move|event|{trusted.set(event_target_checked(&event));candidate.set(None);approved.set(false);}/>{move||i18n.text("message.i_trust_this_program_and_allow_it_to_read_its_manifest")}</label>
+            <button id="probe-connector" type="button" disabled=move||!trusted.get()||module.get().is_empty()||path.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Probe))>{move||i18n.text("message.read_manifest")}</button>
             <div hidden=move||candidate.get().is_none()><h4>{move||candidate.get().map(|(_,candidate)|translated(i18n,&candidate.manifest,&candidate.manifest.name))}</h4><p>{move||candidate.get().map(|(_,candidate)|translated(i18n,&candidate.manifest,&candidate.manifest.description))}</p><p>{move||candidate.get().map(|(_,candidate)|candidate.binary.path)}</p><p>{move||candidate.get().map(|(_,candidate)|candidate.binary.sha256)}</p>
-                <label><input id="approve-connector" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("Installer ce manifeste et ce programme exacts.")}</label><button id="install-connector" type="button" disabled=move||!approved.get() on:click=move|_|execute.with_value(|execute|execute(Action::Install))>{move||i18n.text("Installer le connecteur")}</button>
+                <label><input id="approve-connector" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("message.install_this_exact_manifest_and_program")}</label><button id="install-connector" type="button" disabled=move||!approved.get() on:click=move|_|execute.with_value(|execute|execute(Action::Install))>{move||i18n.text("message.install_connector")}</button>
             </div>
         </fieldset>
         </fieldset>
-        <p id="connectors-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="connectors-notice" role="status">{move||i18n.text(&notice.get())}</p>
+        <p id="connectors-error" class="error" role="alert">{move||{let message=error.get();original.get().and_then(|connection|connection.installed.manifest.translations.get(i18n.code()).and_then(|messages|messages.get(&message)).or_else(||connection.installed.manifest.translations.get(&connection.installed.manifest.source_locale).and_then(|messages|messages.get(&message))).cloned()).unwrap_or_else(||i18n.text(&message))}}</p><p id="connectors-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}
 }

@@ -351,6 +351,29 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     )
     .await?;
     wait_dom(client,"return document.querySelector('#overview-button')?.getAttribute('aria-current') === 'page';",vec![]).await?;
+    wait_dom(client, "const nav = document.querySelector('.sidebar'); const overview = document.querySelector('#overview-button'); return innerWidth <= 800 || (overview.getBoundingClientRect().height > 0 && (innerHeight < 600 || nav.scrollHeight <= nav.clientHeight + 1));", vec![]).await?;
+    if client
+        .execute("return matchMedia('(min-width: 801px)').matches;", vec![])
+        .await?
+        == json!(true)
+    {
+        let expanded_width = client
+            .execute(
+                "return document.querySelector('.sidebar').getBoundingClientRect().width;",
+                vec![],
+            )
+            .await?;
+        click(client, "#toggle-navigation").await?;
+        wait_dom(client, "const nav = document.querySelector('.sidebar'); const main = document.querySelector('main'); return document.querySelector('#toggle-navigation').getAttribute('aria-expanded') === 'false' && nav.getBoundingClientRect().width < arguments[0] && Math.abs(main.getBoundingClientRect().left - nav.getBoundingClientRect().right) < 1 && getComputedStyle(document.querySelector('#overview-button .nav-label')).position === 'absolute' && document.querySelector('#overview-button').title.length > 0;", vec![expanded_width.clone()]).await?;
+        click(client, "#overview-button").await?;
+        wait_dom(client, "return location.pathname === '/overview' && document.querySelector('.sidebar').classList.contains('sidebar-collapsed');", vec![]).await?;
+        click(client, "#toggle-navigation").await?;
+        wait_dom(client, "return document.querySelector('#toggle-navigation').getAttribute('aria-expanded') === 'true' && document.querySelector('.sidebar').getBoundingClientRect().width === arguments[0] && getComputedStyle(document.querySelector('#overview-button .nav-label')).position !== 'absolute';", vec![expanded_width]).await?;
+    } else {
+        wait_dom(client, "return document.querySelector('#toggle-navigation').getAttribute('aria-expanded') === 'false' && document.querySelector('.sidebar').getBoundingClientRect().height < 100;", vec![]).await?;
+        click(client, "#toggle-navigation").await?;
+        wait_dom(client, "return document.querySelector('#overview-button').getBoundingClientRect().height >= 44 && document.querySelector('#manage-settings').getBoundingClientRect().height >= 44;", vec![]).await?;
+    }
     click(client, "#overview-button").await?;
     wait_dom(client, "return location.pathname === '/overview';", vec![]).await?;
     new_task(client).await?;
@@ -2228,8 +2251,6 @@ async fn profiles_scenario(
     for (selector, text) in [
         ("#profile-id", "ui-api"),
         ("#profile-name", "Profil synthétique <b>é😀</b>"),
-        ("#profile-model", "synthetic/model"),
-        ("#profile-effort", "invalid"),
     ] {
         client
             .find(Locator::Css(selector))
@@ -2254,19 +2275,8 @@ async fn profiles_scenario(
         .send_keys("synthetic-ui-key")
         .await?;
     click(client, "#save-profile").await?;
-    wait_dom(client, "return document.querySelector('#profiles-error')?.textContent.includes('Niveau de réflexion invalide') && document.querySelector('#profile-key')?.value === 'synthetic-ui-key';", vec![]).await?;
-    client
-        .find(Locator::Css("#profile-effort"))
-        .await?
-        .clear()
-        .await?;
-    client
-        .find(Locator::Css("#profile-effort"))
-        .await?
-        .send_keys("high")
-        .await?;
-    click(client, "#save-profile").await?;
     wait_dom(client, "return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key')?.value === '' && document.querySelector('#profile-key-state')?.textContent.includes('Secret enregistré') && document.querySelector('[data-profile=ui-api]')?.textContent.includes('<b>é😀</b>') && !document.querySelector('[data-profile=ui-api] b');", vec![]).await?;
+    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-version')?.textContent === '0.0.7' && document.querySelector('#agent-diagnostic-auth')?.textContent === 'Clé présente, validité non vérifiée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     let catalog = request(reqwest::Method::GET, "/api/agent-providers")
@@ -2320,11 +2330,13 @@ async fn profiles_scenario(
     click(client, "#profile-clear-key").await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#profile-key-state')?.textContent === 'Aucun secret enregistré.';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Aucune clé API enregistrée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     client.execute("const select=document.querySelector('#profile-auth'); select.value='cli'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && !document.querySelector('#agents-dialog')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     wait_dom(client,"return document.querySelector('#agent-account-quotas')?.textContent.includes('synthetic-plan') && document.querySelector('.agent-quota-value')?.textContent === '75.0 % restants' && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-account-output') && !document.querySelector('#agent-account-quotas')?.textContent.includes('private-quota-output');",vec![]).await?;
@@ -2432,6 +2444,7 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('[data-profile=ui-command]') && document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "[data-profile=ui-command]").await?;
     wait_dom(client,"return document.querySelector('#profile-analyzeArgs')?.value === '[\"--analyze\",\"{model}\"]' && document.querySelector('#profile-versionArgs')?.value === '[\"--version\"]';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     click(client, "#diagnose-profile").await?;
     wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion CLI présente, accès au service non vérifié.' && document.querySelector('#agent-diagnostic-result')?.textContent.includes('synthetic@example.invalid') && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned');",vec![]).await?;
     for (selector, arguments, expected) in [
@@ -2459,6 +2472,7 @@ async fn profiles_scenario(
             .await?;
         click(client, "#save-profile").await?;
         wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+        wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
         click(client, "#diagnose-profile").await?;
         wait_dom(client,"return document.querySelector('#agent-diagnostic-result')?.textContent.includes(arguments[0]) && !document.querySelector('#agent-diagnostic-result')?.textContent.includes('private-output-must-not-be-returned') && document.querySelector('#diagnose-profile')?.disabled === false;",vec![json!(expected)]).await?;
     }
@@ -2469,6 +2483,30 @@ async fn profiles_scenario(
     click(client, "#remove-profile").await?;
     click(client, "#confirm-profile-action").await?;
     wait_dom(client,"return !document.querySelector('[data-profile=ui-command]') && document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",vec![]).await?;
+    click(client, "#new-profile").await?;
+    client.execute("const select=document.querySelector('#profile-type'); select.value='acp'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    for (selector, value) in [
+        ("#profile-id", "ui-acp".to_owned()),
+        ("#profile-name", "Agent ACP synthétique".to_owned()),
+        ("#profile-command", fixture.to_string_lossy().into_owned()),
+    ] {
+        client
+            .find(Locator::Css(selector))
+            .await?
+            .send_keys(&value)
+            .await?;
+    }
+    let arguments = client.find(Locator::Css("#profile-protocolArgs")).await?;
+    arguments.clear().await?;
+    arguments.send_keys(r#"["acp"]"#).await?;
+    click(client, "#save-profile").await?;
+    wait_dom(client,"return document.querySelector('[data-profile=ui-acp]') && document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    click(client, "#diagnose-profile").await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-version')?.textContent === '0.0.7' && document.querySelector('#agent-diagnostic-auth')?.textContent === 'Connexion non vérifiée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    click(client, "#remove-profile").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return !document.querySelector('[data-profile=ui-acp]') && document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",vec![]).await?;
     click(client, "#new-profile").await?;
     client
         .find(Locator::Css("#profile-name"))

@@ -129,7 +129,7 @@ pub struct TicketCreation {
 }
 pub fn ticket_creation(input: &Value) -> Result<TicketCreation> {
     let input: TicketCreation =
-        serde_json::from_value(input.clone()).map_err(|_| "Création de ticket invalide.")?;
+        serde_json::from_value(input.clone()).map_err(|_| "message.invalid_ticket_creation")?;
     if !text(&input.kind, 100, false)
         || input
             .kind
@@ -138,7 +138,7 @@ pub fn ticket_creation(input: &Value) -> Result<TicketCreation> {
         || !text(&input.title, 255, false)
         || !text(&input.description, 20_000, true)
     {
-        return Err("Type, titre ou description de ticket invalide.");
+        return Err("message.invalid_ticket_type_title_or_description");
     }
     Ok(input)
 }
@@ -173,7 +173,7 @@ pub struct TimeProposal {
 }
 pub fn time_proposal(value: &Value) -> Result<TimeProposal> {
     let proposal: TimeProposal =
-        serde_json::from_value(value.clone()).map_err(|_| "Aperçu d’export de temps invalide.")?;
+        serde_json::from_value(value.clone()).map_err(|_| "message.invalid_time_export_preview")?;
     let source = &proposal.source;
     if !text(&source.id, 100, false)
         || !text(&source.card_id, 100, false)
@@ -189,11 +189,11 @@ pub fn time_proposal(value: &Value) -> Result<TimeProposal> {
                 || !text(&ticket.key, 200, false)
         })
     {
-        return Err("Portée ou saisie de l’export de temps invalide.");
+        return Err("message.invalid_time_export_scope_or_entry");
     }
     let entry = serde_json::json!({"seconds":source.seconds,"date":source.date,"startTime":source.start_time,"description":source.description});
     let entry =
-        serde_json::from_str(&entry.to_string()).map_err(|_| "Saisie de temps invalide.")?;
+        serde_json::from_str(&entry.to_string()).map_err(|_| "message.invalid_time_entry")?;
     crate::domain::time::time_fields(&entry)?;
     Ok(proposal)
 }
@@ -223,14 +223,14 @@ pub fn remote_receipt(output: &Value, operation_id: &str) -> Result<Option<Remot
     let Some(value) = output.get("receipt") else {
         return Ok(None);
     };
-    let receipt: RemoteReceipt =
-        serde_json::from_value(value.clone()).map_err(|_| "Observation du connecteur invalide.")?;
+    let receipt: RemoteReceipt = serde_json::from_value(value.clone())
+        .map_err(|_| "message.invalid_connector_observation")?;
     if receipt.operation_id != operation_id
         || receipt.reference.trim().is_empty()
         || !text(&receipt.reference, 2000, false)
         || !text(&receipt.observed_at, 100, false)
     {
-        return Err("L’observation ne correspond pas à l’opération d’origine.");
+        return Err("message.the_observation_does_not_match_the_original_operation");
     }
     Ok(Some(receipt))
 }
@@ -268,14 +268,14 @@ pub struct TicketTransitionPayload {
     pub transition: TicketTransition,
 }
 pub fn ticket_transitions(value: &Value) -> Result<TicketTransitions> {
-    let report: TicketTransitions = serde_json::from_value(value.clone())
-        .map_err(|_| "Transitions du connecteur invalides.")?;
+    let report: TicketTransitions =
+        serde_json::from_value(value.clone()).map_err(|_| "message.invalid_module_transitions")?;
     if !text(&report.ticket.instance, 2000, false)
         || !text(&report.ticket.id, 200, false)
         || !text(&report.status, 200, false)
         || report.transitions.len() > 100
     {
-        return Err("État ou portée des transitions invalide.");
+        return Err("message.invalid_transition_status_or_scope");
     }
     let mut seen = BTreeSet::new();
     for transition in &report.transitions {
@@ -285,14 +285,14 @@ pub fn ticket_transitions(value: &Value) -> Result<TicketTransitions> {
             || !text(&transition.status, 200, false)
             || !seen.insert(&transition.id)
         {
-            return Err("Transition du connecteur invalide ou dupliquée.");
+            return Err("message.invalid_or_duplicate_module_transition");
         }
     }
     Ok(report)
 }
 pub fn ticket_transition_payload(value: &Value) -> Result<TicketTransitionPayload> {
     let payload: TicketTransitionPayload = serde_json::from_value(value.clone())
-        .map_err(|_| "Aperçu de transition du connecteur invalide.")?;
+        .map_err(|_| "message.invalid_module_transition_preview")?;
     ticket_transitions(
         &serde_json::json!({"ticket":payload.ticket,"status":payload.from_status,"transitions":[payload.transition]}),
     )?;
@@ -306,9 +306,7 @@ pub fn ticket_transition_payload(value: &Value) -> Result<TicketTransitionPayloa
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
         || payload.transition.requires_fields
     {
-        return Err(
-            "La transition exige des champs supplémentaires ou un nouvel instantané de carte.",
-        );
+        return Err("message.the_transition_requires_additional_fields_or_a_new_task_snapshot");
     }
     Ok(payload)
 }
@@ -381,13 +379,13 @@ pub fn report_items(report: &Report) -> Result<Vec<ReportItem>> {
         return Ok(Vec::new());
     };
     let items = serde_json::from_value::<Vec<ReportItem>>(items.clone())
-        .map_err(|_| "Éléments du rapport de connecteur invalides.")?;
+        .map_err(|_| "message.invalid_connector_report_items")?;
     if items.len() > 100
         || items
             .iter()
             .any(|item| !text(&item.label, 200, false) || !text(&item.value, 2000, true))
     {
-        return Err("Éléments du rapport de connecteur trop volumineux.");
+        return Err("message.connector_report_items_exceed_the_limit");
     }
     Ok(items)
 }
@@ -395,15 +393,15 @@ pub fn report_items(report: &Report) -> Result<Vec<ReportItem>> {
 pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
     let page = match method {
         Method::TicketsSearch => serde_json::from_value::<TicketPage>(output.clone())
-            .map_err(|_| "Page de tickets du connecteur invalide.")?,
+            .map_err(|_| "message.invalid_connector_ticket_page")?,
         Method::TicketsRead => TicketPage {
             items: vec![
                 serde_json::from_value::<Ticket>(output.clone())
-                    .map_err(|_| "Ticket du connecteur invalide.")?,
+                    .map_err(|_| "message.invalid_connector_ticket")?,
             ],
             next: None,
         },
-        _ => return Err("Ce rapport ne contient pas de tickets."),
+        _ => return Err("message.this_report_contains_no_tickets"),
     };
     if page.items.len() > 100
         || page
@@ -411,7 +409,7 @@ pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
             .as_ref()
             .is_some_and(|next| !text(next, 2000, false))
     {
-        return Err("Page de tickets du connecteur trop volumineuse.");
+        return Err("message.connector_ticket_page_exceeds_the_limit");
     }
     let mut identities = BTreeSet::new();
     for ticket in &page.items {
@@ -425,7 +423,7 @@ pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
             || !text(&ticket.status, 200, true)
             || !identities.insert(ticket.identity())
         {
-            return Err("Ticket du connecteur invalide ou dupliqué.");
+            return Err("message.invalid_or_duplicate_connector_ticket");
         }
     }
     Ok(page)
@@ -586,7 +584,7 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
         || manifest.tabs.len() > 8
         || manifest.methods.len() > 32
     {
-        return Err("Manifeste de connecteur invalide.");
+        return Err("message.connector_manifest_invalid");
     }
     let methods = manifest.methods.iter().copied().collect::<BTreeSet<_>>();
     if methods.contains(&Method::RepositoriesPublish)
@@ -598,15 +596,13 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
         .iter()
         .all(|method| methods.contains(method))
     {
-        return Err(
-            "La publication d’un dépôt exige aperçu, actualisation et préparation de review.",
-        );
+        return Err("message.repository_publication_methods_required");
     }
     if methods.len() != manifest.methods.len()
         || !methods.contains(&Method::Check)
         || methods.contains(&Method::Describe)
     {
-        return Err("Méthodes du connecteur invalides ou répétées.");
+        return Err("message.connector_methods_invalid");
     }
     if methods.iter().any(|method| {
         method.effect() == Effect::Remote
@@ -616,15 +612,15 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
                 Method::Reconcile
             })
     }) {
-        return Err("Un connecteur qui écrit à distance doit proposer le rapprochement.");
+        return Err("message.connector_reconciliation_required");
     }
     if methods.contains(&Method::TimeSend) && !methods.contains(&Method::TimePreview) {
-        return Err("Un export de temps exige un aperçu de destination avant envoi.");
+        return Err("message.a_time_export_requires_a_destination_preview_before_sending");
     }
     if methods.contains(&Method::TicketsTransition)
         && !methods.contains(&Method::TicketsTransitions)
     {
-        return Err("Une transition de ticket exige la lecture préalable des choix disponibles.");
+        return Err("message.a_ticket_transition_requires_reading_the_available_choices_first");
     }
     let mut ids = BTreeSet::new();
     for field in &manifest.fields {
@@ -639,7 +635,7 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
             || invalid_options
             || (field.kind == FieldKind::Password && field.credential_scope)
         {
-            return Err("Champ de connecteur invalide ou répété.");
+            return Err("message.connector_field_invalid");
         }
         let mut values = BTreeSet::new();
         for option in &field.options {
@@ -647,7 +643,7 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
                 || !text(&option.label, 200, false)
                 || !values.insert(&option.value)
             {
-                return Err("Choix de connecteur invalide ou répété.");
+                return Err("message.connector_choice_invalid");
             }
         }
     }
@@ -660,7 +656,7 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
             || !text(&tab.description, 2000, true)
             || tab.actions.len() > 16
         {
-            return Err("Onglet de connecteur invalide.");
+            return Err("message.connector_tab_invalid");
         }
         for action in &tab.actions {
             if !identifier(&action.id)
@@ -668,36 +664,44 @@ pub fn validate_manifest(manifest: &Manifest) -> Result<()> {
                 || !text(&action.label, 200, false)
                 || (action.effect == Effect::Remote && !methods.contains(&Method::Reconcile))
             {
-                return Err("Action de connecteur invalide ou répétée.");
+                return Err("message.connector_action_invalid");
             }
         }
     }
     if methods.contains(&Method::Action) {
         if actions.is_empty() {
-            return Err("Actions du connecteur incohérentes.");
+            return Err("message.connector_actions_inconsistent");
         }
     } else if !actions.is_empty() {
-        return Err("Actions du connecteur incohérentes.");
+        return Err("message.connector_actions_inconsistent");
     }
     if manifest.translations.len() > 2 {
-        return Err("Catalogue de connecteur trop volumineux.");
+        return Err("message.connector_catalog_too_large");
     }
     for (locale, messages) in &manifest.translations {
         if !["fr-FR", "en-US"].contains(&locale.as_str())
             || messages.len() > 200
             || messages
                 .iter()
-                .any(|(key, value)| !text(key, 2000, false) || !text(value, 4000, true))
+                .any(|(key, value)| !identifier(key) || !text(value, 4000, true))
         {
-            return Err("Catalogue de connecteur invalide.");
+            return Err("message.connector_catalog_invalid");
+        }
+        if messages.keys().any(|key| {
+            !manifest
+                .translations
+                .get(&manifest.source_locale)
+                .is_some_and(|source| source.contains_key(key))
+        }) {
+            return Err("message.connector_catalog_invalid");
         }
     }
     if serde_json::to_vec(manifest)
-        .map_err(|_| "Manifeste de connecteur invalide.")?
+        .map_err(|_| "message.connector_manifest_invalid")?
         .len()
         > 128 * 1024
     {
-        return Err("Manifeste de connecteur trop volumineux.");
+        return Err("message.connector_manifest_too_large");
     }
     Ok(())
 }
@@ -711,7 +715,7 @@ pub fn effect(manifest: &Manifest, request: &Request) -> Result<Effect> {
             .as_ref()
             .is_some_and(|id| !identifier(id))
     {
-        return Err("Identité de requête de connecteur invalide.");
+        return Err("message.invalid_connector_request_identity");
     }
     if request.method == Method::Describe {
         if request.action.is_some()
@@ -720,39 +724,39 @@ pub fn effect(manifest: &Manifest, request: &Request) -> Result<Effect> {
             || !request.secrets.is_empty()
             || request.input != Value::Null
         {
-            return Err("La découverte du connecteur ne reçoit aucun contexte ni secret.");
+            return Err("message.connector_discovery_context_forbidden");
         }
         return Ok(Effect::Read);
     }
     if !manifest.methods.contains(&request.method) {
-        return Err("Méthode non proposée par ce connecteur.");
+        return Err("message.connector_method_unsupported");
     }
     if serde_json::to_vec(request)
-        .map_err(|_| "Requête de connecteur invalide.")?
+        .map_err(|_| "message.connector_request_invalid")?
         .len()
         > INPUT_LIMIT
     {
-        return Err("Requête de connecteur trop volumineuse.");
+        return Err("message.connector_request_too_large");
     }
     for (key, value) in &request.settings {
         let field = manifest
             .fields
             .iter()
             .find(|field| &field.id == key && field.kind != FieldKind::Password)
-            .ok_or("Paramètre public de connecteur inconnu.")?;
+            .ok_or("message.connector_public_setting_unknown")?;
         if field.kind == FieldKind::Checkbox {
             if !value.is_boolean() {
-                return Err("Valeur de connecteur invalide.");
+                return Err("message.connector_value_invalid");
             }
         } else {
             let value = value
                 .as_str()
                 .filter(|value| text(value, 4000, true))
-                .ok_or("Valeur de connecteur invalide.")?;
+                .ok_or("message.connector_value_invalid")?;
             if field.kind == FieldKind::Select
                 && !field.options.iter().any(|option| option.value == value)
             {
-                return Err("Choix de connecteur invalide ou répété.");
+                return Err("message.connector_choice_invalid");
             }
         }
     }
@@ -765,7 +769,7 @@ pub fn effect(manifest: &Manifest, request: &Request) -> Result<Effect> {
             || value.len() > 4000
             || value.contains(['\0', '\r', '\n'])
         {
-            return Err("Secret de connecteur invalide ou non déclaré.");
+            return Err("message.connector_secret_invalid");
         }
     }
     let effect = if request.method == Method::Action {
@@ -775,37 +779,37 @@ pub fn effect(manifest: &Manifest, request: &Request) -> Result<Effect> {
             .flat_map(|tab| &tab.actions)
             .find(|action| Some(&action.id) == request.action.as_ref())
             .map(|action| action.effect)
-            .ok_or("Action de connecteur inconnue.")?
+            .ok_or("message.connector_action_unknown")?
     } else {
         if request.action.is_some() {
-            return Err("Action de connecteur inattendue.");
+            return Err("message.connector_action_unexpected");
         }
         request.method.effect()
     };
     if effect != Effect::Read && request.operation_id.is_none() {
-        return Err("Toute écriture de connecteur exige une intention persistante.");
+        return Err("message.connector_write_requires_intent");
     }
     if matches!(request.method, Method::Reconcile | Method::TimeReconcile)
         && request.operation_id.is_none()
     {
-        return Err("Le rapprochement exige l’identité de l’opération d’origine.");
+        return Err("message.connector_reconcile_requires_operation");
     }
     Ok(effect)
 }
 
 pub fn decode_reply(bytes: &[u8], request: &Request) -> Result<Reply> {
     if bytes.len() > OUTPUT_LIMIT {
-        return Err("Réponse de connecteur trop volumineuse.");
+        return Err("message.connector_reply_too_large");
     }
-    let reply: Reply = serde_json::from_slice(bytes)
-        .map_err(|_| "Réponse de connecteur invalide ou sortie supplémentaire.")?;
+    let reply: Reply =
+        serde_json::from_slice(bytes).map_err(|_| "message.connector_reply_invalid")?;
     if reply.protocol != PROTOCOL
         || reply.request_id != request.request_id
         || reply.module != request.module
         || reply.method != request.method
         || !text(&reply.message, 2000, true)
     {
-        return Err("Réponse de connecteur liée à une autre requête.");
+        return Err("message.connector_reply_mismatch");
     }
     Ok(reply)
 }
@@ -842,6 +846,26 @@ mod tests {
             tabs: vec![],
             translations: BTreeMap::new(),
         }
+    }
+    #[test]
+    fn connector_translations_use_keys_with_a_source_message() {
+        let mut candidate = manifest();
+        candidate.translations.insert(
+            "en-US".into(),
+            BTreeMap::from([("connector-name".into(), "Connector".into())]),
+        );
+        assert!(validate_manifest(&candidate).is_err());
+        candidate.translations.insert(
+            "fr-FR".into(),
+            BTreeMap::from([("connector-name".into(), "Connecteur".into())]),
+        );
+        assert!(validate_manifest(&candidate).is_ok());
+        candidate
+            .translations
+            .get_mut("fr-FR")
+            .unwrap()
+            .insert("Nom du connecteur".into(), "Connecteur".into());
+        assert!(validate_manifest(&candidate).is_err());
     }
     fn request() -> Request {
         Request {

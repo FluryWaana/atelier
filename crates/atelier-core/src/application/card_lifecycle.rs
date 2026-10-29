@@ -15,9 +15,9 @@ pub enum CardFailure {
 impl std::fmt::Display for CardFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
-            Self::Missing => "Carte introuvable.",
+            Self::Missing => "message.card_not_found",
             Self::Invalid(message) | Self::Conflict(message) => message,
-            Self::Document(_) => "Document enregistré invalide.",
+            Self::Document(_) => "message.stored_document_invalid",
         })
     }
 }
@@ -39,7 +39,7 @@ pub fn archive(
         .get::<bool>("archived")
         .ok()
         .flatten()
-        .ok_or(CardFailure::Invalid("État d’archive invalide."))?;
+        .ok_or(CardFailure::Invalid("message.invalid_archive_state"))?;
     let mut active = busy(&card.id);
     if !active {
         for entry in times {
@@ -55,7 +55,7 @@ pub fn archive(
     }
     if active {
         return Err(CardFailure::Conflict(
-            "Attends la fin des opérations et arrête le chronomètre avant d’archiver.",
+            "message.wait_for_operations_to_finish_and_stop_the_timer_before_archivin",
         ));
     }
     card.fields.set("archived", &archived)?;
@@ -84,9 +84,7 @@ fn includes(value: Option<&RawValue>, id: &str) -> Result<bool, CardFailure> {
             let text: JsonString = serde_json::from_str(value.get())?;
             Ok(id.0.is_empty() || text.0.windows(id.0.len()).any(|window| window == id.0))
         }
-        _ => Err(CardFailure::Invalid(
-            "c.blockedBy?.includes is not a function",
-        )),
+        _ => Err(CardFailure::Invalid("message.invalid_blocked_by")),
     }
 }
 
@@ -115,36 +113,26 @@ pub fn remove(
     busy: impl Fn(&str) -> bool,
 ) -> Result<(), CardFailure> {
     if card.fields.truthy("ticketCreation")? {
-        return Err(CardFailure::Conflict(
-            "Vérifie et rattache le ticket Jira de l’envoi incertain avant de supprimer cette carte.",
-        ));
+        return Err(CardFailure::Conflict("message.verify_and_link_the_jira_ticket_from_the_uncertain_delivery_befo"));
     }
     if queued.contains(&card.id) {
-        return Err(CardFailure::Conflict(
-            "Retire cette tâche de la file avant de la supprimer.",
-        ));
+        return Err(CardFailure::Conflict("message.remove_this_task_from_the_queue_before_deleting_it"));
     }
     for other in cards {
         if includes(other.raw("blockedBy"), &card.id)? {
-            return Err(CardFailure::Conflict(
-                "Retire les liens « Bloquée par » avant de supprimer cette tâche.",
-            ));
+            return Err(CardFailure::Conflict("message.remove_blocked_by_links_before_deleting_this_task"));
         }
     }
     if busy(&card.id) {
-        return Err(CardFailure::Conflict("Une exécution est active."));
+        return Err(CardFailure::Conflict("message.a_run_is_active"));
     }
     for entry in times {
         if entry.string_equals("cardId", &card.id)? {
-            return Err(CardFailure::Conflict(
-                "Cette carte possède des entrées de temps. Conserve-la pour garder leur historique.",
-            ));
+            return Err(CardFailure::Conflict("message.this_card_has_time_entries_keep_it_to_preserve_their_history"));
         }
     }
     if card.fields.truthy("worktree")? || has_keys(card.fields.raw("serviceWorktrees"))? {
-        return Err(CardFailure::Conflict(
-            "Retire d’abord les worktrees de cette carte. Les branches seront conservées.",
-        ));
+        return Err(CardFailure::Conflict("message.remove_this_cards_worktrees_first_branches_will_be_kept"));
     }
     Ok(())
 }

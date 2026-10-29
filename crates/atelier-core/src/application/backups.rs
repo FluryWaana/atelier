@@ -23,13 +23,13 @@ pub fn require_idle(
 ) -> Result<()> {
     if providers_busy {
         return Err(BackupFailure::Conflict(
-            "Attendez la fin des exécutions et mises à jour avant de modifier les fournisseurs.",
+            "message.wait_for_runs_and_updates_to_finish_before_editing_providers",
         )
         .into());
     }
     if servers_running {
         return Err(BackupFailure::Conflict(
-            "Arrête les serveurs Front / Back avant cette opération.",
+            "message.stop_front_back_servers_before_this_operation",
         )
         .into());
     }
@@ -40,7 +40,10 @@ pub fn require_idle(
             || entry.string_equals("exportState", "uncertain")?;
     }
     if busy {
-        return Err(BackupFailure::Conflict("Mets la file en pause, arrête les agents et chronomètres, puis termine ou vérifie les envois Tempo avant cette opération.").into());
+        return Err(BackupFailure::Conflict(
+            "message.pause_the_queue_stop_agents_and_timers_then_complete_or_verify_t",
+        )
+        .into());
     }
     Ok(())
 }
@@ -50,12 +53,12 @@ pub fn restore_name(body: &Document) -> Result<String> {
         .raw("confirmed")
         .is_some_and(|value| value.get() == "true")
     {
-        return Err(BackupFailure::Invalid("Confirme la restauration de cette sauvegarde.").into());
+        return Err(BackupFailure::Invalid("message.confirm_restoration_of_this_backup").into());
     }
     body.get::<String>("name")
         .ok()
         .flatten()
-        .ok_or_else(|| BackupFailure::Invalid("Sauvegarde locale introuvable.").into())
+        .ok_or_else(|| BackupFailure::Invalid("message.local_backup_not_found").into())
 }
 
 pub fn pause_restored_queue(settings: &mut Document) -> Result<()> {
@@ -66,7 +69,7 @@ pub fn pause_restored_queue(settings: &mut Document) -> Result<()> {
     queue.set("paused", &true)?;
     queue.set(
         "message",
-        &"File en pause ; la tâche active peut se terminer.",
+        &"message.queue_paused_the_active_task_may_finish",
     )?;
     settings.set("taskQueue", &queue)?;
     Ok(())

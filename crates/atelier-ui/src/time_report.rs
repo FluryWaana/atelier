@@ -50,10 +50,10 @@ pub fn TimeReport(
             wasm_bindgen_futures::spawn_local(async move {
                 let result = crate::write(&credential, method, &path, &body).await;
                 let _ = board.refresh(&credential).await;
-                if let Err(message) = result {
-                    if error.try_get_untracked().is_some() {
-                        error.set(message);
-                    }
+                if let Err(message) = result
+                    && error.try_get_untracked().is_some()
+                {
+                    error.set(message);
                 }
                 if pending.try_get_untracked().is_some() {
                     pending.set(false);
@@ -245,14 +245,14 @@ pub fn TimeReport(
                     .collect::<Vec<_>>()
             });
             let headers = [
-                "Date",
-                "Heure",
-                "Ticket",
-                "Tâche",
-                "Secondes",
-                "Description",
-                "État Tempo",
-                "ID Tempo",
+                "message.date",
+                "message.time",
+                "message.ticket",
+                "message.task",
+                "message.seconds",
+                "message.description",
+                "message.tempo_state",
+                "message.tempo_id",
             ]
             .map(|key| i18n.text(key));
             let csv = atelier_core::application::time_reports::csv(
@@ -264,26 +264,26 @@ pub fn TimeReport(
             let parts = js_sys::Array::new();
             parts.push(&wasm_bindgen::JsValue::from_str(&csv));
             let blob = web_sys::Blob::new_with_str_sequence(parts.as_ref())
-                .map_err(|_| "Création du CSV impossible.".to_owned())?;
+                .map_err(|_| "message.unable_to_create_the_csv".to_owned())?;
             let next = web_sys::Url::create_object_url_with_blob(&blob)
-                .map_err(|_| "Création du CSV impossible.".to_owned())?;
+                .map_err(|_| "message.unable_to_create_the_csv".to_owned())?;
             if let Some(previous) = url.get_untracked() {
                 let _ = web_sys::Url::revoke_object_url(&previous);
             }
             url.set(Some(next.clone()));
             let document = web_sys::window()
                 .and_then(|window| window.document())
-                .ok_or("Navigateur indisponible.")?;
+                .ok_or("message.browser_unavailable")?;
             let anchor = document
                 .create_element("a")
-                .map_err(|_| "Téléchargement indisponible.".to_owned())?
+                .map_err(|_| "message.download_unavailable".to_owned())?
                 .dyn_into::<web_sys::HtmlAnchorElement>()
-                .map_err(|_| "Téléchargement indisponible.".to_owned())?;
+                .map_err(|_| "message.download_unavailable".to_owned())?;
             anchor.set_href(&next);
             anchor.set_download("atelier-time.csv");
-            let body = document.body().ok_or("Navigateur indisponible.")?;
+            let body = document.body().ok_or("message.browser_unavailable")?;
             body.append_child(&anchor)
-                .map_err(|_| "Téléchargement indisponible.".to_owned())?;
+                .map_err(|_| "message.download_unavailable".to_owned())?;
             anchor.click();
             anchor.remove();
             Ok(())
@@ -291,28 +291,28 @@ pub fn TimeReport(
         error.set(result.err().unwrap_or_default());
     };
     view! {<section id="time-report" class="time-view" tabindex="-1" aria-labelledby="time-report-heading" aria-busy=move||loading.get().to_string()>
-        <header class="panel-heading"><div><h2 id="time-report-heading">{move||i18n.text("Saisies & chronomètres")}</h2><p class="hint">{move||i18n.text("Des saisies locales, à relire avant tout envoi au service connecté.")}</p></div><div class="row-actions"><button id="add-time" class="primary" type="button" disabled=move||loading.get()||!board.cards.with(|cards|cards.iter().any(|card|!card.fields.truthy("archived").unwrap_or(false))) on:click=move|_|{if let Some(card)=board.cards.with_untracked(|cards|cards.iter().find(|card|!card.fields.truthy("archived").unwrap_or(false)).cloned()){editing.set(Some((card.id,None)));}}>{move||i18n.text("Saisir du temps")}</button><button id="close-time-report" type="button" on:click=move|_|close()>{move||i18n.text("Fermer")}</button></div></header>
-        <p role="status" hidden=move||!loading.get()>{move||i18n.text("Chargement du tableau…")}</p><p class="error" role="alert">{move||i18n.text(&load_error.get())}</p>
-        <p class="field-help" role="status" hidden=move||board.connected.get()&&board.sync_error.get().is_empty()>{move||i18n.text(&if board.sync_error.get().is_empty(){"Actualisation interrompue. Reconnexion automatique…".to_owned()}else{board.sync_error.get()})}</p>
-        <p class="field-help">{move||i18n.text("Les saisies humaines utilisent leur date locale. Les durées actives des agents sont rattachées à la date de début de la session en UTC ; elles ne sont pas réparties entre les jours.")}</p>
-        <section class="time-filters" aria-label=move||i18n.text("Filtrer les saisies")>
-        <label>{move||i18n.text("Du")}<input id="report-from" type="date" prop:value=move||from.get() on:input=move|event|{from.set(event_target_value(&event));page.set(0);} /></label>
-        <label>{move||i18n.text("Au")}<input id="report-to" type="date" prop:value=move||to.get() on:input=move|event|{to.set(event_target_value(&event));page.set(0);} /></label>
-        <label>{move||i18n.text("Projet")}<select id="report-project" prop:value=move||repo.get() on:change=move|event|{repo.set(event_target_value(&event));page.set(0);} ><option value="">{move||i18n.text("Tous les projets")}</option><For each=move||board.projects.get() key=|project|field(project,"id") children=move|project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
-        <label>{move||i18n.text("Source du temps")}<select id="report-source" prop:value=move||source.get() on:change=move|event|{source.set(event_target_value(&event));page.set(0);} ><option value="all">{move||i18n.text("Toutes les sources")}</option><option value="human">{move||i18n.text("Temps humain")}</option><option value="agent">{move||i18n.text("Temps actif des agents mesuré")}</option></select></label>
-        <label>{move||i18n.text("État d’envoi humain")}<select id="report-state" prop:value=move||status.get() on:change=move|event|{status.set(event_target_value(&event));page.set(0);} ><option value="all">{move||i18n.text("Tous les états")}</option><option value="draft">{move||i18n.text("Non envoyé")}</option><option value="exported">{move||i18n.text("Envoyé")}</option><option value="uncertain">{move||i18n.text("Envoi incertain")}</option></select></label>
+        <header class="panel-heading"><div><h2 id="time-report-heading">{move||i18n.text("message.entries_timers")}</h2><p class="hint">{move||i18n.text("message.local_entries_to_review_before_sending_to_the_connected_service")}</p></div><div class="row-actions"><button id="add-time" class="primary" type="button" disabled=move||loading.get()||!board.cards.with(|cards|cards.iter().any(|card|!card.fields.truthy("archived").unwrap_or(false))) on:click=move|_|{if let Some(card)=board.cards.with_untracked(|cards|cards.iter().find(|card|!card.fields.truthy("archived").unwrap_or(false)).cloned()){editing.set(Some((card.id,None)));}}>{move||i18n.text("message.log_time")}</button><button id="close-time-report" type="button" on:click=move|_|close()>{move||i18n.text("message.close")}</button></div></header>
+        <p role="status" hidden=move||!loading.get()>{move||i18n.text("message.loading_the_board")}</p><p class="error" role="alert">{move||i18n.text(&load_error.get())}</p>
+        <p class="field-help" role="status" hidden=move||board.connected.get()&&board.sync_error.get().is_empty()>{move||i18n.text(&if board.sync_error.get().is_empty(){"message.updates_interrupted_reconnecting".to_owned()}else{board.sync_error.get()})}</p>
+        <p class="field-help">{move||i18n.text("message.human_entries_use_their_local_date_active_agent_durations_belong")}</p>
+        <section class="time-filters" aria-label=move||i18n.text("message.filter_entries")>
+        <label>{move||i18n.text("message.from")}<input id="report-from" type="date" prop:value=move||from.get() on:input=move|event|{from.set(event_target_value(&event));page.set(0);} /></label>
+        <label>{move||i18n.text("message.to")}<input id="report-to" type="date" prop:value=move||to.get() on:input=move|event|{to.set(event_target_value(&event));page.set(0);} /></label>
+        <label>{move||i18n.text("message.project")}<select id="report-project" prop:value=move||repo.get() on:change=move|event|{repo.set(event_target_value(&event));page.set(0);} ><option value="">{move||i18n.text("message.all_projects")}</option><For each=move||board.projects.get() key=|project|field(project,"id") children=move|project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
+        <label>{move||i18n.text("message.time_source")}<select id="report-source" prop:value=move||source.get() on:change=move|event|{source.set(event_target_value(&event));page.set(0);} ><option value="all">{move||i18n.text("message.all_sources")}</option><option value="human">{move||i18n.text("message.human_time")}</option><option value="agent">{move||i18n.text("message.measured_active_agent_time")}</option></select></label>
+        <label>{move||i18n.text("message.human_submission_state")}<select id="report-state" prop:value=move||status.get() on:change=move|event|{status.set(event_target_value(&event));page.set(0);} ><option value="all">{move||i18n.text("message.all_states")}</option><option value="draft">{move||i18n.text("message.not_submitted")}</option><option value="exported">{move||i18n.text("message.submitted")}</option><option value="uncertain">{move||i18n.text("message.uncertain_submission")}</option></select></label>
         </section>
-        <p role="alert" hidden=move||!invalid.get()>{move||i18n.text("La date de fin doit suivre la date de début.")}</p>
-        <div class="view-stats time-stats"><div><span>{move||i18n.text("Temps humain")}</span><strong id="report-human-total">{move||duration_text(rows.with(|rows|rows.iter().filter(|row|!row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add)))}</strong></div>
-        <div><span>{move||i18n.text("Temps des agents")}</span><strong id="report-agent-total">{move||duration_text(rows.with(|rows|rows.iter().filter(|row|row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add)))}</strong></div>
-        <div><span>{move||i18n.text("À valider")}</span><strong>{move||rows.with(|rows|rows.iter().filter(|row|!row.agent&&!row.running&&row.state!="exported").count())}</strong><small>{move||i18n.text("Saisies à envoyer ou vérifier")}</small></div></div>
+        <p role="alert" hidden=move||!invalid.get()>{move||i18n.text("message.the_end_date_must_follow_the_start_date")}</p>
+        <div class="view-stats time-stats"><div><span>{move||i18n.text("message.human_time")}</span><strong id="report-human-total">{move||duration_text(rows.with(|rows|rows.iter().filter(|row|!row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add)))}</strong></div>
+        <div><span>{move||i18n.text("message.agent_time")}</span><strong id="report-agent-total">{move||duration_text(rows.with(|rows|rows.iter().filter(|row|row.agent).map(|row|row.seconds).fold(0u64,u64::saturating_add)))}</strong></div>
+        <div><span>{move||i18n.text("message.pending_approval")}</span><strong>{move||rows.with(|rows|rows.iter().filter(|row|!row.agent&&!row.running&&row.state!="exported").count())}</strong><small>{move||i18n.text("message.entries_to_send_or_check")}</small></div></div>
         <crate::agent_usage::AgentUsage runs=usage_runs />
-        <details><summary>{move||i18n.text("Synthèse humaine par jour")}</summary><dl><For each=move||daily.get() key=|(day,_)|day.clone() children=move|(day,seconds)|view!{<dt>{day}</dt><dd>{duration_text(seconds)}</dd>} /></dl></details>
-        <p class="field-help">{move||i18n.text("Les chronomètres et agents actifs peuvent encore augmenter. Le CSV contient uniquement les saisies humaines arrêtées.")}</p><button id="download-time-csv" type="button" disabled=move||loading.get()||!load_error.get().is_empty()||invalid.get()||!rows.with(|rows|rows.iter().any(|row|!row.agent&&!row.running)) on:click=download>{move||i18n.text("Exporter les saisies arrêtées (CSV)")}</button>
-        <p hidden=move||loading.get()||!load_error.get().is_empty()||!rows.with(|rows|rows.is_empty())>{move||i18n.text("Aucun temps dans cette sélection.")}</p><div><For each=move||rows.with(|rows|rows.iter().skip(page.get()*100).take(100).cloned().collect::<Vec<_>>()) key=|row|row.clone() children=move|row|{let card=row.card.clone();let edit_card=card.clone();let entry_id=StoredValue::new(row.id.clone());view!{<article class="workspace-row time-entry time-report-row"><div><p hidden=!row.running>{move||i18n.text("En cours")}</p><strong>{row.date}" "{row.start}" · "{duration_text(row.seconds)}</strong><p>{move||i18n.text(if row.agent{"Temps actif des agents mesuré"}else{"Temps humain"})}</p><button type="button" on:click=move|_|{on_task.run(card.clone());}>{row.ticket}" · "{row.title}</button><p class="entry-description">{row.description}</p></div><div class="row-actions"><button type="button" hidden=row.agent||!row.running disabled=move||pending.get() on:click=move|_|action.run((gloo_net::http::Method::POST,format!("/api/time/{}/stop",entry_id.get_value()),serde_json::json!({})))>{move||i18n.text("Arrêter")}</button><button class="edit-report-time" type="button" hidden=row.agent||row.running||row.state!="draft" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=board.times.with_untracked(|times|times.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned()){editing.set(Some((edit_card.clone(),Some(entry))));}}>{move||i18n.text("Corriger")}</button><button class="delete-report-time danger" type="button" hidden=row.agent||row.running||row.state!="draft" disabled=move||pending.get() on:click=move|_|removing.set(board.times.with_untracked(|times|times.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned()))>{move||i18n.text("Supprimer")}</button></div></article>}} /></div>
-        <div class="editor-actions" hidden=move||rows.with(|rows|rows.len()<=100)><button type="button" disabled=move||page.get()==0 on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("Précédent")}</button><button type="button" disabled=move||rows.with(|rows|(page.get()+1)*100>=rows.len()) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("Suivant")}</button></div>
+        <details><summary>{move||i18n.text("message.daily_human_summary")}</summary><dl><For each=move||daily.get() key=|(day,_)|day.clone() children=move|(day,seconds)|view!{<dt>{day}</dt><dd>{duration_text(seconds)}</dd>} /></dl></details>
+        <p class="field-help">{move||i18n.text("message.active_timers_and_agents_may_still_increase_the_csv_contains_onl")}</p><button id="download-time-csv" type="button" disabled=move||loading.get()||!load_error.get().is_empty()||invalid.get()||!rows.with(|rows|rows.iter().any(|row|!row.agent&&!row.running)) on:click=download>{move||i18n.text("message.export_stopped_entries_csv")}</button>
+        <p hidden=move||loading.get()||!load_error.get().is_empty()||!rows.with(|rows|rows.is_empty())>{move||i18n.text("message.no_time_in_this_selection")}</p><div><For each=move||rows.with(|rows|rows.iter().skip(page.get()*100).take(100).cloned().collect::<Vec<_>>()) key=|row|row.clone() children=move|row|{let card=row.card.clone();let edit_card=card.clone();let entry_id=StoredValue::new(row.id.clone());view!{<article class="workspace-row time-entry time-report-row"><div><p hidden=!row.running>{move||i18n.text("message.in_progress")}</p><strong>{row.date}" "{row.start}" · "{duration_text(row.seconds)}</strong><p>{move||i18n.text(if row.agent{"message.measured_active_agent_time"}else{"message.human_time"})}</p><button type="button" on:click=move|_|{on_task.run(card.clone());}>{row.ticket}" · "{row.title}</button><p class="entry-description">{row.description}</p></div><div class="row-actions"><button type="button" hidden=row.agent||!row.running disabled=move||pending.get() on:click=move|_|action.run((gloo_net::http::Method::POST,format!("/api/time/{}/stop",entry_id.get_value()),serde_json::json!({})))>{move||i18n.text("message.stop")}</button><button class="edit-report-time" type="button" hidden=row.agent||row.running||row.state!="draft" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=board.times.with_untracked(|times|times.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned()){editing.set(Some((edit_card.clone(),Some(entry))));}}>{move||i18n.text("message.edit")}</button><button class="delete-report-time danger" type="button" hidden=row.agent||row.running||row.state!="draft" disabled=move||pending.get() on:click=move|_|removing.set(board.times.with_untracked(|times|times.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned()))>{move||i18n.text("message.delete_5e5d0216")}</button></div></article>}} /></div>
+        <div class="editor-actions" hidden=move||rows.with(|rows|rows.len()<=100)><button type="button" disabled=move||page.get()==0 on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("message.previous")}</button><button type="button" disabled=move||rows.with(|rows|(page.get()+1)*100>=rows.len()) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("message.next")}</button></div>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
-        <div class="confirmation" role="alert" hidden=move||removing.get().is_none()><p>{move||i18n.text("Supprimer définitivement cette saisie de temps ?")}</p><button id="confirm-report-delete-time" class="danger" type="button" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=removing.get_untracked(){action.run((gloo_net::http::Method::DELETE,format!("/api/time/{}",field(&entry,"id")),serde_json::json!({"expected":entry})));}}>{move||i18n.text("Supprimer définitivement")}</button><button type="button" disabled=move||pending.get() on:click=move|_|removing.set(None)>{move||i18n.text("Annuler")}</button></div>
+        <div class="confirmation" role="alert" hidden=move||removing.get().is_none()><p>{move||i18n.text("message.permanently_delete_this_time_entry")}</p><button id="confirm-report-delete-time" class="danger" type="button" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=removing.get_untracked(){action.run((gloo_net::http::Method::DELETE,format!("/api/time/{}",field(&entry,"id")),serde_json::json!({"expected":entry})));}}>{move||i18n.text("message.delete_permanently")}</button><button type="button" disabled=move||pending.get() on:click=move|_|removing.set(None)>{move||i18n.text("message.cancel")}</button></div>
         {move||editing.get().map(|(card_id,entry)|view!{<TimeEditor card_id entry board token on_close=Callback::new(move|()|editing.set(None)) />})}
     </section>}
 }
@@ -384,9 +384,9 @@ fn TimeEditor(
     });
     on_cleanup(move || unload.remove());
     view! {<dialog id="time-dialog" class="time-entry-editor" node_ref=dialog aria-labelledby="time-title" on:cancel=move|event:web_sys::Event|{event.prevent_default();request_close();}>
-        <header class="dialog-heading"><div><div class="eyebrow">{move||i18n.text("TEMPS HUMAIN")}</div><h2 id="time-title">{move||i18n.text(if initial.with_value(Option::is_some){"Corriger le temps"}else{"Saisir du temps"})}</h2></div><button id="close-time-editor" type="button" disabled=move||pending.get() on:click=move|_|request_close()>{move||i18n.text("Fermer")}</button></header>
-        <label>{move||i18n.text("Tâche")}<select id="time-card" prop:value=move||card.get() disabled=move||pending.get()||dirty.get()||initial.with_value(Option::is_some) on:change=move|event|card.set(event_target_value(&event))><For each={move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(false)||initial.with_value(Option::is_some)).collect::<Vec<_>>()} key=|card|card.id.clone() children=move|card|view!{<option value=card.id>{String::from_utf16_lossy(&card.title.0)}</option>}/></select></label>
+        <header class="dialog-heading"><div><div class="eyebrow">{move||i18n.text("message.human_time_a2731ccf")}</div><h2 id="time-title">{move||i18n.text(if initial.with_value(Option::is_some){"message.edit_time"}else{"message.log_time"})}</h2></div><button id="close-time-editor" type="button" disabled=move||pending.get() on:click=move|_|request_close()>{move||i18n.text("message.close")}</button></header>
+        <label>{move||i18n.text("message.task")}<select id="time-card" prop:value=move||card.get() disabled=move||pending.get()||dirty.get()||initial.with_value(Option::is_some) on:change=move|event|card.set(event_target_value(&event))><For each={move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(false)||initial.with_value(Option::is_some)).collect::<Vec<_>>()} key=|card|card.id.clone() children=move|card|view!{<option value=card.id>{String::from_utf16_lossy(&card.title.0)}</option>}/></select></label>
         {move||{let card_id=card.get();let archived=board.cards.with_untracked(|cards|cards.iter().find(|card|card.id==card_id).is_none_or(|card|card.fields.truthy("archived").unwrap_or(false)));view!{<crate::time::TimeTask card_id board token pending dirty blocked=Memo::new(move|_|false) archived initial_entry=initial.get_value() editor_only=true on_saved=Some(Callback::new(move|()|close()))/>}}}
-        <div class="confirmation" role="alert" hidden=move||!discard.get()><p>{move||i18n.text("Abandonner la saisie de temps non enregistrée ?")}</p><button id="discard-time-editor" class="danger" type="button" disabled=move||pending.get() on:click=move|_|close()>{move||i18n.text("Abandonner")}</button><button id="keep-time-editor" type="button" on:click=move|_|{discard.set(false);navigation.set_value(None);} >{move||i18n.text("Continuer à modifier")}</button></div>
+        <div class="confirmation" role="alert" hidden=move||!discard.get()><p>{move||i18n.text("message.discard_the_unsaved_time_entry")}</p><button id="discard-time-editor" class="danger" type="button" disabled=move||pending.get() on:click=move|_|close()>{move||i18n.text("message.discard")}</button><button id="keep-time-editor" type="button" on:click=move|_|{discard.set(false);navigation.set_value(None);} >{move||i18n.text("message.keep_editing")}</button></div>
     </dialog>}
 }

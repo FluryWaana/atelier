@@ -104,6 +104,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
         ["--version"] => {
+            if let Ok(value) = std::fs::read_to_string(".slow-diagnostic")
+                && ["atelier-synthetic-slow", "atelier-synthetic-held"].contains(&value.as_str()) {
+                std::fs::write(".version-started", "synthetic-only")?;
+                std::fs::write(format!(".version-started.{}", std::process::id()), "synthetic-only")?;
+                if value == "atelier-synthetic-held" {
+                    for _ in 0..200 {
+                        if std::path::Path::new(".version-release").exists() { break; }
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                } else { std::thread::sleep(Duration::from_secs(2)); }
+            }
             no_inherited_credentials()?;
             if std::fs::read_to_string(".cli-update-fixture").is_ok_and(|value|value=="atelier-r03-cli-update/synthetic-only") {
                 let version=std::fs::read_to_string("installed-version")?;
@@ -187,7 +198,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         }
         ["app-server", ..] => fake_agent::run(true),
-        ["-p", ..] => fake_agent::run(false),
+        ["acp"] | ["agent", "stdio"] | ["--acp"] | ["--acp", "--stdio"] => fake_agent::acp(),
+        ["-p", ..] => {
+            if let Some(config) = std::env::var_os("CLAUDE_CONFIG_DIR") {
+                let config = std::path::PathBuf::from(config);
+                if std::fs::read_to_string(config.join(".agent-diagnostic-fixture")).is_ok_and(|value| value == "atelier-synthetic-models") {
+                    std::fs::write(config.join("models-requested"), "synthetic-only")?;
+                }
+            }
+            fake_agent::run(false)
+        },
         ["run-empty-brainstorm","synthetic-only"] => {
             let cwd=std::env::current_dir()?;
             if !cwd.file_name().and_then(|name|name.to_str()).is_some_and(|name|name.starts_with("atelier-brainstorm-")) || cwd.read_dir()?.next().is_some(){return Err("Empty synthetic conversation directory required".into());}

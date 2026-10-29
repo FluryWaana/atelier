@@ -22,12 +22,12 @@ pub(super) async fn preview(
         Err(response) => return *response,
     };
     if id != input.expected.id {
-        return failure(StatusCode::BAD_REQUEST, "Carte de push incohérente.");
+        return failure(StatusCode::BAD_REQUEST, "message.inconsistent_push_card");
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let mut stopped = state.shutdown.subscribe();
@@ -42,10 +42,10 @@ pub(super) async fn preview(
                 let linked = card
                     .fields
                     .get::<PullRequest>("pullRequest")?
-                    .ok_or("Associe une PR/MR avant de préparer le push.")?;
+                    .ok_or("message.link_a_pr_mr_before_preparing_the_push")?;
                 if linked.revision != revision {
                     return Err(
-                        "Relis la liaison de PR/MR après le changement de connexion.".into(),
+                        "message.read_the_pr_mr_link_again_after_changing_the_connection".into(),
                     );
                 }
                 let (configuration, token) =
@@ -70,9 +70,9 @@ pub(super) async fn preview(
     };
     let stopping = *stopped.borrow();
     if stopping {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
-    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),operation)=>response(result.unwrap_or_else(|_|Err("Aperçu du push trop long.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(120),operation)=>response(result.unwrap_or_else(|_|Err("message.push_preview_timed_out".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down")}
 }
 pub(super) async fn push(
     State(state): State<Shared>,
@@ -121,13 +121,13 @@ async fn execute(
     if id != input.expected.id || !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme le commit et la branche à pousser.",
+            "message.confirm_the_commit_and_branch_to_push",
         );
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     response(perform(&state, id, input, reconcile, publication).await)
@@ -141,7 +141,7 @@ pub(super) async fn perform(
     publication: Option<ForgePublicationRequest>,
 ) -> crate::Result<Card> {
     if id != input.expected.id || !input.confirmed {
-        return Err("Confirme le commit et la branche à pousser.".into());
+        return Err("message.confirm_the_commit_and_branch_to_push".into());
     }
     let requested = input.clone();
     let operation = uuid::Uuid::new_v4().to_string();
@@ -160,23 +160,23 @@ pub(super) async fn perform(
             }
             let card = store
                 .document::<Card>(Documents::Cards, &requested.expected.id)?
-                .ok_or("Carte introuvable.")?;
+                .ok_or("message.card_not_found")?;
             if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(
                     &requested.expected,
                 ))?
             {
-                return Err("La tâche a changé. Recharge avant de vérifier le push.".into());
+                return Err("message.the_task_changed_reload_before_checking_the_push".into());
             }
             let intent = card
                 .fields
                 .get::<GitPushIntent>("gitPush")?
                 .filter(|intent| intent.state == ForgeWriteState::Uncertain)
-                .ok_or("Aucun push incertain à vérifier.")?;
+                .ok_or("message.no_uncertain_push_to_check")?;
             let configuration =
                 forge::configuration(store, intent.preview.configuration.kind, requested.revision)?;
             if configuration.base != intent.preview.configuration.base {
-                return Err("Reconnecte le site de forge du push incertain.".into());
+                return Err("message.reconnect_the_forge_site_of_the_uncertain_push".into());
             }
             Ok(card)
         })
@@ -184,7 +184,7 @@ pub(super) async fn perform(
     let intent = card
         .fields
         .get::<GitPushIntent>("gitPush")?
-        .ok_or("Intention de push absente.")?;
+        .ok_or("message.push_intent_missing")?;
     let _ = state.changed.send(());
     let mut stopped = state.shutdown.subscribe();
     let work = async {
@@ -253,9 +253,9 @@ pub(super) async fn perform(
     let stopping = *stopped.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
-        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("Push interrompu ou trop long. Relis la branche distante.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("message.push_interrupted_or_timed_out_read_the_remote_branch".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
     };
     let result = match result {
         Err(error) if !reconcile => {

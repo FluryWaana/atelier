@@ -22,12 +22,15 @@ pub(super) async fn preview(
         Err(response) => return *response,
     };
     if input.expected.id != id {
-        return failure(StatusCode::BAD_REQUEST, "Carte de publication incohérente.");
+        return failure(
+            StatusCode::BAD_REQUEST,
+            "message.inconsistent_publication_card",
+        );
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     let mut stopped = state.shutdown.subscribe();
@@ -60,9 +63,9 @@ pub(super) async fn preview(
     };
     let stopping = *stopped.borrow();
     if stopping {
-        return failure(StatusCode::CONFLICT, "Atelier est en cours d’arrêt.");
+        return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
     }
-    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(180),operation)=>response(result.unwrap_or_else(|_|Err("Aperçu de publication trop long.".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"Atelier est en cours d’arrêt.")}
+    tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(180),operation)=>response(result.unwrap_or_else(|_|Err("message.publication_preview_timed_out".into()))),_=stopped.changed()=>failure(StatusCode::CONFLICT,"message.atelier_is_shutting_down")}
 }
 pub(super) async fn create(
     State(state): State<Shared>,
@@ -86,13 +89,13 @@ async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -
     if input.expected.id != id || !input.confirmed {
         return failure(
             StatusCode::BAD_REQUEST,
-            "Confirme les branches et le contenu de la PR/MR à créer.",
+            "message.confirm_the_branches_and_content_of_the_pr_mr_to_create",
         );
     }
     let Ok(_permit) = state.integration_reads.try_acquire() else {
         return failure(
             StatusCode::SERVICE_UNAVAILABLE,
-            "Les recherches distantes sont occupées. Réessaie dans un instant.",
+            "message.remote_searches_are_busy_try_again_shortly",
         );
     };
     response(perform(&state, id, input, reconcile).await)
@@ -105,7 +108,7 @@ pub(super) async fn perform(
     reconcile: bool,
 ) -> crate::Result<Card> {
     if id != input.expected.id || !input.confirmed {
-        return Err("Confirme les branches et le contenu de la PR/MR à créer.".into());
+        return Err("message.confirm_the_branches_and_content_of_the_pr_mr_to_create".into());
     }
     let prepared = input.clone();
     let operation = uuid::Uuid::new_v4().to_string();
@@ -117,23 +120,25 @@ pub(super) async fn perform(
             }
             let card = store
                 .document::<Card>(Documents::Cards, &prepared.expected.id)?
-                .ok_or("Carte introuvable.")?;
+                .ok_or("message.card_not_found")?;
             if serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(
                     &prepared.expected,
                 ))?
             {
-                return Err("La tâche a changé. Recharge avant de vérifier la publication.".into());
+                return Err(
+                    "message.the_task_changed_reload_before_checking_the_publication".into(),
+                );
             }
             let intent = card
                 .fields
                 .get::<ForgePublicationIntent>("forgePublication")?
                 .filter(|intent| intent.state == ForgeWriteState::Uncertain)
-                .ok_or("Aucune publication incertaine à vérifier.")?;
+                .ok_or("message.no_uncertain_publication_to_check")?;
             let configuration =
                 forge::configuration(store, intent.preview.configuration.kind, prepared.revision)?;
             if configuration.base != intent.preview.configuration.base {
-                return Err("Reconnecte le site de forge de la publication incertaine.".into());
+                return Err("message.reconnect_the_forge_site_of_the_uncertain_publication".into());
             }
             Ok(card)
         })
@@ -141,7 +146,7 @@ pub(super) async fn perform(
     let intent = card
         .fields
         .get::<ForgePublicationIntent>("forgePublication")?
-        .ok_or("Intention de publication absente.")?;
+        .ok_or("message.publication_intent_missing")?;
     let _ = state.changed.send(());
     let mut stopped = state.shutdown.subscribe();
     let work = async {
@@ -196,17 +201,24 @@ pub(super) async fn perform(
             .await?;
         let card_id = id.clone();
         let operation = intent.id.clone();
-        match found{
-            Some(pr)=>state.database.call(move|store|workflow::record(store,&card_id,&operation,pr)).await,
-            None=>Err("Aucune PR/MR portant le marqueur retrouvée. La publication reste incertaine ; aucun renvoi automatique.".into()),
+        match found {
+            Some(pr) => {
+                state
+                    .database
+                    .call(move |store| workflow::record(store, &card_id, &operation, pr))
+                    .await
+            }
+            None => Err(
+                "message.no_pr_mr_with_the_marker_found_publication_remains_uncertain_no".into(),
+            ),
         }
     };
     let stopping = *stopped.borrow();
     let result = if stopping {
         drop(work);
-        Err("Atelier est en cours d’arrêt.".into())
+        Err("message.atelier_is_shutting_down".into())
     } else {
-        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("Publication interrompue ou trop longue. Relis la forge sans renvoyer.".into())),_=stopped.changed()=>Err("Atelier est en cours d’arrêt.".into())}
+        tokio::select! {result=tokio::time::timeout(std::time::Duration::from_secs(300),work)=>result.unwrap_or_else(|_|Err("message.publication_interrupted_or_timed_out_read_the_forge_without_rese".into())),_=stopped.changed()=>Err("message.atelier_is_shutting_down".into())}
     };
     let result = match result {
         Err(error) if !reconcile => {

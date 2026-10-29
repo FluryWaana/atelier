@@ -32,7 +32,7 @@ async fn execute(state: Shared, service: Option<String>, request: Request) -> Re
                 error.downcast_ref::<SettingsFailure>(),
                 Some(SettingsFailure::UnknownService)
             ) {
-                failure(StatusCode::NOT_FOUND, "Service inconnu.")
+                failure(StatusCode::NOT_FOUND, "message.unknown_service")
             } else if matches!(
                 error.downcast_ref::<SettingsFailure>(),
                 Some(SettingsFailure::Conflict)
@@ -49,7 +49,7 @@ async fn execute(state: Shared, service: Option<String>, request: Request) -> Re
             {
                 failure(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Modification des réglages impossible.",
+                    "message.the_settings_could_not_be_updated",
                 )
             } else {
                 failure(StatusCode::BAD_REQUEST, &error.to_string())

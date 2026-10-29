@@ -70,9 +70,7 @@ async fn checked_preview(
         expected.remote_source = Some(expected.source_commit.clone());
     }
     if serde_json::to_value(&fresh)? != serde_json::to_value(&expected)? {
-        return Err(
-            "Les branches ou le contenu de publication ont changé depuis leur approbation.".into(),
-        );
+        return Err("message.publication_branches_or_content_changed_after_approval".into());
     }
     state
         .database
@@ -90,8 +88,7 @@ fn confirmed_push(card: &Card, commit: &str) -> Result<()> {
         })
     {
         return Err(
-            "Le push du parcours n’est pas confirmé. Relis la branche distante sans renvoyer."
-                .into(),
+            "message.workflow_push_is_unconfirmed_read_the_remote_branch_without_rese".into(),
         );
     }
     Ok(())
@@ -100,7 +97,7 @@ async fn refresh_pushed_pr(state: &Shared, card: Card, approved: &GitPushPreview
     let original = approved
         .pull_request
         .as_ref()
-        .ok_or("PR/MR du push absente.")?;
+        .ok_or("message.push_pr_mr_missing")?;
     let (configuration, token) =
         credentials(state, approved.configuration.kind, approved.revision).await?;
     let remote = forge::Forge::new(configuration.clone(), token, approved.revision)?
@@ -149,12 +146,14 @@ pub(super) async fn perform(state: &Shared, id: &str, operation: &str) -> Result
     )
     .await?;
     if !crate::infrastructure::local_commit::disk_matches_commit(&repository, commit).await? {
-        return Err("Les sources vérifiées ne correspondent pas au commit approuvé. Prépare le commit avant de publier.".into());
+        return Err(
+            "message.the_verified_sources_do_not_match_the_approved_commit_prepare_th".into(),
+        );
     }
     let _permit = state
         .integration_reads
         .try_acquire()
-        .map_err(|_| "Les recherches distantes sont occupées. Réessaie dans un instant.")?;
+        .map_err(|_| "message.remote_searches_are_busy_try_again_shortly")?;
     match plan {
         PublicationPlan::Module(approved) => {
             let expected = card.clone();
@@ -179,10 +178,7 @@ pub(super) async fn perform(state: &Shared, id: &str, operation: &str) -> Result
                 observed.state,
                 ForgeWriteState::Confirmed | ForgeWriteState::Reconciled
             ) {
-                return Err(
-                    "La publication du module reste incertaine. Rapproche-la sans nouvel envoi."
-                        .into(),
-                );
+                return Err("message.connector_publication_uncertain".into());
             }
             let card = current(state, id, operation).await?;
             let op = operation.to_owned();
@@ -242,7 +238,7 @@ pub(super) async fn perform(state: &Shared, id: &str, operation: &str) -> Result
                 actual.checked_at = expected.checked_at.clone();
             }
             if serde_json::to_value(&comparable)? != serde_json::to_value(&approved)? {
-                return Err("L’aperçu du push a changé depuis l’approbation du parcours.".into());
+                return Err("message.the_push_preview_changed_after_workflow_approval".into());
             }
             let revision = approved.revision;
             let card = state

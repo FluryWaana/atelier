@@ -30,7 +30,7 @@ pub(super) async fn register(State(state): State<Shared>, request: Request) -> R
     if !state.native {
         return failure(
             StatusCode::CONFLICT,
-            "Autorise les dépôts depuis le lanceur natif.",
+            "message.authorize_repositories_from_the_native_launcher",
         );
     }
     let input: Input = match super::jira_transitions::input(request).await {
@@ -59,7 +59,7 @@ pub(super) async fn revoke(State(state): State<Shared>, request: Request) -> Res
     if !state.native {
         return failure(
             StatusCode::CONFLICT,
-            "Autorise les dépôts depuis le lanceur natif.",
+            "message.authorize_repositories_from_the_native_launcher",
         );
     }
     let input: Input = match super::jira_transitions::input(request).await {

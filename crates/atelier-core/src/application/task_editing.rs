@@ -22,13 +22,14 @@ pub struct Edit {
     pub requirements_changed: bool,
 }
 
-pub const REVIEW_CHANGE_REASON: &str = "Le besoin ou les critères ont changé. Relancez la review.";
+pub const REVIEW_CHANGE_REASON: &str =
+    "message.requirements_or_criteria_changed_run_the_review_again";
 
 fn check_expected(card: &Card, body: &Document) -> Result<()> {
     let Some(expected) = body.get::<Value>("expected")? else {
         return Ok(());
     };
-    let invalid = || CardFailure::Invalid("Condition de modification invalide.");
+    let invalid = || CardFailure::Invalid("message.invalid_edit_condition");
     let expected = expected.as_object().ok_or_else(invalid)?;
     let fields = [
         "title",
@@ -52,7 +53,7 @@ fn check_expected(card: &Card, body: &Document) -> Result<()> {
     }
     let conflict = || {
         CardFailure::Conflict(
-            "Cette tâche a changé ailleurs. Ton brouillon est conservé ; ferme-le puis rouvre la tâche pour charger la dernière version.",
+            "message.this_task_changed_elsewhere_your_draft_is_preserved_close_and_re",
         )
     };
     for (key, previous) in expected {
@@ -191,17 +192,19 @@ pub fn prepare(
         && (body.raw("title").is_some() || body.raw("description").is_some())
     {
         return Err(CardFailure::Conflict(
-            "Cette carte est liée à un ticket. Recharge la tâche avant de modifier son contenu.",
+            "message.this_card_is_linked_to_an_issue_reload_the_task_before_editing_i",
         )
         .into());
     }
     if card.fields.truthy("archived")? {
         return Err(
-            CardFailure::Conflict("Restaure cette tâche avant de reprendre le travail.").into(),
+            CardFailure::Conflict("message.restore_this_task_before_resuming_work").into(),
         );
     }
     if busy {
-        return Err(CardFailure::Conflict("Arrête l’agent avant de modifier cette carte.").into());
+        return Err(
+            CardFailure::Conflict("message.stop_the_agent_before_editing_this_card").into(),
+        );
     }
     check_expected(&card, body)?;
     // Validate stored requirements before touching the card.
@@ -216,7 +219,7 @@ pub fn prepare(
             };
             if body.raw(key).is_some() && !same_scalar(body.raw(key), previous)? {
                 return Err(CardFailure::Invalid(
-                    "Retire d’abord le worktree avant de changer le dépôt ou la branche.",
+                    "message.remove_the_worktree_before_changing_the_repository_or_branch",
                 )
                 .into());
             }
@@ -229,14 +232,14 @@ pub fn prepare(
             .flatten()
             .unwrap_or_default();
         if !STATUSES.contains(&status.as_str()) {
-            return Err(CardFailure::Invalid("Statut invalide.").into());
+            return Err(CardFailure::Invalid("message.invalid_status").into());
         }
         card.fields.set("status", &raw)?;
     }
     if body.raw("title").is_some() {
         card.title = text(body.raw("title"), 300)?;
         if card.title.0.is_empty() {
-            return Err(CardFailure::Invalid("Titre requis.").into());
+            return Err(CardFailure::Invalid("message.title_required").into());
         }
     }
     if body.raw("description").is_some() {
@@ -254,8 +257,8 @@ pub fn prepare(
     if body.raw("agent").is_some() {
         let agent = body
             .get::<JsonString>("agent")
-            .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-            .ok_or(CardFailure::Invalid("Agent invalide."))?;
+            .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+            .ok_or(CardFailure::Invalid("message.invalid_agent"))?;
         provider(&context.settings()?, &agent)?;
         if !same_scalar(body.raw("agent"), card.fields.raw("agent"))? {
             card.fields.set("agentExplicit", &true)?;
@@ -266,8 +269,8 @@ pub fn prepare(
     let agent = card
         .fields
         .get::<JsonString>("agent")
-        .map_err(|_| CardFailure::Invalid("Agent invalide."))?
-        .ok_or(CardFailure::Invalid("Agent invalide."))?;
+        .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+        .ok_or(CardFailure::Invalid("message.invalid_agent"))?;
     let mut selected = Document::default();
     for key in ["model", "effort"] {
         if let Some(value) = present(body.raw(key))
@@ -295,7 +298,7 @@ pub fn prepare(
     }
     if let Some(value) = body.raw("blockedBy") {
         let invalid = CardFailure::Invalid(
-            "Dépendances invalides (20 tâches maximum, sans doublon ni référence à soi-même).",
+            "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
         );
         let value = serde_json::from_str::<Value>(value.get()).map_err(|_| invalid)?;
         let mut references = Vec::new();
@@ -322,7 +325,7 @@ pub fn prepare(
     }
     if let Some(raw) = body.raw("mode") {
         if !body.string_equals("mode", "edit")? && !body.string_equals("mode", "analyze")? {
-            return Err(CardFailure::Invalid("Mode invalide.").into());
+            return Err(CardFailure::Invalid("message.invalid_mode").into());
         }
         card.fields.set("mode", &raw)?;
     }

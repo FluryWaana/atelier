@@ -89,7 +89,7 @@ pub fn JiraSettings(
                         .await?
                         .json::<JiraConnection>()
                         .await
-                        .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                        .map_err(|_| "message.invalid_server_response".to_owned())
                 }
                 .await;
                 if alive.get() {
@@ -146,7 +146,7 @@ pub fn JiraSettings(
                     .await?
                     .json::<JiraConnection>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -158,7 +158,7 @@ pub fn JiraSettings(
                         token_set.set(connection.token_set);
                         original.set(connection.configuration.clone());
                         draft.set(connection.configuration);
-                        notice.set("Connexion Jira enregistrée.".into());
+                        notice.set("message.jira_connection_saved".into());
                     }
                     Err(message) => error.set(message),
                 }
@@ -195,7 +195,7 @@ pub fn JiraSettings(
                 .await?
                 .json::<JiraSearch>()
                 .await
-                .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -235,7 +235,7 @@ pub fn JiraSettings(
                 .await?
                 .json::<JiraIssueDetail>()
                 .await
-                .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -287,7 +287,7 @@ pub fn JiraSettings(
                     .await?
                     .json::<JiraImported>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
@@ -295,11 +295,11 @@ pub fn JiraSettings(
                 match result {
                     Ok(result) => notice.set(
                         if result.created {
-                            "Ticket importé dans une nouvelle carte."
+                            "message.issue_imported_into_a_new_card"
                         } else if result.attached {
-                            "Ticket associé à la carte. Son contenu local est conservé."
+                            "message.issue_linked_to_the_card_its_local_content_is_preserved"
                         } else {
-                            "Ce ticket est déjà lié à une carte. Aucune modification effectuée."
+                            "message.this_issue_is_already_linked_to_a_card_no_changes_made"
                         }
                         .into(),
                     ),
@@ -348,14 +348,14 @@ pub fn JiraSettings(
                     .await?
                     .json::<Vec<JiraImported>>()
                     .await
-                    .map_err(|_| "Réponse du serveur invalide.".to_owned())
+                    .map_err(|_| "message.invalid_server_response".to_owned())
             }
             .await;
             if alive.get() {
                 match result {
                     Ok(_) => {
                         notice.set(
-                            "Lot importé : nouvelles cartes créées, cartes déjà liées conservées."
+                            "message.batch_imported_new_cards_created_already_linked_cards_preserved"
                                 .into(),
                         );
                         selected.set(std::collections::BTreeSet::new());
@@ -372,37 +372,37 @@ pub fn JiraSettings(
     };
     view! {
         <section class="task-files" aria-labelledby="jira-heading" aria-busy=move || (loading.get() || pending.get() || searching.get() || inspecting.get()).to_string()>
-            <h3 id="jira-heading">"Jira"</h3><p class="field-help">{move || i18n.text("Configure la connexion, puis lance une recherche explicite. Les résultats sont en lecture seule ; aucun ticket distant n’est modifié.")}</p>
+            <h3 id="jira-heading">"Jira"</h3><p class="field-help">{move || i18n.text("message.configure_the_connection_then_explicitly_run_a_search_results_ar")}</p>
             <crate::jira_batch::JiraBatch board token pending dirty=sync_dirty blocked=own_dirty/>
-            <p role="status" hidden=move || !loading.get()>{move || i18n.text("Chargement de la connexion Jira…")}</p>
+            <p role="status" hidden=move || !loading.get()>{move || i18n.text("message.loading_jira_connection")}</p>
             <form on:submit=save><fieldset disabled=move || !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get() || loading.get() || pending.get() || searching.get() || inspecting.get()>
-                <label for="jira-mode">{move || i18n.text("Version de Jira")}</label><select id="jira-mode" prop:value=move || if draft.get().mode==JiraMode::Cloud{"cloud"}else{"dataCenter"} on:change=move |event| draft.update(|draft| draft.mode=if event_target_value(&event)=="cloud"{JiraMode::Cloud}else{JiraMode::DataCenter})><option value="cloud">"Jira Cloud"</option><option value="dataCenter">"Jira Data Center"</option></select>
-                <label for="jira-url">{move || i18n.text("Adresse de Jira")}</label><input id="jira-url" type="url" maxlength="2000" placeholder="https://tickets.example.test" prop:value=move || draft.get().url on:input=move |event| draft.update(|draft| draft.url=event_target_value(&event)) />
-                <label for="jira-email">{move || i18n.text("E-mail (Cloud)")}</label><input id="jira-email" type="email" maxlength="300" prop:value=move || draft.get().email on:input=move |event| draft.update(|draft| draft.email=event_target_value(&event)) />
-                <label for="jira-token">{move || i18n.text("Jeton API ou personnel")}</label><input id="jira-token" type="password" autocomplete="off" maxlength="4000" disabled=move || clear.get() prop:value=move || key.get() on:input=move |event| key.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text(if token_set.get(){"Un jeton est enregistré. Laisser vide pour le conserver."}else{"Aucun jeton Jira enregistré."})}</p>
-                <label><input id="jira-clear-token" type="checkbox" prop:checked=move || clear.get() on:change=move |event| {clear.set(event_target_checked(&event));if clear.get_untracked(){key.set(String::new());}} />{move || i18n.text("Retirer le jeton enregistré")}</label>
-                <p class="field-help">{move || i18n.text("Changer l’adresse, le compte ou la version de Jira retire le jeton précédent si tu n’en fournis pas un nouveau.")}</p>
-                <label for="jira-query">{move || i18n.text("Tickets à rechercher (JQL)")}</label><textarea id="jira-query" maxlength="4000" prop:value=move || draft.get().query on:input=move |event| draft.update(|draft| draft.query=event_target_value(&event)) />
-            </fieldset><button id="save-jira" type="submit" disabled=move || !loaded.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !own_dirty.get()>{move || i18n.text("Enregistrer la connexion Jira")}</button></form>
-            <div class="editor-actions"><button id="reload-jira" type="button" disabled=move || pending.get() || loading.get() || searching.get() || inspecting.get() on:click=move |_| {if own_dirty.get_untracked() || !selected.with_untracked(std::collections::BTreeSet::is_empty){replace.set(true);}else{load.with_value(|load|load());}}>{move || i18n.text("Recharger la connexion Jira")}</button><button id="search-jira" type="button" disabled=move || !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get() || own_dirty.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !token_set.get() || original.get().url.is_empty() on:click=search>{move || i18n.text("Rechercher les tickets Jira")}</button></div>
-            <div class="confirmation" role="alert" hidden=move || !replace.get()><p>{move || i18n.text("Abandonner les modifications non enregistrées ?")}</p><button id="confirm-reload-jira" type="button" on:click=move |_| load.with_value(|load|load())>{move || i18n.text("Abandonner")}</button><button type="button" on:click=move |_|replace.set(false)>{move || i18n.text("Continuer à modifier")}</button></div>
+                <label for="jira-mode">{move || i18n.text("message.jira_version")}</label><select id="jira-mode" prop:value=move || if draft.get().mode==JiraMode::Cloud{"cloud"}else{"dataCenter"} on:change=move |event| draft.update(|draft| draft.mode=if event_target_value(&event)=="cloud"{JiraMode::Cloud}else{JiraMode::DataCenter})><option value="cloud">"Jira Cloud"</option><option value="dataCenter">"Jira Data Center"</option></select>
+                <label for="jira-url">{move || i18n.text("message.jira_address")}</label><input id="jira-url" type="url" maxlength="2000" placeholder="https://tickets.example.test" prop:value=move || draft.get().url on:input=move |event| draft.update(|draft| draft.url=event_target_value(&event)) />
+                <label for="jira-email">{move || i18n.text("message.email_cloud")}</label><input id="jira-email" type="email" maxlength="300" prop:value=move || draft.get().email on:input=move |event| draft.update(|draft| draft.email=event_target_value(&event)) />
+                <label for="jira-token">{move || i18n.text("message.api_or_personal_token")}</label><input id="jira-token" type="password" autocomplete="off" maxlength="4000" disabled=move || clear.get() prop:value=move || key.get() on:input=move |event| key.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text(if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_jira_token_saved"})}</p>
+                <label><input id="jira-clear-token" type="checkbox" prop:checked=move || clear.get() on:change=move |event| {clear.set(event_target_checked(&event));if clear.get_untracked(){key.set(String::new());}} />{move || i18n.text("message.remove_saved_token")}</label>
+                <p class="field-help">{move || i18n.text("message.changing_the_jira_address_account_or_version_removes_the_previou")}</p>
+                <label for="jira-query">{move || i18n.text("message.issues_to_search_jql")}</label><textarea id="jira-query" maxlength="4000" prop:value=move || draft.get().query on:input=move |event| draft.update(|draft| draft.query=event_target_value(&event)) />
+            </fieldset><button id="save-jira" type="submit" disabled=move || !loaded.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !own_dirty.get()>{move || i18n.text("message.save_jira_connection")}</button></form>
+            <div class="editor-actions"><button id="reload-jira" type="button" disabled=move || pending.get() || loading.get() || searching.get() || inspecting.get() on:click=move |_| {if own_dirty.get_untracked() || !selected.with_untracked(std::collections::BTreeSet::is_empty){replace.set(true);}else{load.with_value(|load|load());}}>{move || i18n.text("message.reload_jira_connection")}</button><button id="search-jira" type="button" disabled=move || !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get() || own_dirty.get() || pending.get() || loading.get() || searching.get() || inspecting.get() || !token_set.get() || original.get().url.is_empty() on:click=search>{move || i18n.text("message.search_jira_issues")}</button></div>
+            <div class="confirmation" role="alert" hidden=move || !replace.get()><p>{move || i18n.text("message.discard_unsaved_changes")}</p><button id="confirm-reload-jira" type="button" on:click=move |_| load.with_value(|load|load())>{move || i18n.text("message.discard")}</button><button type="button" on:click=move |_|replace.set(false)>{move || i18n.text("message.keep_editing")}</button></div>
             <p id="jira-error" class="error" role="alert">{move || i18n.text(&error.get())}</p><p id="jira-notice" role="status">{move || i18n.text(&notice.get())}</p>
-            <p role="status" hidden=move || !searching.get()>{move || i18n.text("Recherche Jira en cours…")}</p>
-            <p hidden=move || !results.with(|results| results.as_ref().is_some_and(|results| results.issues.is_empty()))>{move || i18n.text("Aucun ticket trouvé.")}</p>
-            <p role="status" hidden=move || !inspecting.get()>{move || i18n.text("Chargement du ticket Jira…")}</p>
-            {move || detail.get().map(|value| view!{<section aria-label=move || i18n.text("Détail du ticket Jira")><h4 id="jira-detail-heading" tabindex="-1">{value.issue.key}" · "{value.issue.title}</h4><pre>{value.description}</pre><button type="button" disabled=move || pending.get() on:click=move |_|{detail.set(None);focus(format!("jira-inspect-{}",inspected_id.get_untracked()));}>{move || i18n.text("Fermer le détail")}</button></section>})}
-            <div hidden=move || detail.with(|detail|detail.is_none())><label for="jira-import-project">{move || i18n.text("Importer dans le projet")}</label><select id="jira-import-project" disabled=move || pending.get() prop:value=move || import_project.get() on:change=move |event|{import_project.set(event_target_value(&event));attach_to.set(None);batch_approved.set(false);}><option value="">{move || i18n.text("Choisir un projet")}</option><For each=move || board.projects.get() key={|project|project.get::<String>("id").ok().flatten().unwrap_or_default()} children=move |project|view!{<option value={project.get::<String>("id").ok().flatten().unwrap_or_default()}>{project.get::<String>("name").ok().flatten().unwrap_or_default()}</option>} /></select><label for="jira-attach-card">{move || i18n.text("Carte à associer")}</label><select id="jira-attach-card" disabled=move || pending.get() || import_project.get().is_empty() prop:value=move || attach_to.with(|card|card.as_ref().map(|card|card.id.clone()).unwrap_or_default()) on:change=move |event|{let id=event_target_value(&event);attach_to.set(board.cards.with(|cards|cards.iter().find(|card|card.id==id).cloned()));}><option value="">{move || i18n.text("Créer une nouvelle carte")}</option><For each=move || {let repo=board.projects.with(|projects|projects.iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(import_project.get().as_str())).and_then(|project|project.get::<String>("repo").ok().flatten()).unwrap_or_default());board.cards.with(|cards|cards.iter().filter(|card|!card.fields.truthy("archived").unwrap_or(true) && card.fields.get::<String>("repo").ok().flatten().as_deref()==Some(repo.as_str())).cloned().collect::<Vec<_>>())} key=|card|card.id.clone() children=move |card|view!{<option value=card.id>{String::from_utf16_lossy(&card.title.0)}</option>} /></select><button id="import-jira" type="button" disabled=move || pending.get() || inspecting.get() || own_dirty.get() || import_project.get().is_empty() on:click=import>{move || i18n.text(if attach_to.with(|card|card.is_some()) {"Associer ce ticket à la carte"}else{"Importer ce ticket en carte"})}</button><p class="field-help">{move || i18n.text("Le ticket sera relu avant l’import. Une carte déjà liée sera conservée sans modification.")}</p></div>
+            <p role="status" hidden=move || !searching.get()>{move || i18n.text("message.searching_jira")}</p>
+            <p hidden=move || !results.with(|results| results.as_ref().is_some_and(|results| results.issues.is_empty()))>{move || i18n.text("message.no_issues_found")}</p>
+            <p role="status" hidden=move || !inspecting.get()>{move || i18n.text("message.loading_jira_issue")}</p>
+            {move || detail.get().map(|value| view!{<section aria-label=move || i18n.text("message.jira_issue_details")><h4 id="jira-detail-heading" tabindex="-1">{value.issue.key}" · "{value.issue.title}</h4><pre>{value.description}</pre><button type="button" disabled=move || pending.get() on:click=move |_|{detail.set(None);focus(format!("jira-inspect-{}",inspected_id.get_untracked()));}>{move || i18n.text("message.close_details")}</button></section>})}
+            <div hidden=move || detail.with(|detail|detail.is_none())><label for="jira-import-project">{move || i18n.text("message.import_into_project")}</label><select id="jira-import-project" disabled=move || pending.get() prop:value=move || import_project.get() on:change=move |event|{import_project.set(event_target_value(&event));attach_to.set(None);batch_approved.set(false);}><option value="">{move || i18n.text("message.choose_a_project")}</option><For each=move || board.projects.get() key={|project|project.get::<String>("id").ok().flatten().unwrap_or_default()} children=move |project|view!{<option value={project.get::<String>("id").ok().flatten().unwrap_or_default()}>{project.get::<String>("name").ok().flatten().unwrap_or_default()}</option>} /></select><label for="jira-attach-card">{move || i18n.text("message.card_to_link")}</label><select id="jira-attach-card" disabled=move || pending.get() || import_project.get().is_empty() prop:value=move || attach_to.with(|card|card.as_ref().map(|card|card.id.clone()).unwrap_or_default()) on:change=move |event|{let id=event_target_value(&event);attach_to.set(board.cards.with(|cards|cards.iter().find(|card|card.id==id).cloned()));}><option value="">{move || i18n.text("message.create_a_new_card")}</option><For each=move || {let repo=board.projects.with(|projects|projects.iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(import_project.get().as_str())).and_then(|project|project.get::<String>("repo").ok().flatten()).unwrap_or_default());board.cards.with(|cards|cards.iter().filter(|card|!card.fields.truthy("archived").unwrap_or(true) && card.fields.get::<String>("repo").ok().flatten().as_deref()==Some(repo.as_str())).cloned().collect::<Vec<_>>())} key=|card|card.id.clone() children=move |card|view!{<option value=card.id>{String::from_utf16_lossy(&card.title.0)}</option>} /></select><button id="import-jira" type="button" disabled=move || pending.get() || inspecting.get() || own_dirty.get() || import_project.get().is_empty() on:click=import>{move || i18n.text(if attach_to.with(|card|card.is_some()) {"message.link_this_issue_to_the_card"}else{"message.import_this_issue_as_a_card"})}</button><p class="field-help">{move || i18n.text("message.the_issue_will_be_read_again_before_importing_an_already_linked")}</p></div>
             <fieldset hidden=move||results.with(|results|results.as_ref().is_none_or(|results|results.issues.is_empty())) disabled=move||pending.get()||inspecting.get()||searching.get()||own_dirty.get()>
-                <legend>{move||i18n.text("Importer une sélection Jira")}</legend>
-                <p class="field-help">{move||i18n.text("Sélectionne jusqu’à 20 tickets, y compris sur plusieurs pages. Ils seront tous relus avant une seule transaction ; en cas d’erreur, aucune nouvelle carte ne sera conservée.")}</p>
-                <p role="status">{move||i18n.text("Tickets sélectionnés : {0}").replace("{0}",&selected.with(|ids|ids.len()).to_string())}</p>
-                <label for="jira-batch-project">{move||i18n.text("Projet de destination du lot")}</label><select id="jira-batch-project" prop:value=move||import_project.get() on:change=move|event|{import_project.set(event_target_value(&event));attach_to.set(None);batch_approved.set(false);} ><option value="">{move||i18n.text("Choisir un projet")}</option><For each=move||board.projects.get() key={|project|project.get::<String>("id").ok().flatten().unwrap_or_default()} children=move|project|view!{<option value={project.get::<String>("id").ok().flatten().unwrap_or_default()}>{project.get::<String>("name").ok().flatten().unwrap_or_default()}</option>}/></select>
-                <label><input id="confirm-jira-batch" type="checkbox" prop:checked=move||batch_approved.get() on:change=move|event|batch_approved.set(event_target_checked(&event)) />{move||i18n.text("Importer cette sélection dans le projet choisi et conserver les cartes déjà liées.")}</label>
-                <button id="import-jira-batch" type="button" disabled=move||!batch_approved.get()||selected.with(std::collections::BTreeSet::is_empty)||import_project.get().is_empty() on:click=import_batch>{move||i18n.text("Confirmer l’import du lot")}</button>
-                <button id="clear-jira-batch" type="button" on:click=move|_|{selected.set(std::collections::BTreeSet::new());batch_approved.set(false);}>{move||i18n.text("Vider la sélection")}</button>
+                <legend>{move||i18n.text("message.import_selected_jira_issues")}</legend>
+                <p class="field-help">{move||i18n.text("message.select_up_to_20_issues_across_pages_all_will_be_read_again_befor")}</p>
+                <p role="status">{move||i18n.text("message.selected_issues_0").replace("{0}",&selected.with(|ids|ids.len()).to_string())}</p>
+                <label for="jira-batch-project">{move||i18n.text("message.batch_destination_project")}</label><select id="jira-batch-project" prop:value=move||import_project.get() on:change=move|event|{import_project.set(event_target_value(&event));attach_to.set(None);batch_approved.set(false);} ><option value="">{move||i18n.text("message.choose_a_project")}</option><For each=move||board.projects.get() key={|project|project.get::<String>("id").ok().flatten().unwrap_or_default()} children=move|project|view!{<option value={project.get::<String>("id").ok().flatten().unwrap_or_default()}>{project.get::<String>("name").ok().flatten().unwrap_or_default()}</option>}/></select>
+                <label><input id="confirm-jira-batch" type="checkbox" prop:checked=move||batch_approved.get() on:change=move|event|batch_approved.set(event_target_checked(&event)) />{move||i18n.text("message.import_this_selection_into_the_chosen_project_and_preserve_alrea")}</label>
+                <button id="import-jira-batch" type="button" disabled=move||!batch_approved.get()||selected.with(std::collections::BTreeSet::is_empty)||import_project.get().is_empty() on:click=import_batch>{move||i18n.text("message.confirm_batch_import")}</button>
+                <button id="clear-jira-batch" type="button" on:click=move|_|{selected.set(std::collections::BTreeSet::new());batch_approved.set(false);}>{move||i18n.text("message.clear_selection")}</button>
             </fieldset>
-            <ul class="service-endpoints"><For each=move || results.with(|results| results.as_ref().map(|results| results.issues.iter().skip(page.get()*200).take(200).cloned().collect::<Vec<_>>()).unwrap_or_default()) key=|issue| issue.id.clone() children=move |issue| {let id=issue.id.clone(); let selection=StoredValue::new(issue.id.clone()); view!{<li class="jira-issue"><label><input type="checkbox" aria-label=move||i18n.text("Sélectionner le ticket {0}").replace("{0}",&selection.get_value()) disabled=move||pending.get()||inspecting.get()||searching.get()||own_dirty.get()||selected.with(|ids|ids.len()>=20&&!ids.contains(&selection.get_value())) prop:checked=move||selected.with(|ids|ids.contains(&selection.get_value())) on:change=move|event|{selected.update(|ids|{if event_target_checked(&event){if ids.len()<20{ids.insert(selection.get_value());}}else{ids.remove(&selection.get_value());}});batch_approved.set(false);} />{move||i18n.text("Sélectionner")}</label><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}" · "{issue.title}</a>" · "{issue.status}<button id=format!("jira-inspect-{}",issue.id) type="button" disabled=move || inspecting.get() || searching.get() || loading.get() || pending.get() || own_dirty.get() on:click=move |_|inspect.with_value(|inspect|inspect(id.clone()))>{move || i18n.text("Afficher le détail")}</button></li>}} /></ul>
-            <div class="editor-actions" hidden=move || results.with(|results| results.as_ref().is_none_or(|results| results.issues.len()<=200))><button type="button" disabled=move || page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move || i18n.text("Précédent")}</button><button type="button" disabled=move || results.with(|results| results.as_ref().is_none_or(|results| (page.get()+1)*200>=results.issues.len())) on:click=move |_|page.update(|page|*page+=1)>{move || i18n.text("Suivant")}</button></div>
+            <ul class="service-endpoints"><For each=move || results.with(|results| results.as_ref().map(|results| results.issues.iter().skip(page.get()*200).take(200).cloned().collect::<Vec<_>>()).unwrap_or_default()) key=|issue| issue.id.clone() children=move |issue| {let id=issue.id.clone(); let selection=StoredValue::new(issue.id.clone()); view!{<li class="jira-issue"><label><input type="checkbox" aria-label=move||i18n.text("message.select_issue_0").replace("{0}",&selection.get_value()) disabled=move||pending.get()||inspecting.get()||searching.get()||own_dirty.get()||selected.with(|ids|ids.len()>=20&&!ids.contains(&selection.get_value())) prop:checked=move||selected.with(|ids|ids.contains(&selection.get_value())) on:change=move|event|{selected.update(|ids|{if event_target_checked(&event){if ids.len()<20{ids.insert(selection.get_value());}}else{ids.remove(&selection.get_value());}});batch_approved.set(false);} />{move||i18n.text("message.select")}</label><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}" · "{issue.title}</a>" · "{issue.status}<button id=format!("jira-inspect-{}",issue.id) type="button" disabled=move || inspecting.get() || searching.get() || loading.get() || pending.get() || own_dirty.get() on:click=move |_|inspect.with_value(|inspect|inspect(id.clone()))>{move || i18n.text("message.show_details")}</button></li>}} /></ul>
+            <div class="editor-actions" hidden=move || results.with(|results| results.as_ref().is_none_or(|results| results.issues.len()<=200))><button type="button" disabled=move || page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move || i18n.text("message.previous")}</button><button type="button" disabled=move || results.with(|results| results.as_ref().is_none_or(|results| (page.get()+1)*200>=results.issues.len())) on:click=move |_|page.update(|page|*page+=1)>{move || i18n.text("message.next")}</button></div>
         </section>
     }
 }

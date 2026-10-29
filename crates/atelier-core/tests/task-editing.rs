@@ -37,7 +37,7 @@ impl CreationContext for Context {
     fn repository(&self, value: &RawValue) -> Result<JsonString> {
         self.event(&("repository", value));
         let value: JsonString =
-            serde_json::from_str(value.get()).map_err(|_| "Texte invalide ou trop long.")?;
+            serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
         let value = text_units(&value, 2000)?;
         if self.scenario.truthy("repositoryError")? {
             return Err("Synthetic repository failure".into());
@@ -120,7 +120,10 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
             )
             .err()
             .expect("Linked ticket text must not be edited locally");
-            assert!(error.to_string().contains("liée à un ticket"));
+            assert_eq!(
+                error.to_string(),
+                "message.this_card_is_linked_to_an_issue_reload_the_task_before_editing_i"
+            );
             assert!(context.events.borrow().is_empty());
             continue;
         }
