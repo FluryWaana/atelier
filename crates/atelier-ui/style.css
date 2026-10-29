@@ -360,7 +360,7 @@ dialog.app-modal::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: no
   padding: 0;
   border: 0;
 }
-#agents-dialog .profile-list button { width: 100%; border-color: transparent; background: transparent; color: #bcbcbc; text-align: left; overflow-wrap: anywhere; }
+#agents-dialog .profile-list button { display: flex; align-items: center; gap: 10px; width: 100%; border-color: transparent; background: transparent; color: #bcbcbc; text-align: left; overflow-wrap: anywhere; }
 #agents-dialog .profile-list button[aria-pressed="true"] { background: #303030; border-color: #484848; color: #fff; }
 #agents-dialog .profile-list button[aria-pressed="true"]:hover:not(:disabled) { background: #383838; color: #fff; }
 #agents-dialog .agent-profile-content > form { padding: 0; }

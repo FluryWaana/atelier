@@ -139,6 +139,7 @@ pub fn AgentProfiles(
     on_close: Callback<()>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
+    let statuses = expect_context::<crate::agent_diagnostics::AgentStatuses>();
     let items = RwSignal::new(Vec::<Document>::new());
     let original = RwSignal::new(None::<Document>);
     let baseline = RwSignal::new(Draft::new(None));
@@ -333,7 +334,7 @@ pub fn AgentProfiles(
             <ul class="profile-list"><For each=move || items.get() key=|profile| field(profile,"id") children=move |profile| {
                 let id = StoredValue::new(field(&profile,"id"));
                 let current = move || items.with(|items| items.iter().find(|profile| field(profile,"id") == id.get_value()).cloned());
-                view! { <li><button type="button" data-profile=id.get_value() aria-pressed=move || original.get().is_some_and(|profile| field(&profile,"id") == id.get_value()).to_string() disabled=move || pending.get() || dirty.get() on:click=move |_| select(current())>{move || current().map(|profile| format!("{} · {}", field(&profile,"name"), field(&profile,"type"))).unwrap_or_default()}</button></li> }
+                view! { <li><button type="button" data-profile=id.get_value() aria-pressed=move || original.get().is_some_and(|profile| field(&profile,"id") == id.get_value()).to_string() disabled=move || pending.get() || dirty.get() on:click=move |_| select(current())><span class=move || if crate::agent_diagnostics::current_status(statuses.0, &id.get_value(), &board.settings.get()).is_some_and(|status| status.cli_connected()) { "online-dot agent-status-online" } else { "online-dot offline" } role="img" aria-label=move || i18n.text(if crate::agent_diagnostics::current_status(statuses.0, &id.get_value(), &board.settings.get()).is_some_and(|status| status.cli_connected()) { "message.cli_login_present_service_access_has_not_been_verified" } else { "message.not_verified" })></span><span>{move || current().map(|profile| field(&profile,"name")).unwrap_or_default()}</span></button></li> }
             } /></ul>
             <p hidden=move || !dirty.get() class="field-help">{move || i18n.text("message.save_or_reload_this_profile_before_selecting_another_one")}</p>
             </aside>
