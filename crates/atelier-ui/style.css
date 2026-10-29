@@ -248,6 +248,7 @@ dialog.app-modal {
   box-shadow: none;
   animation: none;
   scroll-padding: 0;
+  scrollbar-gutter: auto;
 }
 dialog.app-modal::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: none; }
 .app-modal .modal-close {
