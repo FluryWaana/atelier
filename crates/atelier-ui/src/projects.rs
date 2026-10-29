@@ -30,8 +30,6 @@ struct Draft {
     automation: bool,
     auto_fix: bool,
     target: String,
-    jira_mode: String,
-    jira_mapping: std::collections::BTreeMap<String, String>,
 }
 impl Draft {
     fn from_document(project: &Document) -> Self {
@@ -66,24 +64,12 @@ impl Draft {
                 .flatten()
                 .unwrap_or(true),
             target: field(project, "prTarget"),
-            jira_mode: project
-                .get::<String>("jiraMode")
-                .ok()
-                .flatten()
-                .unwrap_or_else(|| "inherit".into()),
-            jira_mapping: project
-                .get("jiraStatusMap")
-                .ok()
-                .flatten()
-                .unwrap_or_default(),
         }
     }
 
     fn patch(&self, previous: &Self) -> serde_json::Value {
         let fields = |value: &Self| {
             let mut fields = serde_json::json!({"name":value.name, "repo":value.repo, "baseBranch":value.branch, "projectRules":value.rules, "agent":value.agent, "linkedProjectId":value.linked,"testCommand":value.verification,"automationEnabled":value.automation,"autoFix":value.auto_fix,"prTarget":value.target});
-            fields["jiraMode"] = serde_json::json!(value.jira_mode);
-            fields["jiraStatusMap"] = serde_json::json!(value.jira_mapping);
             for (index, role) in ["front", "back"].into_iter().enumerate() {
                 let service = &value.services[index];
                 for (suffix, text) in [
@@ -407,19 +393,7 @@ pub fn Projects(
                     <label for="project-rules">{move || i18n.text("message.project_instructions")}</label><textarea id="project-rules" rows="4" maxlength="12000" prop:value=move || draft.get().rules on:input=move |event| draft.update(|draft| draft.rules = event_target_value(&event))></textarea>
                     <label for="project-agent">{move || i18n.text("message.preferred_agent")}</label><select id="project-agent" prop:value=move || draft.get().agent on:change=move |event| draft.update(|draft| draft.agent = event_target_value(&event))><option value="">{move || i18n.text("message.inherit_global_setting")}</option><For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } /></select>
                     </section><section class="form-section"><h3>{move ||i18n.text("message.application_launch")}</h3><ProjectServices draft=draft pending=pending token=token access_dirty=[front_access_dirty,back_access_dirty] /></section><section class="form-section">
-                    <label for="project-jira-mode">{move||i18n.text("message.project_jira_mappings")}</label>
-                    <select id="project-jira-mode" prop:value=move||draft.get().jira_mode on:change=move|event|draft.update(|draft|draft.jira_mode=event_target_value(&event))>
-                        <option value="inherit">{move||i18n.text("message.inherit_global_setting")}</option>
-                        <option value="off">{move||i18n.text("message.disabled")}</option>
-                        <option value="custom">{move||i18n.text("message.custom")}</option>
-                    </select>
-                    <div hidden=move||draft.get().jira_mode!="custom">
-                        <For each=||["todo","doing","review","done","standby"] key=|status|*status children=move|status|view!{
-                            <label for=format!("project-jira-{status}")>{move||i18n.text(match status {"todo"=>"message.to_do","doing"=>"message.in_progress","review"=>"message.to_review","done"=>"message.done",_=>"message.on_hold"})}</label>
-                            <input id=format!("project-jira-{status}") maxlength="100" prop:value=move||draft.get().jira_mapping.get(status).cloned().unwrap_or_default() on:input=move|event|draft.update(|draft|{draft.jira_mapping.insert(status.into(),event_target_value(&event));})/>
-                        }/>
-                        <p class="field-help">{move||i18n.text("message.target_jira_status_id_or_name_saving_a_mapping_does_not_send_any")}</p>
-                    </div>
+                    <p class="field-help">{move||i18n.text("message.configure_jira_mapping_in_kanban")}</p>
                     </section><section class="form-section"><h3>{move ||i18n.text("message.automatic_development")}</h3><label for="project-test-command">{move||i18n.text("message.verification_command")}</label><textarea id="project-test-command" maxlength="2000" rows="2" spellcheck="false" prop:value=move||draft.get().verification on:input=move|event|draft.update(|draft|draft.verification=event_target_value(&event)) />
                     <p class="field-help">{move||i18n.text("message.this_command_runs_explicitly_in_the_task_worktree_with_your_acco")}</p>
                     <label for="project-pr-target">{move||i18n.text("message.workflow_target_branch")}</label><input id="project-pr-target" maxlength="180" spellcheck="false" prop:value=move||draft.get().target on:input=move|event|draft.update(|draft|draft.target=event_target_value(&event))/>

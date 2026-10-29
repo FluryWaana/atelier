@@ -31,6 +31,7 @@ mod jira_batch;
 mod jira_creation;
 mod jira_refresh;
 mod jira_task;
+mod kanban_settings;
 mod live;
 mod modal;
 mod preparation;
@@ -405,6 +406,7 @@ fn App() -> impl IntoView {
     let pending = RwSignal::new(false);
     let selected = RwSignal::new(None::<Card>);
     let show_projects = RwSignal::new(false);
+    let show_kanban_settings = RwSignal::new(false);
     let token = StoredValue::new(session());
     let agent_status = RwSignal::new(atelier_core::application::agent_status::Checks::default());
     provide_context(agent_diagnostics::AgentStatuses(agent_status));
@@ -955,6 +957,7 @@ fn App() -> impl IntoView {
             <section class="toolbar-actions" aria-label=move || i18n.text("message.project_and_search") hidden=move || !workspace_controls()>
                 <label class="project-choice" for="board-project">{move || i18n.text("message.project")}<select id="board-project" prop:value=move ||repository.get() on:change=move |event| {repository.set(event_target_value(&event));focus_filter.set("all".into());search.set(String::new());}><option value="">{move ||i18n.text("message.all_projects")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
                 <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
+                <button id="configure-columns" hidden=move||view.get()!=WorkspaceView::Board type="button" on:click=move |_|show_kanban_settings.set(true)>{move||i18n.text("message.configure_kanban_columns")}</button>
                 <button id="sync-button" type="button" hidden=move||board.settings.get().string_equals("ticketProvider","local").unwrap_or(true) on:click=move |_| {settings_section.set("tickets");navigate.run(WorkspaceView::Settings);}>{move ||i18n.text("message.synchronize_tickets")}</button>
             </section>
             <p class="connection-notice" id="live-status" role="status" hidden=move || !workspace_controls() || token.get_value().is_err() || (board.connected.get() && board.sync_error.get().is_empty()) data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else{"message.updates_interrupted_reconnecting".into()}))}</p>
@@ -970,9 +973,11 @@ fn App() -> impl IntoView {
                 <div class="welcome-settings"><p>{move ||i18n.text("message.connect_tools_later")}</p><button id="welcome-settings" class="text-button" type="button" on:click=move |_|navigate.run(WorkspaceView::Settings)>{move ||i18n.text("message.open_settings")}</button></div>
             </section>
             <section aria-label=move || i18n.text("message.task_board") id="prototype-board" class="board" tabindex="0" hidden=move ||view.get()!=WorkspaceView::Board || visible(false).is_empty() aria-busy=move || loading.get().to_string()>
-                <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
+                <For each=move||board.projects.get().iter().find(|project|field(project,"repo")==repository.get()).and_then(|project|atelier_core::application::kanban::for_project(project).ok()).unwrap_or_default().columns key=|column|column.status.clone() children=move |entry| {
+                    let status=STATUSES.iter().find(|(status,_)|*status==entry.status).map(|(status,_)|*status).unwrap_or("todo");
+                    let label=move||board.projects.with(|projects|crate::kanban_settings::project_column_name(i18n,projects,&repository.get(),status));
                     let column = move || if view.get()==WorkspaceView::Archives {Vec::new()} else {visible(false).into_iter().filter(|card| field(&card.fields, "status") == status && matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).collect::<Vec<_>>()};
-                    view! { <section class=format!("column {status}") data-status=status aria-label=move || i18n.text(label) on:dragover=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some()&&!pending.get_untracked(){event.prevent_default();if let Some(transfer)=event.data_transfer(){transfer.set_drop_effect("move");}}} on:drop=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some(){event.prevent_default();move_card.run(status);}}><div class="column-heading"><span class="status-dot"></span>{move || i18n.text(label)}<span class="count">{move || column().len()}</span></div><For each=column key=|card| card.id.clone() children=move |card| {
+                    view! { <section class=format!("column {status}") data-status=status aria-label=label on:dragover=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some()&&!pending.get_untracked(){event.prevent_default();if let Some(transfer)=event.data_transfer(){transfer.set_drop_effect("move");}}} on:drop=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some(){event.prevent_default();move_card.run(status);}}><div class="column-heading"><span class="status-dot"></span>{label}<span class="count">{move || column().len()}</span></div><For each=column key=|card| card.id.clone() children=move |card| {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
                         let running=move || board.runs.with(|runs|runs.iter().any(|run|field(run,"cardId")==id.get_value()&&matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")));
@@ -1004,6 +1009,7 @@ fn App() -> impl IntoView {
             {move || match view.get(){WorkspaceView::Settings|WorkspaceView::Updates=>Some(view!{<Settings board token initial_tab=if view.get()==WorkspaceView::Updates{"updates"}else{settings_section.get_untracked()} on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) />}),_=>None}}
             <Show when=move ||view.get()==WorkspaceView::Time><crate::time_report::TimeReport board token loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) on_task=open_task /></Show>
             <footer>"ATELIER "<span>{move ||i18n.text("message.a_little_less_friction_a_little_more_done")}</span><span>{move ||i18n.text("message.local_storage_sqlite")}</span></footer>
+            <Show when=move||show_kanban_settings.get()><crate::kanban_settings::KanbanSettings board token repository on_close=Callback::new(move|()|show_kanban_settings.set(false))/></Show>
             <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
             <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
             <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>

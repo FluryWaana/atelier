@@ -11,6 +11,14 @@ pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Respons
         Ok(value) => Json(value).into_response(),
         Err(error) => {
             let status = if matches!(
+                error.downcast_ref::<atelier_core::application::projects::ProjectFailure>(),
+                Some(atelier_core::application::projects::ProjectFailure::Missing)
+            ) {
+                StatusCode::NOT_FOUND
+            } else if matches!(
+                error.downcast_ref::<atelier_core::application::projects::ProjectFailure>(),
+                Some(atelier_core::application::projects::ProjectFailure::Conflict(_))
+            ) || matches!(
                 error.downcast_ref::<atelier_core::application::settings::SettingsFailure>(),
                 Some(atelier_core::application::settings::SettingsFailure::Conflict)
             ) || matches!(

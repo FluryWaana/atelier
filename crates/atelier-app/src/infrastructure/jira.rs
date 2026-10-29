@@ -448,6 +448,33 @@ impl Jira {
         }
         self.status_value(&row["fields"]["status"])
     }
+    pub async fn board_configuration(
+        &self,
+        board_id: u64,
+    ) -> Result<atelier_core::contracts::JiraBoardConfiguration> {
+        if board_id == 0 {
+            return Err("message.invalid_jira_board_configuration".into());
+        }
+        let url = self.endpoint(&[
+            "rest",
+            "agile",
+            "1.0",
+            "board",
+            &board_id.to_string(),
+            "configuration",
+        ])?;
+        let value = self.request(url, None).await?;
+        let board = jira::board_configuration(&value, board_id, self.configuration.revision)?;
+        if board.name.contains(&self.token)
+            || board.columns.iter().any(|column| {
+                column.name.contains(&self.token)
+                    || column.status_ids.iter().any(|id| id.contains(&self.token))
+            })
+        {
+            return Err("message.the_jira_response_contains_unexpected_confidential_data".into());
+        }
+        Ok(board)
+    }
     pub async fn transitions(&self, id: &str) -> Result<JiraTransitions> {
         let current = self.status(id).await?;
         let mut url = self.issue_endpoint(id, Some("transitions"))?;
@@ -853,7 +880,9 @@ fn gateway_base(id: &str) -> Result<Url> {
     ))?)
 }
 fn gateway_request(gateway: &Url, request: &Url) -> Result<Url> {
-    if !request.path().starts_with("/rest/api/3/") {
+    if !request.path().starts_with("/rest/api/3/")
+        && !request.path().starts_with("/rest/agile/1.0/board/")
+    {
         return Err("message.jira_cloud_path_invalid".into());
     }
     let mut target = gateway.clone();
@@ -1027,6 +1056,16 @@ mod tests {
         assert_eq!(
             target.path(),
             "/ex/jira/00000000-0000-4000-8000-000000000001/rest/api/3/search/jql"
+        );
+        let board =
+            Url::parse("https://synthetic.atlassian.net/rest/agile/1.0/board/42/configuration")
+                .unwrap();
+        let target = gateway_request(&gateway, &board).unwrap();
+        assert_eq!(target.host_str(), Some("api.atlassian.com"));
+        assert!(
+            target
+                .path()
+                .ends_with("/rest/agile/1.0/board/42/configuration")
         );
         for id in [
             "synthetic-token",

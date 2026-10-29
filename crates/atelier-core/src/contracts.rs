@@ -920,3 +920,18 @@ pub struct ForgeChecks {
     pub other_snapshot_count: usize,
     pub limits: Vec<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraBoardColumn {
+    pub name: String,
+    pub status_ids: Vec<String>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JiraBoardConfiguration {
+    pub connection_revision: u64,
+    pub board_id: u64,
+    pub name: String,
+    pub columns: Vec<JiraBoardColumn>,
+}

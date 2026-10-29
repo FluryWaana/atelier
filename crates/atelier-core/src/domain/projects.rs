@@ -259,6 +259,7 @@ pub fn settings_for_project(
             .unwrap_or(json!(""))
     };
     let mut result = settings.clone();
+    result["kanban"] = project["kanban"].clone();
     result["projectRules"] = if repo.is_empty() {
         json!("")
     } else {

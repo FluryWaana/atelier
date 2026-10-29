@@ -17,6 +17,7 @@ pub mod extensions;
 pub mod forge;
 pub mod integrations;
 pub mod jira;
+pub mod kanban;
 pub mod preparation;
 pub mod projects;
 pub mod reviews;

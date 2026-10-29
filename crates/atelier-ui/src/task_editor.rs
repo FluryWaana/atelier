@@ -99,6 +99,18 @@ pub fn TaskEditor(
 
     let original = StoredValue::new(Draft::from_card(&card));
     let id = StoredValue::new(card.id);
+    let status_label = move |status: &str| {
+        let repo = board.cards.with(|cards| {
+            cards
+                .iter()
+                .find(|card| card.id == id.get_value())
+                .map(|card| field(&card.fields, "repo"))
+                .unwrap_or_default()
+        });
+        board.projects.with(|projects| {
+            crate::kanban_settings::project_column_name(i18n, projects, &repo, status)
+        })
+    };
     let ticket_info = Signal::derive(move || {
         board.cards.with(|cards| {
             cards
@@ -378,7 +390,7 @@ pub fn TaskEditor(
     // Hide panels without unmounting their forms, pending operations or draft guards.
     view! {
             <section id="task-page" class="task-workspace" aria-label=move ||i18n.text("message.task_details_a3f19152") on:keydown=move |event: web_sys::KeyboardEvent| {if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none(){event.prevent_default();request_close();}}><div id="card-detail"><div id="task-editor" aria-labelledby="editor-heading">
-                <header class="task-heading"><button id="close-editor" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.back_ef23a594")}</button><div class="task-heading-body"><div><div class="eyebrow">{move ||ticket_info.get().map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text(if archived {"message.archive"} else {"message.local_task"}))}</div><h1 id="editor-heading" tabindex="-1">{move ||draft.get().title}</h1></div><span class="task-status">{move ||{let status=draft.get().status;i18n.text(STATUSES.into_iter().find(|(value,_)|*value==status).map(|(_,label)|label).unwrap_or("message.on_hold"))}}</span></div></header>
+                <header class="task-heading"><button id="close-editor" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.back_ef23a594")}</button><div class="task-heading-body"><div><div class="eyebrow">{move ||ticket_info.get().map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text(if archived {"message.archive"} else {"message.local_task"}))}</div><h1 id="editor-heading" tabindex="-1">{move ||draft.get().title}</h1></div><span class="task-status">{move ||status_label(&draft.get().status)}</span></div></header>
                 <nav class="task-tabs" role="tablist" aria-label=move || i18n.text("message.task_sections")>
                     {TASK_TABS.into_iter().enumerate().map(move |(index, (tab, label))| view! {
                         <button id=format!("task-tab-{tab}") type="button" role="tab" aria-controls=if matches!(tab,"diff"|"files") { "task-panel-repository".to_owned() } else { format!("task-panel-{tab}") } aria-selected=move || (active_tab.get()==tab).to_string() tabindex=move || if active_tab.get()==tab { 0 } else { -1 } on:click=move |_| select_tab(tab) on:keydown=move |event: leptos::ev::KeyboardEvent| {
@@ -423,7 +435,7 @@ pub fn TaskEditor(
                             } />
                             <button id="add-criterion" type="button" disabled={move || draft.get().criteria.len() >= 20} on:click=move |_| draft.update(|draft| draft.criteria.push(Criterion { text: "".into(), done: false }))>{move || i18n.text("message.add_a_criterion")}</button>
                         </details>
-                        <div class="form-row"><div>                    <label for="edit-status">{move || i18n.text("message.local_progress")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, label)| view! { <option value=status>{move || i18n.text(label)}</option> }).collect_view()}</select>
+                        <div class="form-row"><div>                    <label for="edit-status">{move || i18n.text("message.local_progress")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, _)| view! { <option value=status>{move || status_label(status)}</option> }).collect_view()}</select>
     </div><div>                    <label for="edit-agent">{move||i18n.text("message.agent")}</label><select id="edit-agent" prop:value=move||draft.get().agent on:change=move|event|draft.update(|draft|{draft.agent=event_target_value(&event);draft.model.clear();draft.effort.clear();})><option value="" disabled>{move||i18n.text("message.choose_a_profile")}</option><For each=move||atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move|profile|view!{<option value=field(&profile,"id")>{field(&profile,"name")}</option>} /></select>
     </div></div>
                         <details class="disclosure"><summary>{move ||i18n.text("message.model_and_reasoning")}</summary><div class="form-row"><div>                    <label for="edit-model">{move||i18n.text("message.task_model")}</label><input id="edit-model" maxlength="180" spellcheck="false" placeholder=move||i18n.text("message.inherit_from_the_profile_when_empty") prop:value=move||draft.get().model on:input=move|event|draft.update(|draft|draft.model=event_target_value(&event)) />

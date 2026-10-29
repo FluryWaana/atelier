@@ -241,3 +241,68 @@ async fn attachment_preserves_local_content_and_refuses_stale_cards_duplicates_a
     }).await.unwrap();
     database.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn manually_mapped_columns_apply_to_new_imports_but_never_move_existing_cards() {
+    use atelier_core::{
+        application::kanban::{Configuration, JiraMapping},
+        contracts::{JiraBoardColumn, JiraIssue, JiraIssueDetail},
+    };
+    let directory = tempfile::tempdir().unwrap();
+    let repo = directory.path().to_string_lossy().into_owned();
+    let database = Database::open(&directory.path().join("synthetic.sqlite")).unwrap();
+    database
+        .call(move |store| {
+            let connection = JiraConfiguration {
+                url: "https://synthetic.example.test".into(),
+                email: "synthetic@example.test".into(),
+                revision: 1,
+                ..Default::default()
+            };
+            store.save_settings(&json!({"jiraConnection":connection}))?;
+            let mut columns = Configuration::default();
+            columns.jira = Some(JiraMapping {
+                instance: connection.url.clone(),
+                account: connection.email.clone(),
+                mode: connection.mode,
+                board_id: 42,
+                name: "Synthetic board".into(),
+                columns: vec![JiraBoardColumn {
+                    name: "Closed".into(),
+                    status_ids: vec!["10".into(), "11".into()],
+                }],
+                targets: [("10".into(), "done".into()), ("11".into(), "done".into())].into(),
+            });
+            store.put(
+                Documents::Projects,
+                &json!({"id":"project","repo":repo,"kanban":columns}),
+            )?;
+            let detail = JiraIssueDetail {
+                connection_revision: 1,
+                description: "Synthetic imported content".into(),
+                issue: JiraIssue {
+                    id: "1".into(),
+                    key: "SYN-1".into(),
+                    title: "Synthetic imported ticket".into(),
+                    status: "Closed".into(),
+                    status_id: "11".into(),
+                    url: "https://synthetic.example.test/browse/SYN-1".into(),
+                },
+            };
+            jira_import::reserve(store, input(), "mapped".into())?;
+            let imported = jira_import::finish(store, "mapped", detail.clone())?;
+            assert!(imported.created);
+            assert!(imported.card.fields.string_equals("status", "done")?);
+            let mut card = imported.card.clone();
+            card.fields.set("status", &"review")?;
+            store.put(Documents::Cards, &card)?;
+            jira_import::reserve(store, input(), "repeated".into())?;
+            let repeated = jira_import::finish(store, "repeated", detail)?;
+            assert!(!repeated.created);
+            assert!(repeated.card.fields.string_equals("status", "review")?);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+}

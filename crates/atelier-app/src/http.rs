@@ -46,6 +46,7 @@ mod jira;
 mod jira_creation;
 mod jira_refresh;
 mod jira_transitions;
+mod kanban;
 mod mutations;
 mod preparation;
 mod projects;
@@ -697,6 +698,10 @@ async fn serve_mode(
         )
         .route("/api/jira/creation-metadata", get(jira::creation_metadata))
         .route("/api/jira/search", get(jira::search))
+        .route(
+            "/api/jira/boards/{id}/configuration",
+            get(jira::board_configuration),
+        )
         .route("/api/jira/import", post(jira::import))
         .route(
             "/api/forges",
@@ -742,6 +747,10 @@ async fn serve_mode(
             axum::routing::delete(settings::remove_token),
         )
         .route("/api/projects", post(projects::create))
+        .route(
+            "/api/projects/{id}/kanban",
+            axum::routing::put(kanban::save),
+        )
         .route(
             "/api/repositories",
             get(repository_access::read)

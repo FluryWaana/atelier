@@ -49,16 +49,28 @@ pub(super) struct Revision {
     revision: u64,
 }
 pub(super) async fn search(State(state): State<Shared>, Query(query): Query<Revision>) -> Response {
-    read_issue(state, query, None).await
+    read_issue(state, query, Read::Search).await
 }
 pub(super) async fn detail(
     State(state): State<Shared>,
     Path(id): Path<String>,
     Query(query): Query<Revision>,
 ) -> Response {
-    read_issue(state, query, Some(id)).await
+    read_issue(state, query, Read::Issue(id)).await
 }
-async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Response {
+pub(super) async fn board_configuration(
+    State(state): State<Shared>,
+    Path(id): Path<u64>,
+    Query(query): Query<Revision>,
+) -> Response {
+    read_issue(state, query, Read::Board(id)).await
+}
+enum Read {
+    Search,
+    Issue(String),
+    Board(u64),
+}
+async fn read_issue(state: Shared, query: Revision, read: Read) -> Response {
     let mut stopped = state.shutdown.subscribe();
     if *stopped.borrow() {
         return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
@@ -81,10 +93,10 @@ async fn read_issue(state: Shared, query: Revision, id: Option<String>) -> Respo
             .await?;
         let client = jira::Jira::new(configuration, token)?;
         let revision = query.revision;
-        let result = if let Some(id) = id {
-            serde_json::to_value(client.detail(&id).await?)?
-        } else {
-            serde_json::to_value(client.search().await?)?
+        let result = match read {
+            Read::Issue(id) => serde_json::to_value(client.detail(&id).await?)?,
+            Read::Search => serde_json::to_value(client.search().await?)?,
+            Read::Board(id) => serde_json::to_value(client.board_configuration(id).await?)?,
         };
         state
             .database

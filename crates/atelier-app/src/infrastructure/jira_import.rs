@@ -299,6 +299,11 @@ fn finish_one(
                 .ok_or("message.missing_project_repository")?,
         )?;
         let mut card = task_creation::create(store, &body, false)?;
+        if let Some(status) = atelier_core::application::kanban::for_project(&project)?
+            .mapped_status(&connection, &detail.issue.status_id)
+        {
+            card.fields.set("status", &status)?;
+        }
         card.fields.set("ticket", &ticket)?;
         store.put(Documents::Cards, &card)?;
         JiraImported {

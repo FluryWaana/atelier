@@ -699,6 +699,13 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
 .jira-connection-fields { padding-top: 16px; }
 .jira-module .editor-actions { flex-wrap: wrap; }
 
+#kanban-settings { width: min(760px, calc(100vw - 32px)); }
+.kanban-column-editor { padding: 0; list-style: none; }
+.kanban-column-editor li { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(120px, 2fr) auto auto; align-items: center; gap: 8px; margin: 12px 0; }
+.kanban-column-editor input { min-width: 0; }
+.kanban-match-row { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(120px, 2fr); gap: 12px; align-items: center; margin: 12px 0; }
+@media (max-width: 600px) { .kanban-column-editor li { grid-template-columns: minmax(0, 1fr) auto auto; } .kanban-column-editor li label { grid-column: 1 / -1; } .kanban-match-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
 /* Shared form rhythm, including settings modules with standalone fieldsets. */
 :is(form, .settings-content) label[for] {
   margin-block: 20px 8px;

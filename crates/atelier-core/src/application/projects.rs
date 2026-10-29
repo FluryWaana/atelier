@@ -57,6 +57,18 @@ pub fn mapped_jira_transition<'a>(
 }
 
 pub fn mapped_jira_status(settings: &serde_json::Value, id: &str, name: &str) -> Option<String> {
+    if settings.get("kanban").is_some_and(|value| !value.is_null()) {
+        let columns =
+            serde_json::from_value::<super::kanban::Configuration>(settings["kanban"].clone())
+                .ok()?;
+        columns.validate().ok()?;
+        let connection = serde_json::from_value::<crate::contracts::JiraConfiguration>(
+            settings["jiraConnection"].clone(),
+        )
+        .ok()?;
+        return columns.mapped_status(&connection, id);
+    }
+
     if settings["jiraAutoTransition"].as_bool() != Some(true) {
         return None;
     }

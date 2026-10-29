@@ -327,3 +327,63 @@ pub fn validate_creation(
     }
     Ok(())
 }
+
+pub fn board_configuration(
+    value: &serde_json::Value,
+    board_id: u64,
+    revision: u64,
+) -> Result<crate::contracts::JiraBoardConfiguration, JiraFailure> {
+    use crate::contracts::{JiraBoardColumn, JiraBoardConfiguration};
+    let invalid = || JiraFailure::Invalid("message.invalid_jira_board_configuration");
+    let name = |value: &serde_json::Value| -> Result<String, JiraFailure> {
+        let text = value
+            .as_str()
+            .filter(|text| {
+                !text.trim().is_empty()
+                    && text.chars().count() <= 100
+                    && !text.chars().any(char::is_control)
+            })
+            .ok_or_else(invalid)?;
+        Ok(text.to_owned())
+    };
+    if board_id == 0 || value["id"].as_u64() != Some(board_id) {
+        return Err(invalid());
+    }
+    let rows = value["columnConfig"]["columns"]
+        .as_array()
+        .filter(|rows| !rows.is_empty() && rows.len() <= 64)
+        .ok_or_else(invalid)?;
+    let mut seen = std::collections::BTreeSet::new();
+    let mut columns = Vec::with_capacity(rows.len());
+    for row in rows {
+        let statuses = row["statuses"]
+            .as_array()
+            .filter(|statuses| statuses.len() <= 100)
+            .ok_or_else(invalid)?;
+        let mut status_ids = Vec::with_capacity(statuses.len());
+        for status in statuses {
+            let id = status["id"]
+                .as_str()
+                .filter(|id| {
+                    !id.is_empty()
+                        && id.len() <= 100
+                        && id.bytes().all(|byte| byte.is_ascii_digit())
+                })
+                .ok_or_else(invalid)?;
+            if !seen.insert(id.to_owned()) || seen.len() > 512 {
+                return Err(invalid());
+            }
+            status_ids.push(id.to_owned());
+        }
+        columns.push(JiraBoardColumn {
+            name: name(&row["name"])?,
+            status_ids,
+        });
+    }
+    Ok(JiraBoardConfiguration {
+        connection_revision: revision,
+        board_id,
+        name: name(&value["name"])?,
+        columns,
+    })
+}

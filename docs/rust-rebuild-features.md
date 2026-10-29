@@ -349,3 +349,6 @@ Régression F5 qualifiée sur Edge le 2026-10-29 : deux diagnostics synthétique
 
 
 Paramètres génériques Tickets/Temps candidats : Local par défaut, catalogue par capacités des modules installés, choix indépendants avec contrôle de conflit et retrait atomique du défaut. Jira/Tempo restent des adaptateurs Rust intégrés ; formulaires conditionnels et parcours de reprise conservés. Voir [les sources et intégrations](rust-integrations.md). Scénarios synthétiques écrits, compilations autorisées seulement ; tests/Clippy/navigateur/CI non exécutés, aucune qualification finale supplémentaire.
+
+
+Configuration du Kanban candidate par projet : noms et ordre des cinq étapes, récupération des colonnes Jira Cloud et Data Center et correspondances manuelles par groupes de statuts. Imports nouveaux classés par identifiant, cartes existantes préservées et synchronisation soumise à confirmation. Voir [les colonnes du Kanban](rust-kanban-columns.md). Tests synthétiques et parcours navigateur écrits, sans exécution ni qualification finale.

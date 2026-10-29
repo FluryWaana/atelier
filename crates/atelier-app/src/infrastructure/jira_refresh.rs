@@ -38,7 +38,7 @@ fn mapping(store: &Store<'_>, card: &Card) -> Result<serde_json::Value> {
         cfg!(windows),
     );
     Ok(
-        serde_json::json!({"jiraAutoTransition":settings["jiraAutoTransition"],"jiraStatusMap":settings["jiraStatusMap"]}),
+        serde_json::json!({"jiraAutoTransition":settings["jiraAutoTransition"],"jiraStatusMap":settings["jiraStatusMap"],"kanban":settings["kanban"],"jiraConnection":settings["jiraConnection"]}),
     )
 }
 pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -> Result<String> {

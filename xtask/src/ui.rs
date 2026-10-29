@@ -793,6 +793,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "#new-dialog .dialog-heading button").await?;
     live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
+    kanban_columns_scenario(client, http, &address, &next_token).await?;
     settings_scenario(client, http, &address, &next_token, data.path()).await?;
     backups_scenario(client, http, &address, &next_token).await?;
     language_scenario(client).await?;
@@ -2951,6 +2952,76 @@ async fn projects_scenario(
         root().join(".artifacts/rust-ui-projects.png"),
         client.screenshot().await?,
     )?;
+    Ok(())
+}
+
+async fn kanban_columns_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    address: &str,
+    token: &str,
+) -> Result<()> {
+    show_board(client).await?;
+    click(client, "#configure-columns").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#kanban-settings')?.matches(':modal');",
+        vec![],
+    )
+    .await?;
+    client.execute("const select=document.querySelector('#kanban-project');select.value=Array.from(select.options).find(option=>option.value).value;select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    let project = client
+        .execute(
+            "return document.querySelector('#kanban-project').value;",
+            vec![],
+        )
+        .await?;
+    client
+        .find(Locator::Css("#kanban-name-todo"))
+        .await?
+        .send_keys("Prêt à démarrer")
+        .await?;
+    client.execute("document.querySelector('#kanban-name-todo').closest('li').querySelectorAll('button')[1].click();",vec![]).await?;
+    click(client, "#save-kanban-columns").await?;
+    wait_dom(client,"return document.querySelector('#save-kanban-columns')?.disabled && document.querySelector('#kanban-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#close-kanban-settings").await?;
+    wait_dom(client,"return document.querySelector('#prototype-board .column')?.dataset.status === 'doing' && document.querySelector('#prototype-board [data-status=todo] .column-heading')?.textContent.includes('Prêt à démarrer');",vec![]).await?;
+    let repo = client
+        .execute(
+            "return document.querySelector('#board-project').value;",
+            vec![],
+        )
+        .await?;
+    client.refresh().await?;
+    wait_dom(client,"return Array.from(document.querySelectorAll('#board-project option')).some(option=>option.value===arguments[0]);",vec![repo.clone()]).await?;
+    client.execute("const select=document.querySelector('#board-project');select.value=arguments[0];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![repo]).await?;
+    wait_dom(client,"return document.querySelector('#prototype-board [data-status=todo] .column-heading')?.textContent.includes('Prêt à démarrer');",vec![]).await?;
+    click(client, "#configure-columns").await?;
+    client
+        .find(Locator::Css("#kanban-name-todo"))
+        .await?
+        .send_keys(" brouillon")
+        .await?;
+    let state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    let expected = state["projects"]
+        .as_array()
+        .and_then(|projects| projects.iter().find(|entry| entry["id"] == project))
+        .ok_or("Projet Kanban synthétique absent")?["kanban"]
+        .clone();
+    http.put(format!("{address}/api/projects/{}/kanban",project.as_str().ok_or("Identifiant projet invalide")?)).bearer_auth(token).header("x-local-request","1").json(&json!({"configuration":atelier_core::application::kanban::Configuration::default(),"expected":expected,"jiraRevision":null})).send().await?.checked_status().await?;
+    click(client, "#save-kanban-columns").await?;
+    wait_dom(client,"return document.querySelector('#kanban-name-todo')?.value === 'Prêt à démarrer brouillon' && document.querySelector('#kanban-settings .error')?.textContent.includes('modifiées ailleurs') && document.querySelector('#kanban-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#reset-kanban-columns").await?;
+    click(client, "#close-kanban-settings").await?;
+    wait_dom(client,"return document.querySelector('#prototype-board .column')?.dataset.status === 'todo' && document.activeElement?.id === 'configure-columns';",vec![]).await?;
     Ok(())
 }
 

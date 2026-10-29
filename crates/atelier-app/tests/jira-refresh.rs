@@ -342,3 +342,74 @@ async fn full_length_card_text_does_not_resend_the_nested_read_cache() {
         .unwrap();
     database.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn changing_manual_board_mapping_invalidates_an_existing_refresh_preview() {
+    use atelier_core::{
+        application::kanban::{Configuration, JiraMapping},
+        contracts::{JiraBoardColumn, JiraConfiguration},
+    };
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database
+        .call(|store| {
+            let mut initial = seed(store)?;
+            initial.fields.set("repo", &"/synthetic/kanban")?;
+            store.put(Documents::Cards, &initial)?;
+            let connection = store
+                .settings::<Document>()?
+                .get::<JiraConfiguration>("jiraConnection")?
+                .unwrap();
+            let mut configuration = Configuration::default();
+            configuration.jira = Some(JiraMapping {
+                instance: connection.url,
+                account: connection.email,
+                mode: connection.mode,
+                board_id: 42,
+                name: "Synthetic board".into(),
+                columns: vec![JiraBoardColumn {
+                    name: "Open".into(),
+                    status_ids: vec!["1".into()],
+                }],
+                targets: [("1".into(), "doing".into())].into(),
+            });
+            let mut project = document(
+                json!({"id":"synthetic-project","repo":"/synthetic/kanban","kanban":configuration}),
+            );
+            store.put(Documents::Projects, &project)?;
+            let card = ready(store, initial, "manual-board")?;
+            assert_eq!(
+                card.fields
+                    .get::<JiraRefreshPreview>("jiraRefresh")?
+                    .unwrap()
+                    .mapped_status
+                    .as_deref(),
+                Some("doing")
+            );
+            configuration
+                .jira
+                .as_mut()
+                .unwrap()
+                .targets
+                .insert("1".into(), "todo".into());
+            project.set("kanban", &configuration)?;
+            store.put(Documents::Projects, &project)?;
+            let request = JiraRefreshApply {
+                revision: 1,
+                expected: card,
+                preview_id: "manual-board".into(),
+                apply_status: true,
+            };
+            assert!(workflow::apply(store, &request).is_err());
+            assert!(
+                store
+                    .document::<Card>(Documents::Cards, "card")?
+                    .unwrap()
+                    .fields
+                    .string_equals("status", "review")?
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+}
