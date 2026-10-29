@@ -346,7 +346,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     .await?;
     wait_dom(
         client,
-        "return document.querySelector('#live-status')?.dataset.connected === 'true';",
+        "return document.querySelector('#live-status')?.dataset.connected === 'true' && document.querySelector('#live-status').hidden && !document.querySelector('.board-meta') && !document.querySelector('#activity');",
         vec![],
     )
     .await?;
@@ -404,6 +404,17 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     client
         .find(Locator::Css("#board-search"))
         .await?
+        .send_keys("synthetic-no-task-match-onboarding")
+        .await?;
+    wait_dom(client, "return document.querySelectorAll('article.card').length === 0 && document.querySelector('#welcome')?.hidden === true && document.querySelector('#create-button')?.hidden === false;", vec![]).await?;
+    client
+        .find(Locator::Css("#board-search"))
+        .await?
+        .clear()
+        .await?;
+    client
+        .find(Locator::Css("#board-search"))
+        .await?
         .send_keys("DESCRIPTION À RETROUVER")
         .await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
@@ -413,6 +424,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .clear()
         .await?;
     // WebDriver clear does not consistently emit the input event across browsers.
+    wait_dom(
+        client,
+        "const select = document.querySelector('#board-project'); const search = document.querySelector('#board-search'); const a = getComputedStyle(select); const b = getComputedStyle(search); return ['backgroundColor', 'borderRadius', 'fontSize', 'minHeight'].every(key => a[key] === b[key]) && (!CSS.supports('appearance', 'base-select') || (a.appearance === 'base-select' && a.display === 'flex' && a.flexWrap === 'nowrap' && getComputedStyle(select, '::picker(select)').appearance === 'base-select'));",
+        vec![],
+    )
+    .await?;
     client.execute("document.querySelector('#board-search').dispatchEvent(new Event('input', {bubbles:true})); const select=document.querySelector('#board-project'); select.value=arguments[0]; select.dispatchEvent(new Event('change', {bubbles:true}));", vec![project["repo"].clone()]).await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
     click(client, "#show-archives").await?;
@@ -859,7 +876,7 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.matches(':disabled') === false;",vec![]).await?;
         client.find(Locator::Css("#update-archive")).await?.send_keys(&candidate.to_string_lossy()).await?;
         client.find(Locator::Css("#update-signature")).await?.send_keys(&candidate_signature.to_string_lossy()).await?;
-        click(client,"#close-settings").await?;click(client,"#keep-settings").await?;
+        click(client,"#overview-button").await?;click(client,"#keep-settings").await?;
         wait_dom(client,"return document.querySelector('#update-archive')?.value === arguments[0];",vec![json!(candidate)]).await?;
         click(client,"#preview-update").await?;
         let preparation_deadline=Instant::now()+Duration::from_secs(120);
@@ -1147,7 +1164,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         .await?;
     }
     click(client, "#confirm-jira-batch").await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     wait_dom(
         client,
@@ -1210,7 +1227,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
         );
     }
     click(client, "#clear-jira-batch").await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     client
         .goto(&format!("{address}/tasks/jira-refresh"))
         .await?;
@@ -2847,7 +2864,7 @@ async fn settings_scenario(
         .await?;
     client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-settings").await?;
-    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
     client.refresh().await?;
     wait_dom(client,"return location.pathname === '/settings' && document.querySelector('#settings-branch')?.value === 'main' && document.querySelector('#settings-agent')?.value === 'claude' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
     let card: atelier_core::contracts::Card = http
@@ -2893,9 +2910,9 @@ async fn settings_scenario(
         .await?;
     click(client, "#save-settings").await?;
     wait_dom(client,"return document.querySelector('#settings-error')?.textContent.includes('changé ailleurs') && document.querySelector('#settings-branch')?.value === 'main-local';",vec![]).await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#discard-settings").await?;
     click(client, "#manage-settings").await?;
     wait_dom(
@@ -2910,8 +2927,8 @@ async fn settings_scenario(
         .send_keys("/missing-synthetic-directory")
         .await?;
     click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.length > 0 && document.querySelector('#settings-repo')?.value.endsWith('/missing-synthetic-directory') && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
-    click(client, "#close-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-error')?.textContent.length > 0 && document.querySelector('#settings-repo')?.value.endsWith('/missing-synthetic-directory') && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
+    click(client, "#overview-button").await?;
     click(client, "#discard-settings").await?;
     client.refresh().await?;
     wait_dom(
@@ -2942,7 +2959,7 @@ async fn settings_scenario(
             .send_keys(value)
             .await?;
     }
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     wait_dom(client,"return document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
     client
@@ -3008,7 +3025,7 @@ async fn settings_scenario(
             .send_keys(value)
             .await?;
     }
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     wait_dom(
         client,
@@ -3072,7 +3089,7 @@ async fn settings_scenario(
         .await?
         .send_keys("synthetic-tempo-ui-token")
         .await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     wait_dom(
         client,
@@ -3117,7 +3134,7 @@ async fn settings_scenario(
         client.screenshot().await?,
     )?;
     client
-        .find(Locator::Css("#close-settings"))
+        .find(Locator::Css("#settings-tab-general"))
         .await?
         .send_keys("\u{e00c}")
         .await?;
@@ -3194,7 +3211,7 @@ async fn connectors_scenario(
     click(client, "#settings-tab-general").await?;
     click(client, "#settings-tab-connectors").await?;
     wait_dom(client,"return document.querySelector('#connector-field-token')?.value === 'synthetic-extension-browser-token' && document.querySelector('#check-connector')?.disabled === true;",vec![]).await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     click(client, "#save-connector").await?;
     wait_dom(client,"return document.querySelector('#connector-field-token')?.value === '' && document.querySelector('#save-connector')?.disabled === true;",vec![]).await?;
@@ -3283,7 +3300,7 @@ async fn connectors_scenario(
         .find(|card| card["ticket"]["connector"] == "extension:synthetic-extension")
         .cloned()
         .ok_or("Ticket synthétique non importé")?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     client
         .goto(&format!(
             "{address}/tasks/{}",
@@ -3625,7 +3642,7 @@ async fn connector_time_scenario(
     .await?;
     click(client, "#preview-connector-time").await?;
     wait_dom(client,"return document.querySelector('#prepare-connector-time')?.disabled === false && document.querySelector('#connector-time-entry')?.parentElement.textContent.includes('synthetic-time-account');",vec![]).await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
     wait_dom(client,"return document.querySelector('#connector-time-entry')?.value === arguments[0] && document.querySelector('#prepare-connector-time')?.disabled === false;",vec![json!(id)]).await?;
     click(client, "#prepare-connector-time").await?;
@@ -3806,7 +3823,7 @@ async fn language_scenario(client: &Client) -> Result<()> {
         .await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='en-US'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#workspace-title')?.textContent === 'Settings' && document.querySelector('#settings-branch')?.value === arguments[0] && document.querySelector('#save-settings')?.textContent === 'Save general settings';",vec![json!(format!("{original}-draft"))]).await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     wait_dom(client,"return document.querySelector('#settings-page .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
     click(client, "#discard-settings").await?;
     show_board(client).await?;
@@ -3834,13 +3851,13 @@ async fn language_scenario(client: &Client) -> Result<()> {
         .send_keys("/missing-synthetic-directory")
         .await?;
     click(client, "#save-settings").await?;
-    wait_dom(client,"return document.querySelector('#settings-error')?.textContent === 'The repository could not be found or accessed.' && document.querySelector('#close-settings')?.disabled === false;",vec![]).await?;
-    click(client, "#close-settings").await?;
+    wait_dom(client,"return document.querySelector('#settings-error')?.textContent === 'The repository could not be found or accessed.' && document.querySelector('#settings-form fieldset')?.disabled === false;",vec![]).await?;
+    click(client, "#overview-button").await?;
     click(client, "#discard-settings").await?;
     click(client, "#manage-settings").await?;
     client.execute("const select=document.querySelector('#interface-language'); select.value='fr-FR'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.documentElement.lang === 'fr-FR' && document.querySelector('#workspace-title')?.textContent === 'Paramètres';",vec![]).await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     Ok(())
 }
 
@@ -4534,7 +4551,11 @@ async fn show_board(client: &Client) -> Result<()> {
 
 async fn new_task(client: &Client) -> Result<()> {
     show_board(client).await?;
-    click(client, "#create-button").await?;
+    click(
+        client,
+        "#create-button:not([hidden]), #welcome:not([hidden]) #welcome-create",
+    )
+    .await?;
     wait_dom(client,"return document.querySelector('#new-dialog')?.open && document.activeElement?.id === 'task-title';",vec![]).await
 }
 

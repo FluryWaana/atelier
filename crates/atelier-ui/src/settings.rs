@@ -191,11 +191,10 @@ pub fn Settings(
     on_cleanup(move || unload.remove());
     view! {
         <section id="settings-page" aria-label=move ||i18n.text("message.application_settings") on:keydown=move |event: web_sys::KeyboardEvent| { if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none() {event.prevent_default(); request_close();} }>
-            <div class="detail-actions"><button id="close-settings" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()><span aria-hidden="true">"←"</span>" "{move || i18n.text("message.back_ef23a594")}</button></div>
             <div id="settings-dialog" class="settings-page">
             <nav id="settings-navigation" class="settings-navigation" role="tablist" aria-orientation="vertical" aria-label=move || i18n.text("message.settings_sections")>
                 {TABS.into_iter().enumerate().map(move |(index,(id,label))| view! {
-                    <button class="view-tab" class:selected-tab=move ||tab.get()==index type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
+                    <button class="settings-tab" class:selected-tab=move ||tab.get()==index type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
                         if pending.get_untracked() { return; }
                         let next=match event.key().as_str() { "ArrowRight"|"ArrowDown"=> (index+1)%TABS.len(), "ArrowLeft"|"ArrowUp"=> (index+TABS.len()-1)%TABS.len(), "Home"=>0, "End"=>TABS.len()-1, _=>return };
                         event.prevent_default(); tab.set(next);

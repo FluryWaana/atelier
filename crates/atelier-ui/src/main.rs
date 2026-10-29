@@ -543,6 +543,15 @@ fn App() -> impl IntoView {
             })
             .collect::<Vec<_>>()
     };
+    let onboarding = move || {
+        matches!(view.get(), WorkspaceView::Board | WorkspaceView::Overview)
+            && !loading.get()
+            && !cards.with(|cards| {
+                cards
+                    .iter()
+                    .any(|card| !card.fields.truthy("brainstormSession").unwrap_or(false))
+            })
+    };
     let commit_view = Callback::new(move |next: WorkspaceView| {
         selected.set(None);
         view.set(next);
@@ -747,7 +756,11 @@ fn App() -> impl IntoView {
             if let Some(dialog) = new_dialog.get_untracked() {
                 dialog.close();
             }
-            focus_element("create-button");
+            focus_element(if onboarding() {
+                "welcome-create"
+            } else {
+                "create-button"
+            });
         }
     };
     let workspace_controls = move || {
@@ -923,7 +936,7 @@ fn App() -> impl IntoView {
             <div class="sidebar-bottom"><nav class="sidebar-utilities" aria-label=move || i18n.text("message.settings_4ed117e0")><button class="nav-item" id="manage-settings" type="button" class:nav-active=move || view.get()==WorkspaceView::Settings aria-current=move || if view.get()==WorkspaceView::Settings {"page"}else{"false"} disabled=move || loading.get() on:click=move |_| {settings_section.set("general");navigate.run(WorkspaceView::Settings);} title=move || i18n.text("message.settings_4ed117e0")><NavigationIcon kind="settings" /><span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span></button>
             <button class="nav-item" id="diagnostics-button" type="button" disabled=move || loading.get() on:click=move |_|show_diagnostics.set(true) title=move || i18n.text("message.diagnostics")><NavigationIcon kind="diagnostics" /><span class="nav-label">{move || i18n.text("message.diagnostics")}</span></button>
             <button class="nav-item" id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true) title=move || i18n.text("message.backups")><NavigationIcon kind="backups" /><span class="nav-label">{move || i18n.text("message.backups")}</span></button>
-            <button class="nav-item" id="check-updates" type="button" class:nav-active=move || view.get()==WorkspaceView::Updates aria-current=move || if view.get()==WorkspaceView::Updates {"page"}else{"false"} disabled=move || loading.get() on:click=move |_|navigate.run(WorkspaceView::Updates) title=move || i18n.text("message.updates")><span aria-hidden="true">"↻"</span><span class="nav-label">{move || i18n.text("message.updates")}</span></button></nav><div class="local-note"><small>{move || i18n.text("message.your_cards_stay_here")}</small></div></div>
+            <button class="nav-item" id="check-updates" type="button" class:nav-active=move || view.get()==WorkspaceView::Updates aria-current=move || if view.get()==WorkspaceView::Updates {"page"}else{"false"} disabled=move || loading.get() on:click=move |_|navigate.run(WorkspaceView::Updates) title=move || i18n.text("message.updates")><NavigationIcon kind="updates" /><span class="nav-label">{move || i18n.text("message.updates")}</span></button></nav><div class="local-note"><small>{move || i18n.text("message.your_cards_stay_here")}</small></div></div>
         </aside>
         <main id="main-content" tabindex="-1">
             <header class="topbar">
@@ -934,18 +947,25 @@ fn App() -> impl IntoView {
                 </button>
                 <span class="topbar-local" title=move || i18n.text("message.your_cards_stay_here")>"Local"</span>
             </header>
-            <section class="heading" hidden=move || view.get()==WorkspaceView::Task><div><div class="eyebrow">{move || i18n.text("message.your_workspace_eaca3b2c")}</div><h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1><p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p></div><div class="heading-actions"><button id="create-button" class="primary" type="button" hidden=move || !workspace_controls() disabled=move || pending.get() || loading.get() on:click=move |_|open_new.run(())>"＋ "{move || i18n.text("message.new_task")}<kbd>"N"</kbd></button></div></section>
+            <section class="heading" hidden=move || view.get()==WorkspaceView::Task><div><div class="eyebrow" hidden=move || matches!(view.get(), WorkspaceView::Overview | WorkspaceView::Settings | WorkspaceView::Updates)>{move || i18n.text("message.your_workspace_eaca3b2c")}</div><h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1><p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p></div><div class="heading-actions"><button id="create-button" class="primary" type="button" hidden=move || !workspace_controls() || onboarding() disabled=move || pending.get() || loading.get() on:click=move |_|open_new.run(())>"＋ "{move || i18n.text("message.new_task")}<kbd>"N"</kbd></button></div></section>
             <section class="toolbar" hidden=move || !workspace_controls()><nav class="tabs" aria-label=move || i18n.text("message.project_views")>{[(WorkspaceView::Overview,"message.overview_bb28a9f4"),(WorkspaceView::Board,"message.kanban"),(WorkspaceView::Agents,"message.agents_279b44d2"),(WorkspaceView::Processes,"message.processes"),(WorkspaceView::Worktrees,"message.branches_prs"),(WorkspaceView::Time,"message.time_47b15010"),(WorkspaceView::Archives,"message.archives")].into_iter().map(move |(target,label)|view!{<button class="view-tab" class:selected-tab=move || view.get()==target data-view=target.key() id=match target{WorkspaceView::Time=>"view-time-report",WorkspaceView::Archives=>"show-archives",_=>target.key()} aria-pressed=move ||(view.get()==target).to_string() on:click=move |_|navigate.run(target)><NavigationIcon kind=target.key() view_icon=true /><span>{move ||i18n.text(label)}</span></button>}).collect_view()}</nav></section>
             <section class="toolbar-actions" aria-label=move || i18n.text("message.project_and_search") hidden=move || !workspace_controls()>
                 <label class="project-choice" for="board-project">{move || i18n.text("message.project")}<select id="board-project" prop:value=move ||repository.get() on:change=move |event| {repository.set(event_target_value(&event));focus_filter.set("all".into());search.set(String::new());}><option value="">{move ||i18n.text("message.all_projects")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
                 <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_jira_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
                 <button id="sync-button" type="button" on:click=move |_| {settings_section.set("jira");navigate.run(WorkspaceView::Settings);}>"↻ "{move ||i18n.text("message.synchronize_tickets")}</button>
             </section>
-            <div class="board-meta" hidden=move || !workspace_controls()><span id="repo-label">{move ||projects.with(|items|items.iter().find(|project|field(project,"repo")==repository.get()).map(|project|format!("{} · {}",field(project,"name"),field(project,"repo")))).unwrap_or_else(||i18n.text("message.all_your_projects_choose_a_project_to_filter_the_board"))}</span><span id="live-status" role="status" hidden=move || token.get_value().is_err() data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else if board.connected.get(){"message.board_up_to_date".into()}else{"message.updates_interrupted_reconnecting".into()}))}</span><span id="activity">{move ||{let count=board.runs.with(|runs|runs.iter().filter(|run|field(run,"status")=="running").count());if count==0{i18n.text("message.at_your_own_pace")}else{i18n.text("message.0_agent_s_working").replace("{0}",&count.to_string())}}}</span></div>
+            <p class="connection-notice" id="live-status" role="status" hidden=move || !workspace_controls() || token.get_value().is_err() || (board.connected.get() && board.sync_error.get().is_empty()) data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else{"message.updates_interrupted_reconnecting".into()}))}</p>
             <div id="focus-bar" class="focus-bar" hidden=move || view.get()!=WorkspaceView::Board || cards.get().is_empty()><span class="results-count"><strong id="total">{move ||visible(false).into_iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).count()}</strong>" "{move ||i18n.text("message.task_s")}</span><div class="focus-options">{[("all","message.all"),("review","message.to_review"),("attention","message.to_resume")].into_iter().map(move |(filter,label)|view!{<button data-focus=filter aria-pressed=move ||(focus_filter.get()==filter).to_string() on:click=move |_|focus_filter.set(filter.into())>{move ||i18n.text(label)}<span hidden=filter=="all">{move ||visible(false).iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),filter)).count()}</span></button>}).collect_view()}</div><span class="keyboard-hint"><kbd>"/"</kbd>" "{move ||i18n.text("message.search_2fe057eb")}" · "<kbd>"N"</kbd>" "{move ||i18n.text("message.new_task_b7d039ad")}</span></div>
             <crate::time::TimerBanner board token on_task=open_task />
             <p role="alert" id="error">{move || i18n.text(&error.get())}</p><p class="loading" role="status" hidden=move || !loading.get()>{move ||i18n.text("message.loading_the_board")}</p>
-            <section id="welcome" class="welcome-guide" hidden=move || !matches!(view.get(),WorkspaceView::Board|WorkspaceView::Overview) || !visible(false).is_empty() || loading.get()><div><div class="eyebrow">{move ||i18n.text("message.welcome_to_your_workshop")}</div><h2>{move ||i18n.text("message.one_project_one_task_lets_move_forward")}</h2><p class="hint">{move ||i18n.text("message.start_locally_add_the_connectors_your_team_needs")}</p></div><div class="setup-steps"><button id="welcome-projects" on:click=move |_|show_projects.set(true)><span class="step-number">"1"</span><span><strong>{move ||i18n.text("message.choose_a_project")}</strong><small>{move ||i18n.text("message.give_your_code_folder_a_name")}</small></span><span>"→"</span></button><button id="welcome-create" on:click=move |_|open_new.run(())><span class="step-number">"2"</span><span><strong>{move ||i18n.text("message.create_your_first_task")}</strong><small>{move ||i18n.text("message.describe_the_expected_outcome_and_choose_your_agent")}</small></span><span>"→"</span></button></div><button id="welcome-settings" class="text-button" on:click=move |_|navigate.run(WorkspaceView::Settings)>{move ||i18n.text("message.configure_modules_and_connections")}</button></section>
+            <section id="welcome" class="welcome-guide" aria-labelledby="welcome-title" hidden=move || !onboarding()>
+                <div class="welcome-intro"><h2 id="welcome-title">{move ||i18n.text("message.prepare_your_first_task")}</h2><p>{move ||i18n.text("message.welcome_task_intro")}</p></div>
+                <div class="welcome-paths">
+                    <div class="welcome-path"><h3>{move ||i18n.text("message.find_your_code")}</h3><p>{move ||i18n.text("message.save_a_project_folder")}</p><button id="welcome-projects" type="button" on:click=move |_|show_projects.set(true)>{move ||i18n.text("message.add_a_project")}</button></div>
+                    <div class="welcome-path"><h3>{move ||i18n.text("message.describe_the_work")}</h3><p>{move ||i18n.text("message.first_task_help")}</p><button id="welcome-create" class="primary" type="button" on:click=move |_|open_new.run(())>{move ||i18n.text("message.new_task")}</button></div>
+                </div>
+                <div class="welcome-settings"><p>{move ||i18n.text("message.connect_tools_later")}</p><button id="welcome-settings" class="text-button" type="button" on:click=move |_|navigate.run(WorkspaceView::Settings)>{move ||i18n.text("message.open_settings")}</button></div>
+            </section>
             <section aria-label=move || i18n.text("message.task_board") id="prototype-board" class="board" tabindex="0" hidden=move ||view.get()!=WorkspaceView::Board || visible(false).is_empty() aria-busy=move || loading.get().to_string()>
                 <For each=|| STATUSES key=|(status, _)| *status children=move |(status, label)| {
                     let column = move || if view.get()==WorkspaceView::Archives {Vec::new()} else {visible(false).into_iter().filter(|card| field(&card.fields, "status") == status && matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).collect::<Vec<_>>()};
@@ -1125,6 +1145,7 @@ fn NavigationIcon(kind: &'static str, #[prop(default = false)] view_icon: bool) 
         "projects"=>view!{<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><path d="M3 10h18" />}.into_any(),
         "settings"=>view!{<path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" /><circle cx="15" cy="17" r="3" />}.into_any(),
         "diagnostics"=>view!{<path d="M3 12h4l3-7 4 14 3-7h4" />}.into_any(),
+        "updates"=>view!{<path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />}.into_any(),
         "backups"=>view!{<path d="M4 3h13l3 3v15H4Z" /><path d="M8 3v6h8V3M8 21v-8h8v8" />}.into_any(),
         "board"=>view!{<rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M15 4v16" />}.into_any(),
         "agents"=>view!{<path d="M8 3v3m8-3v3M6 6h12v14H6zM3 10h3m12 0h3M3 16h3m12 0h3M9 10h6M9 15h6" />}.into_any(),

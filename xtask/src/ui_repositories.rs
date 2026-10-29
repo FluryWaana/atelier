@@ -152,7 +152,7 @@ pub(super) async fn scenario(
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"module-review-command","name":"Synthetic module review","type":"command","auth":"cli","command":fixture,"analyzeArgs":["review-json"],"editArgs":["review-json"],"expected":null})).send().await?.checked_status().await?;
-    click(client, "#close-settings").await?;
+    click(client, "#overview-button").await?;
     client.goto(&format!("{address}/?task={}", card.id)).await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='module-review-command');",vec![]).await?;
     client.execute("for(const [id,value] of [['run-agent','module-review-command'],['run-purpose','review']]){const select=document.getElementById(id);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));}",vec![]).await?;
