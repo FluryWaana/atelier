@@ -15,6 +15,7 @@ pub mod brainstorm;
 pub mod card_lifecycle;
 pub mod extensions;
 pub mod forge;
+pub mod integrations;
 pub mod jira;
 pub mod preparation;
 pub mod projects;

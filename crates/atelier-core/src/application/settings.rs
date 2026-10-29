@@ -29,6 +29,14 @@ pub fn config(stored: &Document) -> Result<Document> {
         r#"{"repo":"","agent":"codex","baseBranch":"HEAD","jiraType":"cloud","jiraUrl":"","jiraEmail":"","jql":"assignee = currentUser() AND sprint in openSprints() ORDER BY updated DESC","jiraAutoTransition":false,"jiraStatusMap":{}}"#,
     )?;
     config.overlay(stored);
+    for kind in [
+        super::integrations::Kind::Tickets,
+        super::integrations::Kind::Time,
+    ] {
+        if config.raw(kind.setting()).is_none() {
+            config.set(kind.setting(), &"local")?;
+        }
+    }
     Ok(config)
 }
 
@@ -39,6 +47,7 @@ pub fn public_config(stored: &Document, tokens: &Document, platform: &str) -> Re
     config.remove("connectorTicketResetPreview");
     config.remove("agentCliUpdate");
     config.set("platform", &platform)?;
+    config.set("integrationCatalog", &super::integrations::catalog(stored)?)?;
     for (service, flag) in [
         ("jira", "tokenSet"),
         ("azure", "azureTokenSet"),

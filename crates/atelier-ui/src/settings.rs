@@ -8,9 +8,9 @@ use wasm_bindgen_futures::spawn_local;
 
 const TABS: [(&str, &str); 6] = [
     ("general", "message.general"),
-    ("jira", "Jira"),
+    ("tickets", "message.tickets"),
     ("forges", "message.forges"),
-    ("tempo", "Tempo"),
+    ("time", "message.time_tracking"),
     ("connectors", "message.connectors"),
     ("updates", "message.updates"),
 ];
@@ -46,16 +46,28 @@ pub fn Settings(
             .position(|(id, _)| *id == initial_tab)
             .unwrap_or(0),
     );
-    let jira_dirty = RwSignal::new(false);
+    let ticket_module_dirty = RwSignal::new(false);
     let forge_dirty = RwSignal::new(false);
-    let tempo_dirty = RwSignal::new(false);
+    let time_module_dirty = RwSignal::new(false);
     let connectors_dirty = RwSignal::new(false);
     let updates_dirty = RwSignal::new(false);
+    let tickets_choice_dirty = RwSignal::new(false);
+    let time_choice_dirty = RwSignal::new(false);
+    let requested_module = RwSignal::new(String::new());
+    let configure_module = Callback::new(move |module: String| {
+        requested_module.set(module);
+        tab.set(4);
+    });
+    let integration_blocked = Memo::new(move |_| {
+        ticket_module_dirty.get() || time_module_dirty.get() || connectors_dirty.get()
+    });
     let updates_blocked = Memo::new(move |_| {
         dirty.get()
-            || jira_dirty.get()
+            || ticket_module_dirty.get()
             || forge_dirty.get()
-            || tempo_dirty.get()
+            || tickets_choice_dirty.get()
+            || time_choice_dirty.get()
+            || time_module_dirty.get()
             || connectors_dirty.get()
     });
     let error = RwSignal::new(String::new());
@@ -84,11 +96,13 @@ pub fn Settings(
             return;
         }
         if dirty.get_untracked()
-            || jira_dirty.get_untracked()
+            || ticket_module_dirty.get_untracked()
             || forge_dirty.get_untracked()
-            || tempo_dirty.get_untracked()
+            || time_module_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
+            || tickets_choice_dirty.get_untracked()
+            || time_choice_dirty.get_untracked()
         {
             close_focus.set_value(
                 document()
@@ -127,11 +141,13 @@ pub fn Settings(
     });
     let unload = window_event_listener(leptos::ev::beforeunload, move |event| {
         if dirty.get_untracked()
-            || jira_dirty.get_untracked()
+            || ticket_module_dirty.get_untracked()
             || forge_dirty.get_untracked()
-            || tempo_dirty.get_untracked()
+            || time_module_dirty.get_untracked()
             || connectors_dirty.get_untracked()
             || updates_dirty.get_untracked()
+            || tickets_choice_dirty.get_untracked()
+            || time_choice_dirty.get_untracked()
             || pending.get_untracked()
         {
             event.prevent_default();
@@ -187,9 +203,15 @@ pub fn Settings(
             </form>
             </section>
             <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
-            <section id="settings-panel-jira" role="tabpanel" aria-labelledby="settings-tab-jira" hidden=move || tab.get()!=1><crate::jira::JiraSettings board token pending dirty=jira_dirty /></section>
-            <section id="settings-panel-tempo" role="tabpanel" aria-labelledby="settings-tab-tempo" hidden=move || tab.get()!=3><crate::tempo::TempoSettings token pending dirty=tempo_dirty /></section>
-            <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors board token pending dirty=connectors_dirty /></section>
+            <section id="settings-panel-tickets" role="tabpanel" aria-labelledby="settings-tab-tickets" hidden=move || tab.get()!=1>
+                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=tickets_choice_dirty blocked=integration_blocked on_configure=configure_module/>
+                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=ticket_module_dirty/>
+            </section>
+            <section id="settings-panel-time" role="tabpanel" aria-labelledby="settings-tab-time" hidden=move || tab.get()!=3>
+                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_choice_dirty blocked=integration_blocked on_configure=configure_module/>
+                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_module_dirty/>
+            </section>
+            <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module /></section>
             <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
             </div></div>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>

@@ -316,6 +316,7 @@ pub fn remove(
         tokens.remove(&secret_name(id, &field.id));
     }
     profiles.retain(|profile| profile.manifest.id != id);
+    atelier_core::application::integrations::removed(&mut stored, id)?;
     advance(&mut stored)?;
     save_profiles(&mut stored, &profiles)?;
     settings::persist(
@@ -548,6 +549,78 @@ mod tests {
         let mut unsupported = restored;
         unsupported.set("connectorRevision", &0).unwrap();
         assert!(profiles(&unsupported).is_err());
+    }
+
+    #[test]
+    fn removing_a_default_module_is_atomic_and_keeps_linked_cards() {
+        use super::super::store::Documents;
+        use atelier_core::application::integrations::{self, Kind};
+        let home = tempfile::tempdir().unwrap();
+        let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
+        let store = Store::new(&connection);
+        let mut valid = candidate();
+        valid.manifest.methods.extend([
+            protocol::Method::TicketsSearch,
+            protocol::Method::TicketsRead,
+        ]);
+        let installed = install(
+            &store,
+            &Installation {
+                expected_revision: 0,
+                candidate: valid.clone(),
+                confirmed: true,
+            },
+            valid,
+            &mut protect,
+        )
+        .unwrap();
+        let settings = integrations::choose(
+            &store.settings().unwrap(),
+            Kind::Tickets,
+            "extension:synthetic-demo",
+            "local",
+        )
+        .unwrap();
+        store.save_settings(&settings).unwrap();
+        let card = json!({"id":"synthetic-linked-card","title":"Keep local text","ticket":{"connector":"extension:synthetic-demo","instance":"https://synthetic.example.test","id":"42","key":"SYN-42"}});
+        store.put(Documents::Cards, &card).unwrap();
+        connection.execute_batch("CREATE TRIGGER refuse_settings BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();
+        assert!(
+            remove(
+                &store,
+                "synthetic-demo",
+                installed.modules[0].installed.revision,
+                true,
+                &mut protect
+            )
+            .is_err()
+        );
+        assert_eq!(
+            integrations::selected(&store.settings().unwrap(), Kind::Tickets).unwrap(),
+            "extension:synthetic-demo"
+        );
+        assert_eq!(profiles(&store.settings().unwrap()).unwrap().len(), 1);
+        connection
+            .execute_batch("DROP TRIGGER refuse_settings;")
+            .unwrap();
+        remove(
+            &store,
+            "synthetic-demo",
+            installed.modules[0].installed.revision,
+            true,
+            &mut protect,
+        )
+        .unwrap();
+        assert_eq!(
+            integrations::selected(&store.settings().unwrap(), Kind::Tickets).unwrap(),
+            "local"
+        );
+        assert_eq!(
+            store
+                .document::<serde_json::Value>(Documents::Cards, "synthetic-linked-card")
+                .unwrap(),
+            Some(card)
+        );
     }
 
     #[cfg(windows)]

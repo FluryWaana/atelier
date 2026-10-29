@@ -67,6 +67,7 @@ pub fn Connectors(
     token: StoredValue<Result<String, String>>,
     pending: RwSignal<bool>,
     dirty: RwSignal<bool>,
+    #[prop(optional)] requested: Option<RwSignal<String>>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let registry = RwSignal::new(None::<Registry>);
@@ -360,7 +361,10 @@ pub fn Connectors(
                 }
                 Err(message) => error.set(message),
             }
-            if matches!(action, Action::Import) {
+            if matches!(
+                action,
+                Action::Import | Action::Install | Action::Remove | Action::Save
+            ) {
                 let _ = board.refresh(&credential).await;
             }
             if reading {
@@ -371,6 +375,30 @@ pub fn Connectors(
         });
     });
     Effect::new(move |_| execute.with_value(|execute| execute(Action::Reload)));
+    Effect::new(move |_| {
+        let target = requested
+            .map(|requested| requested.get())
+            .unwrap_or_default();
+        if target.is_empty() || own_dirty.get() {
+            return;
+        }
+        if let Some(connection) = registry.get().and_then(|registry| {
+            registry
+                .modules
+                .into_iter()
+                .find(|connection| connection.installed.manifest.id == target)
+        }) {
+            if original
+                .get_untracked()
+                .is_none_or(|current| current.installed.manifest.id != target)
+            {
+                select(Some(connection));
+            }
+            if let Some(requested) = requested {
+                requested.set(String::new());
+            }
+        }
+    });
     let invalidate = move || {
         candidate.set(None);
         approved.set(false);

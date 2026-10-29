@@ -30,7 +30,10 @@ pub fn TempoSettings(
     Effect::new(move |_| dirty.set(own_dirty.get()));
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
-    on_cleanup(move || mounted.with_value(|alive| alive.set(false)));
+    on_cleanup(move || {
+        mounted.with_value(|alive| alive.set(false));
+        let _ = dirty.try_update(|value| *value = false);
+    });
     let execute = StoredValue::new_local(move |save: bool| {
         if pending.get_untracked() || loading.get_untracked() {
             return;

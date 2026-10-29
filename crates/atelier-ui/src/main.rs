@@ -25,6 +25,7 @@ mod forge_publication;
 mod forge_task;
 mod git_push;
 mod i18n;
+mod integration_choice;
 mod jira;
 mod jira_batch;
 mod jira_creation;
@@ -111,7 +112,7 @@ impl WorkspaceView {
             ),
             Self::Brainstorm => (
                 "message.brainstorming",
-                "message.explore_an_idea_choose_your_next_tasks_jira_is_optional",
+                "message.explore_an_idea_external_tickets_optional",
             ),
             Self::Overview => ("message.overview", "message.your_next_actions_at_a_glance"),
             Self::Board => (
@@ -358,13 +359,14 @@ fn App() -> impl IntoView {
     let deleting_card = RwSignal::new(None::<Card>);
     let dragging = RwSignal::new(None::<(String, String)>);
     let command_open = RwSignal::new(false);
-    let settings_section = RwSignal::new(
-        if requested_parameter("section").as_deref() == Some("jira") {
-            "jira"
-        } else {
-            "general"
-        },
-    );
+    let settings_section = RwSignal::new(match requested_parameter("section").as_deref() {
+        Some("tickets") => "tickets",
+        Some("time") => "time",
+        Some("connectors") => "connectors",
+        Some("forges") => "forges",
+        Some("updates") => "updates",
+        _ => "general",
+    });
     let cards = board.cards;
     let projects = board.projects;
     let templates = board.templates;
@@ -807,13 +809,14 @@ fn App() -> impl IntoView {
                 }
             } else {
                 selected.set(None);
-                settings_section.set(
-                    if requested_parameter("section").as_deref() == Some("jira") {
-                        "jira"
-                    } else {
-                        "general"
-                    },
-                );
+                settings_section.set(match requested_parameter("section").as_deref() {
+                    Some("tickets") => "tickets",
+                    Some("time") => "time",
+                    Some("connectors") => "connectors",
+                    Some("forges") => "forges",
+                    Some("updates") => "updates",
+                    _ => "general",
+                });
                 view.set(WorkspaceView::from_key(
                     requested_parameter("view").as_deref().unwrap_or("overview"),
                 ));
@@ -951,8 +954,8 @@ fn App() -> impl IntoView {
             <section class="toolbar" hidden=move || !workspace_controls()><nav class="tabs" aria-label=move || i18n.text("message.project_views")>{[(WorkspaceView::Overview,"message.overview_bb28a9f4"),(WorkspaceView::Board,"message.kanban"),(WorkspaceView::Agents,"message.agents_279b44d2"),(WorkspaceView::Processes,"message.processes"),(WorkspaceView::Worktrees,"message.branches_prs"),(WorkspaceView::Time,"message.time_47b15010"),(WorkspaceView::Archives,"message.archives")].into_iter().map(move |(target,label)|view!{<button class="view-tab" class:selected-tab=move || view.get()==target data-view=target.key() id=match target{WorkspaceView::Time=>"view-time-report",WorkspaceView::Archives=>"show-archives",_=>target.key()} aria-pressed=move ||(view.get()==target).to_string() on:click=move |_|navigate.run(target)><NavigationIcon kind=target.key() view_icon=true /><span>{move ||i18n.text(label)}</span></button>}).collect_view()}</nav></section>
             <section class="toolbar-actions" aria-label=move || i18n.text("message.project_and_search") hidden=move || !workspace_controls()>
                 <label class="project-choice" for="board-project">{move || i18n.text("message.project")}<select id="board-project" prop:value=move ||repository.get() on:change=move |event| {repository.set(event_target_value(&event));focus_filter.set("all".into());search.set(String::new());}><option value="">{move ||i18n.text("message.all_projects")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
-                <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_jira_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
-                <button id="sync-button" type="button" on:click=move |_| {settings_section.set("jira");navigate.run(WorkspaceView::Settings);}>"↻ "{move ||i18n.text("message.synchronize_tickets")}</button>
+                <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
+                <button id="sync-button" type="button" hidden=move||board.settings.get().string_equals("ticketProvider","local").unwrap_or(true) on:click=move |_| {settings_section.set("tickets");navigate.run(WorkspaceView::Settings);}>"↻ "{move ||i18n.text("message.synchronize_tickets")}</button>
             </section>
             <p class="connection-notice" id="live-status" role="status" hidden=move || !workspace_controls() || token.get_value().is_err() || (board.connected.get() && board.sync_error.get().is_empty()) data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else{"message.updates_interrupted_reconnecting".into()}))}</p>
             <div id="focus-bar" class="focus-bar" hidden=move || view.get()!=WorkspaceView::Board || cards.get().is_empty()><span class="results-count"><strong id="total">{move ||visible(false).into_iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).count()}</strong>" "{move ||i18n.text("message.task_s")}</span><div class="focus-options">{[("all","message.all"),("review","message.to_review"),("attention","message.to_resume")].into_iter().map(move |(filter,label)|view!{<button data-focus=filter aria-pressed=move ||(focus_filter.get()==filter).to_string() on:click=move |_|focus_filter.set(filter.into())>{move ||i18n.text(label)}<span hidden=filter=="all">{move ||visible(false).iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),filter)).count()}</span></button>}).collect_view()}</div><span class="keyboard-hint"><kbd>"/"</kbd>" "{move ||i18n.text("message.search_2fe057eb")}" · "<kbd>"N"</kbd>" "{move ||i18n.text("message.new_task_b7d039ad")}</span></div>

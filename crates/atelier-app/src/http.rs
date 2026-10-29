@@ -41,6 +41,7 @@ mod forge;
 mod forge_draft;
 mod forge_publication;
 mod git_push;
+mod integrations;
 mod jira;
 mod jira_creation;
 mod jira_refresh;
@@ -732,6 +733,10 @@ async fn serve_mode(
             post(agent_providers::diagnose),
         )
         .route("/api/settings", axum::routing::put(settings::update))
+        .route(
+            "/api/integrations/defaults",
+            axum::routing::put(integrations::choose),
+        )
         .route(
             "/api/settings/tokens/{service}",
             axum::routing::delete(settings::remove_token),

@@ -1130,7 +1130,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     wait_dom(client,"return document.querySelector('#jira-create-error')?.textContent.includes('Renseigne le jeton Jira') && document.querySelector('#jira-created-key')?.value === 'SYN-9' && document.querySelector('#resolve-jira-creation')?.disabled === false;",vec![]).await?;
     click(client, "#close-jira-creation-ack").await?;
     click(client, "#close-jira-creation").await?;
-    wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.matches(':disabled') === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#jira-create-notice')?.textContent.includes('Aucun ticket distant supprimé') && document.querySelector('#jira-created-key')?.value === '' && document.querySelector('#jira-create-project')?.matches(':disabled') === true;",vec![]).await?;
     client
         .goto(&format!("{address}/tasks/jira-creation"))
         .await?;
@@ -1146,7 +1146,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     wait_dom(client,"return document.querySelector('#edit-title')?.value === 'Remote refresh title' && document.querySelector('#edit-description')?.value === 'Remote refresh description é😀' && document.querySelector('#edit-instructions')?.value === 'Keep refresh instructions' && document.querySelector('.criterion-done')?.checked === true && document.querySelector('#close-editor')?.disabled === false && document.querySelector('#jira-refresh-heading')?.parentElement.textContent.includes('Carte synchronisée');",vec![]).await?;
     click(client, "#close-editor").await?;
     click(client, "#manage-settings").await?;
-    click(client, "#settings-tab-jira").await?;
+    click(client, "#settings-tab-tickets").await?;
+    choose_integration(client, "ticketProvider", "jira").await?;
     wait_dom(client,"return document.querySelector('.jira-batch-select[data-jira-card=\"jira-batch-1\"]')?.disabled === false;",vec![]).await?;
     for index in 1..=2 {
         click(
@@ -2953,6 +2954,24 @@ async fn projects_scenario(
     Ok(())
 }
 
+async fn choose_integration(client: &Client, setting: &str, provider: &str) -> Result<()> {
+    wait_dom(client,"return document.querySelector('#'+arguments[0]) && !document.querySelector('#'+arguments[0]).matches(':disabled');",vec![json!(setting)]).await?;
+    if client
+        .execute(
+            "return document.querySelector('#'+arguments[0]).value;",
+            vec![json!(setting)],
+        )
+        .await?
+        == json!(provider)
+    {
+        return Ok(());
+    }
+    client.execute("const select=document.querySelector('#'+arguments[0]);select.value=arguments[1];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(setting),json!(provider)]).await?;
+    click(client, &format!("#save-{setting}")).await?;
+    wait_dom(client,"return document.querySelector('#'+arguments[0])?.value===arguments[1] && document.querySelector('#save-'+arguments[0])?.disabled && !document.querySelector('#'+arguments[0])?.matches(':disabled');",vec![json!(setting),json!(provider)]).await?;
+    Ok(())
+}
+
 async fn settings_scenario(
     client: &Client,
     http: &reqwest::Client,
@@ -2980,7 +2999,10 @@ async fn settings_scenario(
         vec![],
     )
     .await?;
-    click(client, "#settings-tab-jira").await?;
+    click(client, "#settings-tab-tickets").await?;
+    wait_dom(client,"return document.querySelector('#ticketProvider')?.value === 'local' && !document.querySelector('#settings-tab-jira') && !document.querySelector('#jira-url') && !document.querySelector('#tempo-token');",vec![]).await?;
+    click(client, "#settings-tab-tickets").await?;
+    choose_integration(client, "ticketProvider", "jira").await?;
     wait_dom(
         client,
         "return document.querySelector('#jira-query')?.matches(':disabled') === false;",
@@ -3004,17 +3026,17 @@ async fn settings_scenario(
     click(client, "#keep-settings").await?;
     wait_dom(client,"return document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
     client
-        .find(Locator::Css("#settings-tab-jira"))
+        .find(Locator::Css("#settings-tab-tickets"))
         .await?
         .send_keys("\u{e014}")
         .await?;
-    wait_dom(client,"return document.activeElement?.id === 'settings-tab-forges' && document.querySelector('#settings-panel-jira')?.hidden === true;",vec![]).await?;
+    wait_dom(client,"return document.activeElement?.id === 'settings-tab-forges' && document.querySelector('#settings-panel-tickets')?.hidden === true;",vec![]).await?;
     client
         .find(Locator::Css("#settings-tab-forges"))
         .await?
         .send_keys("\u{e012}")
         .await?;
-    wait_dom(client,"return document.activeElement?.id === 'settings-tab-jira' && document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
+    wait_dom(client,"return document.activeElement?.id === 'settings-tab-tickets' && document.querySelector('#jira-token')?.value === 'synthetic-jira-one' && document.querySelector('#jira-query')?.value === 'project = SYN';",vec![]).await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
     let saved: serde_json::Value = http
@@ -3117,7 +3139,8 @@ async fn settings_scenario(
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
     // Jira changed above: read the current scope before entering a new token.
-    click(client, "#settings-tab-tempo").await?;
+    click(client, "#settings-tab-time").await?;
+    choose_integration(client, "timeProvider", "tempo").await?;
     click(client, "#reload-tempo").await?;
     wait_dom(
         client,
@@ -3238,6 +3261,11 @@ async fn connectors_scenario(
     click(client, "#approve-connector").await?;
     click(client, "#install-connector").await?;
     wait_dom(client,"return !!document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+    click(client, "#settings-tab-tickets").await?;
+    choose_integration(client, "ticketProvider", "extension:synthetic-extension").await?;
+    click(client, "#settings-tab-time").await?;
+    choose_integration(client, "timeProvider", "extension:synthetic-extension").await?;
+    click(client, "#settings-tab-connectors").await?;
     click(client, "[data-connector=synthetic-extension]").await?;
     client
         .find(Locator::Css("#connector-field-fixture-root"))
@@ -3858,7 +3886,7 @@ async fn language_scenario(client: &Client) -> Result<()> {
     wait_dom(client,"return document.querySelector('#settings-page .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
     click(client, "#discard-settings").await?;
     show_board(client).await?;
-    wait_dom(client,"return document.querySelector('#workspace-title')?.textContent === 'Task board' && document.querySelector('#board-search')?.placeholder === 'Title, Jira ticket or description…' && Array.from(document.querySelectorAll('#prototype-board .column-heading')).map(node=>Array.from(node.childNodes).filter(child=>child.nodeType===Node.TEXT_NODE).map(child=>child.textContent).join('').trim()).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#workspace-title')?.textContent === 'Task board' && document.querySelector('#board-search')?.placeholder === 'Title, ticket or description…' && Array.from(document.querySelectorAll('#prototype-board .column-heading')).map(node=>Array.from(node.childNodes).filter(child=>child.nodeType===Node.TEXT_NODE).map(child=>child.textContent).join('').trim()).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
     wait_title(client, "État après sauvegarde").await?;
     click(client, ".card-open").await?;
     wait_dom(client,"return document.querySelector('#editor-heading')?.textContent === 'État après sauvegarde' && document.querySelector('#criteria-heading')?.textContent === 'Acceptance criteria' && document.querySelector('#edit-status option')?.textContent === 'To do';",vec![]).await?;

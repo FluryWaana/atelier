@@ -11,6 +11,9 @@ pub(super) fn response<T: serde::Serialize>(result: crate::Result<T>) -> Respons
         Ok(value) => Json(value).into_response(),
         Err(error) => {
             let status = if matches!(
+                error.downcast_ref::<atelier_core::application::settings::SettingsFailure>(),
+                Some(atelier_core::application::settings::SettingsFailure::Conflict)
+            ) || matches!(
                 error.downcast_ref::<JiraFailure>(),
                 Some(JiraFailure::Conflict | JiraFailure::OperationConflict(_))
             ) || matches!(

@@ -786,7 +786,8 @@ async fn public_assets_are_allowlisted_captured_once_and_never_expose_private_pa
         "/worktrees",
         "/time",
         "/archives",
-        "/settings?section=jira",
+        "/settings?section=tickets",
+        "/settings?section=time",
         "/updates",
         "/tasks/synthetic-card",
     ] {
