@@ -659,6 +659,8 @@ async fn serve_mode(
             post(connector_effects::cancel),
         )
         .route("/api/updates", get(updates::get))
+        .route("/api/updates/check", get(updates::check))
+        .route("/api/updates/install", post(updates::action))
         .route("/api/updates/preview", post(updates::action))
         .route("/api/updates/apply", post(updates::action))
         .route("/api/updates/cancel", post(updates::action))

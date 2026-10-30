@@ -1,5 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Release {
+    pub version: String,
+    pub compatible: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Download {
+    pub received: u64,
+    pub total: u64,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Phase {
@@ -48,6 +62,8 @@ pub struct Operation {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Status {
+    #[serde(default)]
+    pub download: Option<Download>,
     pub installed: bool,
     #[serde(default)]
     pub system_managed: bool,

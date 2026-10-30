@@ -874,12 +874,16 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#check-updates").await?;
         wait_dom(client,"return location.pathname === '/updates';",vec![]).await?;
-        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false' && document.querySelector('#update-archive')?.matches(':disabled') === false;",vec![]).await?;
-        client.find(Locator::Css("#update-archive")).await?.send_keys(&candidate.to_string_lossy()).await?;
-        client.find(Locator::Css("#update-signature")).await?.send_keys(&candidate_signature.to_string_lossy()).await?;
-        click(client,"#overview-button").await?;click(client,"#keep-settings").await?;
-        wait_dom(client,"return document.querySelector('#update-archive')?.value === arguments[0];",vec![json!(candidate)]).await?;
-        click(client,"#preview-update").await?;
+        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        if client.execute("return document.querySelector('#update-archive, #update-signature, #approve-update') === null;",vec![]).await? != json!(true) {
+            return Err("Les anciens champs de mise à jour sont encore affichés.".into());
+        }
+        // Prepare a signed local fixture without depending on a public GitHub release.
+        http.post(format!("{address}/api/updates/preview"))
+            .bearer_auth(&token).header("x-local-request", "1")
+            .json(&json!({"archive":candidate,"signature":candidate_signature}))
+            .send().await?.checked_status().await?;
+        click(client,"#reload-updates").await?;
         let preparation_deadline=Instant::now()+Duration::from_secs(120);
         loop {
             let phase=updates::status(Some(&installation))?.operation.map(|operation|operation.state);
@@ -894,16 +898,15 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         }
         wait_dom(client,"return document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         client.refresh().await?;
-        wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#approve-update").await?;click(client,"#settings-tab-general").await?;
+        wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version prête à confirmer' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        click(client,"#settings-tab-general").await?;
         client.execute("const select=document.querySelector('#settings-agent'); select.value=select.value === 'claude' ? 'codex' : 'claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
         click(client,"#settings-tab-updates").await?;
         if client.execute("return document.querySelector('#apply-update')?.matches(':disabled');",vec![]).await?!=json!(true){return Err("La mise à jour n’a pas protégé l’autre brouillon.".into());}
         click(client,"#settings-tab-general").await?;click(client,"#save-settings").await?;
         wait_dom(client,"return document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;click(client,"#settings-tab-updates").await?;
         click(client,"#reload-updates").await?;
-        wait_dom(client,"return document.querySelector('#approve-update')?.checked === false && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
-        click(client,"#approve-update").await.map_err(|error|format!("Updates : confirmation avant activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
+        wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#apply-update").await.map_err(|error|format!("Updates : clic natif d’activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         let deadline=Instant::now()+Duration::from_secs(120);
         loop {

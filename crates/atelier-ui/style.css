@@ -779,3 +779,22 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
   .forge-settings .forge-save-actions { width: 100%; margin-left: 0; }
   .forge-settings .forge-save-actions button { flex: 1; }
 }
+
+/* Updates share the settings column. Progress uses the same full width on mobile. */
+#updates-settings { max-width: 720px; }
+#updates-settings > h3 { margin: 0 0 8px; }
+#updates-settings > p { margin: 8px 0 16px; }
+#updates-settings button { min-height: 44px; white-space: normal; }
+#updates-settings details { margin-block: 20px; overflow-wrap: anywhere; }
+#updates-settings .update-progress { margin-block: 24px; padding: 20px; background: var(--surface); border-radius: 8px; }
+#updates-settings .update-progress label { display: block; margin-bottom: 12px; }
+#update-download-progress { display: block; width: 100%; height: 10px; border: 0; border-radius: 5px; accent-color: var(--text); background: var(--line); overflow: hidden; }
+#update-download-progress::-webkit-progress-bar { background: var(--line); }
+#update-download-progress::-webkit-progress-value { background: var(--text); }
+#update-download-progress::-moz-progress-bar { background: var(--text); }
+#updates-settings .update-download-size { margin: 10px 0 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+#updates-settings :is(#updates-error, #updates-notice):empty { display: none; }
+@media (max-width: 600px) {
+  #updates-settings .update-progress { padding: 16px; }
+  #updates-settings button { max-width: 100%; }
+}

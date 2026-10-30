@@ -25,6 +25,18 @@ pub(super) fn guard(root: Option<&std::path::Path>) -> Option<Response> {
 #[cfg(test)]
 mod guard_tests {
     #[test]
+    fn install_selection_rejects_unknown_fields_and_missing_versions() {
+        assert!(serde_json::from_str::<super::ReleaseSelection>(r#"{"version":"1.2.3"}"#).is_ok());
+        for body in [
+            r#"{}"#,
+            r#"{"version":"1.2.3","archive":"/tmp/untrusted"}"#,
+            r#"{"version":123}"#,
+        ] {
+            assert!(serde_json::from_str::<super::ReleaseSelection>(body).is_err());
+        }
+    }
+
+    #[test]
     fn absent_installation_is_allowed_but_unreadable_or_partial_journal_blocks_writes() {
         assert!(super::guard(None).is_none());
         let root = tempfile::tempdir().unwrap();
@@ -45,6 +57,19 @@ mod guard_tests {
 
 pub(super) async fn get(State(state): State<Shared>) -> Response {
     response(updates::status(state.installation_root.as_deref()))
+}
+pub(super) async fn check(State(state): State<Shared>) -> Response {
+    let status = match updates::status(state.installation_root.as_deref()) {
+        Ok(status) => status,
+        Err(error) => return response::<()>(Err(error)),
+    };
+    response(updates::check_release(&status.current_version, &status.target).await)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReleaseSelection {
+    version: String,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -67,6 +92,29 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
         );
     };
     let path = request.uri().path().to_owned();
+    if path.ends_with("/install") {
+        let selection: ReleaseSelection = match super::jira_transitions::input(request).await {
+            Ok(value) => value,
+            Err(response) => return *response,
+        };
+        if crate::infrastructure::package::version_parts(&selection.version).is_err() {
+            return failure(StatusCode::BAD_REQUEST, "message.github_update_invalid");
+        }
+        let data = state.prototype_paths[0].clone();
+        let port = state.port;
+        let result = tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(updates::install_release(
+                &root,
+                &selection.version,
+                &data,
+                port,
+            ))
+        })
+        .await;
+        return response(
+            result.unwrap_or_else(|_| Err("message.github_update_unavailable".into())),
+        );
+    }
     if path.ends_with("/preview") {
         let source: Source = match super::jira_transitions::input(request).await {
             Ok(value) => value,

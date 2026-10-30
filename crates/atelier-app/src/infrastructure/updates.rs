@@ -1,3 +1,6 @@
+mod github;
+pub use github::{check_release, install_release};
+
 use super::{
     checked_file::CheckedFile,
     data_lock::DataLock,
@@ -31,6 +34,8 @@ struct Journal {
     port: u16,
     restart: bool,
     worker_pid: Option<u32>,
+    #[serde(default)]
+    backup: Option<String>,
 }
 
 fn load(directory: &Dir) -> Result<Option<Journal>> {
@@ -145,16 +150,24 @@ pub fn maintenance(root: &Path) -> Result<bool> {
     let directory = Dir::open_ambient_dir(root, ambient_authority())?;
     Ok(load(&directory)?.is_some_and(|journal| journal.operation.state.maintenance()))
 }
-async fn require_connector_idle(journal: &Journal) -> Result<()> {
+async fn backup_data(journal: &Journal) -> Result<Option<String>> {
     let (data, _, directory) = data_identity(&journal.data)?;
     match directory.symlink_metadata("kanban.sqlite") {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error.into()),
         Ok(metadata) => super::checked_file::require_plain(&metadata)?,
     }
+    let backups = super::backups::BackupDirectory::open_in(&data, &directory)?;
     let database = super::database::Database::open_in(data.join("kanban.sqlite"), directory)?;
     let result = database
-        .call(|store| {
+        .call(move |store| {
+            let integrity: String =
+                store
+                    .connection
+                    .query_row("PRAGMA quick_check", [], |row| row.get(0))?;
+            if integrity != "ok" {
+                return Err("message.update_data_backup_failed".into());
+            }
             if atelier_core::application::agent_cli::busy(
                 &store.settings::<atelier_core::document::Document>()?,
             )? {
@@ -168,7 +181,8 @@ async fn require_connector_idle(journal: &Journal) -> Result<()> {
             {
                 return Err("message.finish_or_reconcile_connector_writes_before_updating".into());
             }
-            Ok(())
+            let backup = backups.create(store)?;
+            Ok(Some(backup.name))
         })
         .await;
     database.close().await?;
@@ -190,6 +204,7 @@ pub fn status(root: Option<&Path>) -> Result<Status> {
     let target = package::native_target()?.to_owned();
     let Some(root) = root else {
         return Ok(Status {
+            download: github::progress(),
             installed: false,
             system_managed: false,
             current_version: env!("CARGO_PKG_VERSION").into(),
@@ -202,6 +217,7 @@ pub fn status(root: Option<&Path>) -> Result<Status> {
         &CheckedFile::open_in(&directory, Path::new("current.json"))?.read(16 * 1024)?,
     )?;
     Ok(Status {
+        download: github::progress(),
         installed: true,
         system_managed: system_managed(root)?,
         current_version: current.active.version,
@@ -277,6 +293,7 @@ pub async fn preview(
         port,
         restart: false,
         worker_pid: None,
+        backup: None,
     };
     save(&installation, &journal)?;
     let result: Result<()> = async {
@@ -562,7 +579,7 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
             validate_data(&journal)?;
             launcher::stop(&journal.data, journal.port).await?;
             let guard = data_lock(&journal).await?;
-            require_connector_idle(&journal).await?;
+            journal.backup = backup_data(&journal).await?;
             phase(
                 &installation,
                 &mut journal,
@@ -940,8 +957,110 @@ mod tests {
             port,
             restart: false,
             worker_pid: None,
+            backup: None,
         };
         (root, installation, journal)
+    }
+
+    #[tokio::test]
+    async fn automatic_backup_preserves_every_table_settings_logs_and_unrelated_files() {
+        use crate::infrastructure::store::{self, Documents, Store};
+        use serde_json::json;
+        let (_root, installation, journal) = prepared_installation();
+        let database = journal.data.join("kanban.sqlite");
+        std::fs::remove_file(&database).unwrap();
+        let connection = store::open(&database).unwrap();
+        let store = Store::new(&connection);
+        for table in [
+            Documents::Projects,
+            Documents::Cards,
+            Documents::Runs,
+            Documents::Times,
+        ] {
+            store.put(table, &json!({"id":"synthetic-preserved","title":"Travail conservé","seconds":123,"description":"Synthetic human notes"})).unwrap();
+        }
+        store
+            .save_settings(&json!({"baseBranch":"synthetic-human-branch"}))
+            .unwrap();
+        connection.execute("INSERT INTO logs(runId,stream,text) VALUES('synthetic-preserved','stdout','Synthetic preserved log')", []).unwrap();
+        drop(connection);
+        let identity = std::fs::read(journal.data.join(".atelier-prototype-vault")).unwrap();
+        let notes = journal.data.join("synthetic-human-notes.txt");
+        std::fs::write(&notes, b"Must remain unchanged").unwrap();
+        let before = installation.current().clone();
+        let name = backup_data(&journal).await.unwrap().unwrap();
+        let snapshot = rusqlite::Connection::open_with_flags(
+            journal.data.join("backups").join(name),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let live = rusqlite::Connection::open_with_flags(
+            &database,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        for table in ["projects", "cards", "runs", "time_entries", "settings"] {
+            let query = format!("SELECT data FROM {table}");
+            let expected: String = live.query_row(&query, [], |row| row.get(0)).unwrap();
+            let actual: String = snapshot.query_row(&query, [], |row| row.get(0)).unwrap();
+            assert_eq!(actual, expected);
+        }
+        let log: (i64, String, String, String) = snapshot
+            .query_row("SELECT seq,runId,stream,text FROM logs", [], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+            .unwrap();
+        assert_eq!(
+            log,
+            (
+                1,
+                "synthetic-preserved".into(),
+                "stdout".into(),
+                "Synthetic preserved log".into()
+            )
+        );
+        assert_eq!(
+            snapshot
+                .query_row::<String, _, _>("PRAGMA quick_check", [], |row| row.get(0))
+                .unwrap(),
+            "ok"
+        );
+        assert!(installation.current() == &before);
+        assert_eq!(std::fs::read(notes).unwrap(), b"Must remain unchanged");
+        assert_eq!(
+            std::fs::read(journal.data.join(".atelier-prototype-vault")).unwrap(),
+            identity
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_backup_cannot_change_the_active_version_or_existing_data() {
+        let (_root, installation, journal) = prepared_installation();
+        let before = std::fs::read(journal.data.join("kanban.sqlite")).unwrap();
+        let pointer = std::fs::read(installation.root().join("current.json")).unwrap();
+        std::fs::write(
+            journal.data.join("backups"),
+            b"Synthetic human file blocks backup directory",
+        )
+        .unwrap();
+        assert!(backup_data(&journal).await.is_err());
+        assert_eq!(
+            std::fs::read(journal.data.join("kanban.sqlite")).unwrap(),
+            before
+        );
+        assert_eq!(
+            std::fs::read(installation.root().join("current.json")).unwrap(),
+            pointer
+        );
+        std::fs::remove_file(journal.data.join("backups")).unwrap();
+        assert!(backup_data(&journal).await.is_err());
+        assert_eq!(
+            std::fs::read(journal.data.join("kanban.sqlite")).unwrap(),
+            before
+        );
+        std::fs::remove_file(journal.data.join("kanban.sqlite")).unwrap();
+        assert!(backup_data(&journal).await.unwrap().is_none());
+        assert!(!journal.data.join("kanban.sqlite").exists());
     }
     #[tokio::test]
     async fn recovery_at_each_switch_boundary_preserves_exact_data_bytes_and_human_edits() {
