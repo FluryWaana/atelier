@@ -1299,24 +1299,10 @@ fn App() -> impl IntoView {
             </header>
             <section class="heading" hidden={move || view.get() == WorkspaceView::Task}>
                 <div>
-                    <div
-                        class="eyebrow"
-                        hidden={move || {
-                            matches!(
-                                view.get(),
-                                WorkspaceView::Overview
-                                | WorkspaceView::Settings
-                                | WorkspaceView::Updates
-                                | WorkspaceView::Projects
-                            )
-                        }}
-                    >
-                        {move || i18n.text("message.your_workspace_eaca3b2c")}
-                    </div>
                     <h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1>
                     <p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p>
                 </div>
-                <div class="heading-actions">
+                <div class="heading-actions" hidden={move || !workspace_controls() || onboarding()}>
                     <crate::button::Button
                         variant={crate::button::ButtonVariant::Primary}
                         disabled={Signal::derive(move || pending.get() || loading.get())}

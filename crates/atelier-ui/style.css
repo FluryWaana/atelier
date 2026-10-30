@@ -1022,3 +1022,6 @@ input.ui-switch:disabled { opacity: .5; cursor: not-allowed; }
 .ui-modal-header .modal-close { width: 44px; min-height: 44px; }
 
 .brainstorm-composer > .ui-field { flex: 1; min-width: 0; margin: 0; }
+
+main > .heading { padding: 16px 0; gap: 12px; }
+main > .heading h1 { margin: 0 0 6px; }
