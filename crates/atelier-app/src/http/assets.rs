@@ -91,6 +91,7 @@ fn asset_router(path: &Path, revision: Option<String>) -> Result<Router<Shared>>
                 "/worktrees",
                 "/time",
                 "/archives",
+                "/projects",
                 "/settings",
                 "/updates",
                 "/tasks/{id}",

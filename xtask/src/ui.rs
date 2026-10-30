@@ -2643,6 +2643,7 @@ async fn projects_scenario(
         r#"{"scripts":{"dev":"vite","predev":"never execute during detection"},"devDependencies":{"vite":"synthetic"}}"#,
     )?;
     click(client, "#manage-projects").await?;
+    click(client, "#add-project").await?;
     client
         .find(Locator::Css("#project-create-name"))
         .await?
@@ -2655,8 +2656,8 @@ async fn projects_scenario(
         .await?;
     wait_dom(client,"return document.querySelector('#project-create-access')?.hidden === false && document.querySelector('#project-create-access .authorize-project-repository') && !document.querySelector('#project-edit-access')?.matches(':not([hidden])');",vec![]).await?;
     click(client, "#project-form button[type=submit]").await?;
-    wait_dom(client, "return document.querySelectorAll('#project-list .project-row').length === 2 && document.querySelector('#project-create-name')?.value === '' && document.querySelector('#project-form .error')?.textContent === '';", vec![]).await?;
-    let id = client.execute("return Array.from(document.querySelectorAll('#project-list [data-project-id]')).find(button=>button.closest('.project-row').querySelector('strong').textContent === 'Projet depuis l’interface').dataset.projectId;", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('#project-list .project-choice').length === 2 && !document.querySelector('#project-create-dialog');", vec![]).await?;
+    let id = client.execute("return Array.from(document.querySelectorAll('#project-list [data-project-id]')).find(button=>button.querySelector('strong').textContent === 'Projet depuis l’interface').dataset.projectId;", vec![]).await?;
     click(
         client,
         &format!(
@@ -2687,7 +2688,7 @@ async fn projects_scenario(
         .await?;
     client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#detect-front").await?;
-    wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#project-settings-dialog fieldset')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#project-settings-panel fieldset')?.disabled === false;", vec![]).await?;
     click(client, ".launch-candidate[data-role=front]").await?;
     wait_dom(client, "return document.querySelector('#project-front-directory')?.value === 'client' && document.querySelector('#project-front-command')?.value.includes('--port {port}');", vec![]).await?;
     client
@@ -2707,11 +2708,12 @@ async fn projects_scenario(
         .await?;
     client.execute("const select=document.querySelector('#project-linked'); select.value=Array.from(select.options).find(option=>option.value).value; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
     click(client, "#save-project").await?;
-    wait_dom(client, "return document.querySelector('#project-settings-dialog')?.open === false && Array.from(document.querySelectorAll('#project-list strong')).some(element=>element.textContent === 'Projet renommé');", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#save-project')?.disabled && document.querySelector('#add-project')?.disabled === false && Array.from(document.querySelectorAll('#project-list strong')).some(element=>element.textContent === 'Projet renommé');", vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-project-editor.png"),
         client.screenshot().await?,
     )?;
+    click(client, "#add-project").await?;
     client
         .find(Locator::Css("#project-create-name"))
         .await?
@@ -2755,19 +2757,24 @@ async fn projects_scenario(
         }
     }
     wait_dom(client, "return document.querySelector('#project-form .error')?.textContent.includes('déjà') && document.querySelector('#project-create-name')?.value === 'Doublon refusé';", vec![]).await?;
-    click(client, "#close-projects").await?;
-    click(client, "#projects-dialog > .confirmation button.danger").await?;
-    click(client, "#manage-projects").await?;
-    wait_dom(client,"return document.querySelector('#project-create-name')?.value === '' && document.querySelector('#project-form .error')?.textContent === '';",vec![]).await?;
+    click(client, "#project-create-dialog [data-close]").await?;
+    click(client, "#project-create-dialog .confirmation button.danger").await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#project-create-dialog');",
+        vec![],
+    )
+    .await?;
     click(
         client,
         &format!(
-            "#project-list [data-project='{}']",
+            "#project-list [data-project-id='{}']",
             id.as_str().ok_or("Projet sans id")?
         ),
     )
     .await?;
-    wait_dom(client, "return !document.querySelector('#projects-dialog') && document.activeElement?.id === 'manage-projects' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
+    click(client, ".project-open-tasks").await?;
+    wait_dom(client, "return location.pathname === '/overview' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
     new_task(client).await?;
     client
         .find(Locator::Css("#task-title"))
@@ -2829,6 +2836,9 @@ async fn projects_scenario(
         .await?
         .send_keys(" brouillon")
         .await?;
+    click(client, "#close-projects").await?;
+    wait_dom(client, "return !document.querySelector('#projects-page > .confirmation')?.hidden && location.pathname === '/projects';", vec![]).await?;
+    click(client, "#projects-page > .confirmation button:not(.danger)").await?;
     http.patch(format!(
         "{address}/api/projects/{}",
         id.as_str().ok_or("Projet sans id")?
@@ -2842,7 +2852,7 @@ async fn projects_scenario(
     .await?;
     click(client, "#save-project").await?;
     wait_dom(client,"return document.querySelector('#project-error')?.textContent.includes('changé ailleurs') && document.querySelector('#project-name')?.value === 'Projet renommé brouillon';",vec![]).await?;
-    click(client, "#project-settings-dialog .dialog-heading button").await?;
+    click(client, ".project-detail-heading button").await?;
     click(client, "#confirm-project").await?;
     click(client, "#close-projects").await?;
     click(client, "#manage-projects").await?;
@@ -2865,7 +2875,7 @@ async fn projects_scenario(
     click(client, "#remove-project").await?;
     click(client, "#archive-project-tasks").await?;
     click(client, "#confirm-project").await?;
-    wait_dom(client, "return document.querySelectorAll('#project-list .project-row').length === 1 && document.querySelector('#project-settings-dialog')?.open === false && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelectorAll('#project-list .project-choice').length === 1 && document.querySelector('#project-settings-panel')?.hidden === true && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
     click(client, "#close-projects").await?;
     click(client, "#show-archives").await?;
     wait_dom(client, "return location.pathname === '/archives' && Array.from(document.querySelectorAll('#workspace-archives .archive-row')).some(card => card.dataset.id === arguments[0]);", vec![json!(card_id)]).await?;

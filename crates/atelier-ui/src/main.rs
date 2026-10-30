@@ -68,6 +68,7 @@ pub enum WorkspaceView {
     Worktrees,
     Time,
     Archives,
+    Projects,
     Settings,
     Diagnostics,
     Updates,
@@ -85,6 +86,7 @@ impl WorkspaceView {
             Self::Worktrees => "worktrees",
             Self::Time => "time",
             Self::Archives => "archives",
+            Self::Projects => "projects",
             Self::Settings => "settings",
             Self::Diagnostics => "diagnostics",
             Self::Updates => "updates",
@@ -100,6 +102,7 @@ impl WorkspaceView {
             "worktrees" => Self::Worktrees,
             "time" => Self::Time,
             "archives" => Self::Archives,
+            "projects" => Self::Projects,
             "settings" => Self::Settings,
             "updates" => Self::Updates,
             _ => Self::Overview,
@@ -107,6 +110,7 @@ impl WorkspaceView {
     }
     fn heading(self) -> (&'static str, &'static str) {
         match self {
+            Self::Projects => ("message.my_projects", "message.manage_project_settings"),
             Self::Settings | Self::Updates => (
                 "message.settings",
                 "message.general_settings_modules_and_connections",
@@ -441,7 +445,6 @@ fn App() -> impl IntoView {
     let ticket_sync_notice = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
     let selected = RwSignal::new(None::<Card>);
-    let show_projects = RwSignal::new(false);
     let show_kanban_settings = RwSignal::new(false);
     let token = StoredValue::new(session());
     let agent_status = RwSignal::new(atelier_core::application::agent_status::Checks::default());
@@ -670,6 +673,7 @@ fn App() -> impl IntoView {
                 view.get_untracked(),
                 WorkspaceView::Task
                     | WorkspaceView::Settings
+                    | WorkspaceView::Projects
                     | WorkspaceView::Updates
                     | WorkspaceView::Brainstorm
             ) {
@@ -831,6 +835,7 @@ fn App() -> impl IntoView {
         !matches!(
             view.get(),
             WorkspaceView::Settings
+                | WorkspaceView::Projects
                 | WorkspaceView::Updates
                 | WorkspaceView::Task
                 | WorkspaceView::Brainstorm
@@ -995,7 +1000,7 @@ fn App() -> impl IntoView {
             <button id="toggle-navigation" class="sidebar-toggle" type="button" aria-controls="main-navigation" aria-expanded=move || (!sidebar_collapsed.get()).to_string() aria-label=sidebar_toggle_label title=sidebar_toggle_label on:click=move |_| sidebar_collapsed.update(|collapsed| *collapsed = !*collapsed)><NavigationIcon kind="collapse" /><NavigationIcon kind="menu" /></button></div>
             <nav class="sidebar-primary" aria-label=move || i18n.text("message.personal_workspace")><button class="nav-item" class:nav-active=move || view.get()==WorkspaceView::Brainstorm data-view="brainstorm" id="brainstorm-button" aria-current=move || if view.get()==WorkspaceView::Brainstorm {"page"}else{"false"} on:click=move |_|navigate.run(WorkspaceView::Brainstorm) title=move || i18n.text("message.brainstorming")><NavigationIcon kind="brainstorm" /><span class="nav-label">{move || i18n.text("message.brainstorming")}</span></button>
             <button class="nav-item" class:nav-active=move || view.get()==WorkspaceView::Overview id="overview-button" aria-current=move || if view.get()==WorkspaceView::Overview {"page"}else{"false"} on:click=move |_|navigate.run(WorkspaceView::Overview) title=move || i18n.text("message.overview")><NavigationIcon kind="overview" /><span class="nav-label">{move || i18n.text("message.overview")}</span></button>
-            <button class="nav-item" id="manage-projects" type="button" disabled=move || loading.get() on:click=move |_| show_projects.set(true) title=move || i18n.text("message.my_projects")><NavigationIcon kind="projects" /><span class="nav-label">{move || i18n.text("message.my_projects")}</span></button></nav>
+            <button class="nav-item" id="manage-projects" type="button" class:nav-active=move ||view.get()==WorkspaceView::Projects aria-current=move ||if view.get()==WorkspaceView::Projects{"page"}else{"false"} disabled=move || loading.get() on:click=move |_| navigate.run(WorkspaceView::Projects) title=move || i18n.text("message.my_projects")><NavigationIcon kind="projects" /><span class="nav-label">{move || i18n.text("message.my_projects")}</span></button></nav>
             <section class="sidebar-agents"><div class="workspace-label">{move || i18n.text("message.your_agents")}</div><div id="agents"><div class="sidebar-agent-list"><For each=move || atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move |profile|view!{<button class="agent-row" type="button" title=field(&profile,"name") on:click=move |_|show_agents.set(true)><span class="agent-avatar">{field(&profile,"name").chars().next().unwrap_or('A')}</span><span class="agent-row-copy"><span class="agent-status"><span class={ let id = field(&profile, "id"); move || { if agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).is_some_and(|status| status.cli_connected()) { "online-dot agent-status-online" } else { "online-dot offline" } } } aria-hidden="true"></span><span class="sr-only">{let id = field(&profile, "id"); move || i18n.text(if agent_checking.get() && agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).is_none() { "message.checking" } else { match agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).map(|status| (status.authentication, status.account_report.map(|report| report.state))) { Some((_, Some(atelier_core::application::agent_account::State::Available))) => "message.limits_reported_by_the_service_they_do_not_establish_access_to_a", Some((_, Some(atelier_core::application::agent_account::State::Disconnected))) => "message.sign_in_through_the_cli_then_check_again", Some((_, Some(atelier_core::application::agent_account::State::RateLimited))) => "message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte", Some((atelier_core::contracts::AgentAuthentication::Present, _)) => "message.cli_login_present_service_access_has_not_been_verified", Some((atelier_core::contracts::AgentAuthentication::Absent, _)) => "message.no_cli_login", Some((atelier_core::contracts::AgentAuthentication::Configured, _)) => "message.key_present_validity_has_not_been_verified", Some((atelier_core::contracts::AgentAuthentication::MissingKey, _)) => "message.no_saved_api_key", _ => "message.not_verified" } })}</span></span><strong>{field(&profile,"name")}</strong></span><span class="agent-chevron" aria-hidden="true">"›"</span></button>} /><p class="error" role="status">{move || i18n.text(&agent_check_error.get())}</p></div><button id="manage-agents" class="text-button" title=move || i18n.text("message.manage_agents") type="button" disabled=move || loading.get() on:click=move |_|show_agents.set(true)><NavigationIcon kind="agents" /><span class="nav-label">{move || i18n.text("message.manage_agents")}</span></button></div></section>
             <div class="sidebar-bottom"><nav class="sidebar-utilities" aria-label=move || i18n.text("message.settings_4ed117e0")><button class="nav-item" id="manage-settings" type="button" class:nav-active=move || view.get()==WorkspaceView::Settings aria-current=move || if view.get()==WorkspaceView::Settings {"page"}else{"false"} disabled=move || loading.get() on:click=move |_| {settings_section.set("general");navigate.run(WorkspaceView::Settings);} title=move || i18n.text("message.settings_4ed117e0")><NavigationIcon kind="settings" /><span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span></button>
             <button class="nav-item" id="diagnostics-button" type="button" disabled=move || loading.get() on:click=move |_|show_diagnostics.set(true) title=move || i18n.text("message.diagnostics")><NavigationIcon kind="diagnostics" /><span class="nav-label">{move || i18n.text("message.diagnostics")}</span></button>
@@ -1026,7 +1031,7 @@ fn App() -> impl IntoView {
             <section id="welcome" class="welcome-guide" aria-labelledby="welcome-title" hidden=move || !onboarding()>
                 <div class="welcome-intro"><h2 id="welcome-title">{move ||i18n.text("message.prepare_your_first_task")}</h2><p>{move ||i18n.text("message.welcome_task_intro")}</p></div>
                 <div class="welcome-paths">
-                    <div class="welcome-path"><h3>{move ||i18n.text("message.find_your_code")}</h3><p>{move ||i18n.text("message.save_a_project_folder")}</p><button id="welcome-projects" type="button" on:click=move |_|show_projects.set(true)>{move ||i18n.text("message.add_a_project")}</button></div>
+                    <div class="welcome-path"><h3>{move ||i18n.text("message.find_your_code")}</h3><p>{move ||i18n.text("message.save_a_project_folder")}</p><button id="welcome-projects" type="button" on:click=move |_|navigate.run(WorkspaceView::Projects)>{move ||i18n.text("message.add_a_project")}</button></div>
                     <div class="welcome-path"><h3>{move ||i18n.text("message.describe_the_work")}</h3><p>{move ||i18n.text("message.first_task_help")}</p><button id="welcome-create" class="primary" type="button" on:click=move |_|open_new.run(())>{move ||i18n.text("message.new_task")}</button></div>
                 </div>
                 <div class="welcome-settings"><p>{move ||i18n.text("message.connect_tools_later")}</p><button id="welcome-settings" class="text-button" type="button" on:click=move |_|navigate.run(WorkspaceView::Settings)>{move ||i18n.text("message.open_settings")}</button></div>
@@ -1061,7 +1066,7 @@ fn App() -> impl IntoView {
                     } /><p class="empty" hidden=move || !column().is_empty() || loading.get()>{move || i18n.text("message.nothing_yet")}</p><button type="button" class="column-add" hidden=status!="todo" aria-label=move ||i18n.text("message.add_a_task") on:click=move |_|open_new.run(())>"＋"</button></section> }
                 } />
             </section>
-            <Show when=move || matches!(view.get(),WorkspaceView::Overview|WorkspaceView::Agents|WorkspaceView::Processes|WorkspaceView::Worktrees)><workspace_views::WorkspaceViews board token view=Signal::derive(move ||view.get()) project=Signal::derive(move ||repository.get()) on_open=open_task on_view=navigate on_focus=Callback::new(move |filter:String|{focus_filter.set(filter);search.set(String::new());navigate.run(WorkspaceView::Board);}) on_projects=Callback::new(move |()|show_projects.set(true)) /></Show>
+            <Show when=move || matches!(view.get(),WorkspaceView::Overview|WorkspaceView::Agents|WorkspaceView::Processes|WorkspaceView::Worktrees)><workspace_views::WorkspaceViews board token view=Signal::derive(move ||view.get()) project=Signal::derive(move ||repository.get()) on_open=open_task on_view=navigate on_focus=Callback::new(move |filter:String|{focus_filter.set(filter);search.set(String::new());navigate.run(WorkspaceView::Board);}) on_projects=Callback::new(move |()|navigate.run(WorkspaceView::Projects)) /></Show>
             <Show when=move || view.get()==WorkspaceView::Archives><section id="workspace-archives" class="workspace-panel"><div class="panel-heading"><div><h2>{move ||i18n.text("message.your_history")}</h2><p class="hint">{move ||i18n.text("message.archived_tasks_with_their_time_entries_branches_and_logs_restori")}</p></div></div><For each=move ||visible(false) key=|card|card.id.clone() children=move |card|{let id=StoredValue::new(card.id.clone());view!{<article class="workspace-row archive-row" data-id=id.get_value()><div><span class="section-kicker">{move ||i18n.text("message.archived_task")}</span><h3>{card.title.clone()}</h3><p class="hint">{move ||i18n.text("message.history_kept")}</p></div><div class="row-actions"><button id=format!("card-open-{}",id.get_value()) class="card-open" on:click=move |_|open_task.run(id.get_value())>{move ||i18n.text("message.open_task")}</button><button disabled=move ||pending.get() on:click=move |_|{if pending.get_untracked(){return;}let Ok(token)=token.get_value()else{return;};pending.set(true);spawn_local(async move{let result=write(&token,Method::POST,&format!("/api/cards/{}/archive",id.get_value()),&serde_json::json!({"archived":false})).await;match result{Ok(_)=>{let _=board.refresh(&token).await;},Err(message)=>error.set(message)}pending.set(false);});}>{move ||i18n.text("message.restore")}</button></div></article>}} /><p class="empty" hidden=move ||!visible(false).is_empty()>{move ||i18n.text("message.no_archived_tasks")}</p></section></Show>
             <Show when=move ||view.get()==WorkspaceView::Brainstorm><BrainstormPage board token on_open=open_task on_new=open_new /></Show>
             {move || selected.get().filter(|_|view.get()==WorkspaceView::Task).map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| commit_view.run(return_view.get_untracked())) /> })}
@@ -1069,12 +1074,12 @@ fn App() -> impl IntoView {
             <Show when=move ||view.get()==WorkspaceView::Time><crate::time_report::TimeReport board token loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) on_task=open_task /></Show>
             <footer>"ATELIER "<span>{move ||i18n.text("message.a_little_less_friction_a_little_more_done")}</span><span>{move ||i18n.text("message.local_storage_sqlite")}</span></footer>
             <Show when=move||show_kanban_settings.get()><crate::kanban_settings::KanbanSettings board token repository on_close=Callback::new(move|()|show_kanban_settings.set(false))/></Show>
-            <Show when=move || show_projects.get()><Projects board repository token on_close=Callback::new(move |()| show_projects.set(false)) /></Show>
+            <Show when=move || view.get()==WorkspaceView::Projects><Projects board repository token on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) /></Show>
             <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
             <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>
             {move ||deleting_card.get().map(|card|{let id=card.id.clone();view!{<DeleteCardDialog card pending error on_confirm=Callback::new(move |()|card_action.run((id.clone(),"confirm-delete"))) on_close=Callback::new(move |()|deleting_card.set(None)) />}})}
             <Show when=move ||show_diagnostics.get()><DiagnosticsDialog board token on_close=Callback::new(move |()|show_diagnostics.set(false)) /></Show>
-            <Show when=move ||command_open.get()><CommandPalette board on_close=Callback::new(move |()|command_open.set(false)) on_open=open_task on_new=open_new on_project=Callback::new(move |repo:String|{repository.set(repo);search.set(String::new());focus_filter.set("all".into());navigate.run(WorkspaceView::Overview);}) on_projects=Callback::new(move |()|show_projects.set(true)) on_diagnostics=Callback::new(move |()|show_diagnostics.set(true)) /></Show>
+            <Show when=move ||command_open.get()><CommandPalette board on_close=Callback::new(move |()|command_open.set(false)) on_open=open_task on_new=open_new on_project=Callback::new(move |repo:String|{repository.set(repo);search.set(String::new());focus_filter.set("all".into());navigate.run(WorkspaceView::Overview);}) on_projects=Callback::new(move |()|navigate.run(WorkspaceView::Projects)) on_diagnostics=Callback::new(move |()|show_diagnostics.set(true)) /></Show>
         </main>
             <dialog id="new-dialog" node_ref=new_dialog aria-label=move ||i18n.text("message.new_task") on:cancel=move |event:web_sys::Event|{event.prevent_default();close_new();}><form id="new-form" on:submit=move |event:leptos::ev::SubmitEvent| {
                 event.prevent_default();

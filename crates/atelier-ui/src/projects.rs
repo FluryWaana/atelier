@@ -152,35 +152,15 @@ pub fn Projects(
     let confirmation = RwSignal::new("");
     let archive = RwSignal::new(false);
     let editing = RwSignal::new(false);
-    let settings_dialog = NodeRef::<leptos::html::Dialog>::new();
-    Effect::new(move |_| {
-        let opened = editing.get();
-        if let Some(node) = settings_dialog.get() {
-            if opened && !node.open() {
-                let _ = node.show_modal();
-            }
-            if !opened && node.open() {
-                node.close();
-            }
-        }
-    });
-    let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
+    let creating = RwSignal::new(false);
+    let navigation = StoredValue::new(None::<Callback<()>>);
     let close = move || {
-        if let Some(node) = dialog.get_untracked() {
-            node.close();
+        if let Some(next) = navigation.get_value() {
+            navigation.set_value(None);
+            next.run(());
+        } else {
+            on_close.run(());
         }
-        on_close.run(());
-        request_animation_frame(move || {
-            if let Some(element) = document()
-                .get_element_by_id("manage-projects")
-                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
-            {
-                let _ = element.focus();
-            }
-        });
     };
     let request_close = move || {
         if pending.get_untracked() {
@@ -188,10 +168,34 @@ pub fn Projects(
         }
         if dirty.get_untracked() {
             confirmation.set("discard");
+            request_animation_frame(move || {
+                if let Some(element) = document()
+                    .get_element_by_id("discard-project-navigation")
+                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                {
+                    element.scroll_into_view();
+                    let _ = element.focus();
+                }
+            });
         } else {
             close();
         }
     };
+    let guard = expect_context::<crate::NavigationGuard>();
+    guard.1.update(|generation| *generation += 1);
+    let generation = guard.1.get_untracked();
+    guard.0.set(Some(Callback::new(move |next: Callback<()>| {
+        if pending.get_untracked() {
+            return;
+        }
+        navigation.set_value(Some(next));
+        request_close();
+    })));
+    on_cleanup(move || {
+        if guard.1.get_untracked() == generation {
+            guard.0.set(None);
+        }
+    });
     let unload = window_event_listener(leptos::ev::beforeunload, move |event| {
         if dirty.get_untracked() || pending.get_untracked() {
             event.prevent_default();
@@ -208,8 +212,13 @@ pub fn Projects(
         archive.set(false);
     };
     let close_settings = move || {
-        let target = format!("project-settings-{}", draft.get_untracked().id);
+        let target = if creating.get_untracked() {
+            "add-project".to_owned()
+        } else {
+            format!("project-settings-{}", draft.get_untracked().id)
+        };
         editing.set(false);
+        creating.set(false);
         select(Draft::default());
         request_animation_frame(move || {
             if let Some(element) = document()
@@ -339,9 +348,9 @@ pub fn Projects(
                     repository.set(saved.repo.clone());
                     if value.id.is_empty() {
                         select(Draft::default());
+                        creating.set(false);
                     } else {
                         select(saved);
-                        close_settings();
                     }
                 }
                 // A failed refresh must not turn an already committed creation into a retry.
@@ -360,31 +369,24 @@ pub fn Projects(
         });
     };
     view! {
-        <dialog id="projects-dialog" node_ref=dialog aria-labelledby="projects-heading" on:cancel=move |event: web_sys::Event| { event.prevent_default(); request_close(); }>
-            <header class="dialog-heading"><div><div class="eyebrow">{move || i18n.text("message.on_this_computer")}</div><h2 id="projects-heading">{move || i18n.text("message.my_projects")}</h2></div><button id="close-projects" data-close="" aria-label=move ||i18n.text("message.close") type="button" disabled=move || pending.get() on:click=move |_| request_close()><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></header>
-            <p class="hint">{move ||i18n.text("message.save_your_directories_to_find_them_and_filter_tasks_removing_a_p")}</p>
-            <div class="projects-layout"><section class="project-catalog"><div class="section-heading"><span class="section-number">"01"</span><div><h3>{move ||i18n.text("message.your_projects")}</h3></div></div>
-            <div id="project-list" aria-label=move || i18n.text("message.saved_projects")><For each=move || projects.get() key=|project| field(project, "id") children=move |project| {
-                let id = StoredValue::new(field(&project, "id"));
-                let current = move || projects.with(|projects| projects.iter().find(|project| field(project, "id") == id.get_value()).cloned());
-                view! { <div class="project-row"><button type="button" data-project=id.get_value() disabled=move || pending.get() || dirty.get() on:click=move |_| {if let Some(project)=current(){repository.set(field(&project,"repo"));close();}}><strong>{move || current().map(|project| field(&project,"name")).unwrap_or_default()}</strong><small>{move || current().map(|project| field(&project,"repo")).unwrap_or_default()}</small></button><div class="project-row-actions"><button id=format!("project-settings-{}",id.get_value()) type="button" data-project-id=id.get_value() disabled=move ||pending.get()||dirty.get() on:click=move |_|{if let Some(project)=current(){select(Draft::from_document(&project));editing.set(true);}}>{move ||i18n.text("message.settings_4ed117e0")}</button><button type="button" disabled=move ||pending.get()||dirty.get() on:click=move |_|{if let Some(project)=current(){select(Draft::from_document(&project));editing.set(true);archive.set(true);confirmation.set("remove");}}>{move ||i18n.text("message.remove")}</button></div></div> }
-            } /><p class="hint" hidden=move || !projects.get().is_empty()>{move || i18n.text("message.no_saved_projects")}</p></div></section>
-            <form id="project-form" class="form-section" on:submit=move |event|{event.prevent_default();save(false);}>
-                <div class="section-heading"><span class="section-number">"02"</span><div><h3>{move ||i18n.text("message.add_a_project")}</h3><p class="hint">{move ||i18n.text("message.a_name_and_a_folder_to_find_your_tasks")}</p></div></div>
-                <fieldset disabled=move ||pending.get()||editing.get()><label for="project-create-name">{move ||i18n.text("message.project_name")}</label><input id="project-create-name" required maxlength="100" placeholder=move ||i18n.text("message.my_application") prop:value=move ||draft.get().name on:input=move |event|draft.update(|draft|draft.name=event_target_value(&event))/>
-                <label for="project-directory">{move ||i18n.text("message.local_directory")}</label><div class="directory-picker"><input id="project-directory" required maxlength="2000" prop:value=move ||draft.get().repo on:input=move |event|draft.update(|draft|draft.repo=event_target_value(&event))/><button id="browse-project" type="button" on:click=move |_|browse()>{move ||i18n.text("message.browse")}</button></div>
-                <crate::repository_access::RepositoryAccess token pending dirty=create_access_dirty path=Signal::derive(move||if editing.get(){String::new()}else{draft.get().repo}) id="project-create-access"/>
-                <p class="hint">{move ||i18n.text("message.choose_an_existing_folder_or_paste_its_path_worktrees_require_a")}</p><div class="form-actions"><button class="primary" type="submit" disabled=move ||!dirty.get()>{move ||i18n.text("message.add_project")}</button></div></fieldset>
-                <p class="error" role="alert">{error_text}</p>
-            </form></div>
-            <div class="confirmation" role="alert" hidden=move ||confirmation.get()!="discard"><p>{move ||i18n.text("message.discard_unsaved_changes")}</p><button type="button" class="danger" on:click=move |_|close()>{move ||i18n.text("message.discard")}</button><button type="button" on:click=move |_|confirmation.set("")>{move ||i18n.text("message.keep_editing")}</button></div>
-        </dialog>
-        <dialog id="project-settings-dialog" node_ref=settings_dialog aria-labelledby="project-settings-title" on:cancel=move |event:web_sys::Event|{event.prevent_default();request_settings_close();}>
-            <header class="dialog-heading"><div><div class="eyebrow">{move ||i18n.text("message.project_settings")}</div><h2 id="project-settings-title">{move ||draft.get().name}</h2></div><button data-close="" aria-label=move ||i18n.text("message.close") type="button" disabled=move ||pending.get() on:click=move |_|request_settings_close()><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19"/></svg></button></header>
-            <p class="hint">{move ||i18n.text("message.the_main_repository_can_contain_front_or_back_configure_other_re")}</p>
+        <section id="projects-page" class="projects-page" aria-labelledby="workspace-title">
+            <div class="projects-page-actions"><button id="close-projects" type="button" disabled=move ||pending.get() on:click=move |_|request_close()>{move ||i18n.text("message.back")}</button><button id="add-project" class="primary" type="button" disabled=move ||pending.get()||dirty.get() on:click=move |_|{select(Draft::default());editing.set(false);creating.set(true);}>{move ||i18n.text("message.add_a_project")}</button></div>
+            <p class="error" role="alert" hidden=move ||editing.get()||creating.get()>{error_text}</p>
+            <div class="projects-workspace" class:project-detail-open=move ||editing.get()>
+            <section class="project-catalog" aria-label=move ||i18n.text("message.saved_projects")>
+                <h2>{move ||i18n.text("message.your_projects")}</h2>
+                <div id="project-list"><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|{
+                    let id=StoredValue::new(field(&project,"id"));
+                    let current=move ||projects.with(|items|items.iter().find(|project|field(project,"id")==id.get_value()).cloned());
+                    view!{<button class="project-choice" data-project-id=id.get_value() id=format!("project-settings-{}",id.get_value()) type="button" aria-pressed=move ||(draft.get().id==id.get_value()).to_string() disabled=move ||pending.get()||dirty.get() on:click=move |_|{if let Some(project)=current(){select(Draft::from_document(&project));editing.set(true);request_animation_frame(move ||{if let Some(element)=document().get_element_by_id("project-settings-title").and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}});}}><strong>{move ||current().map(|project|field(&project,"name")).unwrap_or_default()}</strong><small>{move ||current().map(|project|field(&project,"repo")).unwrap_or_default()}</small></button>}
+                }/></div>
+                <p class="hint" hidden=move ||!projects.get().is_empty()>{move ||i18n.text("message.no_saved_projects")}</p>
+            </section>
+            <section id="project-settings-panel" class="settings-content project-detail" hidden=move ||!editing.get() aria-labelledby="project-settings-title">
+                <header class="project-detail-heading"><div><h2 id="project-settings-title" tabindex="-1">{move ||draft.get().name}</h2><p class="hint">{move ||i18n.text("message.project_settings")}</p></div><button type="button" disabled=move ||pending.get() on:click=move |_|request_settings_close()>{move ||i18n.text("message.back")}</button></header><button class="project-open-tasks" type="button" disabled=move ||pending.get()||dirty.get() on:click=move |_|{repository.set(draft.get_untracked().repo);close();}>{move ||i18n.text("message.task_board")}</button>
             <form id="project-settings-form" on:submit=move |event| { event.prevent_default(); save(false); }>
                 <fieldset disabled=move || pending.get()>
-                    <section class="form-section"><div class="section-heading"><span class="section-number">"01"</span><h3>{move ||i18n.text("message.main_project")}</h3></div>
+                    <section class="form-section"><div class="section-heading"><h3>{move ||i18n.text("message.main_project")}</h3></div>
                     <label for="project-name">{move || i18n.text("message.project_name")}</label><input id="project-name" required maxlength="100" autofocus prop:value=move || draft.get().name on:input=move |event| draft.update(|draft| draft.name = event_target_value(&event)) />
                     <label for="project-repo">{move || i18n.text("message.git_repository_location")}</label><div class="directory-picker"><input id="project-repo" required maxlength="2000" spellcheck="false" readonly=move ||repository_locked.get() prop:value=move || draft.get().repo on:input=move |event| draft.update(|draft| draft.repo = event_target_value(&event)) /><button id="browse-project-settings" type="button" disabled=move ||repository_locked.get() on:click=move |_|browse()>{move ||i18n.text("message.browse")}</button></div>
                     <p class="hint">{move || i18n.text(if repository_locked.get(){"message.remove_this_projects_worktrees_before_changing_its_location"}else{"message.choose_an_existing_folder_no_files_will_be_moved_project_cards_w"})}</p>
@@ -408,11 +410,31 @@ pub fn Projects(
                 <div class="form-actions"><button id="save-project" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "message.saving" } else { "message.save" })}</button><button id="reset-project" type="button" disabled=move || pending.get() || !dirty.get() on:click=move |_| confirmation.set("reset")>{move || i18n.text("message.discard_changes_8bc1ff70")}</button></div>
             </form>
             <div class="editor-secondary" hidden=move || draft.get().id.is_empty()><button id="remove-project" class="danger" type="button" disabled=move || pending.get() || dirty.get() on:click=move |_| confirmation.set("remove")>{move || i18n.text("message.remove_this_project")}</button></div>
-            <div class="confirmation" role="alert" hidden=move || confirmation.get().is_empty()><p>{move || i18n.text(if confirmation.get() == "remove" { "message.remove_this_project_from_the_list_repository_files_and_tasks_wil" } else { "message.discard_unsaved_changes" })}</p>
+            <div class="confirmation" role="alert" hidden=move || !matches!(confirmation.get(), "remove" | "reset" | "settings-discard")><p>{move || i18n.text(if confirmation.get() == "remove" { "message.remove_this_project_from_the_list_repository_files_and_tasks_wil" } else { "message.discard_unsaved_changes" })}</p>
                 <label class="check-filter" hidden=move || confirmation.get() != "remove"><input id="archive-project-tasks" type="checkbox" prop:checked=move || archive.get() on:change=move |event| archive.set(event_target_checked(&event)) />{move || i18n.text("message.also_archive_this_project_s_tasks")}</label>
                 <button id="confirm-project" class="danger" type="button" disabled=move || pending.get() on:click=move |_| match confirmation.get_untracked() { "remove" => save(true), "reset" => select(original.get_untracked()), "settings-discard"=>close_settings(), _ => close() }>{move || i18n.text("message.confirm")}</button><button id="cancel-project-confirmation" type="button" disabled=move || pending.get() on:click=move |_| confirmation.set("")>{move || i18n.text("message.back")}</button>
             </div>
-        </dialog>
+            </section>
+            <p class="project-selection-hint hint" hidden=move ||editing.get()||projects.get().is_empty()>{move ||i18n.text("message.select_project_to_configure")}</p>
+            </div>
+            <div class="confirmation" role="alert" hidden=move ||confirmation.get()!="discard"><p>{move ||i18n.text("message.discard_unsaved_changes")}</p><button id="discard-project-navigation" type="button" class="danger" on:click=move |_|close()>{move ||i18n.text("message.discard")}</button><button type="button" on:click=move |_|{navigation.set_value(None);confirmation.set("");}>{move ||i18n.text("message.keep_editing")}</button></div>
+        </section>
+        <Show when=move ||creating.get()>
+            <crate::modal::Modal id="project-create-dialog" labelledby="project-create-title" node_ref=NodeRef::new() on_close=Callback::new(move |()|{if !pending.get_untracked(){if dirty.get_untracked(){confirmation.set("create-discard");}else{close_settings();}}})>
+                <header class="dialog-heading"><h2 id="project-create-title">{move ||i18n.text("message.add_a_project")}</h2><button type="button" data-close="" disabled=move ||pending.get() on:click=move |_|{if dirty.get_untracked(){confirmation.set("create-discard");}else{close_settings();}}>{move ||i18n.text("message.close")}</button></header>
+            <form id="project-form" class="form-section" on:submit=move |event|{event.prevent_default();save(false);}>
+                <div class="section-heading"><div><h3>{move ||i18n.text("message.add_a_project")}</h3><p class="hint">{move ||i18n.text("message.a_name_and_a_folder_to_find_your_tasks")}</p></div></div>
+                <fieldset disabled=move ||pending.get()||editing.get()><label for="project-create-name">{move ||i18n.text("message.project_name")}</label><input id="project-create-name" required maxlength="100" placeholder=move ||i18n.text("message.my_application") prop:value=move ||draft.get().name on:input=move |event|draft.update(|draft|draft.name=event_target_value(&event))/>
+                <label for="project-directory">{move ||i18n.text("message.local_directory")}</label><div class="directory-picker"><input id="project-directory" required maxlength="2000" prop:value=move ||draft.get().repo on:input=move |event|draft.update(|draft|draft.repo=event_target_value(&event))/><button id="browse-project" type="button" on:click=move |_|browse()>{move ||i18n.text("message.browse")}</button></div>
+                <crate::repository_access::RepositoryAccess token pending dirty=create_access_dirty path=Signal::derive(move||if editing.get(){String::new()}else{draft.get().repo}) id="project-create-access"/>
+                <p class="hint">{move ||i18n.text("message.choose_an_existing_folder_or_paste_its_path_worktrees_require_a")}</p><div class="form-actions"><button class="primary" type="submit" disabled=move ||!dirty.get()>{move ||i18n.text("message.add_project")}</button></div></fieldset>
+                <p class="error" role="alert">{error_text}</p>
+            </form>
+
+                <div class="confirmation" role="alert" hidden=move ||confirmation.get()!="create-discard"><p>{move ||i18n.text("message.discard_unsaved_changes")}</p><button type="button" class="danger" on:click=move |_|close_settings()>{move ||i18n.text("message.discard")}</button><button type="button" on:click=move |_|confirmation.set("")>{move ||i18n.text("message.keep_editing")}</button></div>
+            </crate::modal::Modal>
+        </Show>
+
     }
 }
 

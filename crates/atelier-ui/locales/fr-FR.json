@@ -2951,5 +2951,7 @@
   "message.ticket_sync_running": "Récupération des tickets…",
   "message.ticket_sync_complete": "Tickets récupérés.",
   "message.cancel_jira_token_removal": "Annuler le retrait du jeton",
-  "message.jira_token_removal_pending": "Le jeton sera retiré à l’enregistrement."
+  "message.jira_token_removal_pending": "Le jeton sera retiré à l’enregistrement.",
+  "message.manage_project_settings": "Retrouvez vos projets et configurez leur fonctionnement.",
+  "message.select_project_to_configure": "Choisissez un projet pour afficher ses paramètres."
 }

@@ -798,3 +798,29 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
   #updates-settings .update-progress { padding: 16px; }
   #updates-settings button { max-width: 100%; }
 }
+/* Project management uses the workspace, with a compact creation dialog. */
+.projects-page { max-width: 1240px; }
+.projects-page-actions { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+.projects-workspace { display: grid; grid-template-columns: minmax(240px, 320px) minmax(0, 1fr); gap: 32px; align-items: start; }
+.projects-page .project-catalog { min-width: 0; }
+.projects-page h2 { margin: 0 0 16px; font-size: 20px; }
+.projects-page #project-list { display: grid; gap: 8px; }
+.projects-page .project-choice { display: grid; gap: 6px; width: 100%; min-width: 0; padding: 16px; text-align: left; white-space: normal; background: transparent; border: 1px solid var(--line); border-radius: 8px; }
+.projects-page .project-choice[aria-pressed=true] { background: var(--surface); border-color: var(--muted); }
+.projects-page .project-choice small { color: var(--muted); overflow-wrap: anywhere; }
+.project-detail-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 24px; }
+.project-detail-heading h2 { margin-bottom: 8px; overflow-wrap: anywhere; }
+.projects-page .project-detail { width: 100%; max-width: 760px; }
+.projects-page .form-actions { position: sticky; bottom: 16px; z-index: 1; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.projects-page .editor-secondary { margin-top: 32px; }
+.projects-page .confirmation { margin-block: 24px; }
+.projects-page .error:empty { display: none; }
+.project-selection-hint { padding: 24px; background: var(--surface); border-radius: 8px; }
+#project-create-dialog { width: min(560px, calc(100vw - 32px)); }
+#project-create-dialog .section-heading { display: none; }
+@media (max-width: 760px) {
+  .projects-workspace { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .projects-workspace.project-detail-open > .project-catalog { display: none; }
+  .projects-page .form-actions { bottom: 8px; }
+}
+.projects-page-actions { gap: 12px; }

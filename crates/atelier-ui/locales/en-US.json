@@ -2951,5 +2951,7 @@
   "message.ticket_sync_running": "Retrieving tickets…",
   "message.ticket_sync_complete": "Tickets retrieved.",
   "message.cancel_jira_token_removal": "Cancel token removal",
-  "message.jira_token_removal_pending": "The token will be removed when you save."
+  "message.jira_token_removal_pending": "The token will be removed when you save.",
+  "message.manage_project_settings": "Find your projects and configure how they work.",
+  "message.select_project_to_configure": "Choose a project to view its settings."
 }
