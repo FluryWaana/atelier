@@ -743,12 +743,6 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
 .settings-content fieldset + button { margin-top: 16px; }
 .forge-settings > h3 { margin-bottom: 8px; }
 .forge-settings > select { max-width: 400px; margin-bottom: 24px; }
-.forge-settings .forge-inspection-form {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--line);
-}
-.forge-inspection-form > h4 { margin: 0; }
 .forge-settings :is(#forge-error, #forge-notice):empty { display: none; }
 @media (max-width: 600px) {
   .settings-content .form-section { padding: 18px; }

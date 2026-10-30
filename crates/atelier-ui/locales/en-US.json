@@ -1017,7 +1017,7 @@
   "message.forge": "Forge",
   "message.forge_connection_saved_no_remote_access_verified": "Forge connection saved. No remote access verified.",
   "message.invalid_read_parameters": "Invalid read parameters.",
-  "message.configure_github_gitlab_or_azure_devops_services_then_explicitly": "Configure GitHub, GitLab or Azure DevOps Services, then explicitly read a PR/MR. This read does not publish, comment or start CI.",
+  "message.configure_github_gitlab_or_azure_devops_services_then_explicitly": "Configure connections to GitHub, GitLab or Azure DevOps Services.",
   "message.site_or_organization_address": "Site or organization address",
   "message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio": "Use the GitHub site root, GitLab site prefix or Azure organization address. Changing the address removes the previous token unless you provide a new one.",
   "message.forge_personal_access_token": "Forge personal access token",

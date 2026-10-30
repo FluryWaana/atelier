@@ -3180,15 +3180,7 @@ async fn settings_scenario(
     .await?;
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#forge-token')?.value === '' && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié') && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
-    client
-        .find(Locator::Css("#forge-repository"))
-        .await?
-        .send_keys("../invalid")
-        .await?;
-    click(client, "#list-forge-prs").await?;
-    // Invalid repository scope is rejected before any HTTP call to the forge.
-    wait_dom(client,"return document.querySelector('#forge-error')?.textContent.includes('Dépôt ou numéro de PR invalide') && document.querySelector('#forge-repository')?.value === '../invalid' && document.querySelector('#list-forge-prs')?.disabled === false;",vec![]).await?;
-    clear_input(client, "#forge-repository").await?;
+    wait_dom(client, "return !document.querySelector('#forge-repository') && !document.querySelector('#read-forge-pr') && !document.querySelector('#list-forge-prs');", vec![]).await?;
     let forges: atelier_core::contracts::ForgeConnections = http
         .get(format!("{address}/api/forges"))
         .bearer_auth(token)

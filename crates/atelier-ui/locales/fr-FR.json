@@ -1017,7 +1017,7 @@
   "message.forge": "Forge",
   "message.forge_connection_saved_no_remote_access_verified": "Connexion de forge enregistrée. Aucun accès distant vérifié.",
   "message.invalid_read_parameters": "Paramètres de lecture invalides.",
-  "message.configure_github_gitlab_or_azure_devops_services_then_explicitly": "Configure GitHub, GitLab ou Azure DevOps Services, puis lis explicitement une PR/MR. Cette lecture ne crée ni publication, ni commentaire, ni exécution de CI.",
+  "message.configure_github_gitlab_or_azure_devops_services_then_explicitly": "Configure les connexions à GitHub, GitLab ou Azure DevOps Services.",
   "message.site_or_organization_address": "Adresse du site ou de l’organisation",
   "message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio": "Utilise la racine du site GitHub, le préfixe du site GitLab ou l’adresse de l’organisation Azure. Changer l’adresse retire le jeton précédent si tu n’en fournis pas un nouveau.",
   "message.forge_personal_access_token": "Jeton personnel de la forge",
