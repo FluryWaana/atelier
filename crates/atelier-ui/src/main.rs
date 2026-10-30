@@ -74,7 +74,6 @@ pub enum WorkspaceView {
     Archives,
     Projects,
     Settings,
-    Diagnostics,
     Updates,
     Task,
 }
@@ -92,7 +91,6 @@ impl WorkspaceView {
             Self::Archives => "archives",
             Self::Projects => "projects",
             Self::Settings => "settings",
-            Self::Diagnostics => "diagnostics",
             Self::Updates => "updates",
             Self::Task => "task",
         }
@@ -148,7 +146,6 @@ impl WorkspaceView {
                 "message.archives",
                 "message.find_your_history_and_restore_a_task_when_you_need_it",
             ),
-            Self::Diagnostics => ("message.diagnostics", "message.test_connections"),
             Self::Task => ("", ""),
         }
     }
@@ -424,7 +421,6 @@ fn App() -> impl IntoView {
     };
     let show_agents = RwSignal::new(false);
     let show_backups = RwSignal::new(false);
-    let show_diagnostics = RwSignal::new(false);
     let deleting_card = RwSignal::new(None::<Card>);
     let dragging = RwSignal::new(None::<(String, String)>);
     let command_open = RwSignal::new(false);
@@ -1201,18 +1197,6 @@ fn App() -> impl IntoView {
                     >
                         <NavigationIcon kind="settings" />
                         <span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span>
-                    </crate::button::Button>
-                    <crate::button::Button
-                        disabled={Signal::derive(move || loading.get())}
-                        class="nav-item"
-                        {..}
-                        id="diagnostics-button"
-                        type="button"
-                        on:click={move |_| show_diagnostics.set(true)}
-                        title={move || i18n.text("message.diagnostics")}
-                    >
-                        <NavigationIcon kind="diagnostics" />
-                        <span class="nav-label">{move || i18n.text("message.diagnostics")}</span>
                     </crate::button::Button>
                     <crate::button::Button
                         disabled={Signal::derive(move || loading.get())}
@@ -2204,13 +2188,6 @@ fn App() -> impl IntoView {
                         }
                     })
             }}
-            <Show when={move || show_diagnostics.get()}>
-                <DiagnosticsDialog
-                    board
-                    token
-                    on_close={Callback::new(move |()| show_diagnostics.set(false))}
-                />
-            </Show>
             <Show when={move || command_open.get()}>
                 <CommandPalette
                     board
@@ -2224,7 +2201,7 @@ fn App() -> impl IntoView {
                         navigate.run(WorkspaceView::Overview);
                     })}
                     on_projects={Callback::new(move |()| navigate.run(WorkspaceView::Projects))}
-                    on_diagnostics={Callback::new(move |()| show_diagnostics.set(true))}
+                    on_agents={Callback::new(move |()| show_agents.set(true))}
                 />
             </Show>
         </main>
@@ -2333,7 +2310,6 @@ fn NavigationIcon(kind: &'static str, #[prop(default = false)] view_icon: bool) 
             <circle cx="9" cy="7" r="3" />
             <circle cx="15" cy="17" r="3" />
         }.into_any(),
-        "diagnostics"=>view! { <path d="M3 12h4l3-7 4 14 3-7h4" /> }.into_any(),
         "updates"=>view! {
             <path d="M20 7v5h-5M4 17v-5h5" />
             <path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />
@@ -2389,7 +2365,7 @@ fn command_search(value: &str) -> String {
 enum CommandTarget {
     New,
     Projects,
-    Diagnostics,
+    Agents,
     Project(String),
     Card(String),
 }
@@ -2402,7 +2378,7 @@ fn CommandPalette(
     on_new: Callback<()>,
     on_project: Callback<String>,
     on_projects: Callback<()>,
-    on_diagnostics: Callback<()>,
+    on_agents: Callback<()>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let query = RwSignal::new(String::new());
@@ -2421,9 +2397,9 @@ fn CommandPalette(
                 i18n.text("message.local_directories"),
             ),
             (
-                CommandTarget::Diagnostics,
-                i18n.text("message.test_connections"),
-                i18n.text("message.git_agents_and_services"),
+                CommandTarget::Agents,
+                i18n.text("message.agents"),
+                i18n.text("message.installation_and_login"),
             ),
         ];
         items.extend(board.projects.get().into_iter().map(|project| {
@@ -2471,7 +2447,7 @@ fn CommandPalette(
             match target {
                 CommandTarget::New => on_new.run(()),
                 CommandTarget::Projects => on_projects.run(()),
-                CommandTarget::Diagnostics => on_diagnostics.run(()),
+                CommandTarget::Agents => on_agents.run(()),
                 CommandTarget::Project(repo) => on_project.run(repo),
                 CommandTarget::Card(id) => on_open.run(id),
             }
@@ -2584,73 +2560,6 @@ fn CommandPalette(
                 </span>
             </div>
         </modal::Modal>
-    }
-}
-
-#[component]
-fn DiagnosticsDialog(
-    board: BoardState,
-    token: StoredValue<Result<String, String>>,
-    on_close: Callback<()>,
-) -> impl IntoView {
-    let i18n = expect_context::<I18n>();
-    let pending = RwSignal::new(false);
-    let profile = RwSignal::new(None::<atelier_core::document::Document>);
-    let dialog = NodeRef::<leptos::html::Dialog>::new();
-    let close = move || {
-        if !pending.get_untracked() {
-            if let Some(dialog) = dialog.get_untracked() {
-                dialog.close();
-            }
-            on_close.run(());
-            focus_element("diagnostics-button");
-        }
-    };
-    view! {
-        <crate::modal::Modal
-            id="diagnostics-dialog"
-            node_ref={dialog}
-            labelledby="diagnostics-title"
-            on_close={Callback::new(move |()| close())}
-        >
-            <crate::modal::ModalHeader class="inset" title_id="diagnostics-title" title=Signal::derive(move||i18n.text("message.service_status")) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|close())/>
-            <p class="hint">
-                {move || {
-                    i18n.text("message.explicit_check_of_the_saved_profile_cli_version_and_login_status")
-                }}
-            </p>
-            <crate::form::Field label=Signal::derive(move || i18n.text("message.agent"))><crate::form::Select
-                    {..}
-                    disabled={move || pending.get()}
-                    on:change={move |event| {
-                        let id = event_target_value(&event);
-                        profile
-                            .set(
-                                atelier_core::domain::agent_options::providers(
-                                        &board.settings.get_untracked(),
-                                    )
-                                    .unwrap_or_default()
-                                    .into_iter()
-                                    .find(|item| field(item, "id") == id),
-                            );
-                    }}
-                >
-                    <option value="">{move || i18n.text("message.choose_a_profile")}</option>
-                    <For
-                        each={move || {
-                            atelier_core::domain::agent_options::providers(&board.settings.get())
-                                .unwrap_or_default()
-                        }}
-                        key={|profile| field(profile, "id")}
-                        children={move |profile| {
-                            view! { <option value={field(&profile, "id")}>{field(&profile, "name")}</option> }
-                        }}
-                    />
-                </crate::form::Select></crate::form::Field>
-            <div id="diagnostics-results" aria-live="polite">
-                <agent_diagnostics::AgentDiagnostics profile token pending blocked={Memo::new(|_| false)} />
-            </div>
-        </crate::modal::Modal>
     }
 }
 

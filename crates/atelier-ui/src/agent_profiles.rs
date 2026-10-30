@@ -168,8 +168,11 @@ pub fn AgentProfiles(
     board: BoardState,
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
+    #[prop(optional)] initial_profile: String,
+    #[prop(default = "manage-agents")] return_focus: &'static str,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
+    let initial_profile = StoredValue::new(initial_profile);
     let statuses = expect_context::<crate::agent_diagnostics::AgentStatuses>();
     let items = RwSignal::new(Vec::<Document>::new());
     let original = RwSignal::new(None::<Document>);
@@ -198,6 +201,9 @@ pub fn AgentProfiles(
                 && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
             {
                 let _ = element.focus();
+                if id == "agent-diagnostic-heading" {
+                    element.scroll_into_view_with_bool(true);
+                }
             }
         })
     };
@@ -222,7 +228,7 @@ pub fn AgentProfiles(
             node.close();
         }
         on_close.run(());
-        focus("manage-agents");
+        focus(return_focus);
     };
     let ask = move |action: Confirmation| {
         confirmation.set(Some(action));
@@ -270,6 +276,16 @@ pub fn AgentProfiles(
                             select(None);
                             editing.set(false);
                             focus("new-profile");
+                        }
+                    }
+                    if !reload && !editing.get_untracked() {
+                        let selected = profiles
+                            .iter()
+                            .find(|profile| field(profile, "id") == initial_profile.get_value())
+                            .cloned();
+                        if selected.is_some() {
+                            select(selected);
+                            focus("agent-diagnostic-heading");
                         }
                     }
                     items.set(profiles);

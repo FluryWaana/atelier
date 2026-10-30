@@ -78,6 +78,8 @@ pub fn Runs(
     let purpose = RwSignal::new("work".to_owned());
     let error = RwSignal::new(String::new());
     let selected_run = RwSignal::new(String::new());
+    let help_profile = RwSignal::new(None::<String>);
+    let failed_start = RwSignal::new(None::<String>);
     let profiles = Signal::derive(move || {
         board.settings.with(|settings| {
             atelier_core::domain::agent_options::providers(settings).unwrap_or_default()
@@ -245,6 +247,8 @@ pub fn Runs(
             pending.set(true);
         }
         error.set(String::new());
+        failed_start.set(None);
+        let started_agent = (!stop && !verifying && !queuing).then(|| agent.get_untracked());
         let alive = acting.clone();
         spawn_local(async move {
             let result = async {
@@ -258,6 +262,7 @@ pub fn Runs(
                     message.set(String::new());
                 }
                 if let Err(message) = result {
+                    failed_start.set(started_agent);
                     error.set(message);
                 }
                 if stop {
@@ -655,6 +660,29 @@ pub fn Runs(
                     )
                 }}
             </p>
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || running.get())}
+                {..}
+                id="check-run-agent"
+                type="button"
+                hidden={move || failed_start.get().is_none() && latest.get().is_none_or(|run| field(&run, "status") != "failed")}
+                on:click={move |_| {
+                    let selected = failed_start.get_untracked().unwrap_or_else(|| {
+                        latest.get_untracked().map(|run| field(&run, "agent")).unwrap_or_default()
+                    });
+                    help_profile.set(Some(selected));
+                }}
+            >
+                {move || i18n.text("message.check_agent_settings")}
+            </crate::button::Button>
+            <Show when={move || help_profile.get().is_some()}>
+                <crate::agent_profiles::AgentProfiles
+                    board token
+                    initial_profile={help_profile.get_untracked().unwrap_or_default()}
+                    return_focus="check-run-agent"
+                    on_close={Callback::new(move |()| help_profile.set(None))}
+                />
+            </Show>
             <crate::form::Field
                 id="run-history"
                 label={Signal::derive(move || i18n.text("message.run_history"))}

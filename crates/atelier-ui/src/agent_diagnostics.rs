@@ -140,10 +140,10 @@ pub fn AgentDiagnostics(
             hidden={move || profile.get().is_none()}
             aria-labelledby="agent-diagnostic-heading"
         >
-            <h3 id="agent-diagnostic-heading">{move || i18n.text("message.installation_and_login")}</h3>
+            <h3 id="agent-diagnostic-heading" tabindex="-1">{move || i18n.text("message.installation_and_login")}</h3>
             <p class="field-help">
                 {move || {
-                    i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")
+                    i18n.text("message.agent_check_scope")
                 }}
             </p>
             <crate::button::Button
@@ -176,6 +176,9 @@ pub fn AgentDiagnostics(
             </p>
             <p id="agent-diagnostic-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
+            </p>
+            <p class="field-help" hidden={move || error.get().is_empty()}>
+                {move || i18n.text("message.agent_check_help")}
             </p>
             <div id="agent-diagnostic-result" role="status">
                 {move || {
@@ -218,6 +221,14 @@ pub fn AgentDiagnostics(
                                                 }
                                             },
                                         )}
+                                </p>
+                                <p class="field-help" id="agent-check-next-step">
+                                    {i18n.text(match diagnostic.authentication {
+                                        AgentAuthentication::Absent => "message.agent_login_help",
+                                        AgentAuthentication::MissingKey => "message.agent_key_help",
+                                        AgentAuthentication::Unavailable => "message.agent_check_help",
+                                        _ => "message.agent_check_access_scope",
+                                    })}
                                 </p>
                                 <p class="error">
                                     {diagnostic.authentication_error.map(|message| i18n.text(&message))}

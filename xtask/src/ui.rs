@@ -137,7 +137,7 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
     let requested_journey = std::env::var("ATELIER_TEST_JOURNEY").unwrap_or("all".into());
     if !matches!(
         requested_journey.as_str(),
-        "all" | "application" | "jira" | "updates"
+        "all" | "application" | "diagnostics" | "jira" | "updates"
     ) {
         return Err("Parcours navigateur inconnu.".into());
     }
@@ -241,6 +241,10 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
             "application",
             Box::pin(scenario(&client, &http)) as Pin<Box<dyn Future<Output = Result<()>> + '_>>,
         ),
+        (
+            "diagnostics",
+            Box::pin(diagnostics_scenario(&client, &http)),
+        ),
         ("jira", Box::pin(jira_recovery_scenario(&client, &http))),
         ("updates", Box::pin(updates_scenario(&client, &http))),
     ];
@@ -271,6 +275,112 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
     println!(
         "Sélection navigateur {browser}/{requested_journey} réussie ; les parcours non exécutés restent non qualifiés."
     );
+    Ok(())
+}
+
+async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+    let data = tempfile::tempdir()?;
+    let port = free_port()?;
+    let address = format!("http://127.0.0.1:{port}");
+    let (_server, token) = start_server(data.path(), port, &ui_assets()).await?;
+    client.goto(&format!("{address}/#session={token}")).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",
+        vec![],
+    )
+    .await?;
+    profiles_scenario(client, http, &address, &token, data.path()).await?;
+    let fixture = crate::target()
+        .join("debug")
+        .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(&token).header("x-local-request", "1")
+        .json(&json!({"id":"diagnostic-command","name":"Diagnostic synthétique","type":"command","auth":"cli","command":fixture,"analyzeArgs":["invalid-synthetic-command"],"expected":null}))
+        .send().await?.checked_status().await?;
+    let card: atelier_core::contracts::Card = http
+        .post(format!("{address}/api/brainstorms"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Synthetic diagnostic failure","repo":""}))
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    client.goto(&format!("{address}/tasks/{}", card.id)).await?;
+    task_tab(client, "activity").await?;
+    wait_dom(client, "return [...document.querySelector('#run-agent')?.options || []].some(option => option.value === 'diagnostic-command');", vec![]).await?;
+    client.execute("const select=document.querySelector('#run-agent');select.value='diagnostic-command';select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#brainstorm-message"))
+        .await?
+        .send_keys("Synthetic failure")
+        .await?;
+    click(client, "#start-run").await?;
+    wait_dom(client,"return document.querySelector('#runs-heading')?.parentElement.textContent.includes('Échec de l’exécution') && document.querySelector('#check-run-agent')?.hidden === false && document.querySelector('#check-run-agent')?.disabled === false;",vec![]).await?;
+    click(client, "#check-run-agent").await?;
+    wait_dom(client,"return document.querySelector('#agents-dialog')?.matches(':modal') && document.querySelector('#profile-id')?.value === 'diagnostic-command';",vec![]).await?;
+    wait_dom(
+        client,
+        "return document.activeElement?.id === 'agent-diagnostic-heading';",
+        vec![],
+    )
+    .await?;
+    for width in [1440, 1024, 390] {
+        client.set_window_rect(0, 0, width, 900).await?;
+        click(client, "#close-agents").await?;
+        click(client, "#check-run-agent").await?;
+        wait_dom(
+            client,
+            "return document.activeElement?.id === 'agent-diagnostic-heading';",
+            vec![],
+        )
+        .await?;
+        std::fs::write(
+            root().join(format!(".artifacts/diagnostic-agent-{width}.png")),
+            client.screenshot().await?,
+        )?;
+    }
+    client.set_window_rect(0, 0, 1440, 1000).await?;
+    client
+        .find(Locator::Css("#profile-name"))
+        .await?
+        .send_keys(" brouillon conservé")
+        .await?;
+    click(client, "#close-agents").await?;
+    click(client, "#cancel-profile-action").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#profile-name')?.value.endsWith(' brouillon conservé');",
+        vec![],
+    )
+    .await?;
+    click(client, "#close-agents").await?;
+    click(client, "#confirm-profile-action").await?;
+    wait_dom(client,"return !document.querySelector('#agents-dialog') && document.activeElement?.id === 'check-run-agent';",vec![]).await?;
+    http.post(format!("{address}/api/agent-providers")).bearer_auth(&token).header("x-local-request", "1")
+        .json(&json!({"id":"diagnostic-missing","name":"Programme synthétique absent","type":"command","auth":"cli","command":data.path().join("missing-agent.exe"),"expected":null}))
+        .send().await?.checked_status().await?;
+    wait_dom(client, "return [...document.querySelector('#run-agent')?.options || []].some(option => option.value === 'diagnostic-missing');", vec![]).await?;
+    client.execute("const select=document.querySelector('#run-agent');select.value='diagnostic-missing';select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    client
+        .find(Locator::Css("#brainstorm-message"))
+        .await?
+        .send_keys("Keep this draft")
+        .await?;
+    click(client, "#start-run").await?;
+    wait_dom(client, "return document.querySelector('#check-run-agent')?.disabled === false && document.querySelector('#brainstorm-message')?.value === 'Keep this draft';", vec![]).await?;
+    click(client, "#check-run-agent").await?;
+    wait_dom(client, "return document.querySelector('#agents-dialog')?.matches(':modal') && document.querySelector('#profile-id')?.value === 'diagnostic-missing';", vec![]).await?;
+    click(client, "#close-agents").await?;
+    wait_dom(client, "return !document.querySelector('#agents-dialog') && document.querySelector('#brainstorm-message')?.value === 'Keep this draft' && document.activeElement?.id === 'check-run-agent';", vec![]).await?;
+    client
+        .find(Locator::Css("#brainstorm-message"))
+        .await?
+        .clear()
+        .await?;
+    click(client, "#close-editor").await?;
     Ok(())
 }
 
@@ -2189,6 +2299,7 @@ async fn profiles_scenario(
     token: &str,
     data: &Path,
 ) -> Result<()> {
+    wait_dom(client, "return !document.querySelector('#diagnostics-button') && !document.querySelector('#diagnostics-dialog');", vec![]).await?;
     let source = root()
         .join("target/debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
@@ -2207,7 +2318,19 @@ async fn profiles_scenario(
             .bearer_auth(token)
             .header("x-local-request", "1")
     };
-    click(client, "#manage-agents").await?;
+    click(client, "#command-button").await?;
+    client
+        .find(Locator::Css("#command-query"))
+        .await?
+        .send_keys("Agents")
+        .await?;
+    wait_dom(client,"return [...document.querySelectorAll('#command-results .command-result')].some(item => item.textContent.includes('Installation et connexion'));",vec![]).await?;
+    client
+        .find(Locator::Css("#command-query"))
+        .await?
+        .send_keys("\u{e007}")
+        .await?;
+    wait_dom(client,"return document.querySelector('#agents-dialog')?.matches(':modal') && !document.querySelector('#command-dialog');",vec![]).await?;
     wait_dom(client, "return document.querySelector('#agents-dialog')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('[data-profile]').length >= 2;", vec![]).await?;
     click(client, "#new-profile").await?;
     wait_dom(client, "return /^profile-[0-9]+$/.test(document.querySelector('#profile-id')?.value) && !document.querySelector('#profile-advanced')?.open;", vec![]).await?;
@@ -2371,7 +2494,7 @@ async fn profiles_scenario(
     )
     .await?;
     click(client, "#diagnose-profile").await?;
-    wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Aucune clé API enregistrée.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#agent-diagnostic-auth')?.textContent === 'Aucune clé API enregistrée.' && document.querySelector('#agent-check-next-step')?.textContent.includes('Ajoute une clé API') && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
     client.execute("const select=document.querySelector('#profile-auth'); select.value='cli'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil enregistré.' && document.querySelector('#diagnose-profile')?.disabled === false;",vec![]).await?;
@@ -4227,7 +4350,7 @@ async fn saved_task(client: &Client) -> Result<()> {
 
 async fn expand_control(client: &Client, selector: &str) -> Result<()> {
     for _ in 0..16 {
-        if client.execute("const element=document.querySelector(arguments[0]);return !!element?.closest('details:not([open])');",vec![json!(selector)]).await? != json!(true) { return Ok(()); }
+        if client.execute("const element=document.querySelector(arguments[0]);const container=element?.matches('summary')?element.parentElement?.parentElement:element;return !!container?.closest('details:not([open])');",vec![json!(selector)]).await? != json!(true) { return Ok(()); }
         client
             .find(Locator::Css(&format!(
                 "details:not([open]):has({selector}) > summary"
