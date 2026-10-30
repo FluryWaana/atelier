@@ -1,4 +1,8 @@
 {
+  "message.save_provider_choice": "Enregistrer le choix",
+  "message.loading_module_configuration": "Chargement des réglages du module.",
+  "message.save_current_module_draft_first": "Enregistre ou annule le brouillon du module en cours avant d’en configurer un autre.",
+  "message.open_module_manager": "Ouvrir les modules",
   "message.configure_jira_mapping_in_kanban": "Les correspondances Jira se règlent dans le Kanban avec Configurer les colonnes.",
   "message.column_mapping_needs_review": "Correspondance à vérifier",
   "message.kanban_operation_in_progress": "Opération en cours.",

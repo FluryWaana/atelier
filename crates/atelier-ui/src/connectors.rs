@@ -68,11 +68,25 @@ pub fn Connectors(
     pending: RwSignal<bool>,
     dirty: RwSignal<bool>,
     #[prop(optional)] requested: Option<RwSignal<String>>,
+    #[prop(optional)] shown: Option<RwSignal<String>>,
+    #[prop(optional)] preview_error: Option<RwSignal<String>>,
+    #[prop(optional)] embedded: Option<Signal<bool>>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
+    let embedded = move || embedded.map(|embedded| embedded.get()).unwrap_or(false);
     let registry = RwSignal::new(None::<Registry>);
     let loading = RwSignal::new(false);
     let original = RwSignal::new(None::<Connection>);
+    Effect::new(move |_| {
+        if let Some(shown) = shown {
+            shown.set(
+                original
+                    .get()
+                    .map(|connection| connection.installed.manifest.id)
+                    .unwrap_or_default(),
+            );
+        }
+    });
     let draft = RwSignal::new(Draft::default());
     let module = RwSignal::new(String::new());
     let path = RwSignal::new(String::new());
@@ -82,6 +96,11 @@ pub fn Connectors(
     let reload = RwSignal::new(false);
     let remove = RwSignal::new(false);
     let error = RwSignal::new(String::new());
+    Effect::new(move |_| {
+        if let Some(preview_error) = preview_error {
+            preview_error.set(error.get());
+        }
+    });
     let notice = RwSignal::new(String::new());
     let tickets = RwSignal::new(BTreeSet::<TicketIdentity>::new());
     let project = RwSignal::new(None::<atelier_core::document::Document>);
@@ -413,23 +432,23 @@ pub fn Connectors(
         })
     };
     view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="connectors-heading">{move||i18n.text("message.local_connectors")}</h3>
-        <p class="field-help">{move||i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")}</p>
+        <h3 id="connectors-heading">{move||if embedded(){original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name)).unwrap_or_else(||i18n.text("message.connectors"))}else{i18n.text("message.local_connectors")}}</h3>
+        <p class="field-help" hidden=embedded>{move||i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")}</p>
         <fieldset disabled=move||loading.get()>
-        <p>{move||i18n.text("message.a_connector_is_a_trusted_program_running_with_your_account_permi")}</p>
+        <p hidden=embedded>{move||i18n.text("message.a_connector_is_a_trusted_program_running_with_your_account_permi")}</p>
         <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}</p>
         <button id="reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(Action::Reload));}}>{move||i18n.text("message.reload_connectors")}</button>
         <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("message.discard_connector_drafts_and_reload")}</p><button id="confirm-reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Reload))>{move||i18n.text("message.discard_and_reload")}</button><button type="button" disabled=move||pending.get() on:click=move|_|reload.set(false)>{move||i18n.text("message.back")}</button></div>
         <p hidden=move||registry.get().is_none_or(|value|!value.modules.is_empty())>{move||i18n.text("message.no_local_connector_installed")}</p>
-        <div class="editor-actions"><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
+        <div class="editor-actions" hidden=embedded><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
             let manifest=StoredValue::new(connection.installed.manifest.clone());
             let connection=StoredValue::new(connection);
             view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
         }/></div>
         <div hidden=move||original.get().is_none()>
-            <h4>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name))}</h4>
+            <h4 hidden=embedded>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name))}</h4>
             <p>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.description))}</p>
-            <p>{move||original.get().map(|connection|connection.installed.binary.path)}</p>
+            <p hidden=embedded>{move||original.get().map(|connection|connection.installed.binary.path)}</p>
             <fieldset disabled=move||pending.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.fields).unwrap_or_default() key=move|field|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),field.id.clone()) children=move|field|{
                     let field=StoredValue::new(field);
@@ -454,7 +473,7 @@ pub fn Connectors(
                 <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("message.save_connector")}</button>
                 <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("message.run_connector_check")}</button>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==ConnectorEffect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
-                <button id="remove-connector" class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("message.remove_connector")}</button>
+                <button id="remove-connector" hidden=embedded class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("message.remove_connector")}</button>
             </fieldset>
             <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("message.remove_this_connector_and_its_secrets_imported_tasks_will_be_kep")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("message.confirm")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("message.cancel")}</button></div>
             <div role="status"><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|report.observed_at))}</p><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|translated(i18n,&connection.installed.manifest,&report.message)))}</p></div>
@@ -478,8 +497,8 @@ pub fn Connectors(
             </fieldset>
         </div>
         <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
-        <h4>{move||i18n.text("message.add_a_connector")}</h4>
-        <fieldset disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
+        <h4 hidden=embedded>{move||i18n.text("message.add_a_connector")}</h4>
+        <fieldset hidden=embedded disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
             <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("message.prepare_bundled_azure_work_items")}</button>
             <p class="field-help">{move||i18n.text("message.the_azure_connector_uses_the_shipped_atelier_program_read_its_ma")}</p>
             <label for="connector-module">{move||i18n.text("message.module_identifier")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>

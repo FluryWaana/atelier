@@ -3027,14 +3027,7 @@ async fn kanban_columns_scenario(
 
 async fn choose_integration(client: &Client, setting: &str, provider: &str) -> Result<()> {
     wait_dom(client,"return document.querySelector('#'+arguments[0]) && !document.querySelector('#'+arguments[0]).matches(':disabled');",vec![json!(setting)]).await?;
-    if client
-        .execute(
-            "return document.querySelector('#'+arguments[0]).value;",
-            vec![json!(setting)],
-        )
-        .await?
-        == json!(provider)
-    {
+    if client.execute("return document.querySelector('#'+arguments[0]).value === arguments[1] && document.querySelector('#save-'+arguments[0]).disabled;",vec![json!(setting),json!(provider)]).await? == json!(true) {
         return Ok(());
     }
     client.execute("const select=document.querySelector('#'+arguments[0]);select.value=arguments[1];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![json!(setting),json!(provider)]).await?;
@@ -3073,6 +3066,22 @@ async fn settings_scenario(
     click(client, "#settings-tab-tickets").await?;
     wait_dom(client,"return document.querySelector('#ticketProvider')?.value === 'local' && !document.querySelector('#settings-tab-jira') && !document.querySelector('#jira-url') && !document.querySelector('#tempo-token');",vec![]).await?;
     click(client, "#settings-tab-tickets").await?;
+    client.execute("const select=document.querySelector('#ticketProvider');select.value='jira';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#jira-url')?.offsetParent !== null && document.querySelector('#save-ticketProvider')?.disabled === false;",vec![]).await?;
+    let preview_state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if preview_state["settings"]["ticketProvider"] != json!("local") {
+        return Err("L’aperçu Jira a enregistré le choix sans confirmation.".into());
+    }
+    client.execute("const select=document.querySelector('#ticketProvider');select.value='local';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return !document.querySelector('#jira-url') && document.querySelector('#save-ticketProvider')?.disabled === true;",vec![]).await?;
     choose_integration(client, "ticketProvider", "jira").await?;
     wait_dom(
         client,
@@ -3213,6 +3222,27 @@ async fn settings_scenario(
     wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
     // Jira changed above: read the current scope before entering a new token.
     click(client, "#settings-tab-time").await?;
+    client.execute("const select=document.querySelector('#timeProvider');select.value='tempo';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#tempo-token')?.offsetParent !== null && document.querySelector('#save-timeProvider')?.disabled === false;",vec![]).await?;
+    let time_preview: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if time_preview["settings"]["timeProvider"] != json!("local") {
+        return Err("L’aperçu Tempo a enregistré le choix sans confirmation.".into());
+    }
+    client.execute("const select=document.querySelector('#timeProvider');select.value='local';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#tempo-token');",
+        vec![],
+    )
+    .await?;
     choose_integration(client, "timeProvider", "tempo").await?;
     click(client, "#reload-tempo").await?;
     wait_dom(
@@ -3335,6 +3365,22 @@ async fn connectors_scenario(
     click(client, "#install-connector").await?;
     wait_dom(client,"return !!document.querySelector('[data-connector=synthetic-extension]') && document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     click(client, "#settings-tab-tickets").await?;
+    client.execute("const select=document.querySelector('#ticketProvider');select.value='extension:synthetic-extension';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#connector-field-fixture-root')?.offsetParent !== null && document.querySelector('#settings-tab-tickets')?.getAttribute('aria-selected') === 'true' && document.querySelector('#save-ticketProvider')?.disabled === false;",vec![]).await?;
+    let module_preview: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if module_preview["settings"]["ticketProvider"] != json!("jira") {
+        return Err("L’aperçu du module a changé la source enregistrée.".into());
+    }
+    client.execute("const select=document.querySelector('#ticketProvider');select.value='jira';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#connector-field-fixture-root')?.offsetParent === null && document.querySelector('#save-ticketProvider')?.disabled === true;",vec![]).await?;
     choose_integration(client, "ticketProvider", "extension:synthetic-extension").await?;
     click(client, "#settings-tab-time").await?;
     choose_integration(client, "timeProvider", "extension:synthetic-extension").await?;

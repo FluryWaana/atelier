@@ -1,4 +1,8 @@
 {
+  "message.save_provider_choice": "Save selection",
+  "message.loading_module_configuration": "Loading module settings.",
+  "message.save_current_module_draft_first": "Save or discard the current module draft before configuring another module.",
+  "message.open_module_manager": "Open modules",
   "message.configure_jira_mapping_in_kanban": "Set Jira mapping from the Kanban using Configure columns.",
   "message.column_mapping_needs_review": "Mapping needs review",
   "message.kanban_operation_in_progress": "Operation in progress.",

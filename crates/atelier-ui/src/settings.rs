@@ -53,10 +53,54 @@ pub fn Settings(
     let updates_dirty = RwSignal::new(false);
     let tickets_choice_dirty = RwSignal::new(false);
     let time_choice_dirty = RwSignal::new(false);
+    let ticket_preview = RwSignal::new(
+        atelier_core::application::integrations::selected(
+            &board.settings.get_untracked(),
+            atelier_core::application::integrations::Kind::Tickets,
+        )
+        .unwrap_or_else(|_| "local".into()),
+    );
+    let time_preview = RwSignal::new(
+        atelier_core::application::integrations::selected(
+            &board.settings.get_untracked(),
+            atelier_core::application::integrations::Kind::Time,
+        )
+        .unwrap_or_else(|_| "local".into()),
+    );
+    let shown_module = RwSignal::new(String::new());
+    let preview_error = RwSignal::new(String::new());
+    let external_preview = Memo::new(move |_| {
+        let provider = match tab.get() {
+            1 => ticket_preview.get(),
+            3 => time_preview.get(),
+            _ => String::new(),
+        };
+        provider
+            .strip_prefix("extension:")
+            .unwrap_or_default()
+            .to_owned()
+    });
+    let preview_available = Memo::new(move |_| {
+        board
+            .settings
+            .get()
+            .get::<Vec<atelier_core::application::integrations::Provider>>("integrationCatalog")
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+            .iter()
+            .any(|provider| provider.id == format!("extension:{}", external_preview.get()))
+    });
     let requested_module = RwSignal::new(String::new());
-    let configure_module = Callback::new(move |module: String| {
-        requested_module.set(module);
-        tab.set(4);
+    Effect::new(move |_| {
+        let module = external_preview.get();
+        if !module.is_empty()
+            && preview_available.get()
+            && !connectors_dirty.get()
+            && shown_module.get_untracked() != module
+        {
+            requested_module.set(module);
+        }
     });
     let integration_blocked = Memo::new(move |_| {
         ticket_module_dirty.get() || time_module_dirty.get() || connectors_dirty.get()
@@ -204,14 +248,20 @@ pub fn Settings(
             </section>
             <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
             <section id="settings-panel-tickets" role="tabpanel" aria-labelledby="settings-tab-tickets" hidden=move || tab.get()!=1>
-                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=tickets_choice_dirty blocked=integration_blocked on_configure=configure_module/>
-                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=ticket_module_dirty/>
+                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=tickets_choice_dirty selected=ticket_preview blocked=integration_blocked/>
+                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=ticket_module_dirty selected=ticket_preview/>
             </section>
             <section id="settings-panel-time" role="tabpanel" aria-labelledby="settings-tab-time" hidden=move || tab.get()!=3>
-                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_choice_dirty blocked=integration_blocked on_configure=configure_module/>
-                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_module_dirty/>
+                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_choice_dirty selected=time_preview blocked=integration_blocked/>
+                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_module_dirty selected=time_preview/>
             </section>
-            <section id="settings-panel-connectors" role="tabpanel" aria-labelledby="settings-tab-connectors" hidden=move || tab.get()!=4><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module /></section>
+            <section id="settings-panel-connectors" role=move||if tab.get()==4{"tabpanel"}else{"region"} aria-labelledby=move||match tab.get(){1=>"settings-tab-tickets",3=>"settings-tab-time",_=>"settings-tab-connectors"} hidden=move||tab.get()!=4&&external_preview.get().is_empty()>
+                <p class="error" role="alert" hidden=move||tab.get()==4||preview_available.get()>{move||i18n.text("message.integration_unavailable")}</p>
+                <div hidden=move||tab.get()==4||!preview_available.get()||shown_module.get()==external_preview.get()||preview_error.get().is_empty()><p class="error" role="alert">{move||i18n.text(&preview_error.get())}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(4)>{move||i18n.text("message.open_module_manager")}</button></div>
+                <p role="status" hidden=move||tab.get()==4||shown_module.get()==external_preview.get()||connectors_dirty.get()||!preview_available.get()||!preview_error.get().is_empty()>{move||i18n.text("message.loading_module_configuration")}</p>
+                <div hidden=move||tab.get()==4||shown_module.get()==external_preview.get()||!connectors_dirty.get()><p>{move||i18n.text("message.save_current_module_draft_first")}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(4)>{move||i18n.text("message.open_module_manager")}</button></div>
+                <div hidden=move||tab.get()!=4&&(!preview_available.get()||shown_module.get()!=external_preview.get())><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module shown=shown_module preview_error=preview_error embedded=Signal::derive(move||tab.get()!=4) /></div>
+            </section>
             <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
             </div></div>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>

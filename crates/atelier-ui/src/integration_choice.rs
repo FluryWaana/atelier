@@ -1,4 +1,4 @@
-use crate::{field, i18n::I18n, live::BoardState, write};
+use crate::{i18n::I18n, live::BoardState, write};
 use atelier_core::application::integrations::{self, Kind, Provider};
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -12,15 +12,14 @@ pub fn IntegrationChoice(
     token: StoredValue<Result<String, String>>,
     pending: RwSignal<bool>,
     dirty: RwSignal<bool>,
+    selected: RwSignal<String>,
     blocked: Memo<bool>,
-    on_configure: Callback<String>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let current = move || {
         integrations::selected(&board.settings.get(), kind).unwrap_or_else(|_| "local".into())
     };
     let original = RwSignal::new(current());
-    let selected = RwSignal::new(original.get_untracked());
     let changed = Memo::new(move |_| original.get() != selected.get());
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(false);
@@ -33,7 +32,8 @@ pub fn IntegrationChoice(
     Effect::new(move |_| dirty.set(changed.get()));
     Effect::new(move |_| {
         let saved = current();
-        if !changed.get_untracked() {
+        let can_sync = !blocked.get();
+        if !changed.get_untracked() && can_sync {
             original.set(saved.clone());
             selected.set(saved);
         }
@@ -109,14 +109,13 @@ pub fn IntegrationChoice(
         <p class="hint">{move||i18n.text("message.integration_defaults_future_only")}</p>
         <form on:submit=save><fieldset disabled=move||pending.get()||blocked.get()>
             <label for=id>{move||i18n.text("message.default_provider")}</label>
-            <select id=id prop:value=move||selected.get() on:change=move|event|{selected.set(event_target_value(&event));notice.set(false);}>
+            <select id=id prop:value=move||selected.get() on:change=move|event|{if pending.get_untracked()||blocked.get_untracked(){return;}selected.set(event_target_value(&event));notice.set(false);}>
                 {move||(!providers().iter().any(|provider|provider.id==selected.get())).then(||view!{<option value=selected.get() disabled>{move||i18n.text("message.integration_unavailable")}</option>})}
                 <For each=providers key=|provider|provider.id.clone() children=move|provider|{let name=provider.name;view!{<option value=provider.id>{move||i18n.text(&name)}</option>}}/>
             </select>
-            <div class="form-actions"><button id=format!("save-{id}") class="primary" type="submit" disabled=move||!changed.get()>{move||i18n.text("message.save")}</button><button type="button" disabled=move||!changed.get() on:click=move |_|{let saved=current();original.set(saved.clone());selected.set(saved);error.set(String::new());}>{move||i18n.text("message.cancel")}</button></div>
+            <div class="form-actions"><button id=format!("save-{id}") class="primary" type="submit" disabled=move||!changed.get()>{move||i18n.text("message.save_provider_choice")}</button><button type="button" disabled=move||!changed.get() on:click=move |_|{let saved=current();original.set(saved.clone());selected.set(saved);error.set(String::new());}>{move||i18n.text("message.cancel")}</button></div>
         </fieldset></form>
-        <p class="field-help" hidden=move||current()!="local">{move||i18n.text(if kind==Kind::Tickets{"message.local_tickets_explanation"}else{"message.local_time_explanation"})}</p>
-        <button type="button" hidden=move||!current().starts_with("extension:") disabled=move||pending.get()||changed.get()||blocked.get() on:click=move |_|{on_configure.run(field(&board.settings.get_untracked(),id).trim_start_matches("extension:").into());}>{move||i18n.text("message.configure_selected_module")}</button>
+        <p class="field-help" hidden=move||selected.get()!="local">{move||i18n.text(if kind==Kind::Tickets{"message.local_tickets_explanation"}else{"message.local_time_explanation"})}</p>
         <p class="error" role="alert">{move||i18n.text(&error.get())}</p><p role="status">{move||if notice.get(){i18n.text("message.settings_saved")}else{String::new()}}</p>
     </section>}
 }
@@ -129,10 +128,9 @@ pub fn IntegrationConfiguration(
     token: StoredValue<Result<String, String>>,
     pending: RwSignal<bool>,
     dirty: RwSignal<bool>,
+    selected: RwSignal<String>,
 ) -> impl IntoView {
-    let source = Memo::new(move |_| {
-        integrations::selected(&board.settings.get(), kind).unwrap_or_else(|_| "local".into())
-    });
+    let source = Memo::new(move |_| selected.get());
     move || match (kind, source.get().as_str()) {
         (Kind::Tickets, "jira") => {
             view! {<crate::jira::JiraSettings board token pending dirty/>}.into_any()
