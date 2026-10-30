@@ -154,12 +154,57 @@ pub fn ForgeSettings(
                 .is_some_and(|connection| connection.token_set)
         })
     });
-    view! {<section class="task-files forge-settings" aria-labelledby="forges-heading" aria-busy=move||(pending.get()||loading.get()).to_string()><h3 id="forges-heading">{move||i18n.text("message.forge_connections")}</h3>
-        <p class="field-help">{move||i18n.text("message.configure_github_gitlab_or_azure_devops_services_then_explicitly")}</p>
-        <label for="forge-kind">{move||i18n.text("message.forge")}</label><select id="forge-kind" prop:value=move||kind.get().name() disabled=move||pending.get()||loading.get()||own_dirty.get() on:change=move|event|{let selected=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github};select(selected);} ><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
-        <form on:submit=save><fieldset disabled=move||configurations.with(|configurations|configurations.is_none())||pending.get()||loading.get()><label for="forge-base">{move||i18n.text("message.site_or_organization_address")}</label><input id="forge-base" aria-describedby="forge-base-help" type="url" required maxlength="2000" placeholder=move||if kind.get()==ForgeKind::Azure{"https://dev.azure.com/ORGANISATION"}else{"https://forge.example.test"} prop:value=move||base.get() on:input=move|event|base.set(event_target_value(&event)) />
-            <p id="forge-base-help" class="field-help">{move||i18n.text("message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio")}</p><label for="forge-token">{move||i18n.text("message.forge_personal_access_token")}</label><input id="forge-token" aria-describedby="forge-token-help" type="password" autocomplete="off" maxlength="4000" disabled=move||clear.get() prop:value=move||secret.get() on:input=move|event|secret.set(event_target_value(&event)) /><p id="forge-token-help" class="field-help">{move||i18n.text(if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_token_saved_for_this_forge"})}</p><label><input id="forge-clear-token" type="checkbox" prop:checked=move||clear.get() on:change=move|event|{clear.set(event_target_checked(&event));if clear.get_untracked(){secret.set(String::new());}} />{move||i18n.text("message.remove_saved_token")}</label><button id="save-forge" class="primary" type="submit" disabled=move||!own_dirty.get()>{move||i18n.text("message.save_forge_connection")}</button></fieldset></form>
-        <button id="reload-forges" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|{if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}}>{move||i18n.text("message.reload_forge_connections")}</button><div class="confirmation" hidden=move||!replace.get()><p>{move||i18n.text("message.discard_unsaved_changes")}</p><button id="confirm-reload-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.discard")}</button><button type="button" on:click=move|_|replace.set(false)>{move||i18n.text("message.keep_editing")}</button></div>
-        <p class="error" id="forge-error" role="alert">{move||i18n.text(&error.get())}</p><p id="forge-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+    view! {
+        <section class="forge-settings" aria-labelledby="forges-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
+            <h3 id="forges-heading">{move||i18n.text("message.forge_connections")}</h3>
+            <p class="field-help">{move||i18n.text("message.configure_github_gitlab_or_azure_devops_services_then_explicitly")}</p>
+            <div class="forge-field">
+                <label for="forge-kind">{move||i18n.text("message.forge")}</label>
+                <select id="forge-kind" prop:value=move||kind.get().name() disabled=move||pending.get()||loading.get()||own_dirty.get() on:change=move|event|{
+                    let selected=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github};
+                    select(selected);
+                }>
+                    <option value="github">"GitHub"</option>
+                    <option value="gitlab">"GitLab"</option>
+                    <option value="azure">"Azure DevOps Services"</option>
+                </select>
+            </div>
+            <form on:submit=save>
+                <fieldset disabled=move||configurations.with(|value|value.is_none())||pending.get()||loading.get()>
+                    <div class="forge-field">
+                        <label for="forge-base">{move||i18n.text("message.site_or_organization_address")}</label>
+                        <input id="forge-base" aria-describedby="forge-base-help" type="url" required maxlength="2000" placeholder=move||match kind.get(){ForgeKind::Github=>"https://github.com",ForgeKind::Gitlab=>"https://gitlab.com",ForgeKind::Azure=>"https://dev.azure.com/ORGANISATION"} prop:value=move||base.get() on:input=move|event|base.set(event_target_value(&event)) />
+                        <p id="forge-base-help" class="field-help">{move||i18n.text("message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio")}</p>
+                    </div>
+                    <div class="forge-field">
+                        <label for="forge-token">{move||i18n.text("message.forge_personal_access_token")}</label>
+                        <input id="forge-token" aria-describedby="forge-token-help" type="password" autocomplete="off" maxlength="4000" disabled=move||clear.get() prop:value=move||secret.get() on:input=move|event|secret.set(event_target_value(&event)) />
+                        <p id="forge-token-help" class="field-help" role="status">{move||i18n.text(if clear.get(){"message.forge_token_removal_pending"}else if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_token_saved_for_this_forge"})}</p>
+                    </div>
+                </fieldset>
+                <div class="forge-actions">
+                    <button id="forge-clear-token" class="danger" type="button" aria-pressed=move||clear.get().to_string() hidden=move||!token_set.get() disabled=move||pending.get()||loading.get() on:click=move|_|{
+                        clear.update(|value|*value=!*value);
+                        if clear.get_untracked(){secret.set(String::new());}
+                        notice.set(String::new());
+                    }>{move||i18n.text(if clear.get(){"message.keep_forge_token"}else{"message.remove_saved_token"})}</button>
+                    <div class="forge-save-actions">
+                        <button id="reload-forges" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|{
+                            if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}
+                        }>{move||i18n.text("message.refresh")}</button>
+                        <button id="save-forge" class="primary" type="submit" disabled=move||pending.get()||loading.get()||configurations.with(|value|value.is_none())||!own_dirty.get()>{move||i18n.text(if pending.get(){"message.saving"}else{"message.save"})}</button>
+                    </div>
+                </div>
+            </form>
+            <div class="confirmation" hidden=move||!replace.get()>
+                <p>{move||i18n.text("message.discard_unsaved_changes")}</p>
+                <div class="editor-actions">
+                    <button id="confirm-reload-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.discard")}</button>
+                    <button type="button" on:click=move|_|replace.set(false)>{move||i18n.text("message.keep_editing")}</button>
+                </div>
+            </div>
+            <p class="error" id="forge-error" role="alert">{move||i18n.text(&error.get())}</p>
+            <p id="forge-notice" role="status">{move||i18n.text(&notice.get())}</p>
+        </section>
+    }
 }

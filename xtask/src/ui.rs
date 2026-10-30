@@ -3147,9 +3147,15 @@ async fn settings_scenario(
     click(client, "#reload-jira").await?;
     click(client, "#confirm-reload-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-query')?.value === 'project = REMOTE' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
+    wait_dom(client, "return document.querySelector('#forge-clear-token')?.tagName === 'BUTTON' && document.querySelector('#forge-clear-token')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions') && document.querySelector('#reload-forges')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions');", vec![]).await?;
+    click(client, "#forge-clear-token").await?;
+    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === true && document.querySelector('#forge-token-help')?.textContent.includes('retiré') && document.querySelector('#save-forge')?.disabled === false;", vec![]).await?;
+    click(client, "#forge-clear-token").await?;
+    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === false && document.querySelector('#save-forge')?.disabled === true;", vec![]).await?;
     wait_dom(client,"return document.querySelector('#jira-connection-editor')?.open === false && document.querySelector('#jira-connection-summary')?.textContent.includes('https://synthetic-one.example.test') && document.querySelector('#jira-query')?.offsetParent !== null;",vec![]).await?;
     click(client, "#edit-jira-connection").await?;
     click(client, "#jira-clear-token").await?;
+    wait_dom(client, "return document.querySelector('#forge-clear-token')?.hidden === true && document.querySelector('#forge-token')?.disabled === false;", vec![]).await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#search-jira')?.disabled === true && document.querySelector('#save-jira')?.disabled === true;",vec![]).await?;
     click(client, "#settings-tab-forges").await?;

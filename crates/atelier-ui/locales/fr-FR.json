@@ -1,4 +1,6 @@
 {
+  "message.forge_token_removal_pending": "Le jeton sera retiré à l’enregistrement.",
+  "message.keep_forge_token": "Conserver le jeton",
   "message.save_provider_choice": "Enregistrer le choix",
   "message.loading_module_configuration": "Chargement des réglages du module.",
   "message.save_current_module_draft_first": "Enregistre ou annule le brouillon du module en cours avant d’en configurer un autre.",
