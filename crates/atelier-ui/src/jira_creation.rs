@@ -338,21 +338,18 @@ pub fn JiraCreation(
                     intent
                         .get()
                         .map(|intent| {
-                            i18n
-                                .text(
-                                    match intent.state {
-                                        Phase::Preparing => "message.preparing_jira_creation",
-                                        Phase::Sending => "message.jira_creation_request_in_progress",
-                                        Phase::Uncertain => {
-                                            "message.jira_creation_is_uncertain_no_automatic_resubmission"
-                                        }
-                                        Phase::Confirmed => "message.jira_issue_link_saved",
-                                        Phase::Failed => "message.jira_preparation_interrupted_before_sending",
-                                        Phase::Dismissed => {
-                                            "message.jira_uncertainty_closed_after_verification"
-                                        }
-                                    },
-                                )
+                            i18n.text(
+                                match intent.state {
+                                    Phase::Preparing => "message.preparing_jira_creation",
+                                    Phase::Sending => "message.jira_creation_request_in_progress",
+                                    Phase::Uncertain => {
+                                        "message.jira_creation_is_uncertain_no_automatic_resubmission"
+                                    }
+                                    Phase::Confirmed => "message.jira_issue_link_saved",
+                                    Phase::Failed => "message.jira_preparation_interrupted_before_sending",
+                                    Phase::Dismissed => "message.jira_uncertainty_closed_after_verification",
+                                },
+                            )
                         })
                         .unwrap_or_default()
                 }}
@@ -378,64 +375,76 @@ pub fn JiraCreation(
                         || !board.settings.get().string_equals("ticketProvider", "jira").unwrap_or(false)
                 }}
             >
-                <label for="jira-create-project">{move || i18n.text("message.jira_project_key")}</label>
-                <input
+                <crate::form::Field
                     id="jira-create-project"
-                    maxlength="64"
-                    placeholder="SYN"
-                    prop:value={move || project.get()}
-                    on:input={move |event| {
-                        project.set(event_target_value(&event).trim().to_ascii_uppercase());
-                        types.set(Vec::new());
-                        selected.set(String::new());
-                        prepared.set(None);
-                        approved.set(None);
-                    }}
-                />
-                <button
+                    label={Signal::derive(move || i18n.text("message.jira_project_key"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="jira-create-project"
+                        maxlength="64"
+                        placeholder="SYN"
+                        prop:value={move || project.get()}
+                        on:input={move |event| {
+                            project.set(event_target_value(&event).trim().to_ascii_uppercase());
+                            types.set(Vec::new());
+                            selected.set(String::new());
+                            prepared.set(None);
+                            approved.set(None);
+                        }}
+                    />
+                </crate::form::Field>
+                <crate::button::Button
+                    disabled={Signal::derive(move || !domain::project_key(&project.get()))}
+                    {..}
                     id="load-jira-types"
                     type="button"
-                    disabled={move || !domain::project_key(&project.get())}
                     on:click={load_types}
                 >
                     {move || i18n.text("message.load_issue_types")}
-                </button>
-                <label for="jira-create-type">{move || i18n.text("message.ticket_type")}</label>
-                <select
+                </crate::button::Button>
+                <crate::form::Field
                     id="jira-create-type"
-                    prop:value={move || selected.get()}
-                    on:change={move |event| {
-                        selected.set(event_target_value(&event));
-                        prepared.set(None);
-                        approved.set(None);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.ticket_type"))}
                 >
-                    <option value="">{move || i18n.text("message.choose_an_issue_type")}</option>
-                    <For
-                        each={move || types.get()}
-                        key={|kind| kind.id.clone()}
-                        children={move |kind| {
-                            view! {
-                                <option value={kind.id} disabled={kind.subtask}>
-                                    {kind.name}
-                                </option>
-                            }
+                    <crate::form::Select
+                        {..}
+                        id="jira-create-type"
+                        prop:value={move || selected.get()}
+                        on:change={move |event| {
+                            selected.set(event_target_value(&event));
+                            prepared.set(None);
+                            approved.set(None);
                         }}
-                    />
-                </select>
+                    >
+                        <option value="">{move || i18n.text("message.choose_an_issue_type")}</option>
+                        <For
+                            each={move || types.get()}
+                            key={|kind| kind.id.clone()}
+                            children={move |kind| {
+                                view! {
+                                    <option value={kind.id} disabled={kind.subtask}>
+                                        {kind.name}
+                                    </option>
+                                }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.create_subtasks_and_issues_requiring_additional_fields_in_jira_t")
                     }}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || selected.get().is_empty())}
+                    {..}
                     id="prepare-jira-create"
                     type="button"
-                    disabled={move || selected.get().is_empty()}
                     on:click={prepare}
                 >
                     {move || i18n.text("message.prepare_issue_preview")}
-                </button>
+                </crate::button::Button>
                 {move || {
                     prepared
                         .get()
@@ -454,9 +463,9 @@ pub fn JiraCreation(
                     {move || i18n.text(&validation.get())}
                 </p>
                 <label hidden={move || prepared.with(|prepared| prepared.is_none())}>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-jira-create"
-                        type="checkbox"
                         prop:checked={move || {
                             prepared
                                 .with(|prepared| {
@@ -483,22 +492,24 @@ pub fn JiraCreation(
                         i18n.text("message.create_this_issue_in_the_selected_jira_project_and_link_it_to_th")
                     }}
                 </label>
-                <button
-                    id="send-jira-create"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         prepared
                             .with(|prepared| {
                                 prepared
                                     .as_ref()
                                     .is_none_or(|(_, _, proposal)| approved.get() != Some(*proposal))
                             }) || !validation.get().is_empty()
-                    }}
+                    })}
+                    {..}
+                    id="send-jira-create"
+                    type="button"
                     on:click={create}
                 >
                     {move || i18n.text("message.confirm_creation_in_jira")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    {..}
                     id="cancel-jira-preparation"
                     type="button"
                     on:click={move |_| {
@@ -510,7 +521,7 @@ pub fn JiraCreation(
                     }}
                 >
                     {move || i18n.text("message.cancel_preparation")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <fieldset
                 hidden={move || !uncertain.get()}
@@ -521,35 +532,41 @@ pub fn JiraCreation(
                         i18n.text("message.check_the_project_in_jira_if_the_issue_exists_enter_its_key_if_a")
                     }}
                 </p>
-                <label for="jira-created-key">{move || i18n.text("message.existing_issue_key")}</label>
-                <input
+                <crate::form::Field
                     id="jira-created-key"
-                    maxlength="100"
-                    placeholder="SYN-1"
-                    prop:value={move || key.get()}
-                    on:input={move |event| key.set(event_target_value(&event).to_ascii_uppercase())}
-                />
-                <button
-                    id="resolve-jira-creation"
-                    type="button"
-                    disabled={move || {
+                    label={Signal::derive(move || i18n.text("message.existing_issue_key"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="jira-created-key"
+                        maxlength="100"
+                        placeholder="SYN-1"
+                        prop:value={move || key.get()}
+                        on:input={move |event| key.set(event_target_value(&event).to_ascii_uppercase())}
+                    />
+                </crate::form::Field>
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         key.get().trim().is_empty()
                             && intent
                                 .with(|intent| intent.as_ref().is_none_or(|intent| intent.result.is_none()))
-                    }}
+                    })}
+                    {..}
+                    id="resolve-jira-creation"
+                    type="button"
                     on:click={reconcile}
                 >
                     {move || i18n.text("message.verify_and_link_without_creating_again")}
-                </button>
+                </crate::button::Button>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.closing_uncertainty_does_not_delete_any_remote_issue_creating_ag")
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="close-jira-creation-ack"
-                        type="checkbox"
                         prop:checked={move || {
                             intent
                                 .with(|intent| {
@@ -577,17 +594,18 @@ pub fn JiraCreation(
                         i18n.text("message.i_checked_jira_and_want_to_close_this_uncertainty_without_sendin")
                     }}
                 </label>
-                <button
-                    id="close-jira-creation"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         intent
                             .with(|intent| intent.as_ref().is_none_or(|intent| intent.id != close_ack.get()))
-                    }}
+                    })}
+                    {..}
+                    id="close-jira-creation"
+                    type="button"
                     on:click={close_uncertainty}
                 >
                     {move || i18n.text("message.close_uncertainty_after_verification")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <p class="field-help" hidden={move || !loading.get()}>
                 {move || i18n.text("message.reading_jira_metadata")}

@@ -146,10 +146,11 @@ pub fn AgentDiagnostics(
                     i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")
                 }}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || checking.get() || blocked.get() || profile.get().is_none())}
+                {..}
                 id="diagnose-profile"
                 type="button"
-                disabled={move || pending.get() || checking.get() || blocked.get() || profile.get().is_none()}
                 on:click={move |_| {
                     if pending.get_untracked() || blocked.get_untracked() {
                         return;
@@ -161,16 +162,15 @@ pub fn AgentDiagnostics(
                 }}
             >
                 {move || {
-                    i18n
-                        .text(
-                            if checking.get() {
-                                "message.checking"
-                            } else {
-                                "message.check_installation_and_login"
-                            },
-                        )
+                    i18n.text(
+                        if checking.get() {
+                            "message.checking"
+                        } else {
+                            "message.check_installation_and_login"
+                        },
+                    )
                 }}
-            </button>
+            </crate::button::Button>
             <p class="field-help" hidden={move || !blocked.get()}>
                 {move || i18n.text("message.save_or_reload_the_profile_before_checking_it")}
             </p>
@@ -298,8 +298,7 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
                     view! {
                         <p>
                             {move || {
-                                i18n
-                                    .text("message.next_attempt_0")
+                                i18n.text("message.next_attempt_0")
                                     .replace("{0}", &i18n.date(js_sys::Date::parse(&date)))
                             }}
                         </p>
@@ -337,14 +336,13 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
                     let amount = f64::from(window.remaining_tenths) / 10.0;
                     let reset = window.resets_at;
                     view! {
-                        <article class="task-files agent-quota-window">
+                        <crate::card::Card class="task-files agent-quota-window" {..} >
                             <h5>{window.name}</h5>
                             <p>
                                 {move || {
                                     minutes
                                         .map(|minutes| {
-                                            i18n
-                                                .text("message.quota_period")
+                                            i18n.text("message.quota_period")
                                                 .replace(
                                                     "{0}",
                                                     &quota_duration(
@@ -378,8 +376,7 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
                                         .map(|reset| {
                                             remaining_quota_minutes(reset, now.get())
                                                 .map(|minutes| {
-                                                    i18n
-                                                        .text("message.quota_resets_in")
+                                                    i18n.text("message.quota_resets_in")
                                                         .replace(
                                                             "{0}",
                                                             &quota_duration(
@@ -393,7 +390,7 @@ fn AccountQuotas(report: atelier_core::application::agent_account::Report) -> im
                                         .unwrap_or_else(|| i18n.text("message.reset_time_not_reported"))
                                 }}
                             </p>
-                        </article>
+                        </crate::card::Card>
                     }
                 }}
             />

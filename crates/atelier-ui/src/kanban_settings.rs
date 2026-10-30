@@ -110,9 +110,6 @@ pub fn KanbanSettings(
     };
     load(project_id.get_untracked());
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |dialog| {
-        let _ = dialog.show_modal();
-    });
     let close = move || {
         on_close.run(());
         request_animation_frame(move || {
@@ -150,7 +147,7 @@ pub fn KanbanSettings(
             .flatten()
             .unwrap_or_default()
     };
-    let reading = alive.clone();
+    let reading = mounted;
     let fetch = move |_| {
         if pending.get_untracked() || project_id.get_untracked().is_empty() {
             return;
@@ -173,7 +170,7 @@ pub fn KanbanSettings(
         pending.set(true);
         error.set(String::new());
         notice.set(String::new());
-        let alive = reading.clone();
+        let alive = reading.with_value(Clone::clone);
         spawn_local(async move {
             let result = async {
                 let result: JiraBoardConfiguration = read(
@@ -239,7 +236,7 @@ pub fn KanbanSettings(
             }
         });
     };
-    let writing = alive.clone();
+    let writing = mounted;
     let save = move |event: leptos::ev::SubmitEvent| {
         event.prevent_default();
         if pending.get_untracked()
@@ -275,7 +272,7 @@ pub fn KanbanSettings(
         pending.set(true);
         error.set(String::new());
         notice.set(String::new());
-        let alive = writing.clone();
+        let alive = writing.with_value(Clone::clone);
         spawn_local(async move {
             let result = async {
                 let saved: Document = write(
@@ -321,44 +318,37 @@ pub fn KanbanSettings(
         });
     };
     view! {
-        <dialog
+        <crate::modal::Modal
             id="kanban-settings"
-            aria-busy={move || pending.get().to_string()}
+            class=""
+            labelledby="kanban-settings-title"
             node_ref={dialog}
-            aria-labelledby="kanban-settings-title"
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                request_close();
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| request_close())}
         >
-            <header class="dialog-heading">
-                <h2 id="kanban-settings-title">{move || i18n.text("message.configure_kanban_columns")}</h2>
-                <button
-                    id="close-kanban-settings"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| request_close()}
-                >
-                    {move || i18n.text("message.close")}
-                </button>
-            </header>
-            <label for="kanban-project">{move || i18n.text("message.project")}</label>
-            <select
+            <crate::modal::ModalHeader class="inset" title_id="kanban-settings-title" title=Signal::derive(move||i18n.text("message.configure_kanban_columns")) close_id="close-kanban-settings" busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|request_close())/>
+            <crate::form::Field
                 id="kanban-project"
-                prop:value={move || project_id.get()}
-                disabled={move || pending.get() || dirty.get()}
-                on:change={move |event| load(event_target_value(&event))}
+                label={Signal::derive(move || i18n.text("message.project"))}
             >
-                <option value="">{move || i18n.text("message.choose_a_project")}</option>
-                <For
-                    each={move || board.projects.get()}
-                    key={|project| field(project, "id")}
-                    children={move |project| {
-                        view! { <option value={field(&project, "id")}>{field(&project, "name")}</option> }
-                    }}
-                />
-            </select>
-            <form hidden={move || project_id.get().is_empty()} on:submit={save}>
+                <crate::form::Select
+                    {..}
+                    id="kanban-project"
+                    prop:value={move || project_id.get()}
+                    disabled={move || pending.get() || dirty.get()}
+                    on:change={move |event| load(event_target_value(&event))}
+                >
+                    <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                    <For
+                        each={move || board.projects.get()}
+                        key={|project| field(project, "id")}
+                        children={move |project| {
+                            view! { <option value={field(&project, "id")}>{field(&project, "name")}</option> }
+                        }}
+                    />
+                </crate::form::Select>
+            </crate::form::Field>
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(save) {..}  hidden={move || project_id.get().is_empty()} >
                 <fieldset disabled={move || pending.get()}>
                     <h3>{move || i18n.text("message.kanban_local_columns")}</h3>
                     <p class="field-help">{move || i18n.text("message.kanban_columns_keep_workflow")}</p>
@@ -370,11 +360,12 @@ pub fn KanbanSettings(
                                 let status = StoredValue::new(column.status);
                                 view! {
                                     <li>
-                                        <label for={format!(
+                                        <crate::form::Field id={format!(
                                             "kanban-name-{}",
                                             status.get_value(),
-                                        )}>{move || column_name(i18n, &status.get_value(), "")}</label>
-                                        <input
+                                        )} label=Signal::derive(move || column_name(i18n, &status.get_value(), ""))>
+                                        <crate::form::Input
+                                            {..}
                                             id={format!("kanban-name-{}", status.get_value())}
                                             maxlength="100"
                                             placeholder={move || column_name(i18n, &status.get_value(), "")}
@@ -399,16 +390,17 @@ pub fn KanbanSettings(
                                                         }
                                                     })
                                             }}
-                                        />
-                                        <button
-                                            type="button"
-                                            disabled={move || {
+                                        /></crate::form::Field>
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || {
                                                 draft
                                                     .get()
                                                     .columns
                                                     .first()
                                                     .is_some_and(|column| column.status == status.get_value())
-                                            }}
+                                            })}
+                                            {..}
+                                            type="button"
                                             on:click={move |_| {
                                                 draft
                                                     .update(|draft| {
@@ -425,16 +417,17 @@ pub fn KanbanSettings(
                                             aria-label={move || i18n.text("message.move_column_up")}
                                         >
                                             {move || i18n.text("message.move_column_up")}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={move || {
+                                        </crate::button::Button>
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || {
                                                 draft
                                                     .get()
                                                     .columns
                                                     .last()
                                                     .is_some_and(|column| column.status == status.get_value())
-                                            }}
+                                            })}
+                                            {..}
+                                            type="button"
                                             on:click={move |_| {
                                                 draft
                                                     .update(|draft| {
@@ -451,7 +444,7 @@ pub fn KanbanSettings(
                                             aria-label={move || i18n.text("message.move_column_down")}
                                         >
                                             {move || i18n.text("message.move_column_down")}
-                                        </button>
+                                        </crate::button::Button>
                                     </li>
                                 }
                             }}
@@ -459,22 +452,28 @@ pub fn KanbanSettings(
                     </ol>
                     <h3>{move || i18n.text("message.jira_column_matching")}</h3>
                     <p class="field-help">{move || i18n.text("message.kanban_mapping_manual_only")}</p>
-                    <label for="kanban-jira-board">{move || i18n.text("message.jira_board_id")}</label>
-                    <input
+                    <crate::form::Field
                         id="kanban-jira-board"
-                        inputmode="numeric"
-                        maxlength="20"
-                        prop:value={move || board_id.get()}
-                        on:input={move |event| board_id.set(event_target_value(&event))}
-                    />
-                    <button
+                        label={Signal::derive(move || i18n.text("message.jira_board_id"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="kanban-jira-board"
+                            inputmode="numeric"
+                            maxlength="20"
+                            prop:value={move || board_id.get()}
+                            on:input={move |event| board_id.set(event_target_value(&event))}
+                        />
+                    </crate::form::Field>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || connection().url.is_empty() || board_id.get().is_empty())}
+                        {..}
                         id="load-jira-columns"
                         type="button"
-                        disabled={move || connection().url.is_empty() || board_id.get().is_empty()}
                         on:click={fetch}
                     >
                         {move || i18n.text("message.load_jira_columns")}
-                    </button>
+                    </crate::button::Button>
                     <p class="field-help">{move || i18n.text("message.jira_board_id_help")}</p>
                     <div hidden={move || draft.get().jira.is_none()}>
                         <h4>{move || draft.get().jira.map(|jira| jira.name).unwrap_or_default()}</h4>
@@ -512,10 +511,9 @@ pub fn KanbanSettings(
                                 };
                                 view! {
                                     <div class="kanban-match-row">
-                                        <label for={format!(
-                                            "kanban-jira-column-{index}",
-                                        )}>{column.name}</label>
-                                        <select
+                                        <crate::form::Field id=format!("kanban-jira-column-{index}") label=Signal::derive(move||column.name.clone())>
+                                        <crate::form::Select
+                                            {..}
                                             id={format!("kanban-jira-column-{index}")}
                                             disabled={ids.get_value().is_empty()}
                                             prop:value={target}
@@ -570,12 +568,13 @@ pub fn KanbanSettings(
                                                     }
                                                 }}
                                             />
-                                        </select>
+                                        </crate::form::Select></crate::form::Field>
                                     </div>
                                 }
                             }}
                         />
-                        <button
+                        <crate::button::Button
+                            {..}
                             type="button"
                             on:click={move |_| {
                                 draft.update(|draft| draft.jira = None);
@@ -583,28 +582,31 @@ pub fn KanbanSettings(
                             }}
                         >
                             {move || i18n.text("message.remove_jira_column_mapping")}
-                        </button>
+                        </crate::button::Button>
                     </div>
-                    <div class="form-actions">
-                        <button
-                            id="save-kanban-columns"
+                    <crate::modal::ModalActions {..} >
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Primary}
+                            disabled={Signal::derive(move || !dirty.get())}
                             class="primary"
+                            {..}
+                            id="save-kanban-columns"
                             type="submit"
-                            disabled={move || !dirty.get()}
                         >
                             {move || i18n.text("message.save")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || !dirty.get())}
+                            {..}
                             id="reset-kanban-columns"
                             type="button"
-                            disabled={move || !dirty.get()}
                             on:click={move |_| load(project_id.get_untracked())}
                         >
                             {move || i18n.text("message.cancel")}
-                        </button>
-                    </div>
+                        </crate::button::Button>
+                    </crate::modal::ModalActions>
                 </fieldset>
-            </form>
+            </crate::form::Form>
             <p role="status" hidden={move || !pending.get()}>
                 {move || i18n.text("message.kanban_operation_in_progress")}
             </p>
@@ -612,15 +614,26 @@ pub fn KanbanSettings(
                 {move || i18n.text(&error.get())}
             </p>
             <p role="status">{move || i18n.text(&notice.get())}</p>
-            <div class="confirmation" hidden={move || !discard.get()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!discard.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|discard.set(false))>
                 <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
-                <button type="button" disabled={move || pending.get()} on:click={move |_| close()}>
-                    {move || i18n.text("message.discard")}
-                </button>
-                <button type="button" disabled={move || pending.get()} on:click={move |_| discard.set(false)}>
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
+                    type="button"
+                    on:click={move |_| discard.set(false)}
+                >
                     {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    type="button"
+                    on:click={move |_| close()}
+                >
+                    {move || i18n.text("message.discard")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
+        </crate::modal::Modal>
     }
 }

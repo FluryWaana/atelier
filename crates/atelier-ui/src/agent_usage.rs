@@ -137,25 +137,27 @@ pub fn AgentUsage(runs: Signal<Vec<Document>>) -> impl IntoView {
                     report.with(|report| report.as_ref().map_or(true, |groups| groups.len() <= 100))
                 }}
             >
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || page.get() == 0)}
+                    {..}
                     type="button"
-                    disabled={move || page.get() == 0}
                     on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                 >
                     {move || i18n.text("message.previous")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || {
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         report
                             .with(|report| {
                                 report.as_ref().map_or(true, |groups| (page.get() + 1) * 100 >= groups.len())
                             })
-                    }}
+                    })}
+                    {..}
+                    type="button"
                     on:click={move |_| page.update(|page| *page += 1)}
                 >
                     {move || i18n.text("message.next")}
-                </button>
+                </crate::button::Button>
             </div>
         </details>
     }

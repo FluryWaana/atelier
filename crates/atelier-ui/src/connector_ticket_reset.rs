@@ -124,13 +124,14 @@ pub fn ConnectorTicketReset(
                     i18n.text("message.read_every_page_before_confirmation_missing_tickets_will_be_mark")
                 }}
             </p>
-            <button
+            <crate::button::Button
+                {..}
                 id="preview-connector-ticket-reset"
                 type="button"
                 on:click={move |_| execute.with_value(|execute| execute(false))}
             >
                 {move || i18n.text("message.read_the_complete_scope")}
-            </button>
+            </crate::button::Button>
             {move || {
                 preview
                     .get()
@@ -173,32 +174,34 @@ pub fn ConnectorTicketReset(
                     })
             }}
             <label hidden={move || preview.get().is_none()}>
-                <input
+                <crate::form::Checkbox
+                    {..}
                     id="approve-connector-ticket-reset"
-                    type="checkbox"
                     prop:checked={move || approved.get()}
                     on:change={move |event| approved.set(event_target_checked(&event))}
                 />
                 {move || i18n.text("message.confirm_these_scope_flags_only_preserving_every_task")}
             </label>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || preview.get().is_none() || !approved.get())}
+                {..}
                 id="apply-connector-ticket-reset"
                 type="button"
-                disabled={move || preview.get().is_none() || !approved.get()}
                 on:click={move |_| execute.with_value(|execute| execute(true))}
             >
                 {move || i18n.text("message.apply_the_complete_scope")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || preview.get().is_none())}
+                {..}
                 type="button"
-                disabled={move || preview.get().is_none()}
                 on:click={move |_| {
                     preview.set(None);
                     approved.set(false);
                 }}
             >
                 {move || i18n.text("message.cancel_preview")}
-            </button>
+            </crate::button::Button>
             <p role="status" hidden={move || !pending.get()}>
                 {move || i18n.text("message.complete_read_or_application_in_progress")}
             </p>

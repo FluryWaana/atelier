@@ -128,42 +128,58 @@ pub fn TempoSettings(
                 }}
             </p>
             <fieldset disabled={move || pending.get() || loading.get() || original.get().is_none()}>
-                <label for="tempo-base">{move || i18n.text("message.tempo_region")}</label>
-                <select
+                <crate::form::Field
                     id="tempo-base"
-                    prop:value={move || base.get()}
-                    on:change={move |event| base.set(event_target_value(&event))}
+                    label={Signal::derive(move || i18n.text("message.tempo_region"))}
                 >
-                    <option value="https://api.tempo.io/4">{move || i18n.text("message.automatic")}</option>
-                    <option value="https://api.eu.tempo.io/4">{move || i18n.text("message.europe")}</option>
-                    <option value="https://api.us.tempo.io/4">{move || i18n.text("message.americas")}</option>
-                </select>
+                    <crate::form::Select
+                        {..}
+                        id="tempo-base"
+                        prop:value={move || base.get()}
+                        on:change={move |event| base.set(event_target_value(&event))}
+                    >
+                        <option value="https://api.tempo.io/4">
+                            {move || i18n.text("message.automatic")}
+                        </option>
+                        <option value="https://api.eu.tempo.io/4">
+                            {move || i18n.text("message.europe")}
+                        </option>
+                        <option value="https://api.us.tempo.io/4">
+                            {move || i18n.text("message.americas")}
+                        </option>
+                    </crate::form::Select>
+                </crate::form::Field>
                 <p>
                     {move || {
-                        i18n
-                            .text(
-                                if original.get().is_some_and(|connection| connection.token_set) {
-                                    "message.tempo_token_stored"
-                                } else {
-                                    "message.no_tempo_token_stored"
-                                },
-                            )
+                        i18n.text(
+                            if original.get().is_some_and(|connection| connection.token_set) {
+                                "message.tempo_token_stored"
+                            } else {
+                                "message.no_tempo_token_stored"
+                            },
+                        )
                     }}
                 </p>
-                <label for="tempo-token">{move || i18n.text("message.new_tempo_token")}</label>
-                <input
+                <crate::form::Field
                     id="tempo-token"
-                    type="password"
-                    autocomplete="off"
-                    maxlength="4000"
-                    prop:value={move || key.get()}
-                    disabled={move || clear.get()}
-                    on:input={move |event| key.set(event_target_value(&event))}
-                />
+                    label={Signal::derive(move || i18n.text("message.new_tempo_token"))}
+                >
+                    <crate::form::Input
+                        input_type="password"
+                        reveal=true
+                        disabled={Signal::derive(move || clear.get())}
+                        {..}
+                        id="tempo-token"
+                        autocomplete="off"
+                        maxlength="4000"
+                        prop:value={move || key.get()}
+                        on:input={move |event| key.set(event_target_value(&event))}
+                    />
+                </crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="tempo-clear-token"
-                        type="checkbox"
                         prop:checked={move || clear.get()}
                         on:change={move |event| {
                             clear.set(event_target_checked(&event));
@@ -174,19 +190,21 @@ pub fn TempoSettings(
                     />
                     {move || i18n.text("message.remove_tempo_token")}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || !own_dirty.get())}
+                    {..}
                     id="save-tempo"
                     type="button"
-                    disabled={move || !own_dirty.get()}
                     on:click={move |_| execute.with_value(|execute| execute(true))}
                 >
                     {move || i18n.text("message.save_tempo")}
-                </button>
+                </crate::button::Button>
             </fieldset>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                {..}
                 id="reload-tempo"
                 type="button"
-                disabled={move || pending.get() || loading.get()}
                 on:click={move |_| {
                     if own_dirty.get_untracked() {
                         reload.set(true);
@@ -196,20 +214,26 @@ pub fn TempoSettings(
                 }}
             >
                 {move || i18n.text("message.reload_tempo")}
-            </button>
-            <div class="confirmation" hidden={move || !reload.get()}>
+            </crate::button::Button>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!reload.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|reload.set(false))>
                 <p>{move || i18n.text("message.discard_the_tempo_draft_and_read_the_connection_again")}</p>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
+                    type="button"
+                    on:click={move |_| reload.set(false)}
+                >
+                    {move || i18n.text("message.back")}
+                </crate::button::Button><crate::button::Button
+                    {..}
                     id="confirm-reload-tempo"
                     type="button"
                     on:click={move |_| execute.with_value(|execute| execute(false))}
                 >
                     {move || i18n.text("message.discard_and_reload")}
-                </button>
-                <button type="button" on:click={move |_| reload.set(false)}>
-                    {move || i18n.text("message.back")}
-                </button>
-            </div>
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <p id="tempo-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

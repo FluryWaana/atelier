@@ -199,14 +199,15 @@ pub fn JiraRefresh(
                     i18n.text("message.read_the_issue_again_compare_the_preview_then_explicitly_apply_i")
                 }}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || blocked.get() || busy.get())}
+                {..}
                 id="load-jira-refresh"
                 type="button"
-                disabled={move || pending.get() || blocked.get() || busy.get()}
                 on:click={load}
             >
                 {move || i18n.text("message.read_the_issue_again_to_compare")}
-            </button>
+            </crate::button::Button>
             <p
                 role="status"
                 hidden={move || {
@@ -259,9 +260,9 @@ pub fn JiraRefresh(
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-jira-refresh"
-                        type="checkbox"
                         disabled={move || pending.get() || blocked.get() || busy.get()}
                         prop:checked={move || {
                             preview
@@ -290,20 +291,21 @@ pub fn JiraRefresh(
                         i18n.text("message.replace_the_local_title_and_description_with_this_jira_preview")
                     }}
                 </label>
-                <button
-                    id="apply-jira-refresh"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || blocked.get() || busy.get()
                             || preview
                                 .with(|preview| {
                                     preview.as_ref().is_none_or(|preview| preview.id != confirmed.get())
                                 })
-                    }}
+                    })}
+                    {..}
+                    id="apply-jira-refresh"
+                    type="button"
                     on:click={apply}
                 >
                     {move || i18n.text("message.apply_this_preview_to_the_card")}
-                </button>
+                </crate::button::Button>
             </div>
             {move || {
                 preview
@@ -324,9 +326,9 @@ pub fn JiraRefresh(
                         };
                         view! {
                             <label>
-                                <input
+                                <crate::form::Checkbox
+                                    {..}
                                     id="jira-refresh-status"
-                                    type="checkbox"
                                     disabled={move || pending.get() || blocked.get() || busy.get()}
                                     prop:checked={move || apply_status.get()}
                                     on:change={move |event| {

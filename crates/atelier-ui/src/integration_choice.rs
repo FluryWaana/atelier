@@ -67,7 +67,7 @@ pub fn IntegrationChoice(
         pending.set(true);
         error.set(String::new());
         notice.set(false);
-        let alive = alive.clone();
+        let alive = mounted.with_value(Clone::clone);
         spawn_local(async move {
             let result = async {
                 let saved: serde_json::Value = write(
@@ -108,21 +108,21 @@ pub fn IntegrationChoice(
         <section class="form-section">
             <h3>
                 {move || {
-                    i18n
-                        .text(
-                            if kind == Kind::Tickets {
-                                "message.ticket_source"
-                            } else {
-                                "message.time_destination"
-                            },
-                        )
+                    i18n.text(
+                        if kind == Kind::Tickets {
+                            "message.ticket_source"
+                        } else {
+                            "message.time_destination"
+                        },
+                    )
                 }}
             </h3>
             <p class="hint">{move || i18n.text("message.integration_defaults_future_only")}</p>
-            <form on:submit={save}>
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(save) {..}  >
                 <fieldset disabled={move || pending.get() || blocked.get()}>
-                    <label for={id}>{move || i18n.text("message.default_provider")}</label>
-                    <select
+                    <crate::form::Field id={id} label=Signal::derive(move || i18n.text("message.default_provider"))>
+                    <crate::form::Select
+                        {..}
                         id={id}
                         prop:value={move || selected.get()}
                         on:change={move |event| {
@@ -151,19 +151,22 @@ pub fn IntegrationChoice(
                                 view! { <option value={provider.id}>{move || i18n.text(&name)}</option> }
                             }}
                         />
-                    </select>
-                    <div class="form-actions">
-                        <button
-                            id={format!("save-{id}")}
+                    </crate::form::Select></crate::form::Field>
+                    <crate::modal::ModalActions {..} >
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Primary}
+                            disabled={Signal::derive(move || !changed.get())}
                             class="primary"
+                            {..}
+                            id={format!("save-{id}")}
                             type="submit"
-                            disabled={move || !changed.get()}
                         >
                             {move || i18n.text("message.save_provider_choice")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || !changed.get())}
+                            {..}
                             type="button"
-                            disabled={move || !changed.get()}
                             on:click={move |_| {
                                 let saved = current();
                                 original.set(saved.clone());
@@ -172,20 +175,19 @@ pub fn IntegrationChoice(
                             }}
                         >
                             {move || i18n.text("message.cancel")}
-                        </button>
-                    </div>
+                        </crate::button::Button>
+                    </crate::modal::ModalActions>
                 </fieldset>
-            </form>
+            </crate::form::Form>
             <p class="field-help" hidden={move || selected.get() != "local"}>
                 {move || {
-                    i18n
-                        .text(
-                            if kind == Kind::Tickets {
-                                "message.local_tickets_explanation"
-                            } else {
-                                "message.local_time_explanation"
-                            },
-                        )
+                    i18n.text(
+                        if kind == Kind::Tickets {
+                            "message.local_tickets_explanation"
+                        } else {
+                            "message.local_time_explanation"
+                        },
+                    )
                 }}
             </p>
             <p class="error" role="alert">

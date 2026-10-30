@@ -183,8 +183,7 @@ pub fn TempoExport(
                     || (card
                         .get()
                         .is_none_or(|card| {
-                            card
-                                .fields
+                            card.fields
                                 .get::<Document>("ticket")
                                 .ok()
                                 .flatten()
@@ -194,32 +193,32 @@ pub fn TempoExport(
                         }) && intent.get().is_none())
             }}
         >
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || blocked.get() || other_draft.get() || archived)}
                 class="preview-time-export"
+                {..}
                 type="button"
                 hidden={move || {
                     !draft.get()
                         || (!board.settings.get().string_equals("timeProvider", "tempo").unwrap_or(false)
                             && preview.get().is_none())
                 }}
-                disabled={move || pending.get() || blocked.get() || other_draft.get() || archived}
                 on:click={move |_| execute.with_value(|execute| execute("export-preview"))}
             >
                 {move || i18n.text("message.preview_the_tempo_export")}
-            </button>
+            </crate::button::Button>
             {move || {
                 preview
                     .get()
                     .filter(|_| draft.get())
                     .map(|preview| {
                         view! {
-                            <div class="confirmation">
+                            <crate::modal::Notice {..} >
                                 <p>
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.check_the_site_jira_account_ticket_and_data_before_sending",
-                                            )
+                                        i18n.text(
+                                            "message.check_the_site_jira_account_ticket_and_data_before_sending",
+                                        )
                                     }}
                                 </p>
                                 <dl>
@@ -245,16 +244,15 @@ pub fn TempoExport(
                                 <p>{field(&preview.entry, "description")}</p>
                                 <p class="field-help">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.tempo_interprets_this_date_and_time_using_the_author_s_jira_prof",
-                                            )
+                                        i18n.text(
+                                            "message.tempo_interprets_this_date_and_time_using_the_author_s_jira_prof",
+                                        )
                                     }}
                                 </p>
                                 <label>
-                                    <input
+                                    <crate::form::Checkbox
+                                        {..}
                                         class="confirm-time-export"
-                                        type="checkbox"
                                         disabled={move || {
                                             pending.get() || blocked.get() || other_draft.get() || archived
                                         }}
@@ -274,64 +272,69 @@ pub fn TempoExport(
                                         i18n.text("message.confirm_sending_this_human_time_to_this_ticket")
                                     }}
                                 </label>
-                                <button
-                                    class="send-time-export"
-                                    type="button"
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         pending.get() || blocked.get() || other_draft.get() || archived
                                             || approved.get() != key.get()
-                                    }}
+                                    })}
+                                    class="send-time-export"
+                                    {..}
+                                    type="button"
                                     on:click={move |_| execute.with_value(|execute| execute("export"))}
                                 >
                                     {move || i18n.text("message.send_the_confirmed_time")}
-                                </button>
-                            </div>
+                                </crate::button::Button>
+                            </crate::modal::Notice>
                         }
                     })
             }}
-            <div class="confirmation" hidden={move || !uncertain.get()}>
+            <crate::modal::Notice {..}  hidden={move || !uncertain.get()}>
                 <p>
                     {move || {
                         i18n.text("message.uncertain_tempo_export_reading_creates_no_worklog_absence_does_n")
                     }}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
                     class="reconcile-time-export"
+                    {..}
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| execute.with_value(|execute| execute("reconcile"))}
                 >
                     {move || i18n.text("message.find_the_tempo_worklog")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get() || other_draft.get())}
                     class="open-time-export-reset"
+                    {..}
                     type="button"
-                    disabled={move || pending.get() || blocked.get() || other_draft.get()}
                     on:click={move |_| reset_open.set(true)}
                 >
                     {move || i18n.text("message.unlock_after_a_manual_check")}
-                </button>
-            </div>
-            <div class="confirmation" hidden={move || !reset_open.get()}>
+                </crate::button::Button>
+            </crate::modal::Notice>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!reset_open.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|{
+                        reset_open.set(false);
+                        evidence.set(String::new());
+                        risk.set(false);
+                    })>
                 <p role="alert">
                     {move || {
                         i18n.text("message.sending_again_may_create_a_duplicate_if_the_previous_request_arr")
                     }}
                 </p>
-                <label>
-                    {move || i18n.text("message.manual_check_in_tempo")}
-                    <textarea
+                <crate::form::Field label=Signal::derive(move || i18n.text("message.manual_check_in_tempo"))><crate::form::Textarea
+                        {..}
                         class="time-export-evidence"
                         maxlength="1000"
                         disabled={move || pending.get()}
                         prop:value={move || evidence.get()}
                         on:input={move |event| evidence.set(event_target_value(&event))}
-                    />
-                </label>
+                    /></crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         class="time-export-risk"
-                        type="checkbox"
                         disabled={move || pending.get()}
                         prop:checked={move || risk.get()}
                         on:change={move |event| risk.set(event_target_checked(&event))}
@@ -340,20 +343,12 @@ pub fn TempoExport(
                         i18n.text("message.i_checked_tempo_and_explicitly_accept_the_risk_of_a_duplicate")
                     }}
                 </label>
-                <button
-                    class="reset-time-export"
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     type="button"
-                    disabled={move || {
-                        pending.get() || blocked.get() || other_draft.get() || !uncertain.get() || !risk.get()
-                            || evidence.get().trim().is_empty()
-                    }}
-                    on:click={move |_| execute.with_value(|execute| execute("reset-export"))}
-                >
-                    {move || i18n.text("message.keep_the_history_and_unlock")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| {
                         reset_open.set(false);
                         evidence.set(String::new());
@@ -361,8 +356,19 @@ pub fn TempoExport(
                     }}
                 >
                     {move || i18n.text("message.cancel")}
-                </button>
-            </div>
+                </crate::button::Button><crate::button::Button
+                    disabled={Signal::derive(move || {
+                        pending.get() || blocked.get() || other_draft.get() || !uncertain.get() || !risk.get()
+                            || evidence.get().trim().is_empty()
+                    })}
+                    class="reset-time-export"
+                    {..}
+                    type="button"
+                    on:click={move |_| execute.with_value(|execute| execute("reset-export"))}
+                >
+                    {move || i18n.text("message.keep_the_history_and_unlock")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             {move || {
                 intent
                     .get()

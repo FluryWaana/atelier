@@ -159,14 +159,13 @@ pub fn Files(
                 <div>
                     <h3>
                         {move || {
-                            i18n
-                                .text(
-                                    if mode.get() == FileMode::Changes {
-                                        "message.task_changes"
-                                    } else {
-                                        "message.project_files"
-                                    },
-                                )
+                            i18n.text(
+                                if mode.get() == FileMode::Changes {
+                                    "message.task_changes"
+                                } else {
+                                    "message.project_files"
+                                },
+                            )
                         }}
                     </h3>
                     <p class="hint file-context">
@@ -175,15 +174,16 @@ pub fn Files(
                         }}
                     </p>
                 </div>
-                <button
-                    id="refresh-files"
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
                     class="refresh-files"
+                    {..}
+                    id="refresh-files"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| load(None)}
                 >
                     {move || i18n.text("message.refresh")}
-                </button>
+                </crate::button::Button>
             </div>
             <p class="field-help" hidden={move || mode.get() != FileMode::Changes}>
                 {move || {
@@ -200,19 +200,17 @@ pub fn Files(
                 <aside class="file-sidebar">
                     <div class="file-sidebar-heading">
                         {move || {
-                            i18n
-                                .text(
-                                    if mode.get() == FileMode::Changes {
-                                        "message.changes"
-                                    } else {
-                                        "message.explorer"
-                                    },
-                                )
+                            i18n.text(
+                                if mode.get() == FileMode::Changes {
+                                    "message.changes"
+                                } else {
+                                    "message.explorer"
+                                },
+                            )
                         }}<span class="file-count">{move || matching.with(Vec::len)}</span>
                     </div>
-                    <label class="file-search" for="file-search">
-                        <span class="sr-only">{move || i18n.text("message.filter_files")}</span>
-                        <input
+                    <crate::form::Field id="file-search" class="file-search" label_class="sr-only" label=Signal::derive(move || i18n.text("message.filter_files"))><crate::form::Input
+                            {..}
                             id="file-search"
                             class="file-filter"
                             type="search"
@@ -223,7 +221,7 @@ pub fn Files(
                                 page.set(0);
                             }}
                         />
-                    </label>
+                    </crate::form::Field>
                     <p class="file-message" role="status">
                         {move || {
                             if pending.get() { i18n.text("message.loading_files") } else { String::new() }
@@ -246,9 +244,11 @@ pub fn Files(
                             children={move |entry| {
                                 let name = StoredValue::new(entry);
                                 view! {
-                                    <button
-                                        type="button"
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
                                         class="file-entry"
+                                        {..}
+                                        type="button"
                                         title={name.get_value().path}
                                         data-file={name.get_value().path}
                                         aria-current={move || {
@@ -256,7 +256,6 @@ pub fn Files(
                                                 == Some((name.get_value().path, name.get_value().untracked)))
                                                 .to_string()
                                         }}
-                                        disabled={move || pending.get()}
                                         on:click={move |_| load(Some(name.get_value()))}
                                     >
                                         <svg
@@ -276,7 +275,7 @@ pub fn Files(
                                                 format!("{} · ", name.get_value().status)
                                             }}{name.get_value().path}
                                         </span>
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             }}
                         />
@@ -288,14 +287,15 @@ pub fn Files(
                         </p>
                     </nav>
                     <div class="file-pages">
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || page.get() == 0)}
+                            {..}
                             id="previous-files"
                             type="button"
-                            disabled={move || page.get() == 0}
                             on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                         >
                             {move || i18n.text("message.previous")}
-                        </button>
+                        </crate::button::Button>
                         <span>
                             {move || {
                                 format!(
@@ -305,14 +305,15 @@ pub fn Files(
                                 )
                             }}
                         </span>
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || { (page.get() + 1) * PAGE_SIZE >= matching.with(Vec::len) })}
+                            {..}
                             id="next-files"
                             type="button"
-                            disabled={move || (page.get() + 1) * PAGE_SIZE >= matching.with(Vec::len)}
                             on:click={move |_| page.update(|page| *page += 1)}
                         >
                             {move || i18n.text("message.next")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                 </aside>
                 <section class="file-preview" aria-label={move || i18n.text("message.file_preview")}>

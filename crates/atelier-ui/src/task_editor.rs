@@ -405,15 +405,16 @@ pub fn TaskEditor(
             <div id="card-detail">
                 <div id="task-editor" aria-labelledby="editor-heading">
                     <header class="task-heading">
-                        <button
-                            id="close-editor"
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
                             class="task-back"
+                            {..}
+                            id="close-editor"
                             type="button"
-                            disabled={move || pending.get()}
                             on:click={move |_| request_close()}
                         >
                             {move || i18n.text("message.back_ef23a594")}
-                        </button>
+                        </crate::button::Button>
                         <div class="task-heading-body">
                             <div>
                                 <div class="eyebrow">
@@ -423,14 +424,13 @@ pub fn TaskEditor(
                                             .map(|ticket| field(&ticket, "key"))
                                             .filter(|key| !key.is_empty())
                                             .unwrap_or_else(|| {
-                                                i18n
-                                                    .text(
-                                                        if archived {
-                                                            "message.archive"
-                                                        } else {
-                                                            "message.local_task"
-                                                        },
-                                                    )
+                                                i18n.text(
+                                                    if archived {
+                                                        "message.archive"
+                                                    } else {
+                                                        "message.local_task"
+                                                    },
+                                                )
                                             })
                                     }}
                                 </div>
@@ -451,7 +451,8 @@ pub fn TaskEditor(
                             .enumerate()
                             .map(move |(index, (tab, label))| {
                                 view! {
-                                    <button
+                                    <crate::button::Button
+                                        {..}
                                         id={format!("task-tab-{tab}")}
                                         type="button"
                                         role="tab"
@@ -486,7 +487,7 @@ pub fn TaskEditor(
                                         }}
                                     >
                                         {move || i18n.text(label)}
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             })
                             .collect_view()}
@@ -527,10 +528,9 @@ pub fn TaskEditor(
                                                     <p>{status}</p>
                                                     <p class="field-help">
                                                         {move || {
-                                                            i18n
-                                                                .text(
-                                                                    "message.the_title_and_description_of_this_card_are_preserved_locally_no",
-                                                                )
+                                                            i18n.text(
+                                                                "message.the_title_and_description_of_this_card_are_preserved_locally_no",
+                                                            )
                                                         }}
                                                     </p>
                                                 </section>
@@ -548,8 +548,7 @@ pub fn TaskEditor(
                                                     ["brainstormQuestions", "preparationQuestions"]
                                                         .into_iter()
                                                         .flat_map(|key| {
-                                                            card
-                                                                .fields
+                                                            card.fields
                                                                 .get::<Vec<String>>(key)
                                                                 .ok()
                                                                 .flatten()
@@ -573,12 +572,12 @@ pub fn TaskEditor(
                                             }
                                         })
                                 }}
-                                <form
-                                    class="task-editor"
-                                    on:submit={move |event| {
+                                <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                                         event.prevent_default();
                                         perform(Action::Save);
-                                    }}
+                                    }) {..}
+                                    class="task-editor"
+
                                     on:invalid:capture={move |event: web_sys::Event| {
                                         select_tab("details");
                                         if let Some(target) = event
@@ -597,44 +596,52 @@ pub fn TaskEditor(
                                             || connector_dirty.get() || commit_dirty.get() || archived
                                             || show_template.get()
                                     }}>
-                                        <label for="edit-title">{move || i18n.text("message.title")}</label>
-                                        <input
+                                        <crate::form::Field
                                             id="edit-title"
-                                            required
-                                            maxlength="300"
-                                            autofocus
-                                            readonly={move || ticket.get()}
-                                            prop:value={move || draft.get().title}
-                                            on:input={move |event| {
-                                                draft.update(|draft| draft.title = event_target_value(&event))
-                                            }}
-                                        />
-                                        <label for="edit-description">
-                                            {move || i18n.text("message.description")}
-                                        </label>
-                                        <textarea
+                                            label={Signal::derive(move || i18n.text("message.title"))}
+                                        >
+                                            <crate::form::Input
+                                                {..}
+                                                id="edit-title"
+                                                required=true
+                                                maxlength="300"
+                                                autofocus=true
+                                                readonly={move || ticket.get()}
+                                                prop:value={move || draft.get().title}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| draft.title = event_target_value(&event))
+                                                }}
+                                            />
+                                        </crate::form::Field>
+                                        <crate::form::Field
                                             id="edit-description"
-                                            rows="5"
-                                            maxlength="20000"
-                                            readonly={move || ticket.get()}
-                                            prop:value={move || draft.get().description}
-                                            on:input={move |event| {
-                                                draft
-                                                    .update(|draft| {
-                                                        draft.description = event_target_value(&event);
-                                                    })
-                                            }}
-                                        ></textarea>
+                                            label={Signal::derive(move || i18n.text("message.description"))}
+                                        >
+                                            <crate::form::Textarea
+                                                {..}
+                                                id="edit-description"
+                                                rows="5"
+                                                maxlength="20000"
+                                                readonly={move || ticket.get()}
+                                                prop:value={move || draft.get().description}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft.description = event_target_value(&event);
+                                                        })
+                                                }}
+                                            ></crate::form::Textarea>
+                                        </crate::form::Field>
                                         <details class="disclosure criteria" open>
                                             <summary id="criteria-heading">
                                                 {move || i18n.text("message.acceptance_criteria")}
                                             </summary>
                                             <p class="hint">
                                                 {move || {
-                                                    i18n
-                                                        .text(
-                                                            "message.check_criteria_after_verifying_them_up_to_20_criteria",
-                                                        )
+                                                    i18n.text(
+                                                        "message.check_criteria_after_verifying_them_up_to_20_criteria",
+                                                    )
                                                 }}
                                             </p>
                                             <For
@@ -645,17 +652,13 @@ pub fn TaskEditor(
                                                 children={move |index| {
                                                     view! {
                                                         <div class="criterion">
-                                                            <label>
-                                                                <span class="sr-only">
-                                                                    {move || {
-                                                                        i18n
-                                                                            .text("message.criterion_0")
+                                                            <crate::form::Field id={format!("criterion-{index}")} class="criterion-field" label_class="sr-only" label=Signal::derive(move || {
+                                                                        i18n.text("message.criterion_0")
                                                                             .replace("{0}", &(index + 1).to_string())
-                                                                    }}
-                                                                </span>
-                                                                <input
+                                                                    })><crate::form::Input
+                                                                    {..} id={format!("criterion-{index}")}
                                                                     class="criterion-text"
-                                                                    required
+                                                                    required=true
                                                                     maxlength="500"
                                                                     prop:value={move || {
                                                                         draft
@@ -676,11 +679,11 @@ pub fn TaskEditor(
                                                                             })
                                                                     }}
                                                                 />
-                                                            </label>
+                                                            </crate::form::Field>
                                                             <label class="check-filter">
-                                                                <input
+                                                                <crate::form::Checkbox
+                                                                    {..}
                                                                     class="criterion-done"
-                                                                    type="checkbox"
                                                                     prop:checked={move || {
                                                                         draft
                                                                             .with(|draft| {
@@ -701,11 +704,11 @@ pub fn TaskEditor(
                                                                 />
                                                                 {move || i18n.text("message.verified")}
                                                             </label>
-                                                            <button
+                                                            <crate::button::Button
+                                                                {..}
                                                                 type="button"
                                                                 aria-label={move || {
-                                                                    i18n
-                                                                        .text("message.remove_criterion_0")
+                                                                    i18n.text("message.remove_criterion_0")
                                                                         .replace("{0}", &(index + 1).to_string())
                                                                 }}
                                                                 on:click={move |_| {
@@ -716,92 +719,89 @@ pub fn TaskEditor(
                                                                 }}
                                                             >
                                                                 {move || i18n.text("message.remove")}
-                                                            </button>
+                                                            </crate::button::Button>
                                                         </div>
                                                     }
                                                 }}
                                             />
-                                            <button
+                                            <crate::button::Button
+                                                disabled={Signal::derive(move||{draft.get().criteria.len()>=20})}
+                                                {..}
                                                 id="add-criterion"
                                                 type="button"
-                                                disabled={move || draft.get().criteria.len() >= 20}
-                                                on:click={move |_| {
-                                                    draft
-                                                        .update(|draft| {
-                                                            draft
-                                                                .criteria
-                                                                .push(Criterion {
-                                                                    text: "".into(),
-                                                                    done: false,
-                                                                })
-                                                        })
-                                                }}
-                                            >
-                                                {move || i18n.text("message.add_a_criterion")}
-                                            </button>
+                                                on:click=move |_| {draft.update(|draft|draft.criteria.push(Criterion{text:"".into(),done:false}));}
+                                            >{move||i18n.text("message.add_a_criterion")}</crate::button::Button>
                                         </details>
                                         <div class="form-row">
                                             <div>
-                                                <label for="edit-status">
-                                                    {move || i18n.text("message.local_progress")}
-                                                </label>
-                                                <select
+                                                <crate::form::Field
                                                     id="edit-status"
-                                                    prop:value={move || draft.get().status}
-                                                    on:change={move |event| {
-                                                        draft
-                                                            .update(|draft| draft.status = event_target_value(&event))
-                                                    }}
+                                                    label={Signal::derive(move || {
+                                                        i18n.text("message.local_progress")
+                                                    })}
                                                 >
-                                                    {STATUSES
-                                                        .into_iter()
-                                                        .map(move |(status, _)| {
-                                                            view! {
-                                                                <option value={status}>
-                                                                    {move || status_label(status)}
-                                                                </option>
-                                                            }
-                                                        })
-                                                        .collect_view()}
-                                                </select>
+                                                    <crate::form::Select
+                                                        {..}
+                                                        id="edit-status"
+                                                        prop:value={move || draft.get().status}
+                                                        on:change={move |event| {
+                                                            draft
+                                                                .update(|draft| draft.status = event_target_value(&event))
+                                                        }}
+                                                    >
+                                                        {STATUSES
+                                                            .into_iter()
+                                                            .map(move |(status, _)| {
+                                                                view! {
+                                                                    <option value={status}>
+                                                                        {move || status_label(status)}
+                                                                    </option>
+                                                                }
+                                                            })
+                                                            .collect_view()}
+                                                    </crate::form::Select>
+                                                </crate::form::Field>
                                             </div>
                                             <div>
-                                                <label for="edit-agent">
-                                                    {move || i18n.text("message.agent")}
-                                                </label>
-                                                <select
+                                                <crate::form::Field
                                                     id="edit-agent"
-                                                    prop:value={move || draft.get().agent}
-                                                    on:change={move |event| {
-                                                        draft
-                                                            .update(|draft| {
-                                                                draft.agent = event_target_value(&event);
-                                                                draft.model.clear();
-                                                                draft.effort.clear();
-                                                            })
-                                                    }}
+                                                    label={Signal::derive(move || i18n.text("message.agent"))}
                                                 >
-                                                    <option value="" disabled>
-                                                        {move || i18n.text("message.choose_a_profile")}
-                                                    </option>
-                                                    <For
-                                                        each={move || {
-                                                            atelier_core::domain::agent_options::providers(
-                                                                    &board.settings.get(),
-                                                                )
-                                                                .unwrap_or_default()
+                                                    <crate::form::Select
+                                                        {..}
+                                                        id="edit-agent"
+                                                        prop:value={move || draft.get().agent}
+                                                        on:change={move |event| {
+                                                            draft
+                                                                .update(|draft| {
+                                                                    draft.agent = event_target_value(&event);
+                                                                    draft.model.clear();
+                                                                    draft.effort.clear();
+                                                                })
                                                         }}
-                                                        key={|profile| field(profile, "id")}
-                                                        children={move |profile| {
-                                                            view! {
-                                                                <option value={field(
-                                                                    &profile,
-                                                                    "id",
-                                                                )}>{field(&profile, "name")}</option>
-                                                            }
-                                                        }}
-                                                    />
-                                                </select>
+                                                    >
+                                                        <option value="" disabled>
+                                                            {move || i18n.text("message.choose_a_profile")}
+                                                        </option>
+                                                        <For
+                                                            each={move || {
+                                                                atelier_core::domain::agent_options::providers(
+                                                                        &board.settings.get(),
+                                                                    )
+                                                                    .unwrap_or_default()
+                                                            }}
+                                                            key={|profile| field(profile, "id")}
+                                                            children={move |profile| {
+                                                                view! {
+                                                                    <option value={field(
+                                                                        &profile,
+                                                                        "id",
+                                                                    )}>{field(&profile, "name")}</option>
+                                                                }
+                                                            }}
+                                                        />
+                                                    </crate::form::Select>
+                                                </crate::form::Field>
                                             </div>
                                         </div>
                                         <details class="disclosure">
@@ -810,40 +810,50 @@ pub fn TaskEditor(
                                             </summary>
                                             <div class="form-row">
                                                 <div>
-                                                    <label for="edit-model">
-                                                        {move || i18n.text("message.task_model")}
-                                                    </label>
-                                                    <input
+                                                    <crate::form::Field
                                                         id="edit-model"
-                                                        maxlength="180"
-                                                        spellcheck="false"
-                                                        placeholder={move || {
-                                                            i18n.text("message.inherit_from_the_profile_when_empty")
-                                                        }}
-                                                        prop:value={move || draft.get().model}
-                                                        on:input={move |event| {
-                                                            draft
-                                                                .update(|draft| draft.model = event_target_value(&event))
-                                                        }}
-                                                    />
+                                                        label={Signal::derive(move || {
+                                                            i18n.text("message.task_model")
+                                                        })}
+                                                    >
+                                                        <crate::form::Input
+                                                            {..}
+                                                            id="edit-model"
+                                                            maxlength="180"
+                                                            spellcheck="false"
+                                                            placeholder={move || {
+                                                                i18n.text("message.inherit_from_the_profile_when_empty")
+                                                            }}
+                                                            prop:value={move || draft.get().model}
+                                                            on:input={move |event| {
+                                                                draft
+                                                                    .update(|draft| draft.model = event_target_value(&event))
+                                                            }}
+                                                        />
+                                                    </crate::form::Field>
                                                 </div>
                                                 <div>
-                                                    <label for="edit-effort">
-                                                        {move || i18n.text("message.task_effort")}
-                                                    </label>
-                                                    <input
+                                                    <crate::form::Field
                                                         id="edit-effort"
-                                                        maxlength="40"
-                                                        spellcheck="false"
-                                                        placeholder={move || {
-                                                            i18n.text("message.inherit_from_the_profile_when_empty")
-                                                        }}
-                                                        prop:value={move || draft.get().effort}
-                                                        on:input={move |event| {
-                                                            draft
-                                                                .update(|draft| draft.effort = event_target_value(&event))
-                                                        }}
-                                                    />
+                                                        label={Signal::derive(move || {
+                                                            i18n.text("message.task_effort")
+                                                        })}
+                                                    >
+                                                        <crate::form::Input
+                                                            {..}
+                                                            id="edit-effort"
+                                                            maxlength="40"
+                                                            spellcheck="false"
+                                                            placeholder={move || {
+                                                                i18n.text("message.inherit_from_the_profile_when_empty")
+                                                            }}
+                                                            prop:value={move || draft.get().effort}
+                                                            on:input={move |event| {
+                                                                draft
+                                                                    .update(|draft| draft.effort = event_target_value(&event))
+                                                            }}
+                                                        />
+                                                    </crate::form::Field>
                                                 </div>
                                             </div>
                                         </details>
@@ -853,10 +863,9 @@ pub fn TaskEditor(
                                             </summary>
                                             <p class="hint">
                                                 {move || {
-                                                    i18n
-                                                        .text(
-                                                            "message.choose_prerequisite_tasks_completed_tasks_no_longer_block_the_wo",
-                                                        )
+                                                    i18n.text(
+                                                        "message.choose_prerequisite_tasks_completed_tasks_no_longer_block_the_wo",
+                                                    )
                                                 }}
                                             </p>
                                             <For
@@ -872,8 +881,8 @@ pub fn TaskEditor(
                                                     let dependency = StoredValue::new(card.id);
                                                     view! {
                                                         <label class="dependency-choice">
-                                                            <input
-                                                                type="checkbox"
+                                                            <crate::form::Checkbox
+                                                                {..}
                                                                 data-dependency={dependency.get_value()}
                                                                 prop:checked={move || {
                                                                     draft
@@ -907,7 +916,8 @@ pub fn TaskEditor(
                                                     }
                                                 }}
                                             />
-                                            <p class="field-help" hidden={move || cards.get().len() > 1}>
+                                            <p class="field-help" hidden={move || cards.get().len()}>
+                                                1>
                                                 {move || i18n.text("message.no_other_tasks_available")}
                                             </p>
                                         </details>
@@ -915,56 +925,62 @@ pub fn TaskEditor(
                                             <summary>
                                                 {move || i18n.text("message.additional_instructions")}
                                             </summary>
-                                            <label for="edit-instructions">
-                                                {move || i18n.text("message.agent_instructions")}
-                                            </label>
-                                            <textarea
+                                            <crate::form::Field
                                                 id="edit-instructions"
-                                                rows="4"
-                                                maxlength="20000"
-                                                prop:value={move || draft.get().instructions}
-                                                on:input={move |event| {
-                                                    draft
-                                                        .update(|draft| {
-                                                            draft.instructions = event_target_value(&event);
-                                                        })
-                                                }}
-                                            ></textarea>
+                                                label={Signal::derive(move || {
+                                                    i18n.text("message.agent_instructions")
+                                                })}
+                                            >
+                                                <crate::form::Textarea
+                                                    {..}
+                                                    id="edit-instructions"
+                                                    rows="4"
+                                                    maxlength="20000"
+                                                    prop:value={move || draft.get().instructions}
+                                                    on:input={move |event| {
+                                                        draft
+                                                            .update(|draft| {
+                                                                draft.instructions = event_target_value(&event);
+                                                            })
+                                                    }}
+                                                ></crate::form::Textarea>
+                                            </crate::form::Field>
                                         </details>
                                     </fieldset>
-                                    <div class="form-actions">
-                                        <button
-                                            id="save-task"
-                                            class="primary"
-                                            type="submit"
-                                            hidden={archived}
-                                            disabled={move || {
+                                    <crate::modal::ModalActions {..} >
+                                        <crate::button::Button
+                                            busy={Signal::derive(move || pending.get())}
+                                            variant={crate::button::ButtonVariant::Primary}
+                                            disabled={Signal::derive(move || {
                                                 pending.get() || time_dirty.get() || creation_dirty.get()
                                                     || forge_dirty.get() || connector_dirty.get()
                                                     || commit_dirty.get() || !dirty.get()
-                                            }}
+                                            })}
+                                            class="primary"
+                                            {..}
+                                            id="save-task"
+                                            type="submit"
+                                            hidden={archived}
                                         >
                                             {move || {
-                                                i18n
-                                                    .text(
-                                                        if pending.get() {
-                                                            "message.saving"
-                                                        } else {
-                                                            "message.save"
-                                                        },
-                                                    )
+                                                i18n.text(
+                                                    if pending.get() {
+                                                        "message.saving"
+                                                    } else {
+                                                        "message.save"
+                                                    },
+                                                )
                                             }}
-                                        </button>
+                                        </crate::button::Button>
                                         <span role="status">
                                             {move || {
-                                                i18n
-                                                    .text(
-                                                        if dirty.get() { "message.unsaved_changes" } else { "" },
-                                                    )
+                                                i18n.text(
+                                                    if dirty.get() { "message.unsaved_changes" } else { "" },
+                                                )
                                             }}
                                         </span>
-                                    </div>
-                                </form>
+                                    </crate::modal::ModalActions>
+                                </crate::form::Form>
                             </div>
                             <aside class="task-aside">
                                 <crate::commits::Commits
@@ -1164,129 +1180,170 @@ pub fn TaskEditor(
                         {move || i18n.text(&error.get())}
                     </p>
                     <div class="editor-secondary">
-                        <button
-                            id="duplicate-task"
-                            type="button"
-                            disabled={move || {
+                        <crate::button::Button
+                            disabled={Signal::derive(move || {
                                 pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
                                     || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
                                     || commit_dirty.get() || automation_active.get() || show_template.get()
-                            }}
+                            })}
+                            {..}
+                            id="duplicate-task"
+                            type="button"
                             on:click={move |_| perform(Action::Duplicate)}
                         >
                             {move || i18n.text("message.duplicate")}
-                        </button>
-                        <button
-                            id="archive-task"
-                            type="button"
-                            disabled={move || {
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || {
                                 pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
                                     || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
                                     || commit_dirty.get() || automation_active.get() || show_template.get()
-                            }}
+                            })}
+                            {..}
+                            id="archive-task"
+                            type="button"
                             on:click={move |_| perform(Action::Archive)}
                         >
                             {move || {
-                                i18n
-                                    .text(
-                                        if archived { "message.restore" } else { "message.archive_8614cf00" },
-                                    )
+                                i18n.text(
+                                    if archived { "message.restore" } else { "message.archive_8614cf00" },
+                                )
                             }}
-                        </button>
-                        <button
-                            id="delete-task"
-                            class="danger"
-                            type="button"
-                            disabled={move || {
+                        </crate::button::Button>
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Danger}
+                            disabled={Signal::derive(move || {
                                 pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
                                     || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
                                     || commit_dirty.get() || automation_active.get() || show_template.get()
-                            }}
+                            })}
+                            class="danger"
+                            {..}
+                            id="delete-task"
+                            type="button"
                             on:click={move |_| confirmation.set("delete")}
                         >
                             {move || i18n.text("message.delete")}
-                        </button>
-                        <button
-                            id="make-template"
-                            type="button"
-                            disabled={move || {
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || {
                                 pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
                                     || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
                                     || commit_dirty.get() || automation_active.get() || show_template.get()
-                            }}
+                            })}
+                            {..}
+                            id="make-template"
+                            type="button"
                             on:click={move |_| {
                                 notice.set(String::new());
                                 show_template.set(true);
                             }}
                         >
                             {move || i18n.text("message.create_template")}
-                        </button>
+                        </crate::button::Button>
                     </div>
-                    <form
-                        class="template-form"
-                        hidden={move || !show_template.get()}
-                        on:submit={move |event| {
+                    <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                             event.prevent_default();
                             perform(Action::Template);
-                        }}
+                        }) {..}
+                        class="template-form"
+                        hidden={move || !show_template.get()}
+
                     >
-                        <label for="template-name">{move || i18n.text("message.template_name")}</label>
-                        <input
+                        <crate::form::Field
                             id="template-name"
-                            required
-                            maxlength="100"
-                            disabled={move || pending.get()}
-                            prop:value={move || template_name.get()}
-                            on:input={move |event| template_name.set(event_target_value(&event))}
-                        />
+                            label={Signal::derive(move || i18n.text("message.template_name"))}
+                        >
+                            <crate::form::Input
+                                {..}
+                                id="template-name"
+                                required=true
+                                maxlength="100"
+                                disabled={move || pending.get()}
+                                prop:value={move || template_name.get()}
+                                on:input={move |event| template_name.set(event_target_value(&event))}
+                            />
+                        </crate::form::Field>
                         <p class="field-help">
                             {move || {
-                                i18n
-                                    .text(
-                                        "message.the_template_includes_the_description_instructions_and_criteria",
-                                    )
+                                i18n.text(
+                                    "message.the_template_includes_the_description_instructions_and_criteria",
+                                )
                             }}
                         </p>
-                        <button
-                            id="save-template"
+                        <crate::button::Button
+                            busy={Signal::derive(move || pending.get())}
+                            variant={crate::button::ButtonVariant::Primary}
+                            disabled={Signal::derive(move || pending.get())}
                             class="primary"
+                            {..}
+                            id="save-template"
                             type="submit"
-                            disabled={move || pending.get()}
                         >
                             {move || i18n.text("message.save_template")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
                             type="button"
-                            disabled={move || pending.get()}
                             on:click={move |_| {
                                 template_name.set(String::new());
                                 show_template.set(false);
                             }}
                         >
                             {move || i18n.text("message.cancel_template")}
-                        </button>
-                    </form>
+                        </crate::button::Button>
+                    </crate::form::Form>
                     <p id="editor-notice" role="status">
                         {move || i18n.text(&notice.get())}
                     </p>
-                    <div class="confirmation" role="alert" hidden={move || confirmation.get().is_empty()}>
+                    <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(confirmation.get().is_empty())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|{
+                                navigation.set_value(None);
+                                confirmation.set("");
+                                if let Some(element) = document()
+                                    .get_element_by_id(&close_focus.get_value())
+                                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                                {
+                                    let _ = element.focus();
+                                }
+                            })>
                         <p>
                             {move || {
-                                i18n
-                                    .text(
-                                        if confirmation.get() == "delete" {
-                                            "message.permanently_delete_this_task_this_cannot_be_undone"
-                                        } else {
-                                            "message.close_without_saving_changes"
-                                        },
-                                    )
+                                i18n.text(
+                                    if confirmation.get() == "delete" {
+                                        "message.permanently_delete_this_task_this_cannot_be_undone"
+                                    } else {
+                                        "message.close_without_saving_changes"
+                                    },
+                                )
                             }}
                         </p>
-                        <button
-                            id="confirm-editor"
-                            class="danger"
+                        <crate::modal::ModalActions><crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
+                            data-confirmation-cancel=""
+                            autofocus=true
+                            id="cancel-confirmation"
                             type="button"
-                            disabled={move || pending.get()}
+                            on:click={move |_| {
+                                navigation.set_value(None);
+                                confirmation.set("");
+                                if let Some(element) = document()
+                                    .get_element_by_id(&close_focus.get_value())
+                                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                                {
+                                    let _ = element.focus();
+                                }
+                            }}
+                        >
+                            {move || i18n.text("message.keep_editing_746a82c6")}
+                        </crate::button::Button><crate::button::Button
+                            variant={crate::button::ButtonVariant::Danger}
+                            disabled={Signal::derive(move || pending.get())}
+                            class="danger"
+                            {..}
+                            id="confirm-editor"
+                            type="button"
                             on:click={move |_| {
                                 if confirmation.get_untracked() == "delete" {
                                     perform(Action::Delete);
@@ -1300,34 +1357,16 @@ pub fn TaskEditor(
                             }}
                         >
                             {move || {
-                                i18n
-                                    .text(
-                                        if confirmation.get() == "delete" {
-                                            "message.delete_permanently"
-                                        } else {
-                                            "message.discard_changes"
-                                        },
-                                    )
+                                i18n.text(
+                                    if confirmation.get() == "delete" {
+                                        "message.delete_permanently"
+                                    } else {
+                                        "message.discard_changes"
+                                    },
+                                )
                             }}
-                        </button>
-                        <button
-                            id="cancel-confirmation"
-                            type="button"
-                            disabled={move || pending.get()}
-                            on:click={move |_| {
-                                navigation.set_value(None);
-                                confirmation.set("");
-                                if let Some(element) = document()
-                                    .get_element_by_id(&close_focus.get_value())
-                                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
-                                {
-                                    let _ = element.focus();
-                                }
-                            }}
-                        >
-                            {move || i18n.text("message.keep_editing_746a82c6")}
-                        </button>
-                    </div>
+                        </crate::button::Button></crate::modal::ModalActions>
+                    </crate::modal::Confirmation>
                 </div>
             </div>
         </section>

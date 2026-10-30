@@ -228,29 +228,16 @@ pub fn NewTask(
         });
     };
     view! {
-        <dialog
+        <crate::modal::Modal
             id="new-dialog"
             node_ref={dialog}
-            aria-labelledby="new-task-title"
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                close();
-            }}
+            auto_open=false
+            labelledby="new-task-title"
+            busy={Signal::derive(move || busy.get())}
+            on_close={Callback::new(move |()| close())}
         >
-            <form id="new-form" on:submit={submit}>
-                <div class="dialog-heading">
-                    <div>
-                        <h2 id="new-task-title">{move || i18n.text("message.new_task")}</h2>
-                    </div>
-                    <button
-                        type="button"
-                        aria-label={move || i18n.text("message.close")}
-                        disabled={move || busy.get()}
-                        on:click={move |_| close()}
-                    >
-                        "×"
-                    </button>
-                </div>
+            <crate::form::Form busy=Signal::derive(move||busy.get()) on_submit=Callback::new(submit) {..}  id="new-form" >
+                <crate::modal::ModalHeader class="inset" title_id="new-task-title" title=Signal::derive(move||i18n.text("message.new_task")) busy=Signal::derive(move||busy.get()) on_close=Callback::new(move|()|close())/>
                 <details class="disclosure new-task-templates">
                     <summary>{move || i18n.text("message.task_templates")}</summary>
                     <div class="template-options" aria-label={move || i18n.text("message.task_templates")}>
@@ -263,14 +250,15 @@ pub fn NewTask(
                             .into_iter()
                             .map(move |(kind, label)| {
                                 view! {
-                                    <button
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || busy.get())}
+                                        {..}
                                         type="button"
                                         data-template={kind}
-                                        disabled={move || busy.get()}
                                         on:click={move |_| apply_builtin.run(kind)}
                                     >
                                         {move || i18n.text(label)}
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             })
                             .collect_view()}
@@ -278,44 +266,49 @@ pub fn NewTask(
                     <details class="disclosure" hidden={move || templates.get().is_empty()}>
                         <summary>{move || i18n.text("message.use_a_personal_template")}</summary>
                         <div class="template-picker">
-                            <label for="task-template">{move || i18n.text("message.template")}</label>
-                            <select
-
+                            <crate::form::Field
                                 id="task-template"
-                                disabled={move || busy.get()}
-                                prop:value={move || template.get()}
-                                on:change={select_template}
+                                label={Signal::derive(move || i18n.text("message.template"))}
                             >
-                                <option value="">{move || i18n.text("message.no_template")}</option>
-                                <For
-                                    each={move || templates.get()}
-                                    key={|item| field(item, "id")}
-                                    children={|item| {
-                                        view! {
-                                            <option value={field(&item, "id")}>{field(&item, "name")}</option>
-                                        }
-                                    }}
-                                />
-                            </select>
-
-                            <button
+                                <crate::form::Select
+                                    {..}
+                                    id="task-template"
+                                    disabled={move || busy.get()}
+                                    prop:value={move || template.get()}
+                                    on:change={select_template}
+                                >
+                                    <option value="">{move || i18n.text("message.no_template")}</option>
+                                    <For
+                                        each={move || templates.get()}
+                                        key={|item| field(item, "id")}
+                                        children={|item| {
+                                            view! {
+                                                <option value={field(
+                                                    &item,
+                                                    "id",
+                                                )}>{field(&item, "name")}</option>
+                                            }
+                                        }}
+                                    />
+                                </crate::form::Select>
+                            </crate::form::Field>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || busy.get())}
+                                class="text-action"
+                                {..}
                                 id="remove-template"
                                 type="button"
-                                class="text-action"
                                 hidden={move || template.get().is_empty()}
-                                disabled={move || busy.get()}
                                 on:click={move |_| remove_template.set(true)}
                             >
                                 {move || i18n.text("message.remove_this_template")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                     </details>
                 </details>
                 <section class="form-section">
-                    <label for="task-title">
-                        {move || i18n.text("message.title_required_3d8bf263")}
-                        <input
-
+                    <crate::form::Field id="task-title" label=Signal::derive(move || i18n.text("message.title_required_3d8bf263"))><crate::form::Input
+                            {..}
                             node_ref={title_input}
                             id="task-title"
                             name="title"
@@ -325,12 +318,9 @@ pub fn NewTask(
                             placeholder={move || i18n.text("message.e_g_add_a_csv_export_for_tasks")}
                             prop:value={move || title.get()}
                             on:input={move |event| title.set(event_target_value(&event))}
-                        />
-                    </label>
-                    <label>
-                        {move || i18n.text("message.description")}
-                        <textarea
-
+                        /></crate::form::Field>
+                    <crate::form::Field id="new-description" label=Signal::derive(move || i18n.text("message.description"))><crate::form::Textarea
+                            {..}
                             id="new-description"
                             name="description"
                             rows="5"
@@ -339,14 +329,11 @@ pub fn NewTask(
                             placeholder={move || i18n.text("message.context_expected_outcome_constraints")}
                             prop:value={move || description.get()}
                             on:input={move |event| description.set(event_target_value(&event))}
-                        />
-                    </label>
+                        /></crate::form::Field>
                 </section>
                 <section class="form-section execution-options">
-                    <label>
-                        {move || i18n.text("message.saved_project")}
-                        <select
-
+                    <crate::form::Field id="new-project" label=Signal::derive(move || i18n.text("message.saved_project"))><crate::form::Select
+                            {..}
                             id="new-project"
                             disabled={move || busy.get()}
                             prop:value={move || repo.get()}
@@ -379,29 +366,23 @@ pub fn NewTask(
                                     }
                                 }}
                             />
-                        </select>
-                    </label>
+                        </crate::form::Select></crate::form::Field>
                     <details class="disclosure">
                         <summary>{move || i18n.text("message.choose_another_directory")}</summary>
-                        <label>
-                            {move || i18n.text("message.source_git_repository")}
-                            <input
-
+                        <crate::form::Field label=Signal::derive(move || i18n.text("message.source_git_repository"))><crate::form::Input
+                                {..}
                                 name="repo"
                                 disabled={move || busy.get()}
                                 prop:value={move || repo.get()}
                                 on:input={move |event| repo.set(event_target_value(&event))}
                                 placeholder={move || i18n.text("message.absolute_project_path")}
-                            />
-                        </label>
+                            /></crate::form::Field>
                     </details>
                     <details class="disclosure new-task-agent">
                         <summary>{move || i18n.text("message.project_agent")}</summary>
                         <div class="form-row">
-                            <label>
-                                {move || i18n.text("message.agent")}
-                                <select
-
+                            <crate::form::Field label=Signal::derive(move || i18n.text("message.agent"))><crate::form::Select
+                                    {..}
                                     name="agent"
                                     disabled={move || busy.get()}
                                     prop:value={move || agent.get()}
@@ -431,12 +412,9 @@ pub fn NewTask(
                                             }
                                         }}
                                     />
-                                </select>
-                            </label>
-                            <label>
-                                {move || i18n.text("message.requested_work")}
-                                <select
-
+                                </crate::form::Select></crate::form::Field>
+                            <crate::form::Field label=Signal::derive(move || i18n.text("message.requested_work"))><crate::form::Select
+                                    {..}
                                     name="mode"
                                     disabled={move || busy.get()}
                                     prop:value={move || mode.get()}
@@ -446,48 +424,38 @@ pub fn NewTask(
                                     <option value="analyze">
                                         {move || i18n.text("message.analyze_only")}
                                     </option>
-                                </select>
-                            </label>
+                                </crate::form::Select></crate::form::Field>
                         </div>
                         <details class="disclosure">
                             <summary>{move || i18n.text("message.add_extra_instructions")}</summary>
-                            <label>
-                                {move || i18n.text("message.agent_instructions")}
-                                <textarea
-
+                            <crate::form::Field label=Signal::derive(move || i18n.text("message.agent_instructions"))><crate::form::Textarea
+                                    {..}
                                     name="instructions"
                                     rows="2"
                                     maxlength="20000"
                                     disabled={move || busy.get()}
                                     prop:value={move || instructions.get()}
                                     on:input={move |event| instructions.set(event_target_value(&event))}
-                                />
-                            </label>
+                                /></crate::form::Field>
                         </details>
                     </details>
                 </section>
                 <details class="disclosure model-options">
                     <summary>{move || i18n.text("message.model_reasoning_optional")}</summary>
-                    <label>
-                        {move || i18n.text("message.template")}
-                        <input
-
+                    <crate::form::Field label=Signal::derive(move || i18n.text("message.template"))><crate::form::Input
+                            {..}
                             maxlength="180"
                             disabled={move || busy.get()}
                             prop:value={move || model.get()}
                             on:input={move |event| model.set(event_target_value(&event))}
-                        />
-                    </label>
-                    <label>
-                        {move || i18n.text("message.reasoning_effort_4387e5d3")}
-                        <input
-
+                        /></crate::form::Field>
+                    <crate::form::Field label=Signal::derive(move || i18n.text("message.reasoning_effort_4387e5d3"))><crate::form::Input
+                            {..}
                             maxlength="40"
                             disabled={move || busy.get()}
                             prop:value={move || effort.get()}
                             on:input={move |event| effort.set(event_target_value(&event))}
-                        />
-                    </label>
+                        /></crate::form::Field>
                 </details>
                 <p class="hint notice-line">
                     {move || {
@@ -497,31 +465,55 @@ pub fn NewTask(
                 <p class="error" role="alert">
                     {move || i18n.text(&error.get())}
                 </p>
-                <div class="form-actions">
-                    <button type="button" disabled={move || busy.get()} on:click={move |_| close()}>
+                <crate::modal::ModalActions {..} >
+                    <crate::button::Button
+                        disabled={Signal::derive(move || busy.get())}
+                        {..}
+                        type="button"
+                        on:click={move |_| close()}
+                    >
                         {move || i18n.text("message.cancel")}
-                    </button>
-                    <button
-                        id="create-task"
+                    </crate::button::Button>
+                    <crate::button::Button
+                        busy={Signal::derive(move || pending.get())}
+                        variant={crate::button::ButtonVariant::Primary}
+                        disabled={Signal::derive(move || submit_blocked.get())}
                         class="primary"
+                        {..}
+                        id="create-task"
                         type="submit"
-                        disabled={move || submit_blocked.get()}
                     >
                         {move || {
                             i18n.text(if pending.get() { "message.creating" } else { "message.create_task" })
                         }}
-                    </button>
-                </div>
-            </form>
-            <div class="confirmation" hidden={move || template_candidate.get().is_none()}>
+                    </crate::button::Button>
+                </crate::modal::ModalActions>
+            </crate::form::Form>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(template_candidate.get().is_none())) busy=Signal::derive(move||busy.get()) on_close=Callback::new(move|()|{
+                        template_candidate.set(None);
+                        template.set(String::new());
+                    })>
                 <p>
                     {move || {
                         i18n.text("message.replace_the_entered_description_instructions_and_mode_with_this")
                     }}
                 </p>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     type="button"
-                    disabled={move || busy.get()}
+                    on:click={move |_| {
+                        template_candidate.set(None);
+                        template.set(String::new());
+                    }}
+                >
+                    {move || i18n.text("message.cancel")}
+                </crate::button::Button><crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
+                    type="button"
                     on:click={move |_| {
                         if let Some(id) = template_candidate.get_untracked() {
                             apply_template.run(id);
@@ -529,37 +521,30 @@ pub fn NewTask(
                     }}
                 >
                     {move || i18n.text("message.apply")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || busy.get()}
-                    on:click={move |_| {
-                        template_candidate.set(None);
-                        template.set(String::new());
-                    }}
-                >
-                    {move || i18n.text("message.cancel")}
-                </button>
-            </div>
-            <div class="confirmation" hidden={move || !remove_template.get()}>
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!remove_template.get())) busy=Signal::derive(move||busy.get()) on_close=Callback::new(move|()|remove_template.set(false))>
                 <p>{move || i18n.text("message.remove_this_template_existing_tasks_will_be_kept")}</p>
-                <button
-                    id="confirm-remove-template"
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     type="button"
-                    disabled={move || busy.get()}
-                    on:click={delete_template}
-                >
-                    {move || i18n.text("message.remove_template")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || busy.get()}
                     on:click={move |_| remove_template.set(false)}
                 >
                     {move || i18n.text("message.cancel")}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button><crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
+                    id="confirm-remove-template"
+                    type="button"
+                    on:click={delete_template}
+                >
+                    {move || i18n.text("message.remove_template")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
+        </crate::modal::Modal>
     }
 }
 

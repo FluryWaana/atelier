@@ -224,8 +224,10 @@ pub fn Settings(
                         .enumerate()
                         .map(move |(index, (id, label))| {
                             view! {
-                                <button
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || pending.get())}
                                     class="settings-tab"
+                                    {..}
                                     class:selected-tab={move || tab.get() == index}
                                     type="button"
                                     role="tab"
@@ -233,7 +235,6 @@ pub fn Settings(
                                     aria-controls={format!("settings-panel-{id}")}
                                     aria-selected={move || (tab.get() == index).to_string()}
                                     tabindex={move || if tab.get() == index { "0" } else { "-1" }}
-                                    disabled={move || pending.get()}
                                     on:click={move |_| tab.set(index)}
                                     on:keydown={move |event: web_sys::KeyboardEvent| {
                                         if pending.get_untracked() {
@@ -259,7 +260,7 @@ pub fn Settings(
                                     }}
                                 >
                                     {move || i18n.text(label)}
-                                </button>
+                                </crate::button::Button>
                             }
                         })
                         .collect_view()}
@@ -272,26 +273,29 @@ pub fn Settings(
                         hidden={move || tab.get() != 0}
                     >
                         <section class="form-section">
-                            <label for="interface-language">{move || i18n.text("message.language")}</label>
-                            <select
+                            <crate::form::Field
                                 id="interface-language"
-                                prop:value={move || i18n.code()}
-                                on:change={move |event| {
-                                    if let Err(message) = i18n.select(&event_target_value(&event)) {
-                                        error.set(message.into());
-                                    }
-                                }}
+                                label={Signal::derive(move || i18n.text("message.language"))}
                             >
-                                <option value="fr-FR">"Français (France)"</option>
-                                <option value="en-US">"English (US)"</option>
-                            </select>
+                                <crate::form::Select
+                                    {..}
+                                    id="interface-language"
+                                    prop:value={move || i18n.code()}
+                                    on:change={move |event| {
+                                        if let Err(message) = i18n.select(&event_target_value(&event)) {
+                                            error.set(message.into());
+                                        }
+                                    }}
+                                >
+                                    <option value="fr-FR">"Français (France)"</option>
+                                    <option value="en-US">"English (US)"</option>
+                                </crate::form::Select>
+                            </crate::form::Field>
                             <p class="hint">
                                 {move || i18n.text("message.the_language_is_saved_in_this_browser")}
                             </p>
                         </section>
-                        <form
-                            id="settings-form"
-                            on:submit={move |event| {
+                        <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                                 event.prevent_default();
                                 if pending.get_untracked() || !dirty.get_untracked() {
                                     return;
@@ -328,7 +332,9 @@ pub fn Settings(
                                     }
                                     pending.set(false);
                                 });
-                            }}
+                            }) {..}
+                            id="settings-form"
+
                         >
                             <fieldset disabled={move || pending.get()}>
                                 <section class="form-section">
@@ -340,38 +346,40 @@ pub fn Settings(
                                             </p>
                                         </div>
                                     </div>
-                                    <label for="settings-agent">
-                                        {move || i18n.text("message.default_agent")}
-                                    </label>
-                                    <select
+                                    <crate::form::Field
                                         id="settings-agent"
-                                        autofocus
-                                        prop:value={move || draft.get().agent}
-                                        on:change={move |event| {
-                                            draft.update(|value| value.agent = event_target_value(&event))
-                                        }}
+                                        label={Signal::derive(move || i18n.text("message.default_agent"))}
                                     >
-                                        <For
-                                            each={move || {
-                                                providers(&board.settings.get()).unwrap_or_default()
+                                        <crate::form::Select
+                                            {..}
+                                            id="settings-agent"
+                                            autofocus=true
+                                            prop:value={move || draft.get().agent}
+                                            on:change={move |event| {
+                                                draft.update(|value| value.agent = event_target_value(&event))
                                             }}
-                                            key={|provider| field(provider, "id")}
-                                            children={move |provider| {
-                                                view! {
-                                                    <option value={field(
-                                                        &provider,
-                                                        "id",
-                                                    )}>{field(&provider, "name")}</option>
-                                                }
-                                            }}
-                                        />
-                                    </select>
+                                        >
+                                            <For
+                                                each={move || {
+                                                    providers(&board.settings.get()).unwrap_or_default()
+                                                }}
+                                                key={|provider| field(provider, "id")}
+                                                children={move |provider| {
+                                                    view! {
+                                                        <option value={field(
+                                                            &provider,
+                                                            "id",
+                                                        )}>{field(&provider, "name")}</option>
+                                                    }
+                                                }}
+                                            />
+                                        </crate::form::Select>
+                                    </crate::form::Field>
                                     <p class="hint">
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    "message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent",
-                                                )
+                                            i18n.text(
+                                                "message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent",
+                                            )
                                         }}
                                     </p>
                                 </section>
@@ -379,26 +387,28 @@ pub fn Settings(
                             <p id="settings-notice" class="field-help" role="status">
                                 {move || i18n.text(&notice.get())}
                             </p>
-                            <div class="form-actions">
-                                <button
-                                    id="save-settings"
+                            <crate::modal::ModalActions {..} >
+                                <crate::button::Button
+                                    busy={Signal::derive(move || pending.get())}
+                                    variant={crate::button::ButtonVariant::Primary}
+                                    disabled={Signal::derive(move || pending.get() || !dirty.get())}
                                     class="primary"
+                                    {..}
+                                    id="save-settings"
                                     type="submit"
-                                    disabled={move || pending.get() || !dirty.get()}
                                 >
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if pending.get() {
-                                                    "message.saving"
-                                                } else {
-                                                    "message.save_general_settings"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if pending.get() {
+                                                "message.saving"
+                                            } else {
+                                                "message.save_general_settings"
+                                            },
+                                        )
                                     }}
-                                </button>
-                            </div>
-                        </form>
+                                </crate::button::Button>
+                            </crate::modal::ModalActions>
+                        </crate::form::Form>
                     </section>
                     <section
                         id="settings-panel-forges"
@@ -476,13 +486,14 @@ pub fn Settings(
                             <p class="error" role="alert">
                                 {move || i18n.text(&preview_error.get())}
                             </p>
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get())}
+                                {..}
                                 type="button"
-                                disabled={move || pending.get()}
                                 on:click={move |_| tab.set(1)}
                             >
                                 {move || i18n.text("message.tickets")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                         <p
                             role="status"
@@ -497,13 +508,14 @@ pub fn Settings(
                             shown_module.get() == external_preview.get() || !connectors_dirty.get()
                         }}>
                             <p>{move || i18n.text("message.save_current_module_draft_first")}</p>
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get())}
+                                {..}
                                 type="button"
-                                disabled={move || pending.get()}
                                 on:click={move |_| tab.set(1)}
                             >
                                 {move || i18n.text("message.tickets")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                         <div hidden={move || {
                             !preview_available.get() || shown_module.get() != external_preview.get()
@@ -537,12 +549,21 @@ pub fn Settings(
             <p id="settings-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>
-            <div class="confirmation" role="alert" hidden={move || !discard.get()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!discard.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|{
+                        navigation.set_value(None);
+                        discard.set(false);
+                        if let Some(element) = document()
+                            .get_element_by_id(&close_focus.get_value())
+                            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                        {
+                            let _ = element.focus();
+                        }
+                    })>
                 <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
-                <button id="discard-settings" class="danger" type="button" on:click={move |_| close()}>
-                    {move || i18n.text("message.discard")}
-                </button>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     id="keep-settings"
                     type="button"
                     on:click={move |_| {
@@ -557,8 +578,17 @@ pub fn Settings(
                     }}
                 >
                     {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
+                </crate::button::Button><crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    class="danger"
+                    {..}
+                    id="discard-settings"
+                    type="button"
+                    on:click={move |_| close()}
+                >
+                    {move || i18n.text("message.discard")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
         </section>
     }
 }

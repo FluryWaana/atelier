@@ -187,16 +187,17 @@ pub fn ForgeChecksView(
                     i18n.text("message.states_reported_by_the_forge_without_starting_ci_this_read_valid")
                 }}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || {
+                    loading.get() || configuration.with(|configuration| configuration.is_none())
+                })}
+                {..}
                 id="read-forge-checks"
                 type="button"
-                disabled={move || {
-                    loading.get() || configuration.with(|configuration| configuration.is_none())
-                }}
                 on:click={inspect}
             >
                 {move || i18n.text("message.read_checks_and_reviews")}
-            </button>
+            </crate::button::Button>
             <p id="forge-checks-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>
@@ -266,20 +267,22 @@ pub fn ForgeChecksView(
                         </tbody>
                     </table>
                 </div>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || page.get() == 0)}
+                    {..}
                     type="button"
-                    disabled={move || page.get() == 0}
                     on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                 >
                     {move || i18n.text("message.previous")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || { (page.get() + 1) * 100 >= count.get() })}
+                    {..}
                     type="button"
-                    disabled={move || (page.get() + 1) * 100 >= count.get()}
                     on:click={move |_| page.update(|page| *page += 1)}
                 >
                     {move || i18n.text("message.next")}
-                </button>
+                </crate::button::Button>
                 <p>
                     {move || {
                         result
@@ -287,8 +290,7 @@ pub fn ForgeChecksView(
                                 result
                                     .as_ref()
                                     .map(|report| {
-                                        i18n
-                                            .text("message.checks_for_other_snapshots_excluded_0")
+                                        i18n.text("message.checks_for_other_snapshots_excluded_0")
                                             .replace("{0}", &report.other_snapshot_count.to_string())
                                     })
                                     .unwrap_or_default()
@@ -339,20 +341,22 @@ pub fn ForgeChecksView(
                     }}
                 </ul>
                 <div role="group" aria-label={move || i18n.text("message.human_review_pages")}>
-                    <button
+                    <crate::button::Button
+                        disabled={Signal::derive(move || reviewer_page.get() == 0)}
+                        {..}
                         type="button"
-                        disabled={move || reviewer_page.get() == 0}
                         on:click={move |_| reviewer_page.update(|page| *page = page.saturating_sub(1))}
                     >
                         {move || i18n.text("message.previous")}
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || { (reviewer_page.get() + 1) * 100 >= reviewer_count.get() })}
+                        {..}
                         type="button"
-                        disabled={move || (reviewer_page.get() + 1) * 100 >= reviewer_count.get()}
                         on:click={move |_| reviewer_page.update(|page| *page += 1)}
                     >
                         {move || i18n.text("message.next")}
-                    </button>
+                    </crate::button::Button>
                 </div>
                 <ul>
                     {move || {

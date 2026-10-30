@@ -279,13 +279,14 @@ pub fn Commits(
                 }}
             </p>
             <fieldset disabled={move || pending.get() || blocked.get() || archived || unresolved.get()}>
-                <button
+                <crate::button::Button
+                    {..}
                     id="load-commit-files"
                     type="button"
                     on:click={move |_| execute.with_value(|execute| execute("changes"))}
                 >
                     {move || i18n.text("message.refresh_files_to_commit")}
-                </button>
+                </crate::button::Button>
                 <p hidden={move || {
                     !loaded.get() || !files.get().is_empty()
                 }}>{move || i18n.text("message.no_files_changed_since_the_last_commit")}</p>
@@ -300,8 +301,8 @@ pub fn Commits(
                                 let path = StoredValue::new(file.path);
                                 view! {
                                     <label>
-                                        <input
-                                            type="checkbox"
+                                        <crate::form::Checkbox
+                                            {..}
                                             data-commit-path={path.get_value()}
                                             prop:checked={move || {
                                                 selected.with(|selected| selected.contains(&path.get_value()))
@@ -336,56 +337,75 @@ pub fn Commits(
                     }}
                 </div>
                 <div class="editor-actions">
-                    <button
+                    <crate::button::Button
+                        disabled={Signal::derive(move || page.get() == 0)}
+                        {..}
                         type="button"
-                        disabled={move || page.get() == 0}
                         on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                     >
                         {move || i18n.text("message.previous")}
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || { (page.get() + 1) * 100 >= files.with(Vec::len) })}
+                        {..}
                         type="button"
-                        disabled={move || (page.get() + 1) * 100 >= files.with(Vec::len)}
                         on:click={move |_| page.update(|page| *page += 1)}
                     >
                         {move || i18n.text("message.next")}
-                    </button>
+                    </crate::button::Button>
                 </div>
                 <p>{move || i18n.text("message.commit_selection")}" "{move || selected.get().join(", ")}</p>
-                <label for="commit-author-name">{move || i18n.text("message.commit_author")}</label>
-                <input
+                <crate::form::Field
                     id="commit-author-name"
-                    maxlength="255"
-                    prop:value={move || name.get()}
-                    on:input={move |event| name.set(event_target_value(&event))}
-                />
-                <label for="commit-author-email">{move || i18n.text("message.author_email")}</label>
-                <input
+                    label={Signal::derive(move || i18n.text("message.commit_author"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="commit-author-name"
+                        maxlength="255"
+                        prop:value={move || name.get()}
+                        on:input={move |event| name.set(event_target_value(&event))}
+                    />
+                </crate::form::Field>
+                <crate::form::Field
                     id="commit-author-email"
-                    type="email"
-                    maxlength="254"
-                    prop:value={move || email.get()}
-                    on:input={move |event| email.set(event_target_value(&event))}
-                />
-                <label for="commit-message">{move || i18n.text("message.commit_message")}</label>
-                <textarea
+                    label={Signal::derive(move || i18n.text("message.author_email"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="commit-author-email"
+                        type="email"
+                        maxlength="254"
+                        prop:value={move || email.get()}
+                        on:input={move |event| email.set(event_target_value(&event))}
+                    />
+                </crate::form::Field>
+                <crate::form::Field
                     id="commit-message"
-                    maxlength="2000"
-                    prop:value={move || message.get()}
-                    on:input={move |event| message.set(event_target_value(&event))}
-                />
-                <button
-                    id="preview-local-commit"
-                    type="button"
-                    disabled={move || {
+                    label={Signal::derive(move || i18n.text("message.commit_message"))}
+                >
+                    <crate::form::Textarea
+                        {..}
+                        id="commit-message"
+                        maxlength="2000"
+                        prop:value={move || message.get()}
+                        on:input={move |event| message.set(event_target_value(&event))}
+                    />
+                </crate::form::Field>
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         selected.with(Vec::is_empty) || name.get().trim().is_empty()
                             || email.get().trim().is_empty() || message.get().trim().is_empty()
-                    }}
+                    })}
+                    {..}
+                    id="preview-local-commit"
+                    type="button"
                     on:click={move |_| execute.with_value(|execute| execute("preview"))}
                 >
                     {move || i18n.text("message.preview_the_commit")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    {..}
                     type="button"
                     on:click={move |_| {
                         selected.set(Vec::new());
@@ -397,7 +417,7 @@ pub fn Commits(
                     }}
                 >
                     {move || i18n.text("message.clear_the_commit_draft")}
-                </button>
+                </crate::button::Button>
                 <Show when={move || ready.get()}>
                     <pre
                         class="file-preview"
@@ -407,9 +427,9 @@ pub fn Commits(
                         {move || patch.get()}
                     </pre>
                     <label>
-                        <input
+                        <crate::form::Checkbox
+                            {..}
                             id="confirm-local-commit"
-                            type="checkbox"
                             prop:checked={move || approved.get() == key.get()}
                             on:change={move |event| {
                                 approved
@@ -424,38 +444,41 @@ pub fn Commits(
                         />
                         {move || i18n.text("message.confirm_this_author_message_and_changes")}
                     </label>
-                    <button
+                    <crate::button::Button
+                        disabled={Signal::derive(move || approved.get() != key.get())}
+                        {..}
                         id="create-local-commit"
                         type="button"
-                        disabled={move || approved.get() != key.get()}
                         on:click={move |_| execute.with_value(|execute| execute("create"))}
                     >
                         {move || i18n.text("message.create_the_confirmed_commit")}
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || approved.get() != key.get())}
+                        {..}
                         id="workflow-local-commit"
                         type="button"
                         hidden={move || !workflow_waiting.get()}
-                        disabled={move || approved.get() != key.get()}
                         on:click={move |_| execute.with_value(|execute| execute("workflow"))}
                     >
                         {move || i18n.text("message.create_this_commit_in_the_workflow_then_verify")}
-                    </button>
+                    </crate::button::Button>
                 </Show>
             </fieldset>
-            <div class="confirmation" hidden={move || !uncertain.get()}>
+            <crate::modal::Notice {..}  hidden={move || !uncertain.get()}>
                 <p>
                     {move || i18n.text("message.uncertain_commit_read_the_local_branch_before_trying_again")}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="reconcile-local-commit"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| execute.with_value(|execute| execute("reconcile"))}
                 >
                     {move || i18n.text("message.read_the_local_branch")}
-                </button>
-            </div>
+                </crate::button::Button>
+            </crate::modal::Notice>
             {move || {
                 intent
                     .get()

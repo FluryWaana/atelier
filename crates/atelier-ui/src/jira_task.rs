@@ -158,7 +158,7 @@ pub fn JiraTask(
             }
         });
     };
-    let send_alive = alive.clone();
+    let send_alive = mounted;
     let send = move |_| {
         if pending.get_untracked() || blocked.get_untracked() || unresolved.get_untracked() {
             return;
@@ -194,7 +194,7 @@ pub fn JiraTask(
         confirm.set(false);
         error.set(String::new());
         notice.set(String::new());
-        let alive = send_alive.clone();
+        let alive = send_alive.with_value(Clone::clone);
         let path = format!("/api/cards/{}/jira/transition", id.get_value());
         spawn_local(async move {
             let result = async {
@@ -324,14 +324,15 @@ pub fn JiraTask(
                         .unwrap_or_default()
                 }}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get() || blocked.get() || unresolved.get())}
+                {..}
                 id="load-jira-transitions"
                 type="button"
-                disabled={move || pending.get() || loading.get() || blocked.get() || unresolved.get()}
                 on:click={load}
             >
                 {move || i18n.text("message.load_available_transitions")}
-            </button>
+            </crate::button::Button>
             <p role="status" hidden={move || !loading.get()}>
                 {move || i18n.text("message.reading_jira_transitions")}
             </p>
@@ -340,48 +341,56 @@ pub fn JiraTask(
                     .with(|choices| choices.as_ref().is_some_and(|(_, value)| value.transitions.is_empty()))
             }}>{move || i18n.text("message.no_jira_transitions_are_available_for_this_account")}</p>
             <div hidden={move || choices.with(|choices| choices.is_none())}>
-                <label for="jira-transition">{move || i18n.text("message.transition_to_submit")}</label>
-                <select
+                <crate::form::Field
                     id="jira-transition"
-                    disabled={move || pending.get() || blocked.get() || unresolved.get()}
-                    prop:value={move || selected.get()}
-                    on:change={move |event| {
-                        selected.set(event_target_value(&event));
-                        confirm.set(false);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.transition_to_submit"))}
                 >
-                    <option value="">{move || i18n.text("message.choose_a_transition")}</option>
-                    <For
-                        each={move || choices.get().map(|(_, value)| value.transitions).unwrap_or_default()}
-                        key={|transition| transition.id.clone()}
-                        children={move |transition| {
-                            view! {
-                                <option value={transition.id} disabled={transition.requires_fields}>
-                                    {transition.name}
-                                    {i18n.text("message.to_separator")}
-                                    {transition.target.name}
-                                    {if transition.requires_fields { " *" } else { "" }}
-                                </option>
-                            }
+                    <crate::form::Select
+                        {..}
+                        id="jira-transition"
+                        disabled={move || pending.get() || blocked.get() || unresolved.get()}
+                        prop:value={move || selected.get()}
+                        on:change={move |event| {
+                            selected.set(event_target_value(&event));
+                            confirm.set(false);
                         }}
-                    />
-                </select>
+                    >
+                        <option value="">{move || i18n.text("message.choose_a_transition")}</option>
+                        <For
+                            each={move || {
+                                choices.get().map(|(_, value)| value.transitions).unwrap_or_default()
+                            }}
+                            key={|transition| transition.id.clone()}
+                            children={move |transition| {
+                                view! {
+                                    <option value={transition.id} disabled={transition.requires_fields}>
+                                        {transition.name}
+                                        {i18n.text("message.to_separator")}
+                                        {transition.target.name}
+                                        {if transition.requires_fields { " *" } else { "" }}
+                                    </option>
+                                }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.transitions_requiring_additional_fields_must_be_performed_in_jir")
                     }}
                 </p>
-                <button
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         selected.get().is_empty() || pending.get() || blocked.get() || unresolved.get()
-                    }}
+                    })}
+                    {..}
+                    type="button"
                     on:click={move |_| confirm.set(true)}
                 >
                     {move || i18n.text("message.prepare_the_jira_change")}
-                </button>
+                </crate::button::Button>
             </div>
-            <div class="confirmation" role="alert" hidden={move || !confirm.get()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!confirm.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|confirm.set(false))>
                 <p>{move || i18n.text("message.confirm_submitting_this_transition_to_the_jira_issue")}</p>
                 <p>
                     {move || {
@@ -404,33 +413,40 @@ pub fn JiraTask(
                             .unwrap_or_default()
                     }}
                 </p>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
+                    type="button"
+                    on:click={move |_| confirm.set(false)}
+                >
+                    {move || i18n.text("message.cancel")}
+                </crate::button::Button><crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get() || unresolved.get())}
+                    {..}
                     id="confirm-jira-transition"
                     type="button"
-                    disabled={move || pending.get() || blocked.get() || unresolved.get()}
                     on:click={send}
                 >
                     {move || i18n.text("message.confirm_submission_to_jira")}
-                </button>
-                <button type="button" on:click={move |_| confirm.set(false)}>
-                    {move || i18n.text("message.cancel")}
-                </button>
-            </div>
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <div hidden={move || {
                 intent.with(|intent| intent.as_ref().is_none_or(|intent| intent.state != Phase::Uncertain))
             }}>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get())}
+                    {..}
                     id="reconcile-jira-transition"
                     type="button"
-                    disabled={move || pending.get() || blocked.get()}
                     on:click={move |_| reconcile.with_value(|reconcile| reconcile(false))}
                 >
                     {move || i18n.text("message.check_the_status_without_resubmitting")}
-                </button>
+                </crate::button::Button>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="dismiss-jira-ack"
-                        type="checkbox"
                         disabled={move || pending.get()}
                         prop:checked={move || {
                             intent
@@ -459,20 +475,21 @@ pub fn JiraTask(
                         i18n.text("message.i_checked_the_issue_in_jira_and_want_to_close_this_uncertainty_w")
                     }}
                 </label>
-                <button
-                    id="dismiss-jira-transition"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || blocked.get()
                             || intent
                                 .with(|intent| {
                                     intent.as_ref().is_none_or(|intent| intent.id != dismiss.get())
                                 })
-                    }}
+                    })}
+                    {..}
+                    id="dismiss-jira-transition"
+                    type="button"
                     on:click={move |_| reconcile.with_value(|reconcile| reconcile(true))}
                 >
                     {move || i18n.text("message.close_uncertainty_after_verification")}
-                </button>
+                </crate::button::Button>
             </div>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}

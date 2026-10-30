@@ -372,10 +372,11 @@ pub fn Connectors(
                 }}>
                     {move || i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="reload-connectors"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| {
                         if own_dirty.get_untracked() {
                             reload.set(true);
@@ -385,25 +386,28 @@ pub fn Connectors(
                     }}
                 >
                     {move || i18n.text("message.reload_connectors")}
-                </button>
-                <div class="confirmation" hidden={move || !reload.get()}>
+                </crate::button::Button>
+                <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!reload.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|reload.set(false))>
                     <p>{move || i18n.text("message.discard_connector_drafts_and_reload")}</p>
-                    <button
-                        id="confirm-reload-connectors"
+                    <crate::modal::ModalActions><crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
+                        {..}
+                        data-confirmation-cancel=""
+                        autofocus=true
                         type="button"
-                        disabled={move || pending.get()}
-                        on:click={move |_| execute.with_value(|execute| execute(Action::Reload))}
-                    >
-                        {move || i18n.text("message.discard_and_reload")}
-                    </button>
-                    <button
-                        type="button"
-                        disabled={move || pending.get()}
                         on:click={move |_| reload.set(false)}
                     >
                         {move || i18n.text("message.back")}
-                    </button>
-                </div>
+                    </crate::button::Button><crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
+                        {..}
+                        id="confirm-reload-connectors"
+                        type="button"
+                        on:click={move |_| execute.with_value(|execute| execute(Action::Reload))}
+                    >
+                        {move || i18n.text("message.discard_and_reload")}
+                    </crate::button::Button></crate::modal::ModalActions>
+                </crate::modal::Confirmation>
                 <p hidden={move || {
                     registry.get().is_none_or(|value| !value.modules.is_empty())
                 }}>{move || i18n.text("message.no_local_connector_installed")}</p>
@@ -462,9 +466,14 @@ pub fn Connectors(
                                 let controls = match kind {
                                     FieldKind::Password => {
                                         view! {
-                                            <input
+                                            <crate::form::Input
+                                                input_type="password"
+                                                reveal=true
+                                                disabled={Signal::derive(move || {
+                                                    draft.get().forget.contains(&key.get_value())
+                                                })}
+                                                {..}
                                                 id={input_id.clone()}
-                                                type="password"
                                                 autocomplete="new-password"
                                                 maxlength="4000"
                                                 prop:value={move || {
@@ -474,9 +483,6 @@ pub fn Connectors(
                                                         .get(&key.get_value())
                                                         .cloned()
                                                         .unwrap_or_default()
-                                                }}
-                                                disabled={move || {
-                                                    draft.get().forget.contains(&key.get_value())
                                                 }}
                                                 on:input={move |event| {
                                                     draft
@@ -492,24 +498,23 @@ pub fn Connectors(
                                             />
                                             <p>
                                                 {move || {
-                                                    i18n
-                                                        .text(
-                                                            if original
-                                                                .get()
-                                                                .is_some_and(|connection| {
-                                                                    connection.secret_fields.contains(&key.get_value())
-                                                                })
-                                                            {
-                                                                "message.secret_saved_leave_blank_to_keep_it"
-                                                            } else {
-                                                                "message.no_secret_saved"
-                                                            },
-                                                        )
+                                                    i18n.text(
+                                                        if original
+                                                            .get()
+                                                            .is_some_and(|connection| {
+                                                                connection.secret_fields.contains(&key.get_value())
+                                                            })
+                                                        {
+                                                            "message.secret_saved_leave_blank_to_keep_it"
+                                                        } else {
+                                                            "message.no_secret_saved"
+                                                        },
+                                                    )
                                                 }}
                                             </p>
                                             <label>
-                                                <input
-                                                    type="checkbox"
+                                                <crate::form::Checkbox
+                                                    {..}
                                                     prop:checked={move || {
                                                         draft.get().forget.contains(&key.get_value())
                                                     }}
@@ -532,9 +537,9 @@ pub fn Connectors(
                                     }
                                     FieldKind::Checkbox => {
                                         view! {
-                                            <input
+                                            <crate::form::Checkbox
+                                                {..}
                                                 id={input_id.clone()}
-                                                type="checkbox"
                                                 prop:checked={move || {
                                                     draft
                                                         .get()
@@ -560,7 +565,8 @@ pub fn Connectors(
                                     }
                                     FieldKind::Select => {
                                         view! {
-                                            <select
+                                            <crate::form::Select
+                                                {..}
                                                 id={input_id.clone()}
                                                 prop:value={move || {
                                                     let value = draft
@@ -625,13 +631,14 @@ pub fn Connectors(
                                                         }
                                                     })
                                                     .collect_view()}
-                                            </select>
+                                            </crate::form::Select>
                                         }
                                             .into_any()
                                     }
                                     FieldKind::Textarea => {
                                         view! {
-                                            <textarea
+                                            <crate::form::Textarea
+                                                {..}
                                                 id={input_id.clone()}
                                                 rows="3"
                                                 maxlength="8000"
@@ -658,7 +665,8 @@ pub fn Connectors(
                                     }
                                     _ => {
                                         view! {
-                                            <input
+                                            <crate::form::Input
+                                                {..}
                                                 id={input_id.clone()}
                                                 type={if kind == FieldKind::Url { "url" } else { "text" }}
                                                 maxlength="8000"
@@ -686,12 +694,12 @@ pub fn Connectors(
                                     }
                                 };
                                 view! {
-                                    <label for={input_id}>{label}</label>
-                                    {controls}
-                                    <button
+                                    <crate::form::Field id=input_id label=Signal::derive(label)>{controls}</crate::form::Field>
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || !draft.get().values.contains_key(&key.get_value()))}
+                                        {..}
                                         type="button"
                                         hidden={kind == FieldKind::Password}
-                                        disabled={move || !draft.get().values.contains_key(&key.get_value())}
                                         on:click={move |_| {
                                             draft
                                                 .update(|draft| {
@@ -700,22 +708,24 @@ pub fn Connectors(
                                         }}
                                     >
                                         {move || i18n.text("message.remove_this_value")}
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             }}
                         />
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || !profile_dirty.get())}
+                            {..}
                             id="save-connector"
                             type="button"
-                            disabled={move || !profile_dirty.get()}
                             on:click={move |_| execute.with_value(|execute| execute(Action::Save))}
                         >
                             {move || i18n.text("message.save_connector")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || profile_dirty.get())}
+                            {..}
                             id="check-connector"
                             type="button"
-                            disabled={move || profile_dirty.get()}
                             on:click={move |_| {
                                 execute
                                     .with_value(|execute| execute(
@@ -724,7 +734,7 @@ pub fn Connectors(
                             }}
                         >
                             {move || i18n.text("message.run_connector_check")}
-                        </button>
+                        </crate::button::Button>
                         <For
                             each={move || {
                                 original
@@ -753,9 +763,10 @@ pub fn Connectors(
                             children={move |action| {
                                 let action = StoredValue::new(action);
                                 view! {
-                                    <button
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || profile_dirty.get())}
+                                        {..}
                                         type="button"
-                                        disabled={move || profile_dirty.get()}
                                         on:click={move |_| {
                                             execute
                                                 .with_value(|execute| execute(
@@ -778,7 +789,7 @@ pub fn Connectors(
                                                         ))
                                                 })
                                         }}
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             }}
                         />
@@ -839,7 +850,9 @@ pub fn Connectors(
                         }}
                     </dl>
                     <fieldset disabled={move || pending.get() || profile_dirty.get()}>
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || !tickets.get().is_empty())}
+                            {..}
                             id="search-connector-tickets"
                             type="button"
                             hidden={move || {
@@ -853,18 +866,16 @@ pub fn Connectors(
                                             .contains(&ConnectorMethod::TicketsSearch)
                                     })
                             }}
-                            disabled={move || !tickets.get().is_empty()}
                             on:click={move |_| execute.with_value(|execute| execute(Action::Search(None)))}
                         >
                             {move || i18n.text("message.search_connector_tickets")}
-                        </button>
+                        </crate::button::Button>
                         <div hidden={move || page().is_none()}>
                             <p>
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.select_up_to_20_tickets_from_this_page_linked_cards_will_be_kept",
-                                        )
+                                    i18n.text(
+                                        "message.select_up_to_20_tickets_from_this_page_linked_cards_will_be_kept",
+                                    )
                                 }}
                             </p>
                             <p hidden={move || {
@@ -884,10 +895,10 @@ pub fn Connectors(
                                 children={move |ticket| {
                                     let ticket = StoredValue::new(ticket);
                                     view! {
-                                        <article>
+                                        <crate::card::Card {..}>
                                             <label>
-                                                <input
-                                                    type="checkbox"
+                                                <crate::form::Checkbox
+                                                    {..}
                                                     data-connector-ticket={ticket
                                                         .with_value(|ticket| ticket.id.clone())}
                                                     prop:checked={move || {
@@ -928,7 +939,7 @@ pub fn Connectors(
                                             <p class="task-description">
                                                 {ticket.with_value(|ticket| ticket.description.clone())}
                                             </p>
-                                        </article>
+                                        </crate::card::Card>
                                     }
                                 }}
                             />
@@ -936,17 +947,17 @@ pub fn Connectors(
                                 page().is_none_or(|page| page.next.is_none())
                             }}>
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.more_results_are_available_this_page_does_not_represent_the_whol",
-                                        )
+                                    i18n.text(
+                                        "message.more_results_are_available_this_page_does_not_represent_the_whol",
+                                    )
                                 }}
                             </p>
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || !tickets.get().is_empty())}
+                                {..}
                                 id="next-connector-tickets"
                                 type="button"
                                 hidden={move || page().is_none_or(|page| page.next.is_none())}
-                                disabled={move || !tickets.get().is_empty()}
                                 on:click={move |_| {
                                     if let Some(cursor) = page().and_then(|page| page.next) {
                                         execute.with_value(|execute| execute(Action::Search(Some(cursor))));
@@ -954,81 +965,85 @@ pub fn Connectors(
                                 }}
                             >
                                 {move || i18n.text("message.next_page")}
-                            </button>
-                            <label for="connector-import-project">
-                                {move || i18n.text("message.destination_project")}
-                            </label>
-                            <select
+                            </crate::button::Button>
+                            <crate::form::Field
                                 id="connector-import-project"
-                                prop:value={move || {
-                                    project
-                                        .get()
-                                        .and_then(|project| project.get::<String>("id").ok().flatten())
-                                        .unwrap_or_default()
-                                }}
-                                on:change={move |event| {
-                                    let id = event_target_value(&event);
-                                    project
-                                        .set(
-                                            board
-                                                .projects
-                                                .get_untracked()
-                                                .into_iter()
-                                                .find(|project| {
-                                                    project.get::<String>("id").ok().flatten().as_deref()
-                                                        == Some(id.as_str())
-                                                }),
-                                        );
-                                    import_approved.set(false);
-                                }}
+                                label={Signal::derive(move || i18n.text("message.destination_project"))}
                             >
-                                <option value="">{move || i18n.text("message.choose_a_project")}</option>
-                                <For
-                                    each={move || board.projects.get()}
-                                    key={|project| (
-                                        crate::field(project, "id"),
-                                        crate::field(project, "name"),
-                                    )}
-                                    children={move |project| {
-                                        view! {
-                                            <option value={crate::field(
-                                                &project,
-                                                "id",
-                                            )}>{crate::field(&project, "name")}</option>
-                                        }
+                                <crate::form::Select
+                                    {..}
+                                    id="connector-import-project"
+                                    prop:value={move || {
+                                        project
+                                            .get()
+                                            .and_then(|project| project.get::<String>("id").ok().flatten())
+                                            .unwrap_or_default()
                                     }}
-                                />
-                            </select>
+                                    on:change={move |event| {
+                                        let id = event_target_value(&event);
+                                        project
+                                            .set(
+                                                board
+                                                    .projects
+                                                    .get_untracked()
+                                                    .into_iter()
+                                                    .find(|project| {
+                                                        project.get::<String>("id").ok().flatten().as_deref()
+                                                            == Some(id.as_str())
+                                                    }),
+                                            );
+                                        import_approved.set(false);
+                                    }}
+                                >
+                                    <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                                    <For
+                                        each={move || board.projects.get()}
+                                        key={|project| (
+                                            crate::field(project, "id"),
+                                            crate::field(project, "name"),
+                                        )}
+                                        children={move |project| {
+                                            view! {
+                                                <option value={crate::field(
+                                                    &project,
+                                                    "id",
+                                                )}>{crate::field(&project, "name")}</option>
+                                            }
+                                        }}
+                                    />
+                                </crate::form::Select>
+                            </crate::form::Field>
                             <label>
-                                <input
+                                <crate::form::Checkbox
+                                    {..}
                                     id="approve-connector-import"
-                                    type="checkbox"
                                     disabled={move || tickets.get().is_empty() || project.get().is_none()}
                                     prop:checked={move || import_approved.get()}
                                     on:change={move |event| import_approved.set(event_target_checked(&event))}
                                 />
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.create_missing_cards_from_this_exact_selection_and_project",
-                                        )
+                                    i18n.text(
+                                        "message.create_missing_cards_from_this_exact_selection_and_project",
+                                    )
                                 }}
                             </label>
-                            <button
-                                id="import-connector-tickets"
-                                type="button"
-                                disabled={move || {
+                            <crate::button::Button
+                                disabled={Signal::derive(move || {
                                     !import_approved.get() || tickets.get().is_empty()
                                         || project.get().is_none()
-                                }}
+                                })}
+                                {..}
+                                id="import-connector-tickets"
+                                type="button"
                                 on:click={move |_| execute.with_value(|execute| execute(Action::Import))}
                             >
                                 {move || i18n.text("message.import_selection")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || !import_dirty.get())}
+                                {..}
                                 id="cancel-connector-import"
                                 type="button"
-                                disabled={move || !import_dirty.get()}
                                 on:click={move |_| {
                                     tickets.set(BTreeSet::new());
                                     project.set(None);
@@ -1036,7 +1051,7 @@ pub fn Connectors(
                                 }}
                             >
                                 {move || i18n.text("message.cancel_import_selection")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                     </fieldset>
                 </div>

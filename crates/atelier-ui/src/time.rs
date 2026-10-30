@@ -271,66 +271,92 @@ pub fn TimeTask(
                     )
                 }}
             </p>
-            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                 event.prevent_default();
                 save.with_value(|save| save(
                     event.submitter().is_some_and(|button| button.id() == "start-human-timer"),
                 ));
-            }}>
+            }) {..}  >
                 <fieldset disabled={move || {
                     pending.get() || blocked.get()
                         || !export_drafts.with(std::collections::BTreeSet::is_empty)
                         || (archived && selected.with(|entry| entry.is_none()))
                 }}>
-                    <label for="time-date">{move || i18n.text("message.date")}</label>
-                    <input
+                    <crate::form::Field
                         id="time-date"
-                        type="date"
-                        required
-                        prop:value={move || draft.get().date}
-                        on:input={move |event| draft.update(|draft| draft.date = event_target_value(&event))}
-                    />
-                    <label for="time-start">{move || i18n.text("message.start_time")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.date"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="time-date"
+                            type="date"
+                            required=true
+                            prop:value={move || draft.get().date}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.date = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="time-start"
-                        type="time"
-                        step="1"
-                        required
-                        prop:value={move || draft.get().start}
-                        on:input={move |event| draft.update(|draft| draft.start = event_target_value(&event))}
-                    />
-                    <label for="time-duration">{move || i18n.text("message.duration_hh_mm_ss")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.start_time"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="time-start"
+                            type="time"
+                            step="1"
+                            required=true
+                            prop:value={move || draft.get().start}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.start = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="time-duration"
-                        required
-                        maxlength="8"
-                        inputmode="text"
-                        pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
-                        placeholder="00:30:00"
-                        prop:value={move || draft.get().duration}
-                        on:input={move |event| {
-                            draft.update(|draft| draft.duration = event_target_value(&event))
-                        }}
-                    />
-                    <label for="time-description">{move || i18n.text("message.work_description")}</label>
-                    <textarea
+                        label={Signal::derive(move || i18n.text("message.duration_hh_mm_ss"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="time-duration"
+                            required=true
+                            maxlength="8"
+                            inputmode="text"
+                            pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                            placeholder="00:30:00"
+                            prop:value={move || draft.get().duration}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.duration = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="time-description"
-                        required
-                        maxlength="4000"
-                        rows="3"
-                        prop:value={move || draft.get().description}
-                        on:input={move |event| {
-                            draft.update(|draft| draft.description = event_target_value(&event))
-                        }}
-                    />
+                        label={Signal::derive(move || i18n.text("message.work_description"))}
+                    >
+                        <crate::form::Textarea
+                            {..}
+                            id="time-description"
+                            required=true
+                            maxlength="4000"
+                            rows="3"
+                            prop:value={move || draft.get().description}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.description = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
                     <div class="editor-actions">
-                        <button id="save-time" type="submit">
-                            {move || i18n.text("message.save_time")}
-                        </button>
-                        <button
-                            id="start-human-timer"
+                        <crate::button::Button
+                            {..}
+                            id="save-time"
                             type="submit"
-                            disabled={move || {
+                        >
+                            {move || i18n.text("message.save_time")}
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || {
                                 selected.with(|entry| entry.is_some())
                                     || board
                                         .times
@@ -339,18 +365,22 @@ pub fn TimeTask(
                                                 .iter()
                                                 .any(|entry| entry.has_text("runningSince").unwrap_or(false))
                                         })
-                            }}
+                            })}
+                            {..}
+                            id="start-human-timer"
+                            type="submit"
                         >
                             {move || i18n.text("message.start_timer")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                 </fieldset>
-            </form>
-            <button
+            </crate::form::Form>
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get())}
+                {..}
                 id="reset-time-draft"
                 type="button"
                 hidden={editor_only}
-                disabled={move || pending.get()}
                 on:click={move |_| {
                     if own_dirty.get_untracked() {
                         discard.set(true);
@@ -360,16 +390,26 @@ pub fn TimeTask(
                 }}
             >
                 {move || i18n.text("message.new_entry")}
-            </button>
-            <div class="confirmation" role="alert" hidden={move || !discard.get()}>
+            </crate::button::Button>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!discard.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|discard.set(false))>
                 <p>{move || i18n.text("message.discard_the_unsaved_time_entry")}</p>
-                <button id="discard-time-draft" type="button" on:click={move |_| reset()}>
-                    {move || i18n.text("message.discard")}
-                </button>
-                <button type="button" on:click={move |_| discard.set(false)}>
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
+                    type="button"
+                    on:click={move |_| discard.set(false)}
+                >
                     {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
+                </crate::button::Button><crate::button::Button
+                    {..}
+                    id="discard-time-draft"
+                    type="button"
+                    on:click={move |_| reset()}
+                >
+                    {move || i18n.text("message.discard")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <Show when={move || !editor_only}>
                 <p hidden={move || {
                     !entries.with(|entries| entries.is_empty())
@@ -422,21 +462,20 @@ pub fn TimeTask(
                                     <p>{move || field(&entry.get(), "description")}</p>
                                     <p>
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    match field(&entry.get(), "exportState").as_str() {
-                                                        "draft" if board
-                                                            .settings
-                                                            .get()
-                                                            .string_equals("timeProvider", "local")
-                                                            .unwrap_or(true) => "message.recorded_locally",
-                                                        "draft" => "message.not_submitted",
-                                                        "exported" => "message.submitted",
-                                                        "sending" => "message.submitting",
-                                                        "uncertain" => "message.uncertain_submission",
-                                                        _ => "message.unknown_submission_state",
-                                                    },
-                                                )
+                                            i18n.text(
+                                                match field(&entry.get(), "exportState").as_str() {
+                                                    "draft" if board
+                                                        .settings
+                                                        .get()
+                                                        .string_equals("timeProvider", "local")
+                                                        .unwrap_or(true) => "message.recorded_locally",
+                                                    "draft" => "message.not_submitted",
+                                                    "exported" => "message.submitted",
+                                                    "sending" => "message.submitting",
+                                                    "uncertain" => "message.uncertain_submission",
+                                                    _ => "message.unknown_submission_state",
+                                                },
+                                            )
                                         }}
                                     </p>
                                     <p
@@ -444,8 +483,7 @@ pub fn TimeTask(
                                         hidden={move || entry.get().raw("connectorExport").is_none()}
                                     >
                                         {move || {
-                                            i18n
-                                                .text(
+                                            i18n.text(
                                                     "message.export_tracked_in_module_0_s_journal_open_its_settings_to_reread",
                                                 )
                                                 .replace("{0}", &field(&entry.get(), "exportConnector"))
@@ -455,31 +493,32 @@ pub fn TimeTask(
                                         !entry.with(|entry| entry.flag("interrupted").unwrap_or(false))
                                     }}>
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    "message.timer_interrupted_on_restart_duration_preserved",
-                                                )
+                                            i18n.text(
+                                                "message.timer_interrupted_on_restart_duration_preserved",
+                                            )
                                         }}
                                     </p>
-                                    <button
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        {..}
                                         type="button"
                                         hidden={move || {
                                             !entry
                                                 .with(|entry| entry.has_text("runningSince").unwrap_or(false))
                                         }}
-                                        disabled={move || pending.get()}
                                         on:click={move |_| {
                                             execute
                                                 .with_value(|execute| execute(
                                                     Method::POST,
                                                     format!("/api/time/{}/stop", entry_id.get_value()),
-                                                    serde_json::json!({}),
+                                                    serde_json::json!({
+                }),
                                                     false,
                                                 ))
                                         }}
                                     >
                                         {move || i18n.text("message.stop_timer")}
-                                    </button>
+                                    </crate::button::Button>
                                     <crate::tempo_export::TempoExport
                                         entry
                                         card_id={id.get_value()}
@@ -490,10 +529,8 @@ pub fn TimeTask(
                                         drafts={export_drafts}
                                         archived
                                     />
-                                    <button
-                                        class="edit-time"
-                                        type="button"
-                                        disabled={move || {
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || {
                                             pending.get() || blocked.get()
                                                 || entry
                                                     .with(|entry| {
@@ -502,17 +539,18 @@ pub fn TimeTask(
                                                                 .string_equals("exportState", "draft")
                                                                 .unwrap_or(false)
                                                     })
-                                        }}
+                                        })}
+                                        class="edit-time"
+                                        {..}
+                                        type="button"
                                         on:click={move |_| {
                                             select.with_value(|select| select(entry.get_untracked()))
                                         }}
                                     >
                                         {move || i18n.text("message.edit_entry")}
-                                    </button>
-                                    <button
-                                        class="delete-time"
-                                        type="button"
-                                        disabled={move || {
+                                    </crate::button::Button>
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || {
                                             pending.get() || blocked.get() || own_dirty.get()
                                                 || !export_drafts.with(std::collections::BTreeSet::is_empty)
                                                 || entry
@@ -522,47 +560,58 @@ pub fn TimeTask(
                                                                 .string_equals("exportState", "draft")
                                                                 .unwrap_or(false)
                                                     })
-                                        }}
+                                        })}
+                                        class="delete-time"
+                                        {..}
+                                        type="button"
                                         on:click={move |_| removing.set(Some(entry.get_untracked()))}
                                     >
                                         {move || i18n.text("message.delete_entry")}
-                                    </button>
+                                    </crate::button::Button>
                                 </li>
                             }
                         }}
                     />
                 </ul>
                 <div class="editor-actions" hidden={move || entries.with(|entries| entries.len() <= 100)}>
-                    <button
-                        type="button"
-                        disabled={move || {
+                    <crate::button::Button
+                        disabled={Signal::derive(move || {
                             page.get() == 0 || !export_drafts.with(std::collections::BTreeSet::is_empty)
-                        }}
+                        })}
+                        {..}
+                        type="button"
                         on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                     >
                         {move || i18n.text("message.previous")}
-                    </button>
-                    <button
-                        type="button"
-                        disabled={move || {
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || {
                             !export_drafts.with(std::collections::BTreeSet::is_empty)
                                 || entries.with(|entries| (page.get() + 1) * 100 >= entries.len())
-                        }}
+                        })}
+                        {..}
+                        type="button"
                         on:click={move |_| page.update(|page| *page += 1)}
                     >
                         {move || i18n.text("message.next")}
-                    </button>
+                    </crate::button::Button>
                 </div>
-                <div
-                    class="confirmation"
-                    role="alert"
-                    hidden={move || removing.with(|entry| entry.is_none())}
-                >
+                <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(removing.with(|entry| entry.is_none()))) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|removing.set(None))>
                     <p>{move || i18n.text("message.permanently_delete_this_time_entry")}</p>
-                    <button
+                    <crate::modal::ModalActions><crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
+                        {..}
+                        data-confirmation-cancel=""
+                        autofocus=true
+                        type="button"
+                        on:click={move |_| removing.set(None)}
+                    >
+                        {move || i18n.text("message.cancel")}
+                    </crate::button::Button><crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
+                        {..}
                         id="confirm-delete-time"
                         type="button"
-                        disabled={move || pending.get()}
                         on:click={move |_| {
                             if let Some(entry) = removing.get_untracked() {
                                 execute
@@ -576,15 +625,8 @@ pub fn TimeTask(
                         }}
                     >
                         {move || i18n.text("message.delete_permanently")}
-                    </button>
-                    <button
-                        type="button"
-                        disabled={move || pending.get()}
-                        on:click={move |_| removing.set(None)}
-                    >
-                        {move || i18n.text("message.cancel")}
-                    </button>
-                </div>
+                    </crate::button::Button></crate::modal::ModalActions>
+                </crate::modal::Confirmation>
             </Show>
             <p role="status">
                 {move || {
@@ -669,7 +711,8 @@ pub fn TimerBanner(
                     active.get().map(|entry| duration_text(seconds(&entry, now.get()))).unwrap_or_default()
                 }}
             </span>
-            <button
+            <crate::button::Button
+                {..}
                 id={if nested { "open-timer-task-in-task" } else { "open-timer-task" }}
                 type="button"
                 on:click={move |_| {
@@ -679,15 +722,16 @@ pub fn TimerBanner(
                 }}
             >
                 {move || i18n.text("message.open_the_timer_task")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get())}
+                {..}
                 id={if nested { "stop-human-timer-in-task" } else { "stop-human-timer" }}
                 type="button"
-                disabled={move || pending.get()}
                 on:click={stop}
             >
                 {move || i18n.text("message.stop_timer")}
-            </button>
+            </crate::button::Button>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

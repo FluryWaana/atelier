@@ -17,6 +17,7 @@ pub fn RepositoryAccess(
     dirty: RwSignal<bool>,
     path: Signal<String>,
     id: &'static str,
+    #[prop(optional)] on_authorized: Option<Callback<String>>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let registry = RwSignal::new(None::<Registry>);
@@ -46,6 +47,7 @@ pub fn RepositoryAccess(
                 return;
             }
         };
+        error.set(String::new());
         loading.set(true);
         let alive = reading.clone();
         spawn_local(async move {
@@ -59,7 +61,10 @@ pub fn RepositoryAccess(
             .await;
             if alive.get() {
                 match result {
-                    Ok(value) => registry.set(Some(value)),
+                    Ok(value) => {
+                        error.set(String::new());
+                        registry.set(Some(value));
+                    }
                     Err(message) => error.set(message),
                 }
                 loading.set(false);
@@ -168,6 +173,29 @@ pub fn RepositoryAccess(
             })
         })
     });
+    Effect::new(move |_| {
+        let selected = path.get();
+        if authorized.get()
+            && !selected.trim().is_empty()
+            && let Some(callback) = on_authorized
+        {
+            callback.run(selected);
+        }
+    });
+    let error_text = move || {
+        let message = error.get();
+        i18n.text(
+            if matches!(
+                message.as_str(),
+                "message.connection_interrupted"
+                    | "message.connection_interrupted_check_the_current_state_before_trying_aga"
+            ) {
+                "message.repository_access_check_failed"
+            } else {
+                &message
+            },
+        )
+    };
     view! {
         <div
             class="repository-access"
@@ -175,22 +203,29 @@ pub fn RepositoryAccess(
             aria-busy={move || loading.get().to_string()}
             hidden={move || path.get().trim().is_empty()}
         >
+            <p class="field-help" role="status" hidden={move || !loading.get()}>
+                {move || i18n.text("message.repository_access_checking")}
+            </p>
             <p class="field-help" hidden={move || !authorized.get()}>
                 {move || i18n.text("message.repository_authorized_here")}
             </p>
-            <button
-                class="authorize-project-repository"
-                type="button"
-                hidden={move || authorized.get()}
-                disabled={move || {
+            <crate::button::Button
+                disabled={Signal::derive(move || {
                     pending.get() || loading.get()
                         || registry.get().is_none_or(|registry| !registry.available)
-                }}
+                })}
+                class="authorize-project-repository"
+                {..}
+                type="button"
+                hidden={move || authorized.get() || registry.get().is_none_or(|registry| !registry.available)}
                 on:click={save}
             >
                 {move || i18n.text("message.authorize_this_repository")}
-            </button>
-            <p class="field-help" hidden={move || authorized.get()}>
+            </crate::button::Button>
+            <p
+                class="field-help"
+                hidden={move || authorized.get() || registry.get().is_none_or(|registry| !registry.available)}
+            >
                 {move || {
                     i18n.text("message.authorize_atelier_to_use_this_repository_and_its_future_worktree")
                 }}
@@ -201,9 +236,9 @@ pub fn RepositoryAccess(
             <details hidden={move || !authorized.get()}>
                 <summary>{move || i18n.text("message.remove_authorization")}</summary>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         class="confirm-revoke-repository"
-                        type="checkbox"
                         disabled={move || pending.get() || loading.get()}
                         prop:checked={move || remove_ack.get() == path.get()}
                         on:change={move |event| {
@@ -221,24 +256,28 @@ pub fn RepositoryAccess(
                         i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")
                     }}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || loading.get() || remove_ack.get() != path.get())}
                     class="revoke-repository"
+                    {..}
                     type="button"
-                    disabled={move || pending.get() || loading.get() || remove_ack.get() != path.get()}
                     on:click={move |_| revoke.with_value(|revoke| revoke(path.get_untracked()))}
                 >
                     {move || i18n.text("message.remove_authorization")}
-                </button>
+                </crate::button::Button>
             </details>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                class="retry-repository-access"
+                {..}
                 type="button"
-                disabled={move || pending.get() || loading.get()}
+                hidden={move || error.get().is_empty()}
                 on:click={move |_| load.with_value(|load| load())}
             >
-                {move || i18n.text("message.reload_authorizations")}
-            </button>
+                {move || i18n.text("message.project_retry")}
+            </crate::button::Button>
             <p class="error" role="alert">
-                {move || i18n.text(&error.get())}
+                {error_text}
             </p>
         </div>
     }

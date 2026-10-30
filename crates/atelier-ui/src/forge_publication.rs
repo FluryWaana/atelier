@@ -252,74 +252,101 @@ pub fn ForgePublication(
                     i18n.text("message.preview_the_branches_and_content_if_needed_confirm_the_branch_pu")
                 }}
             </p>
-            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                 event.prevent_default();
                 execute.with_value(|execute| execute("publication-preview"));
-            }}>
+            }) {..}  >
                 <fieldset disabled={move || {
                     pending.get() || blocked.get() || archived || linked.get() || unresolved.get()
                         || configuration.with(|value| value.is_none())
                 }}>
-                    <label for="publication-kind">{move || i18n.text("message.forge")}</label>
-                    <select
+                    <crate::form::Field
                         id="publication-kind"
-                        prop:value={move || draft.get().kind.name()}
-                        on:change={move |event| {
-                            draft
-                                .update(|draft| {
-                                    draft.kind = match event_target_value(&event).as_str() {
-                                        "gitlab" => ForgeKind::Gitlab,
-                                        "azure" => ForgeKind::Azure,
-                                        _ => ForgeKind::Github,
-                                    };
-                                })
-                        }}
+                        label={Signal::derive(move || i18n.text("message.forge"))}
                     >
-                        <option value="github">"GitHub"</option>
-                        <option value="gitlab">"GitLab"</option>
-                        <option value="azure">"Azure DevOps Services"</option>
-                    </select>
-                    <label for="publication-repository">
-                        {move || i18n.text("message.pr_mr_repository")}
-                    </label>
-                    <input
+                        <crate::form::Select
+                            {..}
+                            id="publication-kind"
+                            prop:value={move || draft.get().kind.name()}
+                            on:change={move |event| {
+                                draft
+                                    .update(|draft| {
+                                        draft.kind = match event_target_value(&event).as_str() {
+                                            "gitlab" => ForgeKind::Gitlab,
+                                            "azure" => ForgeKind::Azure,
+                                            _ => ForgeKind::Github,
+                                        };
+                                    })
+                            }}
+                        >
+                            <option value="github">"GitHub"</option>
+                            <option value="gitlab">"GitLab"</option>
+                            <option value="azure">"Azure DevOps Services"</option>
+                        </crate::form::Select>
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="publication-repository"
-                        required
-                        maxlength="1000"
-                        prop:value={move || draft.get().repository}
-                        on:input={move |event| {
-                            draft.update(|draft| draft.repository = event_target_value(&event))
-                        }}
-                    />
-                    <label for="publication-target">{move || i18n.text("message.target_branch")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.pr_mr_repository"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="publication-repository"
+                            required=true
+                            maxlength="1000"
+                            prop:value={move || draft.get().repository}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.repository = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="publication-target"
-                        required
-                        maxlength="160"
-                        prop:value={move || draft.get().target}
-                        on:input={move |event| {
-                            draft.update(|draft| draft.target = event_target_value(&event))
-                        }}
-                    />
-                    <label for="publication-title">{move || i18n.text("message.pr_mr_title")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.target_branch"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="publication-target"
+                            required=true
+                            maxlength="160"
+                            prop:value={move || draft.get().target}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.target = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="publication-title"
-                        required
-                        maxlength="255"
-                        prop:value={move || draft.get().title}
-                        on:input={move |event| draft.update(|draft| draft.title = event_target_value(&event))}
-                    />
-                    <label for="publication-body">{move || i18n.text("message.pr_mr_description")}</label>
-                    <textarea
+                        label={Signal::derive(move || i18n.text("message.pr_mr_title"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="publication-title"
+                            required=true
+                            maxlength="255"
+                            prop:value={move || draft.get().title}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.title = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="publication-body"
-                        maxlength="3500"
-                        prop:value={move || draft.get().body}
-                        on:input={move |event| draft.update(|draft| draft.body = event_target_value(&event))}
-                    />
+                        label={Signal::derive(move || i18n.text("message.pr_mr_description"))}
+                    >
+                        <crate::form::Textarea
+                            {..}
+                            id="publication-body"
+                            maxlength="3500"
+                            prop:value={move || draft.get().body}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.body = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
                     <label>
-                        <input
+                        <crate::form::Checkbox
+                            {..}
                             id="publication-draft"
-                            type="checkbox"
                             prop:checked={move || draft.get().draft}
                             on:change={move |event| {
                                 draft.update(|draft| draft.draft = event_target_checked(&event))
@@ -327,11 +354,15 @@ pub fn ForgePublication(
                         />
                         {move || i18n.text("message.create_as_draft")}
                     </label>
-                    <button id="preview-publication" type="submit">
+                    <crate::button::Button
+                        {..}
+                        id="preview-publication"
+                        type="submit"
+                    >
                         {move || i18n.text("message.prepare_publication_preview")}
-                    </button>
+                    </crate::button::Button>
                 </fieldset>
-            </form>
+            </crate::form::Form>
             {move || {
                 preview
                     .get()
@@ -356,10 +387,9 @@ pub fn ForgePublication(
                             <p hidden={!preview
                                 .local_changes}>
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.local_files_changed_they_are_not_included_in_this_publication",
-                                        )
+                                    i18n.text(
+                                        "message.local_files_changed_they_are_not_included_in_this_publication",
+                                    )
                                 }}
                             </p>
                         }
@@ -375,9 +405,9 @@ pub fn ForgePublication(
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-publication-push"
-                        type="checkbox"
                         prop:checked={move || key.get().is_some_and(|key| key == push_approved.get())}
                         on:change={move |event| {
                             push_approved
@@ -392,14 +422,15 @@ pub fn ForgePublication(
                     />
                     {move || i18n.text("message.confirm_sending_this_commit_to_this_remote_branch")}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || key.get().is_none_or(|key| key != push_approved.get()))}
+                    {..}
                     id="push-publication-branch"
                     type="button"
-                    disabled={move || key.get().is_none_or(|key| key != push_approved.get())}
                     on:click={move |_| execute.with_value(|execute| execute("publication-push"))}
                 >
                     {move || i18n.text("message.push_branch_before_publication")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <fieldset
                 hidden={move || !matches.get() || needs_push.get() || unresolved.get() || linked.get()}
@@ -411,9 +442,9 @@ pub fn ForgePublication(
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-publication"
-                        type="checkbox"
                         prop:checked={move || key.get().is_some_and(|key| key == approved.get())}
                         on:change={move |event| {
                             approved
@@ -428,42 +459,45 @@ pub fn ForgePublication(
                     />
                     {move || i18n.text("message.confirm_creating_this_pr_mr_with_these_branches_and_content")}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || key.get().is_none_or(|key| key != approved.get()))}
+                    {..}
                     id="create-publication"
                     type="button"
-                    disabled={move || key.get().is_none_or(|key| key != approved.get())}
                     on:click={move |_| execute.with_value(|execute| execute("publication"))}
                 >
                     {move || i18n.text("message.create_the_confirmed_pr_mr")}
-                </button>
+                </crate::button::Button>
             </fieldset>
-            <div class="confirmation" hidden={move || !uncertain.get()}>
+            <crate::modal::Notice {..}  hidden={move || !uncertain.get()}>
                 <p>
                     {move || {
                         i18n.text("message.publication_uncertain_search_for_the_existing_pr_mr_no_automatic")
                     }}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="reconcile-publication"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| execute.with_value(|execute| execute("publication-reconcile"))}
                 >
                     {move || i18n.text("message.find_existing_publication")}
-                </button>
-            </div>
-            <button
+                </crate::button::Button>
+            </crate::modal::Notice>
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || unresolved.get())}
+                {..}
                 id="cancel-publication"
                 type="button"
                 hidden={move || !own_dirty.get()}
-                disabled={move || pending.get() || unresolved.get()}
                 on:click={move |_| {
                     draft.set(original.get_untracked());
                     approved.set(String::new());
                 }}
             >
                 {move || i18n.text("message.cancel_preparation")}
-            </button>
+            </crate::button::Button>
             <p id="publication-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

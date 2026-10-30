@@ -209,35 +209,35 @@ pub fn Updates(
             }}>
                 {move || i18n.text("message.first_install_the_rust_package_with_its_trusted_key_to_use_this")}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                {..}
                 id="reload-updates"
                 type="button"
-                disabled={move || pending.get() || loading.get()}
                 on:click={move |_| execute.with_value(|execute| execute("reload"))}
             >
                 {move || i18n.text("message.read_update_status_again")}
-            </button>
+            </crate::button::Button>
             <p role="status" hidden={move || !loading.get()}>
                 {move || i18n.text("message.github_update_checking")}
             </p>
             <div class="update-progress" hidden={move || !pending.get()}>
                 <label for="update-download-progress">
                     {move || {
-                        i18n
-                            .text(
-                                if status
-                                    .get()
-                                    .is_some_and(|status| {
-                                        status
-                                            .download
-                                            .is_some_and(|download| download.received == download.total)
-                                    })
-                                {
-                                    "message.github_update_verifying"
-                                } else {
-                                    "message.github_update_installing"
-                                },
-                            )
+                        i18n.text(
+                            if status
+                                .get()
+                                .is_some_and(|status| {
+                                    status
+                                        .download
+                                        .is_some_and(|download| download.received == download.total)
+                                })
+                            {
+                                "message.github_update_verifying"
+                            } else {
+                                "message.github_update_installing"
+                            },
+                        )
                     }}
                 </label>
                 <progress
@@ -288,29 +288,30 @@ pub fn Updates(
                     release.get().is_none_or(|release| release.compatible)
                 }}>{move || i18n.text("message.github_update_incompatible")}</p>
                 <p>{move || i18n.text("message.github_update_restart")}</p>
-                <button
-                    id="install-update"
-                    class="primary"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Primary}
+                    disabled={Signal::derive(move || {
                         system() || pending.get() || loading.get() || blocked.get() || uncertain.get()
                             || status.get().is_none_or(|status| !status.installed)
                             || release.get().is_none_or(|release| !release.compatible)
                             || operation().is_some_and(|operation| operation.state.pending())
-                    }}
+                    })}
+                    class="primary"
+                    {..}
+                    id="install-update"
+                    type="button"
                     on:click={move |_| execute.with_value(|execute| execute("install"))}
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if pending.get() {
-                                    "message.github_update_installing"
-                                } else {
-                                    "message.github_update_install"
-                                },
-                            )
+                        i18n.text(
+                            if pending.get() {
+                                "message.github_update_installing"
+                            } else {
+                                "message.github_update_install"
+                            },
+                        )
                     }}
-                </button>
+                </crate::button::Button>
             </div>
             <div hidden={move || operation().is_none()}>
                 <h4 id="update-phase">
@@ -361,14 +362,16 @@ pub fn Updates(
                     }}
                 >
 
-                    <button
-                        id="apply-update"
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Primary}
                         class="primary"
+                        {..}
+                        id="apply-update"
                         type="button"
                         on:click={move |_| execute.with_value(|execute| execute("apply"))}
                     >
                         {move || i18n.text("message.update_and_restart")}
-                    </button>
+                    </crate::button::Button>
                 </fieldset>
                 <fieldset
                     hidden={move || {
@@ -379,13 +382,14 @@ pub fn Updates(
                     }}
                     disabled={move || system() || pending.get() || loading.get()}
                 >
-                    <button
+                    <crate::button::Button
+                        {..}
                         id="cancel-update"
                         type="button"
                         on:click={move |_| execute.with_value(|execute| execute("cancel"))}
                     >
                         {move || i18n.text("message.cancel_preparation")}
-                    </button>
+                    </crate::button::Button>
                 </fieldset>
                 <fieldset
                     hidden={move || operation().is_none_or(|operation| !operation.state.maintenance())}
@@ -393,13 +397,14 @@ pub fn Updates(
                         system() || pending.get() || loading.get() || blocked.get() || uncertain.get()
                     }}
                 >
-                    <button
+                    <crate::button::Button
+                        {..}
                         id="recover-update"
                         type="button"
                         on:click={move |_| execute.with_value(|execute| execute("recover"))}
                     >
                         {move || i18n.text("message.recover_previous_version")}
-                    </button>
+                    </crate::button::Button>
                 </fieldset>
             </div>
             <p id="updates-error" class="error" role="alert">

@@ -423,6 +423,11 @@ pub(super) fn router(app: Router<Shared>) -> Router<Shared> {
             axum::routing::put(kanban::save),
         )
         .api_route(
+            "/api/repositories/default-branch",
+            Policy::Ordinary,
+            post(repository_access::default_branch),
+        )
+        .api_route(
             "/api/repositories",
             Policy::ProjectExternal,
             get(repository_access::read)

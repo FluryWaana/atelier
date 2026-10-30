@@ -359,9 +359,8 @@ pub fn BrainstormPage(
                 id="brainstorm-toolbar"
                 hidden={move || sessions.with(Vec::is_empty)}
             >
-                <label>
-                    {i18n.text("message.your_conversations")}
-                    <select
+                <crate::form::Field id="brainstorm-session" label=Signal::derive(move || i18n.text("message.your_conversations"))><crate::form::Select
+                        {..}
                         id="brainstorm-session"
                         disabled={move || pending.get()}
                         prop:value={move || selected.get()}
@@ -375,9 +374,9 @@ pub fn BrainstormPage(
                                 view! { <option value={card.id.clone()}>{name(&card)}</option> }
                             }}
                         />
-                    </select>
-                </label>
-                <button
+                    </crate::form::Select></crate::form::Field>
+                <crate::button::Button
+                    {..}
                     type="button"
                     id="brainstorm-toggle-tasks"
                     aria-controls="brainstorm-results"
@@ -385,25 +384,21 @@ pub fn BrainstormPage(
                     on:click={move |_| tasks.update(|visible| *visible = !*visible)}
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if tasks.get() {
-                                    "message.back_to_the_discussion"
-                                } else {
-                                    "message.view_tasks"
-                                },
-                            )
+                        i18n.text(
+                            if tasks.get() { "message.back_to_the_discussion" } else { "message.view_tasks" },
+                        )
                     }}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     type="button"
                     id="brainstorm-new"
                     hidden={move || selected.get().is_empty()}
-                    disabled={move || pending.get()}
                     on:click={move |_| choose.run(String::new())}
                 >
                     {i18n.text("message.new_conversation")}
-                </button>
+                </crate::button::Button>
             </div>
             <div
                 class="brainstorm-layout"
@@ -514,28 +509,26 @@ pub fn BrainstormPage(
                                 }}
                             </dl>
                         </div>
-                        <form
-                            id="brainstorm-form"
-                            hidden={move || !selected.get().is_empty()}
-                            on:submit={move |event| {
+                        <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                                 event.prevent_default();
                                 send.with_value(|send| send(false, None));
-                            }}
+                            }) {..}
+                            id="brainstorm-form"
+                            hidden={move || !selected.get().is_empty()}
+
                         >
                             <fieldset disabled={move || pending.get()}>
-                                <label class="brainstorm-idea-label">
-                                    {i18n.text("message.your_idea")}
-                                    <textarea
+                                <crate::form::Field id="brainstorm-idea" label=Signal::derive(move || i18n.text("message.your_idea"))><crate::form::Textarea
+                                        {..}
                                         id="brainstorm-idea"
                                         name="description"
                                         rows="3"
                                         maxlength="20000"
                                         required={move || draft.with(|draft| draft.title.trim().is_empty())}
                                         placeholder={move || {
-                                            i18n
-                                                .text(
-                                                    "message.id_like_to_make_signing_up_easier_for_my_customers_but_im_not_su",
-                                                )
+                                            i18n.text(
+                                                "message.id_like_to_make_signing_up_easier_for_my_customers_but_im_not_su",
+                                            )
                                         }}
                                         prop:value={move || draft.get().description}
                                         on:input={move |event| {
@@ -544,12 +537,10 @@ pub fn BrainstormPage(
                                                     draft.description = event_target_value(&event);
                                                 })
                                         }}
-                                    />
-                                </label>
+                                    /></crate::form::Field>
                                 <div class="form-row">
-                                    <label>
-                                        {i18n.text("message.project_to_explore_optional")}
-                                        <select
+                                    <crate::form::Field label=Signal::derive(move || i18n.text("message.project_to_explore_optional"))><crate::form::Select
+                                            {..}
                                             name="repo"
                                             prop:value={move || draft.get().repo}
                                             on:change={move |event| {
@@ -571,11 +562,9 @@ pub fn BrainstormPage(
                                                     }
                                                 }}
                                             />
-                                        </select>
-                                    </label>
-                                    <label>
-                                        {i18n.text("message.agent")}
-                                        <select
+                                        </crate::form::Select></crate::form::Field>
+                                    <crate::form::Field label=Signal::derive(move || i18n.text("message.agent"))><crate::form::Select
+                                            {..}
                                             name="agent"
                                             prop:value={move || {
                                                 let agent = draft.get().agent;
@@ -608,8 +597,7 @@ pub fn BrainstormPage(
                                                     }
                                                 }}
                                             />
-                                        </select>
-                                    </label>
+                                        </crate::form::Select></crate::form::Field>
                                 </div>
                                 <details class="brainstorm-settings">
                                     <summary>
@@ -617,9 +605,8 @@ pub fn BrainstormPage(
                                         <span class="hint">{i18n.text("message.optional")}</span>
                                     </summary>
                                     <div data-agent-fields="">
-                                        <label>
-                                            {i18n.text("message.template")}
-                                            <input
+                                        <crate::form::Field label=Signal::derive(move || i18n.text("message.template"))><crate::form::Input
+                                                {..}
                                                 name="model"
                                                 maxlength="180"
                                                 prop:value={move || draft.get().model}
@@ -628,11 +615,9 @@ pub fn BrainstormPage(
                                                         .update(|draft| draft.model = event_target_value(&event))
                                                 }}
                                                 placeholder={move || i18n.text("message.cli_configuration")}
-                                            />
-                                        </label>
-                                        <label>
-                                            {i18n.text("message.reasoning_effort")}
-                                            <input
+                                            /></crate::form::Field>
+                                        <crate::form::Field label=Signal::derive(move || i18n.text("message.reasoning_effort"))><crate::form::Input
+                                                {..}
                                                 name="effort"
                                                 maxlength="40"
                                                 prop:value={move || draft.get().effort}
@@ -641,12 +626,10 @@ pub fn BrainstormPage(
                                                         .update(|draft| draft.effort = event_target_value(&event))
                                                 }}
                                                 placeholder={move || i18n.text("message.default")}
-                                            />
-                                        </label>
+                                            /></crate::form::Field>
                                     </div>
-                                    <label>
-                                        {i18n.text("message.conversation_name_optional")}
-                                        <input
+                                    <crate::form::Field label=Signal::derive(move || i18n.text("message.conversation_name_optional"))><crate::form::Input
+                                            {..}
                                             name="title"
                                             maxlength="300"
                                             prop:value={move || draft.get().title}
@@ -656,11 +639,9 @@ pub fn BrainstormPage(
                                             placeholder={move || {
                                                 i18n.text("message.taken_from_your_idea_if_left_blank")
                                             }}
-                                        />
-                                    </label>
-                                    <label>
-                                        {i18n.text("message.constraints_optional")}
-                                        <textarea
+                                        /></crate::form::Field>
+                                    <crate::form::Field label=Signal::derive(move || i18n.text("message.constraints_optional"))><crate::form::Textarea
+                                            {..}
                                             name="instructions"
                                             rows="2"
                                             maxlength="20000"
@@ -674,42 +655,48 @@ pub fn BrainstormPage(
                                             placeholder={move || {
                                                 i18n.text("message.budget_deadlines_things_to_preserve")
                                             }}
-                                        />
-                                    </label>
+                                        /></crate::form::Field>
                                 </details>
                                 <p class="hint brainstorm-setup-note">
                                     {i18n.text("message.the_project_and_settings_are_fixed_when_you_start")}
                                 </p>
                                 <div class="brainstorm-start-actions">
                                     <span class="hint">
-                                        {i18n.text("message.no_files_are_changed")}<br />
+                                        {i18n.text("message.no_files_are_changed")} <br />
                                         {i18n.text("message.uses_your_agents_quota")}
                                     </span>
-                                    <button class="primary" id="brainstorm-start" type="submit">
+                                    <crate::button::Button
+                                        variant={crate::button::ButtonVariant::Primary}
+                                        class="primary"
+                                        {..}
+                                        id="brainstorm-start"
+                                        type="submit"
+                                    >
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    if pending.get() {
-                                                        "message.starting"
-                                                    } else {
-                                                        "message.start_the_discussion"
-                                                    },
-                                                )
+                                            i18n.text(
+                                                if pending.get() {
+                                                    "message.starting"
+                                                } else {
+                                                    "message.start_the_discussion"
+                                                },
+                                            )
                                         }}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
                                 <div class="brainstorm-direct">
-                                    <button
+                                    <crate::button::Button
+                                        variant={crate::button::ButtonVariant::Ghost}
+                                        class="text-button"
+                                        {..}
                                         type="button"
                                         id="brainstorm-create-local"
-                                        class="text-button"
                                         on:click={move |_| send.with_value(|send| send(true, None))}
                                     >
                                         {i18n.text("message.create_a_task_without_a_discussion")}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
                             </fieldset>
-                        </form>
+                        </crate::form::Form>
                     </details>
                     <div class="brainstorm-run-status">
                         <p id="brainstorm-page-status" class="hint" role="status">
@@ -733,50 +720,49 @@ pub fn BrainstormPage(
                                     .unwrap_or_default()
                             }}
                         </p>
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
                             type="button"
                             id="brainstorm-page-stop"
                             hidden={move || running.get().is_none()}
-                            disabled={move || pending.get()}
                             on:click={move |_| stop()}
                         >
                             {i18n.text("message.stop")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
                             type="button"
                             id="brainstorm-retry"
                             hidden={move || {
                                 selected.get().is_empty() || running.get().is_some()
                                     || latest
                                         .with(|run| {
-                                            run
-                                                .as_ref()
+                                            run.as_ref()
                                                 .is_some_and(|run| {
                                                     field(run, "status") == "completed"
                                                         && field(run, "attention").is_empty()
                                                 })
                                         })
                             }}
-                            disabled={move || pending.get()}
                             on:click={move |_| {
-                                send
-                                    .with_value(|send| send(
-                                        false,
-                                        Some(
-                                            latest
-                                                .get_untracked()
-                                                .map(|run| field(&run, "userMessage"))
-                                                .filter(|message| !message.trim().is_empty())
-                                                .unwrap_or_else(|| {
-                                                    i18n
-                                                        .text("message.resume_exploring_based_on_our_discussion")
-                                                }),
-                                        ),
-                                    ))
+                                send.with_value(|send| send(
+                                    false,
+                                    Some(
+                                        latest
+                                            .get_untracked()
+                                            .map(|run| field(&run, "userMessage"))
+                                            .filter(|message| !message.trim().is_empty())
+                                            .unwrap_or_else(|| {
+                                                i18n.text("message.resume_exploring_based_on_our_discussion")
+                                            }),
+                                    ),
+                                ))
                             }}
                         >
                             {i18n.text("message.retry")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                     <p class="inline-error" role="alert">
                         {move || i18n.text(&error.get())}
@@ -795,7 +781,7 @@ pub fn BrainstormPage(
                             aria-live="polite"
                         >
                             <For
-                                each={move || runs.get().into_iter().rev().collect::<Vec<_>>()}
+                                each={move || { runs.get().into_iter().rev().collect::<Vec<_>>() }}
                                 key={|run| serde_json::to_string(run).unwrap_or_default()}
                                 children={move |run| {
                                     let answer = run.get::<Answer>("brainstormAnswer").ok().flatten();
@@ -838,9 +824,11 @@ pub fn BrainstormPage(
                                                 .map(move |answer| {
                                                     view! {
                                                         <p class="hint">
-                                                            <button
-                                                                type="button"
+                                                            <crate::button::Button
+                                                                variant={crate::button::ButtonVariant::Ghost}
                                                                 class="text-button"
+                                                                {..}
+                                                                type="button"
                                                                 data-brainstorm-show-tasks=""
                                                                 on:click={move |_| {
                                                                     tasks.set(true);
@@ -850,7 +838,7 @@ pub fn BrainstormPage(
                                                                 {i18n
                                                                     .text("message.view_proposed_tasks_0")
                                                                     .replace("{0}", &answer.tickets.len().to_string())}
-                                                            </button>
+                                                            </crate::button::Button>
                                                         </p>
                                                     }
                                                 })}
@@ -913,9 +901,10 @@ pub fn BrainstormPage(
                                                     .map(move |option| {
                                                         let text = option.clone();
                                                         view! {
-                                                            <button
+                                                            <crate::button::Button
+                                                                disabled={Signal::derive(move || pending.get())}
+                                                                {..}
                                                                 type="button"
-                                                                disabled={move || pending.get()}
                                                                 on:click={move |_| {
                                                                     reply
                                                                         .update(|reply| {
@@ -929,7 +918,7 @@ pub fn BrainstormPage(
                                                                 }}
                                                             >
                                                                 {text}
-                                                            </button>
+                                                            </crate::button::Button>
                                                         }
                                                     })
                                                     .collect_view()}
@@ -939,19 +928,20 @@ pub fn BrainstormPage(
                                 }}
                             />
                         </section>
-                        <form
+                        <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
+                                event.prevent_default();
+                                send.with_value(|send| send(false, None));
+                            }) {..}
                             id="brainstorm-reply-form"
                             aria-label={move || i18n.text("message.send_a_message")}
                             data-active={move || running.get().is_some().to_string()}
-                            on:submit={move |event| {
-                                event.prevent_default();
-                                send.with_value(|send| send(false, None));
-                            }}
+
                         >
                             <div class="brainstorm-composer">
-                                <textarea
+                                <crate::form::Field id="brainstorm-reply" label_class="sr-only" label=Signal::derive(move||i18n.text("message.message_to_the_agent"))><crate::form::Textarea
+                                    {..}
                                     id="brainstorm-reply"
-                                    required
+                                    required=true
                                     maxlength="12000"
                                     rows="1"
                                     aria-label={move || i18n.text("message.message_to_the_agent")}
@@ -968,7 +958,7 @@ pub fn BrainstormPage(
                                             send.with_value(|send| send(false, None));
                                         }
                                     }}
-                                />
+                                /></crate::form::Field>
                                 <div class="brainstorm-composer-actions">
                                     <span id="brainstorm-composer-agent">
                                         {move || {
@@ -978,57 +968,58 @@ pub fn BrainstormPage(
                                                 .unwrap_or_else(|| i18n.text("message.your_agent"))
                                         }}
                                     </span>
-                                    <button
-                                        type="submit"
-                                        id="brainstorm-send"
-                                        class="primary"
-                                        disabled={move || {
+                                    <crate::button::Button
+                                        variant={crate::button::ButtonVariant::Primary}
+                                        disabled={Signal::derive(move || {
                                             pending.get() || running.get().is_some()
                                                 || reply.get().trim().is_empty()
-                                        }}
+                                        })}
+                                        class="primary"
+                                        {..}
+                                        type="submit"
+                                        id="brainstorm-send"
                                     >
                                         {i18n.text("message.send")}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
                             </div>
                             <p class="hint brainstorm-composer-hint" id="brainstorm-composer-hint">
                                 {move || {
-                                    i18n
-                                        .text(
-                                            if running.get().is_some() {
-                                                "message.the_agent_is_working_you_can_draft_your_next_message_here"
-                                            } else {
-                                                "message.enter_to_send_shift_enter_for_a_new_line"
-                                            },
-                                        )
+                                    i18n.text(
+                                        if running.get().is_some() {
+                                            "message.the_agent_is_working_you_can_draft_your_next_message_here"
+                                        } else {
+                                            "message.enter_to_send_shift_enter_for_a_new_line"
+                                        },
+                                    )
                                 }}
                             </p>
-                        </form>
+                        </crate::form::Form>
                         <div class="brainstorm-next-step">
                             <div>
                                 <strong>{i18n.text("message.ready_to_take_action")}</strong>
                                 <p id="brainstorm-generate-hint" class="hint">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if !reply.get().trim().is_empty() {
-                                                    "message.your_message_will_be_included"
-                                                } else if proposals.get() {
-                                                    "message.tasks_already_added_will_remain_unchanged"
-                                                } else {
-                                                    "message.when_your_idea_is_clear_enough"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if !reply.get().trim().is_empty() {
+                                                "message.your_message_will_be_included"
+                                            } else if proposals.get() {
+                                                "message.tasks_already_added_will_remain_unchanged"
+                                            } else {
+                                                "message.when_your_idea_is_clear_enough"
+                                            },
+                                        )
                                     }}
                                 </p>
                             </div>
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || {
+                                    pending.get() || running.get().is_some() || selected.get().is_empty()
+                                })}
+                                {..}
                                 type="button"
                                 id="brainstorm-generate"
                                 aria-describedby="brainstorm-generate-hint"
-                                disabled={move || {
-                                    pending.get() || running.get().is_some() || selected.get().is_empty()
-                                }}
                                 on:click={move |_| {
                                     let mut message = reply.get_untracked();
                                     if !message.trim().is_empty() {
@@ -1040,18 +1031,17 @@ pub fn BrainstormPage(
                                 }}
                             >
                                 {move || {
-                                    i18n
-                                        .text(
-                                            if !reply.get().trim().is_empty() {
-                                                "message.send_and_prepare_tasks"
-                                            } else if proposals.get() {
-                                                "message.update_task_proposals"
-                                            } else {
-                                                "message.prepare_tasks"
-                                            },
-                                        )
+                                    i18n.text(
+                                        if !reply.get().trim().is_empty() {
+                                            "message.send_and_prepare_tasks"
+                                        } else if proposals.get() {
+                                            "message.update_task_proposals"
+                                        } else {
+                                            "message.prepare_tasks"
+                                        },
+                                    )
                                 }}
-                            </button>
+                            </crate::button::Button>
                         </div>
                     </section>
                 </section>
@@ -1066,8 +1056,7 @@ pub fn BrainstormPage(
                     aria-valuemax="75"
                     aria-valuenow={move || share.get().to_string()}
                     aria-valuetext={move || {
-                        i18n
-                            .text("message.discussion_0_tasks_1")
+                        i18n.text("message.discussion_0_tasks_1")
                             .replace("{0}", &share.get().to_string())
                             .replace("{1}", &(100 - share.get()).to_string())
                     }}
@@ -1193,39 +1182,36 @@ fn DiscardDraft(
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |dialog| {
-        let _ = dialog.show_modal();
-    });
     view! {
-        <dialog
+        <crate::modal::Modal
+            id="brainstorm-discard-dialog"
             class="confirm-dialog"
-            role="alertdialog"
-            aria-labelledby="brainstorm-discard-title"
+            labelledby="brainstorm-discard-title"
             node_ref={dialog}
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                on_cancel.run(());
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| on_cancel.run(()))}
         >
-            <h2 id="brainstorm-discard-title">{i18n.text("message.discard_unsaved_changes")}</h2>
-            <div class="form-actions">
-                <button
-                    autofocus
+            <crate::modal::ModalHeader class="inset" title_id="brainstorm-discard-title" title=Signal::derive(move||i18n.text("message.discard_unsaved_changes")) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|on_cancel.run(()))/>
+            <crate::modal::ModalActions {..} >
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    autofocus=true
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| on_cancel.run(())}
                 >
                     {i18n.text("message.keep_editing")}
-                </button>
-                <button
-                    type="button"
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
                     class="confirm-action"
-                    disabled={move || pending.get()}
+                    {..}
+                    type="button"
                     on:click={move |_| on_confirm.run(())}
                 >
                     {i18n.text("message.discard")}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button>
+            </crate::modal::ModalActions>
+        </crate::modal::Modal>
     }
 }

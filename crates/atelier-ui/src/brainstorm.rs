@@ -154,13 +154,9 @@ pub fn Results(
             </h4>
             <p class="error" role="alert">
                 {move || {
-                    run
-                        .with(|run| {
-                            run
-                                .as_ref()
-                                .map(|run| i18n.text(&field(run, "brainstormError")))
-                                .unwrap_or_default()
-                        })
+                    run.with(|run| {
+                        run.as_ref().map(|run| i18n.text(&field(run, "brainstormError"))).unwrap_or_default()
+                    })
                 }}
             </p>
             <p hidden={hide_history}>
@@ -180,8 +176,7 @@ pub fn Results(
                 hide_questions || pending.get()
                     || run
                         .with(|run| {
-                            run
-                                .as_ref()
+                            run.as_ref()
                                 .is_some_and(|run| {
                                     matches!(
                                         field(run, "status").as_str(),
@@ -205,44 +200,46 @@ pub fn Results(
                                         children={move |option| {
                                             let text = option.clone();
                                             view! {
-                                                <button
+                                                <crate::button::Button
+                                                    disabled={Signal::derive(move || blocked.get())}
                                                     class="brainstorm-option"
+                                                    {..}
                                                     type="button"
-                                                    disabled={move || blocked.get()}
                                                     on:click={move |_| {
                                                         choose.run(format!("{} : {}", label.get_value(), option))
                                                     }}
                                                 >
                                                     {text}
-                                                </button>
+                                                </crate::button::Button>
                                             }
                                         }}
                                     />
                                     <p class="field-help">
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    "message.you_can_also_enter_a_free_form_answer_in_the_message",
-                                                )
+                                            i18n.text(
+                                                "message.you_can_also_enter_a_free_form_answer_in_the_message",
+                                            )
                                         }}
                                     </p>
-                                    <button
+                                    <crate::button::Button
+                                        {..}
                                         type="button"
                                         on:click={move |_| question.update(|index| *index += 1)}
                                     >
                                         {move || i18n.text("message.next_question")}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
                             }
                         })
                 }}
-                <button
+                <crate::button::Button
+                    {..}
                     type="button"
                     hidden={move || question.get() == 0}
                     on:click={move |_| question.set(0)}
                 >
                     {move || i18n.text("message.review_questions")}
-                </button>
+                </crate::button::Button>
             </div>
             <fieldset
                 disabled={move || pending.get() || blocked.get()}
@@ -261,11 +258,11 @@ pub fn Results(
                     key={move |(index, _)| (identity.get_untracked(), *index)}
                     children={move |(index, proposal)| {
                         view! {
-                            <article class="task-files">
+                            <crate::card::Card class="task-files" {..} >
                                 <label>
-                                    <input
+                                    <crate::form::Checkbox
+                                        {..}
                                         class="brainstorm-proposal"
-                                        type="checkbox"
                                         prop:checked={move || {
                                             selected.with(|selected| selected.contains(&index))
                                         }}
@@ -306,54 +303,65 @@ pub fn Results(
                                         .with(|converted| converted.get(&index).cloned())
                                         .map(|id| {
                                             view! {
-                                                <button
+                                                <crate::button::Button
+                                                    {..}
                                                     type="button"
                                                     on:click={move |_| on_open.run(id.clone())}
                                                 >
                                                     {move || i18n.text("message.open_the_created_task")}
-                                                </button>
+                                                </crate::button::Button>
                                             }
                                         })
                                 }}
-                            </article>
+                            </crate::card::Card>
                         }
                     }}
                 />
-                <label for="brainstorm-project">{move || i18n.text("message.project_for_new_tasks")}</label>
-                <select
+                <crate::form::Field
                     id="brainstorm-project"
-                    prop:value={move || {
-                        project
-                            .with(|project| {
-                                project.as_ref().map(|project| field(project, "id")).unwrap_or_default()
-                            })
-                    }}
-                    on:change={move |event| {
-                        let id = event_target_value(&event);
-                        project
-                            .set(
-                                board
-                                    .projects
-                                    .with(|projects| {
-                                        projects.iter().find(|project| field(project, "id") == id).cloned()
-                                    }),
-                            );
-                        approved.set(false);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.project_for_new_tasks"))}
                 >
-                    <option value="">{move || i18n.text("message.choose_a_project")}</option>
-                    <For
-                        each={move || board.projects.get()}
-                        key={|project| field(project, "id")}
-                        children={move |project| {
-                            view! { <option value={field(&project, "id")}>{field(&project, "name")}</option> }
+                    <crate::form::Select
+                        {..}
+                        id="brainstorm-project"
+                        prop:value={move || {
+                            project
+                                .with(|project| {
+                                    project.as_ref().map(|project| field(project, "id")).unwrap_or_default()
+                                })
                         }}
-                    />
-                </select>
+                        on:change={move |event| {
+                            let id = event_target_value(&event);
+                            project
+                                .set(
+                                    board
+                                        .projects
+                                        .with(|projects| {
+                                            projects
+                                                .iter()
+                                                .find(|project| field(project, "id") == id)
+                                                .cloned()
+                                        }),
+                                );
+                            approved.set(false);
+                        }}
+                    >
+                        <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                        <For
+                            each={move || board.projects.get()}
+                            key={|project| field(project, "id")}
+                            children={move |project| {
+                                view! {
+                                    <option value={field(&project, "id")}>{field(&project, "name")}</option>
+                                }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-brainstorm-convert"
-                        type="checkbox"
                         prop:checked={move || approved.get()}
                         on:change={move |event| approved.set(event_target_checked(&event))}
                     />
@@ -361,17 +369,18 @@ pub fn Results(
                         i18n.text("message.create_the_selected_tasks_with_criteria_requiring_human_validati")
                     }}
                 </label>
-                <button
-                    id="convert-brainstorm"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         !approved.get() || project.with(|project| project.is_none())
                             || selected.with(BTreeSet::is_empty)
-                    }}
+                    })}
+                    {..}
+                    id="convert-brainstorm"
+                    type="button"
                     on:click={convert}
                 >
                     {move || i18n.text("message.confirm_conversion_into_tasks")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}

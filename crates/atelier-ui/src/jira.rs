@@ -117,7 +117,7 @@ pub fn JiraSettings(
     };
     let load = StoredValue::new_local(load);
     Effect::new(move |_| load.with_value(|load| load()));
-    let saving = alive.clone();
+    let saving = mounted;
     let save = move |event: leptos::ev::SubmitEvent| {
         event.prevent_default();
         let credential = match token.get_value() {
@@ -145,7 +145,7 @@ pub fn JiraSettings(
         selected.set(std::collections::BTreeSet::new());
         batch_approved.set(false);
         detail.set(None);
-        let alive = saving.clone();
+        let alive = saving.with_value(Clone::clone);
         spawn_local(async move {
             let result = async {
                 write(&credential, Method::PUT, "/api/jira/config", &body)
@@ -403,7 +403,7 @@ pub fn JiraSettings(
             <p role="status" hidden={move || !loading.get()}>
                 {move || i18n.text("message.loading_jira_connection")}
             </p>
-            <form hidden={move || !loaded.get()} on:submit={save}>
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(save) {..}  hidden={move || !loaded.get()} >
                 <fieldset disabled={move || {
                     !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get() || loading.get()
                         || pending.get() || searching.get() || inspecting.get()
@@ -415,86 +415,109 @@ pub fn JiraSettings(
                     >
                         <summary id="edit-jira-connection">
                             {move || {
-                                i18n
-                                    .text(
-                                        if configured.get() {
-                                            "message.edit_jira_connection"
-                                        } else {
-                                            "message.configure_jira_connection"
-                                        },
-                                    )
+                                i18n.text(
+                                    if configured.get() {
+                                        "message.edit_jira_connection"
+                                    } else {
+                                        "message.configure_jira_connection"
+                                    },
+                                )
                             }}
                         </summary>
                         <div class="jira-connection-fields">
-                            <label for="jira-mode">{move || i18n.text("message.jira_version")}</label>
-                            <select
+                            <crate::form::Field
                                 id="jira-mode"
-                                prop:value={move || {
-                                    if draft.get().mode == JiraMode::Cloud { "cloud" } else { "dataCenter" }
-                                }}
-                                on:change={move |event| {
-                                    draft
-                                        .update(|draft| {
-                                            draft.mode = if event_target_value(&event) == "cloud" {
-                                                JiraMode::Cloud
-                                            } else {
-                                                JiraMode::DataCenter
-                                            };
-                                        })
-                                }}
+                                label={Signal::derive(move || i18n.text("message.jira_version"))}
                             >
-                                <option value="cloud">"Jira Cloud"</option>
-                                <option value="dataCenter">"Jira Data Center"</option>
-                            </select>
-                            <label for="jira-url">{move || i18n.text("message.jira_address")}</label>
-                            <input
+                                <crate::form::Select
+                                    {..}
+                                    id="jira-mode"
+                                    prop:value={move || {
+                                        if draft.get().mode == JiraMode::Cloud {
+                                            "cloud"
+                                        } else {
+                                            "dataCenter"
+                                        }
+                                    }}
+                                    on:change={move |event| {
+                                        draft
+                                            .update(|draft| {
+                                                draft.mode = if event_target_value(&event) == "cloud" {
+                                                    JiraMode::Cloud
+                                                } else {
+                                                    JiraMode::DataCenter
+                                                };
+                                            })
+                                    }}
+                                >
+                                    <option value="cloud">"Jira Cloud"</option>
+                                    <option value="dataCenter">"Jira Data Center"</option>
+                                </crate::form::Select>
+                            </crate::form::Field>
+                            <crate::form::Field
                                 id="jira-url"
-                                type="url"
-                                maxlength="2000"
-                                placeholder="https://tickets.example.test"
-                                prop:value={move || draft.get().url}
-                                on:input={move |event| {
-                                    draft.update(|draft| draft.url = event_target_value(&event))
-                                }}
-                            />
-                            <label for="jira-email">{move || i18n.text("message.email_cloud")}</label>
-                            <input
+                                label={Signal::derive(move || i18n.text("message.jira_address"))}
+                            >
+                                <crate::form::Input
+                                    {..}
+                                    id="jira-url"
+                                    type="url"
+                                    maxlength="2000"
+                                    placeholder="https://tickets.example.test"
+                                    prop:value={move || draft.get().url}
+                                    on:input={move |event| {
+                                        draft.update(|draft| draft.url = event_target_value(&event))
+                                    }}
+                                />
+                            </crate::form::Field>
+                            <crate::form::Field
                                 id="jira-email"
-                                type="email"
-                                maxlength="300"
-                                prop:value={move || draft.get().email}
-                                on:input={move |event| {
-                                    draft.update(|draft| draft.email = event_target_value(&event))
-                                }}
-                            />
-                            <label for="jira-token">
-                                {move || i18n.text("message.api_or_personal_token")}
-                            </label>
-                            <input
+                                label={Signal::derive(move || i18n.text("message.email_cloud"))}
+                            >
+                                <crate::form::Input
+                                    {..}
+                                    id="jira-email"
+                                    type="email"
+                                    maxlength="300"
+                                    prop:value={move || draft.get().email}
+                                    on:input={move |event| {
+                                        draft.update(|draft| draft.email = event_target_value(&event))
+                                    }}
+                                />
+                            </crate::form::Field>
+                            <crate::form::Field
                                 id="jira-token"
-                                type="password"
-                                autocomplete="off"
-                                maxlength="4000"
-                                disabled={move || clear.get()}
-                                prop:value={move || key.get()}
-                                on:input={move |event| key.set(event_target_value(&event))}
-                            />
+                                label={Signal::derive(move || i18n.text("message.api_or_personal_token"))}
+                            >
+                                <crate::form::Input
+                                    input_type="password"
+                                    reveal=true
+                                    disabled={Signal::derive(move || clear.get())}
+                                    {..}
+                                    id="jira-token"
+                                    autocomplete="off"
+                                    maxlength="4000"
+                                    prop:value={move || key.get()}
+                                    on:input={move |event| key.set(event_target_value(&event))}
+                                />
+                            </crate::form::Field>
                             <p class="field-help">
                                 {move || {
-                                    i18n
-                                        .text(
-                                            if token_set.get() {
-                                                "message.a_token_is_saved_leave_blank_to_keep_it"
-                                            } else {
-                                                "message.no_jira_token_saved"
-                                            },
-                                        )
+                                    i18n.text(
+                                        if token_set.get() {
+                                            "message.a_token_is_saved_leave_blank_to_keep_it"
+                                        } else {
+                                            "message.no_jira_token_saved"
+                                        },
+                                    )
                                 }}
                             </p>
-                            <button
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Danger}
+                                class="danger"
+                                {..}
                                 id="jira-clear-token"
                                 type="button"
-                                class="danger"
                                 hidden={move || !token_set.get()}
                                 aria-pressed={move || clear.get().to_string()}
                                 on:click={move |_| {
@@ -505,70 +528,79 @@ pub fn JiraSettings(
                                 }}
                             >
                                 {move || {
-                                    i18n
-                                        .text(
-                                            if clear.get() {
-                                                "message.cancel_jira_token_removal"
-                                            } else {
-                                                "message.remove_saved_token"
-                                            },
-                                        )
+                                    i18n.text(
+                                        if clear.get() {
+                                            "message.cancel_jira_token_removal"
+                                        } else {
+                                            "message.remove_saved_token"
+                                        },
+                                    )
                                 }}
-                            </button>
+                            </crate::button::Button>
                             <p class="field-help" hidden={move || !clear.get()}>
                                 {move || i18n.text("message.jira_token_removal_pending")}
                             </p>
                             <p class="field-help">
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.changing_the_jira_address_account_or_version_removes_the_previou",
-                                        )
+                                    i18n.text(
+                                        "message.changing_the_jira_address_account_or_version_removes_the_previou",
+                                    )
                                 }}
                             </p>
                         </div>
                     </details>
-                    <label for="jira-query">{move || i18n.text("message.issues_to_search_jql")}</label>
-                    <textarea
+                    <crate::form::Field
                         id="jira-query"
-                        rows="3"
-                        spellcheck="false"
-                        maxlength="4000"
-                        prop:value={move || draft.get().query}
-                        on:input={move |event| draft.update(|draft| draft.query = event_target_value(&event))}
-                    />
+                        label={Signal::derive(move || i18n.text("message.issues_to_search_jql"))}
+                    >
+                        <crate::form::Textarea
+                            {..}
+                            id="jira-query"
+                            rows="3"
+                            spellcheck="false"
+                            maxlength="4000"
+                            prop:value={move || draft.get().query}
+                            on:input={move |event| {
+                                draft.update(|draft| draft.query = event_target_value(&event))
+                            }}
+                        />
+                    </crate::form::Field>
                 </fieldset>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
+                        !loaded.get() || pending.get() || loading.get() || searching.get() || inspecting.get()
+                            || !own_dirty.get()
+                    })}
+                    {..}
                     id="save-jira"
                     type="submit"
                     hidden={move || !own_dirty.get()}
-                    disabled={move || {
-                        !loaded.get() || pending.get() || loading.get() || searching.get() || inspecting.get()
-                            || !own_dirty.get()
-                    }}
                 >
                     {move || i18n.text("message.save_jira_settings")}
-                </button>
-            </form>
+                </crate::button::Button>
+            </crate::form::Form>
             <div class="editor-actions">
-                <button
-                    id="search-jira"
-                    class="primary"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Primary}
+                    disabled={Signal::derive(move || {
                         !selected.with(std::collections::BTreeSet::is_empty) || !loaded.get()
                             || own_dirty.get() || pending.get() || loading.get() || searching.get()
                             || inspecting.get() || !token_set.get() || original.get().url.is_empty()
-                    }}
+                    })}
+                    class="primary"
+                    {..}
+                    id="search-jira"
+                    type="button"
                     on:click={search}
                 >
                     {move || i18n.text("message.search_jira_issues")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || loading.get() || searching.get() || inspecting.get())}
+                    {..}
                     id="reload-jira"
                     type="button"
                     hidden={move || loaded.get() && !own_dirty.get() && error.get().is_empty()}
-                    disabled={move || pending.get() || loading.get() || searching.get() || inspecting.get()}
                     on:click={move |_| {
                         if own_dirty.get_untracked()
                             || !selected.with_untracked(std::collections::BTreeSet::is_empty)
@@ -580,21 +612,27 @@ pub fn JiraSettings(
                     }}
                 >
                     {move || i18n.text("message.reload_jira_connection")}
-                </button>
+                </crate::button::Button>
             </div>
-            <div class="confirmation" role="alert" hidden={move || !replace.get()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!replace.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|replace.set(false))>
                 <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
+                    type="button"
+                    on:click={move |_| replace.set(false)}
+                >
+                    {move || i18n.text("message.keep_editing")}
+                </crate::button::Button><crate::button::Button
+                    {..}
                     id="confirm-reload-jira"
                     type="button"
                     on:click={move |_| load.with_value(|load| load())}
                 >
                     {move || i18n.text("message.discard")}
-                </button>
-                <button type="button" on:click={move |_| replace.set(false)}>
-                    {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <p id="jira-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>
@@ -622,115 +660,131 @@ pub fn JiraSettings(
                                     {value.issue.title}
                                 </h4>
                                 <pre>{value.description}</pre>
-                                <button
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || pending.get())}
+                                    {..}
                                     type="button"
-                                    disabled={move || pending.get()}
                                     on:click={move |_| {
                                         detail.set(None);
                                         focus(format!("jira-inspect-{}", inspected_id.get_untracked()));
                                     }}
                                 >
                                     {move || i18n.text("message.close_details")}
-                                </button>
+                                </crate::button::Button>
                             </section>
                         }
                     })
             }}
             <div hidden={move || detail.with(|detail| detail.is_none())}>
-                <label for="jira-import-project">{move || i18n.text("message.import_into_project")}</label>
-                <select
+                <crate::form::Field
                     id="jira-import-project"
-                    disabled={move || pending.get()}
-                    prop:value={move || import_project.get()}
-                    on:change={move |event| {
-                        import_project.set(event_target_value(&event));
-                        attach_to.set(None);
-                        batch_approved.set(false);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.import_into_project"))}
                 >
-                    <option value="">{move || i18n.text("message.choose_a_project")}</option>
-                    <For
-                        each={move || board.projects.get()}
-                        key={|project| project.get::<String>("id").ok().flatten().unwrap_or_default()}
-                        children={move |project| {
-                            view! {
-                                <option value={project
-                                    .get::<String>("id")
-                                    .ok()
-                                    .flatten()
-                                    .unwrap_or_default()}>
+                    <crate::form::Select
+                        {..}
+                        id="jira-import-project"
+                        disabled={move || pending.get()}
+                        prop:value={move || import_project.get()}
+                        on:change={move |event| {
+                            import_project.set(event_target_value(&event));
+                            attach_to.set(None);
+                            batch_approved.set(false);
+                        }}
+                    >
+                        <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                        <For
+                            each={move || board.projects.get()}
+                            key={|project| project.get::<String>("id").ok().flatten().unwrap_or_default()}
+                            children={move |project| {
+                                view! {
+                                    <option value=crate::field(&project,"id")>
                                     {project.get::<String>("name").ok().flatten().unwrap_or_default()}
                                 </option>
-                            }
-                        }}
-                    />
-                </select>
-                <label for="jira-attach-card">{move || i18n.text("message.card_to_link")}</label>
-                <select
+                                }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
+                <crate::form::Field
                     id="jira-attach-card"
-                    disabled={move || pending.get() || import_project.get().is_empty()}
-                    prop:value={move || {
-                        attach_to.with(|card| card.as_ref().map(|card| card.id.clone()).unwrap_or_default())
-                    }}
-                    on:change={move |event| {
-                        let id = event_target_value(&event);
-                        attach_to
-                            .set(board.cards.with(|cards| cards.iter().find(|card| card.id == id).cloned()));
-                    }}
+                    label={Signal::derive(move || i18n.text("message.card_to_link"))}
                 >
-                    <option value="">{move || i18n.text("message.create_a_new_card")}</option>
-                    <For
-                        each={move || {
-                            let repo = board
-                                .projects
-                                .with(|projects| {
-                                    projects
-                                        .iter()
-                                        .find(|project| {
-                                            project.get::<String>("id").ok().flatten().as_deref()
-                                                == Some(import_project.get().as_str())
-                                        })
-                                        .and_then(|project| project.get::<String>("repo").ok().flatten())
-                                        .unwrap_or_default()
-                                });
-                            board
-                                .cards
-                                .with(|cards| {
-                                    cards
-                                        .iter()
-                                        .filter(|card| {
-                                            !card.fields.flag("archived").unwrap_or(true)
-                                                && card.fields.get::<String>("repo").ok().flatten().as_deref()
-                                                    == Some(repo.as_str())
-                                        })
-                                        .cloned()
-                                        .collect::<Vec<_>>()
-                                })
+                    <crate::form::Select
+                        {..}
+                        id="jira-attach-card"
+                        disabled={move || pending.get() || import_project.get().is_empty()}
+                        prop:value={move || {
+                            attach_to
+                                .with(|card| card.as_ref().map(|card| card.id.clone()).unwrap_or_default())
                         }}
-                        key={|card| card.id.clone()}
-                        children={move |card| view! { <option value={card.id}>{card.title.clone()}</option> }}
-                    />
-                </select>
-                <button
-                    id="import-jira"
-                    type="button"
-                    disabled={move || {
+                        on:change={move |event| {
+                            let id = event_target_value(&event);
+                            attach_to
+                                .set(
+                                    board.cards.with(|cards| cards.iter().find(|card| card.id == id).cloned()),
+                                );
+                        }}
+                    >
+                        <option value="">{move || i18n.text("message.create_a_new_card")}</option>
+                        <For
+                            each={move || {
+                                let repo = board
+                                    .projects
+                                    .with(|projects| {
+                                        projects
+                                            .iter()
+                                            .find(|project| {
+                                                project.get::<String>("id").ok().flatten().as_deref()
+                                                    == Some(import_project.get().as_str())
+                                            })
+                                            .and_then(|project| project.get::<String>("repo").ok().flatten())
+                                            .unwrap_or_default()
+                                    });
+                                board
+                                    .cards
+                                    .with(|cards| {
+                                        cards
+                                            .iter()
+                                            .filter(|card| {
+                                                !card.fields.flag("archived").unwrap_or(true)
+                                                    && card
+                                                        .fields
+                                                        .get::<String>("repo")
+                                                        .ok()
+                                                        .flatten()
+                                                        .as_deref() == Some(repo.as_str())
+                                            })
+                                            .cloned()
+                                            .collect::<Vec<_>>()
+                                    })
+                            }}
+                            key={|card| card.id.clone()}
+                            children={move |card| {
+                                view! { <option value={card.id}>{card.title.clone()}</option> }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || inspecting.get() || own_dirty.get()
                             || import_project.get().is_empty()
-                    }}
+                    })}
+                    {..}
+                    id="import-jira"
+                    type="button"
                     on:click={import}
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if attach_to.with(|card| card.is_some()) {
-                                    "message.link_this_issue_to_the_card"
-                                } else {
-                                    "message.import_this_issue_as_a_card"
-                                },
-                            )
+                        i18n.text(
+                            if attach_to.with(|card| card.is_some()) {
+                                "message.link_this_issue_to_the_card"
+                            } else {
+                                "message.import_this_issue_as_a_card"
+                            },
+                        )
                     }}
-                </button>
+                </crate::button::Button>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.the_issue_will_be_read_again_before_importing_an_already_linked")
@@ -751,44 +805,42 @@ pub fn JiraSettings(
                 </p>
                 <p role="status">
                     {move || {
-                        i18n
-                            .text("message.selected_issues_0")
+                        i18n.text("message.selected_issues_0")
                             .replace("{0}", &selected.with(|ids| ids.len()).to_string())
                     }}
                 </p>
-                <label for="jira-batch-project">
-                    {move || i18n.text("message.batch_destination_project")}
-                </label>
-                <select
+                <crate::form::Field
                     id="jira-batch-project"
-                    prop:value={move || import_project.get()}
-                    on:change={move |event| {
-                        import_project.set(event_target_value(&event));
-                        attach_to.set(None);
-                        batch_approved.set(false);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.batch_destination_project"))}
                 >
-                    <option value="">{move || i18n.text("message.choose_a_project")}</option>
-                    <For
-                        each={move || board.projects.get()}
-                        key={|project| project.get::<String>("id").ok().flatten().unwrap_or_default()}
-                        children={move |project| {
-                            view! {
-                                <option value={project
-                                    .get::<String>("id")
-                                    .ok()
-                                    .flatten()
-                                    .unwrap_or_default()}>
+                    <crate::form::Select
+                        {..}
+                        id="jira-batch-project"
+                        prop:value={move || import_project.get()}
+                        on:change={move |event| {
+                            import_project.set(event_target_value(&event));
+                            attach_to.set(None);
+                            batch_approved.set(false);
+                        }}
+                    >
+                        <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                        <For
+                            each={move || board.projects.get()}
+                            key={|project| project.get::<String>("id").ok().flatten().unwrap_or_default()}
+                            children={move |project| {
+                                view! {
+                                    <option value=crate::field(&project,"id")>
                                     {project.get::<String>("name").ok().flatten().unwrap_or_default()}
                                 </option>
-                            }
-                        }}
-                    />
-                </select>
+                                }
+                            }}
+                        />
+                    </crate::form::Select>
+                </crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-jira-batch"
-                        type="checkbox"
                         prop:checked={move || batch_approved.get()}
                         on:change={move |event| batch_approved.set(event_target_checked(&event))}
                     />
@@ -796,18 +848,20 @@ pub fn JiraSettings(
                         i18n.text("message.import_this_selection_into_the_chosen_project_and_preserve_alrea")
                     }}
                 </label>
-                <button
-                    id="import-jira-batch"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         !batch_approved.get() || selected.with(std::collections::BTreeSet::is_empty)
                             || import_project.get().is_empty()
-                    }}
+                    })}
+                    {..}
+                    id="import-jira-batch"
+                    type="button"
                     on:click={import_batch}
                 >
                     {move || i18n.text("message.confirm_batch_import")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    {..}
                     id="clear-jira-batch"
                     type="button"
                     on:click={move |_| {
@@ -816,7 +870,7 @@ pub fn JiraSettings(
                     }}
                 >
                     {move || i18n.text("message.clear_selection")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <ul class="service-endpoints">
                 <For
@@ -844,11 +898,10 @@ pub fn JiraSettings(
                         view! {
                             <li class="jira-issue">
                                 <label>
-                                    <input
-                                        type="checkbox"
+                                    <crate::form::Checkbox
+                                        {..}
                                         aria-label={move || {
-                                            i18n
-                                                .text("message.select_issue_0")
+                                            i18n.text("message.select_issue_0")
                                                 .replace("{0}", &selection.get_value())
                                         }}
                                         disabled={move || {
@@ -885,17 +938,18 @@ pub fn JiraSettings(
                                 </a>
                                 " · "
                                 {issue.status}
-                                <button
-                                    id={format!("jira-inspect-{}", issue.id)}
-                                    type="button"
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         inspecting.get() || searching.get() || loading.get() || pending.get()
                                             || own_dirty.get()
-                                    }}
+                                    })}
+                                    {..}
+                                    id={format!("jira-inspect-{}", issue.id)}
+                                    type="button"
                                     on:click={move |_| inspect.with_value(|inspect| inspect(id.clone()))}
                                 >
                                     {move || i18n.text("message.show_details")}
-                                </button>
+                                </crate::button::Button>
                             </li>
                         }
                     }}
@@ -907,27 +961,29 @@ pub fn JiraSettings(
                     results.with(|results| results.as_ref().is_none_or(|results| results.issues.len() <= 200))
                 }}
             >
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || page.get() == 0)}
+                    {..}
                     type="button"
-                    disabled={move || page.get() == 0}
                     on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                 >
                     {move || i18n.text("message.previous")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || {
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         results
                             .with(|results| {
                                 results
                                     .as_ref()
                                     .is_none_or(|results| (page.get() + 1) * 200 >= results.issues.len())
                             })
-                    }}
+                    })}
+                    {..}
+                    type="button"
                     on:click={move |_| page.update(|page| *page += 1)}
                 >
                     {move || i18n.text("message.next")}
-                </button>
+                </crate::button::Button>
             </div>
         </section>
     }

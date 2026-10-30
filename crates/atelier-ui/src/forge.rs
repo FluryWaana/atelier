@@ -179,102 +179,115 @@ pub fn ForgeSettings(
                 }}
             </p>
             <div class="forge-field">
-                <label for="forge-kind">{move || i18n.text("message.forge")}</label>
-                <select
+                <crate::form::Field
                     id="forge-kind"
-                    prop:value={move || kind.get().name()}
-                    disabled={move || pending.get() || loading.get() || own_dirty.get()}
-                    on:change={move |event| {
-                        let selected = match event_target_value(&event).as_str() {
-                            "gitlab" => ForgeKind::Gitlab,
-                            "azure" => ForgeKind::Azure,
-                            _ => ForgeKind::Github,
-                        };
-                        select(selected);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.forge"))}
                 >
-                    <option value="github">"GitHub"</option>
-                    <option value="gitlab">"GitLab"</option>
-                    <option value="azure">"Azure DevOps Services"</option>
-                </select>
+                    <crate::form::Select
+                        {..}
+                        id="forge-kind"
+                        prop:value={move || kind.get().name()}
+                        disabled={move || pending.get() || loading.get() || own_dirty.get()}
+                        on:change={move |event| {
+                            let selected = match event_target_value(&event).as_str() {
+                                "gitlab" => ForgeKind::Gitlab,
+                                "azure" => ForgeKind::Azure,
+                                _ => ForgeKind::Github,
+                            };
+                            select(selected);
+                        }}
+                    >
+                        <option value="github">"GitHub"</option>
+                        <option value="gitlab">"GitLab"</option>
+                        <option value="azure">"Azure DevOps Services"</option>
+                    </crate::form::Select>
+                </crate::form::Field>
             </div>
-            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                 event.prevent_default();
                 save.with_value(|save| save(false));
-            }}>
+            }) {..}  >
                 <fieldset disabled={move || {
                     configurations.with(|value| value.is_none()) || pending.get() || loading.get()
                 }}>
                     <div class="forge-field">
-                        <label for="forge-base">
-                            {move || i18n.text("message.site_or_organization_address")}
-                        </label>
-                        <input
+                        <crate::form::Field
                             id="forge-base"
-                            aria-describedby="forge-base-help"
-                            type="url"
-                            required
-                            maxlength="2000"
-                            placeholder={move || match kind.get() {
-                                ForgeKind::Github => "https://github.com",
-                                ForgeKind::Gitlab => "https://gitlab.com",
-                                ForgeKind::Azure => "https://dev.azure.com/ORGANISATION",
-                            }}
-                            prop:value={move || base.get()}
-                            on:input={move |event| base.set(event_target_value(&event))}
-                        />
+                            label={Signal::derive(move || i18n.text("message.site_or_organization_address"))}
+                        >
+                            <crate::form::Input
+                                {..}
+                                id="forge-base"
+                                aria-describedby="forge-base-help"
+                                type="url"
+                                required=true
+                                maxlength="2000"
+                                placeholder={move || match kind.get() {
+                                    ForgeKind::Github => "https://github.com",
+                                    ForgeKind::Gitlab => "https://gitlab.com",
+                                    ForgeKind::Azure => "https://dev.azure.com/ORGANISATION",
+                                }}
+                                prop:value={move || base.get()}
+                                on:input={move |event| base.set(event_target_value(&event))}
+                            />
+                        </crate::form::Field>
                         <p id="forge-base-help" class="field-help">
                             {move || {
-                                i18n
-                                    .text(
-                                        "message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio",
-                                    )
+                                i18n.text(
+                                    "message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio",
+                                )
                             }}
                         </p>
                     </div>
                     <div class="forge-field">
-                        <label for="forge-token">
-                            {move || i18n.text("message.forge_personal_access_token")}
-                        </label>
-                        <input
+                        <crate::form::Field
                             id="forge-token"
-                            aria-describedby="forge-token-help"
-                            type="password"
-                            autocomplete="off"
-                            maxlength="4000"
-                            prop:value={move || secret.get()}
-                            on:input={move |event| secret.set(event_target_value(&event))}
-                        />
+                            label={Signal::derive(move || i18n.text("message.forge_personal_access_token"))}
+                        >
+                            <crate::form::Input
+                                input_type="password"
+                                reveal=true
+                                {..}
+                                id="forge-token"
+                                aria-describedby="forge-token-help"
+                                autocomplete="off"
+                                maxlength="4000"
+                                prop:value={move || secret.get()}
+                                on:input={move |event| secret.set(event_target_value(&event))}
+                            />
+                        </crate::form::Field>
                         <p id="forge-token-help" class="field-help" role="status">
                             {move || {
-                                i18n
-                                    .text(
-                                        if token_set.get() {
-                                            "message.a_token_is_saved_leave_blank_to_keep_it"
-                                        } else {
-                                            "message.no_token_saved_for_this_forge"
-                                        },
-                                    )
+                                i18n.text(
+                                    if token_set.get() {
+                                        "message.a_token_is_saved_leave_blank_to_keep_it"
+                                    } else {
+                                        "message.no_token_saved_for_this_forge"
+                                    },
+                                )
                             }}
                         </p>
                     </div>
                 </fieldset>
                 <div class="forge-actions">
-                    <button
-                        id="forge-clear-token"
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Danger}
+                        disabled={Signal::derive(move || pending.get() || loading.get())}
                         class="danger"
+                        {..}
+                        id="forge-clear-token"
                         type="button"
                         hidden={move || !token_set.get()}
-                        disabled={move || pending.get() || loading.get()}
                         on:click={move |_| save.with_value(|save| save(true))}
                     >
                         {move || i18n.text("message.remove_saved_token")}
-                    </button>
+                    </crate::button::Button>
                     <div class="forge-save-actions">
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get() || loading.get())}
+                            {..}
                             id="reload-forges"
                             type="button"
-                            disabled={move || pending.get() || loading.get()}
                             on:click={move |_| {
                                 if own_dirty.get_untracked() {
                                     replace.set(true);
@@ -284,36 +297,44 @@ pub fn ForgeSettings(
                             }}
                         >
                             {move || i18n.text("message.refresh")}
-                        </button>
-                        <button
-                            id="save-forge"
-                            class="primary"
-                            type="submit"
-                            disabled={move || {
+                        </crate::button::Button>
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Primary}
+                            disabled={Signal::derive(move || {
                                 pending.get() || loading.get() || configurations.with(|value| value.is_none())
                                     || !own_dirty.get()
-                            }}
+                            })}
+                            class="primary"
+                            {..}
+                            id="save-forge"
+                            type="submit"
                         >
                             {move || i18n.text(if pending.get() { "message.saving" } else { "message.save" })}
-                        </button>
+                        </crate::button::Button>
                     </div>
                 </div>
-            </form>
-            <div class="confirmation" hidden={move || !replace.get()}>
+            </crate::form::Form>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!replace.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|replace.set(false))>
                 <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
                 <div class="editor-actions">
-                    <button
+                    <crate::modal::ModalActions><crate::button::Button
+                        {..}
+                        data-confirmation-cancel=""
+                        autofocus=true
+                        type="button"
+                        on:click={move |_| replace.set(false)}
+                    >
+                        {move || i18n.text("message.keep_editing")}
+                    </crate::button::Button><crate::button::Button
+                        {..}
                         id="confirm-reload-forges"
                         type="button"
                         on:click={move |_| load.with_value(|load| load())}
                     >
                         {move || i18n.text("message.discard")}
-                    </button>
-                    <button type="button" on:click={move |_| replace.set(false)}>
-                        {move || i18n.text("message.keep_editing")}
-                    </button>
+                    </crate::button::Button></crate::modal::ModalActions>
                 </div>
-            </div>
+            </crate::modal::Confirmation>
             <p class="error" id="forge-error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

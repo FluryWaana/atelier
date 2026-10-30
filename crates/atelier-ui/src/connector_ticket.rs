@@ -188,14 +188,15 @@ pub fn ConnectorTicket(
                     i18n.text("message.this_ticket_is_outside_the_module_s_last_complete_scope_its_task")
                 }}
             </p>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || blocked.get() || transition_dirty.get())}
+                {..}
                 id="read-connector-ticket"
                 type="button"
-                disabled={move || pending.get() || blocked.get() || transition_dirty.get()}
                 on:click={load}
             >
                 {move || i18n.text("message.read_remote_ticket")}
-            </button>
+            </crate::button::Button>
             <Show when={move || preview.get().is_some()}>
                 <p>
                     {move || {
@@ -213,9 +214,9 @@ pub fn ConnectorTicket(
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="replace-connector-ticket-title"
-                        type="checkbox"
                         disabled={move || pending.get() || blocked.get()}
                         prop:checked={move || replace_title.get()}
                         on:change={move |event| {
@@ -229,9 +230,9 @@ pub fn ConnectorTicket(
                     {move || preview.get().map(|preview| preview.ticket.title).unwrap_or_default()}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="replace-connector-ticket-description"
-                        type="checkbox"
                         disabled={move || pending.get() || blocked.get()}
                         prop:checked={move || replace_description.get()}
                         on:change={move |event| {
@@ -249,27 +250,29 @@ pub fn ConnectorTicket(
                     {move || i18n.text("message.the_task_changed_read_the_ticket_again_before_confirming")}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="approve-connector-ticket-refresh"
-                        type="checkbox"
                         disabled={move || pending.get() || blocked.get() || stale.get()}
                         prop:checked={move || approved.get() && !stale.get()}
                         on:change={move |event| approved.set(event_target_checked(&event))}
                     />
                     {move || i18n.text("message.apply_this_preview_with_the_selected_fields")}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get() || stale.get() || !approved.get())}
+                    {..}
                     id="apply-connector-ticket-refresh"
                     type="button"
-                    disabled={move || pending.get() || blocked.get() || stale.get() || !approved.get()}
                     on:click={apply}
                 >
                     {move || i18n.text("message.synchronize_ticket")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="cancel-connector-ticket-refresh"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| {
                         preview.set(None);
                         approved.set(false);
@@ -277,7 +280,7 @@ pub fn ConnectorTicket(
                     }}
                 >
                     {move || i18n.text("message.cancel_preview")}
-                </button>
+                </crate::button::Button>
             </Show>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}

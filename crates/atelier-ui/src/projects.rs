@@ -115,8 +115,17 @@ pub fn Projects(
     let create_access_dirty = RwSignal::new(false);
     let front_access_dirty = RwSignal::new(false);
     let back_access_dirty = RwSignal::new(false);
+    let automatic_branch = RwSignal::new(None::<String>);
     let dirty = Memo::new(move |_| {
-        original.get() != draft.get()
+        let saved = original.get();
+        let mut current = draft.get();
+        // A detected default is a suggestion, not a user edit.
+        if saved.branch.is_empty()
+            && automatic_branch.get().as_deref() == Some(current.branch.as_str())
+        {
+            current.branch.clear();
+        }
+        saved != current
             || access_dirty.get()
             || create_access_dirty.get()
             || front_access_dirty.get()
@@ -140,6 +149,68 @@ pub fn Projects(
     let pending = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let refresh_failed = RwSignal::new(false);
+    let branch_loading = RwSignal::new(false);
+    let branch_error = RwSignal::new(String::new());
+    let branch_request = RwSignal::new(0u64);
+    let detect_branch = Callback::new(move |repo: String| {
+        let selected = draft.get_untracked();
+        if selected.id.is_empty()
+            || selected.repo != repo
+            || !selected.branch.trim().is_empty()
+            || branch_loading.get_untracked()
+        {
+            return;
+        }
+        let credential = match token.get_value() {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        branch_request.update(|value| *value += 1);
+        let request = branch_request.get_untracked();
+        branch_loading.set(true);
+        branch_error.set(String::new());
+        spawn_local(async move {
+            let result = async {
+                let response = write(
+                    &credential,
+                    Method::POST,
+                    "/api/repositories/default-branch",
+                    &serde_json::json!({"path":repo}),
+                )
+                .await?;
+                let value: serde_json::Value = response
+                    .json()
+                    .await
+                    .map_err(|_| "message.invalid_server_response".to_owned())?;
+                Ok::<_, String>(
+                    value["branch"]
+                        .as_str()
+                        .filter(|value| !value.is_empty())
+                        .map(str::to_owned),
+                )
+            }
+            .await;
+            if branch_request.try_get_untracked() != Some(request) {
+                return;
+            }
+            branch_loading.set(false);
+            let current = draft.get_untracked();
+            if current.id != selected.id
+                || current.repo != repo
+                || !current.branch.trim().is_empty()
+            {
+                return;
+            }
+            match result {
+                Ok(Some(branch)) => {
+                    automatic_branch.set(Some(branch.clone()));
+                    draft.update(|draft| draft.branch = branch);
+                }
+                Ok(None) => branch_error.set("message.project_branch_not_detected".into()),
+                Err(_) => branch_error.set("message.project_branch_read_failed".into()),
+            }
+        });
+    });
     let error_text = move || {
         let message = i18n.text(&error.get());
         if refresh_failed.get() {
@@ -149,11 +220,43 @@ pub fn Projects(
             message
         }
     };
+    let navigation = StoredValue::new(None::<Callback<()>>);
     let confirmation = RwSignal::new("");
+    let confirmation_name = RwSignal::new(String::new());
+    let confirmation_focus = StoredValue::new(String::new());
+    let ask_confirmation = move |action| {
+        confirmation_focus.set_value(
+            document()
+                .active_element()
+                .map(|element| element.id())
+                .unwrap_or_default(),
+        );
+        confirmation_name.set(String::new());
+        confirmation.set(action);
+    };
+    let dismiss_confirmation = move || {
+        navigation.set_value(None);
+        confirmation.set("");
+        let target = confirmation_focus.get_value();
+        request_animation_frame(move || {
+            if let Some(element) = document()
+                .get_element_by_id(&target)
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+        });
+    };
     let archive = RwSignal::new(false);
     let editing = RwSignal::new(false);
+    let tab = RwSignal::new(0usize);
+    const TABS: [(&str, &str); 4] = [
+        ("general", "message.general"),
+        ("agent", "message.agent"),
+        ("launch", "message.project_launch_tab"),
+        ("automation", "message.project_automation_tab"),
+    ];
     let creating = RwSignal::new(false);
-    let navigation = StoredValue::new(None::<Callback<()>>);
     let close = move || {
         if let Some(next) = navigation.get_value() {
             navigation.set_value(None);
@@ -167,16 +270,7 @@ pub fn Projects(
             return;
         }
         if dirty.get_untracked() {
-            confirmation.set("discard");
-            request_animation_frame(move || {
-                if let Some(element) = document()
-                    .get_element_by_id("discard-project-navigation")
-                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
-                {
-                    element.scroll_into_view();
-                    let _ = element.focus();
-                }
-            });
+            ask_confirmation("discard");
         } else {
             close();
         }
@@ -204,6 +298,21 @@ pub fn Projects(
     });
     on_cleanup(move || unload.remove());
     let select = move |value: Draft| {
+        automatic_branch.set(None);
+        for flag in [
+            access_dirty,
+            create_access_dirty,
+            front_access_dirty,
+            back_access_dirty,
+        ] {
+            flag.set(false);
+        }
+        branch_request.update(|value| *value += 1);
+        branch_loading.set(false);
+        branch_error.set(String::new());
+        if original.get_untracked().id != value.id {
+            tab.set(0);
+        }
         original.set(value.clone());
         draft.set(value);
         confirmation.set("");
@@ -212,6 +321,7 @@ pub fn Projects(
         archive.set(false);
     };
     let close_settings = move || {
+        navigation.set_value(None);
         let target = if creating.get_untracked() {
             "add-project".to_owned()
         } else {
@@ -234,7 +344,7 @@ pub fn Projects(
             return;
         }
         if dirty.get_untracked() {
-            confirmation.set("settings-discard");
+            ask_confirmation("settings-discard");
         } else {
             close_settings();
         }
@@ -288,7 +398,7 @@ pub fn Projects(
         });
     };
     let save = move |remove: bool| {
-        if pending.get_untracked() {
+        if pending.get_untracked() || branch_loading.get_untracked() {
             return;
         }
         refresh_failed.set(false);
@@ -354,9 +464,8 @@ pub fn Projects(
                     }
                 }
                 // A failed refresh must not turn an already committed creation into a retry.
-                board.refresh(&token).await.map_err(|message| {
+                board.refresh(&token).await.inspect_err(|_message| {
                     refresh_failed.set(true);
-                    message
                 })?;
                 Ok::<(), String>(())
             }
@@ -366,39 +475,74 @@ pub fn Projects(
                 error.set(message);
             }
             pending.set(false);
+            if remove && draft.get_untracked().id.is_empty() {
+                request_animation_frame(move || {
+                    if let Some(element) = document()
+                        .get_element_by_id("add-project")
+                        .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                    {
+                        let _ = element.focus();
+                    }
+                });
+            }
         });
     };
     view! {
         <section id="projects-page" class="projects-page" aria-labelledby="workspace-title">
             <div class="projects-page-actions">
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="close-projects"
                     type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| request_close()}
-                >
-                    {move || i18n.text("message.back")}
-                </button>
-                <button
-                    id="add-project"
-                    class="primary"
-                    type="button"
-                    disabled={move || pending.get() || dirty.get()}
                     on:click={move |_| {
-                        select(Draft::default());
-                        editing.set(false);
-                        creating.set(true);
+                        if editing.get_untracked() {
+                            request_settings_close();
+                        } else {
+                            request_close();
+                        }
+                    }}
+                >
+                    {move || {
+                        i18n.text(
+                            if editing.get() {
+                                "message.project_back_to_list"
+                            } else {
+                                "message.project_back_to_overview"
+                            },
+                        )
+                    }}
+                </crate::button::Button>
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Primary}
+                    disabled={Signal::derive(move || pending.get())}
+                    class="primary"
+                    {..}
+                    id="add-project"
+                    type="button"
+                    on:click={move |_| {
+                        navigation
+                            .set_value(
+                                Some(
+                                    Callback::new(move |()| {
+                                        select(Draft::default());
+                                        editing.set(false);
+                                        creating.set(true);
+                                    }),
+                                ),
+                            );
+                        request_close();
                     }}
                 >
                     {move || i18n.text("message.add_a_project")}
-                </button>
+                </crate::button::Button>
             </div>
             <p class="error" role="alert" hidden={move || editing.get() || creating.get()}>
                 {error_text}
             </p>
             <div class="projects-workspace" class:project-detail-open={move || editing.get()}>
                 <section class="project-catalog" aria-label={move || i18n.text("message.saved_projects")}>
-                    <h2>{move || i18n.text("message.your_projects")}</h2>
+                    <h2>{move || i18n.text("message.saved_projects")}</h2>
                     <div id="project-list">
                         <For
                             each={move || projects.get()}
@@ -415,28 +559,42 @@ pub fn Projects(
                                         })
                                 };
                                 view! {
-                                    <button
-                                        class="project-choice"
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        class="ui-card-choice project-choice"
+                                        {..}
                                         data-project-id={id.get_value()}
                                         id={format!("project-settings-{}", id.get_value())}
                                         type="button"
                                         aria-pressed={move || (draft.get().id == id.get_value()).to_string()}
-                                        disabled={move || pending.get() || dirty.get()}
                                         on:click={move |_| {
-                                            if let Some(project) = current() {
-                                                select(Draft::from_document(&project));
-                                                editing.set(true);
-                                                request_animation_frame(move || {
-                                                    if let Some(element) = document()
-                                                        .get_element_by_id("project-settings-title")
-                                                        .and_then(|element| {
-                                                            element.dyn_into::<web_sys::HtmlElement>().ok()
-                                                        })
-                                                    {
-                                                        let _ = element.focus();
-                                                    }
-                                                });
+                                            if editing.get_untracked()
+                                                && draft.get_untracked().id == id.get_value()
+                                            {
+                                                return;
                                             }
+                                            navigation
+                                                .set_value(
+                                                    Some(
+                                                        Callback::new(move |()| {
+                                                            if let Some(project) = current() {
+                                                                select(Draft::from_document(&project));
+                                                                editing.set(true);
+                                                                request_animation_frame(move || {
+                                                                    if let Some(element) = document()
+                                                                        .get_element_by_id("project-settings-title")
+                                                                        .and_then(|element| {
+                                                                            element.dyn_into::<web_sys::HtmlElement>().ok()
+                                                                        })
+                                                                    {
+                                                                        let _ = element.focus();
+                                                                    }
+                                                                });
+                                                            }
+                                                        }),
+                                                    ),
+                                                );
+                                            request_close();
                                         }}
                                     >
                                         <strong>
@@ -453,7 +611,21 @@ pub fn Projects(
                                                     .unwrap_or_default()
                                             }}
                                         </small>
-                                    </button>
+                                        <span class="project-choice-action">
+                                            {move || i18n.text("message.project_configure")}
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.7"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="m9 5 7 7-7 7" />
+                                            </svg>
+                                        </span>
+                                    </crate::button::Button>
                                 }
                             }}
                         />
@@ -469,88 +641,160 @@ pub fn Projects(
                     aria-labelledby="project-settings-title"
                 >
                     <header class="project-detail-heading">
-                        <div>
-                            <h2 id="project-settings-title" tabindex="-1">
-                                {move || draft.get().name}
-                            </h2>
-                            <p class="hint">{move || i18n.text("message.project_settings")}</p>
-                        </div>
-                        <button
+                        <h2 id="project-settings-title" tabindex="-1">
+                            {move || draft.get().name}
+                        </h2>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            class="project-open-tasks"
+                            {..}
                             type="button"
-                            disabled={move || pending.get()}
-                            on:click={move |_| request_settings_close()}
+                            on:click={move |_| {
+                                navigation
+                                    .set_value(
+                                        Some(
+                                            Callback::new(move |()| {
+                                                repository.set(original.get_untracked().repo);
+                                                on_close.run(());
+                                            }),
+                                        ),
+                                    );
+                                request_close();
+                            }}
                         >
-                            {move || i18n.text("message.back")}
-                        </button>
+                            {move || i18n.text("message.project_open_tasks")}
+                        </crate::button::Button>
                     </header>
-                    <button
-                        class="project-open-tasks"
-                        type="button"
-                        disabled={move || pending.get() || dirty.get()}
-                        on:click={move |_| {
-                            repository.set(draft.get_untracked().repo);
-                            close();
-                        }}
+                    <nav
+                        class="project-tabs"
+                        role="tablist"
+                        aria-label={move || i18n.text("message.settings_sections")}
                     >
-                        {move || i18n.text("message.task_board")}
-                    </button>
-                    <form
+                        {TABS
+                            .into_iter()
+                            .enumerate()
+                            .map(move |(index, (id, label))| {
+                                view! {
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        class="view-tab"
+                                        {..}
+                                        type="button"
+                                        role="tab"
+                                        class:selected-tab={move || tab.get() == index}
+                                        id={format!("project-tab-{id}")}
+                                        aria-controls={format!("project-panel-{id}")}
+                                        aria-selected={move || (tab.get() == index).to_string()}
+                                        tabindex={move || if tab.get() == index { "0" } else { "-1" }}
+                                        on:click={move |_| tab.set(index)}
+                                        on:keydown={move |event: web_sys::KeyboardEvent| {
+                                            if pending.get_untracked() {
+                                                return;
+                                            }
+                                            let next = match event.key().as_str() {
+                                                "ArrowRight" => (index + 1) % TABS.len(),
+                                                "ArrowLeft" => (index + TABS.len() - 1) % TABS.len(),
+                                                "Home" => 0,
+                                                "End" => TABS.len() - 1,
+                                                _ => return,
+                                            };
+                                            event.prevent_default();
+                                            tab.set(next);
+                                            if let Some(element) = document()
+                                                .get_element_by_id(&format!("project-tab-{}", TABS[next].0))
+                                                .and_then(|element| {
+                                                    element.dyn_into::<web_sys::HtmlElement>().ok()
+                                                })
+                                            {
+                                                let _ = element.focus();
+                                            }
+                                        }}
+                                    >
+                                        {move || i18n.text(label)}
+                                    </crate::button::Button>
+                                }
+                            })
+                            .collect_view()}
+                    </nav>
+                    <crate::form::Form
+                        busy={Signal::derive(move || pending.get())}
+                        on_submit={Callback::new(move |_| save(false))}
+                        on_invalid={Callback::new(move |invalid: web_sys::Element| {
+                            if let Ok(Some(panel)) = invalid.closest("[role=tabpanel]")
+                                && let Some(index) = TABS
+                                    .iter()
+                                    .position(|(id, _)| panel.id() == format!("project-panel-{id}"))
+                                {
+                                    tab.set(index);
+                                }
+                        })}
+                        {..}
                         id="project-settings-form"
-                        on:submit={move |event| {
-                            event.prevent_default();
-                            save(false);
-                        }}
                     >
                         <fieldset disabled={move || pending.get()}>
-                            <section class="form-section">
-                                <div class="section-heading">
-                                    <h3>{move || i18n.text("message.main_project")}</h3>
-                                </div>
-                                <label for="project-name">{move || i18n.text("message.project_name")}</label>
-                                <input
+                            <section
+                                id="project-panel-general"
+                                class="form-section"
+                                role="tabpanel"
+                                aria-labelledby="project-tab-general"
+                                hidden={move || tab.get() != 0}
+                            >
+                                <crate::form::Field
                                     id="project-name"
-                                    required
-                                    maxlength="100"
-                                    autofocus
-                                    prop:value={move || draft.get().name}
-                                    on:input={move |event| {
-                                        draft.update(|draft| draft.name = event_target_value(&event))
-                                    }}
-                                />
-                                <label for="project-repo">
-                                    {move || i18n.text("message.git_repository_location")}
-                                </label>
-                                <div class="directory-picker">
-                                    <input
-                                        id="project-repo"
-                                        required
-                                        maxlength="2000"
-                                        spellcheck="false"
-                                        readonly={move || repository_locked.get()}
-                                        prop:value={move || draft.get().repo}
+                                    label={Signal::derive(move || i18n.text("message.project_name"))}
+                                >
+                                    <crate::form::Input
+                                        {..}
+                                        id="project-name"
+                                        required=true
+                                        maxlength="100"
+                                        autofocus=true
+                                        prop:value={move || draft.get().name}
                                         on:input={move |event| {
-                                            draft.update(|draft| draft.repo = event_target_value(&event))
+                                            draft.update(|draft| draft.name = event_target_value(&event))
                                         }}
                                     />
-                                    <button
-                                        id="browse-project-settings"
-                                        type="button"
-                                        disabled={move || repository_locked.get()}
-                                        on:click={move |_| browse()}
-                                    >
-                                        {move || i18n.text("message.browse")}
-                                    </button>
-                                </div>
+                                </crate::form::Field>
+                                <crate::form::Field
+                                    id="project-repo"
+                                    label={Signal::derive(move || {
+                                        i18n.text("message.git_repository_location")
+                                    })}
+                                >
+                                    <div class="directory-picker">
+                                        <crate::form::Input
+                                            copy=true
+                                            {..}
+                                            id="project-repo"
+                                            required=true
+                                            maxlength="2000"
+                                            spellcheck="false"
+                                            readonly={move || repository_locked.get()}
+                                            prop:value={move || draft.get().repo}
+                                            on:input={move |event| {
+                                                draft.update(|draft| draft.repo = event_target_value(&event))
+                                            }}
+                                        />
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || repository_locked.get())}
+                                            {..}
+                                            id="browse-project-settings"
+                                            type="button"
+                                            on:click={move |_| browse()}
+                                        >
+                                            {move || i18n.text("message.browse")}
+                                        </crate::button::Button>
+                                    </div>
+                                </crate::form::Field>
                                 <p class="hint">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if repository_locked.get() {
-                                                    "message.remove_this_projects_worktrees_before_changing_its_location"
-                                                } else {
-                                                    "message.choose_an_existing_folder_no_files_will_be_moved_project_cards_w"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if repository_locked.get() {
+                                                "message.remove_this_projects_worktrees_before_changing_its_location"
+                                            } else {
+                                                "message.choose_an_existing_folder_no_files_will_be_moved_project_cards_w"
+                                            },
+                                        )
                                     }}
                                 </p>
                                 <crate::repository_access::RepositoryAccess
@@ -561,58 +805,105 @@ pub fn Projects(
                                         if editing.get() { draft.get().repo } else { String::new() }
                                     })}
                                     id="project-edit-access"
+                                    on_authorized={detect_branch}
                                 />
-                                <label for="project-branch">{move || i18n.text("message.base_branch")}</label>
-                                <input
+                                <crate::form::Field
                                     id="project-branch"
-                                    maxlength="180"
-                                    placeholder={move || i18n.text("message.default_value")}
-                                    prop:value={move || draft.get().branch}
-                                    on:input={move |event| {
-                                        draft.update(|draft| draft.branch = event_target_value(&event))
-                                    }}
-                                />
-                                <label for="project-rules">
-                                    {move || i18n.text("message.project_instructions")}
-                                </label>
-                                <textarea
-                                    id="project-rules"
-                                    rows="4"
-                                    maxlength="12000"
-                                    prop:value={move || draft.get().rules}
-                                    on:input={move |event| {
-                                        draft.update(|draft| draft.rules = event_target_value(&event))
-                                    }}
-                                ></textarea>
-                                <label for="project-agent">
-                                    {move || i18n.text("message.preferred_agent")}
-                                </label>
-                                <select
-                                    id="project-agent"
-                                    prop:value={move || draft.get().agent}
-                                    on:change={move |event| {
-                                        draft.update(|draft| draft.agent = event_target_value(&event))
-                                    }}
+                                    label={Signal::derive(move || i18n.text("message.base_branch"))}
+                                    help={Signal::derive(move || {
+                                        i18n.text(
+                                            if branch_loading.get() {
+                                                "message.project_branch_loading"
+                                            } else {
+                                                "message.project_branch_help"
+                                            },
+                                        )
+                                    })}
+                                    error={Signal::derive(move || i18n.text(&branch_error.get()))}
                                 >
-                                    <option value="">
-                                        {move || i18n.text("message.inherit_global_setting")}
-                                    </option>
-                                    <For
-                                        each={move || providers(&board.settings.get()).unwrap_or_default()}
-                                        key={|provider| field(provider, "id")}
-                                        children={move |provider| {
-                                            view! {
-                                                <option value={field(
-                                                    &provider,
-                                                    "id",
-                                                )}>{field(&provider, "name")}</option>
-                                            }
+                                    <crate::form::Input
+                                        {..}
+                                        id="project-branch"
+                                        maxlength="180"
+                                        placeholder={move || i18n.text("message.project_branch_automatic")}
+
+                                        prop:value={move || draft.get().branch}
+                                        on:input={move |event| {
+                                            draft.update(|draft| draft.branch = event_target_value(&event))
                                         }}
                                     />
-                                </select>
+                                </crate::form::Field>
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || pending.get() || branch_loading.get())}
+                                    {..}
+                                    type="button"
+                                    hidden={move || branch_error.get().is_empty()}
+                                    on:click={move |_| detect_branch.run(draft.get_untracked().repo)}
+                                >
+                                    {move || i18n.text("message.project_retry")}
+                                </crate::button::Button>
                             </section>
-                            <section class="form-section">
-                                <h3>{move || i18n.text("message.application_launch")}</h3>
+                            <section
+                                id="project-panel-agent"
+                                class="form-section"
+                                role="tabpanel"
+                                aria-labelledby="project-tab-agent"
+                                hidden={move || tab.get() != 1}
+                            >
+                                <crate::form::Field
+                                    id="project-rules"
+                                    label={Signal::derive(move || i18n.text("message.project_instructions"))}
+                                >
+                                    <crate::form::Textarea
+                                        {..}
+                                        id="project-rules"
+                                        rows="4"
+                                        maxlength="12000"
+                                        prop:value={move || draft.get().rules}
+                                        on:input={move |event| {
+                                            draft.update(|draft| draft.rules = event_target_value(&event))
+                                        }}
+                                    ></crate::form::Textarea>
+                                </crate::form::Field>
+                                <crate::form::Field
+                                    id="project-agent"
+                                    label={Signal::derive(move || i18n.text("message.preferred_agent"))}
+                                >
+                                    <crate::form::Select
+                                        {..}
+                                        id="project-agent"
+                                        prop:value={move || draft.get().agent}
+                                        on:change={move |event| {
+                                            draft.update(|draft| draft.agent = event_target_value(&event))
+                                        }}
+                                    >
+                                        <option value="">
+                                            {move || i18n.text("message.inherit_global_setting")}
+                                        </option>
+                                        <For
+                                            each={move || {
+                                                providers(&board.settings.get()).unwrap_or_default()
+                                            }}
+                                            key={|provider| field(provider, "id")}
+                                            children={move |provider| {
+                                                view! {
+                                                    <option value={field(
+                                                        &provider,
+                                                        "id",
+                                                    )}>{field(&provider, "name")}</option>
+                                                }
+                                            }}
+                                        />
+                                    </crate::form::Select>
+                                </crate::form::Field>
+                            </section>
+                            <section
+                                id="project-panel-launch"
+                                class="form-section"
+                                role="tabpanel"
+                                aria-labelledby="project-tab-launch"
+                                hidden={move || tab.get() != 2}
+                            >
                                 <ProjectServices
                                     draft={draft}
                                     pending={pending}
@@ -620,17 +911,16 @@ pub fn Projects(
                                     access_dirty={[front_access_dirty, back_access_dirty]}
                                 />
                             </section>
-                            <section class="form-section">
-                                <p class="field-help">
-                                    {move || i18n.text("message.configure_jira_mapping_in_kanban")}
-                                </p>
-                            </section>
-                            <section class="form-section">
-                                <h3>{move || i18n.text("message.automatic_development")}</h3>
-                                <label for="project-test-command">
-                                    {move || i18n.text("message.verification_command")}
-                                </label>
-                                <textarea
+                            <section
+                                id="project-panel-automation"
+                                class="form-section"
+                                role="tabpanel"
+                                aria-labelledby="project-tab-automation"
+                                hidden={move || tab.get() != 3}
+                            >
+                                <crate::form::Field id="project-test-command" label=Signal::derive(move || i18n.text("message.verification_command"))>
+                                <crate::form::Textarea
+                                    {..}
                                     id="project-test-command"
                                     maxlength="2000"
                                     rows="2"
@@ -639,31 +929,35 @@ pub fn Projects(
                                     on:input={move |event| {
                                         draft.update(|draft| draft.verification = event_target_value(&event))
                                     }}
-                                />
+                                /></crate::form::Field>
                                 <p class="field-help">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.this_command_runs_explicitly_in_the_task_worktree_with_your_acco",
-                                            )
+                                        i18n.text(
+                                            "message.this_command_runs_explicitly_in_the_task_worktree_with_your_acco",
+                                        )
                                     }}
                                 </p>
-                                <label for="project-pr-target">
-                                    {move || i18n.text("message.workflow_target_branch")}
-                                </label>
-                                <input
+                                <crate::form::Field
                                     id="project-pr-target"
-                                    maxlength="180"
-                                    spellcheck="false"
-                                    prop:value={move || draft.get().target}
-                                    on:input={move |event| {
-                                        draft.update(|draft| draft.target = event_target_value(&event))
-                                    }}
-                                />
+                                    label={Signal::derive(move || {
+                                        i18n.text("message.workflow_target_branch")
+                                    })}
+                                >
+                                    <crate::form::Input
+                                        {..}
+                                        id="project-pr-target"
+                                        maxlength="180"
+                                        spellcheck="false"
+                                        prop:value={move || draft.get().target}
+                                        on:input={move |event| {
+                                            draft.update(|draft| draft.target = event_target_value(&event))
+                                        }}
+                                    />
+                                </crate::form::Field>
                                 <label>
-                                    <input
+                                    <crate::form::Switch
+                                        {..}
                                         id="project-automation"
-                                        type="checkbox"
                                         prop:checked={move || draft.get().automation}
                                         on:change={move |event| {
                                             draft
@@ -675,9 +969,9 @@ pub fn Projects(
                                     {move || i18n.text("message.allow_automatic_workflows_for_this_project")}
                                 </label>
                                 <label>
-                                    <input
+                                    <crate::form::Switch
+                                        {..}
                                         id="project-auto-fix"
-                                        type="checkbox"
                                         prop:checked={move || draft.get().auto_fix}
                                         on:change={move |event| {
                                             draft
@@ -688,148 +982,105 @@ pub fn Projects(
                                 </label>
                                 <p class="field-help">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.the_workflow_starts_agents_and_checks_after_confirmation_on_the",
-                                            )
+                                        i18n.text(
+                                            "message.the_workflow_starts_agents_and_checks_after_confirmation_on_the",
+                                        )
                                     }}
                                 </p>
-                                <label for="project-linked">
-                                    {move || i18n.text("message.linked_project_for_testing")}
-                                </label>
-                                <select
+                                <crate::form::Field
                                     id="project-linked"
-                                    prop:value={move || draft.get().linked}
-                                    on:change={move |event| {
-                                        draft.update(|draft| draft.linked = event_target_value(&event))
-                                    }}
+                                    label={Signal::derive(move || {
+                                        i18n.text("message.linked_project_for_testing")
+                                    })}
+                                    help={Signal::derive(move || {
+                                        i18n.text(
+                                            "message.commands_and_the_linked_project_are_saved_for_future_launches_th",
+                                        )
+                                    })}
                                 >
-                                    <option value="">{move || i18n.text("message.no_linked_project")}</option>
-                                    <For
-                                        each={move || {
-                                            projects
-                                                .get()
-                                                .into_iter()
-                                                .filter(|project| field(project, "id") != draft.get().id)
-                                                .collect::<Vec<_>>()
-                                        }}
-                                        key={|project| field(project, "id")}
-                                        children={move |project| {
-                                            let id = field(&project, "id");
-                                            let option_id = id.clone();
-                                            view! {
-                                                <option value={option_id}>
-                                                    {move || {
-                                                        projects
-                                                            .with(|projects| {
-                                                                projects
-                                                                    .iter()
-                                                                    .find(|project| field(project, "id") == id)
-                                                                    .map(|project| field(project, "name"))
-                                                                    .unwrap_or_default()
-                                                            })
-                                                    }}
-                                                </option>
-                                            }
-                                        }}
+                                    <crate::form::Combobox
+                                        id="project-linked"
+                                        value={Signal::derive(move || draft.get().linked)}
+                                        disabled={Signal::derive(move || pending.get())}
+                                        describedby="project-linked-field-help"
+                                        on_change={Callback::new(move |value| {
+                                            draft.update(|draft| draft.linked = value)
+                                        })}
+                                        options={Signal::derive(move || {
+                                            let mut choices = vec![
+                                                crate::form::Choice {
+                                                    value: String::new(),
+                                                    label: i18n.text("message.no_linked_project"),
+                                                },
+                                            ];
+                                            choices
+                                                .extend(
+                                                    projects
+                                                        .get()
+                                                        .into_iter()
+                                                        .filter(|project| field(project, "id") != draft.get().id)
+                                                        .map(|project| crate::form::Choice {
+                                                            value: field(&project, "id"),
+                                                            label: field(&project, "name"),
+                                                        }),
+                                                );
+                                            choices
+                                        })}
                                     />
-                                </select>
-                                <p class="field-help">
-                                    {move || {
-                                        i18n
-                                            .text(
-                                                "message.commands_and_the_linked_project_are_saved_for_future_launches_th",
-                                            )
-                                    }}
-                                </p>
+                                </crate::form::Field>
                             </section>
                         </fieldset>
                         <p id="project-error" class="error" role="alert">
                             {error_text}
                         </p>
-                        <div class="form-actions">
-                            <button
-                                id="save-project"
+                        <crate::modal::ModalActions {..} >
+                            <crate::button::Button
+                                busy={Signal::derive(move || pending.get())}
+                                variant={crate::button::ButtonVariant::Primary}
+                                disabled={Signal::derive(move || pending.get() || branch_loading.get() || !dirty.get())}
                                 class="primary"
+                                {..}
+                                id="save-project"
                                 type="submit"
-                                disabled={move || pending.get() || !dirty.get()}
                             >
                                 {move || {
                                     i18n.text(if pending.get() { "message.saving" } else { "message.save" })
                                 }}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get())}
+                                {..}
                                 id="reset-project"
                                 type="button"
-                                disabled={move || pending.get() || !dirty.get()}
-                                on:click={move |_| confirmation.set("reset")}
+                                on:click={move |_| {
+                                    if dirty.get_untracked() {
+                                        ask_confirmation("settings-discard");
+                                    } else {
+                                        close_settings();
+                                    }
+                                }}
                             >
-                                {move || i18n.text("message.discard_changes_8bc1ff70")}
-                            </button>
-                        </div>
-                    </form>
-                    <div class="editor-secondary" hidden={move || draft.get().id.is_empty()}>
-                        <button
-                            id="remove-project"
+                                {move || i18n.text("message.cancel")}
+                            </crate::button::Button>
+                        </crate::modal::ModalActions>
+                    </crate::form::Form>
+                    <div
+                        class="editor-secondary"
+                        hidden={move || draft.get().id.is_empty() || tab.get() != 0}
+                    >
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Danger}
+                            disabled={Signal::derive(move || pending.get() || dirty.get())}
                             class="danger"
+                            {..}
+                            id="remove-project"
                             type="button"
-                            disabled={move || pending.get() || dirty.get()}
-                            on:click={move |_| confirmation.set("remove")}
+                            on:click={move |_| ask_confirmation("remove")}
                         >
                             {move || i18n.text("message.remove_this_project")}
-                        </button>
+                        </crate::button::Button>
                     </div>
-                    <div
-                        class="confirmation"
-                        role="alert"
-                        hidden={move || {
-                            !matches!(confirmation.get(), "remove" | "reset" | "settings-discard")
-                        }}
-                    >
-                        <p>
-                            {move || {
-                                i18n
-                                    .text(
-                                        if confirmation.get() == "remove" {
-                                            "message.remove_this_project_from_the_list_repository_files_and_tasks_wil"
-                                        } else {
-                                            "message.discard_unsaved_changes"
-                                        },
-                                    )
-                            }}
-                        </p>
-                        <label class="check-filter" hidden={move || confirmation.get() != "remove"}>
-                            <input
-                                id="archive-project-tasks"
-                                type="checkbox"
-                                prop:checked={move || archive.get()}
-                                on:change={move |event| archive.set(event_target_checked(&event))}
-                            />
-                            {move || i18n.text("message.also_archive_this_project_s_tasks")}
-                        </label>
-                        <button
-                            id="confirm-project"
-                            class="danger"
-                            type="button"
-                            disabled={move || pending.get()}
-                            on:click={move |_| match confirmation.get_untracked() {
-                                "remove" => save(true),
-                                "reset" => select(original.get_untracked()),
-                                "settings-discard" => close_settings(),
-                                _ => close(),
-                            }}
-                        >
-                            {move || i18n.text("message.confirm")}
-                        </button>
-                        <button
-                            id="cancel-project-confirmation"
-                            type="button"
-                            disabled={move || pending.get()}
-                            on:click={move |_| confirmation.set("")}
-                        >
-                            {move || i18n.text("message.back")}
-                        </button>
-                    </div>
+
                 </section>
                 <p
                     class="project-selection-hint hint"
@@ -838,66 +1089,43 @@ pub fn Projects(
                     {move || i18n.text("message.select_project_to_configure")}
                 </p>
             </div>
-            <div class="confirmation" role="alert" hidden={move || confirmation.get() != "discard"}>
-                <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
-                <button
-                    id="discard-project-navigation"
-                    type="button"
-                    class="danger"
-                    on:click={move |_| close()}
-                >
-                    {move || i18n.text("message.discard")}
-                </button>
-                <button
-                    type="button"
-                    on:click={move |_| {
-                        navigation.set_value(None);
-                        confirmation.set("");
-                    }}
-                >
-                    {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
+
         </section>
         <Show when={move || creating.get()}>
             <crate::modal::Modal
                 id="project-create-dialog"
                 labelledby="project-create-title"
+                busy={Signal::derive(move || pending.get())}
                 node_ref={NodeRef::new()}
                 on_close={Callback::new(move |()| {
                     if !pending.get_untracked() {
                         if dirty.get_untracked() {
-                            confirmation.set("create-discard");
+                            ask_confirmation("create-discard");
                         } else {
                             close_settings();
                         }
                     }
                 })}
             >
-                <header class="dialog-heading">
-                    <h2 id="project-create-title">{move || i18n.text("message.add_a_project")}</h2>
-                    <button
-                        type="button"
-                        data-close=""
-                        disabled={move || pending.get()}
-                        on:click={move |_| {
-                            if dirty.get_untracked() {
-                                confirmation.set("create-discard");
-                            } else {
-                                close_settings();
-                            }
-                        }}
-                    >
-                        {move || i18n.text("message.close")}
-                    </button>
-                </header>
-                <form
+                <crate::modal::ModalHeader
+                    title_id="project-create-title"
+                    title={Signal::derive(move || i18n.text("message.add_a_project"))}
+                    close_id="close-project-create"
+                    busy={Signal::derive(move || pending.get())}
+                    on_close={Callback::new(move |()| {
+                        if dirty.get_untracked() {
+                            ask_confirmation("create-discard");
+                        } else {
+                            close_settings();
+                        }
+                    })}
+                />
+                <crate::form::Form
+                    busy={Signal::derive(move || pending.get())}
+                    on_submit={Callback::new(move |_| save(false))}
+                    {..}
                     id="project-form"
                     class="form-section"
-                    on:submit={move |event| {
-                        event.prevent_default();
-                        save(false);
-                    }}
                 >
                     <div class="section-heading">
                         <div>
@@ -908,32 +1136,49 @@ pub fn Projects(
                         </div>
                     </div>
                     <fieldset disabled={move || pending.get() || editing.get()}>
-                        <label for="project-create-name">{move || i18n.text("message.project_name")}</label>
-                        <input
+                        <crate::form::Field
                             id="project-create-name"
-                            required
-                            maxlength="100"
-                            placeholder={move || i18n.text("message.my_application")}
-                            prop:value={move || draft.get().name}
-                            on:input={move |event| {
-                                draft.update(|draft| draft.name = event_target_value(&event))
-                            }}
-                        />
-                        <label for="project-directory">{move || i18n.text("message.local_directory")}</label>
-                        <div class="directory-picker">
-                            <input
-                                id="project-directory"
-                                required
-                                maxlength="2000"
-                                prop:value={move || draft.get().repo}
+                            label={Signal::derive(move || i18n.text("message.project_name"))}
+                        >
+                            <crate::form::Input
+                                {..}
+                                id="project-create-name"
+                                autofocus=true
+                                required=true
+                                maxlength="100"
+                                placeholder={move || i18n.text("message.my_application")}
+                                prop:value={move || draft.get().name}
                                 on:input={move |event| {
-                                    draft.update(|draft| draft.repo = event_target_value(&event))
+                                    draft.update(|draft| draft.name = event_target_value(&event))
                                 }}
                             />
-                            <button id="browse-project" type="button" on:click={move |_| browse()}>
-                                {move || i18n.text("message.browse")}
-                            </button>
-                        </div>
+                        </crate::form::Field>
+                        <crate::form::Field
+                            id="project-directory"
+                            label={Signal::derive(move || i18n.text("message.local_directory"))}
+                        >
+                            <div class="directory-picker">
+                                <crate::form::Input
+                                    copy=true
+                                    {..}
+                                    id="project-directory"
+                                    required=true
+                                    maxlength="2000"
+                                    prop:value={move || draft.get().repo}
+                                    on:input={move |event| {
+                                        draft.update(|draft| draft.repo = event_target_value(&event))
+                                    }}
+                                />
+                                <crate::button::Button
+                                    {..}
+                                    id="browse-project"
+                                    type="button"
+                                    on:click={move |_| browse()}
+                                >
+                                    {move || i18n.text("message.browse")}
+                                </crate::button::Button>
+                            </div>
+                        </crate::form::Field>
                         <crate::repository_access::RepositoryAccess
                             token
                             pending
@@ -945,36 +1190,158 @@ pub fn Projects(
                         />
                         <p class="hint">
                             {move || {
-                                i18n
-                                    .text(
-                                        "message.choose_an_existing_folder_or_paste_its_path_worktrees_require_a",
-                                    )
+                                i18n.text(
+                                    "message.choose_an_existing_folder_or_paste_its_path_worktrees_require_a",
+                                )
                             }}
                         </p>
-                        <div class="form-actions">
-                            <button class="primary" type="submit" disabled={move || !dirty.get()}>
+                        <crate::modal::ModalActions {..} >
+                            <crate::button::Button
+                                busy={Signal::derive(move || pending.get())}
+                                variant={crate::button::ButtonVariant::Primary}
+                                disabled={Signal::derive(move || !dirty.get())}
+                                class="primary"
+                                {..}
+                                type="submit"
+                            >
                                 {move || i18n.text("message.add_project")}
-                            </button>
-                        </div>
+                            </crate::button::Button>
+                        </crate::modal::ModalActions>
                     </fieldset>
                     <p class="error" role="alert">
                         {error_text}
                     </p>
-                </form>
+                </crate::form::Form>
 
-                <div
-                    class="confirmation"
-                    role="alert"
-                    hidden={move || confirmation.get() != "create-discard"}
-                >
-                    <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
-                    <button type="button" class="danger" on:click={move |_| close_settings()}>
-                        {move || i18n.text("message.discard")}
-                    </button>
-                    <button type="button" on:click={move |_| confirmation.set("")}>
-                        {move || i18n.text("message.keep_editing")}
-                    </button>
-                </div>
+            </crate::modal::Modal>
+        </Show>
+        <Show when={move || !confirmation.get().is_empty()}>
+            <crate::modal::Modal
+                id="project-confirmation-dialog"
+                labelledby="project-confirmation-title"
+                busy={Signal::derive(move || pending.get())}
+                node_ref={NodeRef::new()}
+                on_close={Callback::new(move |()| {
+                    if !pending.get_untracked() {
+                        dismiss_confirmation();
+                    }
+                })}
+            >
+                <crate::modal::ModalHeader
+                    title_id="project-confirmation-title"
+                    title={Signal::derive(move || {
+                        i18n.text(
+                            if confirmation.get() == "remove" {
+                                "message.project_remove_title"
+                            } else {
+                                "message.project_discard_title"
+                            },
+                        )
+                    })}
+                    busy={Signal::derive(move || pending.get())}
+                    on_close={Callback::new(move |()| dismiss_confirmation())}
+                />
+                <crate::modal::ModalBody class="project-confirmation-body">
+                    <p>
+                        {move || {
+                            i18n.text(
+                                if confirmation.get() == "remove" {
+                                    "message.remove_this_project_from_the_list_repository_files_and_tasks_wil"
+                                } else {
+                                    "message.project_discard_description"
+                                },
+                            )
+                        }}
+                    </p>
+                    <Show when={move || confirmation.get() == "remove"}>
+                        <label class="check-filter">
+                            <crate::form::Checkbox
+                                {..}
+                                id="archive-project-tasks"
+                                disabled={move || pending.get()}
+                                prop:checked={move || archive.get()}
+                                on:change={move |event| archive.set(event_target_checked(&event))}
+                            />
+                            {move || i18n.text("message.also_archive_this_project_s_tasks")}
+                        </label>
+                        <crate::form::Field id="project-confirmation-name" label=Signal::derive(move || {
+                                i18n.text("message.project_type_name_to_remove")
+                                    .replace("{0}", &draft.get().name)
+                            })>
+                        <crate::form::Input
+                            {..}
+                            id="project-confirmation-name"
+                            maxlength="100"
+                            autocomplete="off"
+                            spellcheck="false"
+                            autofocus=true
+                            disabled={move || pending.get()}
+                            prop:value={move || confirmation_name.get()}
+                            on:input={move |event| confirmation_name.set(event_target_value(&event))}
+                        /></crate::form::Field>
+                        <p class="error" role="alert">
+                            {error_text}
+                        </p>
+                    </Show>
+                    <crate::modal::ModalActions>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
+                            id="cancel-project-confirmation"
+                            type="button"
+                            autofocus={move || confirmation.get() != "remove"}
+                            on:click={move |_| dismiss_confirmation()}
+                        >
+                            {move || {
+                                i18n.text(
+                                    if confirmation.get() == "remove" {
+                                        "message.cancel"
+                                    } else {
+                                        "message.keep_editing"
+                                    },
+                                )
+                            }}
+                        </crate::button::Button>
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Danger}
+                            disabled={Signal::derive(move || {
+                                pending.get()
+                                    || (confirmation.get() == "remove"
+                                        && (branch_loading.get()
+                                            || confirmation_name.get() != draft.get().name))
+                            })}
+                            class="danger"
+                            {..}
+                            id={move || {
+                                if confirmation.get() == "discard" {
+                                    "discard-project-navigation"
+                                } else {
+                                    "confirm-project"
+                                }
+                            }}
+                            type="button"
+                            on:click={move |_| match confirmation.get_untracked() {
+                                "remove" => {
+                                    if confirmation_name.get_untracked() == draft.get_untracked().name {
+                                        save(true);
+                                    }
+                                }
+                                "discard" => close(),
+                                _ => close_settings(),
+                            }}
+                        >
+                            {move || {
+                                i18n.text(
+                                    if confirmation.get() == "remove" {
+                                        "message.remove_project"
+                                    } else {
+                                        "message.project_discard_changes"
+                                    },
+                                )
+                            }}
+                        </crate::button::Button>
+                    </crate::modal::ModalActions>
+                </crate::modal::ModalBody>
             </crate::modal::Modal>
         </Show>
     }
@@ -1073,22 +1440,25 @@ fn ProjectServices(
                                 aria-labelledby={format!("project-{role}-heading")}
                             >
                                 <legend id={format!("project-{role}-heading")}>{label}</legend>
-                                <label for={format!(
-                                    "project-{role}-repo",
-                                )}>{move || i18n.text("message.service_repository")}</label>
-                                <input
+                                <crate::form::Field
                                     id={format!("project-{role}-repo")}
-                                    maxlength="2000"
-                                    spellcheck="false"
-                                    placeholder={move || i18n.text("message.main_repository_when_empty")}
-                                    prop:value={move || draft.get().services[index].repo.clone()}
-                                    on:input={move |event| {
-                                        draft
-                                            .update(|draft| {
-                                                draft.services[index].repo = event_target_value(&event);
-                                            })
-                                    }}
-                                />
+                                    label={Signal::derive(move || i18n.text("message.service_repository"))}
+                                >
+                                    <crate::form::Input
+                                        {..}
+                                        id={format!("project-{role}-repo")}
+                                        maxlength="2000"
+                                        spellcheck="false"
+                                        placeholder={move || i18n.text("message.main_repository_when_empty")}
+                                        prop:value={move || draft.get().services[index].repo.clone()}
+                                        on:input={move |event| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.services[index].repo = event_target_value(&event);
+                                                })
+                                        }}
+                                    />
+                                </crate::form::Field>
                                 <crate::repository_access::RepositoryAccess
                                     token
                                     pending
@@ -1100,75 +1470,89 @@ fn ProjectServices(
                                         "project-back-access"
                                     }}
                                 />
-                                <label for={format!(
-                                    "project-{role}-directory",
-                                )}>{move || i18n.text("message.service_subfolder")}</label>
-                                <input
+                                <crate::form::Field
                                     id={format!("project-{role}-directory")}
-                                    maxlength="2000"
-                                    spellcheck="false"
-                                    placeholder={move || i18n.text("message.worktree_root_when_empty")}
-                                    prop:value={move || draft.get().services[index].directory.clone()}
-                                    on:input={move |event| {
-                                        draft
-                                            .update(|draft| {
-                                                draft.services[index].directory = event_target_value(&event);
-                                            })
-                                    }}
-                                />
-                                <label for={format!(
-                                    "project-{role}-command",
-                                )}>{move || i18n.text("message.launch_command")}</label>
-                                <textarea
+                                    label={Signal::derive(move || i18n.text("message.service_subfolder"))}
+                                >
+                                    <crate::form::Input
+                                        {..}
+                                        id={format!("project-{role}-directory")}
+                                        maxlength="2000"
+                                        spellcheck="false"
+                                        placeholder={move || i18n.text("message.worktree_root_when_empty")}
+                                        prop:value={move || draft.get().services[index].directory.clone()}
+                                        on:input={move |event| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.services[index].directory = event_target_value(
+                                                        &event,
+                                                    );
+                                                })
+                                        }}
+                                    />
+                                </crate::form::Field>
+                                <crate::form::Field
                                     id={format!("project-{role}-command")}
-                                    rows="2"
-                                    maxlength="2000"
-                                    spellcheck="false"
-                                    prop:value={move || draft.get().services[index].command.clone()}
-                                    on:input={move |event| {
-                                        draft
-                                            .update(|draft| {
-                                                draft.services[index].command = event_target_value(&event);
-                                            })
-                                    }}
-                                ></textarea>
-                                <label for={format!(
-                                    "project-{role}-port",
-                                )}>{move || i18n.text("message.preferred_port")}</label>
-                                <input
+                                    label={Signal::derive(move || i18n.text("message.launch_command"))}
+                                >
+                                    <crate::form::Textarea
+                                        {..}
+                                        id={format!("project-{role}-command")}
+                                        rows="2"
+                                        maxlength="2000"
+                                        spellcheck="false"
+                                        prop:value={move || draft.get().services[index].command.clone()}
+                                        on:input={move |event| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.services[index].command = event_target_value(&event);
+                                                })
+                                        }}
+                                    ></crate::form::Textarea>
+                                </crate::form::Field>
+                                <crate::form::Field
                                     id={format!("project-{role}-port")}
-                                    type="number"
-                                    min="0"
-                                    max="65535"
-                                    step="1"
-                                    prop:value={move || draft.get().services[index].port.clone()}
-                                    on:input={move |event| {
-                                        draft
-                                            .update(|draft| {
-                                                draft.services[index].port = event_target_value(&event);
-                                            })
-                                    }}
-                                />
+                                    label={Signal::derive(move || i18n.text("message.preferred_port"))}
+                                >
+                                    <crate::form::Input
+                                        {..}
+                                        id={format!("project-{role}-port")}
+                                        type="number"
+                                        min="0"
+                                        max="65535"
+                                        step="1"
+                                        prop:value={move || draft.get().services[index].port.clone()}
+                                        on:input={move |event| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.services[index].port = event_target_value(&event);
+                                                })
+                                        }}
+                                    />
+                                </crate::form::Field>
                                 <p class="field-help">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.0_or_empty_automatic_port_use_port_in_the_command_to_receive_the",
-                                            )
+                                        i18n.text(
+                                            "message.0_or_empty_automatic_port_use_port_in_the_command_to_receive_the",
+                                        )
                                     }}
                                 </p>
-                                <button id={format!("detect-{role}")} type="button" on:click={detect}>
+                                <crate::button::Button
+                                    {..}
+                                    id={format!("detect-{role}")}
+                                    type="button"
+                                    on:click={detect}
+                                >
                                     {move || i18n.text("message.detect_commands")}
-                                </button>
+                                </crate::button::Button>
                                 <p
                                     class="field-help"
                                     hidden={move || !scanned.get() || !candidates.get().is_empty()}
                                 >
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.no_command_detected_you_can_enter_your_own_command",
-                                            )
+                                        i18n.text(
+                                            "message.no_command_detected_you_can_enter_your_own_command",
+                                        )
                                     }}
                                 </p>
                                 <div class="project-list">
@@ -1188,11 +1572,12 @@ fn ProjectServices(
                                                 command,
                                             );
                                             view! {
-                                                <button
+                                                <crate::button::Button
+                                                    disabled={!runnable}
                                                     class="launch-candidate"
+                                                    {..}
                                                     data-role={role}
                                                     type="button"
-                                                    disabled={!runnable}
                                                     on:click={move |_| {
                                                         draft
                                                             .update(|draft| {
@@ -1202,7 +1587,7 @@ fn ProjectServices(
                                                     }}
                                                 >
                                                     {text}
-                                                </button>
+                                                </crate::button::Button>
                                             }
                                         }}
                                     />

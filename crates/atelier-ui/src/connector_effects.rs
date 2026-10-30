@@ -363,8 +363,7 @@ pub fn ConnectorEffects(
                         pending.get() || loading.get() || blocked.get()
                             || operations
                                 .with(|rows| {
-                                    rows
-                                        .iter()
+                                    rows.iter()
                                         .any(|row| {
                                             matches!(
                                                 row.state,
@@ -375,40 +374,54 @@ pub fn ConnectorEffects(
                     }}
                 >
                     <legend>{move || i18n.text("message.create_a_remote_ticket")}</legend>
-                    <label for="connector-ticket-kind">{move || i18n.text("message.ticket_type")}</label>
-                    <input
+                    <crate::form::Field
                         id="connector-ticket-kind"
-                        maxlength="100"
-                        prop:value={move || ticket_kind.get()}
-                        on:input={move |event| ticket_kind.set(event_target_value(&event))}
-                    />
-                    <label for="connector-ticket-title">{move || i18n.text("message.title")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.ticket_type"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="connector-ticket-kind"
+                            maxlength="100"
+                            prop:value={move || ticket_kind.get()}
+                            on:input={move |event| ticket_kind.set(event_target_value(&event))}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="connector-ticket-title"
-                        maxlength="255"
-                        prop:value={move || ticket_title.get()}
-                        on:input={move |event| ticket_title.set(event_target_value(&event))}
-                    />
-                    <label for="connector-ticket-description">
-                        {move || i18n.text("message.description")}
-                    </label>
-                    <textarea
+                        label={Signal::derive(move || i18n.text("message.title"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="connector-ticket-title"
+                            maxlength="255"
+                            prop:value={move || ticket_title.get()}
+                            on:input={move |event| ticket_title.set(event_target_value(&event))}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="connector-ticket-description"
-                        maxlength="20000"
-                        prop:value={move || ticket_description.get()}
-                        on:input={move |event| ticket_description.set(event_target_value(&event))}
-                    ></textarea>
-                    <button
-                        type="button"
-                        disabled={move || {
+                        label={Signal::derive(move || i18n.text("message.description"))}
+                    >
+                        <crate::form::Textarea
+                            {..}
+                            id="connector-ticket-description"
+                            maxlength="20000"
+                            prop:value={move || ticket_description.get()}
+                            on:input={move |event| ticket_description.set(event_target_value(&event))}
+                        ></crate::form::Textarea>
+                    </crate::form::Field>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || {
                             ticket_kind.get().trim().is_empty() || ticket_title.get().trim().is_empty()
-                        }}
+                        })}
+                        {..}
+                        type="button"
                         on:click={move |_| {
                             execute.with_value(|execute| execute(("@create-ticket".into(), None)))
                         }}
                     >
                         {move || i18n.text("message.prepare_ticket_creation")}
-                    </button>
+                    </crate::button::Button>
                 </fieldset>
                 <p class="field-help">
                     {move || {
@@ -437,10 +450,8 @@ pub fn ConnectorEffects(
                             let selected = StoredValue::new(action.id);
                             let label = action.label;
                             view! {
-                                <button
-                                    class="prepare-connector-effect"
-                                    type="button"
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         pending.get() || loading.get() || blocked.get()
                                             || operations
                                                 .with(|operations| {
@@ -453,7 +464,10 @@ pub fn ConnectorEffects(
                                                             )
                                                         })
                                                 })
-                                    }}
+                                    })}
+                                    class="prepare-connector-effect"
+                                    {..}
+                                    type="button"
                                     on:click={move |_| {
                                         execute.with_value(|execute| execute((selected.get_value(), None)))
                                     }}
@@ -467,23 +481,24 @@ pub fn ConnectorEffects(
                                                 &label,
                                             ))
                                     }}
-                                </button>
+                                </crate::button::Button>
                             }
                         }}
                     />
                 </div>
             </Show>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                {..}
                 id={reload_id}
                 type="button"
-                disabled={move || pending.get() || loading.get()}
                 on:click={move |_| {
                     error.set(String::new());
                     load.with_value(|load| load());
                 }}
             >
                 {move || i18n.text("message.reload_operation_history")}
-            </button>
+            </crate::button::Button>
             <p hidden={move || {
                 loading.get() || !operations.with(Vec::is_empty)
             }}>{move || i18n.text("message.no_operations_recorded_for_this_connector")}</p>
@@ -549,8 +564,9 @@ pub fn ConnectorEffects(
                         .transpose()
                         .unwrap_or_default()
                         .unwrap_or_default();
+                    let operation_id = operation.id.clone();
                     view! {
-                        <article class="task-files" data-connector-operation={operation.id.clone()}>
+                        <crate::card::Card class="task-files" {..} data-connector-operation={operation_id}>
                             <h5>{translated(i18n, &operation.manifest, &label)}</h5>
                             <p class="connector-effect-state">{i18n.text(state(operation.state))}</p>
                             <code>{operation.id.clone()}</code>
@@ -769,9 +785,9 @@ pub fn ConnectorEffects(
                             </dl>
                             <div hidden={!matches!(operation.state, Phase::Preparing | Phase::Uncertain)}>
                                 <label>
-                                    <input
+                                    <crate::form::Checkbox
+                                        {..}
                                         class="confirm-connector-effect"
-                                        type="checkbox"
                                         disabled={move || {
                                             pending.get() || loading.get()
                                                 || (blocked.get()
@@ -791,27 +807,27 @@ pub fn ConnectorEffects(
                                         }}
                                     />
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if current.with_value(|operation| operation.state)
-                                                    == Phase::Uncertain
-                                                {
-                                                    "message.reconcile_this_operation_without_resending_its_action"
-                                                } else {
-                                                    "message.send_this_action_once_in_the_displayed_scope"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if current.with_value(|operation| operation.state)
+                                                == Phase::Uncertain
+                                            {
+                                                "message.reconcile_this_operation_without_resending_its_action"
+                                            } else {
+                                                "message.send_this_action_once_in_the_displayed_scope"
+                                            },
+                                        )
                                     }}
                                 </label>
-                                <button
-                                    class="send-connector-effect"
-                                    type="button"
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         pending.get() || loading.get()
                                             || (blocked.get()
                                                 && current.with_value(|operation| operation.state)
                                                     != Phase::Uncertain) || approved.get() != key()
-                                    }}
+                                    })}
+                                    class="send-connector-effect"
+                                    {..}
+                                    type="button"
                                     on:click={move |_| {
                                         execute
                                             .with_value(|execute| execute((
@@ -828,23 +844,23 @@ pub fn ConnectorEffects(
                                     }}
                                 >
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if current.with_value(|operation| operation.state)
-                                                    == Phase::Uncertain
-                                                {
-                                                    "message.reconcile_remote_effect"
-                                                } else {
-                                                    "message.confirm_single_send"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if current.with_value(|operation| operation.state)
+                                                == Phase::Uncertain
+                                            {
+                                                "message.reconcile_remote_effect"
+                                            } else {
+                                                "message.confirm_single_send"
+                                            },
+                                        )
                                     }}
-                                </button>
-                                <button
+                                </crate::button::Button>
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || pending.get() || loading.get())}
                                     class="cancel-connector-effect"
+                                    {..}
                                     hidden={operation.state != Phase::Preparing}
                                     type="button"
-                                    disabled={move || pending.get() || loading.get()}
                                     on:click={move |_| {
                                         execute
                                             .with_value(|execute| execute((
@@ -854,26 +870,28 @@ pub fn ConnectorEffects(
                                     }}
                                 >
                                     {move || i18n.text("message.cancel_this_unsubmitted_preview")}
-                                </button>
+                                </crate::button::Button>
                             </div>
-                        </article>
+                        </crate::card::Card>
                     }
                 }}
             />
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || page.get() == 0)}
+                {..}
                 type="button"
-                disabled={move || page.get() == 0}
                 on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
             >
                 {move || i18n.text("message.previous")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || { (page.get() + 1) * 20 >= operations.with(Vec::len) })}
+                {..}
                 type="button"
-                disabled={move || (page.get() + 1) * 20 >= operations.with(Vec::len)}
                 on:click={move |_| page.update(|page| *page += 1)}
             >
                 {move || i18n.text("message.next")}
-            </button>
+            </crate::button::Button>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

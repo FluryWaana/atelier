@@ -156,28 +156,26 @@ pub fn AgentCliUpdate(
             <h4 id="cli-update-heading">{move || i18n.text("message.cli_update")}</h4>
             <p>
                 {move || {
-                    info
-                        .get()
+                    info.get()
                         .map(|info| {
-                            i18n
-                                .text(
-                                    match info.availability {
-                                        Availability::Available => "message.a_newer_version_is_available",
-                                        Availability::Manual => {
-                                            "message.the_update_command_is_available_its_target_version_is_unknown"
-                                        }
-                                        Availability::Current => "message.no_newer_stable_version_reported",
-                                        Availability::Unknown => {
-                                            "message.published_version_unavailable_no_update_offered"
-                                        }
-                                        Availability::Managed => {
-                                            "message.use_this_installation_s_usual_manager_for_updates"
-                                        }
-                                        Availability::Custom => {
-                                            "message.custom_program_use_its_usual_manager_for_updates"
-                                        }
-                                    },
-                                )
+                            i18n.text(
+                                match info.availability {
+                                    Availability::Available => "message.a_newer_version_is_available",
+                                    Availability::Manual => {
+                                        "message.the_update_command_is_available_its_target_version_is_unknown"
+                                    }
+                                    Availability::Current => "message.no_newer_stable_version_reported",
+                                    Availability::Unknown => {
+                                        "message.published_version_unavailable_no_update_offered"
+                                    }
+                                    Availability::Managed => {
+                                        "message.use_this_installation_s_usual_manager_for_updates"
+                                    }
+                                    Availability::Custom => {
+                                        "message.custom_program_use_its_usual_manager_for_updates"
+                                    }
+                                },
+                            )
                         })
                         .unwrap_or_else(|| {
                             i18n.text("message.run_profile_diagnostics_to_check_its_version_and_updates")
@@ -186,8 +184,7 @@ pub fn AgentCliUpdate(
             </p>
             <p>
                 {move || {
-                    info
-                        .get()
+                    info.get()
                         .and_then(|info| info.latest_version)
                         .map(|version| i18n.text("message.published_version_0").replace("{0}", &version))
                         .unwrap_or_default()
@@ -196,20 +193,19 @@ pub fn AgentCliUpdate(
             <div hidden={move || key.get().is_none()}>
                 <p class="field-help">
                     {move || {
-                        i18n
-                            .text(
-                                if info.get().is_some_and(|info| info.availability == Availability::Manual) {
-                                    "message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the"
-                                } else {
-                                    "message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the_af010593"
-                                },
-                            )
+                        i18n.text(
+                            if info.get().is_some_and(|info| info.availability == Availability::Manual) {
+                                "message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the"
+                            } else {
+                                "message.close_other_sessions_of_this_cli_and_stop_atelier_operations_the_af010593"
+                            },
+                        )
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-cli-update"
-                        type="checkbox"
                         disabled={move || pending.get() || loading.get() || blocked.get() || busy()}
                         prop:checked={move || key.get().is_some_and(|key| key == approved.get())}
                         on:change={move |event| {
@@ -227,17 +223,18 @@ pub fn AgentCliUpdate(
                         i18n.text("message.update_only_the_cli_for_the_displayed_profile_and_installation")
                     }}
                 </label>
-                <button
-                    id="update-agent-cli"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || loading.get() || blocked.get() || busy()
                             || key.get().is_none_or(|key| key != approved.get())
-                    }}
+                    })}
+                    {..}
+                    id="update-agent-cli"
+                    type="button"
                     on:click={execute}
                 >
                     {move || i18n.text("message.confirm_cli_update")}
-                </button>
+                </crate::button::Button>
             </div>
             <p hidden={move || {
                 !busy()
@@ -250,7 +247,7 @@ pub fn AgentCliUpdate(
                 selected()
                     .map(|operation| {
                         view! {
-                            <article class="task-files" id="cli-update-result">
+                            <crate::card::Card class="task-files" {..}  id="cli-update-result">
                                 <p>
                                     {i18n
                                         .text(
@@ -274,32 +271,32 @@ pub fn AgentCliUpdate(
                                     {operation
                                         .target_reached
                                         .map(|reached| {
-                                            i18n
-                                                .text(
-                                                    if reached {
-                                                        "message.target_version_reached_according_to_the_cli"
-                                                    } else {
-                                                        "message.the_target_version_was_not_observed"
-                                                    },
-                                                )
+                                            i18n.text(
+                                                if reached {
+                                                    "message.target_version_reached_according_to_the_cli"
+                                                } else {
+                                                    "message.the_target_version_was_not_observed"
+                                                },
+                                            )
                                         })
                                         .unwrap_or_default()}
                                 </p>
-                            </article>
+                            </crate::card::Card>
                         }
                     })
             }}
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                {..}
                 id="reload-cli-update"
                 type="button"
-                disabled={move || pending.get() || loading.get()}
                 on:click={move |_| {
                     error.set(String::new());
                     load.with_value(|load| load());
                 }}
             >
                 {move || i18n.text("message.refresh_cli_update_status")}
-            </button>
+            </crate::button::Button>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

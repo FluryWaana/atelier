@@ -183,9 +183,9 @@ pub fn Services(
                 }}
             </p>
             <label class="check-filter">
-                <input
+                <crate::form::Checkbox
+                    {..}
                     id="services-standalone"
-                    type="checkbox"
                     disabled={move || pending.get() || running.get()}
                     prop:checked={move || standalone.get()}
                     on:change={move |event| standalone.set(event_target_checked(&event))}
@@ -193,24 +193,26 @@ pub fn Services(
                 {move || i18n.text("message.run_only_this_project")}
             </label>
             <div class="editor-actions">
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
+                        pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get()
+                    })}
+                    {..}
                     id="start-services"
                     type="button"
-                    disabled={move || {
-                        pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get()
-                    }}
                     on:click={move |_| act.with_value(|act| act("start", None))}
                 >
                     {move || i18n.text("message.start_services")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || cancelling.get() || !running.get())}
+                    {..}
                     id="stop-services"
                     type="button"
-                    disabled={move || cancelling.get() || !running.get()}
                     on:click={move |_| act.with_value(|act| act("stop", None))}
                 >
                     {move || i18n.text("message.stop_services")}
-                </button>
+                </crate::button::Button>
             </div>
             <p class="field-help" hidden={move || ready.get()}>
                 {move || i18n.text("message.prepare_and_verify_the_worktrees_before_starting_services")}
@@ -234,22 +236,21 @@ pub fn Services(
                             })
                     };
                     view! {
-                        <article class="service-state">
+                        <crate::card::Card class="service-state" {..} >
                             <h4>{move || current().map(|service| service.name).unwrap_or_default()}</h4>
                             <p class="service-status" role="status">
                                 {move || {
                                     current()
                                         .map(|service| {
-                                            i18n
-                                                .text(
-                                                    match service.status {
-                                                        ServiceStatus::Starting => "message.starting",
-                                                        ServiceStatus::Running => "message.process_running",
-                                                        ServiceStatus::Stopping => "message.stopping",
-                                                        ServiceStatus::Stopped => "message.stopped",
-                                                        ServiceStatus::Failed => "message.service_failed",
-                                                    },
-                                                )
+                                            i18n.text(
+                                                match service.status {
+                                                    ServiceStatus::Starting => "message.starting",
+                                                    ServiceStatus::Running => "message.process_running",
+                                                    ServiceStatus::Stopping => "message.stopping",
+                                                    ServiceStatus::Stopped => "message.stopped",
+                                                    ServiceStatus::Failed => "message.service_failed",
+                                                },
+                                            )
                                         })
                                         .unwrap_or_default()
                                 }}
@@ -327,22 +328,21 @@ pub fn Services(
                                 </pre>
                             </details>
                             <div class="editor-actions">
-                                <button
-                                    class="restart-service"
-                                    type="button"
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         pending.get() || cancelling.get() || blocked.get() || !ready.get()
-                                    }}
+                                    })}
+                                    class="restart-service"
+                                    {..}
+                                    type="button"
                                     on:click={move |_| {
                                         act.with_value(|act| act("restart", Some(service_id.get_value())))
                                     }}
                                 >
                                     {move || i18n.text("message.restart_this_service")}
-                                </button>
-                                <button
-                                    class="stop-service"
-                                    type="button"
-                                    disabled={move || {
+                                </crate::button::Button>
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         cancelling.get()
                                             || current()
                                                 .is_none_or(|service| {
@@ -354,15 +354,18 @@ pub fn Services(
                                                             | ServiceStatus::Stopping
                                                         )
                                                 })
-                                    }}
+                                    })}
+                                    class="stop-service"
+                                    {..}
+                                    type="button"
                                     on:click={move |_| {
                                         act.with_value(|act| act("stop", Some(service_id.get_value())))
                                     }}
                                 >
                                     {move || i18n.text("message.stop_this_service")}
-                                </button>
+                                </crate::button::Button>
                             </div>
-                        </article>
+                        </crate::card::Card>
                     }
                 }}
             />

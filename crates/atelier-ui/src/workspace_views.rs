@@ -332,19 +332,24 @@ fn Overview(
                 let id = card.id.clone();
                 let message = field(&nested(&card.fields, "automation"), "message");
                 view! {
-                    <article class="worktree-box">
+                    <crate::card::Card class="worktree-box" {..} >
                         <strong>{title(&card)}</strong>
                         <p>{i18n.text(&message)}</p>
-                        <button data-open-card={id.clone()} on:click={move |_| on_open.run(id.clone())}>
+                        <crate::button::Button
+                            {..}
+                            data-open-card={id.clone()}
+                            on:click={move |_| on_open.run(id.clone())}
+                        >
                             {i18n.text("message.view_result")}
-                        </button>
+                        </crate::button::Button>
                         <PullRequest card />
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
         <div class="overview-metrics">
-            <button
+            <crate::button::Button
+                {..}
                 data-go-view="board"
                 data-focus-target="review"
                 on:click={move |_| on_focus.run("review".into())}
@@ -359,8 +364,9 @@ fn Overview(
                     }}
                 </strong>
                 <small>{i18n.text("message.review_completed_work")}</small>
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                {..}
                 data-go-view="board"
                 data-focus-target="attention"
                 on:click={move |_| on_focus.run("attention".into())}
@@ -368,13 +374,21 @@ fn Overview(
                 <span>{i18n.text("message.to_resume")}</span>
                 <strong>{move || attention.with(Vec::len)}</strong>
                 <small>{i18n.text("message.examine_interruptions")}</small>
-            </button>
-            <button data-go-view="agents" on:click={move |_| on_view.run(WorkspaceView::Agents)}>
+            </crate::button::Button>
+            <crate::button::Button
+                {..}
+                data-go-view="agents"
+                on:click={move |_| on_view.run(WorkspaceView::Agents)}
+            >
                 <span>{i18n.text("message.active_agents")}</span>
                 <strong>{move || runs.with(|runs| runs.iter().filter(|run| active(run)).count())}</strong>
                 <small>{i18n.text("message.follow_runs")}</small>
-            </button>
-            <button data-go-view="time" on:click={move |_| on_view.run(WorkspaceView::Time)}>
+            </crate::button::Button>
+            <crate::button::Button
+                {..}
+                data-go-view="time"
+                on:click={move |_| on_view.run(WorkspaceView::Time)}
+            >
                 <span>{i18n.text("message.time_awaiting_approval")}</span>
                 <strong>
                     {move || {
@@ -408,7 +422,7 @@ fn Overview(
                     }}
                 </strong>
                 <small>{i18n.text("message.review_before_sending_to_tempo")}</small>
-            </button>
+            </crate::button::Button>
         </div>
         <div class="overview-columns">
             <section class="overview-section">
@@ -435,8 +449,9 @@ fn Overview(
                             .flatten()
                             .unwrap_or_default();
                         view! {
-                            <button
+                            <crate::button::Button
                                 class="next-task"
+                                {..}
                                 data-open-card={id.clone()}
                                 on:click={move |_| on_open.run(id.clone())}
                             >
@@ -459,7 +474,7 @@ fn Overview(
                                             .replace("{1}", &criteria.len().to_string())
                                     }}
                                 </small>
-                            </button>
+                            </crate::button::Button>
                         }
                     }}
                 />
@@ -472,7 +487,7 @@ fn Overview(
                     <h2>{i18n.text("message.recent_runs")}</h2>
                 </div>
                 <For
-                    each={move || runs.get().into_iter().take(5).collect::<Vec<_>>()}
+                    each={move || { runs.get().into_iter().take(5).collect::<Vec<_>>() }}
                     key={|run| serde_json::to_string(run).unwrap_or_default()}
                     children={move |run| {
                         let id = field(&run, "cardId");
@@ -482,8 +497,9 @@ fn Overview(
                             });
                         let current = StoredValue::new(run);
                         view! {
-                            <button
+                            <crate::button::Button
                                 class="recent-run"
+                                {..}
                                 data-open-card={id.clone()}
                                 on:click={move |_| on_open.run(id.clone())}
                             >
@@ -500,20 +516,22 @@ fn Overview(
                                     &current.get_value(),
                                     "id",
                                 )}>{move || elapsed(&current.get_value(), now.get())}</small>
-                            </button>
+                            </crate::button::Button>
                         }
                     }}
                 />
                 <p class="empty" hidden={move || !runs.with(Vec::is_empty)}>
                     {i18n.text("message.your_agents_will_appear_here_from_their_first_task")}
                 </p>
-                <button
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Ghost}
                     class="text-button"
+                    {..}
                     data-go-view="worktrees"
                     on:click={move |_| on_view.run(WorkspaceView::Worktrees)}
                 >
                     {i18n.text("message.view_branches_worktrees_and_prs")}
-                </button>
+                </crate::button::Button>
             </section>
         </div>
     }
@@ -544,22 +562,20 @@ fn Agents(
                             <span>{i18n.text(label)}</span>
                             <strong>
                                 {move || {
-                                    runs
-                                        .with(|runs| {
-                                            runs
-                                                .iter()
-                                                .filter(|run| match kind {
-                                                    0 => active(run),
-                                                    1 => field(run, "status") == "completed",
-                                                    _ => {
-                                                        matches!(
-                                                            field(run, "status").as_str(),
-                                                            "failed" | "cancelled" | "interrupted"
-                                                        )
-                                                    }
-                                                })
-                                                .count()
-                                        })
+                                    runs.with(|runs| {
+                                        runs.iter()
+                                            .filter(|run| match kind {
+                                                0 => active(run),
+                                                1 => field(run, "status") == "completed",
+                                                _ => {
+                                                    matches!(
+                                                        field(run, "status").as_str(),
+                                                        "failed" | "cancelled" | "interrupted"
+                                                    )
+                                                }
+                                            })
+                                            .count()
+                                    })
                                 }}
                             </strong>
                             <small>{i18n.text(help)}</small>
@@ -597,8 +613,7 @@ fn Agents(
                 </strong>
                 " "
                 {move || {
-                    i18n
-                        .text("message.across_0_run_s_with_cost_total_time")
+                    i18n.text("message.across_0_run_s_with_cost_total_time")
                         .replace(
                             "{0}",
                             &runs
@@ -611,8 +626,7 @@ fn Agents(
                     {move || duration_text(
                         runs
                             .with(|runs| {
-                                runs
-                                    .iter()
+                                runs.iter()
                                     .filter_map(|run| run.get::<u64>("activeMilliseconds").ok().flatten())
                                     .fold(0u64, u64::saturating_add)
                             }) / 1000,
@@ -623,8 +637,7 @@ fn Agents(
             </p>
             <p class="hint">
                 {move || {
-                    i18n
-                        .text("message.0_run_s_without_cost_data_current_scope_all_dates_indicative_api")
+                    i18n.text("message.0_run_s_without_cost_data_current_scope_all_dates_indicative_api")
                         .replace(
                             "{0}",
                             &runs
@@ -645,7 +658,7 @@ fn Agents(
                 let open = card_id.clone();
                 let stop = run_id.clone();
                 view! {
-                    <article class="workspace-row agent-run" data-status={field(&data.get_value(), "status")}>
+                    <crate::card::Card class="workspace-row agent-run" {..}  data-status={field(&data.get_value(), "status")}>
                         <div>
                             <span class={format!(
                                 "agent-pill {}",
@@ -689,23 +702,26 @@ fn Agents(
                             </code>
                         </div>
                         <div class="row-actions">
-                            <button
+                            <crate::button::Button
+                                {..}
                                 data-open-card={open.clone()}
                                 on:click={move |_| on_open.run(open.clone())}
                             >
                                 {i18n.text("message.open_task")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Danger}
+                                disabled={Signal::derive(move || busy.get())}
                                 class="danger"
+                                {..}
                                 hidden={!active(&data.get_value())}
-                                disabled={move || busy.get()}
                                 data-stop-agent={stop.clone()}
                                 on:click={move |_| on_stop.run(stop.clone())}
                             >
                                 {i18n.text("message.stop")}
-                            </button>
+                            </crate::button::Button>
                         </div>
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
@@ -978,27 +994,32 @@ fn Processes(
                 </p>
             </div>
             <div class="row-actions">
-                <button
-                    id="start-selected-projects"
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Primary}
+                    disabled={Signal::derive(move || busy.get() || start_selected().is_empty())}
                     class="primary"
-                    disabled={move || busy.get() || start_selected().is_empty()}
+                    {..}
+                    id="start-selected-projects"
                     on:click={move |_| action.run(start_selected())}
                 >
                     {i18n.text("message.launch_selected")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
                     id="refresh-processes"
-                    disabled={move || busy.get()}
                     on:click={move |_| manual_refresh()}
                 >
                     {i18n.text("message.refresh")}
-                </button>
-                <button
-                    id="stop-visible-processes"
-                    class="danger"
-                    disabled={move || {
+                </crate::button::Button>
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    disabled={Signal::derive(move || {
                         busy.get() || !visible_sessions.with(|sessions| sessions.iter().any(session_active))
-                    }}
+                    })}
+                    class="danger"
+                    {..}
+                    id="stop-visible-processes"
                     on:click={move |_| {
                         action
                             .run(
@@ -1012,7 +1033,7 @@ fn Processes(
                     }}
                 >
                     {i18n.text("message.stop_everything_in_this_view")}
-                </button>
+                </crate::button::Button>
             </div>
         </div>
         <For
@@ -1058,7 +1079,7 @@ fn Processes(
                         })
                 };
                 view! {
-                    <article class="workspace-row">
+                    <crate::card::Card class="workspace-row" {..} >
                         <div>
                             <h3>{field(&item, "name")}</h3>
                             <p class="hint">
@@ -1077,9 +1098,8 @@ fn Processes(
                                     i18n.text("message.enter_commands_in_settings")
                                 }}
                             </p>
-                            <label>
-                                {i18n.text("message.worktree")}
-                                <select
+                            <crate::form::Field label=Signal::derive(move || i18n.text("message.worktree"))><crate::form::Select
+                                    {..}
                                     data-launch-project={id.get_value()}
                                     disabled={move || busy.get() || occupied() || !configured}
                                     prop:value={move || current.get()}
@@ -1122,8 +1142,7 @@ fn Processes(
                                             }
                                         }}
                                     />
-                                </select>
-                            </label>
+                                </crate::form::Select></crate::form::Field>
                             <p class="path-text">
                                 {move || {
                                     choices
@@ -1141,31 +1160,32 @@ fn Processes(
                             </p>
                         </div>
                         <div class="row-actions">
-                            <button
-                                data-launch-one={id.get_value()}
-                                disabled={move || {
+                            <crate::button::Button
+                                disabled={Signal::derive(move || {
                                     busy.get() || occupied() || !configured || current.get().is_empty()
-                                }}
+                                })}
+                                {..}
+                                data-launch-one={id.get_value()}
                                 on:click={move |_| action.run(vec![(current.get_untracked(), "start", None)])}
                             >
                                 {i18n.text("message.launch")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || busy.get())}
+                                {..}
                                 data-launch-settings={id.get_value()}
-                                disabled={move || busy.get()}
                                 on:click={move |_| on_projects.run(())}
                             >
                                 {i18n.text("message.configure_launch")}
-                            </button>
+                            </crate::button::Button>
                         </div>
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
         <h3>
             {move || {
-                i18n
-                    .text("message.services_and_logs_0_running")
+                i18n.text("message.services_and_logs_0_running")
                     .replace(
                         "{0}",
                         &visible_sessions
@@ -1230,7 +1250,7 @@ fn Processes(
                     .map(|worktree| worktree.branch)
                     .unwrap_or_else(|| i18n.text("message.card_worktree"));
                 view! {
-                    <article class="process-stack">
+                    <crate::card::Card class="process-stack" {..} >
                         <div class="panel-heading">
                             <div>
                                 <span class="eyebrow">
@@ -1249,30 +1269,30 @@ fn Processes(
                                 </p>
                             </div>
                             <div class="row-actions">
-                                <button
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || busy.get())}
+                                    {..}
                                     data-open-card={id.get_value()}
-                                    disabled={move || busy.get()}
                                     on:click={move |_| on_open.run(id.get_value())}
                                 >
                                     {i18n.text("message.view_card")}
-                                </button>
-                                <button
-                                    data-process-action="start"
-                                    data-process-card={id.get_value()}
-                                    disabled={move || {
+                                </crate::button::Button>
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         busy.get() || !ready
                                             || current
                                                 .with(|session| session.as_ref().is_some_and(session_active))
-                                    }}
+                                    })}
+                                    {..}
+                                    data-process-action="start"
+                                    data-process-card={id.get_value()}
                                     on:click={move |_| action.run(vec![(id.get_value(), "start", None)])}
                                 >
                                     {i18n.text("message.start_all")}
-                                </button>
-                                <button
-                                    class="danger"
-                                    data-process-action="stop"
-                                    data-process-card={id.get_value()}
-                                    disabled={move || {
+                                </crate::button::Button>
+                                <crate::button::Button
+                                    variant={crate::button::ButtonVariant::Danger}
+                                    disabled={Signal::derive(move || {
                                         busy.get()
                                             || current
                                                 .with(|session| {
@@ -1280,11 +1300,15 @@ fn Processes(
                                                         .as_ref()
                                                         .is_none_or(|session| !session_active(session))
                                                 })
-                                    }}
+                                    })}
+                                    class="danger"
+                                    {..}
+                                    data-process-action="stop"
+                                    data-process-card={id.get_value()}
                                     on:click={move |_| action.run(vec![(id.get_value(), "stop", None)])}
                                 >
                                     {i18n.text("message.stop_all")}
-                                </button>
+                                </crate::button::Button>
                             </div>
                         </div>
                         <div class="process-services">
@@ -1332,7 +1356,7 @@ fn Processes(
                                 }}
                             </pre>
                         </details>
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
@@ -1381,8 +1405,7 @@ fn ProcessService(
                                                 &service
                                                     .exit_code
                                                     .map(|code| {
-                                                        i18n
-                                                            .text("message.code_0")
+                                                        i18n.text("message.code_0")
                                                             .replace("{0}", &code.to_string())
                                                     })
                                                     .unwrap_or_default(),
@@ -1398,14 +1421,8 @@ fn ProcessService(
                         .into_iter()
                         .map(move |(operation, label)| {
                             view! {
-                                <button
-                                    class={if operation == "stop" { "danger" } else { "" }}
-                                    data-process-action={operation}
-                                    data-process-card={card_id.get_value()}
-                                    data-service-id={move || {
-                                        service.get().map(|service| service.id).unwrap_or_default()
-                                    }}
-                                    disabled={move || {
+                                <crate::button::Button
+                                    disabled={Signal::derive(move || {
                                         busy.get()
                                             || service
                                                 .with(|service| {
@@ -1421,6 +1438,13 @@ fn ProcessService(
                                                             }
                                                         })
                                                 })
+                                    })}
+                                    class={if operation == "stop" { "danger" } else { "" }}
+                                    {..}
+                                    data-process-action={operation}
+                                    data-process-card={card_id.get_value()}
+                                    data-service-id={move || {
+                                        service.get().map(|service| service.id).unwrap_or_default()
                                     }}
                                     on:click={move |_| {
                                         if let Some(service) = service.get_untracked() {
@@ -1438,7 +1462,7 @@ fn ProcessService(
                                     }}
                                 >
                                     {i18n.text(label)}
-                                </button>
+                                </crate::button::Button>
                             }
                         })
                         .collect_view()}
@@ -1448,7 +1472,7 @@ fn ProcessService(
                 {move || service.get().map(|service| service.directory).unwrap_or_default()}
             </p>
             <p class="hint">
-                {i18n.text("message.port_assigned_by_atelier")}" "
+                {i18n.text("message.port_assigned_by_atelier")} " "
                 <code>
                     {move || {
                         service
@@ -1457,7 +1481,7 @@ fn ProcessService(
                             .map(|port| port.to_string())
                             .unwrap_or_else(|| "-".into())
                     }}
-                </code>" "{i18n.text("message.launcher_pid")}" "
+                </code>" "{i18n.text("message.launcher_pid")} " "
                 <code>
                     {move || {
                         service
@@ -1759,20 +1783,22 @@ fn Worktrees(
                 </p>
             </div>
             <div class="row-actions">
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
                     id="refresh-prs"
-                    disabled={move || busy.get()}
                     on:click={move |_| refresh_prs.run(())}
                 >
                     {i18n.text("message.refresh_prs")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
                     id="inspect-worktrees"
-                    disabled={move || busy.get()}
                     on:click={move |_| inspect.run(())}
                 >
                     {i18n.text("message.refresh_git_status")}
-                </button>
+                </crate::button::Button>
             </div>
         </div>
         <p role="status">{move || i18n.text(&notice.get())}</p>
@@ -1787,38 +1813,39 @@ fn Worktrees(
                 {i18n.text("message.completed_or_archived_tasks_or_merged_prs_refresh_git_status_bef")}
             </p>
             <For
-                each={move || cards.get().into_iter().filter(cleanup_candidate).collect::<Vec<_>>()}
+                each={move || { cards.get().into_iter().filter(cleanup_candidate).collect::<Vec<_>>() }}
                 key={|card| serde_json::to_string(card).unwrap_or_default()}
                 children={move |card| {
                     let id = StoredValue::new(card.id.clone());
                     view! {
-                        <article class="workspace-row">
+                        <crate::card::Card class="workspace-row" {..} >
                             <div>
                                 <h3>{title(&card)}</h3>
                                 <p class="hint">{move || check_label(&id.get_value(), true)}</p>
                             </div>
-                            <button
-                                class="danger"
-                                data-clean-candidate={id.get_value()}
-                                disabled={move || {
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Danger}
+                                disabled={Signal::derive(move || {
                                     busy.get()
                                         || runs
                                             .with(|runs| {
-                                                runs
-                                                    .iter()
+                                                runs.iter()
                                                     .any(|run| {
                                                         field(run, "cardId") == id.get_value() && active(run)
                                                     })
                                             })
-                                }}
+                                })}
+                                class="danger"
+                                {..}
+                                data-clean-candidate={id.get_value()}
                                 on:click={move |_| {
                                     force.set(false);
                                     removing.set(Some(id.get_value()));
                                 }}
                             >
                                 {i18n.text("message.remove_without_forcing")}
-                            </button>
-                        </article>
+                            </crate::button::Button>
+                        </crate::card::Card>
                     }
                 }}
             />
@@ -1842,17 +1869,21 @@ fn Worktrees(
             children={move |card| {
                 let id = card.id.clone();
                 view! {
-                    <article class="workspace-row">
+                    <crate::card::Card class="workspace-row" {..} >
                         <div>
                             <h3>{title(&card)}</h3>
                             <PullRequest card />
                         </div>
                         <div class="row-actions">
-                            <button data-open-card={id.clone()} on:click={move |_| on_open.run(id.clone())}>
+                            <crate::button::Button
+                                {..}
+                                data-open-card={id.clone()}
+                                on:click={move |_| on_open.run(id.clone())}
+                            >
                                 {i18n.text("message.open_task")}
-                            </button>
+                            </crate::button::Button>
                         </div>
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
@@ -1876,7 +1907,7 @@ fn Worktrees(
                     .flatten()
                     .unwrap_or_default();
                 view! {
-                    <article class="workspace-row worktree-row">
+                    <crate::card::Card class="workspace-row worktree-row" {..} >
                         <div>
                             <span class="section-kicker">
                                 {if key.is_empty() { i18n.text("message.local_branch") } else { key }}
@@ -1909,36 +1940,38 @@ fn Worktrees(
                             <PullRequest card />
                         </div>
                         <div class="row-actions">
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || busy.get())}
+                                {..}
                                 data-open-card={id.get_value()}
-                                disabled={move || busy.get()}
                                 on:click={move |_| on_open.run(id.get_value())}
                             >
                                 {i18n.text("message.open_task")}
-                            </button>
-                            <button
-                                class="danger"
-                                data-clean-worktree={id.get_value()}
-                                disabled={move || {
+                            </crate::button::Button>
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Danger}
+                                disabled={Signal::derive(move || {
                                     busy.get()
                                         || runs
                                             .with(|runs| {
-                                                runs
-                                                    .iter()
+                                                runs.iter()
                                                     .any(|run| {
                                                         field(run, "cardId") == id.get_value() && active(run)
                                                     })
                                             })
-                                }}
+                                })}
+                                class="danger"
+                                {..}
+                                data-clean-worktree={id.get_value()}
                                 on:click={move |_| {
                                     force.set(true);
                                     removing.set(Some(id.get_value()));
                                 }}
                             >
                                 {i18n.text("message.remove_worktree_e8412d13")}
-                            </button>
+                            </crate::button::Button>
                         </div>
-                    </article>
+                    </crate::card::Card>
                 }
             }}
         />
@@ -1965,97 +1998,61 @@ fn RemoveConfirmation(
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |dialog| {
-        let _ = dialog.show_modal();
-    });
     let cancel = move || {
         if !busy.get_untracked() {
             removing.set(None);
         }
     };
     view! {
-        <dialog
+        <crate::modal::Modal
+            id="worktree-confirm-dialog"
             class="confirm-dialog"
-            role="alertdialog"
-            aria-labelledby="worktree-confirm-title"
-            aria-describedby="worktree-confirm-message"
+            labelledby="worktree-confirm-title"
+            describedby="worktree-confirm-message"
             node_ref={dialog}
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                cancel();
-            }}
+            busy={Signal::derive(move || busy.get())}
+            on_close={Callback::new(move |()| cancel())}
         >
-            <div class="dialog-heading">
-                <div class="confirm-icon" aria-hidden="true">
-                    <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <path d="M10.3 4.6 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z" />
-                        <path d="M12 9v4m0 4h.01" />
-                    </svg>
-                </div>
-                <button
-                    type="button"
-                    disabled={move || busy.get()}
-                    aria-label={move || i18n.text("message.close")}
-                    on:click={move |_| cancel()}
-                >
-                    "×"
-                </button>
-            </div>
-            <h2 id="worktree-confirm-title">
-                {move || {
-                    i18n
-                        .text(
-                            if force.get() {
-                                "message.remove_worktree_eb977667"
-                            } else {
-                                "message.clean_up_this_folder"
-                            },
-                        )
-                }}
-            </h2>
+            <crate::modal::ModalHeader class="inset" title_id="worktree-confirm-title" title=Signal::derive(move||i18n.text(if force.get(){"message.remove_worktree_eb977667"}else{"message.clean_up_this_folder"})) busy=Signal::derive(move||busy.get()) on_close=Callback::new(move|()|cancel())/>
             <p id="worktree-confirm-message">
                 {move || {
-                    i18n
-                        .text(
-                            if force.get() {
-                                "message.remove_the_main_worktree_and_associated_front_back_worktrees_del"
-                            } else {
-                                "message.remove_the_main_and_associated_worktrees_without_forcing_branche"
-                            },
-                        )
+                    i18n.text(
+                        if force.get() {
+                            "message.remove_the_main_worktree_and_associated_front_back_worktrees_del"
+                        } else {
+                            "message.remove_the_main_and_associated_worktrees_without_forcing_branche"
+                        },
+                    )
                 }}
             </p>
-            <div class="form-actions">
-                <button type="button" autofocus disabled={move || busy.get()} on:click={move |_| cancel()}>
-                    {i18n.text("message.cancel")}
-                </button>
-                <button
-                    class="confirm-action"
+            <crate::modal::ModalActions {..} >
+                <crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    {..}
                     type="button"
-                    disabled={move || busy.get()}
+                    autofocus=true
+                    on:click={move |_| cancel()}
+                >
+                    {i18n.text("message.cancel")}
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || busy.get())}
+                    class="confirm-action"
+                    {..}
+                    type="button"
                     on:click={move |_| on_confirm.run(())}
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if force.get() {
-                                    "message.remove_and_delete_files"
-                                } else {
-                                    "message.remove_without_forcing"
-                                },
-                            )
+                        i18n.text(
+                            if force.get() {
+                                "message.remove_and_delete_files"
+                            } else {
+                                "message.remove_without_forcing"
+                            },
+                        )
                     }}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button>
+            </crate::modal::ModalActions>
+        </crate::modal::Modal>
     }
 }

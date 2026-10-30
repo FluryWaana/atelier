@@ -197,8 +197,7 @@ pub fn ReviewResult(
             </p>
             <p role="status" id="review-freshness">
                 {move || {
-                    run
-                        .get()
+                    run.get()
                         .map(|run| {
                             let stale = field(&run, "reviewStaleReason");
                             if !stale.is_empty() {
@@ -246,9 +245,9 @@ pub fn ReviewResult(
                     view! {
                         <div>
                             <label class="check-filter">
-                                <input
+                                <crate::form::Checkbox
+                                    {..}
                                     class="review-selection"
-                                    type="checkbox"
                                     prop:checked={move || {
                                         selection.with(|selection| selection.contains(&index))
                                     }}
@@ -322,28 +321,30 @@ pub fn ReviewResult(
                     }
                 }}
             />
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || blocked.get())}
+                {..}
                 id="validate-review"
                 type="button"
                 hidden={move || report.get().is_none()}
-                disabled={move || pending.get() || blocked.get()}
                 on:click={validate}
             >
                 {move || i18n.text("message.revalidate_current_requirements_and_commits")}
-            </button>
-            <button
-                id="correct-review"
-                type="button"
-                hidden={move || report.get().is_none()}
-                disabled={move || {
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || {
                     pending.get() || blocked.get() || selection.with(BTreeSet::is_empty)
                         || agent.get().is_empty()
                         || run.get().is_none_or(|run| !field(&run, "reviewStaleReason").is_empty())
-                }}
+                })}
+                {..}
+                id="correct-review"
+                type="button"
+                hidden={move || report.get().is_none()}
                 on:click={correct}
             >
                 {move || i18n.text("message.confirm_and_correct_selected_findings")}
-            </button>
+            </crate::button::Button>
             <p class="field-help">
                 {move || {
                     i18n.text("message.correction_uses_the_profile_selected_in_runs_in_edit_mode_commit")

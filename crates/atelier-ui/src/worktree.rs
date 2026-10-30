@@ -172,40 +172,50 @@ pub fn Workspace(
             <p class="field-help" hidden={move || !blocked.get()}>
                 {move || i18n.text("message.save_or_discard_the_task_edits_before_managing_its_worktree")}
             </p>
-            <form
-                hidden={move || current.get().is_some()}
-                on:submit={move |event| {
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                     event.prevent_default();
                     act(false);
-                }}
+                }) {..}
+                hidden={move || current.get().is_some()}
+
             >
                 <fieldset disabled={move || pending.get() || blocked.get()}>
-                    <label for="worktree-branch">{move || i18n.text("message.task_branch")}</label>
-                    <input
+                    <crate::form::Field
                         id="worktree-branch"
-                        required
-                        maxlength="180"
-                        prop:value={move || branch.get()}
-                        on:input={move |event| {
-                            branch.set(event_target_value(&event));
-                            dirty.set(true);
-                        }}
-                    />
-                    <label for="worktree-base">{move || i18n.text("message.starting_reference")}</label>
-                    <input
+                        label={Signal::derive(move || i18n.text("message.task_branch"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="worktree-branch"
+                            required=true
+                            maxlength="180"
+                            prop:value={move || branch.get()}
+                            on:input={move |event| {
+                                branch.set(event_target_value(&event));
+                                dirty.set(true);
+                            }}
+                        />
+                    </crate::form::Field>
+                    <crate::form::Field
                         id="worktree-base"
-                        required
-                        maxlength="180"
-                        prop:value={move || base.get()}
-                        on:input={move |event| {
-                            base.set(event_target_value(&event));
-                            dirty.set(true);
-                        }}
-                    />
+                        label={Signal::derive(move || i18n.text("message.starting_reference"))}
+                    >
+                        <crate::form::Input
+                            {..}
+                            id="worktree-base"
+                            required=true
+                            maxlength="180"
+                            prop:value={move || base.get()}
+                            on:input={move |event| {
+                                base.set(event_target_value(&event));
+                                dirty.set(true);
+                            }}
+                        />
+                    </crate::form::Field>
                     <label class="check-filter">
-                        <input
+                        <crate::form::Checkbox
+                            {..}
                             id="worktree-fetch"
-                            type="checkbox"
                             prop:checked={move || fetch_origin.get()}
                             on:change={move |event| {
                                 fetch_origin.set(event_target_checked(&event));
@@ -217,32 +227,36 @@ pub fn Workspace(
                     </label>
                     <p class="field-help">
                         {move || {
-                            i18n
-                                .text(
-                                    "message.without_a_refresh_the_reference_must_exist_locally_refreshing_fe",
-                                )
+                            i18n.text(
+                                "message.without_a_refresh_the_reference_must_exist_locally_refreshing_fe",
+                            )
                         }}
                     </p>
                     <fieldset hidden={move || !fetch_origin.get()}>
-                        <label for="worktree-fetch-forge">
-                            {move || i18n.text("message.connection_for_refreshing_origin")}
-                        </label>
-                        <select
+                        <crate::form::Field
                             id="worktree-fetch-forge"
-                            prop:value={move || fetch_forge.get()}
-                            on:change={move |event| {
-                                fetch_forge.set(event_target_value(&event));
-                                snapshot_forge();
-                                dirty.set(true);
-                            }}
+                            label={Signal::derive(move || {
+                                i18n.text("message.connection_for_refreshing_origin")
+                            })}
                         >
-                            <option value="local">
-                                {move || i18n.text("message.authorized_local_repository")}
-                            </option>
-                            <option value="github">"GitHub HTTPS"</option>
-                            <option value="gitlab">"GitLab HTTPS"</option>
-                            <option value="azure">"Azure DevOps HTTPS"</option>
-                        </select>
+                            <crate::form::Select
+                                {..}
+                                id="worktree-fetch-forge"
+                                prop:value={move || fetch_forge.get()}
+                                on:change={move |event| {
+                                    fetch_forge.set(event_target_value(&event));
+                                    snapshot_forge();
+                                    dirty.set(true);
+                                }}
+                            >
+                                <option value="local">
+                                    {move || i18n.text("message.authorized_local_repository")}
+                                </option>
+                                <option value="github">"GitHub HTTPS"</option>
+                                <option value="gitlab">"GitLab HTTPS"</option>
+                                <option value="azure">"Azure DevOps HTTPS"</option>
+                            </crate::form::Select>
+                        </crate::form::Field>
                         <div hidden={move || fetch_forge.get() == "local"}>
                             <p>
                                 {move || {
@@ -253,28 +267,31 @@ pub fn Workspace(
                                     }
                                 }}
                             </p>
-                            <label for="worktree-fetch-repository">
-                                {move || i18n.text("message.allowed_remote_repository")}
-                            </label>
-                            <input
+                            <crate::form::Field
                                 id="worktree-fetch-repository"
-                                maxlength="1000"
-                                placeholder={move || i18n.text("message.group_repository")}
-                                prop:value={move || fetch_repository.get()}
-                                on:input={move |event| {
-                                    fetch_repository.set(event_target_value(&event));
-                                    dirty.set(true);
-                                }}
-                            />
+                                label={Signal::derive(move || i18n.text("message.allowed_remote_repository"))}
+                            >
+                                <crate::form::Input
+                                    {..}
+                                    id="worktree-fetch-repository"
+                                    maxlength="1000"
+                                    placeholder={move || i18n.text("message.group_repository")}
+                                    prop:value={move || fetch_repository.get()}
+                                    on:input={move |event| {
+                                        fetch_repository.set(event_target_value(&event));
+                                        dirty.set(true);
+                                    }}
+                                />
+                            </crate::form::Field>
                             <p class="field-help">
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.the_site_repository_and_origin_https_url_must_match_the_vault_to",
-                                        )
+                                    i18n.text(
+                                        "message.the_site_repository_and_origin_https_url_must_match_the_vault_to",
+                                    )
                                 }}
                             </p>
-                            <button
+                            <crate::button::Button
+                                {..}
                                 id="reload-worktree-forge"
                                 type="button"
                                 on:click={move |_| {
@@ -296,14 +313,19 @@ pub fn Workspace(
                                 }}
                             >
                                 {move || i18n.text("message.reload_selected_connection")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                     </fieldset>
                     <div class="editor-actions">
-                        <button id="create-worktree" type="submit">
+                        <crate::button::Button
+                            {..}
+                            id="create-worktree"
+                            type="submit"
+                        >
                             {move || i18n.text("message.prepare_worktree")}
-                        </button>
-                        <button
+                        </crate::button::Button>
+                        <crate::button::Button
+                            {..}
                             type="button"
                             hidden={move || !dirty.get()}
                             on:click={move |_| {
@@ -318,10 +340,10 @@ pub fn Workspace(
                             }}
                         >
                             {move || i18n.text("message.reset")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                 </fieldset>
-            </form>
+            </crate::form::Form>
             <div hidden={move || current.get().is_none()}>
                 <p class="workspace-path">
                     {move || {
@@ -333,16 +355,15 @@ pub fn Workspace(
                 </p>
                 <p id="worktree-state" role="status">
                     {move || {
-                        i18n
-                            .text(
-                                match current.get().map(|worktree| worktree.state) {
-                                    Some(WorktreeState::Ready) => "message.worktree_ready",
-                                    Some(WorktreeState::Creating | WorktreeState::Removing) => {
-                                        "message.finish_or_verify_this_operation_files_are_preserved_until_remova"
-                                    }
-                                    None => "",
-                                },
-                            )
+                        i18n.text(
+                            match current.get().map(|worktree| worktree.state) {
+                                Some(WorktreeState::Ready) => "message.worktree_ready",
+                                Some(WorktreeState::Creating | WorktreeState::Removing) => {
+                                    "message.finish_or_verify_this_operation_files_are_preserved_until_remova"
+                                }
+                                None => "",
+                            },
+                        )
                     }}
                 </p>
                 {[("front", "Front"), ("back", "Back")]
@@ -356,8 +377,7 @@ pub fn Workspace(
                                         .iter()
                                         .find(|card| card.id == id.get_value())
                                         .and_then(|card| {
-                                            card
-                                                .fields
+                                            card.fields
                                                 .get::<ServiceWorktrees>("serviceWorktrees")
                                                 .ok()
                                                 .flatten()
@@ -383,18 +403,17 @@ pub fn Workspace(
                                 </p>
                                 <p role="status">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                if service()
-                                                    .is_some_and(|worktree| {
-                                                        worktree.state == WorktreeState::Ready
-                                                    })
-                                                {
-                                                    "message.worktree_ready"
-                                                } else {
-                                                    "message.finish_or_verify_this_operation_files_are_preserved_until_remova"
-                                                },
-                                            )
+                                        i18n.text(
+                                            if service()
+                                                .is_some_and(|worktree| {
+                                                    worktree.state == WorktreeState::Ready
+                                                })
+                                            {
+                                                "message.worktree_ready"
+                                            } else {
+                                                "message.finish_or_verify_this_operation_files_are_preserved_until_remova"
+                                            },
+                                        )
                                     }}
                                 </p>
                             </div>
@@ -402,38 +421,41 @@ pub fn Workspace(
                     })
                     .collect_view()}
                 <div class="editor-actions">
-                    <button
+                    <crate::button::Button
+                        disabled={Signal::derive(move || pending.get() || blocked.get())}
+                        {..}
                         id="verify-worktree"
                         type="button"
-                        disabled={move || pending.get() || blocked.get()}
                         on:click={move |_| act(false)}
                     >
                         {move || i18n.text("message.verify_and_resume")}
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Danger}
+                        disabled={Signal::derive(move || pending.get() || blocked.get())}
+                        class="danger"
+                        {..}
                         id="remove-worktree"
                         type="button"
-                        class="danger"
-                        disabled={move || pending.get() || blocked.get()}
                         on:click={move |_| {
                             discard.set(false);
                             confirming.set(true);
                         }}
                     >
                         {move || i18n.text("message.remove_worktree")}
-                    </button>
+                    </crate::button::Button>
                 </div>
             </div>
-            <div class="confirmation" hidden={move || !confirming.get()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(!confirming.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|confirming.set(false))>
                 <p>
                     {move || {
                         i18n.text("message.remove_the_main_worktree_and_its_associated_front_back_worktrees")
                     }}
                 </p>
                 <label class="check-filter">
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="discard-worktree-files"
-                        type="checkbox"
                         disabled={move || pending.get()}
                         prop:checked={move || discard.get()}
                         on:change={move |event| discard.set(event_target_checked(&event))}
@@ -442,23 +464,27 @@ pub fn Workspace(
                         i18n.text("message.also_discard_modified_new_and_ignored_files_in_this_worktree_thi")
                     }}
                 </label>
-                <button
-                    id="confirm-remove-worktree"
-                    class="danger"
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     type="button"
-                    disabled={move || pending.get() || blocked.get()}
-                    on:click={move |_| act(true)}
-                >
-                    {move || i18n.text("message.confirm_removal")}
-                </button>
-                <button
-                    type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| confirming.set(false)}
                 >
                     {move || i18n.text("message.cancel")}
-                </button>
-            </div>
+                </crate::button::Button><crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    disabled={Signal::derive(move || pending.get() || blocked.get())}
+                    class="danger"
+                    {..}
+                    id="confirm-remove-worktree"
+                    type="button"
+                    on:click={move |_| act(true)}
+                >
+                    {move || i18n.text("message.confirm_removal")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <p id="worktree-error" class="error" role="alert">
                 {move || i18n.worktree_error(&error.get())}
             </p>

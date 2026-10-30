@@ -240,64 +240,84 @@ pub fn ConnectorRepositories(
                     i18n.text("message.prepare_a_local_commit_and_keep_the_worktree_clean_the_module_ha")
                 }}
             </p>
-            <label for="connector-repository-card">{move || i18n.text("message.task")}</label>
-            <select
+            <crate::form::Field
                 id="connector-repository-card"
-                disabled={move || touched.get() || report.get().is_some()}
-                prop:value={move || selected.get()}
-                on:change={move |event| selected.set(event_target_value(&event))}
+                label={Signal::derive(move || i18n.text("message.task"))}
             >
-                <option value="">{move || i18n.text("message.choose_a_task")}</option>
-                {move || {
-                    board
-                        .cards
-                        .get()
-                        .into_iter()
-                        .filter(|card| {
-                            !card.fields.flag("archived").unwrap_or(true)
-                                && card.fields.raw("worktree").is_some()
-                                && card.fields.raw("pullRequest").is_none()
-                        })
-                        .map(|card| view! { <option value={card.id}>{card.title.clone()}</option> })
-                        .collect_view()
-                }}
-            </select>
-            <label for="connector-repository-target">{move || i18n.text("message.target_branch")}</label>
-            <input
+                <crate::form::Select
+                    {..}
+                    id="connector-repository-card"
+                    disabled={move || touched.get() || report.get().is_some()}
+                    prop:value={move || selected.get()}
+                    on:change={move |event| selected.set(event_target_value(&event))}
+                >
+                    <option value="">{move || i18n.text("message.choose_a_task")}</option>
+                    {move || {
+                        board
+                            .cards
+                            .get()
+                            .into_iter()
+                            .filter(|card| {
+                                !card.fields.flag("archived").unwrap_or(true)
+                                    && card.fields.raw("worktree").is_some()
+                                    && card.fields.raw("pullRequest").is_none()
+                            })
+                            .map(|card| view! { <option value={card.id}>{card.title.clone()}</option> })
+                            .collect_view()
+                    }}
+                </crate::form::Select>
+            </crate::form::Field>
+            <crate::form::Field
                 id="connector-repository-target"
-                maxlength="180"
-                prop:value={move || target.get()}
-                on:input={move |event| {
-                    target.set(event_target_value(&event));
-                    touched.set(true);
-                    report.set(None);
-                }}
-            />
-            <label for="connector-repository-title">{move || i18n.text("message.title")}</label>
-            <input
+                label={Signal::derive(move || i18n.text("message.target_branch"))}
+            >
+                <crate::form::Input
+                    {..}
+                    id="connector-repository-target"
+                    maxlength="180"
+                    prop:value={move || target.get()}
+                    on:input={move |event| {
+                        target.set(event_target_value(&event));
+                        touched.set(true);
+                        report.set(None);
+                    }}
+                />
+            </crate::form::Field>
+            <crate::form::Field
                 id="connector-repository-title"
-                maxlength="255"
-                prop:value={move || title.get()}
-                on:input={move |event| {
-                    title.set(event_target_value(&event));
-                    touched.set(true);
-                    report.set(None);
-                }}
-            />
-            <label for="connector-repository-body">{move || i18n.text("message.description")}</label>
-            <textarea
+                label={Signal::derive(move || i18n.text("message.title"))}
+            >
+                <crate::form::Input
+                    {..}
+                    id="connector-repository-title"
+                    maxlength="255"
+                    prop:value={move || title.get()}
+                    on:input={move |event| {
+                        title.set(event_target_value(&event));
+                        touched.set(true);
+                        report.set(None);
+                    }}
+                />
+            </crate::form::Field>
+            <crate::form::Field
                 id="connector-repository-body"
-                maxlength="3500"
-                prop:value={move || body.get()}
-                on:input={move |event| {
-                    body.set(event_target_value(&event));
-                    touched.set(true);
-                    report.set(None);
-                }}
-            ></textarea>
+                label={Signal::derive(move || i18n.text("message.description"))}
+            >
+                <crate::form::Textarea
+                    {..}
+                    id="connector-repository-body"
+                    maxlength="3500"
+                    prop:value={move || body.get()}
+                    on:input={move |event| {
+                        body.set(event_target_value(&event));
+                        touched.set(true);
+                        report.set(None);
+                    }}
+                ></crate::form::Textarea>
+            </crate::form::Field>
             <label>
-                <input
-                    type="checkbox"
+                <crate::form::Checkbox
+                    {..}
                     prop:checked={move || draft.get()}
                     on:change={move |event| {
                         draft.set(event_target_checked(&event));
@@ -307,37 +327,44 @@ pub fn ConnectorRepositories(
                 />
                 {move || i18n.text("message.draft")}
             </label>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || card.get().is_none())}
+                {..}
                 id="preview-connector-repository"
                 type="button"
-                disabled={move || card.get().is_none()}
                 on:click={move |_| execute.with_value(|execute| execute(Method::RepositoriesPreview))}
             >
                 {move || i18n.text("message.prepare_pr_mr_publication")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || {
+                    card.get().is_none_or(|card| card.fields.raw("connectorPullRequest").is_none())
+                })}
+                {..}
                 id="refresh-connector-repository"
                 type="button"
-                disabled={move || {
-                    card.get().is_none_or(|card| card.fields.raw("connectorPullRequest").is_none())
-                }}
                 on:click={move |_| execute.with_value(|execute| execute(Method::RepositoriesRefresh))}
             >
                 {move || i18n.text("message.refresh_the_module_pr_mr")}
-            </button>
+            </crate::button::Button>
             <label hidden={move || {
                 card.get().is_none_or(|card| card.fields.raw("connectorPullRequest").is_none())
             }}>
-                <input
-                    type="checkbox"
+                <crate::form::Checkbox
+                    {..}
                     prop:checked={move || detach_approved.get()}
                     on:change={move |event| detach_approved.set(event_target_checked(&event))}
                 />
                 {move || i18n.text("message.confirm_removing_this_local_pr_mr_association")}
             </label>
-            <button type="button" disabled={move || !detach_approved.get()} on:click={detach}>
+            <crate::button::Button
+                disabled={Signal::derive(move || !detach_approved.get())}
+                {..}
+                type="button"
+                on:click={detach}
+            >
                 {move || i18n.text("message.remove_the_module_pr_mr_association")}
-            </button>
+            </crate::button::Button>
             {move || {
                 report
                     .get()
@@ -360,18 +387,20 @@ pub fn ConnectorRepositories(
             <p role="status" hidden={move || !stale.get()}>
                 {move || i18n.text("message.the_task_changed_read_its_preview_again_before_confirming")}
             </p>
-            <button
-                id="prepare-connector-repository"
-                type="button"
-                disabled={move || {
+            <crate::button::Button
+                disabled={Signal::derive(move || {
                     stale.get()
                         || report.get().is_none_or(|report| report.method != Method::RepositoriesPreview)
-                }}
+                })}
+                {..}
+                id="prepare-connector-repository"
+                type="button"
                 on:click={move |_| execute.with_value(|execute| execute(Method::RepositoriesPublish))}
             >
                 {move || i18n.text("message.save_the_pr_mr_dispatch_preview")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                {..}
                 type="button"
                 on:click={move |_| {
                     report.set(None);
@@ -382,7 +411,7 @@ pub fn ConnectorRepositories(
                 }}
             >
                 {move || i18n.text("message.cancel_draft")}
-            </button>
+            </crate::button::Button>
             <p class="field-help">
                 {move || {
                     i18n.text("message.after_publication_start_a_review_from_the_task_runs_revalidate_i")

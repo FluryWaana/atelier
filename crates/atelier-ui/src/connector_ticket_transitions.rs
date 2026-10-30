@@ -130,14 +130,15 @@ pub fn ConnectorTicketTransitions(
     view! {
         <div class="task-files">
             <h4>{move || i18n.text("message.module_ticket_transitions")}</h4>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || blocked.get() || journal_dirty.get())}
+                {..}
                 id="read-connector-transitions"
                 type="button"
-                disabled={move || pending.get() || blocked.get() || journal_dirty.get()}
                 on:click={move |_| execute.with_value(|execute| execute(false))}
             >
                 {move || i18n.text("message.read_available_transitions")}
-            </button>
+            </crate::button::Button>
             {move || {
                 preview
                     .get()
@@ -150,8 +151,9 @@ pub fn ConnectorTicketTransitions(
                                 .is_empty()}>
                                 {i18n.text("message.no_transition_is_available_for_this_ticket")}
                             </p>
-                            <label for="connector-ticket-transition">{i18n.text("message.transition")}</label>
-                            <select
+                            <crate::form::Field id="connector-ticket-transition" label=Signal::derive(move||i18n.text("message.transition"))>
+                            <crate::form::Select
+                                {..}
                                 id="connector-ticket-transition"
                                 disabled={move || pending.get() || blocked.get()}
                                 prop:value={move || selected.get()}
@@ -182,25 +184,27 @@ pub fn ConnectorTicketTransitions(
                                         }
                                     })
                                     .collect_view()}
-                            </select>
-                            <button
+                            </crate::form::Select></crate::form::Field>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get() || blocked.get() || selected.get().is_empty())}
+                                {..}
                                 id="prepare-connector-transition"
                                 type="button"
-                                disabled={move || pending.get() || blocked.get() || selected.get().is_empty()}
                                 on:click={move |_| execute.with_value(|execute| execute(true))}
                             >
                                 {move || i18n.text("message.prepare_this_transition_in_the_journal")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get())}
+                                {..}
                                 type="button"
-                                disabled={move || pending.get()}
                                 on:click={move |_| {
                                     preview.set(None);
                                     selected.set(String::new());
                                 }}
                             >
                                 {move || i18n.text("message.cancel_preview")}
-                            </button>
+                            </crate::button::Button>
                         }
                     })
             }}

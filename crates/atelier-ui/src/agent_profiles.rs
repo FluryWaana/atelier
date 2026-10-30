@@ -190,9 +190,6 @@ pub fn AgentProfiles(
     let notice = RwSignal::new(String::new());
     let confirmation = RwSignal::new(None::<Confirmation>);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
     let focus = |id: &'static str| {
         request_animation_frame(move || {
             if let Some(element) = web_sys::window()
@@ -369,59 +366,44 @@ pub fn AgentProfiles(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <dialog
+        <crate::modal::Modal
             id="agents-dialog"
             class="editor"
+            labelledby="agents-title"
             node_ref={dialog}
-            aria-labelledby="agents-title"
-            aria-busy={move || pending.get().to_string()}
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                request_close();
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| request_close())}
         >
-            <header class="editor-heading">
-                <div>
-                    <h2 id="agents-title">{move || i18n.text("message.agents")}</h2>
-                    <button
-                        id="discover-agents"
-                        type="button"
-                        disabled={move || pending.get() || dirty.get()}
-                        on:click={discover}
-                    >
+            <crate::modal::ModalHeader class="inset" title_id="agents-title" title=Signal::derive(move||i18n.text("message.agents")) close_id="close-agents" busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|request_close())/><crate::button::Button
+                disabled={Signal::derive(move || pending.get() || dirty.get())}
+                {..}
+                id="discover-agents"
+                type="button"
+                on:click={discover}
+            >
                         {move || {
-                            i18n
-                                .text(
-                                    if pending.get() {
-                                        "message.searching_for_agents"
-                                    } else {
-                                        "message.find_installed_agents"
-                                    },
-                                )
+                            i18n.text(
+                                if pending.get() {
+                                    "message.searching_for_agents"
+                                } else {
+                                    "message.find_installed_agents"
+                                },
+                            )
                         }}
-                    </button>
-                </div>
-                <button
-                    id="close-agents"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| request_close()}
-                >
-                    {move || i18n.text("message.close")}
-                </button>
-            </header>
+                    </crate::button::Button>
             <p class="field-help">{move || i18n.text("message.agent_profiles_intro")}</p>
             <div class="agent-profile-layout">
                 <aside class="agent-profile-sidebar" aria-label={move || i18n.text("message.agent_profiles")}>
                     <div class="editor-actions">
-                        <button
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get() || dirty.get())}
+                            {..}
                             id="new-profile"
                             type="button"
-                            disabled={move || pending.get() || dirty.get()}
                             on:click={move |_| select(None)}
                         >
                             {move || i18n.text("message.add_agent_profile")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                     <ul class="profile-list">
                         <For
@@ -440,7 +422,9 @@ pub fn AgentProfiles(
                                 };
                                 view! {
                                     <li>
-                                        <button
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || pending.get() || dirty.get())}
+                                            {..}
                                             type="button"
                                             data-profile={id.get_value()}
                                             aria-pressed={move || {
@@ -451,7 +435,6 @@ pub fn AgentProfiles(
                                                     })
                                                     .to_string()
                                             }}
-                                            disabled={move || pending.get() || dirty.get()}
                                             on:click={move |_| select(current())}
                                         >
                                             <span
@@ -470,20 +453,19 @@ pub fn AgentProfiles(
                                                 }}
                                                 role="img"
                                                 aria-label={move || {
-                                                    i18n
-                                                        .text(
-                                                            if crate::agent_diagnostics::current_status(
-                                                                    statuses.0,
-                                                                    &id.get_value(),
-                                                                    &board.settings.get(),
-                                                                )
-                                                                .is_some_and(|status| status.cli_connected())
-                                                            {
-                                                                "message.cli_login_present_service_access_has_not_been_verified"
-                                                            } else {
-                                                                "message.not_verified"
-                                                            },
-                                                        )
+                                                    i18n.text(
+                                                        if crate::agent_diagnostics::current_status(
+                                                                statuses.0,
+                                                                &id.get_value(),
+                                                                &board.settings.get(),
+                                                            )
+                                                            .is_some_and(|status| status.cli_connected())
+                                                        {
+                                                            "message.cli_login_present_service_access_has_not_been_verified"
+                                                        } else {
+                                                            "message.not_verified"
+                                                        },
+                                                    )
                                                 }}
                                             ></span>
                                             <span>
@@ -493,7 +475,7 @@ pub fn AgentProfiles(
                                                         .unwrap_or_default()
                                                 }}
                                             </span>
-                                        </button>
+                                        </crate::button::Button>
                                     </li>
                                 }
                             }}
@@ -509,28 +491,33 @@ pub fn AgentProfiles(
                     <p class="agent-profile-empty" hidden={move || editing.get()}>
                         {move || i18n.text("message.choose_a_profile_or_create_one_to_get_started")}
                     </p>
-                    <form
-                        hidden={move || !editing.get()}
-                        on:submit={move |event| {
+                    <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                             event.prevent_default();
                             execute(false);
-                        }}
+                        }) {..}
+                        hidden={move || !editing.get()}
+
                     >
                         <fieldset disabled={move || pending.get()}>
-                            <label for="profile-name">{move || i18n.text("message.profile_name")}</label>
-                            <input
+                            <crate::form::Field
                                 id="profile-name"
-                                required
-                                maxlength="100"
-                                prop:value={move || draft.get().values["name"].clone()}
-                                on:input={move |event| {
-                                    draft
-                                        .update(|draft| {
-                                            draft.values.insert("name", event_target_value(&event));
-                                        })
-                                }}
-                            />
-                            <label for="profile-type">{move || i18n.text("message.agent_type")}</label>
+                                label={Signal::derive(move || i18n.text("message.profile_name"))}
+                            >
+                                <crate::form::Input
+                                    {..}
+                                    id="profile-name"
+                                    required=true
+                                    maxlength="100"
+                                    prop:value={move || draft.get().values["name"].clone()}
+                                    on:input={move |event| {
+                                        draft
+                                            .update(|draft| {
+                                                draft.values.insert("name", event_target_value(&event));
+                                            })
+                                    }}
+                                />
+                            </crate::form::Field>
+                            <crate::form::Field id="profile-type" label=Signal::derive(move || i18n.text("message.agent_type"))>
                             <span hidden={move || {
                                 original.get().is_none()
                             }}>
@@ -540,7 +527,8 @@ pub fn AgentProfiles(
                                         .unwrap_or_default()
                                 }}
                             </span>
-                            <select
+                            <crate::form::Select
+                                {..}
                                 id="profile-type"
                                 hidden={move || original.get().is_some()}
                                 disabled={move || original.get().is_some()}
@@ -574,33 +562,36 @@ pub fn AgentProfiles(
                                         }
                                     })
                                     .collect_view()}
-                            </select>
+                            </crate::form::Select></crate::form::Field>
                             <div hidden={move || {
                                 !atelier_core::domain::agent_catalog::find(&draft.get().values["type"])
                                     .is_some_and(|agent| agent.api_auth)
                             }}>
-                                <label for="profile-auth">
-                                    {move || i18n.text("message.authentication")}
-                                </label>
-                                <select
+                                <crate::form::Field
                                     id="profile-auth"
-                                    prop:value={move || draft.get().values["auth"].clone()}
-                                    on:change={move |event| {
-                                        draft
-                                            .update(|draft| {
-                                                draft.values.insert("auth", event_target_value(&event));
-                                                draft.key.clear();
-                                                draft.clear_key = false;
-                                            })
-                                    }}
+                                    label={Signal::derive(move || i18n.text("message.authentication"))}
                                 >
-                                    <option value="cli">
-                                        {move || i18n.text("message.existing_cli_login")}
-                                    </option>
-                                    <option value="api">
-                                        {move || i18n.text("message.api_key_through_the_cli")}
-                                    </option>
-                                </select>
+                                    <crate::form::Select
+                                        {..}
+                                        id="profile-auth"
+                                        prop:value={move || draft.get().values["auth"].clone()}
+                                        on:change={move |event| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.values.insert("auth", event_target_value(&event));
+                                                    draft.key.clear();
+                                                    draft.clear_key = false;
+                                                })
+                                        }}
+                                    >
+                                        <option value="cli">
+                                            {move || i18n.text("message.existing_cli_login")}
+                                        </option>
+                                        <option value="api">
+                                            {move || i18n.text("message.api_key_through_the_cli")}
+                                        </option>
+                                    </crate::form::Select>
+                                </crate::form::Field>
                                 <p
                                     class="field-help"
                                     hidden={move || !has_key.get() || draft.get().values["auth"] == "api"}
@@ -615,31 +606,32 @@ pub fn AgentProfiles(
                                 >
                                     <p id="profile-key-state" class="field-help" role="status">
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    if draft.get().clear_key {
-                                                        "message.profile_key_removal_pending"
-                                                    } else if has_key.get() {
-                                                        "message.secret_saved_leave_blank_to_keep_it"
-                                                    } else {
-                                                        "message.no_secret_saved"
-                                                    },
-                                                )
+                                            i18n.text(
+                                                if draft.get().clear_key {
+                                                    "message.profile_key_removal_pending"
+                                                } else if has_key.get() {
+                                                    "message.secret_saved_leave_blank_to_keep_it"
+                                                } else {
+                                                    "message.no_secret_saved"
+                                                },
+                                            )
                                         }}
                                     </p>
                                     <div hidden={move || !has_key.get()} class="profile-key-actions">
-                                        <button
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || draft.get().clear_key)}
+                                            {..}
                                             id="replace-profile-key"
                                             type="button"
-                                            disabled={move || draft.get().clear_key}
                                             on:click={move |_| {
                                                 replacing_key.set(true);
                                                 focus("profile-key");
                                             }}
                                         >
                                             {move || i18n.text("message.replace_profile_key")}
-                                        </button>
-                                        <button
+                                        </crate::button::Button>
+                                        <crate::button::Button
+                                            {..}
                                             id="profile-clear-key"
                                             type="button"
                                             aria-pressed={move || draft.get().clear_key.to_string()}
@@ -653,36 +645,39 @@ pub fn AgentProfiles(
                                             }}
                                         >
                                             {move || {
-                                                i18n
-                                                    .text(
-                                                        if draft.get().clear_key {
-                                                            "message.cancel_key_removal"
-                                                        } else {
-                                                            "message.forget_api_key"
-                                                        },
-                                                    )
+                                                i18n.text(
+                                                    if draft.get().clear_key {
+                                                        "message.cancel_key_removal"
+                                                    } else {
+                                                        "message.forget_api_key"
+                                                    },
+                                                )
                                             }}
-                                        </button>
+                                        </crate::button::Button>
                                     </div>
                                     <div hidden={move || {
                                         (has_key.get() && !replacing_key.get()) || draft.get().clear_key
                                     }}>
-                                        <label for="profile-key">
-                                            {move || i18n.text("message.api_key")}
-                                        </label>
-                                        <input
+                                        <crate::form::Field
                                             id="profile-key"
-                                            type="password"
-                                            autocomplete="new-password"
-                                            spellcheck="false"
-                                            maxlength="4000"
-                                            aria-describedby="profile-key-state"
-                                            disabled={move || draft.get().clear_key}
-                                            prop:value={move || draft.get().key}
-                                            on:input={move |event| {
-                                                draft.update(|draft| draft.key = event_target_value(&event))
-                                            }}
-                                        />
+                                            label={Signal::derive(move || i18n.text("message.api_key"))}
+                                        >
+                                            <crate::form::Input
+                                                input_type="password"
+                                                reveal=true
+                                                disabled={Signal::derive(move || draft.get().clear_key)}
+                                                {..}
+                                                id="profile-key"
+                                                autocomplete="new-password"
+                                                spellcheck="false"
+                                                maxlength="4000"
+                                                aria-describedby="profile-key-state"
+                                                prop:value={move || draft.get().key}
+                                                on:input={move |event| {
+                                                    draft.update(|draft| draft.key = event_target_value(&event))
+                                                }}
+                                            />
+                                        </crate::form::Field>
                                     </div>
                                 </div>
                             </div>
@@ -693,21 +688,26 @@ pub fn AgentProfiles(
                             >
                                 <summary>{move || i18n.text("message.profile_advanced")}</summary>
                                 <div class="profile-advanced-fields">
-                                    <label for="profile-id">{move || i18n.text("message.profile_id")}</label>
-                                    <input
+                                    <crate::form::Field
                                         id="profile-id"
-                                        required
-                                        maxlength="64"
-                                        pattern="[a-z][a-z0-9-]*"
-                                        readonly={move || original.get().is_some()}
-                                        prop:value={move || draft.get().values["id"].clone()}
-                                        on:input={move |event| {
-                                            draft
-                                                .update(|draft| {
-                                                    draft.values.insert("id", event_target_value(&event));
-                                                })
-                                        }}
-                                    />
+                                        label={Signal::derive(move || i18n.text("message.profile_id"))}
+                                    >
+                                        <crate::form::Input
+                                            {..}
+                                            id="profile-id"
+                                            required=true
+                                            maxlength="64"
+                                            pattern="[a-z][a-z0-9-]*"
+                                            readonly={move || original.get().is_some()}
+                                            prop:value={move || draft.get().values["id"].clone()}
+                                            on:input={move |event| {
+                                                draft
+                                                    .update(|draft| {
+                                                        draft.values.insert("id", event_target_value(&event));
+                                                    })
+                                            }}
+                                        />
+                                    </crate::form::Field>
                                     {[
                                         (
                                             "command",
@@ -730,10 +730,9 @@ pub fn AgentProfiles(
                                                     })
                                             };
                                             view! {
-                                                <label hidden={hidden} for={format!("profile-{key}")}>
-                                                    {move || i18n.text(label)}
-                                                </label>
-                                                <input
+                                                <crate::form::Field id={format!("profile-{key}")} label=Signal::derive(move || i18n.text(label))>
+                                                <crate::form::Input
+                                                    {..}
                                                     hidden={hidden}
                                                     id={format!("profile-{key}")}
                                                     maxlength={limit}
@@ -746,25 +745,23 @@ pub fn AgentProfiles(
                                                                 draft.values.insert(key, event_target_value(&event));
                                                             })
                                                     }}
-                                                />
+                                                /></crate::form::Field>
                                             }
                                         })
                                         .collect_view()}
                                     <p class="field-help">
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    "message.the_executable_does_not_include_its_arguments_leave_model_and_re",
-                                                )
+                                            i18n.text(
+                                                "message.the_executable_does_not_include_its_arguments_leave_model_and_re",
+                                            )
                                         }}
                                     </p>
                                     <div hidden={move || draft.get().values["type"] != "command"}>
                                         <p class="field-help">
                                             {move || {
-                                                i18n
-                                                    .text(
-                                                        "message.arguments_are_json_arrays_of_strings_without_an_intermediate_she",
-                                                    )
+                                                i18n.text(
+                                                    "message.arguments_are_json_arrays_of_strings_without_an_intermediate_she",
+                                                )
                                             }}
                                         </p>
                                         {[
@@ -776,10 +773,11 @@ pub fn AgentProfiles(
                                             .into_iter()
                                             .map(move |(key, label)| {
                                                 view! {
-                                                    <label for={format!(
+                                                    <crate::form::Field id={format!(
                                                         "profile-{key}",
-                                                    )}>{move || i18n.text(label)}</label>
-                                                    <textarea
+                                                    )} label=Signal::derive(move || i18n.text(label))>
+                                                    <crate::form::Textarea
+                                                        {..}
                                                         id={format!("profile-{key}")}
                                                         rows="2"
                                                         maxlength="410000"
@@ -791,16 +789,15 @@ pub fn AgentProfiles(
                                                                     draft.values.insert(key, event_target_value(&event));
                                                                 })
                                                         }}
-                                                    />
+                                                    /></crate::form::Field>
                                                 }
                                             })
                                             .collect_view()}
-                                        <label for="profile-npmPackage">
-                                            {move || {
+                                        <crate::form::Field id="profile-npmPackage" label=Signal::derive(move || {
                                                 i18n.text("message.npm_package_for_update_checks_optional")
-                                            }}
-                                        </label>
-                                        <input
+                                            })>
+                                        <crate::form::Input
+                                            {..}
                                             id="profile-npmPackage"
                                             maxlength="200"
                                             prop:value={move || draft.get().values["npmPackage"].clone()}
@@ -812,32 +809,40 @@ pub fn AgentProfiles(
                                                             .insert("npmPackage", event_target_value(&event));
                                                     })
                                             }}
-                                        />
+                                        /></crate::form::Field>
                                     </div>
                                     <div hidden={move || draft.get().values["type"] != "acp"}>
-                                        <label for="profile-protocolArgs">
-                                            {move || i18n.text("message.acp_protocol_arguments_json_array")}
-                                        </label>
-                                        <textarea
+                                        <crate::form::Field
                                             id="profile-protocolArgs"
-                                            rows="2"
-                                            maxlength="410000"
-                                            spellcheck="false"
-                                            prop:value={move || draft.get().values["protocolArgs"].clone()}
-                                            on:input={move |event| {
-                                                draft
-                                                    .update(|draft| {
-                                                        draft
-                                                            .values
-                                                            .insert("protocolArgs", event_target_value(&event));
-                                                    })
-                                            }}
-                                        />
+                                            label={Signal::derive(move || {
+                                                i18n.text("message.acp_protocol_arguments_json_array")
+                                            })}
+                                        >
+                                            <crate::form::Textarea
+                                                {..}
+                                                id="profile-protocolArgs"
+                                                rows="2"
+                                                maxlength="410000"
+                                                spellcheck="false"
+                                                prop:value={move || {
+                                                    draft.get().values["protocolArgs"].clone()
+                                                }}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft
+                                                                .values
+                                                                .insert("protocolArgs", event_target_value(&event));
+                                                        })
+                                                }}
+                                            />
+                                        </crate::form::Field>
                                     </div>
-                                    <button
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        {..}
                                         id="reload-profile"
                                         type="button"
-                                        disabled={move || pending.get()}
                                         on:click={move |_| {
                                             if dirty.get_untracked() {
                                                 ask(Confirmation::Reload);
@@ -847,63 +852,85 @@ pub fn AgentProfiles(
                                         }}
                                     >
                                         {move || i18n.text("message.reload_profile")}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
                             </details>
                         </fieldset>
                         <div class="editor-actions">
-                            <button
-                                id="save-profile"
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Primary}
+                                disabled={Signal::derive(move || pending.get() || !dirty.get())}
                                 class="primary"
+                                {..}
+                                id="save-profile"
                                 type="submit"
-                                disabled={move || pending.get() || !dirty.get()}
                             >
                                 {move || i18n.text("message.save")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get() || !dirty.get())}
+                                {..}
                                 id="cancel-profile"
                                 type="button"
-                                disabled={move || pending.get() || !dirty.get()}
                                 on:click={move |_| ask(Confirmation::Cancel)}
                             >
                                 {move || i18n.text("message.cancel_profile_changes")}
-                            </button>
-                            <button
+                            </crate::button::Button>
+                            <crate::button::Button
+                                variant={crate::button::ButtonVariant::Danger}
+                                disabled={Signal::derive(move || pending.get() || dirty.get())}
+                                class="danger"
+                                {..}
                                 id="remove-profile"
                                 type="button"
-                                class="danger"
                                 hidden={move || original.get().is_none()}
-                                disabled={move || pending.get() || dirty.get()}
                                 on:click={move |_| ask(Confirmation::Remove)}
                             >
                                 {move || i18n.text("message.remove_profile")}
-                            </button>
+                            </crate::button::Button>
                         </div>
-                    </form>
+                    </crate::form::Form>
                     <crate::agent_diagnostics::AgentDiagnostics
                         profile={original}
                         token
                         pending
                         blocked={dirty}
                     />
-                    <div class="confirmation" hidden={move || confirmation.get().is_none()}>
+                    <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(confirmation.get().is_none())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|{
+                                confirmation.set(None);
+                                focus("profile-name");
+                            })>
                         <p>
                             {move || {
-                                i18n
-                                    .text(
-                                        if matches!(confirmation.get(), Some(Confirmation::Remove)) {
-                                            "message.remove_this_profile_and_its_key_profiles_used_by_tasks_or_projec"
-                                        } else {
-                                            "message.discard_unsaved_changes"
-                                        },
-                                    )
+                                i18n.text(
+                                    if matches!(confirmation.get(), Some(Confirmation::Remove)) {
+                                        "message.remove_this_profile_and_its_key_profiles_used_by_tasks_or_projec"
+                                    } else {
+                                        "message.discard_unsaved_changes"
+                                    },
+                                )
                             }}
                         </p>
-                        <button
+                        <crate::modal::ModalActions><crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
+                            data-confirmation-cancel=""
+                            autofocus=true
+                            id="cancel-profile-action"
+                            type="button"
+                            on:click={move |_| {
+                                confirmation.set(None);
+                                focus("profile-name");
+                            }}
+                        >
+                            {move || i18n.text("message.cancel")}
+                        </crate::button::Button><crate::button::Button
+                            variant={crate::button::ButtonVariant::Danger}
+                            disabled={Signal::derive(move || pending.get())}
+                            class="danger"
+                            {..}
                             id="confirm-profile-action"
                             type="button"
-                            class="danger"
-                            disabled={move || pending.get()}
                             on:click={move |_| {
                                 let action = confirmation.get_untracked();
                                 confirmation.set(None);
@@ -917,19 +944,8 @@ pub fn AgentProfiles(
                             }}
                         >
                             {move || i18n.text("message.confirm")}
-                        </button>
-                        <button
-                            id="cancel-profile-action"
-                            type="button"
-                            disabled={move || pending.get()}
-                            on:click={move |_| {
-                                confirmation.set(None);
-                                focus("profile-name");
-                            }}
-                        >
-                            {move || i18n.text("message.cancel")}
-                        </button>
-                    </div>
+                        </crate::button::Button></crate::modal::ModalActions>
+                    </crate::modal::Confirmation>
                     <p id="profiles-error" class="error" role="alert">
                         {move || i18n.text(&error.get())}
                     </p>
@@ -938,7 +954,7 @@ pub fn AgentProfiles(
                     </p>
                 </div>
             </div>
-        </dialog>
+        </crate::modal::Modal>
     }
 }
 

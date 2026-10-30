@@ -347,3 +347,94 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
         "synthetic outside sentinel"
     );
 }
+#[tokio::test]
+async fn project_base_branch_uses_local_origin_default_then_head_and_respects_access() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root_path = fixture.path().canonicalize().unwrap();
+    let path = root_path.join("repositories/project-default-branch");
+    std::fs::create_dir_all(&path).unwrap();
+    git(&path, &["init", "-b", "trunk"]).await;
+    let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
+    let roots = [root_path];
+    assert_eq!(
+        Repository::default_branch(&root, &roots, path.to_str().unwrap())
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("trunk")
+    );
+    git(
+        &path,
+        &[
+            "-c",
+            "user.name=Synthetic",
+            "-c",
+            "user.email=synthetic@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "Synthetic branch fixture",
+        ],
+    )
+    .await;
+    git(&path, &["checkout", "-b", "feature/draft"]).await;
+    git(&path, &["update-ref", "refs/remotes/origin/trunk", "HEAD"]).await;
+    git(
+        &path,
+        &[
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/trunk",
+        ],
+    )
+    .await;
+    assert_eq!(
+        Repository::default_branch(&root, &roots, path.to_str().unwrap())
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("trunk")
+    );
+    git(
+        &path,
+        &[
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/missing",
+        ],
+    )
+    .await;
+    assert_eq!(
+        Repository::default_branch(&root, &roots, path.to_str().unwrap())
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("feature/draft")
+    );
+    git(
+        &path,
+        &["symbolic-ref", "--delete", "refs/remotes/origin/HEAD"],
+    )
+    .await;
+    assert_eq!(
+        Repository::default_branch(&root, &roots, path.to_str().unwrap())
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("feature/draft")
+    );
+    git(&path, &["checkout", "--detach"]).await;
+    assert_eq!(
+        Repository::default_branch(&root, &roots, path.to_str().unwrap())
+            .await
+            .unwrap(),
+        None
+    );
+    let outside = tempfile::tempdir().unwrap();
+    git(outside.path(), &["init", "-b", "private"]).await;
+    assert!(
+        Repository::default_branch(&root, &roots, outside.path().to_str().unwrap())
+            .await
+            .is_err()
+    );
+}

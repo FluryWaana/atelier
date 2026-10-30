@@ -299,19 +299,16 @@ pub fn TimeReport(
                     <h2 id="time-report-heading">{move || i18n.text("message.entries_timers")}</h2>
                     <p class="hint">
                         {move || {
-                            i18n
-                                .text(
-                                    "message.local_entries_to_review_before_sending_to_the_connected_service",
-                                )
+                            i18n.text(
+                                "message.local_entries_to_review_before_sending_to_the_connected_service",
+                            )
                         }}
                     </p>
                 </div>
                 <div class="row-actions">
-                    <button
-                        id="add-time"
-                        class="primary"
-                        type="button"
-                        disabled={move || {
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Primary}
+                        disabled={Signal::derive(move || {
                             loading.get()
                                 || !board
                                     .cards
@@ -320,7 +317,11 @@ pub fn TimeReport(
                                             .iter()
                                             .any(|card| !card.fields.flag("archived").unwrap_or(false))
                                     })
-                        }}
+                        })}
+                        class="primary"
+                        {..}
+                        id="add-time"
+                        type="button"
                         on:click={move |_| {
                             if let Some(card) = board
                                 .cards
@@ -336,10 +337,15 @@ pub fn TimeReport(
                         }}
                     >
                         {move || i18n.text("message.log_time")}
-                    </button>
-                    <button id="close-time-report" type="button" on:click={move |_| close()}>
+                    </crate::button::Button>
+                    <crate::button::Button
+                        {..}
+                        id="close-time-report"
+                        type="button"
+                        on:click={move |_| close()}
+                    >
                         {move || i18n.text("message.close")}
-                    </button>
+                    </crate::button::Button>
                 </div>
             </header>
             <p role="status" hidden={move || !loading.get()}>
@@ -354,14 +360,13 @@ pub fn TimeReport(
                 hidden={move || board.connected.get() && board.sync_error.get().is_empty()}
             >
                 {move || {
-                    i18n
-                        .text(
-                            &if board.sync_error.get().is_empty() {
-                                "message.updates_interrupted_reconnecting".to_owned()
-                            } else {
-                                board.sync_error.get()
-                            },
-                        )
+                    i18n.text(
+                        &if board.sync_error.get().is_empty() {
+                            "message.updates_interrupted_reconnecting".to_owned()
+                        } else {
+                            board.sync_error.get()
+                        },
+                    )
                 }}
             </p>
             <p class="field-help">
@@ -370,9 +375,8 @@ pub fn TimeReport(
                 }}
             </p>
             <section class="time-filters" aria-label={move || i18n.text("message.filter_entries")}>
-                <label>
-                    {move || i18n.text("message.from")}
-                    <input
+                <crate::form::Field id="report-from" label=Signal::derive(move || i18n.text("message.from"))><crate::form::Input
+                        {..}
                         id="report-from"
                         type="date"
                         prop:value={move || from.get()}
@@ -380,11 +384,9 @@ pub fn TimeReport(
                             from.set(event_target_value(&event));
                             page.set(0);
                         }}
-                    />
-                </label>
-                <label>
-                    {move || i18n.text("message.to")}
-                    <input
+                    /></crate::form::Field>
+                <crate::form::Field id="report-to" label=Signal::derive(move || i18n.text("message.to"))><crate::form::Input
+                        {..}
                         id="report-to"
                         type="date"
                         prop:value={move || to.get()}
@@ -392,11 +394,9 @@ pub fn TimeReport(
                             to.set(event_target_value(&event));
                             page.set(0);
                         }}
-                    />
-                </label>
-                <label>
-                    {move || i18n.text("message.project")}
-                    <select
+                    /></crate::form::Field>
+                <crate::form::Field id="report-project" label=Signal::derive(move || i18n.text("message.project"))><crate::form::Select
+                        {..}
                         id="report-project"
                         prop:value={move || repo.get()}
                         on:change={move |event| {
@@ -414,11 +414,9 @@ pub fn TimeReport(
                                 }
                             }}
                         />
-                    </select>
-                </label>
-                <label>
-                    {move || i18n.text("message.time_source")}
-                    <select
+                    </crate::form::Select></crate::form::Field>
+                <crate::form::Field id="report-source" label=Signal::derive(move || i18n.text("message.time_source"))><crate::form::Select
+                        {..}
                         id="report-source"
                         prop:value={move || source.get()}
                         on:change={move |event| {
@@ -431,11 +429,9 @@ pub fn TimeReport(
                         <option value="agent">
                             {move || i18n.text("message.measured_active_agent_time")}
                         </option>
-                    </select>
-                </label>
-                <label>
-                    {move || i18n.text("message.human_submission_state")}
-                    <select
+                    </crate::form::Select></crate::form::Field>
+                <crate::form::Field id="report-state" label=Signal::derive(move || i18n.text("message.human_submission_state"))><crate::form::Select
+                        {..}
                         id="report-state"
                         prop:value={move || status.get()}
                         on:change={move |event| {
@@ -447,8 +443,7 @@ pub fn TimeReport(
                         <option value="draft">{move || i18n.text("message.not_submitted")}</option>
                         <option value="exported">{move || i18n.text("message.submitted")}</option>
                         <option value="uncertain">{move || i18n.text("message.uncertain_submission")}</option>
-                    </select>
-                </label>
+                    </crate::form::Select></crate::form::Field>
             </section>
             <p role="alert" hidden={move || !invalid.get()}>
                 {move || i18n.text("message.the_end_date_must_follow_the_start_date")}
@@ -460,8 +455,7 @@ pub fn TimeReport(
                         {move || duration_text(
                             rows
                                 .with(|rows| {
-                                    rows
-                                        .iter()
+                                    rows.iter()
                                         .filter(|row| !row.agent)
                                         .map(|row| row.seconds)
                                         .fold(0u64, u64::saturating_add)
@@ -475,8 +469,7 @@ pub fn TimeReport(
                         {move || duration_text(
                             rows
                                 .with(|rows| {
-                                    rows
-                                        .iter()
+                                    rows.iter()
                                         .filter(|row| row.agent)
                                         .map(|row| row.seconds)
                                         .fold(0u64, u64::saturating_add)
@@ -488,13 +481,11 @@ pub fn TimeReport(
                     <span>{move || i18n.text("message.pending_approval")}</span>
                     <strong>
                         {move || {
-                            rows
-                                .with(|rows| {
-                                    rows
-                                        .iter()
-                                        .filter(|row| !row.agent && !row.running && row.state != "exported")
-                                        .count()
-                                })
+                            rows.with(|rows| {
+                                rows.iter()
+                                    .filter(|row| !row.agent && !row.running && row.state != "exported")
+                                    .count()
+                            })
                         }}
                     </strong>
                     <small>{move || i18n.text("message.entries_to_send_or_check")}</small>
@@ -521,27 +512,27 @@ pub fn TimeReport(
                     i18n.text("message.active_timers_and_agents_may_still_increase_the_csv_contains_onl")
                 }}
             </p>
-            <button
-                id="download-time-csv"
-                type="button"
-                disabled={move || {
+            <crate::button::Button
+                disabled={Signal::derive(move || {
                     loading.get() || !load_error.get().is_empty() || invalid.get()
                         || !rows.with(|rows| rows.iter().any(|row| !row.agent && !row.running))
-                }}
+                })}
+                {..}
+                id="download-time-csv"
+                type="button"
                 on:click={download}
             >
                 {move || i18n.text("message.export_stopped_entries_csv")}
-            </button>
+            </crate::button::Button>
             <p hidden={move || {
                 loading.get() || !load_error.get().is_empty() || !rows.with(|rows| rows.is_empty())
             }}>{move || i18n.text("message.no_time_in_this_selection")}</p>
             <div>
                 <For
                     each={move || {
-                        rows
-                            .with(|rows| {
-                                rows.iter().skip(page.get() * 100).take(100).cloned().collect::<Vec<_>>()
-                            })
+                        rows.with(|rows| {
+                            rows.iter().skip(page.get() * 100).take(100).cloned().collect::<Vec<_>>()
+                        })
                     }}
                     key={|row| row.clone()}
                     children={move |row| {
@@ -549,25 +540,25 @@ pub fn TimeReport(
                         let edit_card = card.clone();
                         let entry_id = StoredValue::new(row.id.clone());
                         view! {
-                            <article class="workspace-row time-entry time-report-row">
+                            <crate::card::Card class="workspace-row time-entry time-report-row" {..} >
                                 <div>
                                     <p hidden={!row.running}>{move || i18n.text("message.in_progress")}</p>
                                     <strong>
-                                        {row.date}" "{row.start}" · "{duration_text(row.seconds)}
+                                        {row.date} " "{row.start} " · "{duration_text(row.seconds)}
                                     </strong>
                                     <p>
                                         {move || {
-                                            i18n
-                                                .text(
-                                                    if row.agent {
-                                                        "message.measured_active_agent_time"
-                                                    } else {
-                                                        "message.human_time"
-                                                    },
-                                                )
+                                            i18n.text(
+                                                if row.agent {
+                                                    "message.measured_active_agent_time"
+                                                } else {
+                                                    "message.human_time"
+                                                },
+                                            )
                                         }}
                                     </p>
-                                    <button
+                                    <crate::button::Button
+                                        {..}
                                         type="button"
                                         on:click={move |_| {
                                             on_task.run(card.clone());
@@ -576,30 +567,33 @@ pub fn TimeReport(
                                         {row.ticket}
                                         " · "
                                         {row.title}
-                                    </button>
+                                    </crate::button::Button>
                                     <p class="entry-description">{row.description}</p>
                                 </div>
                                 <div class="row-actions">
-                                    <button
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        {..}
                                         type="button"
                                         hidden={row.agent || !row.running}
-                                        disabled={move || pending.get()}
                                         on:click={move |_| {
                                             action
                                                 .run((
                                                     gloo_net::http::Method::POST,
                                                     format!("/api/time/{}/stop", entry_id.get_value()),
-                                                    serde_json::json!({}),
+                                                    serde_json::json!({
+                }),
                                                 ))
                                         }}
                                     >
                                         {move || i18n.text("message.stop")}
-                                    </button>
-                                    <button
+                                    </crate::button::Button>
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
                                         class="edit-report-time"
+                                        {..}
                                         type="button"
                                         hidden={row.agent || row.running || row.state != "draft"}
-                                        disabled={move || pending.get()}
                                         on:click={move |_| {
                                             if let Some(entry) = board
                                                 .times
@@ -615,12 +609,14 @@ pub fn TimeReport(
                                         }}
                                     >
                                         {move || i18n.text("message.edit")}
-                                    </button>
-                                    <button
+                                    </crate::button::Button>
+                                    <crate::button::Button
+                                        variant={crate::button::ButtonVariant::Danger}
+                                        disabled={Signal::derive(move || pending.get())}
                                         class="delete-report-time danger"
+                                        {..}
                                         type="button"
                                         hidden={row.agent || row.running || row.state != "draft"}
-                                        disabled={move || pending.get()}
                                         on:click={move |_| {
                                             removing
                                                 .set(
@@ -636,39 +632,52 @@ pub fn TimeReport(
                                         }}
                                     >
                                         {move || i18n.text("message.delete_5e5d0216")}
-                                    </button>
+                                    </crate::button::Button>
                                 </div>
-                            </article>
+                            </crate::card::Card>
                         }
                     }}
                 />
             </div>
             <div class="editor-actions" hidden={move || rows.with(|rows| rows.len() <= 100)}>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || page.get() == 0)}
+                    {..}
                     type="button"
-                    disabled={move || page.get() == 0}
                     on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
                 >
                     {move || i18n.text("message.previous")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || rows.with(|rows| (page.get() + 1) * 100 >= rows.len()))}
+                    {..}
                     type="button"
-                    disabled={move || rows.with(|rows| (page.get() + 1) * 100 >= rows.len())}
                     on:click={move |_| page.update(|page| *page += 1)}
                 >
                     {move || i18n.text("message.next")}
-                </button>
+                </crate::button::Button>
             </div>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>
-            <div class="confirmation" role="alert" hidden={move || removing.get().is_none()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(removing.get().is_none())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|removing.set(None))>
                 <p>{move || i18n.text("message.permanently_delete_this_time_entry")}</p>
-                <button
-                    id="confirm-report-delete-time"
-                    class="danger"
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     type="button"
-                    disabled={move || pending.get()}
+                    on:click={move |_| removing.set(None)}
+                >
+                    {move || i18n.text("message.cancel")}
+                </crate::button::Button><crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    disabled={Signal::derive(move || pending.get())}
+                    class="danger"
+                    {..}
+                    id="confirm-report-delete-time"
+                    type="button"
                     on:click={move |_| {
                         if let Some(entry) = removing.get_untracked() {
                             action
@@ -681,11 +690,8 @@ pub fn TimeReport(
                     }}
                 >
                     {move || i18n.text("message.delete_permanently")}
-                </button>
-                <button type="button" disabled={move || pending.get()} on:click={move |_| removing.set(None)}>
-                    {move || i18n.text("message.cancel")}
-                </button>
-            </div>
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             {move || {
                 editing
                     .get()
@@ -721,9 +727,6 @@ fn TimeEditor(
     let discard = RwSignal::new(false);
     let navigation = StoredValue::new(None::<Callback<()>>);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
     let close = move || {
         if let Some(next) = navigation.get_value() {
             navigation.set_value(None);
@@ -772,44 +775,17 @@ fn TimeEditor(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <dialog
+        <crate::modal::Modal
             id="time-dialog"
             class="time-entry-editor"
+            labelledby="time-title"
             node_ref={dialog}
-            aria-labelledby="time-title"
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                request_close();
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| request_close())}
         >
-            <header class="dialog-heading">
-                <div>
-                    <div class="eyebrow">{move || i18n.text("message.human_time_a2731ccf")}</div>
-                    <h2 id="time-title">
-                        {move || {
-                            i18n
-                                .text(
-                                    if initial.with_value(Option::is_some) {
-                                        "message.edit_time"
-                                    } else {
-                                        "message.log_time"
-                                    },
-                                )
-                        }}
-                    </h2>
-                </div>
-                <button
-                    id="close-time-editor"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| request_close()}
-                >
-                    {move || i18n.text("message.close")}
-                </button>
-            </header>
-            <label>
-                {move || i18n.text("message.task")}
-                <select
+            <crate::modal::ModalHeader class="inset" title_id="time-title" title=Signal::derive(move||i18n.text(if initial.with_value(Option::is_some){"message.edit_time"}else{"message.log_time"})) close_id="close-time-editor" busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|request_close())/>
+            <crate::form::Field id="time-card" label=Signal::derive(move || i18n.text("message.task"))><crate::form::Select
+                    {..}
                     id="time-card"
                     prop:value={move || card.get()}
                     disabled={move || pending.get() || dirty.get() || initial.with_value(Option::is_some)}
@@ -830,8 +806,7 @@ fn TimeEditor(
                         key={|card| card.id.clone()}
                         children={move |card| view! { <option value={card.id}>{card.title.clone()}</option> }}
                     />
-                </select>
-            </label>
+                </crate::form::Select></crate::form::Field>
             {move || {
                 let card_id = card.get();
                 let archived = board
@@ -857,18 +832,15 @@ fn TimeEditor(
                     />
                 }
             }}
-            <div class="confirmation" role="alert" hidden={move || !discard.get()}>
+            <crate::modal::Confirmation open=Signal::derive(move||!(!discard.get())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|{
+                        discard.set(false);
+                        navigation.set_value(None);
+                    })>
                 <p>{move || i18n.text("message.discard_the_unsaved_time_entry")}</p>
-                <button
-                    id="discard-time-editor"
-                    class="danger"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| close()}
-                >
-                    {move || i18n.text("message.discard")}
-                </button>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     id="keep-time-editor"
                     type="button"
                     on:click={move |_| {
@@ -877,8 +849,18 @@ fn TimeEditor(
                     }}
                 >
                     {move || i18n.text("message.keep_editing")}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button><crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    disabled={Signal::derive(move || pending.get())}
+                    class="danger"
+                    {..}
+                    id="discard-time-editor"
+                    type="button"
+                    on:click={move |_| close()}
+                >
+                    {move || i18n.text("message.discard")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
+        </crate::modal::Modal>
     }
 }

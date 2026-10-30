@@ -132,13 +132,9 @@ pub fn PreparationResult(
             <h4 id="preparation-heading">{move || i18n.text("message.issue_preparation")}</h4>
             <p class="error" role="alert">
                 {move || {
-                    run
-                        .with(|run| {
-                            run
-                                .as_ref()
-                                .map(|run| i18n.text(&field(run, "preparationError")))
-                                .unwrap_or_default()
-                        })
+                    run.with(|run| {
+                        run.as_ref().map(|run| i18n.text(&field(run, "preparationError"))).unwrap_or_default()
+                    })
                 }}
             </p>
             {move || {
@@ -181,9 +177,9 @@ pub fn PreparationResult(
                 hidden={move || result.with(|result| result.is_none())}
             >
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-preparation"
-                        type="checkbox"
                         prop:checked={move || {
                             run.with(|run| run.as_ref().is_some_and(|run| field(run, "id") == approved.get()))
                         }}
@@ -204,16 +200,17 @@ pub fn PreparationResult(
                         i18n.text("message.replace_current_criteria_with_this_proposal_and_reset_their_huma")
                     }}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
+                        run.with(|run| run.as_ref().is_none_or(|run| field(run, "id") != approved.get()))
+                    })}
+                    {..}
                     id="apply-preparation"
                     type="button"
-                    disabled={move || {
-                        run.with(|run| run.as_ref().is_none_or(|run| field(run, "id") != approved.get()))
-                    }}
                     on:click={apply}
                 >
                     {move || i18n.text("message.confirm_applying_the_preparation")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}

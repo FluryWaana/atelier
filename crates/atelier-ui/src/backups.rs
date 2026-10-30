@@ -31,9 +31,6 @@ pub fn Backups(
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(None::<(&'static str, String)>);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
     let close = move || {
         if pending.get_untracked() {
             return;
@@ -136,52 +133,40 @@ pub fn Backups(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <dialog
+        <crate::modal::Modal
             id="backups-dialog"
             class="editor"
+            labelledby="backups-title"
             node_ref={dialog}
-            aria-labelledby="backups-title"
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                close();
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| close())}
         >
-            <header class="editor-heading">
-                <div>
-                    <p class="eyebrow">{move || i18n.text("message.your_data")}</p>
-                    <h2 id="backups-title">{move || i18n.text("message.backups_and_restore")}</h2>
-                </div>
-                <button
-                    id="close-backups"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| close()}
-                >
-                    {move || i18n.text("message.close")}
-                </button>
-            </header>
+            <crate::modal::ModalHeader class="inset" title_id="backups-title" title=Signal::derive(move||i18n.text("message.backups_and_restore")) close_id="close-backups" busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|close())/>
             <p class="field-help">
                 {move || i18n.text("message.backups_preserve_application_data_repository_and_worktree_files")}
             </p>
             <div class="editor-actions">
-                <button
-                    id="create-backup"
+                <crate::button::Button
+                    variant={crate::button::ButtonVariant::Primary}
+                    disabled={Signal::derive(move || pending.get())}
                     class="primary"
+                    {..}
+                    id="create-backup"
                     type="button"
-                    autofocus
-                    disabled={move || pending.get()}
+                    autofocus=true
                     on:click={move |_| execute(false)}
                 >
                     {move || i18n.text("message.create_backup")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="refresh-backups"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| refresh()}
                 >
                     {move || i18n.text("message.refresh")}
-                </button>
+                </crate::button::Button>
             </div>
             <p id="backups-notice" class="field-help" role="status">
                 {move || {
@@ -211,12 +196,13 @@ pub fn Backups(
                         let date = field(&backup, "date").replace('T', " ").replace('Z', " UTC");
                         let size = backup.get::<u64>("bytes").ok().flatten().unwrap_or(0).div_ceil(1024);
                         view! {
-                            <button
+                            <crate::button::Button
+                                disabled={Signal::derive(move || pending.get())}
+                                class="ui-card-choice project-choice"
+                                {..}
                                 type="button"
-                                class="project-choice"
                                 data-backup={name.get_value()}
                                 aria-pressed={move || (selected.get() == name.get_value()).to_string()}
-                                disabled={move || pending.get()}
                                 on:click={move |_| selected.set(name.get_value())}
                             >
                                 <strong>
@@ -228,7 +214,7 @@ pub fn Backups(
                                     }}
                                 </strong>
                                 <small>{name.get_value()}</small>
-                            </button>
+                            </crate::button::Button>
                         }
                     }}
                 />
@@ -236,31 +222,35 @@ pub fn Backups(
                     {move || i18n.text("message.no_backups_available")}
                 </p>
             </div>
-            <div class="confirmation" role="alert" hidden={move || selected.get().is_empty()}>
+            <crate::modal::Confirmation error=Signal::derive(move||i18n.text(&error.get())) open=Signal::derive(move||!(selected.get().is_empty())) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|selected.set(String::new()))>
                 <p>
                     {move || {
                         i18n.text("message.restoring_this_backup_will_replace_current_tasks_projects_settin")
                     }}
                 </p>
                 <p class="backup-name">{move || selected.get()}</p>
-                <button
-                    id="restore-backup"
-                    class="danger"
-                    type="button"
-                    disabled={move || pending.get()}
-                    on:click={move |_| execute(true)}
-                >
-                    {move || i18n.text("message.restore_this_backup")}
-                </button>
-                <button
+                <crate::modal::ModalActions><crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
+                    data-confirmation-cancel=""
+                    autofocus=true
                     id="cancel-restore"
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| selected.set(String::new())}
                 >
                     {move || i18n.text("message.cancel")}
-                </button>
-            </div>
-        </dialog>
+                </crate::button::Button><crate::button::Button
+                    variant={crate::button::ButtonVariant::Danger}
+                    disabled={Signal::derive(move || pending.get())}
+                    class="danger"
+                    {..}
+                    id="restore-backup"
+                    type="button"
+                    on:click={move |_| execute(true)}
+                >
+                    {move || i18n.text("message.restore_this_backup")}
+                </crate::button::Button></crate::modal::ModalActions>
+            </crate::modal::Confirmation>
+        </crate::modal::Modal>
     }
 }

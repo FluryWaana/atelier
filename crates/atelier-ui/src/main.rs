@@ -13,6 +13,8 @@ mod automation;
 mod backups;
 mod brainstorm;
 mod brainstorm_page;
+mod button;
+mod card;
 mod commits;
 mod connector_effects;
 mod connector_ticket;
@@ -23,6 +25,7 @@ mod forge_checks;
 mod forge_content;
 mod forge_publication;
 mod forge_task;
+mod form;
 mod git_push;
 mod i18n;
 mod integration_choice;
@@ -205,29 +208,57 @@ async fn write(
             })?;
         checked_response(response).await
     };
-    if path.ends_with("/diagnose") {
-        retry_agent_request(send).await
-    } else {
-        send().await
+    retry_request(send, path.ends_with("/diagnose")).await
+}
+
+// Admission refuses before reservation. Other write failures can have an effect and must never retry.
+fn request_retry_allowed(message: Option<&str>, diagnostic: bool) -> bool {
+    matches!(
+        message,
+        Some("message.a_change_is_in_progress_try_again_shortly")
+    ) || (diagnostic
+        && matches!(
+            message,
+            Some(
+                "message.agent_diagnostic_busy"
+                    | "message.executable_lookup_is_busy_try_again_shortly"
+            )
+        ))
+}
+
+#[cfg(test)]
+mod retry_policy_tests {
+    #[test]
+    fn writes_only_retry_a_refusal_before_any_effect() {
+        assert!(super::request_retry_allowed(
+            Some("message.a_change_is_in_progress_try_again_shortly"),
+            false
+        ));
+        for message in [
+            None,
+            Some("message.agent_diagnostic_busy"),
+            Some("message.operation_refused"),
+            Some("message.connection_interrupted_check_the_current_state_before_trying_aga"),
+        ] {
+            assert!(!super::request_retry_allowed(message, false));
+        }
+        assert!(super::request_retry_allowed(
+            Some("message.agent_diagnostic_busy"),
+            true
+        ));
     }
 }
 
-async fn retry_agent_request<F, Fut>(mut send: F) -> Result<Response, String>
+async fn retry_request<F, Fut>(mut send: F, diagnostic: bool) -> Result<Response, String>
 where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<Response, String>>,
 {
-    for attempt in 0..60 {
+    let attempts = if diagnostic { 60 } else { 15 };
+    for attempt in 0..attempts {
         let result = send().await;
-        if attempt == 59
-            || !matches!(
-                result.as_ref().err().map(String::as_str),
-                Some(
-                    "message.agent_diagnostic_busy"
-                        | "message.executable_lookup_is_busy_try_again_shortly"
-                        | "message.a_change_is_in_progress_try_again_shortly"
-                )
-            )
+        if attempt + 1 == attempts
+            || !request_retry_allowed(result.as_ref().err().map(String::as_str), diagnostic)
         {
             return result;
         }
@@ -236,7 +267,7 @@ where
                 move || {
                     let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
                 },
-                std::time::Duration::from_secs(1),
+                std::time::Duration::from_millis(if diagnostic { 1000 } else { 200 }),
             );
         });
         let _ = wasm_bindgen_futures::JsFuture::from(pause).await;
@@ -354,11 +385,7 @@ async fn read(token: &str, path: &str) -> Result<Response, String> {
             .map_err(|_| "message.connection_interrupted")?;
         checked_response(response).await
     };
-    if path == "/api/agent-providers/discover" {
-        retry_agent_request(send).await
-    } else {
-        send().await
-    }
+    retry_request(send, path == "/api/agent-providers/discover").await
 }
 
 async fn load(token: &str) -> Result<Board, String> {
@@ -630,7 +657,7 @@ fn App() -> impl IntoView {
             }
             selected.set(card);
             view.set(WorkspaceView::Task);
-            focus_element("task-editor");
+            focus_element("editor-heading");
         });
         if let Some(guard) = navigation_guard.0.get_untracked() {
             guard.run(continuation);
@@ -909,9 +936,14 @@ fn App() -> impl IntoView {
     });
     on_cleanup(move || shortcuts.remove());
     view! {
-        <button class="skip-link" type="button" on:click={move |_| focus_element("main-content")}>
+        <crate::button::Button
+            class="skip-link"
+            {..}
+            type="button"
+            on:click={move |_| focus_element("main-content")}
+        >
             {move || i18n.text("message.skip_to_content")}
-        </button>
+        </crate::button::Button>
         <aside
             id="main-navigation"
             class="sidebar"
@@ -934,9 +966,10 @@ fn App() -> impl IntoView {
                         {env!("CARGO_PKG_VERSION")}
                     </small>
                 </a>
-                <button
-                    id="toggle-navigation"
+                <crate::button::Button
                     class="sidebar-toggle"
+                    {..}
+                    id="toggle-navigation"
                     type="button"
                     aria-controls="main-navigation"
                     aria-expanded={move || (!sidebar_collapsed.get()).to_string()}
@@ -946,11 +979,12 @@ fn App() -> impl IntoView {
                 >
                     <NavigationIcon kind="collapse" />
                     <NavigationIcon kind="menu" />
-                </button>
+                </crate::button::Button>
             </div>
             <nav class="sidebar-primary" aria-label={move || i18n.text("message.personal_workspace")}>
-                <button
+                <crate::button::Button
                     class="nav-item"
+                    {..}
                     class:nav-active={move || view.get() == WorkspaceView::Brainstorm}
                     data-view="brainstorm"
                     id="brainstorm-button"
@@ -962,9 +996,10 @@ fn App() -> impl IntoView {
                 >
                     <NavigationIcon kind="brainstorm" />
                     <span class="nav-label">{move || i18n.text("message.brainstorming")}</span>
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
                     class="nav-item"
+                    {..}
                     class:nav-active={move || view.get() == WorkspaceView::Overview}
                     id="overview-button"
                     aria-current={move || {
@@ -975,26 +1010,27 @@ fn App() -> impl IntoView {
                 >
                     <NavigationIcon kind="overview" />
                     <span class="nav-label">{move || i18n.text("message.overview")}</span>
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || loading.get())}
                     class="nav-item"
+                    {..}
                     id="manage-projects"
                     type="button"
                     class:nav-active={move || view.get() == WorkspaceView::Projects}
                     aria-current={move || {
                         if view.get() == WorkspaceView::Projects { "page" } else { "false" }
                     }}
-                    disabled={move || loading.get()}
                     on:click={move |_| navigate.run(WorkspaceView::Projects)}
                     title={move || i18n.text("message.my_projects")}
                 >
                     <NavigationIcon kind="projects" />
                     <span class="nav-label">{move || i18n.text("message.my_projects")}</span>
-                </button>
+                </crate::button::Button>
             </nav>
             <section class="sidebar-agents">
                 <div class="workspace-label">{move || i18n.text("message.your_agents")}</div>
-                <div id="agents">
+                <div class="sidebar-agent-container">
                     <div class="sidebar-agent-list">
                         <For
                             each={move || {
@@ -1003,11 +1039,13 @@ fn App() -> impl IntoView {
                             }}
                             key={|profile| field(profile, "id")}
                             children={move |profile| {
+                                let profile_title = field(&profile, "name");
                                 view! {
-                                    <button
+                                    <crate::button::Button
                                         class="agent-row"
+                                        {..}
                                         type="button"
-                                        title={field(&profile, "name")}
+                                        title={profile_title}
                                         on:click={move |_| show_agents.set(true)}
                                     >
                                         <span class="agent-avatar">
@@ -1038,80 +1076,79 @@ fn App() -> impl IntoView {
                                                     {
                                                         let id = field(&profile, "id");
                                                         move || {
-                                                            i18n
-                                                                .text(
-                                                                    if agent_checking.get()
-                                                                        && agent_diagnostics::current_status(
-                                                                                agent_status,
-                                                                                &id,
-                                                                                &board.settings.get(),
-                                                                            )
-                                                                            .is_none()
+                                                            i18n.text(
+                                                                if agent_checking.get()
+                                                                    && agent_diagnostics::current_status(
+                                                                            agent_status,
+                                                                            &id,
+                                                                            &board.settings.get(),
+                                                                        )
+                                                                        .is_none()
+                                                                {
+                                                                    "message.checking"
+                                                                } else {
+                                                                    match agent_diagnostics::current_status(
+                                                                            agent_status,
+                                                                            &id,
+                                                                            &board.settings.get(),
+                                                                        )
+                                                                        .map(|status| (
+                                                                            status.authentication,
+                                                                            status.account_report.map(|report| report.state),
+                                                                        ))
                                                                     {
-                                                                        "message.checking"
-                                                                    } else {
-                                                                        match agent_diagnostics::current_status(
-                                                                                agent_status,
-                                                                                &id,
-                                                                                &board.settings.get(),
-                                                                            )
-                                                                            .map(|status| (
-                                                                                status.authentication,
-                                                                                status.account_report.map(|report| report.state),
-                                                                            ))
-                                                                        {
-                                                                            Some(
-                                                                                (
-                                                                                    _,
-                                                                                    Some(
-                                                                                        atelier_core::application::agent_account::State::Available,
-                                                                                    ),
+                                                                        Some(
+                                                                            (
+                                                                                _,
+                                                                                Some(
+                                                                                    atelier_core::application::agent_account::State::Available,
                                                                                 ),
-                                                                            ) => {
-                                                                                "message.limits_reported_by_the_service_they_do_not_establish_access_to_a"
-                                                                            }
-                                                                            Some(
-                                                                                (
-                                                                                    _,
-                                                                                    Some(
-                                                                                        atelier_core::application::agent_account::State::Disconnected,
-                                                                                    ),
-                                                                                ),
-                                                                            ) => "message.sign_in_through_the_cli_then_check_again",
-                                                                            Some(
-                                                                                (
-                                                                                    _,
-                                                                                    Some(
-                                                                                        atelier_core::application::agent_account::State::RateLimited,
-                                                                                    ),
-                                                                                ),
-                                                                            ) => {
-                                                                                "message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte"
-                                                                            }
-                                                                            Some(
-                                                                                (atelier_core::contracts::AgentAuthentication::Present, _),
-                                                                            ) => {
-                                                                                "message.cli_login_present_service_access_has_not_been_verified"
-                                                                            }
-                                                                            Some(
-                                                                                (atelier_core::contracts::AgentAuthentication::Absent, _),
-                                                                            ) => "message.no_cli_login",
-                                                                            Some(
-                                                                                (
-                                                                                    atelier_core::contracts::AgentAuthentication::Configured,
-                                                                                    _,
-                                                                                ),
-                                                                            ) => "message.key_present_validity_has_not_been_verified",
-                                                                            Some(
-                                                                                (
-                                                                                    atelier_core::contracts::AgentAuthentication::MissingKey,
-                                                                                    _,
-                                                                                ),
-                                                                            ) => "message.no_saved_api_key",
-                                                                            _ => "message.not_verified",
+                                                                            ),
+                                                                        ) => {
+                                                                            "message.limits_reported_by_the_service_they_do_not_establish_access_to_a"
                                                                         }
-                                                                    },
-                                                                )
+                                                                        Some(
+                                                                            (
+                                                                                _,
+                                                                                Some(
+                                                                                    atelier_core::application::agent_account::State::Disconnected,
+                                                                                ),
+                                                                            ),
+                                                                        ) => "message.sign_in_through_the_cli_then_check_again",
+                                                                        Some(
+                                                                            (
+                                                                                _,
+                                                                                Some(
+                                                                                    atelier_core::application::agent_account::State::RateLimited,
+                                                                                ),
+                                                                            ),
+                                                                        ) => {
+                                                                            "message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte"
+                                                                        }
+                                                                        Some(
+                                                                            (atelier_core::contracts::AgentAuthentication::Present, _),
+                                                                        ) => {
+                                                                            "message.cli_login_present_service_access_has_not_been_verified"
+                                                                        }
+                                                                        Some(
+                                                                            (atelier_core::contracts::AgentAuthentication::Absent, _),
+                                                                        ) => "message.no_cli_login",
+                                                                        Some(
+                                                                            (
+                                                                                atelier_core::contracts::AgentAuthentication::Configured,
+                                                                                _,
+                                                                            ),
+                                                                        ) => "message.key_present_validity_has_not_been_verified",
+                                                                        Some(
+                                                                            (
+                                                                                atelier_core::contracts::AgentAuthentication::MissingKey,
+                                                                                _,
+                                                                            ),
+                                                                        ) => "message.no_saved_api_key",
+                                                                        _ => "message.not_verified",
+                                                                    }
+                                                                },
+                                                            )
                                                         }
                                                     }
                                                 </span>
@@ -1121,7 +1158,7 @@ fn App() -> impl IntoView {
                                         <span class="agent-chevron" aria-hidden="true">
                                             "›"
                                         </span>
-                                    </button>
+                                    </crate::button::Button>
                                 }
                             }}
                         />
@@ -1129,30 +1166,33 @@ fn App() -> impl IntoView {
                             {move || i18n.text(&agent_check_error.get())}
                         </p>
                     </div>
-                    <button
-                        id="manage-agents"
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Ghost}
+                        disabled={Signal::derive(move || loading.get())}
                         class="text-button"
+                        {..}
+                        id="manage-agents"
                         title={move || i18n.text("message.manage_agents")}
                         type="button"
-                        disabled={move || loading.get()}
                         on:click={move |_| show_agents.set(true)}
                     >
                         <NavigationIcon kind="agents" />
                         <span class="nav-label">{move || i18n.text("message.manage_agents")}</span>
-                    </button>
+                    </crate::button::Button>
                 </div>
             </section>
             <div class="sidebar-bottom">
                 <nav class="sidebar-utilities" aria-label={move || i18n.text("message.settings_4ed117e0")}>
-                    <button
+                    <crate::button::Button
+                        disabled={Signal::derive(move || loading.get())}
                         class="nav-item"
+                        {..}
                         id="manage-settings"
                         type="button"
                         class:nav-active={move || view.get() == WorkspaceView::Settings}
                         aria-current={move || {
                             if view.get() == WorkspaceView::Settings { "page" } else { "false" }
                         }}
-                        disabled={move || loading.get()}
                         on:click={move |_| {
                             settings_section.set("general");
                             navigate.run(WorkspaceView::Settings);
@@ -1161,44 +1201,47 @@ fn App() -> impl IntoView {
                     >
                         <NavigationIcon kind="settings" />
                         <span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span>
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || loading.get())}
                         class="nav-item"
+                        {..}
                         id="diagnostics-button"
                         type="button"
-                        disabled={move || loading.get()}
                         on:click={move |_| show_diagnostics.set(true)}
                         title={move || i18n.text("message.diagnostics")}
                     >
                         <NavigationIcon kind="diagnostics" />
                         <span class="nav-label">{move || i18n.text("message.diagnostics")}</span>
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || loading.get())}
                         class="nav-item"
+                        {..}
                         id="manage-backups"
                         type="button"
-                        disabled={move || loading.get()}
                         on:click={move |_| show_backups.set(true)}
                         title={move || i18n.text("message.backups")}
                     >
                         <NavigationIcon kind="backups" />
                         <span class="nav-label">{move || i18n.text("message.backups")}</span>
-                    </button>
-                    <button
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || loading.get())}
                         class="nav-item"
+                        {..}
                         id="check-updates"
                         type="button"
                         class:nav-active={move || view.get() == WorkspaceView::Updates}
                         aria-current={move || {
                             if view.get() == WorkspaceView::Updates { "page" } else { "false" }
                         }}
-                        disabled={move || loading.get()}
                         on:click={move |_| navigate.run(WorkspaceView::Updates)}
                         title={move || i18n.text("message.updates")}
                     >
                         <NavigationIcon kind="updates" />
                         <span class="nav-label">{move || i18n.text("message.updates")}</span>
-                    </button>
+                    </crate::button::Button>
                 </nav>
                 <div class="local-note">
                     <small>{move || i18n.text("message.your_cards_stay_here")}</small>
@@ -1225,8 +1268,9 @@ fn App() -> impl IntoView {
                         }}
                     </strong>
                 </span>
-                <button
+                <crate::button::Button
                     class="command-trigger"
+                    {..}
                     id="command-button"
                     type="button"
                     aria-haspopup="dialog"
@@ -1248,7 +1292,7 @@ fn App() -> impl IntoView {
                     </svg>
                     <span>{move || i18n.text("message.search_go_to")}</span>
                     <kbd>"Ctrl K"</kbd>
-                </button>
+                </crate::button::Button>
                 <span class="topbar-local" title={move || i18n.text("message.your_cards_stay_here")}>
                     "Local"
                 </span>
@@ -1260,7 +1304,10 @@ fn App() -> impl IntoView {
                         hidden={move || {
                             matches!(
                                 view.get(),
-                                WorkspaceView::Overview | WorkspaceView::Settings | WorkspaceView::Updates
+                                WorkspaceView::Overview
+                                | WorkspaceView::Settings
+                                | WorkspaceView::Updates
+                                | WorkspaceView::Projects
                             )
                         }}
                     >
@@ -1270,18 +1317,20 @@ fn App() -> impl IntoView {
                     <p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p>
                 </div>
                 <div class="heading-actions">
-                    <button
-                        id="create-button"
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Primary}
+                        disabled={Signal::derive(move || pending.get() || loading.get())}
                         class="primary"
+                        {..}
+                        id="create-button"
                         type="button"
                         hidden={move || !workspace_controls() || onboarding()}
-                        disabled={move || pending.get() || loading.get()}
                         on:click={move |_| open_new.run(())}
                     >
                         "＋ "
                         {move || i18n.text("message.new_task")}
                         <kbd>"N"</kbd>
-                    </button>
+                    </crate::button::Button>
                 </div>
             </section>
             <section class="toolbar" hidden={move || !workspace_controls()}>
@@ -1298,8 +1347,9 @@ fn App() -> impl IntoView {
                         .into_iter()
                         .map(move |(target, label)| {
                             view! {
-                                <button
+                                <crate::button::Button
                                     class="view-tab"
+                                    {..}
                                     class:selected-tab={move || view.get() == target}
                                     data-view={target.key()}
                                     id={match target {
@@ -1312,7 +1362,7 @@ fn App() -> impl IntoView {
                                 >
                                     <NavigationIcon kind={target.key()} view_icon=true />
                                     <span>{move || i18n.text(label)}</span>
-                                </button>
+                                </crate::button::Button>
                             }
                         })
                         .collect_view()}
@@ -1323,9 +1373,8 @@ fn App() -> impl IntoView {
                 aria-label={move || i18n.text("message.project_and_search")}
                 hidden={move || !workspace_controls()}
             >
-                <label class="project-choice" for="board-project">
-                    {move || i18n.text("message.project")}
-                    <select
+                <crate::form::Field id="board-project" label=Signal::derive(move || i18n.text("message.project"))><crate::form::Select
+                        {..}
                         id="board-project"
                         prop:value={move || repository.get()}
                         on:change={move |event| {
@@ -1344,9 +1393,9 @@ fn App() -> impl IntoView {
                                 }
                             }}
                         />
-                    </select>
-                </label>
-                <input
+                    </crate::form::Select></crate::form::Field>
+                <crate::form::Input
+                    {..}
                     id="board-search"
                     type="search"
                     hidden={move || view.get() != WorkspaceView::Board}
@@ -1355,21 +1404,23 @@ fn App() -> impl IntoView {
                     prop:value={move || search.get()}
                     on:input={move |event| search.set(event_target_value(&event))}
                 />
-                <button
+                <crate::button::Button
+                    {..}
                     id="configure-columns"
                     hidden={move || view.get() != WorkspaceView::Board}
                     type="button"
                     on:click={move |_| show_kanban_settings.set(true)}
                 >
                     {move || i18n.text("message.configure_kanban_columns")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
+                    {..}
                     id="sync-button"
                     type="button"
                     hidden={move || {
                         board.settings.get().string_equals("ticketProvider", "local").unwrap_or(true)
                     }}
-                    disabled={move || pending.get()}
                     on:click={move |_| {
                         if pending.get_untracked() {
                             return;
@@ -1408,7 +1459,7 @@ fn App() -> impl IntoView {
                     }}
                 >
                     {move || i18n.text("message.synchronize_tickets")}
-                </button>
+                </crate::button::Button>
             </section>
             <p
                 id="credential-status"
@@ -1431,14 +1482,13 @@ fn App() -> impl IntoView {
                 data-connected={move || board.connected.get().to_string()}
             >
                 {move || {
-                    i18n
-                        .text(
-                            &(if !board.sync_error.get().is_empty() {
-                                board.sync_error.get()
-                            } else {
-                                "message.updates_interrupted_reconnecting".into()
-                            }),
-                        )
+                    i18n.text(
+                        &(if !board.sync_error.get().is_empty() {
+                            board.sync_error.get()
+                        } else {
+                            "message.updates_interrupted_reconnecting".into()
+                        }),
+                    )
                 }}
             </p>
             <div
@@ -1472,7 +1522,8 @@ fn App() -> impl IntoView {
                         .into_iter()
                         .map(move |(filter, label)| {
                             view! {
-                                <button
+                                <crate::button::Button
+                                    {..}
                                     data-focus={filter}
                                     aria-pressed={move || (focus_filter.get() == filter).to_string()}
                                     on:click={move |_| focus_filter.set(filter.into())}
@@ -1492,7 +1543,7 @@ fn App() -> impl IntoView {
                                                 .count()
                                         }}
                                     </span>
-                                </button>
+                                </crate::button::Button>
                             }
                         })
                         .collect_view()}
@@ -1531,37 +1582,42 @@ fn App() -> impl IntoView {
                     <div class="welcome-path">
                         <h3>{move || i18n.text("message.find_your_code")}</h3>
                         <p>{move || i18n.text("message.save_a_project_folder")}</p>
-                        <button
+                        <crate::button::Button
+                            {..}
                             id="welcome-projects"
                             type="button"
                             on:click={move |_| navigate.run(WorkspaceView::Projects)}
                         >
                             {move || i18n.text("message.add_a_project")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                     <div class="welcome-path">
                         <h3>{move || i18n.text("message.describe_the_work")}</h3>
                         <p>{move || i18n.text("message.first_task_help")}</p>
-                        <button
-                            id="welcome-create"
+                        <crate::button::Button
+                            variant={crate::button::ButtonVariant::Primary}
                             class="primary"
+                            {..}
+                            id="welcome-create"
                             type="button"
                             on:click={move |_| open_new.run(())}
                         >
                             {move || i18n.text("message.new_task")}
-                        </button>
+                        </crate::button::Button>
                     </div>
                 </div>
                 <div class="welcome-settings">
                     <p>{move || i18n.text("message.connect_tools_later")}</p>
-                    <button
-                        id="welcome-settings"
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Ghost}
                         class="text-button"
+                        {..}
+                        id="welcome-settings"
                         type="button"
                         on:click={move |_| navigate.run(WorkspaceView::Settings)}
                     >
                         {move || i18n.text("message.open_settings")}
-                    </button>
+                    </crate::button::Button>
                 </div>
             </section>
             <section
@@ -1658,8 +1714,7 @@ fn App() -> impl IntoView {
                                             board
                                                 .runs
                                                 .with(|runs| {
-                                                    runs
-                                                        .iter()
+                                                    runs.iter()
                                                         .any(|run| {
                                                             field(run, "cardId") == id.get_value()
                                                                 && matches!(
@@ -1683,9 +1738,12 @@ fn App() -> impl IntoView {
                                                     })
                                         };
                                         view! {
-                                            <article
+                                            <crate::card::Card
                                                 class="card"
+                                                {..}
+
                                                 data-id={id.get_value()}
+                                                aria-labelledby={format!("card-open-{}", id.get_value())}
                                                 draggable={move || (!busy()).to_string()}
                                                 class:dragging={move || {
                                                     dragging
@@ -1714,120 +1772,128 @@ fn App() -> impl IntoView {
                                                 }}
                                                 on:dragend={move |_| dragging.set(None)}
                                             >
-                                                <div class="card-actions">
-                                                    <button
-                                                        type="button"
-                                                        id={format!("card-actions-toggle-{}", id.get_value())}
-                                                        class="card-actions-toggle"
-                                                        popovertarget={format!("card-actions-{}", id.get_value())}
-                                                        aria-label={move || i18n.text("message.task_actions")}
-                                                        title={move || i18n.text("message.task_actions")}
-                                                    >
-                                                        <svg
-                                                            width="16"
-                                                            height="16"
-                                                            viewBox="0 0 16 16"
-                                                            fill="currentColor"
-                                                            aria-hidden="true"
-                                                        >
-                                                            <circle cx="3" cy="8" r="1.5" />
-                                                            <circle cx="8" cy="8" r="1.5" />
-                                                            <circle cx="13" cy="8" r="1.5" />
-                                                        </svg>
-                                                    </button>
-                                                    <div
-                                                        id={format!("card-actions-{}", id.get_value())}
-                                                        class="card-action-menu"
-                                                        popover="auto"
-                                                    >
-                                                        <button
+                                                <crate::card::CardHeader>
+                                                    <span class="card-label">
+                                                        {move || {
+                                                            current()
+                                                                .and_then(|card| {
+                                                                    card.fields
+                                                                        .get::<atelier_core::document::Document>("ticket")
+                                                                        .ok()
+                                                                        .flatten()
+                                                                })
+                                                                .map(|ticket| field(&ticket, "key"))
+                                                                .filter(|key| !key.is_empty())
+                                                                .unwrap_or_else(|| i18n.text("message.local_task"))
+                                                        }}
+                                                    </span>
+                                                    <div class="card-actions">
+                                                        <crate::button::Button
+                                                            class="card-actions-toggle"
+                                                            {..}
                                                             type="button"
-                                                            class="danger"
-                                                            hidden={move || !running()}
-                                                            disabled={move || pending.get()}
+                                                            id={format!("card-actions-toggle-{}", id.get_value())}
                                                             popovertarget={format!("card-actions-{}", id.get_value())}
-                                                            popovertargetaction="hide"
-                                                            on:click={move |_| {
-                                                                card_action.run((id.get_value(), "stop"))
-                                                            }}
+                                                            aria-label={move || i18n.text("message.task_actions")}
+                                                            title={move || i18n.text("message.task_actions")}
                                                         >
                                                             <svg
                                                                 width="16"
                                                                 height="16"
-                                                                viewBox="0 0 24 24"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="1.7"
+                                                                viewBox="0 0 16 16"
+                                                                fill="currentColor"
                                                                 aria-hidden="true"
                                                             >
-                                                                <rect x="5" y="5" width="14" height="14" rx="2" />
+                                                                <circle cx="3" cy="8" r="1.5" />
+                                                                <circle cx="8" cy="8" r="1.5" />
+                                                                <circle cx="13" cy="8" r="1.5" />
                                                             </svg>
-                                                            {move || i18n.text("message.stop_the_agent")}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            hidden={running}
-                                                            disabled={busy}
-                                                            popovertarget={format!("card-actions-{}", id.get_value())}
-                                                            popovertargetaction="hide"
-                                                            on:click={move |_| {
-                                                                card_action.run((id.get_value(), "archive"))
-                                                            }}
+                                                        </crate::button::Button>
+                                                        <div
+                                                            id={format!("card-actions-{}", id.get_value())}
+                                                            class="card-action-menu"
+                                                            popover="auto"
                                                         >
-                                                            <NavigationIcon kind="archives" view_icon=true />
-                                                            {move || i18n.text("message.archive_8614cf00")}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            class="danger"
-                                                            hidden={running}
-                                                            disabled={busy}
-                                                            popovertarget={format!("card-actions-{}", id.get_value())}
-                                                            popovertargetaction="hide"
-                                                            on:click={move |_| {
-                                                                card_action.run((id.get_value(), "delete"))
-                                                            }}
-                                                        >
-                                                            <svg
-                                                                width="16"
-                                                                height="16"
-                                                                viewBox="0 0 24 24"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="1.7"
-                                                                aria-hidden="true"
+                                                            <crate::button::Button
+                                                                variant={crate::button::ButtonVariant::Danger}
+                                                                disabled={Signal::derive(move || pending.get())}
+                                                                class="danger"
+                                                                {..}
+                                                                type="button"
+                                                                hidden={move || !running()}
+                                                                popovertarget={format!("card-actions-{}", id.get_value())}
+                                                                popovertargetaction="hide"
+                                                                on:click={move |_| {
+                                                                    card_action.run((id.get_value(), "stop"))
+                                                                }}
                                                             >
-                                                                <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
-                                                            </svg>
-                                                            {move || i18n.text("message.delete_locally")}
-                                                        </button>
+                                                                <svg
+                                                                    width="16"
+                                                                    height="16"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    stroke-width="1.7"
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    <rect x="5" y="5" width="14" height="14" rx="2" />
+                                                                </svg>
+                                                                {move || i18n.text("message.stop_the_agent")}
+                                                            </crate::button::Button>
+                                                            <crate::button::Button
+                                                                disabled={busy}
+                                                                {..}
+                                                                type="button"
+                                                                hidden={running}
+                                                                popovertarget={format!("card-actions-{}", id.get_value())}
+                                                                popovertargetaction="hide"
+                                                                on:click={move |_| {
+                                                                    card_action.run((id.get_value(), "archive"))
+                                                                }}
+                                                            >
+                                                                <NavigationIcon kind="archives" view_icon=true />
+                                                                {move || i18n.text("message.archive_8614cf00")}
+                                                            </crate::button::Button>
+                                                            <crate::button::Button
+                                                                variant={crate::button::ButtonVariant::Danger}
+                                                                disabled={busy}
+                                                                class="danger"
+                                                                {..}
+                                                                type="button"
+                                                                hidden={running}
+                                                                popovertarget={format!("card-actions-{}", id.get_value())}
+                                                                popovertargetaction="hide"
+                                                                on:click={move |_| {
+                                                                    card_action.run((id.get_value(), "delete"))
+                                                                }}
+                                                            >
+                                                                <svg
+                                                                    width="16"
+                                                                    height="16"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    stroke-width="1.7"
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
+                                                                </svg>
+                                                                {move || i18n.text("message.delete_locally")}
+                                                            </crate::button::Button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <span class="card-label">
-                                                    {move || {
-                                                        current()
-                                                            .and_then(|card| {
-                                                                card
-                                                                    .fields
-                                                                    .get::<atelier_core::document::Document>("ticket")
-                                                                    .ok()
-                                                                    .flatten()
-                                                            })
-                                                            .map(|ticket| field(&ticket, "key"))
-                                                            .filter(|key| !key.is_empty())
-                                                            .unwrap_or_else(|| i18n.text("message.local_task"))
-                                                    }}
-                                                </span>
-                                                <button
-                                                    type="button"
+                                                </crate::card::CardHeader>
+                                                <crate::button::Button
                                                     class="card-title card-open"
+                                                    {..}
+                                                    type="button"
                                                     id={format!("card-open-{}", id.get_value())}
                                                     on:click={move |_| open_task.run(id.get_value())}
                                                 >
                                                     {move || {
                                                         current().map(|card| card.title.clone()).unwrap_or_default()
                                                     }}
-                                                </button>
+                                                </crate::button::Button>
                                                 <span class="card-description">
                                                     {move || {
                                                         current()
@@ -1838,8 +1904,7 @@ fn App() -> impl IntoView {
                                                 {move || {
                                                     current()
                                                         .and_then(|card| {
-                                                            card
-                                                                .fields
+                                                            card.fields
                                                                 .get::<
                                                                     Vec<atelier_core::domain::checklist::Criterion>,
                                                                 >("checklist")
@@ -1865,7 +1930,7 @@ fn App() -> impl IntoView {
                                                             }
                                                         })
                                                 }}
-                                                <div class="card-bottom">
+                                                <crate::card::CardFooter class="card-bottom">
                                                     {move || {
                                                         current()
                                                             .and_then(|card| {
@@ -1917,8 +1982,7 @@ fn App() -> impl IntoView {
                                                             !board
                                                                 .runs
                                                                 .with(|runs| {
-                                                                    runs
-                                                                        .iter()
+                                                                    runs.iter()
                                                                         .any(|run| {
                                                                             field(run, "cardId") == id.get_value()
                                                                                 && field(run, "status") == "running"
@@ -1928,23 +1992,24 @@ fn App() -> impl IntoView {
                                                     >
                                                         {move || i18n.text("message.work_in_progress")}
                                                     </span>
-                                                </div>
-                                            </article>
+                                                </crate::card::CardFooter>
+                                            </crate::card::Card>
                                         }
                                     }}
                                 />
                                 <p class="empty" hidden={move || !column().is_empty() || loading.get()}>
                                     {move || i18n.text("message.nothing_yet")}
                                 </p>
-                                <button
-                                    type="button"
+                                <crate::button::Button
                                     class="column-add"
+                                    {..}
+                                    type="button"
                                     hidden={status != "todo"}
                                     aria-label={move || i18n.text("message.add_a_task")}
                                     on:click={move |_| open_new.run(())}
                                 >
                                     "＋"
-                                </button>
+                                </crate::button::Button>
                             </section>
                         }
                     }}
@@ -1981,10 +2046,9 @@ fn App() -> impl IntoView {
                             <h2>{move || i18n.text("message.your_history")}</h2>
                             <p class="hint">
                                 {move || {
-                                    i18n
-                                        .text(
-                                            "message.archived_tasks_with_their_time_entries_branches_and_logs_restori",
-                                        )
+                                    i18n.text(
+                                        "message.archived_tasks_with_their_time_entries_branches_and_logs_restori",
+                                    )
                                 }}
                             </p>
                         </div>
@@ -1995,7 +2059,7 @@ fn App() -> impl IntoView {
                         children={move |card| {
                             let id = StoredValue::new(card.id.clone());
                             view! {
-                                <article class="workspace-row archive-row" data-id={id.get_value()}>
+                                <crate::card::Card class="workspace-row archive-row" {..}  data-id={id.get_value()}>
                                     <div>
                                         <span class="section-kicker">
                                             {move || i18n.text("message.archived_task")}
@@ -2004,15 +2068,17 @@ fn App() -> impl IntoView {
                                         <p class="hint">{move || i18n.text("message.history_kept")}</p>
                                     </div>
                                     <div class="row-actions">
-                                        <button
-                                            id={format!("card-open-{}", id.get_value())}
+                                        <crate::button::Button
                                             class="card-open"
+                                            {..}
+                                            id={format!("card-open-{}", id.get_value())}
                                             on:click={move |_| open_task.run(id.get_value())}
                                         >
                                             {move || i18n.text("message.open_task")}
-                                        </button>
-                                        <button
-                                            disabled={move || pending.get()}
+                                        </crate::button::Button>
+                                        <crate::button::Button
+                                            disabled={Signal::derive(move || pending.get())}
+                                            {..}
                                             on:click={move |_| {
                                                 if pending.get_untracked() {
                                                     return;
@@ -2026,7 +2092,11 @@ fn App() -> impl IntoView {
                                                             &token,
                                                             Method::POST,
                                                             &format!("/api/cards/{}/archive", id.get_value()),
-                                                            &serde_json::json!({"archived":false}),
+                                                            &serde_json::json!(
+                                                                {
+                                "archived":false
+                            }
+                                                            ),
                                                         )
                                                         .await;
                                                     match result {
@@ -2040,9 +2110,9 @@ fn App() -> impl IntoView {
                                             }}
                                         >
                                             {move || i18n.text("message.restore")}
-                                        </button>
+                                        </crate::button::Button>
                                     </div>
-                                </article>
+                                </crate::card::Card>
                             }
                         }}
                     />
@@ -2103,6 +2173,14 @@ fn App() -> impl IntoView {
                     on_task={open_task}
                 />
             </Show>
+            <Show when={move || view.get() == WorkspaceView::Projects}>
+                <Projects
+                    board
+                    repository
+                    token
+                    on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
+                />
+            </Show>
             <footer>
                 "ATELIER "
                 <span>{move || i18n.text("message.a_little_less_friction_a_little_more_done")}</span>
@@ -2114,14 +2192,6 @@ fn App() -> impl IntoView {
                     token
                     repository
                     on_close={Callback::new(move |()| show_kanban_settings.set(false))}
-                />
-            </Show>
-            <Show when={move || view.get() == WorkspaceView::Projects}>
-                <Projects
-                    board
-                    repository
-                    token
-                    on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
                 />
             </Show>
             <Show when={move || show_agents.get()}>
@@ -2428,63 +2498,48 @@ fn CommandPalette(
             node_ref={dialog}
             on_close={Callback::new(move |()| close())}
         >
-            <header class="command-heading">
-                <h2 id="command-title">{move || i18n.text("message.quick_search")}</h2>
-                <button
-                    class="modal-close"
-                    type="button"
-                    aria-label={move || i18n.text("message.close")}
-                    on:click={move |_| close()}
-                >
-                    <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        stroke-linecap="round"
-                        aria-hidden="true"
-                    >
-                        <path d="m6 6 12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </header>
+            <modal::ModalHeader class="command-heading" title_id="command-title" title=Signal::derive(move||i18n.text("message.quick_search")) on_close=Callback::new(move|()|close())/>
             <div class="command-search">
-                <label for="command-query">{move || i18n.text("message.project_task_or_action")}</label>
-                <input
+                <crate::form::Field
                     id="command-query"
-                    type="search"
-                    autofocus
-                    autocomplete="off"
-                    aria-controls="command-results"
-                    placeholder={move || i18n.text("message.a_ticket_a_project_an_action")}
-                    prop:value={move || query.get()}
-                    on:input={move |event| {
-                        query.set(event_target_value(&event));
-                        index.set(0);
-                    }}
-                    on:keydown={move |event: leptos::ev::KeyboardEvent| {
-                        match event.key().as_str() {
-                            "ArrowDown" => {
-                                event.prevent_default();
-                                index
-                                    .update(|index| {
-                                        *index = (*index + 1).min(results.with(Vec::len).saturating_sub(1));
-                                    });
+                    label={Signal::derive(move || i18n.text("message.project_task_or_action"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="command-query"
+                        type="search"
+                        autofocus=true
+                        autocomplete="off"
+                        aria-controls="command-results"
+                        placeholder={move || i18n.text("message.a_ticket_a_project_an_action")}
+                        prop:value={move || query.get()}
+                        on:input={move |event| {
+                            query.set(event_target_value(&event));
+                            index.set(0);
+                        }}
+                        on:keydown={move |event: leptos::ev::KeyboardEvent| {
+                            match event.key().as_str() {
+                                "ArrowDown" => {
+                                    event.prevent_default();
+                                    index
+                                        .update(|index| {
+                                            *index = (*index + 1)
+                                                .min(results.with(Vec::len).saturating_sub(1));
+                                        });
+                                }
+                                "ArrowUp" => {
+                                    event.prevent_default();
+                                    index.update(|index| *index = index.saturating_sub(1));
+                                }
+                                "Enter" => {
+                                    event.prevent_default();
+                                    execute.run(index.get_untracked());
+                                }
+                                _ => {}
                             }
-                            "ArrowUp" => {
-                                event.prevent_default();
-                                index.update(|index| *index = index.saturating_sub(1));
-                            }
-                            "Enter" => {
-                                event.prevent_default();
-                                execute.run(index.get_untracked());
-                            }
-                            _ => {}
-                        }
-                    }}
-                />
+                        }}
+                    />
+                </crate::form::Field>
             </div>
             <div id="command-results" aria-live="polite">
                 {move || {
@@ -2494,8 +2549,9 @@ fn CommandPalette(
                         .enumerate()
                         .map(|(position, (target, title, detail))| {
                             view! {
-                                <button
+                                <crate::button::Button
                                     class="command-result"
+                                    {..}
                                     type="button"
                                     aria-current={move || (index.get() == position).to_string()}
                                     on:click={move |_| execute.run(position)}
@@ -2517,7 +2573,7 @@ fn CommandPalette(
                                     <span class="command-return" aria-hidden="true">
                                         "↵"
                                     </span>
-                                </button>
+                                </crate::button::Button>
                             }
                         })
                         .collect_view()
@@ -2555,9 +2611,6 @@ fn DiagnosticsDialog(
     let pending = RwSignal::new(false);
     let profile = RwSignal::new(None::<atelier_core::document::Document>);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
     let close = move || {
         if !pending.get_untracked() {
             if let Some(dialog) = dialog.get_untracked() {
@@ -2568,36 +2621,20 @@ fn DiagnosticsDialog(
         }
     };
     view! {
-        <dialog
+        <crate::modal::Modal
             id="diagnostics-dialog"
-            aria-label={move || i18n.text("message.service_status")}
             node_ref={dialog}
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                close();
-            }}
+            labelledby="diagnostics-title"
+            on_close={Callback::new(move |()| close())}
         >
-            <div class="dialog-heading">
-                <div>
-                    <div class="eyebrow">{move || i18n.text("message.connections")}</div>
-                    <h2>{move || i18n.text("message.service_status")}</h2>
-                </div>
-                <button
-                    disabled={move || pending.get()}
-                    aria-label={move || i18n.text("message.close")}
-                    on:click={move |_| close()}
-                >
-                    "×"
-                </button>
-            </div>
+            <crate::modal::ModalHeader class="inset" title_id="diagnostics-title" title=Signal::derive(move||i18n.text("message.service_status")) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|close())/>
             <p class="hint">
                 {move || {
                     i18n.text("message.explicit_check_of_the_saved_profile_cli_version_and_login_status")
                 }}
             </p>
-            <label>
-                {move || i18n.text("message.agent")}
-                <select
+            <crate::form::Field label=Signal::derive(move || i18n.text("message.agent"))><crate::form::Select
+                    {..}
                     disabled={move || pending.get()}
                     on:change={move |event| {
                         let id = event_target_value(&event);
@@ -2623,12 +2660,11 @@ fn DiagnosticsDialog(
                             view! { <option value={field(&profile, "id")}>{field(&profile, "name")}</option> }
                         }}
                     />
-                </select>
-            </label>
+                </crate::form::Select></crate::form::Field>
             <div id="diagnostics-results" aria-live="polite">
                 <agent_diagnostics::AgentDiagnostics profile token pending blocked={Memo::new(|_| false)} />
             </div>
-        </dialog>
+        </crate::modal::Modal>
     }
 }
 
@@ -2643,9 +2679,6 @@ fn DeleteCardDialog(
     let i18n = expect_context::<I18n>();
     let id = StoredValue::new(card.id);
     let dialog = NodeRef::<leptos::html::Dialog>::new();
-    dialog.on_load(move |node| {
-        let _ = node.show_modal();
-    });
     let close = move || {
         if pending.get_untracked() {
             return;
@@ -2666,46 +2699,20 @@ fn DeleteCardDialog(
         });
     };
     view! {
-        <dialog
+        <crate::modal::Modal
             id="confirm-dialog"
             class="confirm-dialog"
-            role="alertdialog"
-            aria-labelledby="confirm-title"
-            aria-describedby="confirm-message"
+            labelledby="confirm-title"
+            describedby="confirm-message"
             node_ref={dialog}
-            on:cancel={move |event: web_sys::Event| {
-                event.prevent_default();
-                close();
-            }}
+            busy={Signal::derive(move || pending.get())}
+            on_close={Callback::new(move |()| close())}
         >
-            <form on:submit={move |event| {
+            <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
                 event.prevent_default();
                 on_confirm.run(());
-            }}>
-                <div class="dialog-heading">
-                    <div class="confirm-icon" aria-hidden="true">
-                        <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.7"
-                        >
-                            <path d="M10.3 4.6 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z" />
-                            <path d="M12 9v4m0 4h.01" />
-                        </svg>
-                    </div>
-                    <button
-                        type="button"
-                        disabled={move || pending.get()}
-                        aria-label={move || i18n.text("message.close")}
-                        on:click={move |_| close()}
-                    >
-                        "×"
-                    </button>
-                </div>
-                <h2 id="confirm-title">{move || i18n.text("message.permanently_delete_this_task")}</h2>
+            }) {..}  >
+                <crate::modal::ModalHeader class="inset" title_id="confirm-title" title=Signal::derive(move||i18n.text("message.permanently_delete_this_task")) busy=Signal::derive(move||pending.get()) on_close=Callback::new(move|()|close())/>
                 <p>{card.title.clone()}</p>
                 <p id="confirm-message">
                     {move || i18n.text("message.permanently_delete_this_task_this_cannot_be_undone")}
@@ -2713,26 +2720,28 @@ fn DeleteCardDialog(
                 <p class="error" role="alert">
                     {move || i18n.text(&error.get())}
                 </p>
-                <div class="form-actions">
-                    <button
+                <crate::modal::ModalActions {..} >
+                    <crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
+                        {..}
                         type="button"
-                        autofocus
-                        disabled={move || pending.get()}
+                        autofocus=true
                         on:click={move |_| close()}
                     >
                         {move || i18n.text("message.cancel")}
-                    </button>
-                    <button
-                        id="confirm-action"
+                    </crate::button::Button>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
                         class="confirm-action"
+                        {..}
+                        id="confirm-action"
                         type="submit"
-                        disabled={move || pending.get()}
                     >
                         {move || i18n.text("message.delete_permanently")}
-                    </button>
-                </div>
-            </form>
-        </dialog>
+                    </crate::button::Button>
+                </crate::modal::ModalActions>
+            </crate::form::Form>
+        </crate::modal::Modal>
     }
 }
 fn field(document: &atelier_core::document::Document, key: &str) -> String {

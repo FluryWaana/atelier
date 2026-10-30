@@ -97,3 +97,28 @@ pub(super) async fn revoke(State(state): State<Shared>, request: Request) -> Res
             .await,
     )
 }
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BranchInput {
+    path: String,
+}
+
+pub(super) async fn default_branch(State(state): State<Shared>, request: Request) -> Response {
+    let input: BranchInput = match super::jira_transitions::input(request).await {
+        Ok(value) => value,
+        Err(response) => return *response,
+    };
+    if atelier_core::domain::text(&input.path, 2000).is_err() || input.path.trim().is_empty() {
+        return failure(StatusCode::BAD_REQUEST, "message.invalid_request");
+    }
+    response(
+        crate::infrastructure::files::Repository::default_branch(
+            &state.prototype_directory,
+            &state.prototype_paths,
+            &input.path,
+        )
+        .await
+        .map(|branch| serde_json::json!({"branch":branch})),
+    )
+}

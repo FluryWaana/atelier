@@ -195,8 +195,7 @@ pub fn Automation(
             <p>{move || profile.get().map(|profile| field(&profile, "name")).unwrap_or_default()}</p>
             <p role="status">
                 {move || {
-                    flow
-                        .get()
+                    flow.get()
                         .map(|flow| {
                             format!(
                                 "{} · {} · {}",
@@ -222,9 +221,9 @@ pub fn Automation(
                 {move || i18n.text("message.enable_workflows_in_the_project_settings_to_start_a_task")}
             </p>
             <label hidden={move || active.get()}>
-                <input
+                <crate::form::Checkbox
+                    {..}
                     id="approve-automation"
-                    type="checkbox"
                     prop:checked={move || approved.get().as_deref() == Some(snapshot.get().as_str())}
                     disabled={move || pending.get() || blocked.get()}
                     on:change={move |event| {
@@ -233,36 +232,37 @@ pub fn Automation(
                 />
                 {move || i18n.text("message.authorize_this_step_with_the_displayed_requirements_profile_and")}
             </label>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || {
+                    pending.get() || blocked.get()
+                        || approved.get().as_deref() != Some(snapshot.get().as_str())
+                })}
+                {..}
                 id="start-automation"
                 type="button"
                 hidden={move || active.get()}
-                disabled={move || {
-                    pending.get() || blocked.get()
-                        || approved.get().as_deref() != Some(snapshot.get().as_str())
-                }}
                 on:click={move |_| execute.with_value(|execute| execute("step"))}
             >
                 {move || i18n.text(action.get().map(|(_, label)| label).unwrap_or("message.start_workflow"))}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || {
+                    pending.get() || blocked.get()
+                        || approved.get().as_deref() != Some(snapshot.get().as_str())
+                })}
+                {..}
                 id="restart-automation"
                 type="button"
                 hidden={move || {
-                    flow
-                        .get()
+                    flow.get()
                         .is_none_or(|flow| {
                             !matches!(flow.state, State::Interrupted | State::Error | State::Cancelled)
                         })
                 }}
-                disabled={move || {
-                    pending.get() || blocked.get()
-                        || approved.get().as_deref() != Some(snapshot.get().as_str())
-                }}
                 on:click={move |_| execute.with_value(|execute| execute("restart"))}
             >
                 {move || i18n.text("message.start_a_new_workflow_with_the_current_settings")}
-            </button>
+            </crate::button::Button>
             <div hidden={move || {
                 flow.get().is_none_or(|flow| flow.state != State::Waiting) || publication.get().is_none()
             }}>
@@ -319,7 +319,7 @@ pub fn Automation(
                                 }
                             };
                             view! {
-                                <p>{repository}" · "{origin}</p>
+                                <p>{repository} " · "{origin}</p>
                                 <p>{branch}</p>
                                 <code>{commit}</code>
                                 <p>{title}</p>
@@ -328,9 +328,9 @@ pub fn Automation(
                         })
                 }}
                 <label hidden={move || !needs_branch.get()}>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="approve-workflow-branch"
-                        type="checkbox"
                         disabled={move || pending.get() || blocked.get()}
                         prop:checked={move || {
                             branch_approved.get().as_deref() == Some(snapshot.get().as_str())
@@ -342,31 +342,33 @@ pub fn Automation(
                     />
                     {move || i18n.text("message.separately_authorize_creation_of_this_missing_remote_branch")}
                 </label>
-                <button
-                    id="publish-workflow"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || blocked.get()
                             || approved.get().as_deref() != Some(snapshot.get().as_str())
                             || (needs_branch.get()
                                 && branch_approved.get().as_deref() != Some(snapshot.get().as_str()))
-                    }}
+                    })}
+                    {..}
+                    id="publish-workflow"
+                    type="button"
                     on:click={move |_| execute.with_value(|execute| execute("publish"))}
                 >
                     {move || i18n.text("message.recheck_publish_this_preview_and_start_review")}
-                </button>
+                </crate::button::Button>
             </div>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get())}
+                {..}
                 id="stop-automation"
                 type="button"
                 hidden={move || {
                     flow.get().is_none_or(|flow| !matches!(flow.state, State::Running | State::Waiting))
                 }}
-                disabled={move || pending.get()}
                 on:click={move |_| execute.with_value(|execute| execute("stop"))}
             >
                 {move || i18n.text("message.stop_workflow")}
-            </button>
+            </crate::button::Button>
             <p id="automation-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

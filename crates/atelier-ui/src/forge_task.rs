@@ -377,53 +377,68 @@ pub fn ForgeTask(
                 pending.get() || loading.get() || blocked.get() || archived || unresolved.get()
                     || publication_dirty.get() || content_dirty.get()
             }}>
-                <label for="task-forge-kind">{move || i18n.text("message.forge")}</label>
-                <select
+                <crate::form::Field
                     id="task-forge-kind"
-                    prop:value={move || draft.get().0.name()}
-                    on:change={move |event| {
-                        draft
-                            .update(|draft| {
-                                draft.0 = match event_target_value(&event).as_str() {
-                                    "gitlab" => ForgeKind::Gitlab,
-                                    "azure" => ForgeKind::Azure,
-                                    _ => ForgeKind::Github,
-                                };
-                            });
-                        approved.set(None);
-                    }}
+                    label={Signal::derive(move || i18n.text("message.forge"))}
                 >
-                    <option value="github">"GitHub"</option>
-                    <option value="gitlab">"GitLab"</option>
-                    <option value="azure">"Azure DevOps Services"</option>
-                </select>
-                <label for="task-forge-repository">{move || i18n.text("message.pr_mr_repository")}</label>
-                <input
+                    <crate::form::Select
+                        {..}
+                        id="task-forge-kind"
+                        prop:value={move || draft.get().0.name()}
+                        on:change={move |event| {
+                            draft
+                                .update(|draft| {
+                                    draft.0 = match event_target_value(&event).as_str() {
+                                        "gitlab" => ForgeKind::Gitlab,
+                                        "azure" => ForgeKind::Azure,
+                                        _ => ForgeKind::Github,
+                                    };
+                                });
+                            approved.set(None);
+                        }}
+                    >
+                        <option value="github">"GitHub"</option>
+                        <option value="gitlab">"GitLab"</option>
+                        <option value="azure">"Azure DevOps Services"</option>
+                    </crate::form::Select>
+                </crate::form::Field>
+                <crate::form::Field
                     id="task-forge-repository"
-                    maxlength="1000"
-                    prop:value={move || draft.get().1}
-                    on:input={move |event| {
-                        draft.update(|draft| draft.1 = event_target_value(&event));
-                        approved.set(None);
-                    }}
-                />
-                <label for="task-forge-number">{move || i18n.text("message.pr_mr_number")}</label>
-                <input
+                    label={Signal::derive(move || i18n.text("message.pr_mr_repository"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="task-forge-repository"
+                        maxlength="1000"
+                        prop:value={move || draft.get().1}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.1 = event_target_value(&event));
+                            approved.set(None);
+                        }}
+                    />
+                </crate::form::Field>
+                <crate::form::Field
                     id="task-forge-number"
-                    type="number"
-                    min="1"
-                    max="2147483647"
-                    step="1"
-                    prop:value={move || draft.get().2}
-                    on:input={move |event| {
-                        draft.update(|draft| draft.2 = event_target_value(&event));
-                        approved.set(None);
-                    }}
-                />
+                    label={Signal::derive(move || i18n.text("message.pr_mr_number"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="task-forge-number"
+                        type="number"
+                        min="1"
+                        max="2147483647"
+                        step="1"
+                        prop:value={move || draft.get().2}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.2 = event_target_value(&event));
+                            approved.set(None);
+                        }}
+                    />
+                </crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-task-forge"
-                        type="checkbox"
                         prop:checked={move || {
                             configuration
                                 .with(|configuration| {
@@ -457,10 +472,8 @@ pub fn ForgeTask(
                         i18n.text("message.verify_and_link_this_pr_mr_without_changing_anything_on_the_forg")
                     }}
                 </label>
-                <button
-                    id="attach-task-forge"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         configuration
                             .with(|configuration| {
                                 configuration
@@ -469,12 +482,16 @@ pub fn ForgeTask(
                                         approved.get() != Some((draft.get(), configuration.revision))
                                     })
                             })
-                    }}
+                    })}
+                    {..}
+                    id="attach-task-forge"
+                    type="button"
                     on:click={move |_| execute.with_value(|execute| execute(false))}
                 >
                     {move || i18n.text("message.verify_and_save_the_link")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    {..}
                     id="cancel-task-forge"
                     type="button"
                     on:click={move |_| {
@@ -483,14 +500,15 @@ pub fn ForgeTask(
                     }}
                 >
                     {move || i18n.text("message.cancel_preparation")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    {..}
                     id="reload-task-forges"
                     type="button"
                     on:click={move |_| load.with_value(|load| load())}
                 >
                     {move || i18n.text("message.reload_forge_connections")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <fieldset
                 hidden={move || linked.with(|linked| linked.is_none())}
@@ -500,9 +518,9 @@ pub fn ForgeTask(
                 }}
             >
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-detach-forge"
-                        type="checkbox"
                         prop:checked={move || {
                             linked
                                 .with(|linked| {
@@ -535,10 +553,8 @@ pub fn ForgeTask(
                     />
                     {move || i18n.text("message.remove_only_the_local_link_keep_the_pr_mr_and_worktree")}
                 </label>
-                <button
-                    id="detach-task-forge"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         linked
                             .with(|linked| {
                                 linked
@@ -547,11 +563,14 @@ pub fn ForgeTask(
                                         serde_json::to_string(linked).unwrap_or_default() != detach_ack.get()
                                     })
                             })
-                    }}
+                    })}
+                    {..}
+                    id="detach-task-forge"
+                    type="button"
                     on:click={move |_| execute.with_value(|execute| execute(true))}
                 >
                     {move || i18n.text("message.confirm_removing_the_link")}
-                </button>
+                </crate::button::Button>
             </fieldset>
             <fieldset
                 hidden={move || {
@@ -570,9 +589,9 @@ pub fn ForgeTask(
                     }}
                 </p>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-forge-draft"
-                        type="checkbox"
                         prop:checked={move || draft_key.get().is_some_and(|key| key == draft_ack.get())}
                         on:change={move |event| {
                             draft_ack
@@ -586,35 +605,34 @@ pub fn ForgeTask(
                         }}
                     />
                     {move || {
-                        i18n
-                            .text(
-                                if linked.get().is_some_and(|pr| pr.draft) {
-                                    "message.confirm_marking_this_pr_mr_ready_for_review"
-                                } else {
-                                    "message.confirm_converting_this_pr_mr_to_a_draft"
-                                },
-                            )
+                        i18n.text(
+                            if linked.get().is_some_and(|pr| pr.draft) {
+                                "message.confirm_marking_this_pr_mr_ready_for_review"
+                            } else {
+                                "message.confirm_converting_this_pr_mr_to_a_draft"
+                            },
+                        )
                     }}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || draft_key.get().is_none_or(|key| key != draft_ack.get()))}
+                    {..}
                     id="change-forge-draft"
                     type="button"
-                    disabled={move || draft_key.get().is_none_or(|key| key != draft_ack.get())}
                     on:click={move |_| change_draft.with_value(|change| change(false))}
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if linked.get().is_some_and(|pr| pr.draft) {
-                                    "message.mark_ready_for_review"
-                                } else {
-                                    "message.convert_to_draft"
-                                },
-                            )
+                        i18n.text(
+                            if linked.get().is_some_and(|pr| pr.draft) {
+                                "message.mark_ready_for_review"
+                            } else {
+                                "message.convert_to_draft"
+                            },
+                        )
                     }}
-                </button>
+                </crate::button::Button>
             </fieldset>
-            <div class="confirmation" hidden={move || !uncertain.get()}>
+            <crate::modal::Notice {..}  hidden={move || !uncertain.get()}>
                 <p>
                     {move || {
                         i18n.text("message.forge_write_uncertain_read_the_remote_state_atelier_will_not_res")
@@ -622,32 +640,33 @@ pub fn ForgeTask(
                 </p>
                 <p>
                     {move || {
-                        i18n
-                            .text(
-                                if intent.get().is_some_and(|intent| intent.draft) {
-                                    "message.requested_state_draft"
-                                } else {
-                                    "message.requested_state_ready_for_review"
-                                },
-                            )
+                        i18n.text(
+                            if intent.get().is_some_and(|intent| intent.draft) {
+                                "message.requested_state_draft"
+                            } else {
+                                "message.requested_state_ready_for_review"
+                            },
+                        )
                     }}
                 </p>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || loading.get())}
+                    {..}
                     id="reconcile-forge-draft"
                     type="button"
-                    disabled={move || pending.get() || loading.get()}
                     on:click={move |_| change_draft.with_value(|change| change(true))}
                 >
                     {move || i18n.text("message.read_remote_draft_state")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || loading.get())}
+                    {..}
                     type="button"
-                    disabled={move || pending.get() || loading.get()}
                     on:click={move |_| load.with_value(|load| load())}
                 >
                     {move || i18n.text("message.reload_forge_connections")}
-                </button>
-            </div>
+                </crate::button::Button>
+            </crate::modal::Notice>
             <p class="error" id="forge-task-error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>
@@ -687,14 +706,15 @@ pub fn ForgeTask(
                     blocked.get() || draft.get() != original.get() || publication_dirty.get()
                 })}
             />
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                {..}
                 type="button"
                 hidden={move || !unresolved.get()}
-                disabled={move || pending.get() || loading.get()}
                 on:click={move |_| load.with_value(|load| load())}
             >
                 {move || i18n.text("message.reload_forge_connections")}
-            </button>
+            </crate::button::Button>
             <crate::git_push::GitPush
                 card
                 configuration={Signal::derive(move || configuration.get())}

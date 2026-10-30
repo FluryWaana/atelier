@@ -138,45 +138,56 @@ pub fn ForgeContentEditor(
                 <pre>{move || original.get().map(|content| content.body).unwrap_or_default()}</pre>
             </details>
             <fieldset disabled={move || pending.get() || blocked.get() || !available.get()}>
-                <label for="forge-content-title">{move || i18n.text("message.pr_mr_title")}</label>
-                <input
+                <crate::form::Field
                     id="forge-content-title"
-                    maxlength="255"
-                    prop:value={move || draft.get().map(|content| content.title).unwrap_or_default()}
-                    on:input={move |event| {
-                        draft
-                            .update(|draft| {
-                                if let Some(content) = draft {
-                                    content.title = event_target_value(&event);
-                                }
-                            })
-                    }}
-                />
-                <label for="forge-content-body">{move || i18n.text("message.pr_mr_description")}</label>
-                <textarea
+                    label={Signal::derive(move || i18n.text("message.pr_mr_title"))}
+                >
+                    <crate::form::Input
+                        {..}
+                        id="forge-content-title"
+                        maxlength="255"
+                        prop:value={move || draft.get().map(|content| content.title).unwrap_or_default()}
+                        on:input={move |event| {
+                            draft
+                                .update(|draft| {
+                                    if let Some(content) = draft {
+                                        content.title = event_target_value(&event);
+                                    }
+                                })
+                        }}
+                    />
+                </crate::form::Field>
+                <crate::form::Field
                     id="forge-content-body"
-                    maxlength={move || {
-                        if pr.get().is_some_and(|pr| pr.kind == atelier_core::contracts::ForgeKind::Azure) {
-                            "4000"
-                        } else {
-                            "20000"
-                        }
-                    }}
-                    rows="5"
-                    prop:value={move || draft.get().map(|content| content.body).unwrap_or_default()}
-                    on:input={move |event| {
-                        draft
-                            .update(|draft| {
-                                if let Some(content) = draft {
-                                    content.body = event_target_value(&event);
-                                }
-                            })
-                    }}
-                />
+                    label={Signal::derive(move || i18n.text("message.pr_mr_description"))}
+                >
+                    <crate::form::Textarea
+                        {..}
+                        id="forge-content-body"
+                        maxlength={move || {
+                            if pr.get().is_some_and(|pr| pr.kind == atelier_core::contracts::ForgeKind::Azure)
+                            {
+                                "4000"
+                            } else {
+                                "20000"
+                            }
+                        }}
+                        rows="5"
+                        prop:value={move || draft.get().map(|content| content.body).unwrap_or_default()}
+                        on:input={move |event| {
+                            draft
+                                .update(|draft| {
+                                    if let Some(content) = draft {
+                                        content.body = event_target_value(&event);
+                                    }
+                                })
+                        }}
+                    />
+                </crate::form::Field>
                 <label>
-                    <input
+                    <crate::form::Checkbox
+                        {..}
                         id="confirm-forge-content"
-                        type="checkbox"
                         prop:checked={move || key.get().is_some_and(|key| key == approved.get())}
                         on:change={move |event| {
                             approved
@@ -191,26 +202,28 @@ pub fn ForgeContentEditor(
                     />
                     {move || i18n.text("message.send_content_changes_to_this_draft_pr_mr")}
                 </label>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || !dirty.get() || key.get().is_none_or(|key| key != approved.get()))}
+                    {..}
                     id="save-forge-content"
                     type="button"
-                    disabled={move || !dirty.get() || key.get().is_none_or(|key| key != approved.get())}
                     on:click={save}
                 >
                     {move || i18n.text("message.update_remote_content")}
-                </button>
+                </crate::button::Button>
             </fieldset>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || !dirty.get())}
+                {..}
                 id="reset-forge-content"
                 type="button"
-                disabled={move || pending.get() || !dirty.get()}
                 on:click={move |_| {
                     draft.set(original.get_untracked());
                     approved.set(String::new());
                 }}
             >
                 {move || i18n.text("message.cancel_content_changes")}
-            </button>
+            </crate::button::Button>
             <p id="forge-content-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

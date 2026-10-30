@@ -385,8 +385,7 @@ pub fn Runs(
                             let size = usage["contextWindowTokens"].as_u64()?;
                             (size >= used)
                                 .then(|| {
-                                    i18n
-                                        .text(
+                                    i18n.text(
                                             "message.context_0_tokens_remaining_out_of_1_this_is_not_the_account_quot",
                                         )
                                         .replace("{0}", &(size - used).to_string())
@@ -401,11 +400,12 @@ pub fn Runs(
                     i18n.text("message.choose_a_profile_saved_in_agents_approval_requests_and_questions")
                 }}
             </p>
-            <label for="run-agent">{move || i18n.text("message.agent_profile")}</label>
+            <crate::form::Field id="run-agent" label=Signal::derive(move || i18n.text("message.agent_profile"))>
             <p class="field-help" hidden={move || !profiles.get().is_empty()}>
                 {move || i18n.text("message.create_a_command_profile_in_agents_to_start_a_run")}
             </p>
-            <select
+            <crate::form::Select
+                {..}
                 id="run-agent"
                 prop:value={move || agent.get()}
                 disabled={move || pending.get() || running.get()}
@@ -422,33 +422,32 @@ pub fn Runs(
                         view! { <option value={field(&profile, "id")}>{field(&profile, "name")}</option> }
                     }}
                 />
-            </select>
+            </crate::form::Select></crate::form::Field>
             <div hidden={move || brainstorm.get()}>
-                <label for="run-purpose">{move || i18n.text("message.run_purpose")}</label>
-                <select
+                <crate::form::Field
                     id="run-purpose"
-                    prop:value={move || purpose.get()}
-                    disabled={move || pending.get() || running.get()}
-                    on:change={move |event| purpose.set(event_target_value(&event))}
+                    label={Signal::derive(move || i18n.text("message.run_purpose"))}
                 >
-                    <option value="work">{move || i18n.text("message.work_on_the_task")}</option>
-                    <option value="preparation">
-                        {move || i18n.text("message.prepare_criteria_and_questions")}
-                    </option>
-                    <option value="review">
-                        {move || i18n.text("message.review_the_pr_mr_and_its_criteria")}
-                    </option>
-                </select>
+                    <crate::form::Select
+                        {..}
+                        id="run-purpose"
+                        prop:value={move || purpose.get()}
+                        disabled={move || pending.get() || running.get()}
+                        on:change={move |event| purpose.set(event_target_value(&event))}
+                    >
+                        <option value="work">{move || i18n.text("message.work_on_the_task")}</option>
+                        <option value="preparation">
+                            {move || i18n.text("message.prepare_criteria_and_questions")}
+                        </option>
+                        <option value="review">
+                            {move || i18n.text("message.review_the_pr_mr_and_its_criteria")}
+                        </option>
+                    </crate::form::Select>
+                </crate::form::Field>
             </div>
-            <label
-                hidden={move || {
-                    brainstorm.get() || ["preparation", "review"].contains(&purpose.get().as_str())
-                }}
-                for="run-mode"
-            >
-                {move || i18n.text("message.mode")}
-            </label>
-            <select
+            <crate::form::Field id="run-mode" label=Signal::derive(move || i18n.text("message.mode"))>
+            <crate::form::Select
+                {..}
                 hidden={move || {
                     brainstorm.get() || ["preparation", "review"].contains(&purpose.get().as_str())
                 }}
@@ -459,19 +458,22 @@ pub fn Runs(
             >
                 <option value="analyze">{move || i18n.text("message.analysis")}</option>
                 <option value="edit">{move || i18n.text("message.editing")}</option>
-            </select>
+            </crate::form::Select></crate::form::Field>
             <div hidden={move || !brainstorm.get()}>
-                <label for="brainstorm-message">
-                    {move || i18n.text("message.message_for_the_brainstorm")}
-                </label>
-                <textarea
+                <crate::form::Field
                     id="brainstorm-message"
-                    maxlength="12000"
-                    rows="4"
-                    disabled={move || pending.get() || running.get()}
-                    prop:value={move || message.get()}
-                    on:input={move |event| message.set(event_target_value(&event))}
-                />
+                    label={Signal::derive(move || i18n.text("message.message_for_the_brainstorm"))}
+                >
+                    <crate::form::Textarea
+                        {..}
+                        id="brainstorm-message"
+                        maxlength="12000"
+                        rows="4"
+                        disabled={move || pending.get() || running.get()}
+                        prop:value={move || message.get()}
+                        on:input={move |event| message.set(event_target_value(&event))}
+                    />
+                </crate::form::Field>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.describe_your_question_or_request_a_task_breakdown_each_message")
@@ -479,25 +481,27 @@ pub fn Runs(
                 </p>
             </div>
             <div class="editor-actions">
-                <button
-                    id="start-run"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get()
                             || agent.get().is_empty() || (brainstorm.get() && message.get().trim().is_empty())
-                    }}
+                    })}
+                    {..}
+                    id="start-run"
+                    type="button"
                     on:click={move |_| act.with_value(|act| act("start"))}
                 >
                     {move || i18n.text("message.start_run")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || cancelling.get() || !running.get())}
+                    {..}
                     id="stop-run"
                     type="button"
-                    disabled={move || cancelling.get() || !running.get()}
                     on:click={move |_| act.with_value(|act| act("stop"))}
                 >
                     {move || i18n.text("message.stop_run")}
-                </button>
+                </crate::button::Button>
             </div>
             <p
                 class="field-help"
@@ -523,30 +527,34 @@ pub fn Runs(
                 }}
             </p>
             <div hidden={move || brainstorm.get()}>
-                <button
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get() || running.get() || !ready.get())}
+                    {..}
                     id="enqueue-task"
                     type="button"
-                    disabled={move || pending.get() || blocked.get() || running.get() || !ready.get()}
                     on:click={move |_| act.with_value(|act| act("queue"))}
                 >
                     {move || i18n.text("message.add_this_task_to_the_run_queue")}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get() || blocked.get() || running.get() || !ready.get())}
+                    {..}
                     id="enqueue-workflow"
                     type="button"
                     hidden={move || !workflow_enabled.get()}
-                    disabled={move || pending.get() || blocked.get() || running.get() || !ready.get()}
                     on:click={move |_| act.with_value(|act| act("queue-workflow"))}
                 >
                     {move || i18n.text("message.add_the_project_workflow_to_the_queue")}
-                </button>
+                </crate::button::Button>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.the_queue_uses_the_task_s_saved_settings_not_the_temporary_selec")
                     }}
                 </p>
             </div>
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || cancelling.get())}
+                {..}
                 id="pause-task-queue"
                 type="button"
                 hidden={move || {
@@ -561,11 +569,10 @@ pub fn Runs(
                                 .paused
                         })
                 }}
-                disabled={move || cancelling.get()}
                 on:click={move |_| act.with_value(|act| act("pausequeue"))}
             >
                 {move || i18n.text("message.pause_queue")}
-            </button>
+            </crate::button::Button>
             <div hidden={move || brainstorm.get()}>
                 <h4>{move || i18n.text("message.source_verification")}</h4>
                 <p class="field-help" hidden={move || !verification_command.get().is_empty()}>
@@ -574,17 +581,18 @@ pub fn Runs(
                 <pre class="service-log" tabindex="0">
                     {move || verification_command.get()}
                 </pre>
-                <button
-                    id="start-verification"
-                    type="button"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get() || blocked.get() || running.get() || !ready.get()
                             || verification_command.get().trim().is_empty()
-                    }}
+                    })}
+                    {..}
+                    id="start-verification"
+                    type="button"
                     on:click={move |_| act.with_value(|act| act("verify"))}
                 >
                     {move || i18n.text("message.confirm_and_run_verification")}
-                </button>
+                </crate::button::Button>
                 <p class="field-help">
                     {move || {
                         i18n.text("message.the_command_uses_your_account_permissions_without_an_agent_or_va")
@@ -600,43 +608,39 @@ pub fn Runs(
                     latest
                         .get()
                         .map(|run| {
-                            i18n
-                                .text(
-                                    match field(&run, "verificationState").as_str() {
-                                        "passed" => "message.verification_passed_for_this_source_snapshot",
-                                        "failed" => "message.verification_failed_or_stopped",
-                                        "stale" => {
-                                            "message.stale_result_sources_requirements_or_command_changed"
-                                        }
-                                        "interrupted" => {
-                                            "message.verification_was_interrupted_run_the_command_explicitly_again"
-                                        }
-                                        _ => "message.verification_running",
-                                    },
-                                )
+                            i18n.text(
+                                match field(&run, "verificationState").as_str() {
+                                    "passed" => "message.verification_passed_for_this_source_snapshot",
+                                    "failed" => "message.verification_failed_or_stopped",
+                                    "stale" => "message.stale_result_sources_requirements_or_command_changed",
+                                    "interrupted" => {
+                                        "message.verification_was_interrupted_run_the_command_explicitly_again"
+                                    }
+                                    _ => "message.verification_running",
+                                },
+                            )
                         })
                         .unwrap_or_default()
                 }}
             </p>
             <p role="status">
                 {move || {
-                    i18n
-                        .text(
-                            latest
-                                .get()
-                                .map(|run| match field(&run, "status").as_str() {
-                                    "starting" => "message.starting",
-                                    "running" => "message.process_running",
-                                    "stopping" => "message.stopping",
-                                    "completed" => "message.run_completed",
-                                    "cancelled" => "message.run_stopped",
-                                    "interrupted" => {
-                                        "message.run_interrupted_check_the_repository_before_starting_again"
-                                    }
-                                    _ => "message.run_failed",
-                                })
-                                .unwrap_or("message.no_runs_for_this_task"),
-                        )
+                    i18n.text(
+                        latest
+                            .get()
+                            .map(|run| match field(&run, "status").as_str() {
+                                "starting" => "message.starting",
+                                "running" => "message.process_running",
+                                "stopping" => "message.stopping",
+                                "completed" => "message.run_completed",
+                                "cancelled" => "message.run_stopped",
+                                "interrupted" => {
+                                    "message.run_interrupted_check_the_repository_before_starting_again"
+                                }
+                                _ => "message.run_failed",
+                            })
+                            .unwrap_or("message.no_runs_for_this_task"),
+                    )
                 }}
             </p>
             <p class="error" role="alert">
@@ -651,26 +655,33 @@ pub fn Runs(
                     )
                 }}
             </p>
-            <label for="run-history">{move || i18n.text("message.run_history")}</label>
-            <select
+            <crate::form::Field
                 id="run-history"
-                prop:value={move || selected_run.get()}
-                on:change={move |event| selected_run.set(event_target_value(&event))}
+                label={Signal::derive(move || i18n.text("message.run_history"))}
             >
-                <option value="">{move || i18n.text("message.latest_run")}</option>
-                <For
-                    each={move || history.get()}
-                    key={|run| field(run, "id")}
-                    children={move |run| {
-                        view! {
-                            <option value={field(
-                                &run,
-                                "id",
-                            )}>{format!("{} · {}", field(&run, "startedAt"), field(&run, "agent"))}</option>
-                        }
-                    }}
-                />
-            </select>
+                <crate::form::Select
+                    {..}
+                    id="run-history"
+                    prop:value={move || selected_run.get()}
+                    on:change={move |event| selected_run.set(event_target_value(&event))}
+                >
+                    <option value="">{move || i18n.text("message.latest_run")}</option>
+                    <For
+                        each={move || history.get()}
+                        key={|run| field(run, "id")}
+                        children={move |run| {
+                            view! {
+                                <option value={field(
+                                    &run,
+                                    "id",
+                                )}>
+                                    {format!("{} · {}", field(&run, "startedAt"), field(&run, "agent"))}
+                                </option>
+                            }
+                        }}
+                    />
+                </crate::form::Select>
+            </crate::form::Field>
             <p
                 role="status"
                 hidden={move || {
@@ -789,8 +800,7 @@ pub fn Runs(
                         .and_then(|usage| usage["estimatedCostUsd"].as_f64())
                         .filter(|amount| amount.is_finite() && (0.0..=1_000_000.0).contains(amount))
                         .map(|amount| {
-                            i18n
-                                .text(
+                            i18n.text(
                                     "message.estimate_reported_by_claude_0_usd_may_include_a_resumed_session",
                                 )
                                 .replace("{0}", &format!("{amount:.6}"))
@@ -967,14 +977,14 @@ pub(super) fn Interaction(
     };
     let send = StoredValue::new_local(send);
     view! {
-        <form
+        <crate::form::Form on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {
+                event.prevent_default();
+                send.with_value(|send| send(false));
+            }) {..}
             class="service-state agent-interaction"
             aria-label={title}
             aria-busy={move || pending.get().to_string()}
-            on:submit={move |event| {
-                event.prevent_default();
-                send.with_value(|send| send(false));
-            }}
+
         >
             <h4>{title}</h4>
             <pre class="service-log" tabindex="0" hidden={move || request.get_value().detail.is_empty()}>
@@ -992,10 +1002,7 @@ pub(super) fn Interaction(
                         format!("{}-{}-{}", run.get_value(), request.get_value().id, question.get_value().id),
                     );
                     view! {
-                        <label for={move || {
-                            input_id.get_value()
-                        }}>{move || question.get_value().question}</label>
-                        <ul>
+                        <crate::form::Field id=input_id.get_value() label=Signal::derive(move||question.get_value().question)><ul>
                             <For
                                 each={move || question.get_value().options}
                                 key={|option| option.clone()}
@@ -1003,9 +1010,10 @@ pub(super) fn Interaction(
                                     let option = StoredValue::new(option);
                                     view! {
                                         <li>
-                                            <button
+                                            <crate::button::Button
+                                                disabled={Signal::derive(move || pending.get())}
+                                                {..}
                                                 type="button"
-                                                disabled={move || pending.get()}
                                                 on:click={move |_| {
                                                     drafts
                                                         .update(|drafts| {
@@ -1022,7 +1030,7 @@ pub(super) fn Interaction(
                                                 }}
                                             >
                                                 {move || option.get_value()}
-                                            </button>
+                                            </crate::button::Button>
                                         </li>
                                     }
                                 }}
@@ -1032,13 +1040,13 @@ pub(super) fn Interaction(
                             view! {
                                 <p class="field-help">
                                     {move || {
-                                        i18n
-                                            .text(
-                                                "message.one_answer_per_line_you_can_also_enter_another_choice",
-                                            )
+                                        i18n.text(
+                                            "message.one_answer_per_line_you_can_also_enter_another_choice",
+                                        )
                                     }}
                                 </p>
-                                <textarea
+                                <crate::form::Textarea
+                                    {..}
                                     id={move || input_id.get_value()}
                                     required={move || question.get_value().required}
                                     maxlength="32000"
@@ -1067,14 +1075,13 @@ pub(super) fn Interaction(
                                 .into_any()
                         } else {
                             view! {
-                                <input
+                                <crate::form::Input input_type=if question.get_value().is_secret {"password"}else{"text"} reveal=question.get_value().is_secret disabled=Signal::derive(move||pending.get())
+                                    {..}
                                     class="agent-question"
                                     id={move || input_id.get_value()}
-                                    type={if question.get_value().is_secret { "password" } else { "text" }}
                                     autocomplete="off"
                                     required={move || question.get_value().required}
                                     maxlength="4000"
-                                    disabled={move || pending.get()}
                                     prop:value={move || {
                                         drafts
                                             .with(|drafts| {
@@ -1097,7 +1104,7 @@ pub(super) fn Interaction(
                                 />
                             }
                                 .into_any()
-                        }}
+                        }}</crate::form::Field>
                     }
                 }}
             />
@@ -1105,34 +1112,35 @@ pub(super) fn Interaction(
                 {move || i18n.text(&error.get())}
             </p>
             <div class="editor-actions">
-                <button
-                    class="approve-interaction"
-                    type="submit"
-                    disabled={move || {
+                <crate::button::Button
+                    disabled={Signal::derive(move || {
                         pending.get()
                             || (!request.get_value().can_allow && request.get_value().questions.is_empty())
-                    }}
+                    })}
+                    class="approve-interaction"
+                    {..}
+                    type="submit"
                 >
                     {move || {
-                        i18n
-                            .text(
-                                if request.get_value().questions.is_empty() {
-                                    "message.approve_this_request"
-                                } else {
-                                    "message.send_reply"
-                                },
-                            )
+                        i18n.text(
+                            if request.get_value().questions.is_empty() {
+                                "message.approve_this_request"
+                            } else {
+                                "message.send_reply"
+                            },
+                        )
                     }}
-                </button>
-                <button
+                </crate::button::Button>
+                <crate::button::Button
+                    disabled={Signal::derive(move || pending.get())}
                     class="deny-interaction"
+                    {..}
                     type="button"
-                    disabled={move || pending.get()}
                     on:click={move |_| send.with_value(|send| send(true))}
                 >
                     {move || i18n.text("message.deny_this_request")}
-                </button>
+                </crate::button::Button>
             </div>
-        </form>
+        </crate::form::Form>
     }
 }

@@ -60,10 +60,9 @@ pub fn Queue(
             </summary>
             <p role="status">
                 {move || {
-                    i18n
-                        .text(
-                            if state.get().paused { "message.queue_paused" } else { "message.queue_active" },
-                        )
+                    i18n.text(
+                        if state.get().paused { "message.queue_paused" } else { "message.queue_active" },
+                    )
                 }}
             </p>
             <p class="field-help">
@@ -82,7 +81,11 @@ pub fn Queue(
                     let selected = StoredValue::new(id);
                     view! {
                         <div class="editor-actions">
-                            <button type="button" on:click={move |_| on_open.run(selected.get_value())}>
+                            <crate::button::Button
+                                {..}
+                                type="button"
+                                on:click={move |_| on_open.run(selected.get_value())}
+                            >
                                 {move || {
                                     board
                                         .cards
@@ -94,34 +97,35 @@ pub fn Queue(
                                                 .unwrap_or_else(|| i18n.text("message.task_not_found"))
                                         })
                                 }}
-                            </button>
+                            </crate::button::Button>
                             <small hidden={move || {
                                 !state.get().workflows.contains_key(&selected.get_value())
                             }}>{move || i18n.text("message.project_workflow")}</small>
-                            <button
-                                class="remove-queued-task"
-                                type="button"
-                                disabled={move || {
+                            <crate::button::Button
+                                disabled={Signal::derive(move || {
                                     busy.get()
                                         || state
                                             .get()
                                             .active
                                             .is_some_and(|active| active.card_id == selected.get_value())
-                                }}
+                                })}
+                                class="remove-queued-task"
+                                {..}
+                                type="button"
                                 on:click={move |_| {
                                     act.with_value(|act| act("remove", Some(selected.get_value())))
                                 }}
                             >
                                 {move || i18n.text("message.remove_from_queue")}
-                            </button>
+                            </crate::button::Button>
                         </div>
                     }
                 }}
             />
             <label class="check-filter" hidden={move || !state.get().paused || state.get().ids.is_empty()}>
-                <input
+                <crate::form::Checkbox
+                    {..}
                     id="confirm-resume-queue"
-                    type="checkbox"
                     prop:checked={move || approved.get() == Some(state.get().revision)}
                     on:change={move |event| {
                         approved.set(event_target_checked(&event).then(|| state.get_untracked().revision))
@@ -131,25 +135,27 @@ pub fn Queue(
                     i18n.text("message.authorize_local_launches_and_resumptions_with_the_saved_settings")
                 }}
             </label>
-            <button
-                id="resume-queue"
-                type="button"
-                disabled={move || {
+            <crate::button::Button
+                disabled={Signal::derive(move || {
                     busy.get() || !state.get().paused || state.get().ids.is_empty()
                         || approved.get() != Some(state.get().revision)
-                }}
+                })}
+                {..}
+                id="resume-queue"
+                type="button"
                 on:click={move |_| act.with_value(|act| act("resume", None))}
             >
                 {move || i18n.text("message.resume_queue")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || busy.get() || state.get().paused)}
+                {..}
                 id="pause-queue"
                 type="button"
-                disabled={move || busy.get() || state.get().paused}
                 on:click={move |_| act.with_value(|act| act("pause", None))}
             >
                 {move || i18n.text("message.pause_queue")}
-            </button>
+            </crate::button::Button>
             <p class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

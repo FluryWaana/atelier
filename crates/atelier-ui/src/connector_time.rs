@@ -183,53 +183,59 @@ pub fn ConnectorTime(
             <p hidden={move || {
                 !eligible.with(Vec::is_empty)
             }}>{move || i18n.text("message.no_stopped_unsent_human_time_entry_is_available")}</p>
-            <label for="connector-time-entry">{move || i18n.text("message.time_entry")}</label>
-            <select
+            <crate::form::Field
                 id="connector-time-entry"
-                prop:value={move || selected.get()}
-                on:change={move |event| selected.set(event_target_value(&event))}
+                label={Signal::derive(move || i18n.text("message.time_entry"))}
             >
-                <option value="">{move || i18n.text("message.choose_an_entry")}</option>
-                {move || {
-                    eligible
-                        .get()
-                        .into_iter()
-                        .map(|entry| {
-                            let id = field(&entry, "id");
-                            let title = board
-                                .cards
-                                .with(|cards| {
-                                    cards
-                                        .iter()
-                                        .find(|card| card.id == field(&entry, "cardId"))
-                                        .map(|card| card.title.clone())
-                                        .unwrap_or_default()
-                                });
-                            view! {
-                                <option value={id}>
-                                    {format!(
-                                        "{} {} · {} s · {}",
-                                        field(&entry, "date"),
-                                        field(&entry, "startTime"),
-                                        atelier_core::domain::time::time_fields(&entry)
-                                            .map(|fields| fields.seconds)
-                                            .unwrap_or(0),
-                                        title,
-                                    )}
-                                </option>
-                            }
-                        })
-                        .collect_view()
-                }}
-            </select>
-            <button
+                <crate::form::Select
+                    {..}
+                    id="connector-time-entry"
+                    prop:value={move || selected.get()}
+                    on:change={move |event| selected.set(event_target_value(&event))}
+                >
+                    <option value="">{move || i18n.text("message.choose_an_entry")}</option>
+                    {move || {
+                        eligible
+                            .get()
+                            .into_iter()
+                            .map(|entry| {
+                                let id = field(&entry, "id");
+                                let title = board
+                                    .cards
+                                    .with(|cards| {
+                                        cards
+                                            .iter()
+                                            .find(|card| card.id == field(&entry, "cardId"))
+                                            .map(|card| card.title.clone())
+                                            .unwrap_or_default()
+                                    });
+                                view! {
+                                    <option value={id}>
+                                        {format!(
+                                            "{} {} · {} s · {}",
+                                            field(&entry, "date"),
+                                            field(&entry, "startTime"),
+                                            atelier_core::domain::time::time_fields(&entry)
+                                                .map(|fields| fields.seconds)
+                                                .unwrap_or(0),
+                                            title,
+                                        )}
+                                    </option>
+                                }
+                            })
+                            .collect_view()
+                    }}
+                </crate::form::Select>
+            </crate::form::Field>
+            <crate::button::Button
+                disabled={Signal::derive(move || !ready.get())}
+                {..}
                 id="preview-connector-time"
                 type="button"
-                disabled={move || !ready.get()}
                 on:click={move |_| execute.with_value(|execute| execute(false))}
             >
                 {move || i18n.text("message.read_the_export_destination")}
-            </button>
+            </crate::button::Button>
             {move || {
                 report
                     .get()
@@ -260,24 +266,26 @@ pub fn ConnectorTime(
                         }
                     })
             }}
-            <button
+            <crate::button::Button
+                disabled={Signal::derive(move || report.get().is_none() || !ready.get())}
+                {..}
                 id="prepare-connector-time"
                 type="button"
-                disabled={move || report.get().is_none() || !ready.get()}
                 on:click={move |_| execute.with_value(|execute| execute(true))}
             >
                 {move || i18n.text("message.prepare_this_export_in_the_journal")}
-            </button>
-            <button
+            </crate::button::Button>
+            <crate::button::Button
+                disabled={Signal::derive(move || selected.get().is_empty())}
+                {..}
                 type="button"
-                disabled={move || selected.get().is_empty()}
                 on:click={move |_| {
                     selected.set(String::new());
                     report.set(None);
                 }}
             >
                 {move || i18n.text("message.cancel_selection")}
-            </button>
+            </crate::button::Button>
             <p role="status" hidden={move || !notice.get()}>
                 {move || {
                     i18n.text("message.preview_added_to_the_journal_check_its_scope_then_confirm_sendin")

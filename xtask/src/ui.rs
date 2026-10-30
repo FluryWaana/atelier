@@ -52,9 +52,7 @@ fn free_port() -> Result<u16> {
 }
 
 async fn start_server(data: &Path, port: u16, assets: &Path) -> Result<(Process, String)> {
-    let executable = root()
-        .join("target/debug")
-        .join(format!("atelier{}", std::env::consts::EXE_SUFFIX));
+    let executable = ui_server();
     let mut process = Process(
         command(executable)
             .arg("serve")
@@ -153,16 +151,18 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
         _ => return Err("Navigateur de test inconnu.".into()),
     };
     if prepared_assets {
-        super::validate_ui_assets(&root().join(".artifacts/rust-ui"))?;
+        super::validate_ui_assets(&ui_assets())?;
     } else {
         super::build_ui(false)?;
     }
-    run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
-        "build",
-        "--locked",
-        "-p",
-        "atelier-app",
-    ]))?;
+    if std::env::var_os("ATELIER_TEST_SERVER").is_none() {
+        run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
+            "build",
+            "--locked",
+            "-p",
+            "atelier-app",
+        ]))?;
+    }
     run(command("cargo").args([
         "build",
         "--locked",
@@ -278,7 +278,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     let data = tempfile::tempdir()?;
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    let assets = root().join(".artifacts/rust-ui");
+    let assets = ui_assets();
     let (mut server, token) = start_server(data.path(), port, &assets).await?;
     let repo = data.path().join("repositories/board-fixture");
     std::fs::create_dir_all(&repo)?;
@@ -356,7 +356,12 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     query.send_keys("synthetic-no-search-match-92817").await?;
     wait_dom(client, "return document.querySelectorAll('.command-result').length === 0 && document.querySelector('#command-results .empty')?.hidden === false;", vec![]).await?;
     query.send_keys("\u{e007}").await?;
-    wait_dom(client, "return document.querySelector('#command-dialog')?.open === true;", vec![]).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#command-dialog')?.open === true;",
+        vec![],
+    )
+    .await?;
     query.send_keys("\u{e00c}").await?;
     wait_dom(client, "return !document.querySelector('#command-dialog') && document.activeElement?.id === 'command-button';", vec![]).await?;
     click(client, "#command-button").await?;
@@ -405,22 +410,14 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         .send_keys("synthetic-no-task-match-onboarding")
         .await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 0 && document.querySelector('#welcome')?.hidden === true && document.querySelector('#create-button')?.hidden === false;", vec![]).await?;
-    client
-        .find(Locator::Css("#board-search"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#board-search").await?;
     client
         .find(Locator::Css("#board-search"))
         .await?
         .send_keys("DESCRIPTION À RETROUVER")
         .await?;
     wait_dom(client, "return document.querySelectorAll('article.card').length === 1 && document.querySelector('article.card').dataset.id === arguments[0];", vec![queued["id"].clone()]).await?;
-    client
-        .find(Locator::Css("#board-search"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#board-search").await?;
     // WebDriver clear does not consistently emit the input event across browsers.
     wait_dom(
         client,
@@ -481,6 +478,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     {
         return Err("Adresse de tâche absente.".into());
     }
+    wait_dom(client,"return document.querySelectorAll('.criterion-text').length === 0 && document.querySelector('#save-task')?.disabled === true && document.querySelector('#add-criterion')?.textContent.trim() === 'Ajouter un critère';",vec![]).await?;
     client.refresh().await?;
     wait_dom(client, "return (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor')) && document.querySelector('#edit-title')?.value === arguments[0];", vec![json!(title)]).await?;
     client
@@ -494,11 +492,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     }
     click(client, "[data-status=todo] .card-open").await?;
     let title = "Tâche modifiée é 🔧 <script>";
-    client
-        .find(Locator::Css("#edit-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#edit-title").await?;
     client
         .find(Locator::Css("#edit-title"))
         .await?
@@ -658,11 +652,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#edit-description"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#edit-description").await?;
     client
         .find(Locator::Css("#edit-description"))
         .await?
@@ -788,7 +778,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "#remove-template").await?;
     click(client, "#confirm-remove-template").await?;
     wait_dom(client, "return document.querySelector('#task-template')?.options.length === 1 && document.querySelectorAll('article.card').length === 3;", vec![]).await?;
-    click(client, "#new-dialog .dialog-heading button").await?;
+    click(client, "#new-dialog .ui-modal-header [data-close]").await?;
     live_scenario(client, http, &address, &next_token).await?;
     projects_scenario(client, http, &address, &next_token, data.path()).await?;
     kanban_columns_scenario(client, http, &address, &next_token).await?;
@@ -812,12 +802,8 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
     };
     use atelier_core::application::updates::Phase;
     let temporary = tempfile::tempdir()?;
-    let assets = root().join(".artifacts/rust-ui");
-    let binary = root().join("target/debug").join(if cfg!(windows) {
-        "atelier.exe"
-    } else {
-        "atelier"
-    });
+    let assets = ui_assets();
+    let binary = ui_server();
     update_package::generate_synthetic(&temporary.path().join("keys"))?;
     let current = env!("CARGO_PKG_VERSION");
     let parts = package::version_parts(current)?;
@@ -876,11 +862,20 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
         if client.execute("return document.querySelector('#update-archive, #update-signature, #approve-update') === null;",vec![]).await? != json!(true) {
             return Err("Les anciens champs de mise à jour sont encore affichés.".into());
         }
-        // Prepare a signed local fixture without depending on a public GitHub release.
-        http.post(format!("{address}/api/updates/preview"))
-            .bearer_auth(&token).header("x-local-request", "1")
-            .json(&json!({"archive":candidate,"signature":candidate_signature}))
-            .send().await?.checked_status().await?;
+        // Pause the page before the exclusive fixture reservation, including its agent probes.
+        client.goto("about:blank").await?;
+        let mut prepared=false;
+        for _ in 0..75 {
+            let response=http.post(format!("{address}/api/updates/preview")).bearer_auth(&token).header("x-local-request","1").json(&json!({"archive":candidate,"signature":candidate_signature})).send().await?;
+            if response.status().is_success(){prepared=true;break;}
+            let status=response.status();let message:serde_json::Value=response.json().await?;
+            if status!=reqwest::StatusCode::CONFLICT || message["error"]!=json!("message.a_change_is_in_progress_try_again_shortly"){return Err(format!("Préparation synthétique refusée ({status}): {message}").into());}
+            // This refusal happens before reservation, so this exact fixture request has no effect to duplicate.
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        if !prepared{return Err("Préparation synthétique bloquée par une admission occupée.".into());}
+        client.goto(&format!("{address}/updates")).await?;
+        wait_dom(client,"return !!document.querySelector('#reload-updates');",vec![]).await?;
         click(client,"#reload-updates").await?;
         let preparation_deadline=Instant::now()+Duration::from_secs(120);
         loop {
@@ -978,7 +973,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             ]))?;
         let brainstorm_verification = format!(
             "\"{}\" verify success",
-            super::root()
+            root()
                 .join("target/debug")
                 .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX))
                 .display()
@@ -1000,18 +995,44 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             }
             // Preview fixture only; no native Git operation or remote creation is implied.
             store.put(Documents::Cards,&json!({"id":"commit-draft","title":"Synthetic commit draft","description":"Human commit content","status":"todo","repo":"/synthetic/source","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/commit","base":"main","baseCommit":"a".repeat(40),"state":"ready"}}))?;
-            store.put(Documents::Cards,&json!({"id":"publication-branch","title":"Synthetic branch task","description":"Human branch content","status":"todo","repo":"","forgePublicationPreview":{"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"},"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":true,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic first publication","body":"Keep first publication draft","draft":true}}))?;
+            store.put(Documents::Cards,&json!({
+                "id":"publication-branch","title":"Synthetic branch task","description":"Human branch content","status":"todo","repo":"","forgePublicationPreview":{
+                    "configuration":{
+                        "kind":"github","base":"https://github-synthetic.example.test"
+                    },"revision":0,"repository":"owner/repo","worktree":{
+                        "path":"/synthetic/not-created","source":"/synthetic/source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"
+                    },"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":true,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic first publication","body":"Keep first publication draft","draft":true
+                }
+            }))?;
             // Approval controls only: missing synthetic profile/worktree must never dispatch an agent.
             let approval_project:atelier_core::document::Document=serde_json::from_str(&json!({"id":"publication-approval-project","name":"Synthetic approval controls","repo":"/synthetic/approval-source","automationEnabled":true,"autoFix":false,"testCommand":"synthetic-disabled","prTarget":"main"}).to_string())?;
             store.put(Documents::Projects,&approval_project)?;
             let mut approval:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"publication-approval","title":"Synthetic publication approval","agent":"synthetic-unavailable","repo":"/synthetic/approval-source","status":"todo","worktree":{"path":"/synthetic/not-created","source":"/synthetic/approval-source","branch":"task/first","base":"main","baseCommit":"b".repeat(40),"state":"ready"}}).to_string())?;
             let worktree=approval.fields.get::<atelier_core::contracts::Worktree>("worktree")?.ok_or("Synthetic approval worktree missing")?;
             let profile=serde_json::from_str(r#"{"id":"synthetic-unavailable","type":"command","name":"Synthetic unavailable profile"}"#)?;
-            let flow=atelier_core::application::automation::Flow{id:"00000000-0000-4000-8000-000000000007".into(),state:atelier_core::application::automation::State::Waiting,step:atelier_core::application::automation::Step::Publication,project:approval_project,requirements:atelier_core::application::preparation::requirements(&approval)?,worktree:worktree.clone(),agent:"synthetic-unavailable".into(),profile,model:String::new(),effort:String::new(),instructions:String::new(),run_id:None,review_id:None,verification_id:None,publication_plan:None,commit_plan:None,review_requested:false,correction_indexes:vec![],cycles:0,auto_fix:false,started_at:"2026-10-26T00:00:00Z".into(),updated_at:"2026-10-26T00:00:00Z".into(),message:"Synthetic approval fixture only; no verification performed".into()};
+            let flow=atelier_core::application::automation::Flow{
+                id:"00000000-0000-4000-8000-000000000007".into(),state:atelier_core::application::automation::State::Waiting,step:atelier_core::application::automation::Step::Publication,project:approval_project,requirements:atelier_core::application::preparation::requirements(&approval)?,worktree:worktree.clone(),agent:"synthetic-unavailable".into(),profile,model:String::new(),effort:String::new(),instructions:String::new(),run_id:None,review_id:None,verification_id:None,publication_plan:None,commit_plan:None,review_requested:false,correction_indexes:vec![],cycles:0,auto_fix:false,started_at:"2026-10-26T00:00:00Z".into(),updated_at:"2026-10-26T00:00:00Z".into(),message:"Synthetic approval fixture only; no verification performed".into()
+            };
             approval.fields.set("automation",&flow)?;
             approval.fields.set("forgePublicationPreview",&json!({"configuration":{"kind":"github","base":"https://github-synthetic.example.test"},"revision":0,"repository":"owner/repo","worktree":worktree,"target":"main","origin":"https://github-synthetic.example.test/owner/repo.git","remoteSource":null,"localChanges":false,"sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"title":"Synthetic approved publication","body":"Synthetic approval fixture","draft":true}))?;
             store.put(Documents::Cards,&approval)?;
-            store.put(Documents::Runs,&json!({"id":"review-report-run","cardId":"review-report","kind":"pr-review","purpose":"review","status":"completed","startedAt":"2026-10-25T10:00:00Z","reviewStaleReason":atelier_app::infrastructure::reviews::UNCHECKED,"reviewContext":{"requirements":{"criteria":["Synthetic review criterion"]},"worktree":{"path":"/synthetic/not-created","source":"/synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"},"kind":"github","revision":0,"repository":"owner/repo","number":7,"source":"b".repeat(40),"target":"a".repeat(40),"base":"a".repeat(40)},"review":{"summary":"Synthetic review limits: browser and service not executed","findings":[{"priority":"P2","title":"Synthetic finding <script>ignored</script>","file":"src/lib.rs","line":12,"problem":"Synthetic evidence","suggestion":"Synthetic correction"}],"criteria":[{"index":0,"status":"unverifiable","evidence":"Synthetic UI not executed"}]}}))?;
+            store.put(Documents::Runs,&json!({
+                "id":"review-report-run","cardId":"review-report","kind":"pr-review","purpose":"review","status":"completed","startedAt":"2026-10-25T10:00:00Z","reviewStaleReason":atelier_app::infrastructure::reviews::UNCHECKED,"reviewContext":{
+                    "requirements":{
+                        "criteria":["Synthetic review criterion"]
+                    },"worktree":{
+                        "path":"/synthetic/not-created","source":"/synthetic/source","branch":"task","base":"main","baseCommit":"a".repeat(40),"state":"ready"
+                    },"kind":"github","revision":0,"repository":"owner/repo","number":7,"source":"b".repeat(40),"target":"a".repeat(40),"base":"a".repeat(40)
+                },"review":{
+                    "summary":"Synthetic review limits: browser and service not executed","findings":[{
+                        "priority":"P2","title":"Synthetic finding <script>ignored</script>","file":"src/lib.rs","line":12,"problem":"Synthetic evidence","suggestion":"Synthetic correction"
+                    }
+                    ],"criteria":[{
+                        "index":0,"status":"unverifiable","evidence":"Synthetic UI not executed"
+                    }
+                    ]
+                }
+            }))?;
             // This independent journey shares the deliberate uncertain Jira fixture:
             // configure its project before startup, rather than bypassing the global guard.
             store.put(Documents::Projects,&json!({"id":"brainstorm-project","name":"Synthetic brainstorm","repo":brainstorm_repo,"testCommand":brainstorm_verification,"automationEnabled":true,"autoFix":false,"prTarget":"main"}))?;
@@ -1019,7 +1040,19 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
             store.put(Documents::Runs,&json!({"id":"brainstorm-result","cardId":"brainstorm-session","status":"completed","purpose":"brainstorm","startedAt":"2026-10-25T10:00:00Z","userMessage":"Découpe cette idée","brainstormAnswer":{"message":"Synthetic structured proposal","questions":[{"question":"Synthetic choice?","options":["Local only","Shared"]}],"tickets":[{"title":"Synthetic converted task","description":"Converted description","criteria":["Manual validation remains required"],"questions":["Keep open question"]}]}}))?;
             store.save_settings(&json!({"jiraConnection":{"mode":"cloud","url":"https://synthetic-recovery.example.test","email":"synthetic@example.test","query":"project = SYN","revision":1}}))?;
             store.put(Documents::Cards,&json!({"id":"jira-creation","title":"Synthetic Jira creation","description":"Keep local creation content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"jiraCreation":{"id":"synthetic-creation-operation","state":"sending","base":"https://synthetic-recovery.example.test","projectKey":"SYN","issueType":{"id":"1","name":"Task","subtask":false},"revision":1,"startedAt":"2026-10-25T10:00:00Z","result":null}}))?;
-            store.put(Documents::Cards,&json!({"id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"},"jiraTransition":{"id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{"id":"1","name":"Open"},"transition":{"id":"11","name":"Complete","target":{"id":"2","name":"Done"},"requiresFields":false},"startedAt":"2026-10-25T10:00:00Z","observed":null}}))?;
+            store.put(Documents::Cards,&json!({
+                "id":"jira-recovery","title":"Synthetic Jira recovery","description":"Local content","instructions":"","agent":"codex","mode":"analyze","status":"todo","checklist":[],"ticket":{
+                    "connector":"jira","instance":"https://synthetic-recovery.example.test","id":"1","key":"SYN-1","status":"Open","url":"https://synthetic-recovery.example.test/browse/SYN-1"
+                },"jiraTransition":{
+                    "id":"synthetic-operation","state":"sending","base":"https://synthetic-recovery.example.test","issueId":"1","revision":1,"from":{
+                        "id":"1","name":"Open"
+                    },"transition":{
+                        "id":"11","name":"Complete","target":{
+                            "id":"2","name":"Done"
+                        },"requiresFields":false
+                    },"startedAt":"2026-10-25T10:00:00Z","observed":null
+                }
+            }))?;
             let mut card:atelier_core::contracts::Card=serde_json::from_str(&json!({"id":"jira-refresh","title":"Local refresh title","description":"Local refresh description","instructions":"Keep refresh instructions","agent":"codex","mode":"analyze","status":"todo","checklist":[{"text":"Keep refresh criterion","done":true}],"ticket":{"connector":"jira","instance":"https://synthetic-recovery.example.test","id":"2","key":"SYN-2","status":"Open"}}).to_string())?;
             card.fields.set("pullRequest",&json!({"revision":0,"kind":"github","repository":"owner/repo","number":7,"title":"Synthetic linked PR","url":"https://github-synthetic.example.test/owner/repo/pull/7","status":"active","draft":true,"sourceBranch":"task/synthetic","targetBranch":"main","sourceCommit":"a".repeat(40),"targetCommit":"b".repeat(40),"fork":false,"baseUrl":"https://github-synthetic.example.test","checkedAt":"2026-10-25T10:00:00Z"}))?;
             store.put(Documents::Cards,&card)?;
@@ -1040,8 +1073,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     }
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    let (mut server, token) =
-        start_server(data.path(), port, &root().join(".artifacts/rust-ui")).await?;
+    let (mut server, token) = start_server(data.path(), port, &ui_assets()).await?;
     client
         .goto(&format!("{address}/tasks/time-export#session={token}"))
         .await?;
@@ -1288,11 +1320,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         .await?
         .send_keys(&instructions)
         .await?;
-    client
-        .find(Locator::Css("#task-forge-repository"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#task-forge-repository").await?;
     client
         .find(Locator::Css("#task-forge-repository"))
         .await?
@@ -1381,21 +1409,13 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         vec![],
     )
     .await?;
-    client
-        .find(Locator::Css("#publication-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#publication-title").await?;
     client
         .find(Locator::Css("#publication-title"))
         .await?
         .send_keys("Changed publication")
         .await?;
-    client
-        .find(Locator::Css("#publication-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#publication-title").await?;
     client
         .find(Locator::Css("#publication-title"))
         .await?
@@ -1427,22 +1447,14 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
     )
     .await?;
     task_tab(client, "details").await?;
-    client
-        .find(Locator::Css("#publication-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#publication-title").await?;
     client
         .find(Locator::Css("#publication-title"))
         .await?
         .send_keys("Changed approval draft")
         .await?;
     wait_dom(client,"return document.querySelector('#approve-automation')?.checked === false && document.querySelector('#approve-workflow-branch')?.checked === false;",vec![]).await?;
-    client
-        .find(Locator::Css("#publication-title"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#publication-title").await?;
     client
         .find(Locator::Css("#publication-title"))
         .await?
@@ -1935,11 +1947,7 @@ async fn time_task_scenario(
     click(client, "#save-time").await?;
     wait_dom(client,"return document.querySelectorAll('[data-time-id]').length === 1 && document.querySelector('#time-description')?.value === '' && document.querySelector('#close-editor')?.disabled === false;",vec![]).await?;
     click(client, "[data-time-id] .edit-time").await?;
-    client
-        .find(Locator::Css("#time-duration"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#time-duration").await?;
     client
         .find(Locator::Css("#time-duration"))
         .await?
@@ -1978,11 +1986,7 @@ async fn time_task_scenario(
     click(client, "#discard-time-draft").await?;
     click(client, "[data-time-id] .edit-time").await?;
     wait_dom(client,"return document.querySelector('#time-description')?.value === 'Concurrent synthetic note';",vec![]).await?;
-    client
-        .find(Locator::Css("#time-duration"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#time-duration").await?;
     client
         .find(Locator::Css("#time-duration"))
         .await?
@@ -2004,7 +2008,7 @@ async fn time_task_scenario(
         .await?
         .send_keys("Unsaved synthetic idea")
         .await?;
-    click(client, "#new-dialog .dialog-heading button").await?;
+    click(client, "#new-dialog .ui-modal-header [data-close]").await?;
     click(client, "#open-timer-task").await?;
     wait_dom(client,"return (location.pathname.startsWith('/tasks/') && !!document.querySelector('#task-editor')) && document.querySelector('#task-title')?.value==='Unsaved synthetic idea';",vec![]).await?;
     click(client, "#close-editor").await?;
@@ -2038,7 +2042,7 @@ async fn time_task_scenario(
     .await?;
     new_task(client).await?;
     clear_input(client, "#task-title").await?;
-    click(client, "#new-dialog .dialog-heading button").await?;
+    click(client, "#new-dialog .ui-modal-header [data-close]").await?;
     click(client, "#view-time-report").await?;
     wait_dom(client,"return (location.pathname === '/time' && !!document.querySelector('#time-report')) && document.querySelector('#report-human-total')?.textContent.includes('02:02:00') && document.querySelectorAll('.time-report-row').length===3;",vec![]).await?;
     let set_dates = "for(const id of ['report-from','report-to']){const input=document.getElementById(id);input.value=arguments[0];input.dispatchEvent(new Event('input',{bubbles:true}));}";
@@ -2216,11 +2220,7 @@ async fn profiles_scenario(
     click(client, "#confirm-profile-action").await?;
     wait_dom(client, "return document.querySelector('#profile-name')?.value === '' && document.querySelector('#save-profile')?.disabled;", vec![]).await?;
     click(client, "#profile-advanced > summary").await?;
-    client
-        .find(Locator::Css("#profile-id"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-id").await?;
     for (selector, text) in [
         ("#profile-id", "ui-api"),
         ("#profile-name", "Profil synthétique <b>é😀</b>"),
@@ -2342,11 +2342,7 @@ async fn profiles_scenario(
         .await?
         .checked_status()
         .await?;
-    client
-        .find(Locator::Css("#profile-name"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-name").await?;
     client
         .find(Locator::Css("#profile-name"))
         .await?
@@ -2439,11 +2435,7 @@ async fn profiles_scenario(
     wait_dom(client,"return document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.' && !document.querySelector('[data-profile=ui-api]');",vec![]).await?;
     click(client, "#new-profile").await?;
     client.execute("const select=document.querySelector('#profile-type'); select.value='command'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
-    client
-        .find(Locator::Css("#profile-id"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-id").await?;
     for (selector, text) in [
         ("#profile-id", "ui-command"),
         ("#profile-name", "Commande synthétique"),
@@ -2461,11 +2453,7 @@ async fn profiles_scenario(
         .await?
         .send_keys(&fixture.to_string_lossy())
         .await?;
-    client
-        .find(Locator::Css("#profile-statusArgs"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-statusArgs").await?;
     client
         .find(Locator::Css("#profile-statusArgs"))
         .await?
@@ -2473,11 +2461,7 @@ async fn profiles_scenario(
         .await?;
     click(client, "#save-profile").await?;
     wait_dom(client,"return document.querySelector('#profiles-error')?.textContent.includes('liste JSON') && document.querySelector('#profile-analyzeArgs')?.value === 'invalid-json';",vec![]).await?;
-    client
-        .find(Locator::Css("#profile-analyzeArgs"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-analyzeArgs").await?;
     client
         .find(Locator::Css("#profile-analyzeArgs"))
         .await?
@@ -2548,11 +2532,7 @@ async fn profiles_scenario(
     wait_dom(client,"return !document.querySelector('[data-profile=ui-command]') && document.querySelector('#profiles-notice')?.textContent === 'Profil retiré.';",vec![]).await?;
     click(client, "#new-profile").await?;
     client.execute("const select=document.querySelector('#profile-type'); select.value='acp'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
-    client
-        .find(Locator::Css("#profile-id"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#profile-id").await?;
     for (selector, value) in [
         ("#profile-id", "ui-acp".to_owned()),
         ("#profile-name", "Agent ACP synthétique".to_owned()),
@@ -2650,6 +2630,14 @@ async fn projects_scenario(
         .send_keys("Projet depuis l’interface")
         .await?;
     client
+        .execute(
+            "document.querySelector('#project-form').requestSubmit();",
+            vec![],
+        )
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-directory').getAttribute('aria-invalid') === 'true' && document.querySelector('#project-directory-field-error').textContent.trim().length > 0 && document.activeElement.id === 'project-directory';", vec![]).await?;
+
+    client
         .find(Locator::Css("#project-directory"))
         .await?
         .send_keys(&repo.to_string_lossy())
@@ -2666,36 +2654,105 @@ async fn projects_scenario(
         ),
     )
     .await?;
+    wait_dom(client, "return document.querySelector('#save-project')?.disabled === true && document.querySelector('#add-project')?.disabled === false;", vec![]).await?;
+    click(client, "#reset-project").await?;
+    wait_dom(client, "return document.querySelector('#project-settings-panel')?.hidden === true && !document.querySelector('#project-confirmation-dialog');", vec![]).await?;
+    click(
+        client,
+        &format!(
+            "[data-project-id='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        ),
+    )
+    .await?;
     client
         .find(Locator::Css("#project-name"))
         .await?
-        .clear()
+        .send_keys(" brouillon à annuler")
         .await?;
+    click(client, "#add-project").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-confirmation-dialog')?.open === true;",
+        vec![],
+    )
+    .await?;
+    click(client, "#cancel-project-confirmation").await?;
+    wait_dom(client, "return document.querySelector('#project-name')?.value.endsWith(' brouillon à annuler') && document.querySelector('#add-project')?.disabled === false;", vec![]).await?;
+    click(client, "#reset-project").await?;
+    click(client, "#confirm-project").await?;
+    wait_dom(client, "return document.querySelector('#project-settings-panel')?.hidden === true && document.querySelector('#add-project')?.disabled === false && Array.from(document.querySelectorAll('#project-list .project-choice')).every(button=>!button.disabled);", vec![]).await?;
+    click(client, "#add-project").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-create-dialog')?.open === true;",
+        vec![],
+    )
+    .await?;
+    click(client, "#project-create-dialog [data-close]").await?;
+    click(client, "#close-projects").await?;
+    wait_dom(client, "return location.pathname === '/overview';", vec![]).await?;
+    click(client, "#manage-projects").await?;
+    click(
+        client,
+        &format!(
+            "[data-project-id='{}']",
+            id.as_str().ok_or("Projet sans id")?
+        ),
+    )
+    .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-name')?.value === 'Projet depuis l’interface';",
+        vec![],
+    )
+    .await?;
+    clear_input(client, "#project-name").await?;
     client
         .find(Locator::Css("#project-name"))
         .await?
         .send_keys("Projet renommé")
         .await?;
     client
-        .find(Locator::Css("#project-rules"))
-        .await?
-        .send_keys("Consignes synthétiques")
-        .await?;
-    client
         .find(Locator::Css("#project-branch"))
         .await?
         .send_keys("main")
         .await?;
+    wait_dom(client, "return document.querySelectorAll('#projects-page button#close-projects').length === 1 && !!(document.querySelector('#projects-page').compareDocumentPosition(document.querySelector('main > footer')) & Node.DOCUMENT_POSITION_FOLLOWING) && Array.from(document.querySelectorAll('#project-list .project-choice')).every(button=>button.querySelector('.project-choice-action')?.textContent.includes('Configurer')) && !document.querySelector('.project-detail-heading button:not(.project-open-tasks)') && document.querySelector('#close-projects')?.textContent === 'Tous les projets';", vec![]).await?;
+    click(client, "#project-tab-agent").await?;
+    client
+        .find(Locator::Css("#project-rules"))
+        .await?
+        .send_keys("Consignes synthétiques")
+        .await?;
     client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+
+    client.execute("window.__syntheticCopy = null; Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async value=>{window.__syntheticCopy=value;}}});", vec![]).await?;
+    click(
+        client,
+        "#project-repo + .ui-input-buttons [data-input-action=copy]",
+    )
+    .await?;
+    wait_dom(client, "return window.__syntheticCopy === document.querySelector('#project-repo').value && document.querySelector('#project-repo').closest('.ui-input-actions').querySelector('[role=status]').textContent.trim().length > 0;", vec![]).await?;
+    client.execute("Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async()=>{throw Error('Synthetic clipboard denied');}}});",vec![]).await?;
+    click(
+        client,
+        "#project-repo + .ui-input-buttons [data-input-action=copy]",
+    )
+    .await?;
+    wait_dom(client, "return document.querySelector('#project-repo').closest('.ui-input-actions').querySelector('[role=status]').textContent.includes('impossible');", vec![]).await?;
+    client
+        .execute(
+            "delete navigator.clipboard; delete window.__syntheticCopy;",
+            vec![],
+        )
+        .await?;
+    click(client, "#project-tab-launch").await?;
     click(client, "#detect-front").await?;
     wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#project-settings-panel fieldset')?.disabled === false;", vec![]).await?;
     click(client, ".launch-candidate[data-role=front]").await?;
     wait_dom(client, "return document.querySelector('#project-front-directory')?.value === 'client' && document.querySelector('#project-front-command')?.value.includes('--port {port}');", vec![]).await?;
-    client
-        .find(Locator::Css("#project-front-port"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#project-front-port").await?;
     client
         .find(Locator::Css("#project-front-port"))
         .await?
@@ -2706,7 +2763,54 @@ async fn projects_scenario(
         .await?
         .send_keys("synthetic-back --port {port}")
         .await?;
-    client.execute("const select=document.querySelector('#project-linked'); select.value=Array.from(select.options).find(option=>option.value).value; select.dispatchEvent(new Event('change',{bubbles:true}));", vec![]).await?;
+    click(client, "#project-tab-automation").await?;
+    client
+        .find(Locator::Css("#project-linked"))
+        .await?
+        .send_keys("missing-synthetic-project")
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-linked').getAttribute('aria-expanded') === 'true' && document.querySelectorAll('#project-linked-listbox [role=option]').length === 0;", vec![]).await?;
+    client
+        .find(Locator::Css("#project-linked"))
+        .await?
+        .send_keys("\u{e00c}")
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-linked').getAttribute('aria-expanded') === 'false' && document.querySelector('#project-linked').dataset.selectedValue === '';", vec![]).await?;
+
+    client
+        .execute("document.querySelector('#project-linked').focus(); document.querySelector('.ui-combobox-toggle').click();", vec![])
+        .await?;
+    wait_dom(
+        client,
+        "return document.querySelectorAll('#project-linked-listbox [role=option]').length > 1;",
+        vec![],
+    )
+    .await?;
+    client
+        .execute(
+            "document.querySelectorAll('#project-linked-listbox [role=option]')[1].click();",
+            vec![],
+        )
+        .await?;
+    client
+        .find(Locator::Css("#project-tab-automation"))
+        .await?
+        .send_keys("\u{e011}")
+        .await?;
+    wait_dom(client, "return document.activeElement?.id === 'project-tab-general' && document.querySelector('#project-panel-general')?.hidden === false && document.querySelector('#project-panel-launch')?.hidden === true && document.querySelector('#project-name')?.value === 'Projet renommé';", vec![]).await?;
+    click(client, "#project-tab-agent").await?;
+    wait_dom(client, "return document.querySelector('#project-rules')?.value === 'Consignes synthétiques' && document.querySelector('#project-agent')?.value === 'claude';", vec![]).await?;
+    click(client, "#project-tab-general").await?;
+    clear_input(client, "#project-name").await?;
+    click(client, "#project-tab-agent").await?;
+    click(client, "#save-project").await?;
+    wait_dom(client, "return document.querySelector('#project-tab-general')?.getAttribute('aria-selected') === 'true' && document.querySelector('#project-name')?.validity.valueMissing && document.querySelector('#save-project')?.disabled === false;", vec![]).await?;
+    client
+        .find(Locator::Css("#project-name"))
+        .await?
+        .send_keys("Projet renommé")
+        .await?;
+    click(client, "#project-tab-agent").await?;
     click(client, "#save-project").await?;
     wait_dom(client, "return document.querySelector('#save-project')?.disabled && document.querySelector('#add-project')?.disabled === false && Array.from(document.querySelectorAll('#project-list strong')).some(element=>element.textContent === 'Projet renommé');", vec![]).await?;
     std::fs::write(
@@ -2758,7 +2862,7 @@ async fn projects_scenario(
     }
     wait_dom(client, "return document.querySelector('#project-form .error')?.textContent.includes('déjà') && document.querySelector('#project-create-name')?.value === 'Doublon refusé';", vec![]).await?;
     click(client, "#project-create-dialog [data-close]").await?;
-    click(client, "#project-create-dialog .confirmation button.danger").await?;
+    click(client, "#project-confirmation-dialog #confirm-project").await?;
     wait_dom(
         client,
         "return !document.querySelector('#project-create-dialog');",
@@ -2836,9 +2940,9 @@ async fn projects_scenario(
         .await?
         .send_keys(" brouillon")
         .await?;
-    click(client, "#close-projects").await?;
-    wait_dom(client, "return !document.querySelector('#projects-page > .confirmation')?.hidden && location.pathname === '/projects';", vec![]).await?;
-    click(client, "#projects-page > .confirmation button:not(.danger)").await?;
+    click(client, "#manage-settings").await?;
+    wait_dom(client, "return document.querySelector('#project-confirmation-dialog')?.open === true && location.pathname === '/projects';", vec![]).await?;
+    click(client, "#cancel-project-confirmation").await?;
     http.patch(format!(
         "{address}/api/projects/{}",
         id.as_str().ok_or("Projet sans id")?
@@ -2852,7 +2956,7 @@ async fn projects_scenario(
     .await?;
     click(client, "#save-project").await?;
     wait_dom(client,"return document.querySelector('#project-error')?.textContent.includes('changé ailleurs') && document.querySelector('#project-name')?.value === 'Projet renommé brouillon';",vec![]).await?;
-    click(client, ".project-detail-heading button").await?;
+    click(client, "#close-projects").await?;
     click(client, "#confirm-project").await?;
     click(client, "#close-projects").await?;
     click(client, "#manage-projects").await?;
@@ -2873,6 +2977,12 @@ async fn projects_scenario(
     click(client, "#remove-project").await?;
     click(client, "#cancel-project-confirmation").await?;
     click(client, "#remove-project").await?;
+    wait_dom(client, "return document.querySelector('#project-confirmation-dialog')?.open === true && document.querySelector('#confirm-project')?.disabled === true;", vec![]).await?;
+    client
+        .find(Locator::Css("#project-confirmation-name"))
+        .await?
+        .send_keys("Nom externe")
+        .await?;
     click(client, "#archive-project-tasks").await?;
     click(client, "#confirm-project").await?;
     wait_dom(client, "return document.querySelectorAll('#project-list .project-choice').length === 1 && document.querySelector('#project-settings-panel')?.hidden === true && document.querySelector('#close-projects')?.disabled === false;", vec![]).await?;
@@ -3065,11 +3175,7 @@ async fn settings_scenario(
     if serde_json::to_string(&saved)?.contains("synthetic-jira-one") {
         return Err("Le jeton Jira apparaît dans la réponse publique.".into());
     }
-    client
-        .find(Locator::Css("#jira-query"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#jira-query").await?;
     client
         .find(Locator::Css("#jira-query"))
         .await?
@@ -3122,6 +3228,24 @@ async fn settings_scenario(
         vec![],
     )
     .await?;
+
+    click(
+        client,
+        "#forge-token + .ui-input-buttons [data-input-action=reveal]",
+    )
+    .await?;
+    wait_dom(client, "return document.querySelector('#forge-token').type === 'text' && document.querySelector('#forge-token').value === 'synthetic-forge-ui';", vec![]).await?;
+    click(
+        client,
+        "#forge-token + .ui-input-buttons [data-input-action=reveal]",
+    )
+    .await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#forge-token').type === 'password';",
+        vec![],
+    )
+    .await?;
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#forge-token')?.value === '' && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié') && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
     wait_dom(client, "return !document.querySelector('#forge-repository') && !document.querySelector('#read-forge-pr') && !document.querySelector('#list-forge-prs');", vec![]).await?;
@@ -3137,11 +3261,7 @@ async fn settings_scenario(
     if serde_json::to_string(&forges)?.contains("synthetic-forge-ui") {
         return Err("Le jeton de forge apparaît dans la réponse publique.".into());
     }
-    client
-        .find(Locator::Css("#forge-base"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#forge-base").await?;
     client
         .find(Locator::Css("#forge-base"))
         .await?
@@ -3384,7 +3504,7 @@ async fn language_scenario(client: &Client) -> Result<()> {
     client.execute("const select=document.querySelector('#interface-language'); select.value='en-US'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#workspace-title')?.textContent === 'Settings' && document.querySelector('#save-settings')?.disabled === false && document.querySelector('#save-settings')?.textContent === 'Save general settings';",vec![]).await?;
     click(client, "#overview-button").await?;
-    wait_dom(client,"return document.querySelector('#settings-page .confirmation p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
+    wait_dom(client,"return document.querySelector('#settings-page dialog.ui-confirmation[open] .ui-confirmation-body > p')?.textContent === 'Discard unsaved changes?';",vec![]).await?;
     click(client, "#discard-settings").await?;
     show_board(client).await?;
     wait_dom(client,"return document.querySelector('#workspace-title')?.textContent === 'Task board' && document.querySelector('#board-search')?.placeholder === 'Title, ticket or description…' && Array.from(document.querySelectorAll('#prototype-board .column-heading')).map(node=>Array.from(node.childNodes).filter(child=>child.nodeType===Node.TEXT_NODE).map(child=>child.textContent).join('').trim()).join('|') === 'To do|In progress|To review|Done|On hold';",vec![]).await?;
@@ -3567,11 +3687,7 @@ async fn files_scenario(
     .await?;
     click(client, ".file-entry").await?;
     wait_dom(client,"return Array.from(document.querySelectorAll('#file-content .code-line code')).map(line=>line.textContent).join('\\n') === 'Contenu modifié sur disque';",vec![]).await?;
-    client
-        .find(Locator::Css("#file-search"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#file-search").await?;
     client
         .find(Locator::Css("#file-search"))
         .await?
@@ -3581,11 +3697,7 @@ async fn files_scenario(
     wait_dom(client,"return document.querySelector('#file-unavailable')?.textContent.includes('binaire') && document.querySelector('#file-content')?.hidden === true;",vec![]).await?;
     task_tab(client, "diff").await?;
     wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
-    client
-        .find(Locator::Css("#file-search"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#file-search").await?;
     client
         .find(Locator::Css("#file-search"))
         .await?
@@ -3602,11 +3714,7 @@ async fn files_scenario(
     click(client, "#refresh-files").await?;
     wait_dom(client,"return document.querySelector('.file-explorer')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.file-entry').length === 0 && document.querySelector('#file-error')?.textContent === '';",vec![]).await?;
     task_tab(client, "details").await?;
-    client
-        .find(Locator::Css("#worktree-base"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#worktree-base").await?;
     task_tab(client, "details").await?;
     client
         .find(Locator::Css("#worktree-base"))
@@ -3999,21 +4107,13 @@ async fn local_commit_scenario(
     click(client, "#preview-local-commit").await?;
     wait_dom(client,"return document.querySelector('#local-commit-notice')?.textContent === 'Aperçu préparé. Aucun commit créé.' && document.querySelector('#local-commit .file-preview')?.textContent.includes('+worktree synthetic modification') && !document.querySelector('#local-commit .file-preview')?.textContent.includes('Keep human unselected content') && document.querySelector('#create-local-commit')?.disabled === true;",vec![]).await?;
     click(client, "#confirm-local-commit").await?;
-    client
-        .find(Locator::Css("#commit-message"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#commit-message").await?;
     client
         .find(Locator::Css("#commit-message"))
         .await?
         .send_keys("Changed synthetic message")
         .await?;
-    client
-        .find(Locator::Css("#commit-message"))
-        .await?
-        .clear()
-        .await?;
+    clear_input(client, "#commit-message").await?;
     client
         .find(Locator::Css("#commit-message"))
         .await?
@@ -4106,7 +4206,10 @@ async fn new_task(client: &Client) -> Result<()> {
         "#create-button:not([hidden]), #welcome:not([hidden]) #welcome-create",
     )
     .await?;
-    wait_dom(client,"return document.querySelector('#new-dialog')?.open && document.activeElement?.id === 'task-title';",vec![]).await
+    wait_dom(client,"return document.querySelector('#new-dialog')?.open && document.activeElement?.id === 'task-title';",vec![]).await?;
+    // Exercise local creation explicitly even when the only saved project is proposed by default.
+    client.execute("const select=document.querySelector('#new-project');select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
+    Ok(())
 }
 
 async fn created_task(client: &Client, title: &str) -> Result<()> {
@@ -4154,6 +4257,7 @@ async fn click(client: &Client, selector: &str) -> Result<()> {
     // Center controls inside scrolling dialogs; retain WebDriver's native click and hit testing.
     client.execute("document.querySelector(arguments[0])?.scrollIntoView({block:'center', inline:'nearest', behavior:'instant'});", vec![json!(selector)]).await?;
     client.find(Locator::Css(selector)).await?.click().await?;
+    inspect_surface(client).await?;
     Ok(())
 }
 
@@ -4179,10 +4283,108 @@ fn wait_dom<'a>(
         .await;
         let journals = client.execute("return Array.from(document.querySelectorAll('[data-connector-journal-card]')).map(section=>({card:section.dataset.connectorJournalCard,busy:section.getAttribute('aria-busy'),errors:Array.from(section.querySelectorAll('p.error')).map(error=>error.textContent),operations:Array.from(section.querySelectorAll('[data-connector-operation]')).map(operation=>({id:operation.dataset.connectorOperation,state:operation.querySelector('.connector-effect-state')?.textContent}))}));", vec![]).await;
         let services = client.execute("return {error:document.querySelector('#services-error')?.textContent,states:Array.from(document.querySelectorAll('.service-state')).map(service=>({status:service.querySelector('.service-status')?.textContent,ready:service.querySelector('.service-log')?.textContent.includes('synthetic-service-ready'),errors:Array.from(service.querySelectorAll('.error')).map(error=>error.textContent.slice(0,2000))}))};",vec![]).await;
-        let settings = client.execute("return {saveDisabled:document.querySelector('#save-settings')?.disabled,discardHidden:document.querySelector('#discard-settings')?.closest('.confirmation')?.hidden,focused:document.activeElement?.id};",vec![]).await;
+        let settings = client.execute("return {timeControls:Array.from(document.querySelectorAll('.confirm-time-export,.send-time-export')).map(e=>({tag:e.tagName,classes:e.className,disabled:e.disabled,fieldset:e.closest('fieldset')?.disabled})),saveDisabled:document.querySelector('#save-settings')?.disabled,discardHidden:document.querySelector('#discard-settings')?.closest('dialog')?.open === false,focused:document.activeElement?.id};",vec![]).await;
+        let export_guards=client.execute("return Array.from(document.querySelectorAll('.tempo-export')).map(el=>({busy:el.getAttribute('aria-busy'),blocked:el.dataset.editBlocked,otherDraft:el.dataset.otherDraft,archived:el.dataset.archived,checkDisabled:el.querySelector('.confirm-time-export')?.disabled,fieldsetDisabled:el.querySelector('.confirm-time-export')?.closest('fieldset')?.disabled}));",vec![]).await;
+        let behavior=client.execute("return {search:document.querySelector('#board-search')?.value,repo:document.querySelector('#board-project')?.value,cards:Array.from(document.querySelectorAll('article.card')).map(el=>({id:el.dataset.id,description:el.querySelector('.card-description')?.textContent})),tempoErrors:Array.from(document.querySelectorAll('.time-export-error')).map(el=>el.textContent),tempoChecks:Array.from(document.querySelectorAll('.confirm-time-export')).map(el=>el.checked),update:{phase:document.querySelector('#update-phase')?.textContent,busy:document.querySelector('#updates-settings')?.getAttribute('aria-busy'),error:document.querySelector('#updates-error')?.textContent,disabled:document.querySelector('#apply-update')?.matches(':disabled'),fieldset:document.querySelector('#apply-update')?.closest('fieldset')?.disabled,settingsError:document.querySelector('#settings-error')?.textContent,agent:document.querySelector('#settings-agent')?.value,agents:Array.from(document.querySelectorAll('#settings-agent option')).map(el=>el.value)}};",vec![]).await;
         Err(
-        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}; services : {services:?}; paramètres : {settings:?}")
+        format!("État DOM attendu non atteint : {script}; diagnostic synthétique : {state:?}; journaux : {journals:?}; services : {services:?}; paramètres : {settings:?}; export guards: {export_guards:?}; behavior: {behavior:?}")
             .into(),
     )
     })
+}
+
+async fn inspect_surface(client: &Client) -> Result<()> {
+    if std::env::var_os("ATELIER_UI_INSPECT").is_none() {
+        return Ok(());
+    }
+    let surface = client.execute(r#"const visible = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+const ids = Array.from(document.querySelectorAll('[id]')).map(el=>el.id);
+const controls = Array.from(document.querySelectorAll('input:not([type=hidden]),select,textarea')).filter(visible);
+const buttons = Array.from(document.querySelectorAll('button')).filter(visible);
+const navigation = innerWidth > 800 ? Array.from(document.querySelectorAll('.sidebar:not(.sidebar-collapsed) .nav-item')).filter(visible) : [];
+const firstIcon = navigation[0]?.querySelector('svg')?.getBoundingClientRect().left;
+const dialogs = Array.from(document.querySelectorAll('dialog[open]'));
+return {path:location.pathname, dialogs:dialogs.map(el=>el.id), tabs:Array.from(document.querySelectorAll('[role=tab][aria-selected=true]')).filter(visible).map(el=>el.id),
+duplicates:ids.filter((id,index)=>ids.indexOf(id)!==index), unnamed:controls.filter(el=>!el.labels?.length && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).map(el=>el.id||el.className),
+unsharedButtons:buttons.filter(el=>!el.classList.contains('ui-button')).map(el=>el.id||el.className),
+unnamedButtons:buttons.filter(el=>!el.textContent.trim() && !el.getAttribute('aria-label')?.trim() && !document.getElementById(el.getAttribute('aria-labelledby'))?.textContent.trim()).map(el=>el.id||el.className),
+busyEnabledButtons:buttons.filter(el=>el.getAttribute('aria-busy')==='true' && !el.matches(':disabled')).map(el=>el.id||el.className),
+misalignedNavigation:navigation.filter(el=>Math.abs(el.querySelector('svg').getBoundingClientRect().left-firstIcon)>1).map(el=>el.id),
+framedCardTitles:Array.from(document.querySelectorAll('.card-title.card-open')).filter(visible).filter(el=>{const style=getComputedStyle(el);return style.textAlign!=='left' || style.paddingLeft!=='0px' || style.backgroundColor!=='rgba(0, 0, 0, 0)';}).map(el=>el.id),
+unsharedCards:Array.from(document.querySelectorAll('article:not(.brainstorm-message)')).filter(visible).filter(el=>!el.classList.contains('ui-card')).map(el=>el.id||el.className),
+overlappingCardActions:Array.from(document.querySelectorAll('.ui-card.card .ui-card-header')).filter(visible).filter(el=>{const label=el.querySelector('.card-label'),actions=el.querySelector('.card-actions');return label && actions && label.getBoundingClientRect().right>actions.getBoundingClientRect().left;}).map(el=>el.closest('.card').dataset.id),
+detachedCardMenus:Array.from(document.querySelectorAll('.ui-card.card .card-action-menu:popover-open')).filter(el=>{const menu=el.getBoundingClientRect(),button=el.closest('.card-actions').querySelector('button').getBoundingClientRect();return menu.left<0 || menu.top<0 || menu.right>innerWidth || menu.bottom>innerHeight || Math.min(Math.abs(menu.top-button.bottom),Math.abs(menu.bottom-button.top))>12;}).map(el=>el.id),
+unlabelledDialogs:dialogs.filter(el=>!document.getElementById(el.getAttribute('aria-labelledby'))?.textContent.trim()).map(el=>el.id),
+brokenDescriptions:controls.flatMap(el=>(el.getAttribute('aria-describedby')||'').split(/\s+/).filter(Boolean).filter(id=>!document.getElementById(id)).map(id=>el.id+':'+id)),
+overflow:document.documentElement.scrollWidth>innerWidth};"#,vec![]).await?;
+    let directory = root().join(".artifacts/ui-surfaces");
+    std::fs::create_dir_all(&directory)?;
+    let key = serde_json::to_string(&json!([
+        surface["path"],
+        surface["dialogs"],
+        surface["tabs"]
+    ]))?;
+    static SEEN: std::sync::OnceLock<std::sync::Mutex<std::collections::BTreeSet<String>>> =
+        std::sync::OnceLock::new();
+    let fresh = SEEN
+        .get_or_init(Default::default)
+        .lock()
+        .map_err(|_| "UI inventory lock failed")?
+        .insert(key);
+    if fresh {
+        use std::io::Write;
+        let mut log = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(directory.join("surfaces.jsonl"))?;
+        writeln!(log, "{}", serde_json::to_string(&surface)?)?;
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let index = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if index < 300 {
+            std::fs::write(
+                directory.join(format!("surface-{index:03}.png")),
+                client.screenshot().await?,
+            )?;
+        }
+    }
+    if [
+        "duplicates",
+        "unnamed",
+        "unlabelledDialogs",
+        "brokenDescriptions",
+        "unsharedButtons",
+        "unnamedButtons",
+        "busyEnabledButtons",
+        "misalignedNavigation",
+        "framedCardTitles",
+        "unsharedCards",
+        "overlappingCardActions",
+        "detachedCardMenus",
+    ]
+    .iter()
+    .any(|key| {
+        surface[*key]
+            .as_array()
+            .is_some_and(|values| !values.is_empty())
+    }) || surface["overflow"] == json!(true)
+    {
+        return Err(format!("UI accessibility/layout check failed: {}", surface).into());
+    }
+    Ok(())
+}
+
+fn ui_assets() -> std::path::PathBuf {
+    std::env::var_os("ATELIER_TEST_ASSETS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| root().join(".artifacts/rust-ui"))
+}
+
+fn ui_server() -> std::path::PathBuf {
+    std::env::var_os("ATELIER_TEST_SERVER")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            root()
+                .join("target/debug")
+                .join(format!("atelier{}", std::env::consts::EXE_SUFFIX))
+        })
 }

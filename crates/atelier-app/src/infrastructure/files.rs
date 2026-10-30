@@ -116,6 +116,49 @@ impl Repository {
         Ok(Self { path, directory })
     }
 
+    /// Reads local Git references only, after checking the repository access boundary.
+    pub async fn default_branch(
+        root: &Dir,
+        roots: &[PathBuf],
+        repo: &str,
+    ) -> Result<Option<String>> {
+        let repository = Self::open_synthetic(root, roots, repo)?;
+        repository.verify_root().await?;
+        for (reference, prefix) in [
+            ("refs/remotes/origin/HEAD", "refs/remotes/origin/"),
+            ("HEAD", "refs/heads/"),
+        ] {
+            if let Some(output) = repository
+                .git_optional(&["symbolic-ref", "--quiet", reference], true)
+                .await?
+            {
+                let output = String::from_utf8(output)?;
+                if reference != "HEAD"
+                    && repository
+                        .git_optional(
+                            &[
+                                "show-ref",
+                                "--verify",
+                                "--quiet",
+                                output.trim_end_matches(['\r', '\n']),
+                            ],
+                            true,
+                        )
+                        .await?
+                        .is_none()
+                {
+                    continue;
+                }
+                if let Some(branch) = output.trim_end_matches(['\r', '\n']).strip_prefix(prefix) {
+                    atelier_core::application::worktrees::validate_reference(branch)?;
+                    repository.verify_root().await?;
+                    return Ok(Some(branch.to_owned()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
     pub(super) async fn verify_root(&self) -> Result<()> {
         let top = self.git(&["rev-parse", "--show-toplevel"]).await?;
         let top = String::from_utf8(top)?;
