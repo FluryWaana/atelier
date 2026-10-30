@@ -16,13 +16,11 @@ pub fn ForgeSettings(
     let original = RwSignal::new(String::new());
     let base = RwSignal::new(String::new());
     let secret = RwSignal::new(String::new());
-    let clear = RwSignal::new(false);
     let loading = RwSignal::new(false);
     let replace = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
-    let own_dirty =
-        Memo::new(move |_| base.get() != original.get() || !secret.get().is_empty() || clear.get());
+    let own_dirty = Memo::new(move |_| base.get() != original.get() || !secret.get().is_empty());
     Effect::new(move |_| dirty.set(own_dirty.get()));
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
@@ -47,7 +45,6 @@ pub fn ForgeSettings(
         original.set(address.clone());
         base.set(address);
         secret.set(String::new());
-        clear.set(false);
         replace.set(false);
     };
     let load_alive = alive.clone();
@@ -89,9 +86,11 @@ pub fn ForgeSettings(
     });
     Effect::new(move |_| load.with_value(|load| load()));
     let saving = alive.clone();
-    let save = move |event: leptos::ev::SubmitEvent| {
-        event.prevent_default();
-        if pending.get_untracked() || loading.get_untracked() || !own_dirty.get_untracked() {
+    let save = StoredValue::new_local(move |remove_token: bool| {
+        if pending.get_untracked()
+            || loading.get_untracked()
+            || (!remove_token && !own_dirty.get_untracked())
+        {
             return;
         }
         let Some(configuration) = configurations.get_untracked() else {
@@ -108,10 +107,15 @@ pub fn ForgeSettings(
             expected_revision: configuration.revision,
             configuration: ForgeConfiguration {
                 kind: kind.get_untracked(),
-                base: base.get_untracked(),
+                base: if remove_token {
+                    original.get_untracked()
+                } else {
+                    base.get_untracked()
+                },
             },
-            token: (!secret.get_untracked().is_empty()).then(|| secret.get_untracked()),
-            clear_token: clear.get_untracked(),
+            token: (!remove_token && !secret.get_untracked().is_empty())
+                .then(|| secret.get_untracked()),
+            clear_token: remove_token,
         })
         .expect("forge configuration serialization");
         pending.set(true);
@@ -132,15 +136,23 @@ pub fn ForgeSettings(
                 match saved {
                     Ok(value) => {
                         configurations.set(Some(value));
-                        select(kind.get_untracked());
-                        notice
-                            .set("message.forge_connection_saved_no_remote_access_verified".into());
+                        if !remove_token {
+                            select(kind.get_untracked());
+                        }
+                        notice.set(
+                            if remove_token {
+                                "message.forge_token_removed"
+                            } else {
+                                "message.forge_connection_saved_no_remote_access_verified"
+                            }
+                            .into(),
+                        );
                     }
                     Err(message) => error.set(message),
                 }
             }
         });
-    };
+    });
     let token_set = Memo::new(move |_| {
         configurations.with(|configurations| {
             configurations
@@ -169,7 +181,7 @@ pub fn ForgeSettings(
                     <option value="azure">"Azure DevOps Services"</option>
                 </select>
             </div>
-            <form on:submit=save>
+            <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();save.with_value(|save|save(false));}>
                 <fieldset disabled=move||configurations.with(|value|value.is_none())||pending.get()||loading.get()>
                     <div class="forge-field">
                         <label for="forge-base">{move||i18n.text("message.site_or_organization_address")}</label>
@@ -178,16 +190,12 @@ pub fn ForgeSettings(
                     </div>
                     <div class="forge-field">
                         <label for="forge-token">{move||i18n.text("message.forge_personal_access_token")}</label>
-                        <input id="forge-token" aria-describedby="forge-token-help" type="password" autocomplete="off" maxlength="4000" disabled=move||clear.get() prop:value=move||secret.get() on:input=move|event|secret.set(event_target_value(&event)) />
-                        <p id="forge-token-help" class="field-help" role="status">{move||i18n.text(if clear.get(){"message.forge_token_removal_pending"}else if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_token_saved_for_this_forge"})}</p>
+                        <input id="forge-token" aria-describedby="forge-token-help" type="password" autocomplete="off" maxlength="4000" prop:value=move||secret.get() on:input=move|event|secret.set(event_target_value(&event)) />
+                        <p id="forge-token-help" class="field-help" role="status">{move||i18n.text(if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_token_saved_for_this_forge"})}</p>
                     </div>
                 </fieldset>
                 <div class="forge-actions">
-                    <button id="forge-clear-token" class="danger" type="button" aria-pressed=move||clear.get().to_string() hidden=move||!token_set.get() disabled=move||pending.get()||loading.get() on:click=move|_|{
-                        clear.update(|value|*value=!*value);
-                        if clear.get_untracked(){secret.set(String::new());}
-                        notice.set(String::new());
-                    }>{move||i18n.text(if clear.get(){"message.keep_forge_token"}else{"message.remove_saved_token"})}</button>
+                    <button id="forge-clear-token" class="danger" type="button" hidden=move||!token_set.get() disabled=move||pending.get()||loading.get() on:click=move|_|save.with_value(|save|save(true))>{move||i18n.text("message.remove_saved_token")}</button>
                     <div class="forge-save-actions">
                         <button id="reload-forges" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|{
                             if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}

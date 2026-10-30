@@ -1,6 +1,5 @@
 {
-  "message.forge_token_removal_pending": "The token will be removed when you save.",
-  "message.keep_forge_token": "Keep the token",
+  "message.forge_token_removed": "Token removed.",
   "message.save_provider_choice": "Save selection",
   "message.loading_module_configuration": "Loading module settings.",
   "message.save_current_module_draft_first": "Save or discard the current module draft before configuring another module.",

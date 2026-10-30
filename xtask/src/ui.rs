@@ -3144,13 +3144,22 @@ async fn settings_scenario(
     wait_dom(client,"return document.querySelector('#forge-base')?.value === 'https://github-synthetic.example.test' && document.querySelector('#forge-token')?.value === '' && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
     wait_dom(client, "return document.querySelector('#forge-clear-token')?.tagName === 'BUTTON' && document.querySelector('#forge-clear-token')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions') && document.querySelector('#reload-forges')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions');", vec![]).await?;
     click(client, "#forge-clear-token").await?;
-    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === true && document.querySelector('#forge-token-help')?.textContent.includes('retiré') && document.querySelector('#save-forge')?.disabled === false;", vec![]).await?;
-    click(client, "#forge-clear-token").await?;
-    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === false && document.querySelector('#save-forge')?.disabled === true;", vec![]).await?;
-    click(client, "#forge-clear-token").await?;
-    click(client, "#save-forge").await?;
-    wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
-    wait_dom(client, "return document.querySelector('#forge-clear-token')?.hidden === true && document.querySelector('#forge-token')?.disabled === false;", vec![]).await?;
+    wait_dom(client, "return document.querySelector('#forge-clear-token')?.hidden === true && document.querySelector('#forge-notice')?.textContent === 'Jeton retiré.' && document.querySelector('#save-forge')?.disabled === true;", vec![]).await?;
+    let removed: atelier_core::contracts::ForgeConnections = http
+        .get(format!("{address}/api/forges"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if removed.connections.iter().any(|connection| {
+        connection.configuration.kind == atelier_core::contracts::ForgeKind::Github
+            && connection.token_set
+    }) {
+        return Err("Le bouton de retrait a conservé le jeton GitHub.".into());
+    }
     // Jira changed above: read the current scope before entering a new token.
     click(client, "#settings-tab-time").await?;
     client.execute("const select=document.querySelector('#timeProvider');select.value='tempo';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
