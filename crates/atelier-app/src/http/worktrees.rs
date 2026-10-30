@@ -35,7 +35,12 @@ pub(super) async fn inspect_status(
     {
         Ok(Some(card)) => card,
         Ok(None) => return failure(StatusCode::NOT_FOUND, "message.card_not_found"),
-        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => {
+            return super::responses::error(
+                error,
+                "message.unable_to_read_or_save_retry_or_reload",
+            );
+        }
     };
     let worktree = match card.fields.get::<Worktree>("worktree") {
         Ok(Some(worktree)) if worktree.state == WorktreeState::Ready => worktree,
@@ -66,7 +71,12 @@ pub(super) async fn inspect_status(
     .await
     {
         Ok(value) => value,
-        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => {
+            return super::responses::error(
+                error,
+                "message.unable_to_read_or_save_retry_or_reload",
+            );
+        }
     };
     let expected = worktree.clone();
     let checked = state
@@ -91,7 +101,9 @@ pub(super) async fn inspect_status(
             checked_at,
         })
         .into_response(),
-        Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
+        Err(error) => {
+            super::responses::conflict(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 

@@ -1,4 +1,6 @@
 {
+  "message.credentials_unavailable_no_settings_changed": "Connections are unavailable. No settings were changed.",
+  "message.credentials_unavailable_local_data_remain_available": "Connections are unavailable. Your local tasks and time tracking remain available.",
   "message.invalid_card_id": "The task ID must be nonempty text.",
   "message.github_update_backup": "The database is backed up before switching versions. If the backup fails, the update is refused.",
   "message.update_data_backup_failed": "The data backup failed. Update refused.",

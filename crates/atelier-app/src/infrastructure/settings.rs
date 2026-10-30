@@ -9,7 +9,7 @@ use atelier_core::{
 pub struct VaultFailure;
 impl std::fmt::Display for VaultFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("Coffre du prototype indisponible ; aucun réglage modifié.")
+        formatter.write_str("message.credentials_unavailable_no_settings_changed")
     }
 }
 impl std::error::Error for VaultFailure {}
@@ -66,7 +66,22 @@ pub fn public_config(
     store: &Store<'_>,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
 ) -> Result<Document> {
-    settings::public_config(&store.settings()?, &load(store, protect)?, platform())
+    let stored = store.settings()?;
+    match load(store, protect) {
+        Ok(tokens) => settings::public_config(&stored, &tokens, platform()),
+        Err(error) if error.is::<VaultFailure>() => {
+            let mut config = settings::public_config(&stored, &Document::default(), platform())?;
+            for flag in ["tokenSet", "azureTokenSet", "tempoTokenSet"] {
+                config.set(flag, &Option::<bool>::None)?;
+            }
+            config.set(
+                "credentialError",
+                &"message.credentials_unavailable_local_data_remain_available",
+            )?;
+            Ok(config)
+        }
+        Err(error) => Err(error),
+    }
 }
 
 // The caller owns one SQLite worker operation: no other settings/template write can interleave.
@@ -147,6 +162,38 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn unavailable_vault_keeps_local_settings_readable_without_claiming_tokens_are_absent() {
+        let connection = super::super::store::open(std::path::Path::new(":memory:")).unwrap();
+        let store = Store::new(&connection);
+        let saved = json!({"baseBranch":"local","taskTemplates":[{"id":"keep"}]});
+        store.save_settings(&saved).unwrap();
+        token_vault::save_encrypted(&store, Some("synthetic-opaque-credentials")).unwrap();
+        let mut unavailable =
+            |_: &str, _: bool| -> Result<String> { Err("synthetic locked vault".into()) };
+        let public = public_config(&store, &mut unavailable).unwrap();
+        assert_eq!(
+            public.get::<String>("baseBranch").unwrap().as_deref(),
+            Some("local")
+        );
+        for flag in ["tokenSet", "azureTokenSet", "tempoTokenSet"] {
+            assert_eq!(public.raw(flag).unwrap().get(), "null");
+        }
+        assert!(public.has_text("credentialError").unwrap());
+        assert!(
+            !serde_json::to_string(&public)
+                .unwrap()
+                .contains("synthetic-opaque")
+        );
+        let body = serde_json::from_str(r#"{"baseBranch":"changed"}"#).unwrap();
+        assert!(update(&store, &body, &mut unavailable).is_err());
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), saved);
+        assert_eq!(
+            token_vault::read_encrypted(&store).unwrap().as_deref(),
+            Some("synthetic-opaque-credentials")
+        );
+    }
+
+    #[test]
     fn settings_and_encrypted_tokens_commit_together_or_remain_unchanged() {
         for fault in ["none", "encryption", "storage"] {
             let root = tempfile::tempdir().unwrap();
@@ -216,7 +263,7 @@ mod tests {
                 remove_token(&store, "unknown", &mut unavailable)
                     .unwrap_err()
                     .to_string(),
-                "Service inconnu."
+                "message.unknown_service"
             );
         }
     }

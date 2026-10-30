@@ -55,7 +55,9 @@ pub(super) async fn start(
     let result = launch(&state, id, body, uuid::Uuid::new_v4().to_string(), false).await;
     match result {
         Ok(run) => Json(run).into_response(),
-        Err(error) => failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => {
+            super::responses::error(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 
@@ -239,7 +241,9 @@ pub(super) async fn reply(
         };
     match state.runs.reply(&id, answer).await {
         Ok(()) => Json(serde_json::json!({"ok":true})).into_response(),
-        Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
+        Err(error) => {
+            super::responses::conflict(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 
@@ -359,7 +363,9 @@ pub(super) async fn stop(
     }
     match state.runs.stop(&id).await {
         Ok(()) => Json(serde_json::json!({"ok":true})).into_response(),
-        Err(error) => failure(StatusCode::CONFLICT, &error.to_string()),
+        Err(error) => {
+            super::responses::conflict(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 

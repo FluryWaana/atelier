@@ -171,20 +171,211 @@ pub fn Services(
     };
     let act = StoredValue::new_local(act);
     view! {
-        <section class="task-files" aria-labelledby="services-heading" aria-busy=move || (pending.get() || cancelling.get()).to_string()>
+        <section
+            class="task-files"
+            aria-labelledby="services-heading"
+            aria-busy={move || (pending.get() || cancelling.get()).to_string()}
+        >
             <h3 id="services-heading">{move || i18n.text("message.front_back_services")}</h3>
-            <p class="field-help">{move || i18n.text("message.run_the_commands_saved_in_project_settings_linked_project_servic")}</p>
-            <label class="check-filter"><input id="services-standalone" type="checkbox" disabled=move || pending.get() || running.get() prop:checked=move || standalone.get() on:change=move |event| standalone.set(event_target_checked(&event)) />{move || i18n.text("message.run_only_this_project")}</label>
-            <div class="editor-actions"><button id="start-services" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get() on:click=move |_| act.with_value(|act| act("start",None))>{move || i18n.text("message.start_services")}</button><button id="stop-services" type="button" disabled=move || cancelling.get() || !running.get() on:click=move |_| act.with_value(|act| act("stop",None))>{move || i18n.text("message.stop_services")}</button></div>
-            <p class="field-help" hidden=move || ready.get()>{move || i18n.text("message.prepare_and_verify_the_worktrees_before_starting_services")}</p>
-            <p id="services-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <For each={move || session.get().map(|session| session.services).unwrap_or_default()} key=|service| service.id.clone() children=move |initial| {
-                let service_id = StoredValue::new(initial.id);
-                let current = move || session.get().and_then(|session| session.services.into_iter().find(|service| service.id == service_id.get_value()));
-                view! { <article class="service-state"><h4>{move || current().map(|service| service.name).unwrap_or_default()}</h4><p class="service-status" role="status">{move || current().map(|service| i18n.text(match service.status { ServiceStatus::Starting=>"message.starting",ServiceStatus::Running=>"message.process_running",ServiceStatus::Stopping=>"message.stopping",ServiceStatus::Stopped=>"message.stopped",ServiceStatus::Failed=>"message.service_failed" })).unwrap_or_default()}</p><p class="workspace-path">{move || current().map(|service| service.directory).unwrap_or_default()}</p><p>{move || current().and_then(|service| service.port).map(|port| format!("{} {port}", i18n.text("message.assigned_port"))).unwrap_or_default()}</p><p class="field-help" role="status">{move || current().map(|service| i18n.text(&service.inspection_error)).unwrap_or_default()}</p><ul class="service-endpoints" aria-label=move || i18n.text("message.detected_tcp_listeners")><For each=move || current().map(|service| service.endpoints).unwrap_or_default() key=|endpoint| (endpoint.pid,endpoint.address.clone(),endpoint.port,endpoint.url.clone()) children=move |endpoint| { if let Some(url) = endpoint.url { let label=url.clone(); view! { <li><a href=url target="_blank" rel="noopener noreferrer">{label}</a></li> }.into_any() } else { view! { <li>{format!("{}:{} · PID {}",endpoint.address,endpoint.port,endpoint.pid)}</li> }.into_any() } } /></ul><p class="error">{move || current().map(|service| i18n.text(&service.error)).unwrap_or_default()}</p><details><summary>{move || i18n.text("message.service_logs")}</summary><pre class="service-log"><code>{move || current().map(|service| service.log).unwrap_or_default()}</code></pre></details><div class="editor-actions"><button class="restart-service" type="button" disabled=move || pending.get() || cancelling.get() || blocked.get() || !ready.get() on:click=move |_| act.with_value(|act| act("restart",Some(service_id.get_value())))>{move || i18n.text("message.restart_this_service")}</button><button class="stop-service" type="button" disabled=move || cancelling.get() || current().is_none_or(|service| service.pid.is_none() && !matches!(service.status,ServiceStatus::Starting|ServiceStatus::Running|ServiceStatus::Stopping)) on:click=move |_| act.with_value(|act| act("stop",Some(service_id.get_value())))>{move || i18n.text("message.stop_this_service")}</button></div></article> }
-            } />
-            <p class="field-help">{move || i18n.text("message.logs_retain_the_last_64_kib_per_service_a_running_process_does_n")}</p>
-            <p class="field-help">{move || i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")}</p>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.run_the_commands_saved_in_project_settings_linked_project_servic")
+                }}
+            </p>
+            <label class="check-filter">
+                <input
+                    id="services-standalone"
+                    type="checkbox"
+                    disabled={move || pending.get() || running.get()}
+                    prop:checked={move || standalone.get()}
+                    on:change={move |event| standalone.set(event_target_checked(&event))}
+                />
+                {move || i18n.text("message.run_only_this_project")}
+            </label>
+            <div class="editor-actions">
+                <button
+                    id="start-services"
+                    type="button"
+                    disabled={move || {
+                        pending.get() || cancelling.get() || blocked.get() || running.get() || !ready.get()
+                    }}
+                    on:click={move |_| act.with_value(|act| act("start", None))}
+                >
+                    {move || i18n.text("message.start_services")}
+                </button>
+                <button
+                    id="stop-services"
+                    type="button"
+                    disabled={move || cancelling.get() || !running.get()}
+                    on:click={move |_| act.with_value(|act| act("stop", None))}
+                >
+                    {move || i18n.text("message.stop_services")}
+                </button>
+            </div>
+            <p class="field-help" hidden={move || ready.get()}>
+                {move || i18n.text("message.prepare_and_verify_the_worktrees_before_starting_services")}
+            </p>
+            <p id="services-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <For
+                each={move || session.get().map(|session| session.services).unwrap_or_default()}
+                key={|service| service.id.clone()}
+                children={move |initial| {
+                    let service_id = StoredValue::new(initial.id);
+                    let current = move || {
+                        session
+                            .get()
+                            .and_then(|session| {
+                                session
+                                    .services
+                                    .into_iter()
+                                    .find(|service| service.id == service_id.get_value())
+                            })
+                    };
+                    view! {
+                        <article class="service-state">
+                            <h4>{move || current().map(|service| service.name).unwrap_or_default()}</h4>
+                            <p class="service-status" role="status">
+                                {move || {
+                                    current()
+                                        .map(|service| {
+                                            i18n
+                                                .text(
+                                                    match service.status {
+                                                        ServiceStatus::Starting => "message.starting",
+                                                        ServiceStatus::Running => "message.process_running",
+                                                        ServiceStatus::Stopping => "message.stopping",
+                                                        ServiceStatus::Stopped => "message.stopped",
+                                                        ServiceStatus::Failed => "message.service_failed",
+                                                    },
+                                                )
+                                        })
+                                        .unwrap_or_default()
+                                }}
+                            </p>
+                            <p class="workspace-path">
+                                {move || current().map(|service| service.directory).unwrap_or_default()}
+                            </p>
+                            <p>
+                                {move || {
+                                    current()
+                                        .and_then(|service| service.port)
+                                        .map(|port| format!("{} {port}", i18n.text("message.assigned_port")))
+                                        .unwrap_or_default()
+                                }}
+                            </p>
+                            <p class="field-help" role="status">
+                                {move || {
+                                    current()
+                                        .map(|service| i18n.text(&service.inspection_error))
+                                        .unwrap_or_default()
+                                }}
+                            </p>
+                            <ul
+                                class="service-endpoints"
+                                aria-label={move || i18n.text("message.detected_tcp_listeners")}
+                            >
+                                <For
+                                    each={move || {
+                                        current().map(|service| service.endpoints).unwrap_or_default()
+                                    }}
+                                    key={|endpoint| (
+                                        endpoint.pid,
+                                        endpoint.address.clone(),
+                                        endpoint.port,
+                                        endpoint.url.clone(),
+                                    )}
+                                    children={move |endpoint| {
+                                        if let Some(url) = endpoint.url {
+                                            let label = url.clone();
+                                            view! {
+                                                <li>
+                                                    <a href={url} target="_blank" rel="noopener noreferrer">
+                                                        {label}
+                                                    </a>
+                                                </li>
+                                            }
+                                                .into_any()
+                                        } else {
+                                            view! {
+                                                <li>
+                                                    {format!(
+                                                        "{}:{} · PID {}",
+                                                        endpoint.address,
+                                                        endpoint.port,
+                                                        endpoint.pid,
+                                                    )}
+                                                </li>
+                                            }
+                                                .into_any()
+                                        }
+                                    }}
+                                />
+                            </ul>
+                            <p class="error">
+                                {move || {
+                                    current().map(|service| i18n.text(&service.error)).unwrap_or_default()
+                                }}
+                            </p>
+                            <details>
+                                <summary>{move || i18n.text("message.service_logs")}</summary>
+                                <pre class="service-log">
+                                    <code>
+                                        {move || current().map(|service| service.log).unwrap_or_default()}
+                                    </code>
+                                </pre>
+                            </details>
+                            <div class="editor-actions">
+                                <button
+                                    class="restart-service"
+                                    type="button"
+                                    disabled={move || {
+                                        pending.get() || cancelling.get() || blocked.get() || !ready.get()
+                                    }}
+                                    on:click={move |_| {
+                                        act.with_value(|act| act("restart", Some(service_id.get_value())))
+                                    }}
+                                >
+                                    {move || i18n.text("message.restart_this_service")}
+                                </button>
+                                <button
+                                    class="stop-service"
+                                    type="button"
+                                    disabled={move || {
+                                        cancelling.get()
+                                            || current()
+                                                .is_none_or(|service| {
+                                                    service.pid.is_none()
+                                                        && !matches!(
+                                                            service.status,
+                                                            ServiceStatus::Starting
+                                                            | ServiceStatus::Running
+                                                            | ServiceStatus::Stopping
+                                                        )
+                                                })
+                                    }}
+                                    on:click={move |_| {
+                                        act.with_value(|act| act("stop", Some(service_id.get_value())))
+                                    }}
+                                >
+                                    {move || i18n.text("message.stop_this_service")}
+                                </button>
+                            </div>
+                        </article>
+                    }
+                }}
+            />
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.logs_retain_the_last_64_kib_per_service_a_running_process_does_n")
+                }}
+            </p>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")
+                }}
+            </p>
         </section>
     }
 }

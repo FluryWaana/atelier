@@ -274,58 +274,609 @@ pub fn ConnectorEffects(
         },
     );
     let heading_id = heading.clone();
-    view! {<section class="task-files" data-connector-journal-card=card_id.get_value() hidden=move||connection.get().is_none() aria-labelledby=heading aria-busy=move||(loading.get()||pending.get()).to_string()>
-        <h4 id=heading_id>{move||i18n.text("message.connector_remote_writes")}</h4>
-        <Show when=move||!scoped>
-        <connector_time::ConnectorTime connection board token pending dirty=time_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
-        <connector_ticket_reset::ConnectorTicketReset connection board token pending dirty=reset_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))))/>
-        <connector_repositories::ConnectorRepositories connection board token pending dirty=repository_dirty blocked=Memo::new(move |_|blocked.get()||loading.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))) on_prepared=Callback::new(move |operation:Operation|{operations.update(|rows|rows.insert(0,operation));page.set(0);})/>
-        <fieldset hidden=move||connection.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&Method::TicketsCreate)) disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|rows|rows.iter().any(|row|matches!(row.state,Phase::Preparing|Phase::Sending|Phase::Uncertain)))>
-            <legend>{move||i18n.text("message.create_a_remote_ticket")}</legend>
-            <label for="connector-ticket-kind">{move||i18n.text("message.ticket_type")}</label><input id="connector-ticket-kind" maxlength="100" prop:value=move||ticket_kind.get() on:input=move|event|ticket_kind.set(event_target_value(&event))/>
-            <label for="connector-ticket-title">{move||i18n.text("message.title")}</label><input id="connector-ticket-title" maxlength="255" prop:value=move||ticket_title.get() on:input=move|event|ticket_title.set(event_target_value(&event))/>
-            <label for="connector-ticket-description">{move||i18n.text("message.description")}</label><textarea id="connector-ticket-description" maxlength="20000" prop:value=move||ticket_description.get() on:input=move|event|ticket_description.set(event_target_value(&event))></textarea>
-            <button type="button" disabled=move||ticket_kind.get().trim().is_empty()||ticket_title.get().trim().is_empty() on:click=move |_|execute.with_value(|execute|execute(("@create-ticket".into(),None)))>{move||i18n.text("message.prepare_ticket_creation")}</button>
-        </fieldset>
-        <p class="field-help">{move||i18n.text("message.prepare_a_declared_action_check_its_scope_then_confirm_a_single")}</p>
-        <div><For each=move||connection.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==RemoteEffect::Remote).collect::<Vec<_>>()).unwrap_or_default() key=|action|action.id.clone() children=move|action|{let selected=StoredValue::new(action.id);let label=action.label;view!{<button class="prepare-connector-effect" type="button" disabled=move||pending.get()||loading.get()||blocked.get()||operations.with(|operations|operations.iter().any(|operation|matches!(operation.state,Phase::Preparing|Phase::Sending|Phase::Uncertain))) on:click=move |_|execute.with_value(|execute|execute((selected.get_value(),None)))>{move||connection.get().map(|connection|translated(i18n,&connection.installed.manifest,&label))}</button>}}/></div>
-        </Show>
-        <button id=reload_id type="button" disabled=move||pending.get()||loading.get() on:click=move |_|{error.set(String::new());load.with_value(|load|load());}>{move||i18n.text("message.reload_operation_history")}</button>
-        <p hidden=move||loading.get()||!operations.with(Vec::is_empty)>{move||i18n.text("message.no_operations_recorded_for_this_connector")}</p>
-        <For each=move||{let _=i18n.code();operations.with(|operations|operations.iter().skip(page.get()*20).take(20).cloned().collect::<Vec<_>>())} key=move|operation|(operation.id.clone(),operation.version,i18n.code()) children=move|operation|{
-            let current=StoredValue::new(operation.clone());
-            let key=move||context.get().map(|(_,revision)|format!("{}:{}:{revision}",current.with_value(|operation|operation.id.clone()),current.with_value(|operation|operation.version))).unwrap_or_default();
-            let label=if operation.method==Method::RepositoriesPublish{i18n.text("message.publish_a_pr_mr_through_this_module")}else if operation.method==Method::TicketsTransition{i18n.text("message.change_a_remote_ticket_s_status")}else if operation.method==Method::TimeSend {i18n.text("message.export_a_time_entry")}else if operation.method==Method::TicketsCreate {i18n.text("message.create_a_remote_ticket")}else{operation.manifest.tabs.iter().flat_map(|tab|&tab.actions).find(|action|action.id==operation.action).map(|action|action.label.clone()).unwrap_or_default()};
-            let report=operation.reply.as_ref().map(|reply|protocol::Report{id:operation.id.clone(),method:operation.method,action:if operation.method==Method::Action {Some(operation.action.clone())}else{None},message:reply.message.clone(),output:reply.output.clone(),observed_at:operation.updated_at.clone()});
-            let items=report.as_ref().map(protocol::report_items).transpose().unwrap_or_default().unwrap_or_default();
-            view!{<article class="task-files" data-connector-operation=operation.id.clone()>
-                <h5>{translated(i18n,&operation.manifest,&label)}</h5><p class="connector-effect-state">{i18n.text(state(operation.state))}</p><code>{operation.id.clone()}</code><p>{operation.updated_at.clone()}</p>
-                <p class="field-help">{translated(i18n,&operation.manifest,&operation.manifest.name)}</p>
-                <p hidden=operation.method!=Method::Action>{i18n.text("message.local_tickets_in_this_scope_0").replace("{0}",&operation.input["importedCount"].as_u64().unwrap_or(0).to_string())}</p>
-                {if operation.method==Method::TicketsTransition{protocol::ticket_transition_payload(&operation.input).ok().map(|payload|view!{<dl>
-                    <dt>{i18n.text("message.task")}</dt><dd>{payload.card_title}</dd><dt>{i18n.text("message.ticket")}</dt><dd>{payload.ticket_key}</dd><dt>{i18n.text("message.instance")}</dt><dd>{payload.ticket.instance}</dd>
-                    <dt>{i18n.text("message.starting_remote_status")}</dt><dd>{payload.from_status}</dd><dt>{i18n.text("message.transition")}</dt><dd>{payload.transition.name}</dd><dt>{i18n.text("message.requested_remote_status")}</dt><dd>{payload.transition.status}</dd>
-                    <dt>{i18n.text("message.remote_concurrency_limit")}</dt><dd>{i18n.text("message.another_actor_may_change_the_ticket_between_rereading_and_sendin")}</dd>
-                </dl>})}else{None}}
-                {if operation.method==Method::TicketsCreate {Some(view!{<dl><dt>{i18n.text("message.ticket_type")}</dt><dd>{operation.input["kind"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("message.title")}</dt><dd>{operation.input["title"].as_str().unwrap_or_default().to_owned()}</dd><dt>{i18n.text("message.description")}</dt><dd class="pre-wrap">{operation.input["description"].as_str().unwrap_or_default().to_owned()}</dd></dl>})}else{None}}
-                {if operation.method==Method::RepositoriesPublish{protocol::repository_proposal(&operation.input).ok().map(|proposal|view!{<dl><dt>{i18n.text("message.remote_repository")}</dt><dd>{proposal.observation.reference.origin}</dd><dt>{i18n.text("message.title")}</dt><dd>{proposal.title}</dd><dt>{i18n.text("message.description")}</dt><dd class="pre-wrap">{proposal.body}</dd><dt>{i18n.text("message.source_commit")}</dt><dd>{proposal.context.source}</dd><dt>{i18n.text("message.target_commit")}</dt><dd>{proposal.context.target}</dd><dt>{i18n.text("message.target_branch")}</dt><dd>{proposal.observation.target_branch}</dd></dl>})}else{None}}
-                {if operation.method==Method::TimeSend {protocol::time_proposal(&operation.input).ok().map(|proposal|view!{<dl>
-                    <dt>{i18n.text("message.task")}</dt><dd>{proposal.source.card_title}</dd><dt>{i18n.text("message.time_entry")}</dt><dd>{proposal.source.id}</dd>
-                    <dt>{i18n.text("message.destination")}</dt><dd>{proposal.instance}</dd><dt>{i18n.text("message.account")}</dt><dd>{proposal.account}</dd><dt>{i18n.text("message.remote_reference")}</dt><dd>{proposal.reference}</dd>
-                    {proposal.source.ticket.map(|ticket|view!{<dt>{i18n.text("message.source_ticket")}</dt><dd>{format!("{} · {}",ticket.key,ticket.instance)}</dd>})}
-                    <dt>{i18n.text("message.date")}</dt><dd>{format!("{} {}",proposal.source.date,proposal.source.start_time)}</dd><dt>{i18n.text("message.duration")}</dt><dd>{format!("{} s",proposal.source.seconds)}</dd>
-                    <dt>{i18n.text("message.description")}</dt><dd class="pre-wrap">{proposal.source.description}</dd></dl>})}else{None}}
-                <dl>{operation.manifest.fields.iter().filter(|field|field.kind!=protocol::FieldKind::Password).filter_map(|field|operation.values.get(&field.id).map(|value|(field,value))).map(|(field,value)|view!{<dt>{translated(i18n,&operation.manifest,&field.label)}</dt><dd>{value.as_str().map(str::to_owned).unwrap_or_else(||value.to_string())}</dd>}).collect_view()}</dl>
-                <p>{operation.reply.as_ref().map(|reply|translated(i18n,&operation.manifest,&reply.message)).unwrap_or_default()}</p>
-                {operation.reply.as_ref().and_then(|reply|protocol::remote_receipt(&reply.output,&operation.id).ok().flatten()).map(|receipt|view!{<p>{i18n.text(match receipt.outcome{protocol::RemoteOutcome::Applied=>"message.effect_declared_applied",protocol::RemoteOutcome::NotAttempted=>"message.send_declared_not_attempted",protocol::RemoteOutcome::Unknown=>"message.result_declared_unknown"})}" · "{i18n.text("message.reference_declared_by_the_module")}<code>{receipt.reference}</code>" · "{receipt.observed_at}</p>})}
-                <dl>{items.into_iter().map(|item|view!{<dt>{translated(i18n,&operation.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view()}</dl>
-                <div hidden=!matches!(operation.state,Phase::Preparing|Phase::Uncertain)><label><input class="confirm-connector-effect" type="checkbox" disabled=move||pending.get()||loading.get()||(blocked.get()&&current.with_value(|operation|operation.state)!=Phase::Uncertain) prop:checked=move||approved.get()==key() on:change=move|event|approved.set(if event_target_checked(&event){key()}else{String::new()})/>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"message.reconcile_this_operation_without_resending_its_action"}else{"message.send_this_action_once_in_the_displayed_scope"})}</label>
-                    <button class="send-connector-effect" type="button" disabled=move||pending.get()||loading.get()||(blocked.get()&&current.with_value(|operation|operation.state)!=Phase::Uncertain)||approved.get()!=key() on:click=move |_|execute.with_value(|execute|execute(((if current.with_value(|operation|operation.state)==Phase::Uncertain{"reconcile"}else{"send"}).into(),Some(current.get_value()))))>{move||i18n.text(if current.with_value(|operation|operation.state)==Phase::Uncertain{"message.reconcile_remote_effect"}else{"message.confirm_single_send"})}</button>
-                    <button class="cancel-connector-effect" hidden=operation.state!=Phase::Preparing type="button" disabled=move||pending.get()||loading.get() on:click=move |_|execute.with_value(|execute|execute(("cancel".into(),Some(current.get_value()))))>{move||i18n.text("message.cancel_this_unsubmitted_preview")}</button>
+    view! {
+        <section
+            class="task-files"
+            data-connector-journal-card={card_id.get_value()}
+            hidden={move || connection.get().is_none()}
+            aria-labelledby={heading}
+            aria-busy={move || (loading.get() || pending.get()).to_string()}
+        >
+            <h4 id={heading_id}>{move || i18n.text("message.connector_remote_writes")}</h4>
+            <Show when={move || !scoped}>
+                <connector_time::ConnectorTime
+                    connection
+                    board
+                    token
+                    pending
+                    dirty={time_dirty}
+                    blocked={Memo::new(move |_| {
+                        blocked.get() || loading.get()
+                            || operations
+                                .with(|operations| {
+                                    operations
+                                        .iter()
+                                        .any(|operation| {
+                                            matches!(
+                                                operation.state,
+                                                Phase::Preparing | Phase::Sending | Phase::Uncertain
+                                            )
+                                        })
+                                })
+                    })}
+                />
+                <connector_ticket_reset::ConnectorTicketReset
+                    connection
+                    board
+                    token
+                    pending
+                    dirty={reset_dirty}
+                    blocked={Memo::new(move |_| {
+                        blocked.get() || loading.get()
+                            || operations
+                                .with(|operations| {
+                                    operations
+                                        .iter()
+                                        .any(|operation| {
+                                            matches!(
+                                                operation.state,
+                                                Phase::Preparing | Phase::Sending | Phase::Uncertain
+                                            )
+                                        })
+                                })
+                    })}
+                />
+                <connector_repositories::ConnectorRepositories
+                    connection
+                    board
+                    token
+                    pending
+                    dirty={repository_dirty}
+                    blocked={Memo::new(move |_| {
+                        blocked.get() || loading.get()
+                            || operations
+                                .with(|operations| {
+                                    operations
+                                        .iter()
+                                        .any(|operation| {
+                                            matches!(
+                                                operation.state,
+                                                Phase::Preparing | Phase::Sending | Phase::Uncertain
+                                            )
+                                        })
+                                })
+                    })}
+                    on_prepared={Callback::new(move |operation: Operation| {
+                        operations.update(|rows| rows.insert(0, operation));
+                        page.set(0);
+                    })}
+                />
+                <fieldset
+                    hidden={move || {
+                        connection
+                            .get()
+                            .is_none_or(|connection| {
+                                !connection.installed.manifest.methods.contains(&Method::TicketsCreate)
+                            })
+                    }}
+                    disabled={move || {
+                        pending.get() || loading.get() || blocked.get()
+                            || operations
+                                .with(|rows| {
+                                    rows
+                                        .iter()
+                                        .any(|row| {
+                                            matches!(
+                                                row.state,
+                                                Phase::Preparing | Phase::Sending | Phase::Uncertain
+                                            )
+                                        })
+                                })
+                    }}
+                >
+                    <legend>{move || i18n.text("message.create_a_remote_ticket")}</legend>
+                    <label for="connector-ticket-kind">{move || i18n.text("message.ticket_type")}</label>
+                    <input
+                        id="connector-ticket-kind"
+                        maxlength="100"
+                        prop:value={move || ticket_kind.get()}
+                        on:input={move |event| ticket_kind.set(event_target_value(&event))}
+                    />
+                    <label for="connector-ticket-title">{move || i18n.text("message.title")}</label>
+                    <input
+                        id="connector-ticket-title"
+                        maxlength="255"
+                        prop:value={move || ticket_title.get()}
+                        on:input={move |event| ticket_title.set(event_target_value(&event))}
+                    />
+                    <label for="connector-ticket-description">
+                        {move || i18n.text("message.description")}
+                    </label>
+                    <textarea
+                        id="connector-ticket-description"
+                        maxlength="20000"
+                        prop:value={move || ticket_description.get()}
+                        on:input={move |event| ticket_description.set(event_target_value(&event))}
+                    ></textarea>
+                    <button
+                        type="button"
+                        disabled={move || {
+                            ticket_kind.get().trim().is_empty() || ticket_title.get().trim().is_empty()
+                        }}
+                        on:click={move |_| {
+                            execute.with_value(|execute| execute(("@create-ticket".into(), None)))
+                        }}
+                    >
+                        {move || i18n.text("message.prepare_ticket_creation")}
+                    </button>
+                </fieldset>
+                <p class="field-help">
+                    {move || {
+                        i18n.text("message.prepare_a_declared_action_check_its_scope_then_confirm_a_single")
+                    }}
+                </p>
+                <div>
+                    <For
+                        each={move || {
+                            connection
+                                .get()
+                                .map(|connection| {
+                                    connection
+                                        .installed
+                                        .manifest
+                                        .tabs
+                                        .into_iter()
+                                        .flat_map(|tab| tab.actions)
+                                        .filter(|action| action.effect == RemoteEffect::Remote)
+                                        .collect::<Vec<_>>()
+                                })
+                                .unwrap_or_default()
+                        }}
+                        key={|action| action.id.clone()}
+                        children={move |action| {
+                            let selected = StoredValue::new(action.id);
+                            let label = action.label;
+                            view! {
+                                <button
+                                    class="prepare-connector-effect"
+                                    type="button"
+                                    disabled={move || {
+                                        pending.get() || loading.get() || blocked.get()
+                                            || operations
+                                                .with(|operations| {
+                                                    operations
+                                                        .iter()
+                                                        .any(|operation| {
+                                                            matches!(
+                                                                operation.state,
+                                                                Phase::Preparing | Phase::Sending | Phase::Uncertain
+                                                            )
+                                                        })
+                                                })
+                                    }}
+                                    on:click={move |_| {
+                                        execute.with_value(|execute| execute((selected.get_value(), None)))
+                                    }}
+                                >
+                                    {move || {
+                                        connection
+                                            .get()
+                                            .map(|connection| translated(
+                                                i18n,
+                                                &connection.installed.manifest,
+                                                &label,
+                                            ))
+                                    }}
+                                </button>
+                            }
+                        }}
+                    />
                 </div>
-            </article>}
-        }/>
-        <button type="button" disabled=move||page.get()==0 on:click=move |_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("message.previous")}</button><button type="button" disabled={move||(page.get()+1)*20>=operations.with(Vec::len)} on:click=move |_|page.update(|page|*page+=1)>{move||i18n.text("message.next")}</button>
-        <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
-    </section>}
+            </Show>
+            <button
+                id={reload_id}
+                type="button"
+                disabled={move || pending.get() || loading.get()}
+                on:click={move |_| {
+                    error.set(String::new());
+                    load.with_value(|load| load());
+                }}
+            >
+                {move || i18n.text("message.reload_operation_history")}
+            </button>
+            <p hidden={move || {
+                loading.get() || !operations.with(Vec::is_empty)
+            }}>{move || i18n.text("message.no_operations_recorded_for_this_connector")}</p>
+            <For
+                each={move || {
+                    let _ = i18n.code();
+                    operations
+                        .with(|operations| {
+                            operations.iter().skip(page.get() * 20).take(20).cloned().collect::<Vec<_>>()
+                        })
+                }}
+                key={move |operation| (operation.id.clone(), operation.version, i18n.code())}
+                children={move |operation| {
+                    let current = StoredValue::new(operation.clone());
+                    let key = move || {
+                        context
+                            .get()
+                            .map(|(_, revision)| {
+                                format!(
+                                    "{}:{}:{revision}",
+                                    current.with_value(|operation| operation.id.clone()),
+                                    current.with_value(|operation| operation.version),
+                                )
+                            })
+                            .unwrap_or_default()
+                    };
+                    let label = if operation.method == Method::RepositoriesPublish {
+                        i18n.text("message.publish_a_pr_mr_through_this_module")
+                    } else if operation.method == Method::TicketsTransition {
+                        i18n.text("message.change_a_remote_ticket_s_status")
+                    } else if operation.method == Method::TimeSend {
+                        i18n.text("message.export_a_time_entry")
+                    } else if operation.method == Method::TicketsCreate {
+                        i18n.text("message.create_a_remote_ticket")
+                    } else {
+                        operation
+                            .manifest
+                            .tabs
+                            .iter()
+                            .flat_map(|tab| &tab.actions)
+                            .find(|action| action.id == operation.action)
+                            .map(|action| action.label.clone())
+                            .unwrap_or_default()
+                    };
+                    let report = operation
+                        .reply
+                        .as_ref()
+                        .map(|reply| protocol::Report {
+                            id: operation.id.clone(),
+                            method: operation.method,
+                            action: if operation.method == Method::Action {
+                                Some(operation.action.clone())
+                            } else {
+                                None
+                            },
+                            message: reply.message.clone(),
+                            output: reply.output.clone(),
+                            observed_at: operation.updated_at.clone(),
+                        });
+                    let items = report
+                        .as_ref()
+                        .map(protocol::report_items)
+                        .transpose()
+                        .unwrap_or_default()
+                        .unwrap_or_default();
+                    view! {
+                        <article class="task-files" data-connector-operation={operation.id.clone()}>
+                            <h5>{translated(i18n, &operation.manifest, &label)}</h5>
+                            <p class="connector-effect-state">{i18n.text(state(operation.state))}</p>
+                            <code>{operation.id.clone()}</code>
+                            <p>{operation.updated_at.clone()}</p>
+                            <p class="field-help">
+                                {translated(i18n, &operation.manifest, &operation.manifest.name)}
+                            </p>
+                            <p hidden={operation.method
+                                != Method::Action}>
+                                {i18n
+                                    .text("message.local_tickets_in_this_scope_0")
+                                    .replace(
+                                        "{0}",
+                                        &operation.input["importedCount"].as_u64().unwrap_or(0).to_string(),
+                                    )}
+                            </p>
+                            {if operation.method == Method::TicketsTransition {
+                                protocol::ticket_transition_payload(&operation.input)
+                                    .ok()
+                                    .map(|payload| {
+                                        view! {
+                                            <dl>
+                                                <dt>{i18n.text("message.task")}</dt>
+                                                <dd>{payload.card_title}</dd>
+                                                <dt>{i18n.text("message.ticket")}</dt>
+                                                <dd>{payload.ticket_key}</dd>
+                                                <dt>{i18n.text("message.instance")}</dt>
+                                                <dd>{payload.ticket.instance}</dd>
+                                                <dt>{i18n.text("message.starting_remote_status")}</dt>
+                                                <dd>{payload.from_status}</dd>
+                                                <dt>{i18n.text("message.transition")}</dt>
+                                                <dd>{payload.transition.name}</dd>
+                                                <dt>{i18n.text("message.requested_remote_status")}</dt>
+                                                <dd>{payload.transition.status}</dd>
+                                                <dt>{i18n.text("message.remote_concurrency_limit")}</dt>
+                                                <dd>
+                                                    {i18n
+                                                        .text(
+                                                            "message.another_actor_may_change_the_ticket_between_rereading_and_sendin",
+                                                        )}
+                                                </dd>
+                                            </dl>
+                                        }
+                                    })
+                            } else {
+                                None
+                            }}
+                            {if operation.method == Method::TicketsCreate {
+                                Some(
+                                    view! {
+                                        <dl>
+                                            <dt>{i18n.text("message.ticket_type")}</dt>
+                                            <dd>
+                                                {operation
+                                                    .input["kind"]
+                                                    .as_str()
+                                                    .unwrap_or_default()
+                                                    .to_owned()}
+                                            </dd>
+                                            <dt>{i18n.text("message.title")}</dt>
+                                            <dd>
+                                                {operation
+                                                    .input["title"]
+                                                    .as_str()
+                                                    .unwrap_or_default()
+                                                    .to_owned()}
+                                            </dd>
+                                            <dt>{i18n.text("message.description")}</dt>
+                                            <dd class="pre-wrap">
+                                                {operation
+                                                    .input["description"]
+                                                    .as_str()
+                                                    .unwrap_or_default()
+                                                    .to_owned()}
+                                            </dd>
+                                        </dl>
+                                    },
+                                )
+                            } else {
+                                None
+                            }}
+                            {if operation.method == Method::RepositoriesPublish {
+                                protocol::repository_proposal(&operation.input)
+                                    .ok()
+                                    .map(|proposal| {
+                                        view! {
+                                            <dl>
+                                                <dt>{i18n.text("message.remote_repository")}</dt>
+                                                <dd>{proposal.observation.reference.origin}</dd>
+                                                <dt>{i18n.text("message.title")}</dt>
+                                                <dd>{proposal.title}</dd>
+                                                <dt>{i18n.text("message.description")}</dt>
+                                                <dd class="pre-wrap">{proposal.body}</dd>
+                                                <dt>{i18n.text("message.source_commit")}</dt>
+                                                <dd>{proposal.context.source}</dd>
+                                                <dt>{i18n.text("message.target_commit")}</dt>
+                                                <dd>{proposal.context.target}</dd>
+                                                <dt>{i18n.text("message.target_branch")}</dt>
+                                                <dd>{proposal.observation.target_branch}</dd>
+                                            </dl>
+                                        }
+                                    })
+                            } else {
+                                None
+                            }}
+                            {if operation.method == Method::TimeSend {
+                                protocol::time_proposal(&operation.input)
+                                    .ok()
+                                    .map(|proposal| {
+                                        view! {
+                                            <dl>
+                                                <dt>{i18n.text("message.task")}</dt>
+                                                <dd>{proposal.source.card_title}</dd>
+                                                <dt>{i18n.text("message.time_entry")}</dt>
+                                                <dd>{proposal.source.id}</dd>
+                                                <dt>{i18n.text("message.destination")}</dt>
+                                                <dd>{proposal.instance}</dd>
+                                                <dt>{i18n.text("message.account")}</dt>
+                                                <dd>{proposal.account}</dd>
+                                                <dt>{i18n.text("message.remote_reference")}</dt>
+                                                <dd>{proposal.reference}</dd>
+                                                {proposal
+                                                    .source
+                                                    .ticket
+                                                    .map(|ticket| {
+                                                        view! {
+                                                            <dt>{i18n.text("message.source_ticket")}</dt>
+                                                            <dd>{format!("{} · {}", ticket.key, ticket.instance)}</dd>
+                                                        }
+                                                    })}
+                                                <dt>{i18n.text("message.date")}</dt>
+                                                <dd>
+                                                    {format!(
+                                                        "{} {}",
+                                                        proposal.source.date,
+                                                        proposal.source.start_time,
+                                                    )}
+                                                </dd>
+                                                <dt>{i18n.text("message.duration")}</dt>
+                                                <dd>{format!("{} s", proposal.source.seconds)}</dd>
+                                                <dt>{i18n.text("message.description")}</dt>
+                                                <dd class="pre-wrap">{proposal.source.description}</dd>
+                                            </dl>
+                                        }
+                                    })
+                            } else {
+                                None
+                            }}
+                            <dl>
+                                {operation
+                                    .manifest
+                                    .fields
+                                    .iter()
+                                    .filter(|field| field.kind != protocol::FieldKind::Password)
+                                    .filter_map(|field| {
+                                        operation.values.get(&field.id).map(|value| (field, value))
+                                    })
+                                    .map(|(field, value)| {
+                                        view! {
+                                            <dt>{translated(i18n, &operation.manifest, &field.label)}</dt>
+                                            <dd>
+                                                {value
+                                                    .as_str()
+                                                    .map(str::to_owned)
+                                                    .unwrap_or_else(|| value.to_string())}
+                                            </dd>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </dl>
+                            <p>
+                                {operation
+                                    .reply
+                                    .as_ref()
+                                    .map(|reply| translated(i18n, &operation.manifest, &reply.message))
+                                    .unwrap_or_default()}
+                            </p>
+                            {operation
+                                .reply
+                                .as_ref()
+                                .and_then(|reply| {
+                                    protocol::remote_receipt(&reply.output, &operation.id).ok().flatten()
+                                })
+                                .map(|receipt| {
+                                    view! {
+                                        <p>
+                                            {i18n
+                                                .text(
+                                                    match receipt.outcome {
+                                                        protocol::RemoteOutcome::Applied => {
+                                                            "message.effect_declared_applied"
+                                                        }
+                                                        protocol::RemoteOutcome::NotAttempted => {
+                                                            "message.send_declared_not_attempted"
+                                                        }
+                                                        protocol::RemoteOutcome::Unknown => {
+                                                            "message.result_declared_unknown"
+                                                        }
+                                                    },
+                                                )}" · "
+                                            {i18n.text("message.reference_declared_by_the_module")}
+                                            <code>{receipt.reference}</code>" · "{receipt.observed_at}
+                                        </p>
+                                    }
+                                })}
+                            <dl>
+                                {items
+                                    .into_iter()
+                                    .map(|item| {
+                                        view! {
+                                            <dt>{translated(i18n, &operation.manifest, &item.label)}</dt>
+                                            <dd>{item.value}</dd>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </dl>
+                            <div hidden={!matches!(operation.state, Phase::Preparing | Phase::Uncertain)}>
+                                <label>
+                                    <input
+                                        class="confirm-connector-effect"
+                                        type="checkbox"
+                                        disabled={move || {
+                                            pending.get() || loading.get()
+                                                || (blocked.get()
+                                                    && current.with_value(|operation| operation.state)
+                                                        != Phase::Uncertain)
+                                        }}
+                                        prop:checked={move || approved.get() == key()}
+                                        on:change={move |event| {
+                                            approved
+                                                .set(
+                                                    if event_target_checked(&event) {
+                                                        key()
+                                                    } else {
+                                                        String::new()
+                                                    },
+                                                )
+                                        }}
+                                    />
+                                    {move || {
+                                        i18n
+                                            .text(
+                                                if current.with_value(|operation| operation.state)
+                                                    == Phase::Uncertain
+                                                {
+                                                    "message.reconcile_this_operation_without_resending_its_action"
+                                                } else {
+                                                    "message.send_this_action_once_in_the_displayed_scope"
+                                                },
+                                            )
+                                    }}
+                                </label>
+                                <button
+                                    class="send-connector-effect"
+                                    type="button"
+                                    disabled={move || {
+                                        pending.get() || loading.get()
+                                            || (blocked.get()
+                                                && current.with_value(|operation| operation.state)
+                                                    != Phase::Uncertain) || approved.get() != key()
+                                    }}
+                                    on:click={move |_| {
+                                        execute
+                                            .with_value(|execute| execute((
+                                                (if current.with_value(|operation| operation.state)
+                                                    == Phase::Uncertain
+                                                {
+                                                    "reconcile"
+                                                } else {
+                                                    "send"
+                                                })
+                                                    .into(),
+                                                Some(current.get_value()),
+                                            )))
+                                    }}
+                                >
+                                    {move || {
+                                        i18n
+                                            .text(
+                                                if current.with_value(|operation| operation.state)
+                                                    == Phase::Uncertain
+                                                {
+                                                    "message.reconcile_remote_effect"
+                                                } else {
+                                                    "message.confirm_single_send"
+                                                },
+                                            )
+                                    }}
+                                </button>
+                                <button
+                                    class="cancel-connector-effect"
+                                    hidden={operation.state != Phase::Preparing}
+                                    type="button"
+                                    disabled={move || pending.get() || loading.get()}
+                                    on:click={move |_| {
+                                        execute
+                                            .with_value(|execute| execute((
+                                                "cancel".into(),
+                                                Some(current.get_value()),
+                                            )))
+                                    }}
+                                >
+                                    {move || i18n.text("message.cancel_this_unsubmitted_preview")}
+                                </button>
+                            </div>
+                        </article>
+                    }
+                }}
+            />
+            <button
+                type="button"
+                disabled={move || page.get() == 0}
+                on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
+            >
+                {move || i18n.text("message.previous")}
+            </button>
+            <button
+                type="button"
+                disabled={move || (page.get() + 1) * 20 >= operations.with(Vec::len)}
+                on:click={move |_| page.update(|page| *page += 1)}
+            >
+                {move || i18n.text("message.next")}
+            </button>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+        </section>
+    }
 }

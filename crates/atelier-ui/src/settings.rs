@@ -199,72 +199,366 @@ pub fn Settings(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <section id="settings-page" aria-label=move ||i18n.text("message.application_settings") on:keydown=move |event: web_sys::KeyboardEvent| { if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none() {event.prevent_default(); request_close();} }>
+        <section
+            id="settings-page"
+            aria-label={move || i18n.text("message.application_settings")}
+            on:keydown={move |event: web_sys::KeyboardEvent| {
+                if event.key() == "Escape" && !event.default_prevented()
+                    && document().query_selector("dialog[open]").ok().flatten().is_none()
+                {
+                    event.prevent_default();
+                    request_close();
+                }
+            }}
+        >
             <div id="settings-dialog" class="settings-page">
-            <nav id="settings-navigation" class="settings-navigation" role="tablist" aria-orientation="vertical" aria-label=move || i18n.text("message.settings_sections")>
-                {TABS.into_iter().enumerate().map(move |(index,(id,label))| view! {
-                    <button class="settings-tab" class:selected-tab=move ||tab.get()==index type="button" role="tab" id=format!("settings-tab-{id}") aria-controls=format!("settings-panel-{id}") aria-selected=move || (tab.get()==index).to_string() tabindex=move || if tab.get()==index { "0" } else { "-1" } disabled=move || pending.get() on:click=move |_| tab.set(index) on:keydown=move |event: web_sys::KeyboardEvent| {
-                        if pending.get_untracked() { return; }
-                        let next=match event.key().as_str() { "ArrowRight"|"ArrowDown"=> (index+1)%TABS.len(), "ArrowLeft"|"ArrowUp"=> (index+TABS.len()-1)%TABS.len(), "Home"=>0, "End"=>TABS.len()-1, _=>return };
-                        event.prevent_default(); tab.set(next);
-                        if let Some(element)=document().get_element_by_id(&format!("settings-tab-{}",TABS[next].0)).and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok()) { let _=element.focus(); }
-                    }>{move || i18n.text(label)}</button>
-                }).collect_view()}
-            </nav>
-            <div class="settings-content">
-            <section id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" hidden=move || tab.get()!=0>
-            <section class="form-section"><label for="interface-language">{move || i18n.text("message.language")}</label><select id="interface-language" prop:value=move || i18n.code() on:change=move |event| { if let Err(message) = i18n.select(&event_target_value(&event)) { error.set(message.into()); } }><option value="fr-FR">"Français (France)"</option><option value="en-US">"English (US)"</option></select><p class="hint">{move || i18n.text("message.the_language_is_saved_in_this_browser")}</p></section>
-            <form id="settings-form" on:submit=move |event| {
-                event.prevent_default();
-                if pending.get_untracked() || !dirty.get_untracked() { return; }
-                let token = match token.get_value() { Ok(token) => token, Err(message) => { error.set(message); return; } };
-                let body = draft.get_untracked().patch(&original.get_untracked());
-                pending.set(true); error.set(String::new()); notice.set(String::new());
-                spawn_local(async move {
-                    let result = async {
-                        let response = write(&token, Method::PUT, "/api/settings", &body).await?;
-                        let saved: Document = response.json().await.map_err(|_| "message.invalid_server_response".to_owned())?;
-                        let saved = Draft::from_document(&saved);
-                        original.set(saved.clone()); draft.set(saved);
-                        notice.set("message.settings_saved".into());
-                        Ok::<(), String>(())
-                    }.await;
-                    let _ = board.refresh(&token).await;
-                    if let Err(message) = result { error.set(message); }
-                    pending.set(false);
-                });
-            }>
-                <fieldset disabled=move || pending.get()>
-                    <section class="form-section"><div class="section-heading"><div><h3>{move ||i18n.text("message.agents_models")}</h3><p class="hint">{move ||i18n.text("message.your_preferences_for_new_tasks")}</p></div></div>
-                    <label for="settings-agent">{move || i18n.text("message.default_agent")}</label><select id="settings-agent" autofocus prop:value=move || draft.get().agent on:change=move |event| draft.update(|value| value.agent = event_target_value(&event))>
-                        <For each=move || providers(&board.settings.get()).unwrap_or_default() key=|provider| field(provider,"id") children=move |provider| view! { <option value=field(&provider,"id")>{field(&provider,"name")}</option> } />
-                    </select>
-                    <p class="hint">{move || i18n.text("message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent")}</p></section>
-                </fieldset>
-                <p id="settings-notice" class="field-help" role="status">{move || i18n.text(&notice.get())}</p>
-                <div class="form-actions"><button id="save-settings" class="primary" type="submit" disabled=move || pending.get() || !dirty.get()>{move || i18n.text(if pending.get() { "message.saving" } else { "message.save_general_settings" })}</button></div>
-            </form>
-            </section>
-            <section id="settings-panel-forges" role="tabpanel" aria-labelledby="settings-tab-forges" hidden=move || tab.get()!=2><crate::forge::ForgeSettings token pending dirty=forge_dirty /></section>
-            <section id="settings-panel-tickets" role="tabpanel" aria-labelledby="settings-tab-tickets" hidden=move || tab.get()!=1>
-                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=tickets_choice_dirty selected=ticket_preview blocked=integration_blocked/>
-                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Tickets board token pending dirty=ticket_module_dirty selected=ticket_preview/>
-            </section>
-            <section id="settings-panel-time" role="tabpanel" aria-labelledby="settings-tab-time" hidden=move || tab.get()!=3>
-                <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_choice_dirty selected=time_preview blocked=integration_blocked/>
-                <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_module_dirty selected=time_preview/>
-            </section>
-            <section id="settings-module-configuration" role="region" aria-labelledby=move||match tab.get(){1=>"settings-tab-tickets",3=>"settings-tab-time",_=>"settings-tab-tickets"} hidden=move||external_preview.get().is_empty()>
-                <p class="error" role="alert" hidden=move||preview_available.get()>{move||i18n.text("message.integration_unavailable")}</p>
-                <div hidden=move||!preview_available.get()||shown_module.get()==external_preview.get()||preview_error.get().is_empty()><p class="error" role="alert">{move||i18n.text(&preview_error.get())}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(1)>{move||i18n.text("message.tickets")}</button></div>
-                <p role="status" hidden=move||shown_module.get()==external_preview.get()||connectors_dirty.get()||!preview_available.get()||!preview_error.get().is_empty()>{move||i18n.text("message.loading_module_configuration")}</p>
-                <div hidden=move||shown_module.get()==external_preview.get()||!connectors_dirty.get()><p>{move||i18n.text("message.save_current_module_draft_first")}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(1)>{move||i18n.text("message.tickets")}</button></div>
-                <div hidden=move||!preview_available.get()||shown_module.get()!=external_preview.get()><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module shown=shown_module preview_error=preview_error /></div>
-            </section>
-            <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=4><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
-            </div></div>
-            <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("message.discard_unsaved_changes")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("message.discard")}</button><button id="keep-settings" type="button" on:click=move |_| {navigation.set_value(None);discard.set(false);if let Some(element)=document().get_element_by_id(&close_focus.get_value()).and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}} >{move || i18n.text("message.keep_editing")}</button></div>
+                <nav
+                    id="settings-navigation"
+                    class="settings-navigation"
+                    role="tablist"
+                    aria-orientation="vertical"
+                    aria-label={move || i18n.text("message.settings_sections")}
+                >
+                    {TABS
+                        .into_iter()
+                        .enumerate()
+                        .map(move |(index, (id, label))| {
+                            view! {
+                                <button
+                                    class="settings-tab"
+                                    class:selected-tab={move || tab.get() == index}
+                                    type="button"
+                                    role="tab"
+                                    id={format!("settings-tab-{id}")}
+                                    aria-controls={format!("settings-panel-{id}")}
+                                    aria-selected={move || (tab.get() == index).to_string()}
+                                    tabindex={move || if tab.get() == index { "0" } else { "-1" }}
+                                    disabled={move || pending.get()}
+                                    on:click={move |_| tab.set(index)}
+                                    on:keydown={move |event: web_sys::KeyboardEvent| {
+                                        if pending.get_untracked() {
+                                            return;
+                                        }
+                                        let next = match event.key().as_str() {
+                                            "ArrowRight" | "ArrowDown" => (index + 1) % TABS.len(),
+                                            "ArrowLeft" | "ArrowUp" => (index + TABS.len() - 1) % TABS.len(),
+                                            "Home" => 0,
+                                            "End" => TABS.len() - 1,
+                                            _ => return,
+                                        };
+                                        event.prevent_default();
+                                        tab.set(next);
+                                        if let Some(element) = document()
+                                            .get_element_by_id(&format!("settings-tab-{}", TABS[next].0))
+                                            .and_then(|element| {
+                                                element.dyn_into::<web_sys::HtmlElement>().ok()
+                                            })
+                                        {
+                                            let _ = element.focus();
+                                        }
+                                    }}
+                                >
+                                    {move || i18n.text(label)}
+                                </button>
+                            }
+                        })
+                        .collect_view()}
+                </nav>
+                <div class="settings-content">
+                    <section
+                        id="settings-panel-general"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab-general"
+                        hidden={move || tab.get() != 0}
+                    >
+                        <section class="form-section">
+                            <label for="interface-language">{move || i18n.text("message.language")}</label>
+                            <select
+                                id="interface-language"
+                                prop:value={move || i18n.code()}
+                                on:change={move |event| {
+                                    if let Err(message) = i18n.select(&event_target_value(&event)) {
+                                        error.set(message.into());
+                                    }
+                                }}
+                            >
+                                <option value="fr-FR">"Français (France)"</option>
+                                <option value="en-US">"English (US)"</option>
+                            </select>
+                            <p class="hint">
+                                {move || i18n.text("message.the_language_is_saved_in_this_browser")}
+                            </p>
+                        </section>
+                        <form
+                            id="settings-form"
+                            on:submit={move |event| {
+                                event.prevent_default();
+                                if pending.get_untracked() || !dirty.get_untracked() {
+                                    return;
+                                }
+                                let token = match token.get_value() {
+                                    Ok(token) => token,
+                                    Err(message) => {
+                                        error.set(message);
+                                        return;
+                                    }
+                                };
+                                let body = draft.get_untracked().patch(&original.get_untracked());
+                                pending.set(true);
+                                error.set(String::new());
+                                notice.set(String::new());
+                                spawn_local(async move {
+                                    let result = async {
+                                        let response = write(&token, Method::PUT, "/api/settings", &body)
+                                            .await?;
+                                        let saved: Document = response
+                                            .json()
+                                            .await
+                                            .map_err(|_| "message.invalid_server_response".to_owned())?;
+                                        let saved = Draft::from_document(&saved);
+                                        original.set(saved.clone());
+                                        draft.set(saved);
+                                        notice.set("message.settings_saved".into());
+                                        Ok::<(), String>(())
+                                    }
+                                        .await;
+                                    let _ = board.refresh(&token).await;
+                                    if let Err(message) = result {
+                                        error.set(message);
+                                    }
+                                    pending.set(false);
+                                });
+                            }}
+                        >
+                            <fieldset disabled={move || pending.get()}>
+                                <section class="form-section">
+                                    <div class="section-heading">
+                                        <div>
+                                            <h3>{move || i18n.text("message.agents_models")}</h3>
+                                            <p class="hint">
+                                                {move || i18n.text("message.your_preferences_for_new_tasks")}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <label for="settings-agent">
+                                        {move || i18n.text("message.default_agent")}
+                                    </label>
+                                    <select
+                                        id="settings-agent"
+                                        autofocus
+                                        prop:value={move || draft.get().agent}
+                                        on:change={move |event| {
+                                            draft.update(|value| value.agent = event_target_value(&event))
+                                        }}
+                                    >
+                                        <For
+                                            each={move || {
+                                                providers(&board.settings.get()).unwrap_or_default()
+                                            }}
+                                            key={|provider| field(provider, "id")}
+                                            children={move |provider| {
+                                                view! {
+                                                    <option value={field(
+                                                        &provider,
+                                                        "id",
+                                                    )}>{field(&provider, "name")}</option>
+                                                }
+                                            }}
+                                        />
+                                    </select>
+                                    <p class="hint">
+                                        {move || {
+                                            i18n
+                                                .text(
+                                                    "message.used_for_new_tasks_unless_the_project_defines_a_preferred_agent",
+                                                )
+                                        }}
+                                    </p>
+                                </section>
+                            </fieldset>
+                            <p id="settings-notice" class="field-help" role="status">
+                                {move || i18n.text(&notice.get())}
+                            </p>
+                            <div class="form-actions">
+                                <button
+                                    id="save-settings"
+                                    class="primary"
+                                    type="submit"
+                                    disabled={move || pending.get() || !dirty.get()}
+                                >
+                                    {move || {
+                                        i18n
+                                            .text(
+                                                if pending.get() {
+                                                    "message.saving"
+                                                } else {
+                                                    "message.save_general_settings"
+                                                },
+                                            )
+                                    }}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                    <section
+                        id="settings-panel-forges"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab-forges"
+                        hidden={move || tab.get() != 2}
+                    >
+                        <crate::forge::ForgeSettings token pending dirty={forge_dirty} />
+                    </section>
+                    <section
+                        id="settings-panel-tickets"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab-tickets"
+                        hidden={move || tab.get() != 1}
+                    >
+                        <crate::integration_choice::IntegrationChoice
+                            kind={atelier_core::application::integrations::Kind::Tickets}
+                            board
+                            token
+                            pending
+                            dirty={tickets_choice_dirty}
+                            selected={ticket_preview}
+                            blocked={integration_blocked}
+                        />
+                        <crate::integration_choice::IntegrationConfiguration
+                            kind={atelier_core::application::integrations::Kind::Tickets}
+                            board
+                            token
+                            pending
+                            dirty={ticket_module_dirty}
+                            selected={ticket_preview}
+                        />
+                    </section>
+                    <section
+                        id="settings-panel-time"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab-time"
+                        hidden={move || tab.get() != 3}
+                    >
+                        <crate::integration_choice::IntegrationChoice
+                            kind={atelier_core::application::integrations::Kind::Time}
+                            board
+                            token
+                            pending
+                            dirty={time_choice_dirty}
+                            selected={time_preview}
+                            blocked={integration_blocked}
+                        />
+                        <crate::integration_choice::IntegrationConfiguration
+                            kind={atelier_core::application::integrations::Kind::Time}
+                            board
+                            token
+                            pending
+                            dirty={time_module_dirty}
+                            selected={time_preview}
+                        />
+                    </section>
+                    <section
+                        id="settings-module-configuration"
+                        role="region"
+                        aria-labelledby={move || match tab.get() {
+                            1 => "settings-tab-tickets",
+                            3 => "settings-tab-time",
+                            _ => "settings-tab-tickets",
+                        }}
+                        hidden={move || external_preview.get().is_empty()}
+                    >
+                        <p class="error" role="alert" hidden={move || preview_available.get()}>
+                            {move || i18n.text("message.integration_unavailable")}
+                        </p>
+                        <div hidden={move || {
+                            !preview_available.get() || shown_module.get() == external_preview.get()
+                                || preview_error.get().is_empty()
+                        }}>
+                            <p class="error" role="alert">
+                                {move || i18n.text(&preview_error.get())}
+                            </p>
+                            <button
+                                type="button"
+                                disabled={move || pending.get()}
+                                on:click={move |_| tab.set(1)}
+                            >
+                                {move || i18n.text("message.tickets")}
+                            </button>
+                        </div>
+                        <p
+                            role="status"
+                            hidden={move || {
+                                shown_module.get() == external_preview.get() || connectors_dirty.get()
+                                    || !preview_available.get() || !preview_error.get().is_empty()
+                            }}
+                        >
+                            {move || i18n.text("message.loading_module_configuration")}
+                        </p>
+                        <div hidden={move || {
+                            shown_module.get() == external_preview.get() || !connectors_dirty.get()
+                        }}>
+                            <p>{move || i18n.text("message.save_current_module_draft_first")}</p>
+                            <button
+                                type="button"
+                                disabled={move || pending.get()}
+                                on:click={move |_| tab.set(1)}
+                            >
+                                {move || i18n.text("message.tickets")}
+                            </button>
+                        </div>
+                        <div hidden={move || {
+                            !preview_available.get() || shown_module.get() != external_preview.get()
+                        }}>
+                            <crate::connectors::Connectors
+                                board
+                                token
+                                pending
+                                dirty={connectors_dirty}
+                                requested={requested_module}
+                                shown={shown_module}
+                                preview_error={preview_error}
+                            />
+                        </div>
+                    </section>
+                    <section
+                        id="settings-panel-updates"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab-updates"
+                        hidden={move || tab.get() != 4}
+                    >
+                        <crate::updates::Updates
+                            token
+                            pending
+                            dirty={updates_dirty}
+                            blocked={updates_blocked}
+                        />
+                    </section>
+                </div>
+            </div>
+            <p id="settings-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <div class="confirmation" role="alert" hidden={move || !discard.get()}>
+                <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
+                <button id="discard-settings" class="danger" type="button" on:click={move |_| close()}>
+                    {move || i18n.text("message.discard")}
+                </button>
+                <button
+                    id="keep-settings"
+                    type="button"
+                    on:click={move |_| {
+                        navigation.set_value(None);
+                        discard.set(false);
+                        if let Some(element) = document()
+                            .get_element_by_id(&close_focus.get_value())
+                            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                        {
+                            let _ = element.focus();
+                        }
+                    }}
+                >
+                    {move || i18n.text("message.keep_editing")}
+                </button>
+            </div>
         </section>
     }
 }

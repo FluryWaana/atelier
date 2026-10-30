@@ -13,11 +13,16 @@ pub fn Modal(
         let _ = dialog.show_modal();
     });
     view! {
-        <dialog id=id class="app-modal" node_ref=node_ref aria-labelledby=labelledby
-            on:cancel=move |event: web_sys::Event| {
+        <dialog
+            id={id}
+            class="app-modal"
+            node_ref={node_ref}
+            aria-labelledby={labelledby}
+            on:cancel={move |event: web_sys::Event| {
                 event.prevent_default();
                 on_close.run(());
-            }>
+            }}
+        >
             {children()}
         </dialog>
     }

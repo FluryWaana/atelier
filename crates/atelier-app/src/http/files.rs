@@ -81,7 +81,12 @@ async fn inspect(
     };
     let repository = match repository {
         Ok(repository) => repository,
-        Err(error) => return failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => {
+            return super::responses::error(
+                error,
+                "message.unable_to_read_or_save_retry_or_reload",
+            );
+        }
     };
     let base = worktree
         .as_ref()
@@ -115,7 +120,9 @@ async fn inspect(
             StatusCode::BAD_REQUEST,
             "message.the_file_is_missing_or_no_longer_accessible_refresh_the_list",
         ),
-        Err(error) => failure(StatusCode::BAD_REQUEST, &error.to_string()),
+        Err(error) => {
+            super::responses::error(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 

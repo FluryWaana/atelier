@@ -348,63 +348,738 @@ pub fn Connectors(
                 .and_then(|report| protocol::ticket_page(report.method, &report.output).ok())
         })
     };
-    view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="connectors-heading">{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name)).unwrap_or_else(||i18n.text("message.connectors"))}</h3>
-        <fieldset disabled=move||loading.get()>
-        <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}</p>
-        <button id="reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(Action::Reload));}}>{move||i18n.text("message.reload_connectors")}</button>
-        <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("message.discard_connector_drafts_and_reload")}</p><button id="confirm-reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Reload))>{move||i18n.text("message.discard_and_reload")}</button><button type="button" disabled=move||pending.get() on:click=move|_|reload.set(false)>{move||i18n.text("message.back")}</button></div>
-        <p hidden=move||registry.get().is_none_or(|value|!value.modules.is_empty())>{move||i18n.text("message.no_local_connector_installed")}</p>
-
-        <div hidden=move||original.get().is_none()>
-            <p>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.description))}</p>
-            <fieldset disabled=move||pending.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
-                <For each=move||original.get().map(|connection|connection.installed.manifest.fields).unwrap_or_default() key=move|field|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),field.id.clone()) children=move|field|{
-                    let field=StoredValue::new(field);
-                    let key=field.with_value(|field|field.id.clone());
-                    let input_id=format!("connector-field-{key}");
-                    let key=StoredValue::new(key);
-                    let label=move||original.get().map(|connection|field.with_value(|field|translated(i18n,&connection.installed.manifest,&field.label))).unwrap_or_default();
-                    let kind=field.with_value(|field|field.kind);
-                    let controls=match kind {
-                        FieldKind::Password=>view!{
-                            <input id=input_id.clone() type="password" autocomplete="new-password" maxlength="4000" prop:value=move||draft.get().secrets.get(&key.get_value()).cloned().unwrap_or_default() disabled=move||draft.get().forget.contains(&key.get_value()) on:input=move|event|draft.update(|draft|{let value=event_target_value(&event);if value.is_empty(){draft.secrets.remove(&key.get_value());}else{draft.secrets.insert(key.get_value(),value);}})/>
-                            <p>{move||i18n.text(if original.get().is_some_and(|connection|connection.secret_fields.contains(&key.get_value())){"message.secret_saved_leave_blank_to_keep_it"}else{"message.no_secret_saved"})}</p>
-                            <label><input type="checkbox" prop:checked=move||draft.get().forget.contains(&key.get_value()) on:change=move|event|draft.update(|draft|{if event_target_checked(&event){draft.forget.insert(key.get_value());draft.secrets.remove(&key.get_value());}else{draft.forget.remove(&key.get_value());}})/>{move||i18n.text("message.forget_this_secret")}</label>
-                        }.into_any(),
-                        FieldKind::Checkbox=>view!{<input id=input_id.clone() type="checkbox" prop:checked=move||draft.get().values.get(&key.get_value()).and_then(Value::as_bool).unwrap_or(false) on:change=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_checked(&event)));})/>}.into_any(),
-                        FieldKind::Select=>view!{<select id=input_id.clone() prop:value=move||{let value=draft.get().values.get(&key.get_value()).and_then(Value::as_str).map(str::to_owned);field.with_value(|field|field.options.iter().position(|choice|Some(choice.value.as_str())==value.as_deref()).map(|index|index.to_string()).unwrap_or_default())} on:change=move|event|draft.update(|draft|{let selected=event_target_value(&event).parse::<usize>().ok().and_then(|index|field.with_value(|field|field.options.get(index).map(|choice|choice.value.clone())));if let Some(value)=selected{draft.values.insert(key.get_value(),json!(value));}else{draft.values.remove(&key.get_value());}})><option value="">{move||i18n.text("message.not_set")}</option>{field.with_value(|field|field.options.clone()).into_iter().enumerate().map(move|(index,choice)|view!{<option value=index.to_string()>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&choice.label))}</option>}).collect_view()}</select>}.into_any(),
-                        FieldKind::Textarea=>view!{<textarea id=input_id.clone() rows="3" maxlength="8000" prop:value=move||draft.get().values.get(&key.get_value()).and_then(Value::as_str).unwrap_or_default().to_owned() on:input=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_value(&event)));})/>}.into_any(),
-                        _=>view!{<input id=input_id.clone() type=if kind==FieldKind::Url{"url"}else{"text"} maxlength="8000" spellcheck="false" prop:value=move||draft.get().values.get(&key.get_value()).and_then(Value::as_str).unwrap_or_default().to_owned() on:input=move|event|draft.update(|draft|{draft.values.insert(key.get_value(),json!(event_target_value(&event)));})/>}.into_any(),
-                    };
-                    view!{<label for=input_id>{label}</label>{controls}<button type="button" hidden=kind==FieldKind::Password disabled=move||!draft.get().values.contains_key(&key.get_value()) on:click=move|_|draft.update(|draft|{draft.values.remove(&key.get_value());})>{move||i18n.text("message.remove_this_value")}</button>}
-                }/>
-                <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("message.save_connector")}</button>
-                <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("message.run_connector_check")}</button>
-                <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==ConnectorEffect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
-            </fieldset>
-            <div role="status"><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|report.observed_at))}</p><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|translated(i18n,&connection.installed.manifest,&report.message)))}</p></div>
-            <dl>{move||original.get().map(|connection|connection.installed.report.as_ref().and_then(|report|protocol::report_items(report).ok()).unwrap_or_default().into_iter().map(|item|view!{<dt>{translated(i18n,&connection.installed.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view())}</dl>
-            <fieldset disabled=move||pending.get()||profile_dirty.get()>
-                <button id="search-connector-tickets" type="button" hidden=move||original.get().is_none_or(|connection|!connection.installed.manifest.methods.contains(&ConnectorMethod::TicketsSearch)) disabled=move||!tickets.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Search(None)))>{move||i18n.text("message.search_connector_tickets")}</button>
-                <div hidden=move||page().is_none()>
-                    <p>{move||i18n.text("message.select_up_to_20_tickets_from_this_page_linked_cards_will_be_kept")}</p>
-                    <p hidden=move||page().is_none_or(|page|!page.items.is_empty())>{move||i18n.text("message.no_tickets_on_this_page")}</p>
-                    <For each=move||page().map(|page|page.items).unwrap_or_default() key=move|ticket|(original.get_untracked().and_then(|connection|connection.installed.report.map(|report|report.id)),ticket.instance.clone(),ticket.id.clone()) children=move|ticket|{
-                        let ticket=StoredValue::new(ticket);
-                        view!{<article><label><input type="checkbox" data-connector-ticket=ticket.with_value(|ticket|ticket.id.clone()) prop:checked=move||ticket.with_value(|ticket|tickets.get().contains(&ticket.identity())) disabled=move||ticket.with_value(|ticket|!tickets.get().contains(&ticket.identity())&&tickets.get().len()>=20) on:change=move|event|{let checked=event_target_checked(&event);tickets.update(|selected|{let identity=ticket.with_value(|ticket|ticket.identity());if checked{selected.insert(identity);}else{selected.remove(&identity);}});import_approved.set(false);}/>{ticket.with_value(|ticket|format!("{}: {}",ticket.key,ticket.title))}</label><p>{ticket.with_value(|ticket|ticket.instance.clone())}</p><p>{ticket.with_value(|ticket|ticket.status.clone())}</p><p class="task-description">{ticket.with_value(|ticket|ticket.description.clone())}</p></article>}
-                    }/>
-                    <p hidden=move||page().is_none_or(|page|page.next.is_none())>{move||i18n.text("message.more_results_are_available_this_page_does_not_represent_the_whol")}</p>
-                    <button id="next-connector-tickets" type="button" hidden=move||page().is_none_or(|page|page.next.is_none()) disabled=move||!tickets.get().is_empty() on:click=move|_|{if let Some(cursor)=page().and_then(|page|page.next){execute.with_value(|execute|execute(Action::Search(Some(cursor))));}}>{move||i18n.text("message.next_page")}</button>
-                    <label for="connector-import-project">{move||i18n.text("message.destination_project")}</label><select id="connector-import-project" prop:value=move||project.get().and_then(|project|project.get::<String>("id").ok().flatten()).unwrap_or_default() on:change=move|event|{let id=event_target_value(&event);project.set(board.projects.get_untracked().into_iter().find(|project|project.get::<String>("id").ok().flatten().as_deref()==Some(id.as_str())));import_approved.set(false);}><option value="">{move||i18n.text("message.choose_a_project")}</option><For each=move||board.projects.get() key=|project|(crate::field(project,"id"),crate::field(project,"name")) children=move|project|view!{<option value=crate::field(&project,"id")>{crate::field(&project,"name")}</option>}/></select>
-                    <label><input id="approve-connector-import" type="checkbox" disabled=move||tickets.get().is_empty()||project.get().is_none() prop:checked=move||import_approved.get() on:change=move|event|import_approved.set(event_target_checked(&event))/>{move||i18n.text("message.create_missing_cards_from_this_exact_selection_and_project")}</label>
-                    <button id="import-connector-tickets" type="button" disabled=move||!import_approved.get()||tickets.get().is_empty()||project.get().is_none() on:click=move|_|execute.with_value(|execute|execute(Action::Import))>{move||i18n.text("message.import_selection")}</button>
-                    <button id="cancel-connector-import" type="button" disabled=move||!import_dirty.get() on:click=move|_|{tickets.set(BTreeSet::new());project.set(None);import_approved.set(false);}>{move||i18n.text("message.cancel_import_selection")}</button>
+    view! {
+        <section
+            id="connectors-settings"
+            aria-labelledby="connectors-heading"
+            aria-busy={move || (pending.get() || loading.get()).to_string()}
+        >
+            <h3 id="connectors-heading">
+                {move || {
+                    original
+                        .get()
+                        .map(|connection| translated(
+                            i18n,
+                            &connection.installed.manifest,
+                            &connection.installed.manifest.name,
+                        ))
+                        .unwrap_or_else(|| i18n.text("message.connectors"))
+                }}
+            </h3>
+            <fieldset disabled={move || loading.get()}>
+                <p hidden={move || {
+                    registry.get().is_none_or(|value| value.native_available)
+                }}>
+                    {move || i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}
+                </p>
+                <button
+                    id="reload-connectors"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| {
+                        if own_dirty.get_untracked() {
+                            reload.set(true);
+                        } else {
+                            execute.with_value(|execute| execute(Action::Reload));
+                        }
+                    }}
+                >
+                    {move || i18n.text("message.reload_connectors")}
+                </button>
+                <div class="confirmation" hidden={move || !reload.get()}>
+                    <p>{move || i18n.text("message.discard_connector_drafts_and_reload")}</p>
+                    <button
+                        id="confirm-reload-connectors"
+                        type="button"
+                        disabled={move || pending.get()}
+                        on:click={move |_| execute.with_value(|execute| execute(Action::Reload))}
+                    >
+                        {move || i18n.text("message.discard_and_reload")}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={move || pending.get()}
+                        on:click={move |_| reload.set(false)}
+                    >
+                        {move || i18n.text("message.back")}
+                    </button>
                 </div>
+                <p hidden={move || {
+                    registry.get().is_none_or(|value| !value.modules.is_empty())
+                }}>{move || i18n.text("message.no_local_connector_installed")}</p>
+
+                <div hidden={move || original.get().is_none()}>
+                    <p>
+                        {move || {
+                            original
+                                .get()
+                                .map(|connection| translated(
+                                    i18n,
+                                    &connection.installed.manifest,
+                                    &connection.installed.manifest.description,
+                                ))
+                        }}
+                    </p>
+                    <fieldset disabled={move || {
+                        pending.get() || import_dirty.get()
+                            || registry.get().is_none_or(|value| !value.native_available)
+                    }}>
+                        <For
+                            each={move || {
+                                original
+                                    .get()
+                                    .map(|connection| connection.installed.manifest.fields)
+                                    .unwrap_or_default()
+                            }}
+                            key={move |field| (
+                                original
+                                    .get_untracked()
+                                    .map(|connection| (
+                                        connection.installed.manifest.id,
+                                        connection.installed.revision,
+                                    )),
+                                field.id.clone(),
+                            )}
+                            children={move |field| {
+                                let field = StoredValue::new(field);
+                                let key = field.with_value(|field| field.id.clone());
+                                let input_id = format!("connector-field-{key}");
+                                let key = StoredValue::new(key);
+                                let label = move || {
+                                    original
+                                        .get()
+                                        .map(|connection| {
+                                            field
+                                                .with_value(|field| translated(
+                                                    i18n,
+                                                    &connection.installed.manifest,
+                                                    &field.label,
+                                                ))
+                                        })
+                                        .unwrap_or_default()
+                                };
+                                let kind = field.with_value(|field| field.kind);
+                                let controls = match kind {
+                                    FieldKind::Password => {
+                                        view! {
+                                            <input
+                                                id={input_id.clone()}
+                                                type="password"
+                                                autocomplete="new-password"
+                                                maxlength="4000"
+                                                prop:value={move || {
+                                                    draft
+                                                        .get()
+                                                        .secrets
+                                                        .get(&key.get_value())
+                                                        .cloned()
+                                                        .unwrap_or_default()
+                                                }}
+                                                disabled={move || {
+                                                    draft.get().forget.contains(&key.get_value())
+                                                }}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            let value = event_target_value(&event);
+                                                            if value.is_empty() {
+                                                                draft.secrets.remove(&key.get_value());
+                                                            } else {
+                                                                draft.secrets.insert(key.get_value(), value);
+                                                            }
+                                                        })
+                                                }}
+                                            />
+                                            <p>
+                                                {move || {
+                                                    i18n
+                                                        .text(
+                                                            if original
+                                                                .get()
+                                                                .is_some_and(|connection| {
+                                                                    connection.secret_fields.contains(&key.get_value())
+                                                                })
+                                                            {
+                                                                "message.secret_saved_leave_blank_to_keep_it"
+                                                            } else {
+                                                                "message.no_secret_saved"
+                                                            },
+                                                        )
+                                                }}
+                                            </p>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    prop:checked={move || {
+                                                        draft.get().forget.contains(&key.get_value())
+                                                    }}
+                                                    on:change={move |event| {
+                                                        draft
+                                                            .update(|draft| {
+                                                                if event_target_checked(&event) {
+                                                                    draft.forget.insert(key.get_value());
+                                                                    draft.secrets.remove(&key.get_value());
+                                                                } else {
+                                                                    draft.forget.remove(&key.get_value());
+                                                                }
+                                                            })
+                                                    }}
+                                                />
+                                                {move || i18n.text("message.forget_this_secret")}
+                                            </label>
+                                        }
+                                            .into_any()
+                                    }
+                                    FieldKind::Checkbox => {
+                                        view! {
+                                            <input
+                                                id={input_id.clone()}
+                                                type="checkbox"
+                                                prop:checked={move || {
+                                                    draft
+                                                        .get()
+                                                        .values
+                                                        .get(&key.get_value())
+                                                        .and_then(Value::as_bool)
+                                                        .unwrap_or(false)
+                                                }}
+                                                on:change={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft
+                                                                .values
+                                                                .insert(
+                                                                    key.get_value(),
+                                                                    json!(event_target_checked(&event)),
+                                                                );
+                                                        })
+                                                }}
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    FieldKind::Select => {
+                                        view! {
+                                            <select
+                                                id={input_id.clone()}
+                                                prop:value={move || {
+                                                    let value = draft
+                                                        .get()
+                                                        .values
+                                                        .get(&key.get_value())
+                                                        .and_then(Value::as_str)
+                                                        .map(str::to_owned);
+                                                    field
+                                                        .with_value(|field| {
+                                                            field
+                                                                .options
+                                                                .iter()
+                                                                .position(|choice| {
+                                                                    Some(choice.value.as_str()) == value.as_deref()
+                                                                })
+                                                                .map(|index| index.to_string())
+                                                                .unwrap_or_default()
+                                                        })
+                                                }}
+                                                on:change={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            let selected = event_target_value(&event)
+                                                                .parse::<usize>()
+                                                                .ok()
+                                                                .and_then(|index| {
+                                                                    field
+                                                                        .with_value(|field| {
+                                                                            field.options.get(index).map(|choice| choice.value.clone())
+                                                                        })
+                                                                });
+                                                            if let Some(value) = selected {
+                                                                draft.values.insert(key.get_value(), json!(value));
+                                                            } else {
+                                                                draft.values.remove(&key.get_value());
+                                                            }
+                                                        })
+                                                }}
+                                            >
+                                                <option value="">
+                                                    {move || i18n.text("message.not_set")}
+                                                </option>
+                                                {field
+                                                    .with_value(|field| field.options.clone())
+                                                    .into_iter()
+                                                    .enumerate()
+                                                    .map(move |(index, choice)| {
+                                                        view! {
+                                                            <option value={index
+                                                                .to_string()}>
+                                                                {move || {
+                                                                    original
+                                                                        .get()
+                                                                        .map(|connection| translated(
+                                                                            i18n,
+                                                                            &connection.installed.manifest,
+                                                                            &choice.label,
+                                                                        ))
+                                                                }}
+                                                            </option>
+                                                        }
+                                                    })
+                                                    .collect_view()}
+                                            </select>
+                                        }
+                                            .into_any()
+                                    }
+                                    FieldKind::Textarea => {
+                                        view! {
+                                            <textarea
+                                                id={input_id.clone()}
+                                                rows="3"
+                                                maxlength="8000"
+                                                prop:value={move || {
+                                                    draft
+                                                        .get()
+                                                        .values
+                                                        .get(&key.get_value())
+                                                        .and_then(Value::as_str)
+                                                        .unwrap_or_default()
+                                                        .to_owned()
+                                                }}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft
+                                                                .values
+                                                                .insert(key.get_value(), json!(event_target_value(&event)));
+                                                        })
+                                                }}
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    _ => {
+                                        view! {
+                                            <input
+                                                id={input_id.clone()}
+                                                type={if kind == FieldKind::Url { "url" } else { "text" }}
+                                                maxlength="8000"
+                                                spellcheck="false"
+                                                prop:value={move || {
+                                                    draft
+                                                        .get()
+                                                        .values
+                                                        .get(&key.get_value())
+                                                        .and_then(Value::as_str)
+                                                        .unwrap_or_default()
+                                                        .to_owned()
+                                                }}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft
+                                                                .values
+                                                                .insert(key.get_value(), json!(event_target_value(&event)));
+                                                        })
+                                                }}
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                };
+                                view! {
+                                    <label for={input_id}>{label}</label>
+                                    {controls}
+                                    <button
+                                        type="button"
+                                        hidden={kind == FieldKind::Password}
+                                        disabled={move || !draft.get().values.contains_key(&key.get_value())}
+                                        on:click={move |_| {
+                                            draft
+                                                .update(|draft| {
+                                                    draft.values.remove(&key.get_value());
+                                                })
+                                        }}
+                                    >
+                                        {move || i18n.text("message.remove_this_value")}
+                                    </button>
+                                }
+                            }}
+                        />
+                        <button
+                            id="save-connector"
+                            type="button"
+                            disabled={move || !profile_dirty.get()}
+                            on:click={move |_| execute.with_value(|execute| execute(Action::Save))}
+                        >
+                            {move || i18n.text("message.save_connector")}
+                        </button>
+                        <button
+                            id="check-connector"
+                            type="button"
+                            disabled={move || profile_dirty.get()}
+                            on:click={move |_| {
+                                execute
+                                    .with_value(|execute| execute(
+                                        Action::Invoke(ConnectorMethod::Check, None),
+                                    ))
+                            }}
+                        >
+                            {move || i18n.text("message.run_connector_check")}
+                        </button>
+                        <For
+                            each={move || {
+                                original
+                                    .get()
+                                    .map(|connection| {
+                                        connection
+                                            .installed
+                                            .manifest
+                                            .tabs
+                                            .into_iter()
+                                            .flat_map(|tab| tab.actions)
+                                            .filter(|action| action.effect == ConnectorEffect::Read)
+                                            .collect::<Vec<_>>()
+                                    })
+                                    .unwrap_or_default()
+                            }}
+                            key={move |action| (
+                                original
+                                    .get_untracked()
+                                    .map(|connection| (
+                                        connection.installed.manifest.id,
+                                        connection.installed.revision,
+                                    )),
+                                action.id.clone(),
+                            )}
+                            children={move |action| {
+                                let action = StoredValue::new(action);
+                                view! {
+                                    <button
+                                        type="button"
+                                        disabled={move || profile_dirty.get()}
+                                        on:click={move |_| {
+                                            execute
+                                                .with_value(|execute| execute(
+                                                    Action::Invoke(
+                                                        ConnectorMethod::Action,
+                                                        Some(action.with_value(|action| action.id.clone())),
+                                                    ),
+                                                ))
+                                        }}
+                                    >
+                                        {move || {
+                                            original
+                                                .get()
+                                                .map(|connection| {
+                                                    action
+                                                        .with_value(|action| translated(
+                                                            i18n,
+                                                            &connection.installed.manifest,
+                                                            &action.label,
+                                                        ))
+                                                })
+                                        }}
+                                    </button>
+                                }
+                            }}
+                        />
+                    </fieldset>
+                    <div role="status">
+                        <p>
+                            {move || {
+                                original
+                                    .get()
+                                    .and_then(|connection| {
+                                        connection.installed.report.map(|report| report.observed_at)
+                                    })
+                            }}
+                        </p>
+                        <p>
+                            {move || {
+                                original
+                                    .get()
+                                    .and_then(|connection| {
+                                        connection
+                                            .installed
+                                            .report
+                                            .map(|report| translated(
+                                                i18n,
+                                                &connection.installed.manifest,
+                                                &report.message,
+                                            ))
+                                    })
+                            }}
+                        </p>
+                    </div>
+                    <dl>
+                        {move || {
+                            original
+                                .get()
+                                .map(|connection| {
+                                    connection
+                                        .installed
+                                        .report
+                                        .as_ref()
+                                        .and_then(|report| protocol::report_items(report).ok())
+                                        .unwrap_or_default()
+                                        .into_iter()
+                                        .map(|item| {
+                                            view! {
+                                                <dt>
+                                                    {translated(
+                                                        i18n,
+                                                        &connection.installed.manifest,
+                                                        &item.label,
+                                                    )}
+                                                </dt>
+                                                <dd>{item.value}</dd>
+                                            }
+                                        })
+                                        .collect_view()
+                                })
+                        }}
+                    </dl>
+                    <fieldset disabled={move || pending.get() || profile_dirty.get()}>
+                        <button
+                            id="search-connector-tickets"
+                            type="button"
+                            hidden={move || {
+                                original
+                                    .get()
+                                    .is_none_or(|connection| {
+                                        !connection
+                                            .installed
+                                            .manifest
+                                            .methods
+                                            .contains(&ConnectorMethod::TicketsSearch)
+                                    })
+                            }}
+                            disabled={move || !tickets.get().is_empty()}
+                            on:click={move |_| execute.with_value(|execute| execute(Action::Search(None)))}
+                        >
+                            {move || i18n.text("message.search_connector_tickets")}
+                        </button>
+                        <div hidden={move || page().is_none()}>
+                            <p>
+                                {move || {
+                                    i18n
+                                        .text(
+                                            "message.select_up_to_20_tickets_from_this_page_linked_cards_will_be_kept",
+                                        )
+                                }}
+                            </p>
+                            <p hidden={move || {
+                                page().is_none_or(|page| !page.items.is_empty())
+                            }}>{move || i18n.text("message.no_tickets_on_this_page")}</p>
+                            <For
+                                each={move || page().map(|page| page.items).unwrap_or_default()}
+                                key={move |ticket| (
+                                    original
+                                        .get_untracked()
+                                        .and_then(|connection| {
+                                            connection.installed.report.map(|report| report.id)
+                                        }),
+                                    ticket.instance.clone(),
+                                    ticket.id.clone(),
+                                )}
+                                children={move |ticket| {
+                                    let ticket = StoredValue::new(ticket);
+                                    view! {
+                                        <article>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    data-connector-ticket={ticket
+                                                        .with_value(|ticket| ticket.id.clone())}
+                                                    prop:checked={move || {
+                                                        ticket
+                                                            .with_value(|ticket| {
+                                                                tickets.get().contains(&ticket.identity())
+                                                            })
+                                                    }}
+                                                    disabled={move || {
+                                                        ticket
+                                                            .with_value(|ticket| {
+                                                                !tickets.get().contains(&ticket.identity())
+                                                                    && tickets.get().len() >= 20
+                                                            })
+                                                    }}
+                                                    on:change={move |event| {
+                                                        let checked = event_target_checked(&event);
+                                                        tickets
+                                                            .update(|selected| {
+                                                                let identity = ticket
+                                                                    .with_value(|ticket| ticket.identity());
+                                                                if checked {
+                                                                    selected.insert(identity);
+                                                                } else {
+                                                                    selected.remove(&identity);
+                                                                }
+                                                            });
+                                                        import_approved.set(false);
+                                                    }}
+                                                />
+                                                {ticket
+                                                    .with_value(|ticket| {
+                                                        format!("{}: {}", ticket.key, ticket.title)
+                                                    })}
+                                            </label>
+                                            <p>{ticket.with_value(|ticket| ticket.instance.clone())}</p>
+                                            <p>{ticket.with_value(|ticket| ticket.status.clone())}</p>
+                                            <p class="task-description">
+                                                {ticket.with_value(|ticket| ticket.description.clone())}
+                                            </p>
+                                        </article>
+                                    }
+                                }}
+                            />
+                            <p hidden={move || {
+                                page().is_none_or(|page| page.next.is_none())
+                            }}>
+                                {move || {
+                                    i18n
+                                        .text(
+                                            "message.more_results_are_available_this_page_does_not_represent_the_whol",
+                                        )
+                                }}
+                            </p>
+                            <button
+                                id="next-connector-tickets"
+                                type="button"
+                                hidden={move || page().is_none_or(|page| page.next.is_none())}
+                                disabled={move || !tickets.get().is_empty()}
+                                on:click={move |_| {
+                                    if let Some(cursor) = page().and_then(|page| page.next) {
+                                        execute.with_value(|execute| execute(Action::Search(Some(cursor))));
+                                    }
+                                }}
+                            >
+                                {move || i18n.text("message.next_page")}
+                            </button>
+                            <label for="connector-import-project">
+                                {move || i18n.text("message.destination_project")}
+                            </label>
+                            <select
+                                id="connector-import-project"
+                                prop:value={move || {
+                                    project
+                                        .get()
+                                        .and_then(|project| project.get::<String>("id").ok().flatten())
+                                        .unwrap_or_default()
+                                }}
+                                on:change={move |event| {
+                                    let id = event_target_value(&event);
+                                    project
+                                        .set(
+                                            board
+                                                .projects
+                                                .get_untracked()
+                                                .into_iter()
+                                                .find(|project| {
+                                                    project.get::<String>("id").ok().flatten().as_deref()
+                                                        == Some(id.as_str())
+                                                }),
+                                        );
+                                    import_approved.set(false);
+                                }}
+                            >
+                                <option value="">{move || i18n.text("message.choose_a_project")}</option>
+                                <For
+                                    each={move || board.projects.get()}
+                                    key={|project| (
+                                        crate::field(project, "id"),
+                                        crate::field(project, "name"),
+                                    )}
+                                    children={move |project| {
+                                        view! {
+                                            <option value={crate::field(
+                                                &project,
+                                                "id",
+                                            )}>{crate::field(&project, "name")}</option>
+                                        }
+                                    }}
+                                />
+                            </select>
+                            <label>
+                                <input
+                                    id="approve-connector-import"
+                                    type="checkbox"
+                                    disabled={move || tickets.get().is_empty() || project.get().is_none()}
+                                    prop:checked={move || import_approved.get()}
+                                    on:change={move |event| import_approved.set(event_target_checked(&event))}
+                                />
+                                {move || {
+                                    i18n
+                                        .text(
+                                            "message.create_missing_cards_from_this_exact_selection_and_project",
+                                        )
+                                }}
+                            </label>
+                            <button
+                                id="import-connector-tickets"
+                                type="button"
+                                disabled={move || {
+                                    !import_approved.get() || tickets.get().is_empty()
+                                        || project.get().is_none()
+                                }}
+                                on:click={move |_| execute.with_value(|execute| execute(Action::Import))}
+                            >
+                                {move || i18n.text("message.import_selection")}
+                            </button>
+                            <button
+                                id="cancel-connector-import"
+                                type="button"
+                                disabled={move || !import_dirty.get()}
+                                on:click={move |_| {
+                                    tickets.set(BTreeSet::new());
+                                    project.set(None);
+                                    import_approved.set(false);
+                                }}
+                            >
+                                {move || i18n.text("message.cancel_import_selection")}
+                            </button>
+                        </div>
+                    </fieldset>
+                </div>
+                <crate::connector_effects::ConnectorEffects
+                    connection={Signal::derive(move || original.get())}
+                    board
+                    token
+                    pending
+                    dirty={effects_dirty}
+                    blocked={Memo::new(move |_| {
+                        profile_dirty.get() || import_dirty.get()
+                            || registry.get().is_none_or(|registry| !registry.native_available)
+                    })}
+                />
             </fieldset>
-        </div>
-        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||registry.get().is_none_or(|registry|!registry.native_available))/>
-        </fieldset>
-        <p id="connectors-error" class="error" role="alert">{move||{let message=error.get();original.get().and_then(|connection|connection.installed.manifest.translations.get(i18n.code()).and_then(|messages|messages.get(&message)).or_else(||connection.installed.manifest.translations.get(&connection.installed.manifest.source_locale).and_then(|messages|messages.get(&message))).cloned()).unwrap_or_else(||i18n.text(&message))}}</p><p id="connectors-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+            <p id="connectors-error" class="error" role="alert">
+                {move || {
+                    let message = error.get();
+                    original
+                        .get()
+                        .and_then(|connection| {
+                            connection
+                                .installed
+                                .manifest
+                                .translations
+                                .get(i18n.code())
+                                .and_then(|messages| messages.get(&message))
+                                .or_else(|| {
+                                    connection
+                                        .installed
+                                        .manifest
+                                        .translations
+                                        .get(&connection.installed.manifest.source_locale)
+                                        .and_then(|messages| messages.get(&message))
+                                })
+                                .cloned()
+                        })
+                        .unwrap_or_else(|| i18n.text(&message))
+                }}
+            </p>
+            <p id="connectors-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
+        </section>
+    }
 }

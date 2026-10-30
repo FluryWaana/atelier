@@ -221,25 +221,384 @@ pub fn TimeTask(
         discard.set(false);
         error.set(String::new());
     };
-    view! {<section class="task-files" aria-labelledby="time-task-heading" aria-busy=move||pending.get().to_string()><h3 id="time-task-heading">{move||i18n.text("message.human_time")}</h3>
-        <p class="field-help">{move||i18n.text("message.local_entries_and_one_timer_for_the_entire_application_no_automa")}</p>
-        <p>{move||format!("{} : {}",i18n.text("message.human_time"),duration_text(entries.with(|entries|entries.iter().fold(0u64,|sum,entry|sum.saturating_add(seconds(entry,now.get()))))))}</p>
-        <p>{move||format!("{} : {}",i18n.text("message.measured_active_agent_time"),duration_text(board.runs.with(|runs|runs.iter().filter(|run|field(run,"cardId")==id.get_value()).filter_map(|run|run.get::<u64>("activeMilliseconds").ok().flatten()).fold(0u64,u64::saturating_add)/1000)))}</p>
-        <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();save.with_value(|save|save(event.submitter().is_some_and(|button|button.id()=="start-human-timer")));}><fieldset disabled=move||pending.get()||blocked.get()||!export_drafts.with(std::collections::BTreeSet::is_empty)||(archived&&selected.with(|entry|entry.is_none()))>
-            <label for="time-date">{move||i18n.text("message.date")}</label><input id="time-date" type="date" required prop:value=move||draft.get().date on:input=move|event|draft.update(|draft|draft.date=event_target_value(&event)) />
-            <label for="time-start">{move||i18n.text("message.start_time")}</label><input id="time-start" type="time" step="1" required prop:value=move||draft.get().start on:input=move|event|draft.update(|draft|draft.start=event_target_value(&event)) />
-            <label for="time-duration">{move||i18n.text("message.duration_hh_mm_ss")}</label><input id="time-duration" required maxlength="8" inputmode="text" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}" placeholder="00:30:00" prop:value=move||draft.get().duration on:input=move|event|draft.update(|draft|draft.duration=event_target_value(&event)) />
-            <label for="time-description">{move||i18n.text("message.work_description")}</label><textarea id="time-description" required maxlength="4000" rows="3" prop:value=move||draft.get().description on:input=move|event|draft.update(|draft|draft.description=event_target_value(&event)) />
-            <div class="editor-actions"><button id="save-time" type="submit">{move||i18n.text("message.save_time")}</button><button id="start-human-timer" type="submit" disabled=move||selected.with(|entry|entry.is_some())||board.times.with(|entries|entries.iter().any(|entry|entry.has_text("runningSince").unwrap_or(false)))>{move||i18n.text("message.start_timer")}</button></div>
-        </fieldset></form><button id="reset-time-draft" type="button" hidden=editor_only disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){discard.set(true);}else{reset();}}>{move||i18n.text("message.new_entry")}</button>
-        <div class="confirmation" role="alert" hidden=move||!discard.get()><p>{move||i18n.text("message.discard_the_unsaved_time_entry")}</p><button id="discard-time-draft" type="button" on:click=move|_|reset()>{move||i18n.text("message.discard")}</button><button type="button" on:click=move|_|discard.set(false)>{move||i18n.text("message.keep_editing")}</button></div>
-        <Show when=move||!editor_only><p hidden=move||!entries.with(|entries|entries.is_empty())>{move||i18n.text("message.no_time_entries_for_this_task")}</p>
-        <ul><For each=move||{let mut ids=entries.with(|entries|entries.iter().skip(page.get()*100).take(100).map(|entry|field(entry,"id")).collect::<Vec<_>>());for id in export_drafts.get(){if !ids.contains(&id){ids.push(id);}}ids} key=|id|id.clone() children=move|entry_id|{let entry_id=StoredValue::new(entry_id);let entry=Signal::derive(move||board.times.with(|entries|entries.iter().find(|entry|field(entry,"id")==entry_id.get_value()).cloned().unwrap_or_default()));view!{<li data-time-id=entry_id.get_value()><strong>{move||format!("{} {} · {}",field(&entry.get(),"date"),field(&entry.get(),"startTime"),duration_text(seconds(&entry.get(),now.get())))}</strong><p>{move||field(&entry.get(),"description")}</p><p>{move||i18n.text(match field(&entry.get(),"exportState").as_str(){"draft" if board.settings.get().string_equals("timeProvider","local").unwrap_or(true)=>"message.recorded_locally","draft"=>"message.not_submitted","exported"=>"message.submitted","sending"=>"message.submitting","uncertain"=>"message.uncertain_submission",_=>"message.unknown_submission_state"})}</p><p class="field-help" hidden=move||entry.get().raw("connectorExport").is_none()>{move||i18n.text("message.export_tracked_in_module_0_s_journal_open_its_settings_to_reread").replace("{0}",&field(&entry.get(),"exportConnector"))}</p><p hidden=move||!entry.with(|entry|entry.flag("interrupted").unwrap_or(false))>{move||i18n.text("message.timer_interrupted_on_restart_duration_preserved")}</p><button type="button" hidden=move||!entry.with(|entry|entry.has_text("runningSince").unwrap_or(false)) disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Method::POST,format!("/api/time/{}/stop",entry_id.get_value()),serde_json::json!({}),false))>{move||i18n.text("message.stop_timer")}</button><crate::tempo_export::TempoExport entry card_id=id.get_value() board token pending blocked=Memo::new(move |_|blocked.get()||own_dirty.get()) drafts=export_drafts archived /><button class="edit-time" type="button" disabled=move||pending.get()||blocked.get()||entry.with(|entry|entry.has_text("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|select.with_value(|select|select(entry.get_untracked()))>{move||i18n.text("message.edit_entry")}</button><button class="delete-time" type="button" disabled=move||pending.get()||blocked.get()||own_dirty.get()||!export_drafts.with(std::collections::BTreeSet::is_empty)||entry.with(|entry|entry.has_text("runningSince").unwrap_or(false)||!entry.string_equals("exportState","draft").unwrap_or(false)) on:click=move|_|removing.set(Some(entry.get_untracked()))>{move||i18n.text("message.delete_entry")}</button></li>}} /></ul>
-        <div class="editor-actions" hidden=move||entries.with(|entries|entries.len()<=100)><button type="button" disabled=move||page.get()==0||!export_drafts.with(std::collections::BTreeSet::is_empty) on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("message.previous")}</button><button type="button" disabled=move||!export_drafts.with(std::collections::BTreeSet::is_empty)||entries.with(|entries|(page.get()+1)*100>=entries.len()) on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("message.next")}</button></div>
-        <div class="confirmation" role="alert" hidden=move||removing.with(|entry|entry.is_none())><p>{move||i18n.text("message.permanently_delete_this_time_entry")}</p><button id="confirm-delete-time" type="button" disabled=move||pending.get() on:click=move|_|{if let Some(entry)=removing.get_untracked(){execute.with_value(|execute|execute(Method::DELETE,format!("/api/time/{}",field(&entry,"id")),serde_json::json!({"expected":entry}),true));}}>{move||i18n.text("message.delete_permanently")}</button><button type="button" disabled=move||pending.get() on:click=move|_|removing.set(None)>{move||i18n.text("message.cancel")}</button></div>
-        </Show><p role="status">{move||if own_dirty.get(){i18n.text("message.unsaved_time_entry")}else{String::new()}}</p>
-        <p id="time-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="time-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+    view! {
+        <section
+            class="task-files"
+            aria-labelledby="time-task-heading"
+            aria-busy={move || pending.get().to_string()}
+        >
+            <h3 id="time-task-heading">{move || i18n.text("message.human_time")}</h3>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.local_entries_and_one_timer_for_the_entire_application_no_automa")
+                }}
+            </p>
+            <p>
+                {move || {
+                    format!(
+                        "{} : {}",
+                        i18n.text("message.human_time"),
+                        duration_text(
+                            entries
+                                .with(|entries| {
+                                    entries
+                                        .iter()
+                                        .fold(
+                                            0u64,
+                                            |sum, entry| sum.saturating_add(seconds(entry, now.get())),
+                                        )
+                                }),
+                        ),
+                    )
+                }}
+            </p>
+            <p>
+                {move || {
+                    format!(
+                        "{} : {}",
+                        i18n.text("message.measured_active_agent_time"),
+                        duration_text(
+                            board
+                                .runs
+                                .with(|runs| {
+                                    runs
+                                        .iter()
+                                        .filter(|run| field(run, "cardId") == id.get_value())
+                                        .filter_map(|run| run.get::<u64>("activeMilliseconds").ok().flatten())
+                                        .fold(0u64, u64::saturating_add) / 1000
+                                }),
+                        ),
+                    )
+                }}
+            </p>
+            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+                event.prevent_default();
+                save.with_value(|save| save(
+                    event.submitter().is_some_and(|button| button.id() == "start-human-timer"),
+                ));
+            }}>
+                <fieldset disabled={move || {
+                    pending.get() || blocked.get()
+                        || !export_drafts.with(std::collections::BTreeSet::is_empty)
+                        || (archived && selected.with(|entry| entry.is_none()))
+                }}>
+                    <label for="time-date">{move || i18n.text("message.date")}</label>
+                    <input
+                        id="time-date"
+                        type="date"
+                        required
+                        prop:value={move || draft.get().date}
+                        on:input={move |event| draft.update(|draft| draft.date = event_target_value(&event))}
+                    />
+                    <label for="time-start">{move || i18n.text("message.start_time")}</label>
+                    <input
+                        id="time-start"
+                        type="time"
+                        step="1"
+                        required
+                        prop:value={move || draft.get().start}
+                        on:input={move |event| draft.update(|draft| draft.start = event_target_value(&event))}
+                    />
+                    <label for="time-duration">{move || i18n.text("message.duration_hh_mm_ss")}</label>
+                    <input
+                        id="time-duration"
+                        required
+                        maxlength="8"
+                        inputmode="text"
+                        pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                        placeholder="00:30:00"
+                        prop:value={move || draft.get().duration}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.duration = event_target_value(&event))
+                        }}
+                    />
+                    <label for="time-description">{move || i18n.text("message.work_description")}</label>
+                    <textarea
+                        id="time-description"
+                        required
+                        maxlength="4000"
+                        rows="3"
+                        prop:value={move || draft.get().description}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.description = event_target_value(&event))
+                        }}
+                    />
+                    <div class="editor-actions">
+                        <button id="save-time" type="submit">
+                            {move || i18n.text("message.save_time")}
+                        </button>
+                        <button
+                            id="start-human-timer"
+                            type="submit"
+                            disabled={move || {
+                                selected.with(|entry| entry.is_some())
+                                    || board
+                                        .times
+                                        .with(|entries| {
+                                            entries
+                                                .iter()
+                                                .any(|entry| entry.has_text("runningSince").unwrap_or(false))
+                                        })
+                            }}
+                        >
+                            {move || i18n.text("message.start_timer")}
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+            <button
+                id="reset-time-draft"
+                type="button"
+                hidden={editor_only}
+                disabled={move || pending.get()}
+                on:click={move |_| {
+                    if own_dirty.get_untracked() {
+                        discard.set(true);
+                    } else {
+                        reset();
+                    }
+                }}
+            >
+                {move || i18n.text("message.new_entry")}
+            </button>
+            <div class="confirmation" role="alert" hidden={move || !discard.get()}>
+                <p>{move || i18n.text("message.discard_the_unsaved_time_entry")}</p>
+                <button id="discard-time-draft" type="button" on:click={move |_| reset()}>
+                    {move || i18n.text("message.discard")}
+                </button>
+                <button type="button" on:click={move |_| discard.set(false)}>
+                    {move || i18n.text("message.keep_editing")}
+                </button>
+            </div>
+            <Show when={move || !editor_only}>
+                <p hidden={move || {
+                    !entries.with(|entries| entries.is_empty())
+                }}>{move || i18n.text("message.no_time_entries_for_this_task")}</p>
+                <ul>
+                    <For
+                        each={move || {
+                            let mut ids = entries
+                                .with(|entries| {
+                                    entries
+                                        .iter()
+                                        .skip(page.get() * 100)
+                                        .take(100)
+                                        .map(|entry| field(entry, "id"))
+                                        .collect::<Vec<_>>()
+                                });
+                            for id in export_drafts.get() {
+                                if !ids.contains(&id) {
+                                    ids.push(id);
+                                }
+                            }
+                            ids
+                        }}
+                        key={|id| id.clone()}
+                        children={move |entry_id| {
+                            let entry_id = StoredValue::new(entry_id);
+                            let entry = Signal::derive(move || {
+                                board
+                                    .times
+                                    .with(|entries| {
+                                        entries
+                                            .iter()
+                                            .find(|entry| field(entry, "id") == entry_id.get_value())
+                                            .cloned()
+                                            .unwrap_or_default()
+                                    })
+                            });
+                            view! {
+                                <li data-time-id={entry_id.get_value()}>
+                                    <strong>
+                                        {move || {
+                                            format!(
+                                                "{} {} · {}",
+                                                field(&entry.get(), "date"),
+                                                field(&entry.get(), "startTime"),
+                                                duration_text(seconds(&entry.get(), now.get())),
+                                            )
+                                        }}
+                                    </strong>
+                                    <p>{move || field(&entry.get(), "description")}</p>
+                                    <p>
+                                        {move || {
+                                            i18n
+                                                .text(
+                                                    match field(&entry.get(), "exportState").as_str() {
+                                                        "draft" if board
+                                                            .settings
+                                                            .get()
+                                                            .string_equals("timeProvider", "local")
+                                                            .unwrap_or(true) => "message.recorded_locally",
+                                                        "draft" => "message.not_submitted",
+                                                        "exported" => "message.submitted",
+                                                        "sending" => "message.submitting",
+                                                        "uncertain" => "message.uncertain_submission",
+                                                        _ => "message.unknown_submission_state",
+                                                    },
+                                                )
+                                        }}
+                                    </p>
+                                    <p
+                                        class="field-help"
+                                        hidden={move || entry.get().raw("connectorExport").is_none()}
+                                    >
+                                        {move || {
+                                            i18n
+                                                .text(
+                                                    "message.export_tracked_in_module_0_s_journal_open_its_settings_to_reread",
+                                                )
+                                                .replace("{0}", &field(&entry.get(), "exportConnector"))
+                                        }}
+                                    </p>
+                                    <p hidden={move || {
+                                        !entry.with(|entry| entry.flag("interrupted").unwrap_or(false))
+                                    }}>
+                                        {move || {
+                                            i18n
+                                                .text(
+                                                    "message.timer_interrupted_on_restart_duration_preserved",
+                                                )
+                                        }}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        hidden={move || {
+                                            !entry
+                                                .with(|entry| entry.has_text("runningSince").unwrap_or(false))
+                                        }}
+                                        disabled={move || pending.get()}
+                                        on:click={move |_| {
+                                            execute
+                                                .with_value(|execute| execute(
+                                                    Method::POST,
+                                                    format!("/api/time/{}/stop", entry_id.get_value()),
+                                                    serde_json::json!({}),
+                                                    false,
+                                                ))
+                                        }}
+                                    >
+                                        {move || i18n.text("message.stop_timer")}
+                                    </button>
+                                    <crate::tempo_export::TempoExport
+                                        entry
+                                        card_id={id.get_value()}
+                                        board
+                                        token
+                                        pending
+                                        blocked={Memo::new(move |_| blocked.get() || own_dirty.get())}
+                                        drafts={export_drafts}
+                                        archived
+                                    />
+                                    <button
+                                        class="edit-time"
+                                        type="button"
+                                        disabled={move || {
+                                            pending.get() || blocked.get()
+                                                || entry
+                                                    .with(|entry| {
+                                                        entry.has_text("runningSince").unwrap_or(false)
+                                                            || !entry
+                                                                .string_equals("exportState", "draft")
+                                                                .unwrap_or(false)
+                                                    })
+                                        }}
+                                        on:click={move |_| {
+                                            select.with_value(|select| select(entry.get_untracked()))
+                                        }}
+                                    >
+                                        {move || i18n.text("message.edit_entry")}
+                                    </button>
+                                    <button
+                                        class="delete-time"
+                                        type="button"
+                                        disabled={move || {
+                                            pending.get() || blocked.get() || own_dirty.get()
+                                                || !export_drafts.with(std::collections::BTreeSet::is_empty)
+                                                || entry
+                                                    .with(|entry| {
+                                                        entry.has_text("runningSince").unwrap_or(false)
+                                                            || !entry
+                                                                .string_equals("exportState", "draft")
+                                                                .unwrap_or(false)
+                                                    })
+                                        }}
+                                        on:click={move |_| removing.set(Some(entry.get_untracked()))}
+                                    >
+                                        {move || i18n.text("message.delete_entry")}
+                                    </button>
+                                </li>
+                            }
+                        }}
+                    />
+                </ul>
+                <div class="editor-actions" hidden={move || entries.with(|entries| entries.len() <= 100)}>
+                    <button
+                        type="button"
+                        disabled={move || {
+                            page.get() == 0 || !export_drafts.with(std::collections::BTreeSet::is_empty)
+                        }}
+                        on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
+                    >
+                        {move || i18n.text("message.previous")}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={move || {
+                            !export_drafts.with(std::collections::BTreeSet::is_empty)
+                                || entries.with(|entries| (page.get() + 1) * 100 >= entries.len())
+                        }}
+                        on:click={move |_| page.update(|page| *page += 1)}
+                    >
+                        {move || i18n.text("message.next")}
+                    </button>
+                </div>
+                <div
+                    class="confirmation"
+                    role="alert"
+                    hidden={move || removing.with(|entry| entry.is_none())}
+                >
+                    <p>{move || i18n.text("message.permanently_delete_this_time_entry")}</p>
+                    <button
+                        id="confirm-delete-time"
+                        type="button"
+                        disabled={move || pending.get()}
+                        on:click={move |_| {
+                            if let Some(entry) = removing.get_untracked() {
+                                execute
+                                    .with_value(|execute| execute(
+                                        Method::DELETE,
+                                        format!("/api/time/{}", field(&entry, "id")),
+                                        serde_json::json!({"expected":entry}),
+                                        true,
+                                    ));
+                            }
+                        }}
+                    >
+                        {move || i18n.text("message.delete_permanently")}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={move || pending.get()}
+                        on:click={move |_| removing.set(None)}
+                    >
+                        {move || i18n.text("message.cancel")}
+                    </button>
+                </div>
+            </Show>
+            <p role="status">
+                {move || {
+                    if own_dirty.get() { i18n.text("message.unsaved_time_entry") } else { String::new() }
+                }}
+            </p>
+            <p id="time-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p id="time-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
+        </section>
+    }
 }
 #[component]
 pub fn TimerBanner(
@@ -297,5 +656,41 @@ pub fn TimerBanner(
             }
         });
     };
-    view! {<aside id={if nested{"human-timer-in-task"}else{"human-timer-banner"}} class="task-files" hidden=move||active.with(|entry|entry.is_none()) aria-label=move||i18n.text("message.active_timer")><strong>{move||i18n.text("message.active_timer")}</strong><span>{move||active.get().map(|entry|duration_text(seconds(&entry,now.get()))).unwrap_or_default()}</span><button id={if nested{"open-timer-task-in-task"}else{"open-timer-task"}} type="button" on:click=move|_|{if let Some(entry)=active.get_untracked(){on_task.run(field(&entry,"cardId"));}}>{move||i18n.text("message.open_the_timer_task")}</button><button id={if nested{"stop-human-timer-in-task"}else{"stop-human-timer"}} type="button" disabled=move||pending.get() on:click=stop>{move||i18n.text("message.stop_timer")}</button><p class="error" role="alert">{move||i18n.text(&error.get())}</p></aside>}
+    view! {
+        <aside
+            id={if nested { "human-timer-in-task" } else { "human-timer-banner" }}
+            class="task-files"
+            hidden={move || active.with(|entry| entry.is_none())}
+            aria-label={move || i18n.text("message.active_timer")}
+        >
+            <strong>{move || i18n.text("message.active_timer")}</strong>
+            <span>
+                {move || {
+                    active.get().map(|entry| duration_text(seconds(&entry, now.get()))).unwrap_or_default()
+                }}
+            </span>
+            <button
+                id={if nested { "open-timer-task-in-task" } else { "open-timer-task" }}
+                type="button"
+                on:click={move |_| {
+                    if let Some(entry) = active.get_untracked() {
+                        on_task.run(field(&entry, "cardId"));
+                    }
+                }}
+            >
+                {move || i18n.text("message.open_the_timer_task")}
+            </button>
+            <button
+                id={if nested { "stop-human-timer-in-task" } else { "stop-human-timer" }}
+                type="button"
+                disabled={move || pending.get()}
+                on:click={stop}
+            >
+                {move || i18n.text("message.stop_timer")}
+            </button>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+        </aside>
+    }
 }

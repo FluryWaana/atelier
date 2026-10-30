@@ -11,7 +11,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-fn status(error: &crate::Error) -> StatusCode {
+fn status(error: &crate::Error, default: StatusCode) -> StatusCode {
     if let Some(error) = error.downcast_ref::<CardFailure>() {
         return match error {
             CardFailure::Missing => StatusCode::NOT_FOUND,
@@ -73,11 +73,23 @@ fn status(error: &crate::Error) -> StatusCode {
     {
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
-    StatusCode::BAD_REQUEST
+    default
 }
 
 pub(super) fn error(error: crate::Error, internal_message: &str) -> Response {
-    let status = status(&error);
+    error_with_default(error, internal_message, StatusCode::BAD_REQUEST)
+}
+
+pub(super) fn conflict(error: crate::Error, internal_message: &str) -> Response {
+    error_with_default(error, internal_message, StatusCode::CONFLICT)
+}
+
+fn error_with_default(
+    error: crate::Error,
+    internal_message: &str,
+    default: StatusCode,
+) -> Response {
+    let status = status(&error, default);
     if status == StatusCode::INTERNAL_SERVER_ERROR {
         failure(status, internal_message)
     } else {
@@ -141,5 +153,24 @@ mod tests {
         let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
         let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["error"], "message.storage_read_failed");
+        for internal in [
+            Box::new(rusqlite::Error::InvalidQuery) as crate::Error,
+            Box::new(std::io::Error::other("synthetic private path")),
+            Box::new(serde_json::from_str::<bool>("invalid synthetic document").unwrap_err()),
+        ] {
+            let response = conflict(internal, "message.storage_read_failed");
+            assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+            let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+            let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(body["error"], "message.storage_read_failed");
+        }
+        assert_eq!(
+            conflict("message.operation_refused".into(), "internal").status(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            conflict(CardFailure::Invalid("invalid").into(), "internal").status(),
+            StatusCode::BAD_REQUEST
+        );
     }
 }

@@ -120,28 +120,107 @@ pub fn ConnectorTicketTransitions(
                         Err(message) => error.set(message),
                     }
                 } else {
-                    error
-                        .set("message.the_task_changed_during_the_read_reread_its_transitions".into());
+                    error.set(
+                        "message.the_task_changed_during_the_read_reread_its_transitions".into(),
+                    );
                 }
             }
         });
     });
-    view! {<div class="task-files">
-        <h4>{move||i18n.text("message.module_ticket_transitions")}</h4>
-        <button id="read-connector-transitions" type="button" disabled=move||pending.get()||blocked.get()||journal_dirty.get() on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.read_available_transitions")}</button>
-        {move||preview.get().and_then(|(_,report)|protocol::ticket_transitions(&report.output).ok()).map(|report|view!{
-            <p>{i18n.text("message.starting_remote_status")}" : "{report.status}</p>
-            <p hidden=!report.transitions.is_empty()>{i18n.text("message.no_transition_is_available_for_this_ticket")}</p>
-            <label for="connector-ticket-transition">{i18n.text("message.transition")}</label>
-            <select id="connector-ticket-transition" disabled=move||pending.get()||blocked.get() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))>
-                <option value="">{i18n.text("message.choose_a_transition")}</option>
-                {report.transitions.into_iter().map(|transition|view!{<option value=transition.id disabled=transition.requires_fields>{format!("{}{}{}{}",transition.name,i18n.text("message.to_separator"),transition.status,if transition.requires_fields {i18n.text("message.additional_fields_required")}else{String::new()})}</option>}).collect_view()}
-            </select>
-            <button id="prepare-connector-transition" type="button" disabled=move||pending.get()||blocked.get()||selected.get().is_empty() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.prepare_this_transition_in_the_journal")}</button>
-            <button type="button" disabled=move||pending.get() on:click=move |_|{preview.set(None);selected.set(String::new());}>{move||i18n.text("message.cancel_preview")}</button>
-        })}
-        <p hidden=move||!notice.get() role="status">{move||i18n.text("message.transition_prepared_check_the_ticket_and_statuses_in_the_journal")}</p>
-        <p role="alert" class="error">{move||i18n.text(&error.get())}</p>
-        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||connection.get()) board token pending dirty=journal_dirty blocked=Memo::new(move |_|blocked.get()||preview.get().is_some()) card_id/>
-    </div>}
+    view! {
+        <div class="task-files">
+            <h4>{move || i18n.text("message.module_ticket_transitions")}</h4>
+            <button
+                id="read-connector-transitions"
+                type="button"
+                disabled={move || pending.get() || blocked.get() || journal_dirty.get()}
+                on:click={move |_| execute.with_value(|execute| execute(false))}
+            >
+                {move || i18n.text("message.read_available_transitions")}
+            </button>
+            {move || {
+                preview
+                    .get()
+                    .and_then(|(_, report)| protocol::ticket_transitions(&report.output).ok())
+                    .map(|report| {
+                        view! {
+                            <p>{i18n.text("message.starting_remote_status")}" : "{report.status}</p>
+                            <p hidden={!report
+                                .transitions
+                                .is_empty()}>
+                                {i18n.text("message.no_transition_is_available_for_this_ticket")}
+                            </p>
+                            <label for="connector-ticket-transition">{i18n.text("message.transition")}</label>
+                            <select
+                                id="connector-ticket-transition"
+                                disabled={move || pending.get() || blocked.get()}
+                                prop:value={move || selected.get()}
+                                on:change={move |event| selected.set(event_target_value(&event))}
+                            >
+                                <option value="">{i18n.text("message.choose_a_transition")}</option>
+                                {report
+                                    .transitions
+                                    .into_iter()
+                                    .map(|transition| {
+                                        view! {
+                                            <option
+                                                value={transition.id}
+                                                disabled={transition.requires_fields}
+                                            >
+                                                {format!(
+                                                    "{}{}{}{}",
+                                                    transition.name,
+                                                    i18n.text("message.to_separator"),
+                                                    transition.status,
+                                                    if transition.requires_fields {
+                                                        i18n.text("message.additional_fields_required")
+                                                    } else {
+                                                        String::new()
+                                                    },
+                                                )}
+                                            </option>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </select>
+                            <button
+                                id="prepare-connector-transition"
+                                type="button"
+                                disabled={move || pending.get() || blocked.get() || selected.get().is_empty()}
+                                on:click={move |_| execute.with_value(|execute| execute(true))}
+                            >
+                                {move || i18n.text("message.prepare_this_transition_in_the_journal")}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={move || pending.get()}
+                                on:click={move |_| {
+                                    preview.set(None);
+                                    selected.set(String::new());
+                                }}
+                            >
+                                {move || i18n.text("message.cancel_preview")}
+                            </button>
+                        }
+                    })
+            }}
+            <p hidden={move || !notice.get()} role="status">
+                {move || {
+                    i18n.text("message.transition_prepared_check_the_ticket_and_statuses_in_the_journal")
+                }}
+            </p>
+            <p role="alert" class="error">
+                {move || i18n.text(&error.get())}
+            </p>
+            <crate::connector_effects::ConnectorEffects
+                connection={Signal::derive(move || connection.get())}
+                board
+                token
+                pending
+                dirty={journal_dirty}
+                blocked={Memo::new(move |_| blocked.get() || preview.get().is_some())}
+                card_id
+            />
+        </div>
+    }
 }

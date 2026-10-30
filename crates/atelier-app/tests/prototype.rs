@@ -73,6 +73,89 @@ async fn invalid_text_and_field_types_never_create_cards() {
 }
 
 #[tokio::test]
+async fn unavailable_credentials_do_not_block_local_cards_or_time_and_are_never_erased() {
+    use atelier_app::infrastructure::{store::Documents, token_vault};
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let directory = PrototypeDirectory::open(data.path()).unwrap();
+    let database = directory.database().unwrap();
+    database
+        .call(|store| {
+            store.save_settings(&json!({"processConnectors":[],"baseBranch":"local"}))?;
+            // Invalid envelopes fail before any operating-system credential lookup.
+            token_vault::save_encrypted(store, Some("synthetic-unavailable-envelope"))
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+    drop(database);
+    drop(directory);
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let post = |path: &str| {
+        client
+            .post(format!("{address}{path}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    let response = post("/api/cards")
+        .json(&json!({"title":"Synthetic local task"}))
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success());
+    let card: Card = response.json().await.unwrap();
+    let response = post("/api/time").json(&json!({"cardId":card.id,"seconds":60,"date":"2026-10-30","startTime":"09:00:00","description":"Synthetic local time"})).send().await.unwrap();
+    assert!(response.status().is_success());
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["cards"].as_array().unwrap().len(), 1);
+    assert_eq!(board["times"].as_array().unwrap().len(), 1);
+    assert_eq!(board["settings"]["tokenSet"], Value::Null);
+    assert_eq!(
+        board["settings"]["credentialError"],
+        "message.credentials_unavailable_local_data_remain_available"
+    );
+    let response = client
+        .put(format!("{address}/api/settings"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"baseBranch":"changed"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 503);
+    stop(&address, &token, task).await;
+    let directory = PrototypeDirectory::open(data.path()).unwrap();
+    let database = directory.database().unwrap();
+    database
+        .call(move |store| {
+            assert_eq!(
+                token_vault::read_encrypted(store)?.as_deref(),
+                Some("synthetic-unavailable-envelope")
+            );
+            assert_eq!(store.settings::<Value>()?["baseBranch"], "local");
+            assert!(
+                store
+                    .document::<Card>(Documents::Cards, &card.id)?
+                    .is_some()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+}
+
+#[tokio::test]
 async fn folder_selection_requires_the_local_session_and_a_native_launcher() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

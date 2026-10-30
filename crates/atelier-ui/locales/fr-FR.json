@@ -1,4 +1,6 @@
 {
+  "message.credentials_unavailable_no_settings_changed": "Les connexions sont indisponibles. Aucun réglage modifié.",
+  "message.credentials_unavailable_local_data_remain_available": "Les connexions sont indisponibles. Vos tâches et votre suivi du temps restent accessibles en local.",
   "message.invalid_card_id": "L’identifiant de la tâche doit être un texte non vide.",
   "message.github_update_backup": "La base de données est sauvegardée avant le changement de version. Si la sauvegarde échoue, la mise à jour est refusée.",
   "message.update_data_backup_failed": "La sauvegarde des données a échoué. Mise à jour refusée.",

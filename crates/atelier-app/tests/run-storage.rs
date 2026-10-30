@@ -6,6 +6,40 @@ fn document(json: &str) -> Document {
 }
 
 #[tokio::test]
+async fn persisted_activity_blocks_card_changes_without_a_live_process_manager() {
+    use atelier_core::{application::card_lifecycle, contracts::Card};
+    let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+    database
+        .call(|store| {
+            let card: Card = serde_json::from_str(r#"{"id":"card","title":"Synthetic"}"#)?;
+            let body = document(r#"{"archived":true}"#);
+            for status in ["starting", "running", "stopping", "completed"] {
+                store.put(
+                    Documents::Runs,
+                    &serde_json::json!({"id":"run","cardId":"card","status":status}),
+                )?;
+                let active = runs::active_cards(store)?;
+                let archived = card_lifecycle::archive(
+                    card.clone(),
+                    &body,
+                    &[],
+                    |id| active.contains(id),
+                    "now".into(),
+                );
+                assert_eq!(archived.is_ok(), status == "completed");
+                assert_eq!(
+                    card_lifecycle::remove(&card, &[], &[], &[], |id| active.contains(id)).is_ok(),
+                    status == "completed"
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    database.close().await.unwrap();
+}
+
+#[tokio::test]
 async fn jira_read_or_uncertain_write_prevents_reserving_any_agent() {
     let database = Database::open(std::path::Path::new(":memory:")).unwrap();
     database.call(|store| {

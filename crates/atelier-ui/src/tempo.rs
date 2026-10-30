@@ -105,18 +105,117 @@ pub fn TempoSettings(
         });
     });
     Effect::new(move |_| execute.with_value(|execute| execute(false)));
-    view! {<section id="tempo-settings" aria-labelledby="tempo-settings-heading" aria-busy=move||loading.get().to_string()><h3 id="tempo-settings-heading">"Tempo Cloud"</h3>
-        <p>{move||i18n.text("message.the_tempo_token_is_stored_in_the_vault_choose_its_region_changin")}</p>
-        <p>{move||i18n.text("message.associated_jira_site")}" "{move||original.get().map(|connection|connection.jira_url).filter(|url|!url.is_empty()).unwrap_or_else(||i18n.text("message.no_jira_site_configured"))}</p>
-        <fieldset disabled=move||pending.get()||loading.get()||original.get().is_none()>
-            <label for="tempo-base">{move||i18n.text("message.tempo_region")}</label><select id="tempo-base" prop:value=move||base.get() on:change=move|event|base.set(event_target_value(&event))><option value="https://api.tempo.io/4">{move||i18n.text("message.automatic")}</option><option value="https://api.eu.tempo.io/4">{move||i18n.text("message.europe")}</option><option value="https://api.us.tempo.io/4">{move||i18n.text("message.americas")}</option></select>
-            <p>{move||i18n.text(if original.get().is_some_and(|connection|connection.token_set){"message.tempo_token_stored"}else{"message.no_tempo_token_stored"})}</p>
-            <label for="tempo-token">{move||i18n.text("message.new_tempo_token")}</label><input id="tempo-token" type="password" autocomplete="off" maxlength="4000" prop:value=move||key.get() disabled=move||clear.get() on:input=move|event|key.set(event_target_value(&event)) />
-            <label><input id="tempo-clear-token" type="checkbox" prop:checked=move||clear.get() on:change=move|event|{clear.set(event_target_checked(&event));if clear.get_untracked(){key.set(String::new());}} />{move||i18n.text("message.remove_tempo_token")}</label>
-            <button id="save-tempo" type="button" disabled=move||!own_dirty.get() on:click=move|_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.save_tempo")}</button>
-        </fieldset>
-        <button id="reload-tempo" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(false));}}>{move||i18n.text("message.reload_tempo")}</button>
-        <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("message.discard_the_tempo_draft_and_read_the_connection_again")}</p><button id="confirm-reload-tempo" type="button" on:click=move|_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.discard_and_reload")}</button><button type="button" on:click=move|_|reload.set(false)>{move||i18n.text("message.back")}</button></div>
-        <p id="tempo-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="tempo-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+    view! {
+        <section
+            id="tempo-settings"
+            aria-labelledby="tempo-settings-heading"
+            aria-busy={move || loading.get().to_string()}
+        >
+            <h3 id="tempo-settings-heading">"Tempo Cloud"</h3>
+            <p>
+                {move || {
+                    i18n.text("message.the_tempo_token_is_stored_in_the_vault_choose_its_region_changin")
+                }}
+            </p>
+            <p>
+                {move || i18n.text("message.associated_jira_site")}" "
+                {move || {
+                    original
+                        .get()
+                        .map(|connection| connection.jira_url)
+                        .filter(|url| !url.is_empty())
+                        .unwrap_or_else(|| i18n.text("message.no_jira_site_configured"))
+                }}
+            </p>
+            <fieldset disabled={move || pending.get() || loading.get() || original.get().is_none()}>
+                <label for="tempo-base">{move || i18n.text("message.tempo_region")}</label>
+                <select
+                    id="tempo-base"
+                    prop:value={move || base.get()}
+                    on:change={move |event| base.set(event_target_value(&event))}
+                >
+                    <option value="https://api.tempo.io/4">{move || i18n.text("message.automatic")}</option>
+                    <option value="https://api.eu.tempo.io/4">{move || i18n.text("message.europe")}</option>
+                    <option value="https://api.us.tempo.io/4">{move || i18n.text("message.americas")}</option>
+                </select>
+                <p>
+                    {move || {
+                        i18n
+                            .text(
+                                if original.get().is_some_and(|connection| connection.token_set) {
+                                    "message.tempo_token_stored"
+                                } else {
+                                    "message.no_tempo_token_stored"
+                                },
+                            )
+                    }}
+                </p>
+                <label for="tempo-token">{move || i18n.text("message.new_tempo_token")}</label>
+                <input
+                    id="tempo-token"
+                    type="password"
+                    autocomplete="off"
+                    maxlength="4000"
+                    prop:value={move || key.get()}
+                    disabled={move || clear.get()}
+                    on:input={move |event| key.set(event_target_value(&event))}
+                />
+                <label>
+                    <input
+                        id="tempo-clear-token"
+                        type="checkbox"
+                        prop:checked={move || clear.get()}
+                        on:change={move |event| {
+                            clear.set(event_target_checked(&event));
+                            if clear.get_untracked() {
+                                key.set(String::new());
+                            }
+                        }}
+                    />
+                    {move || i18n.text("message.remove_tempo_token")}
+                </label>
+                <button
+                    id="save-tempo"
+                    type="button"
+                    disabled={move || !own_dirty.get()}
+                    on:click={move |_| execute.with_value(|execute| execute(true))}
+                >
+                    {move || i18n.text("message.save_tempo")}
+                </button>
+            </fieldset>
+            <button
+                id="reload-tempo"
+                type="button"
+                disabled={move || pending.get() || loading.get()}
+                on:click={move |_| {
+                    if own_dirty.get_untracked() {
+                        reload.set(true);
+                    } else {
+                        execute.with_value(|execute| execute(false));
+                    }
+                }}
+            >
+                {move || i18n.text("message.reload_tempo")}
+            </button>
+            <div class="confirmation" hidden={move || !reload.get()}>
+                <p>{move || i18n.text("message.discard_the_tempo_draft_and_read_the_connection_again")}</p>
+                <button
+                    id="confirm-reload-tempo"
+                    type="button"
+                    on:click={move |_| execute.with_value(|execute| execute(false))}
+                >
+                    {move || i18n.text("message.discard_and_reload")}
+                </button>
+                <button type="button" on:click={move |_| reload.set(false)}>
+                    {move || i18n.text("message.back")}
+                </button>
+            </div>
+            <p id="tempo-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p id="tempo-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
+        </section>
+    }
 }

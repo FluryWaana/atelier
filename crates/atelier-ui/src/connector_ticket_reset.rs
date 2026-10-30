@@ -112,20 +112,102 @@ pub fn ConnectorTicketReset(
             }
         });
     });
-    view! {<fieldset id="connector-reset" hidden=move||!supported() disabled=move||pending.get()||blocked.get()>
-        <legend>{move||i18n.text("message.resynchronize_ticket_scope")}</legend>
-        <p class="field-help">{move||i18n.text("message.read_every_page_before_confirmation_missing_tickets_will_be_mark")}</p>
-        <button id="preview-connector-ticket-reset" type="button" on:click=move |_|execute.with_value(|execute|execute(false))>{move||i18n.text("message.read_the_complete_scope")}</button>
-        {move||preview.get().map(|value|view!{
-            <p>{format!("{} · {} pages · {} tickets",value.observed_at,value.pages,value.tickets)}</p>
-            <p hidden={!value.rows.is_empty()}>{i18n.text("message.no_linked_task_in_this_scope")}</p>
-            <ul>{value.rows.into_iter().map(|row|view!{<li>{format!("{} · {} · {}",row.key,row.title,if row.present{i18n.text("message.in_scope")}else{i18n.text("message.out_of_scope")})}</li>}).collect_view()}</ul>
-        })}
-        <label hidden=move||preview.get().is_none()><input id="approve-connector-ticket-reset" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("message.confirm_these_scope_flags_only_preserving_every_task")}</label>
-        <button id="apply-connector-ticket-reset" type="button" disabled=move||preview.get().is_none()||!approved.get() on:click=move |_|execute.with_value(|execute|execute(true))>{move||i18n.text("message.apply_the_complete_scope")}</button>
-        <button type="button" disabled=move||preview.get().is_none() on:click=move |_|{preview.set(None);approved.set(false);}>{move||i18n.text("message.cancel_preview")}</button>
-        <p role="status" hidden=move||!pending.get()>{move||i18n.text("message.complete_read_or_application_in_progress")}</p>
-        <p role="status" hidden=move||!done.get()>{move||i18n.text("message.scope_updated_tasks_and_their_text_were_preserved")}</p>
-        <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
-    </fieldset>}
+    view! {
+        <fieldset
+            id="connector-reset"
+            hidden={move || !supported()}
+            disabled={move || pending.get() || blocked.get()}
+        >
+            <legend>{move || i18n.text("message.resynchronize_ticket_scope")}</legend>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.read_every_page_before_confirmation_missing_tickets_will_be_mark")
+                }}
+            </p>
+            <button
+                id="preview-connector-ticket-reset"
+                type="button"
+                on:click={move |_| execute.with_value(|execute| execute(false))}
+            >
+                {move || i18n.text("message.read_the_complete_scope")}
+            </button>
+            {move || {
+                preview
+                    .get()
+                    .map(|value| {
+                        view! {
+                            <p>
+                                {format!(
+                                    "{} · {} pages · {} tickets",
+                                    value.observed_at,
+                                    value.pages,
+                                    value.tickets,
+                                )}
+                            </p>
+                            <p hidden={!value
+                                .rows
+                                .is_empty()}>{i18n.text("message.no_linked_task_in_this_scope")}</p>
+                            <ul>
+                                {value
+                                    .rows
+                                    .into_iter()
+                                    .map(|row| {
+                                        view! {
+                                            <li>
+                                                {format!(
+                                                    "{} · {} · {}",
+                                                    row.key,
+                                                    row.title,
+                                                    if row.present {
+                                                        i18n.text("message.in_scope")
+                                                    } else {
+                                                        i18n.text("message.out_of_scope")
+                                                    },
+                                                )}
+                                            </li>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </ul>
+                        }
+                    })
+            }}
+            <label hidden={move || preview.get().is_none()}>
+                <input
+                    id="approve-connector-ticket-reset"
+                    type="checkbox"
+                    prop:checked={move || approved.get()}
+                    on:change={move |event| approved.set(event_target_checked(&event))}
+                />
+                {move || i18n.text("message.confirm_these_scope_flags_only_preserving_every_task")}
+            </label>
+            <button
+                id="apply-connector-ticket-reset"
+                type="button"
+                disabled={move || preview.get().is_none() || !approved.get()}
+                on:click={move |_| execute.with_value(|execute| execute(true))}
+            >
+                {move || i18n.text("message.apply_the_complete_scope")}
+            </button>
+            <button
+                type="button"
+                disabled={move || preview.get().is_none()}
+                on:click={move |_| {
+                    preview.set(None);
+                    approved.set(false);
+                }}
+            >
+                {move || i18n.text("message.cancel_preview")}
+            </button>
+            <p role="status" hidden={move || !pending.get()}>
+                {move || i18n.text("message.complete_read_or_application_in_progress")}
+            </p>
+            <p role="status" hidden={move || !done.get()}>
+                {move || i18n.text("message.scope_updated_tasks_and_their_text_were_preserved")}
+            </p>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+        </fieldset>
+    }
 }

@@ -39,11 +39,16 @@ async fn mutate(state: Shared, id: String, action: Action, request: Request) -> 
                     .document::<Card>(Documents::Cards, &id)?
                     .ok_or(CardFailure::Missing)?;
                 let times = store.documents::<Document>(Documents::Times)?;
-                // shortcut: M04/M06 must supply live activity and queued IDs when agents and the queue are enabled.
+                let active = crate::infrastructure::runs::active_cards(store)?;
                 match action {
                     Action::Archive => {
-                        let card =
-                            card_lifecycle::archive(card, &body, &times, |_| false, timestamp)?;
+                        let card = card_lifecycle::archive(
+                            card,
+                            &body,
+                            &times,
+                            |id| active.contains(id),
+                            timestamp,
+                        )?;
                         store.put(Documents::Cards, &card)?;
                         Ok(serde_json::value::to_raw_value(&card)?)
                     }
@@ -52,8 +57,8 @@ async fn mutate(state: Shared, id: String, action: Action, request: Request) -> 
                             &card,
                             &store.documents::<Document>(Documents::Cards)?,
                             &times,
-                            &[],
-                            |_| false,
+                            &crate::infrastructure::queue::read(store)?.ids,
+                            |id| active.contains(id),
                         )?;
                         store.delete(Documents::Cards, &id)?;
                         Ok(serde_json::value::to_raw_value(

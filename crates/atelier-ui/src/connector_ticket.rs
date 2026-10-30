@@ -169,24 +169,130 @@ pub fn ConnectorTicket(
             pending.set(false);
         });
     };
-    view! { <section class="task-files" hidden=move||module.get().is_empty() aria-labelledby="connector-ticket-heading">
-        <h3 id="connector-ticket-heading">{move||i18n.text("message.connector_ticket_synchronization")}</h3>
-        <p role="status" hidden=move||!card.get().is_some_and(|card|card.fields.flag("ticketOutOfScope").unwrap_or(false))>{move||i18n.text("message.this_ticket_is_outside_the_module_s_last_complete_scope_its_task")}</p>
-        <button id="read-connector-ticket" type="button" disabled=move||pending.get()||blocked.get()||transition_dirty.get() on:click=load>{move||i18n.text("message.read_remote_ticket")}</button>
-        <Show when=move||preview.get().is_some()>
-            <p>{move||preview.get().map(|preview|format!("{} · {}",preview.ticket.key,preview.report.observed_at)).unwrap_or_default()}</p>
-            <p class="field-help">{move||i18n.text("message.choose_which_text_to_replace_the_ticket_status_will_be_refreshed")}</p>
-            <label><input id="replace-connector-ticket-title" type="checkbox" disabled=move||pending.get()||blocked.get() prop:checked=move||replace_title.get() on:change=move|event|{replace_title.set(event_target_checked(&event));approved.set(false);}/>{move||i18n.text("message.replace_local_title")}</label>
-            <p class="task-description">{move||preview.get().map(|preview|preview.ticket.title).unwrap_or_default()}</p>
-            <label><input id="replace-connector-ticket-description" type="checkbox" disabled=move||pending.get()||blocked.get() prop:checked=move||replace_description.get() on:change=move|event|{replace_description.set(event_target_checked(&event));approved.set(false);}/>{move||i18n.text("message.replace_local_description")}</label>
-            <p class="task-description">{move||preview.get().map(|preview|preview.ticket.description).unwrap_or_default()}</p>
-            <p>{move||preview.get().map(|preview|preview.ticket.status).unwrap_or_default()}</p>
-            <p class="error" role="alert" hidden=move||!stale.get()>{move||i18n.text("message.the_task_changed_read_the_ticket_again_before_confirming")}</p>
-            <label><input id="approve-connector-ticket-refresh" type="checkbox" disabled=move||pending.get()||blocked.get()||stale.get() prop:checked=move||approved.get()&&!stale.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("message.apply_this_preview_with_the_selected_fields")}</label>
-            <button id="apply-connector-ticket-refresh" type="button" disabled=move||pending.get()||blocked.get()||stale.get()||!approved.get() on:click=apply>{move||i18n.text("message.synchronize_ticket")}</button>
-            <button id="cancel-connector-ticket-refresh" type="button" disabled=move||pending.get() on:click=move|_|{preview.set(None);approved.set(false);error.set(String::new());}>{move||i18n.text("message.cancel_preview")}</button>
-        </Show>
-        <p class="error" role="alert">{move||i18n.text(&error.get())}</p><p role="status">{move||i18n.text(&notice.get())}</p>
-        <connector_ticket_transitions::ConnectorTicketTransitions card_id=id.get_value() card module board token pending dirty=transition_dirty blocked=Memo::new(move |_|blocked.get()||preview.get().is_some())/>
-    </section> }
+    view! {
+        <section
+            class="task-files"
+            hidden={move || module.get().is_empty()}
+            aria-labelledby="connector-ticket-heading"
+        >
+            <h3 id="connector-ticket-heading">
+                {move || i18n.text("message.connector_ticket_synchronization")}
+            </h3>
+            <p
+                role="status"
+                hidden={move || {
+                    !card.get().is_some_and(|card| card.fields.flag("ticketOutOfScope").unwrap_or(false))
+                }}
+            >
+                {move || {
+                    i18n.text("message.this_ticket_is_outside_the_module_s_last_complete_scope_its_task")
+                }}
+            </p>
+            <button
+                id="read-connector-ticket"
+                type="button"
+                disabled={move || pending.get() || blocked.get() || transition_dirty.get()}
+                on:click={load}
+            >
+                {move || i18n.text("message.read_remote_ticket")}
+            </button>
+            <Show when={move || preview.get().is_some()}>
+                <p>
+                    {move || {
+                        preview
+                            .get()
+                            .map(|preview| {
+                                format!("{} · {}", preview.ticket.key, preview.report.observed_at)
+                            })
+                            .unwrap_or_default()
+                    }}
+                </p>
+                <p class="field-help">
+                    {move || {
+                        i18n.text("message.choose_which_text_to_replace_the_ticket_status_will_be_refreshed")
+                    }}
+                </p>
+                <label>
+                    <input
+                        id="replace-connector-ticket-title"
+                        type="checkbox"
+                        disabled={move || pending.get() || blocked.get()}
+                        prop:checked={move || replace_title.get()}
+                        on:change={move |event| {
+                            replace_title.set(event_target_checked(&event));
+                            approved.set(false);
+                        }}
+                    />
+                    {move || i18n.text("message.replace_local_title")}
+                </label>
+                <p class="task-description">
+                    {move || preview.get().map(|preview| preview.ticket.title).unwrap_or_default()}
+                </p>
+                <label>
+                    <input
+                        id="replace-connector-ticket-description"
+                        type="checkbox"
+                        disabled={move || pending.get() || blocked.get()}
+                        prop:checked={move || replace_description.get()}
+                        on:change={move |event| {
+                            replace_description.set(event_target_checked(&event));
+                            approved.set(false);
+                        }}
+                    />
+                    {move || i18n.text("message.replace_local_description")}
+                </label>
+                <p class="task-description">
+                    {move || preview.get().map(|preview| preview.ticket.description).unwrap_or_default()}
+                </p>
+                <p>{move || preview.get().map(|preview| preview.ticket.status).unwrap_or_default()}</p>
+                <p class="error" role="alert" hidden={move || !stale.get()}>
+                    {move || i18n.text("message.the_task_changed_read_the_ticket_again_before_confirming")}
+                </p>
+                <label>
+                    <input
+                        id="approve-connector-ticket-refresh"
+                        type="checkbox"
+                        disabled={move || pending.get() || blocked.get() || stale.get()}
+                        prop:checked={move || approved.get() && !stale.get()}
+                        on:change={move |event| approved.set(event_target_checked(&event))}
+                    />
+                    {move || i18n.text("message.apply_this_preview_with_the_selected_fields")}
+                </label>
+                <button
+                    id="apply-connector-ticket-refresh"
+                    type="button"
+                    disabled={move || pending.get() || blocked.get() || stale.get() || !approved.get()}
+                    on:click={apply}
+                >
+                    {move || i18n.text("message.synchronize_ticket")}
+                </button>
+                <button
+                    id="cancel-connector-ticket-refresh"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| {
+                        preview.set(None);
+                        approved.set(false);
+                        error.set(String::new());
+                    }}
+                >
+                    {move || i18n.text("message.cancel_preview")}
+                </button>
+            </Show>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p role="status">{move || i18n.text(&notice.get())}</p>
+            <connector_ticket_transitions::ConnectorTicketTransitions
+                card_id={id.get_value()}
+                card
+                module
+                board
+                token
+                pending
+                dirty={transition_dirty}
+                blocked={Memo::new(move |_| blocked.get() || preview.get().is_some())}
+            />
+        </section>
+    }
 }

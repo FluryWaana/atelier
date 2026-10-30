@@ -1,6 +1,7 @@
 use super::{Shared, failure, runs, services, updates};
 use axum::{
-    extract::{Request, State},
+    RequestExt,
+    extract::{MatchedPath, RawPathParams, Request, State},
     http::{Method, StatusCode},
     middleware::Next,
     response::Response,
@@ -92,13 +93,53 @@ pub(super) async fn detached(
     }
 }
 
+async fn guard_path(request: &mut Request) -> Result<String, Response> {
+    let matched = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map(|path| path.as_str().to_owned())
+        .ok_or_else(|| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?;
+    if !matched.contains('{') {
+        return Ok(matched);
+    }
+    let params = request
+        .extract_parts::<RawPathParams>()
+        .await
+        .map_err(|_| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?;
+    let mut segments = Vec::new();
+    for segment in matched.split('/') {
+        let value = if let Some(name) = segment
+            .strip_prefix('{')
+            .and_then(|name| name.strip_suffix('}'))
+        {
+            params
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| value)
+                .ok_or_else(|| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?
+        } else {
+            segment
+        };
+        // Decoded separators must not create a different guard target.
+        if value.contains(['/', '\\']) || value.chars().any(char::is_control) {
+            return Err(failure(StatusCode::BAD_REQUEST, "message.invalid_request"));
+        }
+        segments.push(value);
+    }
+    Ok(segments.join("/"))
+}
+
 pub(super) async fn mutate(
     State(policy): State<Policy>,
     axum::Extension(state): axum::Extension<Shared>,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> Response {
     if request.method() != Method::GET {
+        let operation_path = match guard_path(&mut request).await {
+            Ok(path) => path,
+            Err(response) => return response,
+        };
         let cancellation = request.method() == Method::POST && policy == Policy::Cancellation;
         let gate = state.mutations.clone();
         let changed = state.changed.clone();
@@ -112,7 +153,7 @@ pub(super) async fn mutate(
                 let guard_path = if policy.project_guard() {
                     "/api/projects"
                 } else {
-                    request.uri().path()
+                    &operation_path
                 };
                 if let Some(response) = services::guard(&services, guard_path) {
                     return response;
@@ -121,7 +162,6 @@ pub(super) async fn mutate(
                     return response;
                 }
                 let guarded_path = guard_path.to_owned();
-                let operation_path = request.uri().path().to_owned();
                 match state
                     .database
                     .call(move |store| {
@@ -183,6 +223,54 @@ pub(super) async fn mutate(
 mod tests {
     use super::*;
     use axum::response::IntoResponse;
+
+    #[tokio::test]
+    async fn encoded_targets_use_the_same_guard_as_the_decoded_handler() {
+        async fn guarded(mut request: Request, next: Next) -> Response {
+            match guard_path(&mut request).await {
+                Ok(path) if path == "/api/cards/card/archive" => {
+                    StatusCode::CONFLICT.into_response()
+                }
+                Ok(_) => next.run(request).await,
+                Err(response) => response,
+            }
+        }
+        let router = axum::Router::new()
+            .route(
+                "/api/cards/{id}/archive",
+                axum::routing::post(|| async { StatusCode::OK }),
+            )
+            .route(
+                "/api/shutdown",
+                axum::routing::post(|| async { StatusCode::OK }),
+            )
+            .route_layer(axum::middleware::from_fn(guarded));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let client = reqwest::Client::new();
+        for (path, expected) in [
+            ("/api/cards/card/archive", StatusCode::CONFLICT),
+            ("/api/cards/%63ard/archive", StatusCode::CONFLICT),
+            ("/api/cards/%2563ard/archive", StatusCode::OK),
+            ("/api/cards/card%2Fother/archive", StatusCode::BAD_REQUEST),
+            ("/api/cards/card%5Cother/archive", StatusCode::BAD_REQUEST),
+            ("/api/cards/%FF/archive", StatusCode::BAD_REQUEST),
+            ("/api/shutdown", StatusCode::OK),
+        ] {
+            assert_eq!(
+                client
+                    .post(format!("http://{address}{path}"))
+                    .send()
+                    .await
+                    .unwrap()
+                    .status(),
+                expected,
+                "{path}"
+            );
+        }
+        server.abort();
+    }
 
     #[test]
     fn every_api_registration_declares_its_concurrency_policy() {

@@ -11,6 +11,16 @@ pub fn active(run: &Document) -> Result<bool> {
     ))
 }
 
+pub fn active_cards(store: &Store<'_>) -> Result<std::collections::BTreeSet<String>> {
+    let mut cards = std::collections::BTreeSet::new();
+    for run in store.documents::<Document>(Documents::Runs)? {
+        if active(&run)? {
+            cards.insert(run.get::<String>("cardId")?.ok_or("message.card_missing")?);
+        }
+    }
+    Ok(cards)
+}
+
 /// The caller reserves HTTP mutations before preparing the external launch.
 pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
     store.transaction(|store| {

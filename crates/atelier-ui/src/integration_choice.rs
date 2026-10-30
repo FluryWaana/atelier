@@ -104,20 +104,98 @@ pub fn IntegrationChoice(
             }
         });
     };
-    view! {<section class="form-section">
-        <h3>{move||i18n.text(if kind==Kind::Tickets {"message.ticket_source"}else{"message.time_destination"})}</h3>
-        <p class="hint">{move||i18n.text("message.integration_defaults_future_only")}</p>
-        <form on:submit=save><fieldset disabled=move||pending.get()||blocked.get()>
-            <label for=id>{move||i18n.text("message.default_provider")}</label>
-            <select id=id prop:value=move||selected.get() on:change=move|event|{if pending.get_untracked()||blocked.get_untracked(){return;}selected.set(event_target_value(&event));notice.set(false);}>
-                {move||(!providers().iter().any(|provider|provider.id==selected.get())).then(||view!{<option value=selected.get() disabled>{move||i18n.text("message.integration_unavailable")}</option>})}
-                <For each=providers key=|provider|provider.id.clone() children=move|provider|{let name=provider.name;view!{<option value=provider.id>{move||i18n.text(&name)}</option>}}/>
-            </select>
-            <div class="form-actions"><button id=format!("save-{id}") class="primary" type="submit" disabled=move||!changed.get()>{move||i18n.text("message.save_provider_choice")}</button><button type="button" disabled=move||!changed.get() on:click=move |_|{let saved=current();original.set(saved.clone());selected.set(saved);error.set(String::new());}>{move||i18n.text("message.cancel")}</button></div>
-        </fieldset></form>
-        <p class="field-help" hidden=move||selected.get()!="local">{move||i18n.text(if kind==Kind::Tickets{"message.local_tickets_explanation"}else{"message.local_time_explanation"})}</p>
-        <p class="error" role="alert">{move||i18n.text(&error.get())}</p><p role="status">{move||if notice.get(){i18n.text("message.settings_saved")}else{String::new()}}</p>
-    </section>}
+    view! {
+        <section class="form-section">
+            <h3>
+                {move || {
+                    i18n
+                        .text(
+                            if kind == Kind::Tickets {
+                                "message.ticket_source"
+                            } else {
+                                "message.time_destination"
+                            },
+                        )
+                }}
+            </h3>
+            <p class="hint">{move || i18n.text("message.integration_defaults_future_only")}</p>
+            <form on:submit={save}>
+                <fieldset disabled={move || pending.get() || blocked.get()}>
+                    <label for={id}>{move || i18n.text("message.default_provider")}</label>
+                    <select
+                        id={id}
+                        prop:value={move || selected.get()}
+                        on:change={move |event| {
+                            if pending.get_untracked() || blocked.get_untracked() {
+                                return;
+                            }
+                            selected.set(event_target_value(&event));
+                            notice.set(false);
+                        }}
+                    >
+                        {move || {
+                            (!providers().iter().any(|provider| provider.id == selected.get()))
+                                .then(|| {
+                                    view! {
+                                        <option value={selected.get()} disabled>
+                                            {move || i18n.text("message.integration_unavailable")}
+                                        </option>
+                                    }
+                                })
+                        }}
+                        <For
+                            each={providers}
+                            key={|provider| provider.id.clone()}
+                            children={move |provider| {
+                                let name = provider.name;
+                                view! { <option value={provider.id}>{move || i18n.text(&name)}</option> }
+                            }}
+                        />
+                    </select>
+                    <div class="form-actions">
+                        <button
+                            id={format!("save-{id}")}
+                            class="primary"
+                            type="submit"
+                            disabled={move || !changed.get()}
+                        >
+                            {move || i18n.text("message.save_provider_choice")}
+                        </button>
+                        <button
+                            type="button"
+                            disabled={move || !changed.get()}
+                            on:click={move |_| {
+                                let saved = current();
+                                original.set(saved.clone());
+                                selected.set(saved);
+                                error.set(String::new());
+                            }}
+                        >
+                            {move || i18n.text("message.cancel")}
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+            <p class="field-help" hidden={move || selected.get() != "local"}>
+                {move || {
+                    i18n
+                        .text(
+                            if kind == Kind::Tickets {
+                                "message.local_tickets_explanation"
+                            } else {
+                                "message.local_time_explanation"
+                            },
+                        )
+                }}
+            </p>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p role="status">
+                {move || if notice.get() { i18n.text("message.settings_saved") } else { String::new() }}
+            </p>
+        </section>
+    }
 }
 
 // Built-in adapters own their configuration views; process modules use their manifest editor.
@@ -133,10 +211,10 @@ pub fn IntegrationConfiguration(
     let source = Memo::new(move |_| selected.get());
     move || match (kind, source.get().as_str()) {
         (Kind::Tickets, "jira") => {
-            view! {<crate::jira::JiraSettings board token pending dirty/>}.into_any()
+            view! { <crate::jira::JiraSettings board token pending dirty /> }.into_any()
         }
         (Kind::Time, "tempo") => {
-            view! {<crate::tempo::TempoSettings token pending dirty/>}.into_any()
+            view! { <crate::tempo::TempoSettings token pending dirty /> }.into_any()
         }
         _ => ().into_any(),
     }

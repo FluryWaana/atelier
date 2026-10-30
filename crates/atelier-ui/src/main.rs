@@ -33,6 +33,7 @@ mod jira_task;
 mod kanban_settings;
 mod live;
 mod modal;
+mod new_task;
 mod preparation;
 mod projects;
 mod queue;
@@ -409,38 +410,11 @@ fn App() -> impl IntoView {
     });
     let cards = board.cards;
     let projects = board.projects;
-    let templates = board.templates;
-    let template = RwSignal::new(String::new());
-    let remove_template = RwSignal::new(false);
-    let template_pending = RwSignal::new(false);
     let search = RwSignal::new(String::new());
     let repository = RwSignal::new(String::new());
     let focus_filter = RwSignal::new("all".to_owned());
     let loading = RwSignal::new(true);
-    let title = RwSignal::new(String::new());
-    let title_input = NodeRef::<leptos::html::Input>::new();
-    let new_dialog = NodeRef::<leptos::html::Dialog>::new();
-    let description = RwSignal::new(String::new());
-    let instructions = RwSignal::new(String::new());
-    let new_repo = RwSignal::new(String::new());
-    let new_agent = RwSignal::new(String::new());
-    let new_initialized = RwSignal::new(false);
-    let new_mode = RwSignal::new("edit".to_owned());
-    let new_model = RwSignal::new(String::new());
-    let new_effort = RwSignal::new(String::new());
-    let create_error = RwSignal::new(String::new());
-    let template_candidate = RwSignal::new(None::<String>);
-    let apply_template = Callback::new(move |id: String| {
-        if let Some(item) = templates
-            .with_untracked(|items| items.iter().find(|item| field(item, "id") == id).cloned())
-        {
-            description.set(field(&item, "description"));
-            instructions.set(field(&item, "instructions"));
-            new_mode.set(field(&item, "mode"));
-            template.set(id);
-        }
-        template_candidate.set(None);
-    });
+    let new_task_request = RwSignal::new(0u64);
     let error = RwSignal::new(String::new());
     let ticket_sync_notice = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
@@ -679,41 +653,7 @@ fn App() -> impl IntoView {
             ) {
                 commit_view.run(WorkspaceView::Board);
             }
-            if !new_initialized.get_untracked() {
-                let selected_repo = repository.get_untracked();
-                let repo = if !selected_repo.is_empty() {
-                    selected_repo
-                } else {
-                    projects.with_untracked(|items| {
-                        if items.len() == 1 {
-                            field(&items[0], "repo")
-                        } else {
-                            board
-                                .settings
-                                .with_untracked(|settings| field(settings, "repo"))
-                        }
-                    })
-                };
-                let agent = projects.with_untracked(|items| {
-                    items
-                        .iter()
-                        .find(|project| field(project, "repo") == repo)
-                        .map(|project| field(project, "agent"))
-                        .filter(|agent| !agent.is_empty())
-                        .unwrap_or_else(|| {
-                            board
-                                .settings
-                                .with_untracked(|settings| field(settings, "agent"))
-                        })
-                });
-                new_repo.set(repo);
-                new_agent.set(agent);
-                new_initialized.set(true);
-            }
-            if let Some(dialog) = new_dialog.get_untracked() {
-                let _ = dialog.show_modal();
-            }
-            focus_element("task-title");
+            new_task_request.update(|request| *request += 1);
         });
         if let Some(guard) = navigation_guard.0.get_untracked() {
             guard.run(continuation);
@@ -819,18 +759,6 @@ fn App() -> impl IntoView {
             pending.set(false);
         });
     });
-    let close_new = move || {
-        if !pending.get_untracked() && !template_pending.get_untracked() {
-            if let Some(dialog) = new_dialog.get_untracked() {
-                dialog.close();
-            }
-            focus_element(if onboarding() {
-                "welcome-create"
-            } else {
-                "create-button"
-            });
-        }
-    };
     let workspace_controls = move || {
         !matches!(
             view.get(),
@@ -980,168 +908,1288 @@ fn App() -> impl IntoView {
         }
     });
     on_cleanup(move || shortcuts.remove());
-    let draft_unload = window_event_listener(leptos::ev::beforeunload, move |event| {
-        if pending.get_untracked()
-            || !title.get_untracked().is_empty()
-            || !description.get_untracked().is_empty()
-            || !instructions.get_untracked().is_empty()
-        {
-            event.prevent_default();
-            event.set_return_value("");
-        }
-    });
-    on_cleanup(move || draft_unload.remove());
     view! {
-        <button class="skip-link" type="button" on:click=move |_|focus_element("main-content")>{move || i18n.text("message.skip_to_content")}</button>
-        <aside id="main-navigation" class="sidebar" class:sidebar-collapsed=move || sidebar_collapsed.get() aria-label=move || i18n.text("message.main_navigation")>
-            <div class="sidebar-header"><a class="brand" href="/overview" aria-label=move || i18n.text("message.atelier_kanban_home") on:click=move |event| {event.prevent_default();navigate.run(WorkspaceView::Overview);}>
-                <img class="brand-logo" src="/atelier-kanban.png" width="40" height="40" alt="" /><span>"Atelier"<span class="brand-subtitle">"Kanban"</span></span><small class="brand-version" id="app-version">{env!("CARGO_PKG_VERSION")}</small>
-            </a>
-            <button id="toggle-navigation" class="sidebar-toggle" type="button" aria-controls="main-navigation" aria-expanded=move || (!sidebar_collapsed.get()).to_string() aria-label=sidebar_toggle_label title=sidebar_toggle_label on:click=move |_| sidebar_collapsed.update(|collapsed| *collapsed = !*collapsed)><NavigationIcon kind="collapse" /><NavigationIcon kind="menu" /></button></div>
-            <nav class="sidebar-primary" aria-label=move || i18n.text("message.personal_workspace")><button class="nav-item" class:nav-active=move || view.get()==WorkspaceView::Brainstorm data-view="brainstorm" id="brainstorm-button" aria-current=move || if view.get()==WorkspaceView::Brainstorm {"page"}else{"false"} on:click=move |_|navigate.run(WorkspaceView::Brainstorm) title=move || i18n.text("message.brainstorming")><NavigationIcon kind="brainstorm" /><span class="nav-label">{move || i18n.text("message.brainstorming")}</span></button>
-            <button class="nav-item" class:nav-active=move || view.get()==WorkspaceView::Overview id="overview-button" aria-current=move || if view.get()==WorkspaceView::Overview {"page"}else{"false"} on:click=move |_|navigate.run(WorkspaceView::Overview) title=move || i18n.text("message.overview")><NavigationIcon kind="overview" /><span class="nav-label">{move || i18n.text("message.overview")}</span></button>
-            <button class="nav-item" id="manage-projects" type="button" class:nav-active=move ||view.get()==WorkspaceView::Projects aria-current=move ||if view.get()==WorkspaceView::Projects{"page"}else{"false"} disabled=move || loading.get() on:click=move |_| navigate.run(WorkspaceView::Projects) title=move || i18n.text("message.my_projects")><NavigationIcon kind="projects" /><span class="nav-label">{move || i18n.text("message.my_projects")}</span></button></nav>
-            <section class="sidebar-agents"><div class="workspace-label">{move || i18n.text("message.your_agents")}</div><div id="agents"><div class="sidebar-agent-list"><For each=move || atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move |profile|view!{<button class="agent-row" type="button" title=field(&profile,"name") on:click=move |_|show_agents.set(true)><span class="agent-avatar">{field(&profile,"name").chars().next().unwrap_or('A')}</span><span class="agent-row-copy"><span class="agent-status"><span class={ let id = field(&profile, "id"); move || { if agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).is_some_and(|status| status.cli_connected()) { "online-dot agent-status-online" } else { "online-dot offline" } } } aria-hidden="true"></span><span class="sr-only">{let id = field(&profile, "id"); move || i18n.text(if agent_checking.get() && agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).is_none() { "message.checking" } else { match agent_diagnostics::current_status(agent_status, &id, &board.settings.get()).map(|status| (status.authentication, status.account_report.map(|report| report.state))) { Some((_, Some(atelier_core::application::agent_account::State::Available))) => "message.limits_reported_by_the_service_they_do_not_establish_access_to_a", Some((_, Some(atelier_core::application::agent_account::State::Disconnected))) => "message.sign_in_through_the_cli_then_check_again", Some((_, Some(atelier_core::application::agent_account::State::RateLimited))) => "message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte", Some((atelier_core::contracts::AgentAuthentication::Present, _)) => "message.cli_login_present_service_access_has_not_been_verified", Some((atelier_core::contracts::AgentAuthentication::Absent, _)) => "message.no_cli_login", Some((atelier_core::contracts::AgentAuthentication::Configured, _)) => "message.key_present_validity_has_not_been_verified", Some((atelier_core::contracts::AgentAuthentication::MissingKey, _)) => "message.no_saved_api_key", _ => "message.not_verified" } })}</span></span><strong>{field(&profile,"name")}</strong></span><span class="agent-chevron" aria-hidden="true">"›"</span></button>} /><p class="error" role="status">{move || i18n.text(&agent_check_error.get())}</p></div><button id="manage-agents" class="text-button" title=move || i18n.text("message.manage_agents") type="button" disabled=move || loading.get() on:click=move |_|show_agents.set(true)><NavigationIcon kind="agents" /><span class="nav-label">{move || i18n.text("message.manage_agents")}</span></button></div></section>
-            <div class="sidebar-bottom"><nav class="sidebar-utilities" aria-label=move || i18n.text("message.settings_4ed117e0")><button class="nav-item" id="manage-settings" type="button" class:nav-active=move || view.get()==WorkspaceView::Settings aria-current=move || if view.get()==WorkspaceView::Settings {"page"}else{"false"} disabled=move || loading.get() on:click=move |_| {settings_section.set("general");navigate.run(WorkspaceView::Settings);} title=move || i18n.text("message.settings_4ed117e0")><NavigationIcon kind="settings" /><span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span></button>
-            <button class="nav-item" id="diagnostics-button" type="button" disabled=move || loading.get() on:click=move |_|show_diagnostics.set(true) title=move || i18n.text("message.diagnostics")><NavigationIcon kind="diagnostics" /><span class="nav-label">{move || i18n.text("message.diagnostics")}</span></button>
-            <button class="nav-item" id="manage-backups" type="button" disabled=move || loading.get() on:click=move |_| show_backups.set(true) title=move || i18n.text("message.backups")><NavigationIcon kind="backups" /><span class="nav-label">{move || i18n.text("message.backups")}</span></button>
-            <button class="nav-item" id="check-updates" type="button" class:nav-active=move || view.get()==WorkspaceView::Updates aria-current=move || if view.get()==WorkspaceView::Updates {"page"}else{"false"} disabled=move || loading.get() on:click=move |_|navigate.run(WorkspaceView::Updates) title=move || i18n.text("message.updates")><NavigationIcon kind="updates" /><span class="nav-label">{move || i18n.text("message.updates")}</span></button></nav><div class="local-note"><small>{move || i18n.text("message.your_cards_stay_here")}</small></div></div>
+        <button class="skip-link" type="button" on:click={move |_| focus_element("main-content")}>
+            {move || i18n.text("message.skip_to_content")}
+        </button>
+        <aside
+            id="main-navigation"
+            class="sidebar"
+            class:sidebar-collapsed={move || sidebar_collapsed.get()}
+            aria-label={move || i18n.text("message.main_navigation")}
+        >
+            <div class="sidebar-header">
+                <a
+                    class="brand"
+                    href="/overview"
+                    aria-label={move || i18n.text("message.atelier_kanban_home")}
+                    on:click={move |event| {
+                        event.prevent_default();
+                        navigate.run(WorkspaceView::Overview);
+                    }}
+                >
+                    <img class="brand-logo" src="/atelier-kanban.png" width="40" height="40" alt="" />
+                    <span>"Atelier"<span class="brand-subtitle">"Kanban"</span></span>
+                    <small class="brand-version" id="app-version">
+                        {env!("CARGO_PKG_VERSION")}
+                    </small>
+                </a>
+                <button
+                    id="toggle-navigation"
+                    class="sidebar-toggle"
+                    type="button"
+                    aria-controls="main-navigation"
+                    aria-expanded={move || (!sidebar_collapsed.get()).to_string()}
+                    aria-label={sidebar_toggle_label}
+                    title={sidebar_toggle_label}
+                    on:click={move |_| sidebar_collapsed.update(|collapsed| *collapsed = !*collapsed)}
+                >
+                    <NavigationIcon kind="collapse" />
+                    <NavigationIcon kind="menu" />
+                </button>
+            </div>
+            <nav class="sidebar-primary" aria-label={move || i18n.text("message.personal_workspace")}>
+                <button
+                    class="nav-item"
+                    class:nav-active={move || view.get() == WorkspaceView::Brainstorm}
+                    data-view="brainstorm"
+                    id="brainstorm-button"
+                    aria-current={move || {
+                        if view.get() == WorkspaceView::Brainstorm { "page" } else { "false" }
+                    }}
+                    on:click={move |_| navigate.run(WorkspaceView::Brainstorm)}
+                    title={move || i18n.text("message.brainstorming")}
+                >
+                    <NavigationIcon kind="brainstorm" />
+                    <span class="nav-label">{move || i18n.text("message.brainstorming")}</span>
+                </button>
+                <button
+                    class="nav-item"
+                    class:nav-active={move || view.get() == WorkspaceView::Overview}
+                    id="overview-button"
+                    aria-current={move || {
+                        if view.get() == WorkspaceView::Overview { "page" } else { "false" }
+                    }}
+                    on:click={move |_| navigate.run(WorkspaceView::Overview)}
+                    title={move || i18n.text("message.overview")}
+                >
+                    <NavigationIcon kind="overview" />
+                    <span class="nav-label">{move || i18n.text("message.overview")}</span>
+                </button>
+                <button
+                    class="nav-item"
+                    id="manage-projects"
+                    type="button"
+                    class:nav-active={move || view.get() == WorkspaceView::Projects}
+                    aria-current={move || {
+                        if view.get() == WorkspaceView::Projects { "page" } else { "false" }
+                    }}
+                    disabled={move || loading.get()}
+                    on:click={move |_| navigate.run(WorkspaceView::Projects)}
+                    title={move || i18n.text("message.my_projects")}
+                >
+                    <NavigationIcon kind="projects" />
+                    <span class="nav-label">{move || i18n.text("message.my_projects")}</span>
+                </button>
+            </nav>
+            <section class="sidebar-agents">
+                <div class="workspace-label">{move || i18n.text("message.your_agents")}</div>
+                <div id="agents">
+                    <div class="sidebar-agent-list">
+                        <For
+                            each={move || {
+                                atelier_core::domain::agent_options::providers(&board.settings.get())
+                                    .unwrap_or_default()
+                            }}
+                            key={|profile| field(profile, "id")}
+                            children={move |profile| {
+                                view! {
+                                    <button
+                                        class="agent-row"
+                                        type="button"
+                                        title={field(&profile, "name")}
+                                        on:click={move |_| show_agents.set(true)}
+                                    >
+                                        <span class="agent-avatar">
+                                            {field(&profile, "name").chars().next().unwrap_or('A')}
+                                        </span>
+                                        <span class="agent-row-copy">
+                                            <span class="agent-status">
+                                                <span
+                                                    class={
+                                                        let id = field(&profile, "id");
+                                                        move || {
+                                                            if agent_diagnostics::current_status(
+                                                                    agent_status,
+                                                                    &id,
+                                                                    &board.settings.get(),
+                                                                )
+                                                                .is_some_and(|status| status.cli_connected())
+                                                            {
+                                                                "online-dot agent-status-online"
+                                                            } else {
+                                                                "online-dot offline"
+                                                            }
+                                                        }
+                                                    }
+                                                    aria-hidden="true"
+                                                ></span>
+                                                <span class="sr-only">
+                                                    {
+                                                        let id = field(&profile, "id");
+                                                        move || {
+                                                            i18n
+                                                                .text(
+                                                                    if agent_checking.get()
+                                                                        && agent_diagnostics::current_status(
+                                                                                agent_status,
+                                                                                &id,
+                                                                                &board.settings.get(),
+                                                                            )
+                                                                            .is_none()
+                                                                    {
+                                                                        "message.checking"
+                                                                    } else {
+                                                                        match agent_diagnostics::current_status(
+                                                                                agent_status,
+                                                                                &id,
+                                                                                &board.settings.get(),
+                                                                            )
+                                                                            .map(|status| (
+                                                                                status.authentication,
+                                                                                status.account_report.map(|report| report.state),
+                                                                            ))
+                                                                        {
+                                                                            Some(
+                                                                                (
+                                                                                    _,
+                                                                                    Some(
+                                                                                        atelier_core::application::agent_account::State::Available,
+                                                                                    ),
+                                                                                ),
+                                                                            ) => {
+                                                                                "message.limits_reported_by_the_service_they_do_not_establish_access_to_a"
+                                                                            }
+                                                                            Some(
+                                                                                (
+                                                                                    _,
+                                                                                    Some(
+                                                                                        atelier_core::application::agent_account::State::Disconnected,
+                                                                                    ),
+                                                                                ),
+                                                                            ) => "message.sign_in_through_the_cli_then_check_again",
+                                                                            Some(
+                                                                                (
+                                                                                    _,
+                                                                                    Some(
+                                                                                        atelier_core::application::agent_account::State::RateLimited,
+                                                                                    ),
+                                                                                ),
+                                                                            ) => {
+                                                                                "message.the_service_is_limiting_reads_wait_until_the_next_permitted_atte"
+                                                                            }
+                                                                            Some(
+                                                                                (atelier_core::contracts::AgentAuthentication::Present, _),
+                                                                            ) => {
+                                                                                "message.cli_login_present_service_access_has_not_been_verified"
+                                                                            }
+                                                                            Some(
+                                                                                (atelier_core::contracts::AgentAuthentication::Absent, _),
+                                                                            ) => "message.no_cli_login",
+                                                                            Some(
+                                                                                (
+                                                                                    atelier_core::contracts::AgentAuthentication::Configured,
+                                                                                    _,
+                                                                                ),
+                                                                            ) => "message.key_present_validity_has_not_been_verified",
+                                                                            Some(
+                                                                                (
+                                                                                    atelier_core::contracts::AgentAuthentication::MissingKey,
+                                                                                    _,
+                                                                                ),
+                                                                            ) => "message.no_saved_api_key",
+                                                                            _ => "message.not_verified",
+                                                                        }
+                                                                    },
+                                                                )
+                                                        }
+                                                    }
+                                                </span>
+                                            </span>
+                                            <strong>{field(&profile, "name")}</strong>
+                                        </span>
+                                        <span class="agent-chevron" aria-hidden="true">
+                                            "›"
+                                        </span>
+                                    </button>
+                                }
+                            }}
+                        />
+                        <p class="error" role="status">
+                            {move || i18n.text(&agent_check_error.get())}
+                        </p>
+                    </div>
+                    <button
+                        id="manage-agents"
+                        class="text-button"
+                        title={move || i18n.text("message.manage_agents")}
+                        type="button"
+                        disabled={move || loading.get()}
+                        on:click={move |_| show_agents.set(true)}
+                    >
+                        <NavigationIcon kind="agents" />
+                        <span class="nav-label">{move || i18n.text("message.manage_agents")}</span>
+                    </button>
+                </div>
+            </section>
+            <div class="sidebar-bottom">
+                <nav class="sidebar-utilities" aria-label={move || i18n.text("message.settings_4ed117e0")}>
+                    <button
+                        class="nav-item"
+                        id="manage-settings"
+                        type="button"
+                        class:nav-active={move || view.get() == WorkspaceView::Settings}
+                        aria-current={move || {
+                            if view.get() == WorkspaceView::Settings { "page" } else { "false" }
+                        }}
+                        disabled={move || loading.get()}
+                        on:click={move |_| {
+                            settings_section.set("general");
+                            navigate.run(WorkspaceView::Settings);
+                        }}
+                        title={move || i18n.text("message.settings_4ed117e0")}
+                    >
+                        <NavigationIcon kind="settings" />
+                        <span class="nav-label">{move || i18n.text("message.settings_4ed117e0")}</span>
+                    </button>
+                    <button
+                        class="nav-item"
+                        id="diagnostics-button"
+                        type="button"
+                        disabled={move || loading.get()}
+                        on:click={move |_| show_diagnostics.set(true)}
+                        title={move || i18n.text("message.diagnostics")}
+                    >
+                        <NavigationIcon kind="diagnostics" />
+                        <span class="nav-label">{move || i18n.text("message.diagnostics")}</span>
+                    </button>
+                    <button
+                        class="nav-item"
+                        id="manage-backups"
+                        type="button"
+                        disabled={move || loading.get()}
+                        on:click={move |_| show_backups.set(true)}
+                        title={move || i18n.text("message.backups")}
+                    >
+                        <NavigationIcon kind="backups" />
+                        <span class="nav-label">{move || i18n.text("message.backups")}</span>
+                    </button>
+                    <button
+                        class="nav-item"
+                        id="check-updates"
+                        type="button"
+                        class:nav-active={move || view.get() == WorkspaceView::Updates}
+                        aria-current={move || {
+                            if view.get() == WorkspaceView::Updates { "page" } else { "false" }
+                        }}
+                        disabled={move || loading.get()}
+                        on:click={move |_| navigate.run(WorkspaceView::Updates)}
+                        title={move || i18n.text("message.updates")}
+                    >
+                        <NavigationIcon kind="updates" />
+                        <span class="nav-label">{move || i18n.text("message.updates")}</span>
+                    </button>
+                </nav>
+                <div class="local-note">
+                    <small>{move || i18n.text("message.your_cards_stay_here")}</small>
+                </div>
+            </div>
         </aside>
         <main id="main-content" tabindex="-1">
             <header class="topbar">
-                <span class="topbar-context"><span class="topbar-workspace">{move || i18n.text("message.my_workspace")}</span><span class="slash" aria-hidden="true">"/"</span><strong id="breadcrumb">{move || projects.with(|items|items.iter().find(|project|field(project,"repo")==repository.get()).map(|project|field(project,"name"))).unwrap_or_else(||i18n.text("message.all_projects"))}</strong></span>
-                <button class="command-trigger" id="command-button" type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+k Meta+k" on:click=move |_|command_open.set(true)>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
-                    <span>{move || i18n.text("message.search_go_to")}</span><kbd>"Ctrl K"</kbd>
+                <span class="topbar-context">
+                    <span class="topbar-workspace">{move || i18n.text("message.my_workspace")}</span>
+                    <span class="slash" aria-hidden="true">
+                        "/"
+                    </span>
+                    <strong id="breadcrumb">
+                        {move || {
+                            projects
+                                .with(|items| {
+                                    items
+                                        .iter()
+                                        .find(|project| field(project, "repo") == repository.get())
+                                        .map(|project| field(project, "name"))
+                                })
+                                .unwrap_or_else(|| i18n.text("message.all_projects"))
+                        }}
+                    </strong>
+                </span>
+                <button
+                    class="command-trigger"
+                    id="command-button"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-keyshortcuts="Control+k Meta+k"
+                    on:click={move |_| command_open.set(true)}
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="10.5" cy="10.5" r="6.5" />
+                        <path d="m16 16 4 4" />
+                    </svg>
+                    <span>{move || i18n.text("message.search_go_to")}</span>
+                    <kbd>"Ctrl K"</kbd>
                 </button>
-                <span class="topbar-local" title=move || i18n.text("message.your_cards_stay_here")>"Local"</span>
+                <span class="topbar-local" title={move || i18n.text("message.your_cards_stay_here")}>
+                    "Local"
+                </span>
             </header>
-            <section class="heading" hidden=move || view.get()==WorkspaceView::Task><div><div class="eyebrow" hidden=move || matches!(view.get(), WorkspaceView::Overview | WorkspaceView::Settings | WorkspaceView::Updates)>{move || i18n.text("message.your_workspace_eaca3b2c")}</div><h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1><p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p></div><div class="heading-actions"><button id="create-button" class="primary" type="button" hidden=move || !workspace_controls() || onboarding() disabled=move || pending.get() || loading.get() on:click=move |_|open_new.run(())>"＋ "{move || i18n.text("message.new_task")}<kbd>"N"</kbd></button></div></section>
-            <section class="toolbar" hidden=move || !workspace_controls()><nav class="tabs" aria-label=move || i18n.text("message.project_views")>{[(WorkspaceView::Overview,"message.overview_bb28a9f4"),(WorkspaceView::Board,"message.kanban"),(WorkspaceView::Agents,"message.agents_279b44d2"),(WorkspaceView::Processes,"message.processes"),(WorkspaceView::Worktrees,"message.branches_prs"),(WorkspaceView::Time,"message.time_47b15010"),(WorkspaceView::Archives,"message.archives")].into_iter().map(move |(target,label)|view!{<button class="view-tab" class:selected-tab=move || view.get()==target data-view=target.key() id=match target{WorkspaceView::Time=>"view-time-report",WorkspaceView::Archives=>"show-archives",_=>target.key()} aria-pressed=move ||(view.get()==target).to_string() on:click=move |_|navigate.run(target)><NavigationIcon kind=target.key() view_icon=true /><span>{move ||i18n.text(label)}</span></button>}).collect_view()}</nav></section>
-            <section class="toolbar-actions" aria-label=move || i18n.text("message.project_and_search") hidden=move || !workspace_controls()>
-                <label class="project-choice" for="board-project">{move || i18n.text("message.project")}<select id="board-project" prop:value=move ||repository.get() on:change=move |event| {repository.set(event_target_value(&event));focus_filter.set("all".into());search.set(String::new());}><option value="">{move ||i18n.text("message.all_projects")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
-                <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
-                <button id="configure-columns" hidden=move||view.get()!=WorkspaceView::Board type="button" on:click=move |_|show_kanban_settings.set(true)>{move||i18n.text("message.configure_kanban_columns")}</button>
-                <button id="sync-button" type="button" hidden=move||board.settings.get().string_equals("ticketProvider","local").unwrap_or(true) disabled=move||pending.get() on:click=move |_| {if pending.get_untracked(){return;}let Ok(credential)=token.get_value() else{return;};ticket_sync_notice.set("message.ticket_sync_running".into());let provider=field(&board.settings.get_untracked(),"ticketProvider");let project=projects.with_untracked(|items|items.iter().find(|project|field(project,"repo")==repository.get_untracked()).cloned());pending.set(true);error.set(String::new());spawn_local(async move {let result=crate::ticket_sync::synchronize(&credential,&provider,project).await;let _=board.refresh(&credential).await;pending.set(false);ticket_sync_notice.set(String::new());match result {Ok(crate::ticket_sync::Outcome::ConfigurationRequired)=>{settings_section.set("tickets");navigate.run(WorkspaceView::Settings);},Ok(crate::ticket_sync::Outcome::Complete)=>ticket_sync_notice.set("message.ticket_sync_complete".into()),Err(message)=>error.set(message)}});}>{move ||i18n.text("message.synchronize_tickets")}</button>
-            </section>
-            <p class="connection-notice" id="live-status" role="status" hidden=move || !workspace_controls() || token.get_value().is_err() || (board.connected.get() && board.sync_error.get().is_empty()) data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else{"message.updates_interrupted_reconnecting".into()}))}</p>
-            <div id="focus-bar" class="focus-bar" hidden=move || view.get()!=WorkspaceView::Board || cards.get().is_empty()><span class="results-count"><strong id="total">{move ||visible(false).into_iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).count()}</strong>" "{move ||i18n.text("message.task_s")}</span><div class="focus-options">{[("all","message.all"),("review","message.to_review"),("attention","message.to_resume")].into_iter().map(move |(filter,label)|view!{<button data-focus=filter aria-pressed=move ||(focus_filter.get()==filter).to_string() on:click=move |_|focus_filter.set(filter.into())>{move ||i18n.text(label)}<span hidden=filter=="all">{move ||visible(false).iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),filter)).count()}</span></button>}).collect_view()}</div><span class="keyboard-hint"><kbd>"/"</kbd>" "{move ||i18n.text("message.search_2fe057eb")}" · "<kbd>"N"</kbd>" "{move ||i18n.text("message.new_task_b7d039ad")}</span></div>
-            <crate::time::TimerBanner board token on_task=open_task />
-            <p id="ticket-sync-notice" role="status" hidden=move||ticket_sync_notice.get().is_empty()>{move||i18n.text(&ticket_sync_notice.get())}</p><p role="alert" id="error">{move || i18n.text(&error.get())}</p><p class="loading" role="status" hidden=move || !loading.get()>{move ||i18n.text("message.loading_the_board")}</p>
-            <section id="welcome" class="welcome-guide" aria-labelledby="welcome-title" hidden=move || !onboarding()>
-                <div class="welcome-intro"><h2 id="welcome-title">{move ||i18n.text("message.prepare_your_first_task")}</h2><p>{move ||i18n.text("message.welcome_task_intro")}</p></div>
-                <div class="welcome-paths">
-                    <div class="welcome-path"><h3>{move ||i18n.text("message.find_your_code")}</h3><p>{move ||i18n.text("message.save_a_project_folder")}</p><button id="welcome-projects" type="button" on:click=move |_|navigate.run(WorkspaceView::Projects)>{move ||i18n.text("message.add_a_project")}</button></div>
-                    <div class="welcome-path"><h3>{move ||i18n.text("message.describe_the_work")}</h3><p>{move ||i18n.text("message.first_task_help")}</p><button id="welcome-create" class="primary" type="button" on:click=move |_|open_new.run(())>{move ||i18n.text("message.new_task")}</button></div>
+            <section class="heading" hidden={move || view.get() == WorkspaceView::Task}>
+                <div>
+                    <div
+                        class="eyebrow"
+                        hidden={move || {
+                            matches!(
+                                view.get(),
+                                WorkspaceView::Overview | WorkspaceView::Settings | WorkspaceView::Updates
+                            )
+                        }}
+                    >
+                        {move || i18n.text("message.your_workspace_eaca3b2c")}
+                    </div>
+                    <h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1>
+                    <p id="workspace-subtitle">{move || i18n.text(view.get().heading().1)}</p>
                 </div>
-                <div class="welcome-settings"><p>{move ||i18n.text("message.connect_tools_later")}</p><button id="welcome-settings" class="text-button" type="button" on:click=move |_|navigate.run(WorkspaceView::Settings)>{move ||i18n.text("message.open_settings")}</button></div>
+                <div class="heading-actions">
+                    <button
+                        id="create-button"
+                        class="primary"
+                        type="button"
+                        hidden={move || !workspace_controls() || onboarding()}
+                        disabled={move || pending.get() || loading.get()}
+                        on:click={move |_| open_new.run(())}
+                    >
+                        "＋ "
+                        {move || i18n.text("message.new_task")}
+                        <kbd>"N"</kbd>
+                    </button>
+                </div>
             </section>
-            <section aria-label=move || i18n.text("message.task_board") id="prototype-board" class="board" tabindex="0" hidden=move ||view.get()!=WorkspaceView::Board || visible(false).is_empty() aria-busy=move || loading.get().to_string()>
-                <For each=move||board.projects.get().iter().find(|project|field(project,"repo")==repository.get()).and_then(|project|atelier_core::application::kanban::for_project(project).ok()).unwrap_or_default().columns key=|column|column.status.clone() children=move |entry| {
-                    let status=STATUSES.iter().find(|(status,_)|*status==entry.status).map(|(status,_)|*status).unwrap_or("todo");
-                    let label=move||board.projects.with(|projects|crate::kanban_settings::project_column_name(i18n,projects,&repository.get(),status));
-                    let column = move || if view.get()==WorkspaceView::Archives {Vec::new()} else {visible(false).into_iter().filter(|card| field(&card.fields, "status") == status && matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).collect::<Vec<_>>()};
-                    view! { <section class=format!("column {status}") data-status=status aria-label=label on:dragover=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some()&&!pending.get_untracked(){event.prevent_default();if let Some(transfer)=event.data_transfer(){transfer.set_drop_effect("move");}}} on:drop=move |event:leptos::ev::DragEvent|{if dragging.get_untracked().is_some(){event.prevent_default();move_card.run(status);}}><div class="column-heading"><span class="status-dot"></span>{label}<span class="count">{move || column().len()}</span></div><For each=column key=|card| card.id.clone() children=move |card| {
-                        let id = StoredValue::new(card.id);
-                        let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
-                        let running=move || board.runs.with(|runs|runs.iter().any(|run|field(run,"cardId")==id.get_value()&&matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")));
-                        let busy=move ||pending.get()||current().is_some_and(|card|card.fields.flag("publishing").unwrap_or(false)||card.fields.get::<atelier_core::document::Document>("automation").ok().flatten().is_some_and(|flow|field(&flow,"state")=="running"));
-                        view! { <article class="card" data-id=id.get_value() draggable=move ||(!busy()).to_string() class:dragging=move ||dragging.with(|value|value.as_ref().is_some_and(|(card,_)|card==&id.get_value())) on:dragstart=move |event:leptos::ev::DragEvent|{
-                            if busy(){event.prevent_default();return;}
-                            if let Some(card)=current(){if let Some(transfer)=event.data_transfer(){if transfer.set_data("text/plain",&card.id).is_err(){event.prevent_default();return;}transfer.set_effect_allowed("move");}dragging.set(Some((card.id,field(&card.fields,"status"))));}
-                        } on:dragend=move |_|dragging.set(None)>
-                            <div class="card-actions"><button type="button" id=format!("card-actions-toggle-{}",id.get_value()) class="card-actions-toggle" popovertarget=format!("card-actions-{}",id.get_value()) aria-label=move ||i18n.text("message.task_actions") title=move ||i18n.text("message.task_actions")><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg></button><div id=format!("card-actions-{}",id.get_value()) class="card-action-menu" popover="auto">
-                                <button type="button" class="danger" hidden=move ||!running() disabled=move ||pending.get() popovertarget=format!("card-actions-{}",id.get_value()) popovertargetaction="hide" on:click=move |_|card_action.run((id.get_value(),"stop"))><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>{move ||i18n.text("message.stop_the_agent")}</button>
-                                <button type="button" hidden=running disabled=busy popovertarget=format!("card-actions-{}",id.get_value()) popovertargetaction="hide" on:click=move |_|card_action.run((id.get_value(),"archive"))><NavigationIcon kind="archives" view_icon=true />{move ||i18n.text("message.archive_8614cf00")}</button>
-                                <button type="button" class="danger" hidden=running disabled=busy popovertarget=format!("card-actions-{}",id.get_value()) popovertargetaction="hide" on:click=move |_|card_action.run((id.get_value(),"delete"))><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>{move ||i18n.text("message.delete_locally")}</button>
-                            </div></div>
-                            <span class="card-label">{move || current().and_then(|card|card.fields.get::<atelier_core::document::Document>("ticket").ok().flatten()).map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text("message.local_task"))}</span>
-                            <button type="button" class="card-title card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| card.title.clone()).unwrap_or_default()}</button>
-                            <span class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</span>
-                            {move || current().and_then(|card|card.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist").ok().flatten()).filter(|criteria|!criteria.is_empty()).map(|criteria|view!{<span class="card-criteria">{i18n.text("message.0_1_criteria_checked").replace("{0}",&criteria.iter().filter(|criterion|criterion.done).count().to_string()).replace("{1}",&criteria.len().to_string())}</span>})}
-                            <div class="card-bottom">{move || current().and_then(|card|{let agent=field(&card.fields,"agent");board.settings.with(|settings|atelier_core::domain::agent_options::providers(settings).unwrap_or_default().into_iter().find(|profile|field(profile,"id")==agent))}).map(|profile|view!{<span class="agent-pill">{field(&profile,"name")}</span>})}<span class="project-pill">{move || current().map(|card|{let repo=field(&card.fields,"repo");projects.with(|projects|projects.iter().find(|project|field(project,"repo")==repo).map(|project|field(project,"name"))).unwrap_or_else(||if repo.is_empty(){i18n.text("message.no_project")}else{repo.rsplit(['/', '\\']).find(|part|!part.is_empty()).unwrap_or(&repo).to_owned()})}).unwrap_or_default()}</span>
-                                <span class="card-live" hidden=move || !board.runs.with(|runs|runs.iter().any(|run|field(run,"cardId")==id.get_value()&&field(run,"status")=="running"))>{move ||i18n.text("message.work_in_progress")}</span>
-                            </div>
-                        </article> }
-                    } /><p class="empty" hidden=move || !column().is_empty() || loading.get()>{move || i18n.text("message.nothing_yet")}</p><button type="button" class="column-add" hidden=status!="todo" aria-label=move ||i18n.text("message.add_a_task") on:click=move |_|open_new.run(())>"＋"</button></section> }
-                } />
+            <section class="toolbar" hidden={move || !workspace_controls()}>
+                <nav class="tabs" aria-label={move || i18n.text("message.project_views")}>
+                    {[
+                        (WorkspaceView::Overview, "message.overview_bb28a9f4"),
+                        (WorkspaceView::Board, "message.kanban"),
+                        (WorkspaceView::Agents, "message.agents_279b44d2"),
+                        (WorkspaceView::Processes, "message.processes"),
+                        (WorkspaceView::Worktrees, "message.branches_prs"),
+                        (WorkspaceView::Time, "message.time_47b15010"),
+                        (WorkspaceView::Archives, "message.archives"),
+                    ]
+                        .into_iter()
+                        .map(move |(target, label)| {
+                            view! {
+                                <button
+                                    class="view-tab"
+                                    class:selected-tab={move || view.get() == target}
+                                    data-view={target.key()}
+                                    id={match target {
+                                        WorkspaceView::Time => "view-time-report",
+                                        WorkspaceView::Archives => "show-archives",
+                                        _ => target.key(),
+                                    }}
+                                    aria-pressed={move || (view.get() == target).to_string()}
+                                    on:click={move |_| navigate.run(target)}
+                                >
+                                    <NavigationIcon kind={target.key()} view_icon=true />
+                                    <span>{move || i18n.text(label)}</span>
+                                </button>
+                            }
+                        })
+                        .collect_view()}
+                </nav>
             </section>
-            <Show when=move || matches!(view.get(),WorkspaceView::Overview|WorkspaceView::Agents|WorkspaceView::Processes|WorkspaceView::Worktrees)><workspace_views::WorkspaceViews board token view=Signal::derive(move ||view.get()) project=Signal::derive(move ||repository.get()) on_open=open_task on_view=navigate on_focus=Callback::new(move |filter:String|{focus_filter.set(filter);search.set(String::new());navigate.run(WorkspaceView::Board);}) on_projects=Callback::new(move |()|navigate.run(WorkspaceView::Projects)) /></Show>
-            <Show when=move || view.get()==WorkspaceView::Archives><section id="workspace-archives" class="workspace-panel"><div class="panel-heading"><div><h2>{move ||i18n.text("message.your_history")}</h2><p class="hint">{move ||i18n.text("message.archived_tasks_with_their_time_entries_branches_and_logs_restori")}</p></div></div><For each=move ||visible(false) key=|card|card.id.clone() children=move |card|{let id=StoredValue::new(card.id.clone());view!{<article class="workspace-row archive-row" data-id=id.get_value()><div><span class="section-kicker">{move ||i18n.text("message.archived_task")}</span><h3>{card.title.clone()}</h3><p class="hint">{move ||i18n.text("message.history_kept")}</p></div><div class="row-actions"><button id=format!("card-open-{}",id.get_value()) class="card-open" on:click=move |_|open_task.run(id.get_value())>{move ||i18n.text("message.open_task")}</button><button disabled=move ||pending.get() on:click=move |_|{if pending.get_untracked(){return;}let Ok(token)=token.get_value()else{return;};pending.set(true);spawn_local(async move{let result=write(&token,Method::POST,&format!("/api/cards/{}/archive",id.get_value()),&serde_json::json!({"archived":false})).await;match result{Ok(_)=>{let _=board.refresh(&token).await;},Err(message)=>error.set(message)}pending.set(false);});}>{move ||i18n.text("message.restore")}</button></div></article>}} /><p class="empty" hidden=move ||!visible(false).is_empty()>{move ||i18n.text("message.no_archived_tasks")}</p></section></Show>
-            <Show when=move ||view.get()==WorkspaceView::Brainstorm><BrainstormPage board token on_open=open_task on_new=open_new /></Show>
-            {move || selected.get().filter(|_|view.get()==WorkspaceView::Task).map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| commit_view.run(return_view.get_untracked())) /> })}
-            {move || match view.get(){WorkspaceView::Settings|WorkspaceView::Updates=>Some(view!{<Settings board token initial_tab=if view.get()==WorkspaceView::Updates{"updates"}else{settings_section.get_untracked()} on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) />}),_=>None}}
-            <Show when=move ||view.get()==WorkspaceView::Time><crate::time_report::TimeReport board token loading=Memo::new(move |_|loading.get()) load_error=Signal::derive(move ||if board.loaded.get(){String::new()}else{error.get()}) on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) on_task=open_task /></Show>
-            <footer>"ATELIER "<span>{move ||i18n.text("message.a_little_less_friction_a_little_more_done")}</span><span>{move ||i18n.text("message.local_storage_sqlite")}</span></footer>
-            <Show when=move||show_kanban_settings.get()><crate::kanban_settings::KanbanSettings board token repository on_close=Callback::new(move|()|show_kanban_settings.set(false))/></Show>
-            <Show when=move || view.get()==WorkspaceView::Projects><Projects board repository token on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) /></Show>
-            <Show when=move || show_agents.get()><AgentProfiles board token on_close=Callback::new(move |()| show_agents.set(false)) /></Show>
-            <Show when=move || show_backups.get()><Backups board token on_close=Callback::new(move |()| show_backups.set(false)) /></Show>
-            {move ||deleting_card.get().map(|card|{let id=card.id.clone();view!{<DeleteCardDialog card pending error on_confirm=Callback::new(move |()|card_action.run((id.clone(),"confirm-delete"))) on_close=Callback::new(move |()|deleting_card.set(None)) />}})}
-            <Show when=move ||show_diagnostics.get()><DiagnosticsDialog board token on_close=Callback::new(move |()|show_diagnostics.set(false)) /></Show>
-            <Show when=move ||command_open.get()><CommandPalette board on_close=Callback::new(move |()|command_open.set(false)) on_open=open_task on_new=open_new on_project=Callback::new(move |repo:String|{repository.set(repo);search.set(String::new());focus_filter.set("all".into());navigate.run(WorkspaceView::Overview);}) on_projects=Callback::new(move |()|navigate.run(WorkspaceView::Projects)) on_diagnostics=Callback::new(move |()|show_diagnostics.set(true)) /></Show>
+            <section
+                class="toolbar-actions"
+                aria-label={move || i18n.text("message.project_and_search")}
+                hidden={move || !workspace_controls()}
+            >
+                <label class="project-choice" for="board-project">
+                    {move || i18n.text("message.project")}
+                    <select
+                        id="board-project"
+                        prop:value={move || repository.get()}
+                        on:change={move |event| {
+                            repository.set(event_target_value(&event));
+                            focus_filter.set("all".into());
+                            search.set(String::new());
+                        }}
+                    >
+                        <option value="">{move || i18n.text("message.all_projects")}</option>
+                        <For
+                            each={move || projects.get()}
+                            key={|project| field(project, "id")}
+                            children={move |project| {
+                                view! {
+                                    <option value={field(&project, "repo")}>{field(&project, "name")}</option>
+                                }
+                            }}
+                        />
+                    </select>
+                </label>
+                <input
+                    id="board-search"
+                    type="search"
+                    hidden={move || view.get() != WorkspaceView::Board}
+                    placeholder={move || i18n.text("message.title_ticket_or_description")}
+                    aria-label={move || i18n.text("message.search_tasks")}
+                    prop:value={move || search.get()}
+                    on:input={move |event| search.set(event_target_value(&event))}
+                />
+                <button
+                    id="configure-columns"
+                    hidden={move || view.get() != WorkspaceView::Board}
+                    type="button"
+                    on:click={move |_| show_kanban_settings.set(true)}
+                >
+                    {move || i18n.text("message.configure_kanban_columns")}
+                </button>
+                <button
+                    id="sync-button"
+                    type="button"
+                    hidden={move || {
+                        board.settings.get().string_equals("ticketProvider", "local").unwrap_or(true)
+                    }}
+                    disabled={move || pending.get()}
+                    on:click={move |_| {
+                        if pending.get_untracked() {
+                            return;
+                        }
+                        let Ok(credential) = token.get_value() else {
+                            return;
+                        };
+                        ticket_sync_notice.set("message.ticket_sync_running".into());
+                        let provider = field(&board.settings.get_untracked(), "ticketProvider");
+                        let project = projects
+                            .with_untracked(|items| {
+                                items
+                                    .iter()
+                                    .find(|project| field(project, "repo") == repository.get_untracked())
+                                    .cloned()
+                            });
+                        pending.set(true);
+                        error.set(String::new());
+                        spawn_local(async move {
+                            let result = crate::ticket_sync::synchronize(&credential, &provider, project)
+                                .await;
+                            let _ = board.refresh(&credential).await;
+                            pending.set(false);
+                            ticket_sync_notice.set(String::new());
+                            match result {
+                                Ok(crate::ticket_sync::Outcome::ConfigurationRequired) => {
+                                    settings_section.set("tickets");
+                                    navigate.run(WorkspaceView::Settings);
+                                }
+                                Ok(crate::ticket_sync::Outcome::Complete) => {
+                                    ticket_sync_notice.set("message.ticket_sync_complete".into())
+                                }
+                                Err(message) => error.set(message),
+                            }
+                        });
+                    }}
+                >
+                    {move || i18n.text("message.synchronize_tickets")}
+                </button>
+            </section>
+            <p
+                id="credential-status"
+                role="status"
+                class="connection-notice"
+                hidden={move || {
+                    !board.settings.with(|settings| settings.has_text("credentialError").unwrap_or(false))
+                }}
+            >
+                {move || board.settings.with(|settings| i18n.text(&field(settings, "credentialError")))}
+            </p>
+            <p
+                class="connection-notice"
+                id="live-status"
+                role="status"
+                hidden={move || {
+                    !workspace_controls() || token.get_value().is_err()
+                        || (board.connected.get() && board.sync_error.get().is_empty())
+                }}
+                data-connected={move || board.connected.get().to_string()}
+            >
+                {move || {
+                    i18n
+                        .text(
+                            &(if !board.sync_error.get().is_empty() {
+                                board.sync_error.get()
+                            } else {
+                                "message.updates_interrupted_reconnecting".into()
+                            }),
+                        )
+                }}
+            </p>
+            <div
+                id="focus-bar"
+                class="focus-bar"
+                hidden={move || view.get() != WorkspaceView::Board || cards.get().is_empty()}
+            >
+                <span class="results-count">
+                    <strong id="total">
+                        {move || {
+                            visible(false)
+                                .into_iter()
+                                .filter(|card| matches_focus(
+                                    card,
+                                    &cards.get(),
+                                    &board.runs.get(),
+                                    &focus_filter.get(),
+                                ))
+                                .count()
+                        }}
+                    </strong>
+                    " "
+                    {move || i18n.text("message.task_s")}
+                </span>
+                <div class="focus-options">
+                    {[
+                        ("all", "message.all"),
+                        ("review", "message.to_review"),
+                        ("attention", "message.to_resume"),
+                    ]
+                        .into_iter()
+                        .map(move |(filter, label)| {
+                            view! {
+                                <button
+                                    data-focus={filter}
+                                    aria-pressed={move || (focus_filter.get() == filter).to_string()}
+                                    on:click={move |_| focus_filter.set(filter.into())}
+                                >
+                                    {move || i18n.text(label)}
+                                    <span hidden={filter
+                                        == "all"}>
+                                        {move || {
+                                            visible(false)
+                                                .iter()
+                                                .filter(|card| matches_focus(
+                                                    card,
+                                                    &cards.get(),
+                                                    &board.runs.get(),
+                                                    filter,
+                                                ))
+                                                .count()
+                                        }}
+                                    </span>
+                                </button>
+                            }
+                        })
+                        .collect_view()}
+                </div>
+                <span class="keyboard-hint">
+                    <kbd>"/"</kbd>
+                    " "
+                    {move || i18n.text("message.search_2fe057eb")}
+                    " · "
+                    <kbd>"N"</kbd>
+                    " "
+                    {move || i18n.text("message.new_task_b7d039ad")}
+                </span>
+            </div>
+            <crate::time::TimerBanner board token on_task={open_task} />
+            <p id="ticket-sync-notice" role="status" hidden={move || ticket_sync_notice.get().is_empty()}>
+                {move || i18n.text(&ticket_sync_notice.get())}
+            </p>
+            <p role="alert" id="error">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p class="loading" role="status" hidden={move || !loading.get()}>
+                {move || i18n.text("message.loading_the_board")}
+            </p>
+            <section
+                id="welcome"
+                class="welcome-guide"
+                aria-labelledby="welcome-title"
+                hidden={move || !onboarding()}
+            >
+                <div class="welcome-intro">
+                    <h2 id="welcome-title">{move || i18n.text("message.prepare_your_first_task")}</h2>
+                    <p>{move || i18n.text("message.welcome_task_intro")}</p>
+                </div>
+                <div class="welcome-paths">
+                    <div class="welcome-path">
+                        <h3>{move || i18n.text("message.find_your_code")}</h3>
+                        <p>{move || i18n.text("message.save_a_project_folder")}</p>
+                        <button
+                            id="welcome-projects"
+                            type="button"
+                            on:click={move |_| navigate.run(WorkspaceView::Projects)}
+                        >
+                            {move || i18n.text("message.add_a_project")}
+                        </button>
+                    </div>
+                    <div class="welcome-path">
+                        <h3>{move || i18n.text("message.describe_the_work")}</h3>
+                        <p>{move || i18n.text("message.first_task_help")}</p>
+                        <button
+                            id="welcome-create"
+                            class="primary"
+                            type="button"
+                            on:click={move |_| open_new.run(())}
+                        >
+                            {move || i18n.text("message.new_task")}
+                        </button>
+                    </div>
+                </div>
+                <div class="welcome-settings">
+                    <p>{move || i18n.text("message.connect_tools_later")}</p>
+                    <button
+                        id="welcome-settings"
+                        class="text-button"
+                        type="button"
+                        on:click={move |_| navigate.run(WorkspaceView::Settings)}
+                    >
+                        {move || i18n.text("message.open_settings")}
+                    </button>
+                </div>
+            </section>
+            <section
+                aria-label={move || i18n.text("message.task_board")}
+                id="prototype-board"
+                class="board"
+                tabindex="0"
+                hidden={move || view.get() != WorkspaceView::Board || visible(false).is_empty()}
+                aria-busy={move || loading.get().to_string()}
+            >
+                <For
+                    each={move || {
+                        board
+                            .projects
+                            .get()
+                            .iter()
+                            .find(|project| field(project, "repo") == repository.get())
+                            .and_then(|project| atelier_core::application::kanban::for_project(project).ok())
+                            .unwrap_or_default()
+                            .columns
+                    }}
+                    key={|column| column.status.clone()}
+                    children={move |entry| {
+                        let status = STATUSES
+                            .iter()
+                            .find(|(status, _)| *status == entry.status)
+                            .map(|(status, _)| *status)
+                            .unwrap_or("todo");
+                        let label = move || {
+                            board
+                                .projects
+                                .with(|projects| crate::kanban_settings::project_column_name(
+                                    i18n,
+                                    projects,
+                                    &repository.get(),
+                                    status,
+                                ))
+                        };
+                        let column = move || {
+                            if view.get() == WorkspaceView::Archives {
+                                Vec::new()
+                            } else {
+                                visible(false)
+                                    .into_iter()
+                                    .filter(|card| {
+                                        field(&card.fields, "status") == status
+                                            && matches_focus(
+                                                card,
+                                                &cards.get(),
+                                                &board.runs.get(),
+                                                &focus_filter.get(),
+                                            )
+                                    })
+                                    .collect::<Vec<_>>()
+                            }
+                        };
+                        view! {
+                            <section
+                                class={format!("column {status}")}
+                                data-status={status}
+                                aria-label={label}
+                                on:dragover={move |event: leptos::ev::DragEvent| {
+                                    if dragging.get_untracked().is_some() && !pending.get_untracked() {
+                                        event.prevent_default();
+                                        if let Some(transfer) = event.data_transfer() {
+                                            transfer.set_drop_effect("move");
+                                        }
+                                    }
+                                }}
+                                on:drop={move |event: leptos::ev::DragEvent| {
+                                    if dragging.get_untracked().is_some() {
+                                        event.prevent_default();
+                                        move_card.run(status);
+                                    }
+                                }}
+                            >
+                                <div class="column-heading">
+                                    <span class="status-dot"></span>
+                                    {label}
+                                    <span class="count">{move || column().len()}</span>
+                                </div>
+                                <For
+                                    each={column}
+                                    key={|card| card.id.clone()}
+                                    children={move |card| {
+                                        let id = StoredValue::new(card.id);
+                                        let current = move || {
+                                            cards
+                                                .with(|cards| {
+                                                    cards.iter().find(|card| card.id == id.get_value()).cloned()
+                                                })
+                                        };
+                                        let running = move || {
+                                            board
+                                                .runs
+                                                .with(|runs| {
+                                                    runs
+                                                        .iter()
+                                                        .any(|run| {
+                                                            field(run, "cardId") == id.get_value()
+                                                                && matches!(
+                                                                    field(run, "status").as_str(),
+                                                                    "starting" | "running" | "stopping"
+                                                                )
+                                                        })
+                                                })
+                                        };
+                                        let busy = move || {
+                                            pending.get()
+                                                || current()
+                                                    .is_some_and(|card| {
+                                                        card.fields.flag("publishing").unwrap_or(false)
+                                                            || card
+                                                                .fields
+                                                                .get::<atelier_core::document::Document>("automation")
+                                                                .ok()
+                                                                .flatten()
+                                                                .is_some_and(|flow| field(&flow, "state") == "running")
+                                                    })
+                                        };
+                                        view! {
+                                            <article
+                                                class="card"
+                                                data-id={id.get_value()}
+                                                draggable={move || (!busy()).to_string()}
+                                                class:dragging={move || {
+                                                    dragging
+                                                        .with(|value| {
+                                                            value
+                                                                .as_ref()
+                                                                .is_some_and(|(card, _)| card == &id.get_value())
+                                                        })
+                                                }}
+                                                on:dragstart={move |event: leptos::ev::DragEvent| {
+                                                    if busy() {
+                                                        event.prevent_default();
+                                                        return;
+                                                    }
+                                                    if let Some(card) = current() {
+                                                        if let Some(transfer) = event.data_transfer() {
+                                                            if transfer.set_data("text/plain", &card.id).is_err() {
+                                                                event.prevent_default();
+                                                                return;
+                                                            }
+                                                            transfer.set_effect_allowed("move");
+                                                        }
+                                                        dragging
+                                                            .set(Some((card.id, field(&card.fields, "status"))));
+                                                    }
+                                                }}
+                                                on:dragend={move |_| dragging.set(None)}
+                                            >
+                                                <div class="card-actions">
+                                                    <button
+                                                        type="button"
+                                                        id={format!("card-actions-toggle-{}", id.get_value())}
+                                                        class="card-actions-toggle"
+                                                        popovertarget={format!("card-actions-{}", id.get_value())}
+                                                        aria-label={move || i18n.text("message.task_actions")}
+                                                        title={move || i18n.text("message.task_actions")}
+                                                    >
+                                                        <svg
+                                                            width="16"
+                                                            height="16"
+                                                            viewBox="0 0 16 16"
+                                                            fill="currentColor"
+                                                            aria-hidden="true"
+                                                        >
+                                                            <circle cx="3" cy="8" r="1.5" />
+                                                            <circle cx="8" cy="8" r="1.5" />
+                                                            <circle cx="13" cy="8" r="1.5" />
+                                                        </svg>
+                                                    </button>
+                                                    <div
+                                                        id={format!("card-actions-{}", id.get_value())}
+                                                        class="card-action-menu"
+                                                        popover="auto"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="danger"
+                                                            hidden={move || !running()}
+                                                            disabled={move || pending.get()}
+                                                            popovertarget={format!("card-actions-{}", id.get_value())}
+                                                            popovertargetaction="hide"
+                                                            on:click={move |_| {
+                                                                card_action.run((id.get_value(), "stop"))
+                                                            }}
+                                                        >
+                                                            <svg
+                                                                width="16"
+                                                                height="16"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="1.7"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <rect x="5" y="5" width="14" height="14" rx="2" />
+                                                            </svg>
+                                                            {move || i18n.text("message.stop_the_agent")}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            hidden={running}
+                                                            disabled={busy}
+                                                            popovertarget={format!("card-actions-{}", id.get_value())}
+                                                            popovertargetaction="hide"
+                                                            on:click={move |_| {
+                                                                card_action.run((id.get_value(), "archive"))
+                                                            }}
+                                                        >
+                                                            <NavigationIcon kind="archives" view_icon=true />
+                                                            {move || i18n.text("message.archive_8614cf00")}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="danger"
+                                                            hidden={running}
+                                                            disabled={busy}
+                                                            popovertarget={format!("card-actions-{}", id.get_value())}
+                                                            popovertargetaction="hide"
+                                                            on:click={move |_| {
+                                                                card_action.run((id.get_value(), "delete"))
+                                                            }}
+                                                        >
+                                                            <svg
+                                                                width="16"
+                                                                height="16"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="1.7"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
+                                                            </svg>
+                                                            {move || i18n.text("message.delete_locally")}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <span class="card-label">
+                                                    {move || {
+                                                        current()
+                                                            .and_then(|card| {
+                                                                card
+                                                                    .fields
+                                                                    .get::<atelier_core::document::Document>("ticket")
+                                                                    .ok()
+                                                                    .flatten()
+                                                            })
+                                                            .map(|ticket| field(&ticket, "key"))
+                                                            .filter(|key| !key.is_empty())
+                                                            .unwrap_or_else(|| i18n.text("message.local_task"))
+                                                    }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    class="card-title card-open"
+                                                    id={format!("card-open-{}", id.get_value())}
+                                                    on:click={move |_| open_task.run(id.get_value())}
+                                                >
+                                                    {move || {
+                                                        current().map(|card| card.title.clone()).unwrap_or_default()
+                                                    }}
+                                                </button>
+                                                <span class="card-description">
+                                                    {move || {
+                                                        current()
+                                                            .map(|card| field(&card.fields, "description"))
+                                                            .unwrap_or_default()
+                                                    }}
+                                                </span>
+                                                {move || {
+                                                    current()
+                                                        .and_then(|card| {
+                                                            card
+                                                                .fields
+                                                                .get::<
+                                                                    Vec<atelier_core::domain::checklist::Criterion>,
+                                                                >("checklist")
+                                                                .ok()
+                                                                .flatten()
+                                                        })
+                                                        .filter(|criteria| !criteria.is_empty())
+                                                        .map(|criteria| {
+                                                            view! {
+                                                                <span class="card-criteria">
+                                                                    {i18n
+                                                                        .text("message.0_1_criteria_checked")
+                                                                        .replace(
+                                                                            "{0}",
+                                                                            &criteria
+                                                                                .iter()
+                                                                                .filter(|criterion| criterion.done)
+                                                                                .count()
+                                                                                .to_string(),
+                                                                        )
+                                                                        .replace("{1}", &criteria.len().to_string())}
+                                                                </span>
+                                                            }
+                                                        })
+                                                }}
+                                                <div class="card-bottom">
+                                                    {move || {
+                                                        current()
+                                                            .and_then(|card| {
+                                                                let agent = field(&card.fields, "agent");
+                                                                board
+                                                                    .settings
+                                                                    .with(|settings| {
+                                                                        atelier_core::domain::agent_options::providers(settings)
+                                                                            .unwrap_or_default()
+                                                                            .into_iter()
+                                                                            .find(|profile| field(profile, "id") == agent)
+                                                                    })
+                                                            })
+                                                            .map(|profile| {
+                                                                view! {
+                                                                    <span class="agent-pill">{field(&profile, "name")}</span>
+                                                                }
+                                                            })
+                                                    }}
+                                                    <span class="project-pill">
+                                                        {move || {
+                                                            current()
+                                                                .map(|card| {
+                                                                    let repo = field(&card.fields, "repo");
+                                                                    projects
+                                                                        .with(|projects| {
+                                                                            projects
+                                                                                .iter()
+                                                                                .find(|project| field(project, "repo") == repo)
+                                                                                .map(|project| field(project, "name"))
+                                                                        })
+                                                                        .unwrap_or_else(|| {
+                                                                            if repo.is_empty() {
+                                                                                i18n.text("message.no_project")
+                                                                            } else {
+                                                                                repo.rsplit(['/', '\\'])
+                                                                                    .find(|part| !part.is_empty())
+                                                                                    .unwrap_or(&repo)
+                                                                                    .to_owned()
+                                                                            }
+                                                                        })
+                                                                })
+                                                                .unwrap_or_default()
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="card-live"
+                                                        hidden={move || {
+                                                            !board
+                                                                .runs
+                                                                .with(|runs| {
+                                                                    runs
+                                                                        .iter()
+                                                                        .any(|run| {
+                                                                            field(run, "cardId") == id.get_value()
+                                                                                && field(run, "status") == "running"
+                                                                        })
+                                                                })
+                                                        }}
+                                                    >
+                                                        {move || i18n.text("message.work_in_progress")}
+                                                    </span>
+                                                </div>
+                                            </article>
+                                        }
+                                    }}
+                                />
+                                <p class="empty" hidden={move || !column().is_empty() || loading.get()}>
+                                    {move || i18n.text("message.nothing_yet")}
+                                </p>
+                                <button
+                                    type="button"
+                                    class="column-add"
+                                    hidden={status != "todo"}
+                                    aria-label={move || i18n.text("message.add_a_task")}
+                                    on:click={move |_| open_new.run(())}
+                                >
+                                    "＋"
+                                </button>
+                            </section>
+                        }
+                    }}
+                />
+            </section>
+            <Show when={move || {
+                matches!(
+                    view.get(),
+                    WorkspaceView::Overview
+                    | WorkspaceView::Agents
+                    | WorkspaceView::Processes
+                    | WorkspaceView::Worktrees
+                )
+            }}>
+                <workspace_views::WorkspaceViews
+                    board
+                    token
+                    view={Signal::derive(move || view.get())}
+                    project={Signal::derive(move || repository.get())}
+                    on_open={open_task}
+                    on_view={navigate}
+                    on_focus={Callback::new(move |filter: String| {
+                        focus_filter.set(filter);
+                        search.set(String::new());
+                        navigate.run(WorkspaceView::Board);
+                    })}
+                    on_projects={Callback::new(move |()| navigate.run(WorkspaceView::Projects))}
+                />
+            </Show>
+            <Show when={move || view.get() == WorkspaceView::Archives}>
+                <section id="workspace-archives" class="workspace-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>{move || i18n.text("message.your_history")}</h2>
+                            <p class="hint">
+                                {move || {
+                                    i18n
+                                        .text(
+                                            "message.archived_tasks_with_their_time_entries_branches_and_logs_restori",
+                                        )
+                                }}
+                            </p>
+                        </div>
+                    </div>
+                    <For
+                        each={move || visible(false)}
+                        key={|card| card.id.clone()}
+                        children={move |card| {
+                            let id = StoredValue::new(card.id.clone());
+                            view! {
+                                <article class="workspace-row archive-row" data-id={id.get_value()}>
+                                    <div>
+                                        <span class="section-kicker">
+                                            {move || i18n.text("message.archived_task")}
+                                        </span>
+                                        <h3>{card.title.clone()}</h3>
+                                        <p class="hint">{move || i18n.text("message.history_kept")}</p>
+                                    </div>
+                                    <div class="row-actions">
+                                        <button
+                                            id={format!("card-open-{}", id.get_value())}
+                                            class="card-open"
+                                            on:click={move |_| open_task.run(id.get_value())}
+                                        >
+                                            {move || i18n.text("message.open_task")}
+                                        </button>
+                                        <button
+                                            disabled={move || pending.get()}
+                                            on:click={move |_| {
+                                                if pending.get_untracked() {
+                                                    return;
+                                                }
+                                                let Ok(token) = token.get_value() else {
+                                                    return;
+                                                };
+                                                pending.set(true);
+                                                spawn_local(async move {
+                                                    let result = write(
+                                                            &token,
+                                                            Method::POST,
+                                                            &format!("/api/cards/{}/archive", id.get_value()),
+                                                            &serde_json::json!({"archived":false}),
+                                                        )
+                                                        .await;
+                                                    match result {
+                                                        Ok(_) => {
+                                                            let _ = board.refresh(&token).await;
+                                                        }
+                                                        Err(message) => error.set(message),
+                                                    }
+                                                    pending.set(false);
+                                                });
+                                            }}
+                                        >
+                                            {move || i18n.text("message.restore")}
+                                        </button>
+                                    </div>
+                                </article>
+                            }
+                        }}
+                    />
+                    <p class="empty" hidden={move || !visible(false).is_empty()}>
+                        {move || i18n.text("message.no_archived_tasks")}
+                    </p>
+                </section>
+            </Show>
+            <Show when={move || view.get() == WorkspaceView::Brainstorm}>
+                <BrainstormPage board token on_open={open_task} on_new={open_new} />
+            </Show>
+            {move || {
+                selected
+                    .get()
+                    .filter(|_| view.get() == WorkspaceView::Task)
+                    .map(|card| {
+                        view! {
+                            <TaskEditor
+                                card
+                                board
+                                token
+                                on_open={open_task}
+                                on_close={Callback::new(move |()| {
+                                    commit_view.run(return_view.get_untracked())
+                                })}
+                            />
+                        }
+                    })
+            }}
+            {move || match view.get() {
+                WorkspaceView::Settings | WorkspaceView::Updates => {
+                    Some(
+                        view! {
+                            <Settings
+                                board
+                                token
+                                initial_tab={if view.get() == WorkspaceView::Updates {
+                                    "updates"
+                                } else {
+                                    settings_section.get_untracked()
+                                }}
+                                on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
+                            />
+                        },
+                    )
+                }
+                _ => None,
+            }}
+            <Show when={move || view.get() == WorkspaceView::Time}>
+                <crate::time_report::TimeReport
+                    board
+                    token
+                    loading={Memo::new(move |_| loading.get())}
+                    load_error={Signal::derive(move || {
+                        if board.loaded.get() { String::new() } else { error.get() }
+                    })}
+                    on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
+                    on_task={open_task}
+                />
+            </Show>
+            <footer>
+                "ATELIER "
+                <span>{move || i18n.text("message.a_little_less_friction_a_little_more_done")}</span>
+                <span>{move || i18n.text("message.local_storage_sqlite")}</span>
+            </footer>
+            <Show when={move || show_kanban_settings.get()}>
+                <crate::kanban_settings::KanbanSettings
+                    board
+                    token
+                    repository
+                    on_close={Callback::new(move |()| show_kanban_settings.set(false))}
+                />
+            </Show>
+            <Show when={move || view.get() == WorkspaceView::Projects}>
+                <Projects
+                    board
+                    repository
+                    token
+                    on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
+                />
+            </Show>
+            <Show when={move || show_agents.get()}>
+                <AgentProfiles board token on_close={Callback::new(move |()| show_agents.set(false))} />
+            </Show>
+            <Show when={move || show_backups.get()}>
+                <Backups board token on_close={Callback::new(move |()| show_backups.set(false))} />
+            </Show>
+            {move || {
+                deleting_card
+                    .get()
+                    .map(|card| {
+                        let id = card.id.clone();
+                        view! {
+                            <DeleteCardDialog
+                                card
+                                pending
+                                error
+                                on_confirm={Callback::new(move |()| {
+                                    card_action.run((id.clone(), "confirm-delete"))
+                                })}
+                                on_close={Callback::new(move |()| deleting_card.set(None))}
+                            />
+                        }
+                    })
+            }}
+            <Show when={move || show_diagnostics.get()}>
+                <DiagnosticsDialog
+                    board
+                    token
+                    on_close={Callback::new(move |()| show_diagnostics.set(false))}
+                />
+            </Show>
+            <Show when={move || command_open.get()}>
+                <CommandPalette
+                    board
+                    on_close={Callback::new(move |()| command_open.set(false))}
+                    on_open={open_task}
+                    on_new={open_new}
+                    on_project={Callback::new(move |repo: String| {
+                        repository.set(repo);
+                        search.set(String::new());
+                        focus_filter.set("all".into());
+                        navigate.run(WorkspaceView::Overview);
+                    })}
+                    on_projects={Callback::new(move |()| navigate.run(WorkspaceView::Projects))}
+                    on_diagnostics={Callback::new(move |()| show_diagnostics.set(true))}
+                />
+            </Show>
         </main>
-            <dialog id="new-dialog" node_ref=new_dialog aria-label=move ||i18n.text("message.new_task") on:cancel=move |event:web_sys::Event|{event.prevent_default();close_new();}><form id="new-form" on:submit=move |event:leptos::ev::SubmitEvent| {
-                event.prevent_default();
-                if pending.get_untracked() || template_pending.get_untracked() || template_candidate.get_untracked().is_some() { return; }
-                let Ok(token) = token.get_value() else { return; };
-                let entered = title.get_untracked();
-                let repo = new_repo.get_untracked();
-                let selected_template = template.get_untracked();
-                pending.set(true); create_error.set(String::new());
-                spawn_local(async move {
-                    let operation = async {
-                        let mut body = serde_json::json!({"title":entered,"mode":new_mode.get_untracked(),"model":new_model.get_untracked(),"effort":new_effort.get_untracked()});
-                        if !description.get_untracked().is_empty() {body["description"]=serde_json::json!(description.get_untracked());}
-                        if !instructions.get_untracked().is_empty() {body["instructions"]=serde_json::json!(instructions.get_untracked());}
-                        if !new_agent.get_untracked().is_empty() {body["agent"]=serde_json::json!(new_agent.get_untracked());}
-                        if !repo.is_empty() { body["repo"] = serde_json::json!(&repo); }
-                        if !selected_template.is_empty() { body["templateId"] = serde_json::json!(selected_template); }
-                        let response = write(&token, Method::POST, "/api/cards", &body).await?;
-                        let card: Card = response.json().await.map_err(|_| "message.invalid_server_response".to_owned())?;
-                        let id=card.id.clone(); replace_card(cards, card); new_initialized.set(false); title.set(String::new()); description.set(String::new()); instructions.set(String::new()); template.set(String::new()); new_model.set(String::new()); new_effort.set(String::new()); new_mode.set("edit".into()); if let Some(dialog)=new_dialog.get_untracked(){dialog.close();} focus_filter.set("all".into()); search.set(String::new()); repository.set(repo); view.set(WorkspaceView::Board); let _ = board.refresh(&token).await; open_task.run(id); Ok::<(), String>(())
-                    }.await;
-                    if let Err(message) = operation { create_error.set(message); }
-                    pending.set(false);
-                });
-            }>
-                <div class="dialog-heading"><div><h2>{move ||i18n.text("message.new_task")}</h2></div><button type="button" aria-label=move ||i18n.text("message.close") disabled=move ||pending.get() on:click=move |_|close_new()>"×"</button></div>
-                <details class="disclosure new-task-templates"><summary>{move ||i18n.text("message.task_templates")}</summary><div class="template-options" aria-label=move ||i18n.text("message.task_templates")><span>{move ||i18n.text("message.start_from")}</span>{[("feature","message.feature"),("bug","message.correction"),("analysis","message.analysis")].into_iter().map(move |(kind,label)|view!{<button type="button" data-template=kind disabled=move ||pending.get() on:click=move |_| {
-                    let proposed=task_template(kind);
-                    let previous=description.get_untracked();
-                    if !previous.trim().is_empty() && !["feature","bug","analysis"].into_iter().any(|kind|i18n.text(task_template(kind))==previous){create_error.set("message.the_context_already_entered_is_kept_clear_it_to_apply_a_template".into());return;}
-                    template.set(String::new());description.set(i18n.text(proposed));new_mode.set(if kind=="analysis"{"analyze"}else{"edit"}.into());focus_element("task-title");
-                }>{move ||i18n.text(label)}</button>}).collect_view()}</div>
-                <details class="disclosure" hidden=move || templates.get().is_empty()><summary>{move ||i18n.text("message.use_a_personal_template")}</summary><div class="template-picker"><label for="task-template">{move || i18n.text("message.template")}</label><select id="task-template" disabled=move || pending.get() || template_pending.get() prop:value=move || template.get() on:change=move |event| { let id=event_target_value(&event);remove_template.set(false);if id.is_empty(){template.set(id);}else if !description.get_untracked().trim().is_empty()||!instructions.get_untracked().trim().is_empty(){template_candidate.set(Some(id));}else{apply_template.run(id);} }><option value="">{move || i18n.text("message.no_template")}</option><For each=move || templates.get() key=|item| field(item,"id") children=|item| view! { <option value=field(&item,"id")>{field(&item,"name")}</option> } /></select><button id="remove-template" type="button" class="text-action" hidden=move || template.get().is_empty() disabled=move || pending.get() || template_pending.get() on:click=move |_| remove_template.set(true)>{move || i18n.text("message.remove_this_template")}</button></div></details>
-                </details><section class="form-section"><label for="task-title">{move ||i18n.text("message.title_required_3d8bf263")}<input node_ref=title_input id="task-title" name="title" required maxlength="300" disabled=move ||pending.get() placeholder=move ||i18n.text("message.e_g_add_a_csv_export_for_tasks") prop:value=move ||title.get() on:input=move |event|title.set(event_target_value(&event)) /></label><label>{move ||i18n.text("message.description")}<textarea id="new-description" name="description" rows="5" maxlength="20000" disabled=move ||pending.get() placeholder=move ||i18n.text("message.context_expected_outcome_constraints") prop:value=move ||description.get() on:input=move |event|description.set(event_target_value(&event)) /></label></section>
-                <section class="form-section execution-options"><label>{move ||i18n.text("message.saved_project")}<select id="new-project" disabled=move ||pending.get() prop:value=move ||new_repo.get() on:change=move |event|{let repo=event_target_value(&event); if let Some(agent)=projects.with_untracked(|items|items.iter().find(|project|field(project,"repo")==repo).map(|project|field(project,"agent"))).filter(|agent|!agent.is_empty()){new_agent.set(agent);}new_repo.set(repo);}><option value="">{move ||i18n.text("message.choose_a_project_c85ff122")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label><details class="disclosure"><summary>{move ||i18n.text("message.choose_another_directory")}</summary><label>{move ||i18n.text("message.source_git_repository")}<input name="repo" disabled=move ||pending.get() prop:value=move ||new_repo.get() on:input=move |event|new_repo.set(event_target_value(&event)) placeholder=move ||i18n.text("message.absolute_project_path") /></label></details>
-                <details class="disclosure new-task-agent"><summary>{move ||i18n.text("message.project_agent")}</summary><div class="form-row"><label>{move ||i18n.text("message.agent")}<select name="agent" disabled=move ||pending.get() prop:value=move ||new_agent.get() on:change=move |event|{new_agent.set(event_target_value(&event));new_model.set(String::new());new_effort.set(String::new());}><option value="">{move ||i18n.text("message.use_project_settings")}</option><For each=move ||atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move |profile|view!{<option value=field(&profile,"id")>{field(&profile,"name")}</option>} /></select></label><label>{move ||i18n.text("message.requested_work")}<select name="mode" disabled=move ||pending.get() prop:value=move ||new_mode.get() on:change=move |event|new_mode.set(event_target_value(&event))><option value="edit">{move ||i18n.text("message.edit_code")}</option><option value="analyze">{move ||i18n.text("message.analyze_only")}</option></select></label></div><details class="disclosure"><summary>{move ||i18n.text("message.add_extra_instructions")}</summary><label>{move ||i18n.text("message.agent_instructions")}<textarea name="instructions" rows="2" maxlength="20000" disabled=move ||pending.get() prop:value=move ||instructions.get() on:input=move |event|instructions.set(event_target_value(&event)) /></label></details></details></section>
-                <details class="disclosure model-options"><summary>{move ||i18n.text("message.model_reasoning_optional")}</summary><label>{move ||i18n.text("message.template")}<input maxlength="180" disabled=move ||pending.get() prop:value=move ||new_model.get() on:input=move |event|new_model.set(event_target_value(&event)) /></label><label>{move ||i18n.text("message.reasoning_effort_4387e5d3")}<input maxlength="40" disabled=move ||pending.get() prop:value=move ||new_effort.get() on:input=move |event|new_effort.set(event_target_value(&event)) /></label></details>
-                <p class="hint notice-line">{move ||i18n.text("message.creating_the_task_does_not_start_the_agent_you_can_review_its_in")}</p><p class="error" role="alert">{move ||i18n.text(&create_error.get())}</p><div class="form-actions"><button type="button" disabled=move ||pending.get() on:click=move |_|close_new()>{move ||i18n.text("message.cancel")}</button><button id="create-task" class="primary" type="submit" disabled=move ||pending.get()||template_pending.get()||loading.get()||template_candidate.get().is_some()>{move ||i18n.text(if pending.get(){"message.creating"}else{"message.create_task"})}</button></div>
-            </form>
-            <div class="confirmation" hidden=move ||template_candidate.get().is_none()><p>{move ||i18n.text("message.replace_the_entered_description_instructions_and_mode_with_this")}</p><button type="button" disabled=move ||pending.get() on:click=move |_|{if let Some(id)=template_candidate.get_untracked(){apply_template.run(id);}}>{move ||i18n.text("message.apply")}</button><button type="button" disabled=move ||pending.get() on:click=move |_|{template_candidate.set(None);template.set(String::new());}>{move ||i18n.text("message.cancel")}</button></div>
-            <div class="confirmation" hidden=move || !remove_template.get()><p>{move || i18n.text("message.remove_this_template_existing_tasks_will_be_kept")}</p><button id="confirm-remove-template" type="button" disabled=move || template_pending.get() on:click=move |_| {
-                if template_pending.get_untracked() { return; }
-                let Ok(token) = token.get_value() else { return; };
-                let id = template.get_untracked(); template_pending.set(true); create_error.set(String::new());
-                spawn_local(async move {
-                    match write(&token, Method::DELETE, &format!("/api/templates/{id}"), &serde_json::json!({})).await {
-                        Ok(_) => { templates.update(|items| items.retain(|item| field(item,"id") != id)); template.set(String::new()); remove_template.set(false); let _ = board.refresh(&token).await; },
-                        Err(message) => error.set(message),
-                    }
-                    template_pending.set(false);
-                });
-            }>{move || i18n.text("message.remove_template")}</button><button type="button" disabled=move || template_pending.get() on:click=move |_| remove_template.set(false)>{move || i18n.text("message.cancel")}</button></div>
-
-        </dialog>
-    }
-}
-
-fn task_template(kind: &str) -> &'static str {
-    match kind {
-        "bug" => "message.observed_problem_steps_to_reproduce_1_expected_result_fix_verifi",
-        "analysis" => "message.question_to_investigate_context_expected_deliverable_an_analysis",
-        _ => "message.goal_expected_behavior_acceptance_criteria_constraints",
+        <new_task::NewTask
+            board
+            token
+            repository
+            loading
+            pending
+            open_request={new_task_request}
+            on_created={Callback::new(move |(id, repo): (String, String)| {
+                focus_filter.set("all".into());
+                search.set(String::new());
+                repository.set(repo);
+                view.set(WorkspaceView::Board);
+                open_task.run(id);
+            })}
+            on_close={Callback::new(move |()| focus_element(
+                if onboarding() { "welcome-create" } else { "create-button" },
+            ))}
+        />
     }
 }
 
@@ -1211,23 +2259,66 @@ fn matches_focus(
 #[component]
 fn NavigationIcon(kind: &'static str, #[prop(default = false)] view_icon: bool) -> impl IntoView {
     let shape=match kind {
-        "brainstorm"=>view!{<path d="M9 18h6m-6 3h6M8 14a7 7 0 1 1 8 0l-1 2H9z" />}.into_any(),
-        "collapse"=>view!{<path d="m14 6-6 6 6 6" />}.into_any(),
-        "menu"=>view!{<path d="M4 6h16M4 12h16M4 18h16" />}.into_any(),
-        "overview"=>view!{<rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />}.into_any(),
-        "projects"=>view!{<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><path d="M3 10h18" />}.into_any(),
-        "settings"=>view!{<path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" /><circle cx="15" cy="17" r="3" />}.into_any(),
-        "diagnostics"=>view!{<path d="M3 12h4l3-7 4 14 3-7h4" />}.into_any(),
-        "updates"=>view!{<path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />}.into_any(),
-        "backups"=>view!{<path d="M4 3h13l3 3v15H4Z" /><path d="M8 3v6h8V3M8 21v-8h8v8" />}.into_any(),
-        "board"=>view!{<rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M15 4v16" />}.into_any(),
-        "agents"=>view!{<path d="M8 3v3m8-3v3M6 6h12v14H6zM3 10h3m12 0h3M3 16h3m12 0h3M9 10h6M9 15h6" />}.into_any(),
-        "processes"=>view!{<path d="m9 5 11 7-11 7z" />}.into_any(),
-        "worktrees"=>view!{<circle cx="6" cy="5" r="2" /><circle cx="6" cy="19" r="2" /><circle cx="18" cy="5" r="2" /><path d="M6 7v10m12-10v3a5 5 0 0 1-5 5H6" />}.into_any(),
-        "time"=>view!{<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />}.into_any(),
-        _=>view!{<path d="M4 8h16v12H4zM3 4h18v4H3zM9 12h6" />}.into_any(),
+        "brainstorm"=>view! { <path d="M9 18h6m-6 3h6M8 14a7 7 0 1 1 8 0l-1 2H9z" /> }.into_any(),
+        "collapse"=>view! { <path d="m14 6-6 6 6 6" /> }.into_any(),
+        "menu"=>view! { <path d="M4 6h16M4 12h16M4 18h16" /> }.into_any(),
+        "overview"=>view! {
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        }.into_any(),
+        "projects"=>view! {
+            <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+            <path d="M3 10h18" />
+        }.into_any(),
+        "settings"=>view! {
+            <path d="M4 7h16M4 17h16" />
+            <circle cx="9" cy="7" r="3" />
+            <circle cx="15" cy="17" r="3" />
+        }.into_any(),
+        "diagnostics"=>view! { <path d="M3 12h4l3-7 4 14 3-7h4" /> }.into_any(),
+        "updates"=>view! {
+            <path d="M20 7v5h-5M4 17v-5h5" />
+            <path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />
+        }.into_any(),
+        "backups"=>view! {
+            <path d="M4 3h13l3 3v15H4Z" />
+            <path d="M8 3v6h8V3M8 21v-8h8v8" />
+        }.into_any(),
+        "board"=>view! {
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M9 4v16M15 4v16" />
+        }.into_any(),
+        "agents"=>view! { <path d="M8 3v3m8-3v3M6 6h12v14H6zM3 10h3m12 0h3M3 16h3m12 0h3M9 10h6M9 15h6" /> }.into_any(),
+        "processes"=>view! { <path d="m9 5 11 7-11 7z" /> }.into_any(),
+        "worktrees"=>view! {
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="5" r="2" />
+            <path d="M6 7v10m12-10v3a5 5 0 0 1-5 5H6" />
+        }.into_any(),
+        "time"=>view! {
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+        }.into_any(),
+        _=>view! { <path d="M4 8h16v12H4zM3 4h18v4H3zM9 12h6" /> }.into_any(),
     };
-    view! {<svg class=if view_icon{"view-icon"}else{"nav-icon"} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=if view_icon{"1.6"}else{"1.7"} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{shape}</svg>}
+    view! {
+        <svg
+            class={if view_icon { "view-icon" } else { "nav-icon" }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width={if view_icon { "1.6" } else { "1.7" }}
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+        >
+            {shape}
+        </svg>
+    }
 }
 
 fn command_search(value: &str) -> String {
@@ -1331,38 +2422,124 @@ fn CommandPalette(
         }
     });
     view! {
-        <modal::Modal id="command-dialog" labelledby="command-title" node_ref=dialog on_close=Callback::new(move |()|close())>
+        <modal::Modal
+            id="command-dialog"
+            labelledby="command-title"
+            node_ref={dialog}
+            on_close={Callback::new(move |()| close())}
+        >
             <header class="command-heading">
-                <h2 id="command-title">{move ||i18n.text("message.quick_search")}</h2>
-                <button class="modal-close" type="button" aria-label=move ||i18n.text("message.close") on:click=move |_|close()>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                <h2 id="command-title">{move || i18n.text("message.quick_search")}</h2>
+                <button
+                    class="modal-close"
+                    type="button"
+                    aria-label={move || i18n.text("message.close")}
+                    on:click={move |_| close()}
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        aria-hidden="true"
+                    >
+                        <path d="m6 6 12 12M18 6 6 18" />
+                    </svg>
                 </button>
             </header>
             <div class="command-search">
-                <label for="command-query">{move ||i18n.text("message.project_task_or_action")}</label>
-                <input id="command-query" type="search" autofocus autocomplete="off" aria-controls="command-results"
-                    placeholder=move ||i18n.text("message.a_ticket_a_project_an_action") prop:value=move ||query.get()
-                    on:input=move |event|{query.set(event_target_value(&event));index.set(0);}
-                    on:keydown=move |event:leptos::ev::KeyboardEvent|{match event.key().as_str(){
-                        "ArrowDown"=>{event.prevent_default();index.update(|index|*index=(*index+1).min(results.with(Vec::len).saturating_sub(1)));},
-                        "ArrowUp"=>{event.prevent_default();index.update(|index|*index=index.saturating_sub(1));},
-                        "Enter"=>{event.prevent_default();execute.run(index.get_untracked());},_=>{}
-                    }} />
+                <label for="command-query">{move || i18n.text("message.project_task_or_action")}</label>
+                <input
+                    id="command-query"
+                    type="search"
+                    autofocus
+                    autocomplete="off"
+                    aria-controls="command-results"
+                    placeholder={move || i18n.text("message.a_ticket_a_project_an_action")}
+                    prop:value={move || query.get()}
+                    on:input={move |event| {
+                        query.set(event_target_value(&event));
+                        index.set(0);
+                    }}
+                    on:keydown={move |event: leptos::ev::KeyboardEvent| {
+                        match event.key().as_str() {
+                            "ArrowDown" => {
+                                event.prevent_default();
+                                index
+                                    .update(|index| {
+                                        *index = (*index + 1).min(results.with(Vec::len).saturating_sub(1));
+                                    });
+                            }
+                            "ArrowUp" => {
+                                event.prevent_default();
+                                index.update(|index| *index = index.saturating_sub(1));
+                            }
+                            "Enter" => {
+                                event.prevent_default();
+                                execute.run(index.get_untracked());
+                            }
+                            _ => {}
+                        }
+                    }}
+                />
             </div>
             <div id="command-results" aria-live="polite">
-                {move ||results.get().into_iter().enumerate().map(|(position,(target,title,detail))|view!{
-                    <button class="command-result" type="button" aria-current=move ||(index.get()==position).to_string() on:click=move |_|execute.run(position)>
-                        <span class="command-copy"><strong>{title}</strong><small>{detail}</small></span>
-                        <span class="command-kind">{i18n.text(match target{CommandTarget::Project(_)=>"message.project",CommandTarget::Card(_)=>"message.task",_=>"message.command_action"})}</span>
-                        <span class="command-return" aria-hidden="true">"↵"</span>
-                    </button>
-                }).collect_view()}
-                <p class="empty" hidden=move ||!results.with(Vec::is_empty)>{move ||i18n.text("message.no_results_try_a_title_jira_id_or_project_name")}</p>
+                {move || {
+                    results
+                        .get()
+                        .into_iter()
+                        .enumerate()
+                        .map(|(position, (target, title, detail))| {
+                            view! {
+                                <button
+                                    class="command-result"
+                                    type="button"
+                                    aria-current={move || (index.get() == position).to_string()}
+                                    on:click={move |_| execute.run(position)}
+                                >
+                                    <span class="command-copy">
+                                        <strong>{title}</strong>
+                                        <small>{detail}</small>
+                                    </span>
+                                    <span class="command-kind">
+                                        {i18n
+                                            .text(
+                                                match target {
+                                                    CommandTarget::Project(_) => "message.project",
+                                                    CommandTarget::Card(_) => "message.task",
+                                                    _ => "message.command_action",
+                                                },
+                                            )}
+                                    </span>
+                                    <span class="command-return" aria-hidden="true">
+                                        "↵"
+                                    </span>
+                                </button>
+                            }
+                        })
+                        .collect_view()
+                }}
+                <p class="empty" hidden={move || !results.with(Vec::is_empty)}>
+                    {move || i18n.text("message.no_results_try_a_title_jira_id_or_project_name")}
+                </p>
             </div>
             <div class="search-help">
-                <span><kbd>"↑"</kbd><kbd>"↓"</kbd>{move ||i18n.text("message.browse_622500d8")}</span>
-                <span><kbd>{move ||i18n.text("message.enter")}</kbd>{move ||i18n.text("message.open")}</span>
-                <span><kbd>{move ||i18n.text("message.esc")}</kbd>{move ||i18n.text("message.close_d932b8d4")}</span>
+                <span>
+                    <kbd>"↑"</kbd>
+                    <kbd>"↓"</kbd>
+                    {move || i18n.text("message.browse_622500d8")}
+                </span>
+                <span>
+                    <kbd>{move || i18n.text("message.enter")}</kbd>
+                    {move || i18n.text("message.open")}
+                </span>
+                <span>
+                    <kbd>{move || i18n.text("message.esc")}</kbd>
+                    {move || i18n.text("message.close_d932b8d4")}
+                </span>
             </div>
         </modal::Modal>
     }
@@ -1390,7 +2567,69 @@ fn DiagnosticsDialog(
             focus_element("diagnostics-button");
         }
     };
-    view! {<dialog id="diagnostics-dialog" aria-label=move ||i18n.text("message.service_status") node_ref=dialog on:cancel=move |event:web_sys::Event|{event.prevent_default();close();}><div class="dialog-heading"><div><div class="eyebrow">{move ||i18n.text("message.connections")}</div><h2>{move ||i18n.text("message.service_status")}</h2></div><button disabled=move ||pending.get() aria-label=move ||i18n.text("message.close") on:click=move |_|close()>"×"</button></div><p class="hint">{move ||i18n.text("message.explicit_check_of_the_saved_profile_cli_version_and_login_status")}</p><label>{move ||i18n.text("message.agent")}<select disabled=move ||pending.get() on:change=move |event|{let id=event_target_value(&event);profile.set(atelier_core::domain::agent_options::providers(&board.settings.get_untracked()).unwrap_or_default().into_iter().find(|item|field(item,"id")==id));}><option value="">{move ||i18n.text("message.choose_a_profile")}</option><For each=move ||atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move |profile|view!{<option value=field(&profile,"id")>{field(&profile,"name")}</option>} /></select></label><div id="diagnostics-results" aria-live="polite"><agent_diagnostics::AgentDiagnostics profile token pending blocked=Memo::new(|_|false) /></div></dialog>}
+    view! {
+        <dialog
+            id="diagnostics-dialog"
+            aria-label={move || i18n.text("message.service_status")}
+            node_ref={dialog}
+            on:cancel={move |event: web_sys::Event| {
+                event.prevent_default();
+                close();
+            }}
+        >
+            <div class="dialog-heading">
+                <div>
+                    <div class="eyebrow">{move || i18n.text("message.connections")}</div>
+                    <h2>{move || i18n.text("message.service_status")}</h2>
+                </div>
+                <button
+                    disabled={move || pending.get()}
+                    aria-label={move || i18n.text("message.close")}
+                    on:click={move |_| close()}
+                >
+                    "×"
+                </button>
+            </div>
+            <p class="hint">
+                {move || {
+                    i18n.text("message.explicit_check_of_the_saved_profile_cli_version_and_login_status")
+                }}
+            </p>
+            <label>
+                {move || i18n.text("message.agent")}
+                <select
+                    disabled={move || pending.get()}
+                    on:change={move |event| {
+                        let id = event_target_value(&event);
+                        profile
+                            .set(
+                                atelier_core::domain::agent_options::providers(
+                                        &board.settings.get_untracked(),
+                                    )
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .find(|item| field(item, "id") == id),
+                            );
+                    }}
+                >
+                    <option value="">{move || i18n.text("message.choose_a_profile")}</option>
+                    <For
+                        each={move || {
+                            atelier_core::domain::agent_options::providers(&board.settings.get())
+                                .unwrap_or_default()
+                        }}
+                        key={|profile| field(profile, "id")}
+                        children={move |profile| {
+                            view! { <option value={field(&profile, "id")}>{field(&profile, "name")}</option> }
+                        }}
+                    />
+                </select>
+            </label>
+            <div id="diagnostics-results" aria-live="polite">
+                <agent_diagnostics::AgentDiagnostics profile token pending blocked={Memo::new(|_| false)} />
+            </div>
+        </dialog>
+    }
 }
 
 #[component]
@@ -1426,10 +2665,75 @@ fn DeleteCardDialog(
             }
         });
     };
-    view! {<dialog id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-message" node_ref=dialog on:cancel=move |event:web_sys::Event|{event.prevent_default();close();}><form on:submit=move |event|{event.prevent_default();on_confirm.run(());}>
-        <div class="dialog-heading"><div class="confirm-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10.3 4.6 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></svg></div><button type="button" disabled=move ||pending.get() aria-label=move ||i18n.text("message.close") on:click=move |_|close()>"×"</button></div>
-        <h2 id="confirm-title">{move ||i18n.text("message.permanently_delete_this_task")}</h2><p>{card.title.clone()}</p><p id="confirm-message">{move ||i18n.text("message.permanently_delete_this_task_this_cannot_be_undone")}</p><p class="error" role="alert">{move ||i18n.text(&error.get())}</p><div class="form-actions"><button type="button" autofocus disabled=move ||pending.get() on:click=move |_|close()>{move ||i18n.text("message.cancel")}</button><button id="confirm-action" class="confirm-action" type="submit" disabled=move ||pending.get()>{move ||i18n.text("message.delete_permanently")}</button></div>
-    </form></dialog>}
+    view! {
+        <dialog
+            id="confirm-dialog"
+            class="confirm-dialog"
+            role="alertdialog"
+            aria-labelledby="confirm-title"
+            aria-describedby="confirm-message"
+            node_ref={dialog}
+            on:cancel={move |event: web_sys::Event| {
+                event.prevent_default();
+                close();
+            }}
+        >
+            <form on:submit={move |event| {
+                event.prevent_default();
+                on_confirm.run(());
+            }}>
+                <div class="dialog-heading">
+                    <div class="confirm-icon" aria-hidden="true">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                        >
+                            <path d="M10.3 4.6 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z" />
+                            <path d="M12 9v4m0 4h.01" />
+                        </svg>
+                    </div>
+                    <button
+                        type="button"
+                        disabled={move || pending.get()}
+                        aria-label={move || i18n.text("message.close")}
+                        on:click={move |_| close()}
+                    >
+                        "×"
+                    </button>
+                </div>
+                <h2 id="confirm-title">{move || i18n.text("message.permanently_delete_this_task")}</h2>
+                <p>{card.title.clone()}</p>
+                <p id="confirm-message">
+                    {move || i18n.text("message.permanently_delete_this_task_this_cannot_be_undone")}
+                </p>
+                <p class="error" role="alert">
+                    {move || i18n.text(&error.get())}
+                </p>
+                <div class="form-actions">
+                    <button
+                        type="button"
+                        autofocus
+                        disabled={move || pending.get()}
+                        on:click={move |_| close()}
+                    >
+                        {move || i18n.text("message.cancel")}
+                    </button>
+                    <button
+                        id="confirm-action"
+                        class="confirm-action"
+                        type="submit"
+                        disabled={move || pending.get()}
+                    >
+                        {move || i18n.text("message.delete_permanently")}
+                    </button>
+                </div>
+            </form>
+        </dialog>
+    }
 }
 fn field(document: &atelier_core::document::Document, key: &str) -> String {
     document

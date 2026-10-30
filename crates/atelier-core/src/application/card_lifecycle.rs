@@ -243,11 +243,21 @@ mod tests {
             remove(
                 &original,
                 &[document(json!({"blockedBy":[1, "other"]}))],
+                &[],
+                &[],
+                |_| false
+            )
+            .is_err()
+        );
+        assert!(
+            remove(
+                &original,
+                &[],
                 &[document(json!({"cardId":true}))],
                 &[],
                 |_| false
             )
-            .is_ok()
+            .is_err()
         );
         assert!(remove(&original, &[], &[], &[], |_| false).is_ok());
     }

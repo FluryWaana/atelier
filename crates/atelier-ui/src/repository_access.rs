@@ -168,16 +168,78 @@ pub fn RepositoryAccess(
             })
         })
     });
-    view! {<div class="repository-access" id=id aria-busy=move||loading.get().to_string() hidden=move||path.get().trim().is_empty()>
-        <p class="field-help" hidden=move||!authorized.get()>{move||i18n.text("message.repository_authorized_here")}</p>
-        <button class="authorize-project-repository" type="button" hidden=move||authorized.get() disabled=move||pending.get()||loading.get()||registry.get().is_none_or(|registry|!registry.available) on:click=save>{move||i18n.text("message.authorize_this_repository")}</button>
-        <p class="field-help" hidden=move||authorized.get()>{move||i18n.text("message.authorize_atelier_to_use_this_repository_and_its_future_worktree")}</p>
-        <p hidden=move||registry.get().is_none_or(|registry|registry.available)>{move||i18n.text("message.authorize_repositories_from_the_native_launcher")}</p>
-        <details hidden=move||!authorized.get()><summary>{move||i18n.text("message.remove_authorization")}</summary>
-            <label><input class="confirm-revoke-repository" type="checkbox" disabled=move||pending.get()||loading.get() prop:checked=move||remove_ack.get()==path.get() on:change=move|event|remove_ack.set(if event_target_checked(&event){path.get_untracked()}else{String::new()})/>{move||i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")}</label>
-            <button class="revoke-repository" type="button" disabled=move||pending.get()||loading.get()||remove_ack.get()!=path.get() on:click=move |_|revoke.with_value(|revoke|revoke(path.get_untracked()))>{move||i18n.text("message.remove_authorization")}</button>
-        </details>
-        <button type="button" disabled=move||pending.get()||loading.get() on:click=move |_|load.with_value(|load|load())>{move||i18n.text("message.reload_authorizations")}</button>
-        <p class="error" role="alert">{move||i18n.text(&error.get())}</p>
-    </div>}
+    view! {
+        <div
+            class="repository-access"
+            id={id}
+            aria-busy={move || loading.get().to_string()}
+            hidden={move || path.get().trim().is_empty()}
+        >
+            <p class="field-help" hidden={move || !authorized.get()}>
+                {move || i18n.text("message.repository_authorized_here")}
+            </p>
+            <button
+                class="authorize-project-repository"
+                type="button"
+                hidden={move || authorized.get()}
+                disabled={move || {
+                    pending.get() || loading.get()
+                        || registry.get().is_none_or(|registry| !registry.available)
+                }}
+                on:click={save}
+            >
+                {move || i18n.text("message.authorize_this_repository")}
+            </button>
+            <p class="field-help" hidden={move || authorized.get()}>
+                {move || {
+                    i18n.text("message.authorize_atelier_to_use_this_repository_and_its_future_worktree")
+                }}
+            </p>
+            <p hidden={move || {
+                registry.get().is_none_or(|registry| registry.available)
+            }}>{move || i18n.text("message.authorize_repositories_from_the_native_launcher")}</p>
+            <details hidden={move || !authorized.get()}>
+                <summary>{move || i18n.text("message.remove_authorization")}</summary>
+                <label>
+                    <input
+                        class="confirm-revoke-repository"
+                        type="checkbox"
+                        disabled={move || pending.get() || loading.get()}
+                        prop:checked={move || remove_ack.get() == path.get()}
+                        on:change={move |event| {
+                            remove_ack
+                                .set(
+                                    if event_target_checked(&event) {
+                                        path.get_untracked()
+                                    } else {
+                                        String::new()
+                                    },
+                                )
+                        }}
+                    />
+                    {move || {
+                        i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")
+                    }}
+                </label>
+                <button
+                    class="revoke-repository"
+                    type="button"
+                    disabled={move || pending.get() || loading.get() || remove_ack.get() != path.get()}
+                    on:click={move |_| revoke.with_value(|revoke| revoke(path.get_untracked()))}
+                >
+                    {move || i18n.text("message.remove_authorization")}
+                </button>
+            </details>
+            <button
+                type="button"
+                disabled={move || pending.get() || loading.get()}
+                on:click={move |_| load.with_value(|load| load())}
+            >
+                {move || i18n.text("message.reload_authorizations")}
+            </button>
+            <p class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+        </div>
+    }
 }

@@ -167,52 +167,159 @@ pub fn ForgeSettings(
         })
     });
     view! {
-        <section class="forge-settings" aria-labelledby="forges-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-            <h3 id="forges-heading">{move||i18n.text("message.forge_connections")}</h3>
-            <p class="field-help">{move||i18n.text("message.configure_github_gitlab_or_azure_devops_services_then_explicitly")}</p>
+        <section
+            class="forge-settings"
+            aria-labelledby="forges-heading"
+            aria-busy={move || (pending.get() || loading.get()).to_string()}
+        >
+            <h3 id="forges-heading">{move || i18n.text("message.forge_connections")}</h3>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.configure_github_gitlab_or_azure_devops_services_then_explicitly")
+                }}
+            </p>
             <div class="forge-field">
-                <label for="forge-kind">{move||i18n.text("message.forge")}</label>
-                <select id="forge-kind" prop:value=move||kind.get().name() disabled=move||pending.get()||loading.get()||own_dirty.get() on:change=move|event|{
-                    let selected=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github};
-                    select(selected);
-                }>
+                <label for="forge-kind">{move || i18n.text("message.forge")}</label>
+                <select
+                    id="forge-kind"
+                    prop:value={move || kind.get().name()}
+                    disabled={move || pending.get() || loading.get() || own_dirty.get()}
+                    on:change={move |event| {
+                        let selected = match event_target_value(&event).as_str() {
+                            "gitlab" => ForgeKind::Gitlab,
+                            "azure" => ForgeKind::Azure,
+                            _ => ForgeKind::Github,
+                        };
+                        select(selected);
+                    }}
+                >
                     <option value="github">"GitHub"</option>
                     <option value="gitlab">"GitLab"</option>
                     <option value="azure">"Azure DevOps Services"</option>
                 </select>
             </div>
-            <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();save.with_value(|save|save(false));}>
-                <fieldset disabled=move||configurations.with(|value|value.is_none())||pending.get()||loading.get()>
+            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+                event.prevent_default();
+                save.with_value(|save| save(false));
+            }}>
+                <fieldset disabled={move || {
+                    configurations.with(|value| value.is_none()) || pending.get() || loading.get()
+                }}>
                     <div class="forge-field">
-                        <label for="forge-base">{move||i18n.text("message.site_or_organization_address")}</label>
-                        <input id="forge-base" aria-describedby="forge-base-help" type="url" required maxlength="2000" placeholder=move||match kind.get(){ForgeKind::Github=>"https://github.com",ForgeKind::Gitlab=>"https://gitlab.com",ForgeKind::Azure=>"https://dev.azure.com/ORGANISATION"} prop:value=move||base.get() on:input=move|event|base.set(event_target_value(&event)) />
-                        <p id="forge-base-help" class="field-help">{move||i18n.text("message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio")}</p>
+                        <label for="forge-base">
+                            {move || i18n.text("message.site_or_organization_address")}
+                        </label>
+                        <input
+                            id="forge-base"
+                            aria-describedby="forge-base-help"
+                            type="url"
+                            required
+                            maxlength="2000"
+                            placeholder={move || match kind.get() {
+                                ForgeKind::Github => "https://github.com",
+                                ForgeKind::Gitlab => "https://gitlab.com",
+                                ForgeKind::Azure => "https://dev.azure.com/ORGANISATION",
+                            }}
+                            prop:value={move || base.get()}
+                            on:input={move |event| base.set(event_target_value(&event))}
+                        />
+                        <p id="forge-base-help" class="field-help">
+                            {move || {
+                                i18n
+                                    .text(
+                                        "message.use_the_github_site_root_gitlab_site_prefix_or_azure_organizatio",
+                                    )
+                            }}
+                        </p>
                     </div>
                     <div class="forge-field">
-                        <label for="forge-token">{move||i18n.text("message.forge_personal_access_token")}</label>
-                        <input id="forge-token" aria-describedby="forge-token-help" type="password" autocomplete="off" maxlength="4000" prop:value=move||secret.get() on:input=move|event|secret.set(event_target_value(&event)) />
-                        <p id="forge-token-help" class="field-help" role="status">{move||i18n.text(if token_set.get(){"message.a_token_is_saved_leave_blank_to_keep_it"}else{"message.no_token_saved_for_this_forge"})}</p>
+                        <label for="forge-token">
+                            {move || i18n.text("message.forge_personal_access_token")}
+                        </label>
+                        <input
+                            id="forge-token"
+                            aria-describedby="forge-token-help"
+                            type="password"
+                            autocomplete="off"
+                            maxlength="4000"
+                            prop:value={move || secret.get()}
+                            on:input={move |event| secret.set(event_target_value(&event))}
+                        />
+                        <p id="forge-token-help" class="field-help" role="status">
+                            {move || {
+                                i18n
+                                    .text(
+                                        if token_set.get() {
+                                            "message.a_token_is_saved_leave_blank_to_keep_it"
+                                        } else {
+                                            "message.no_token_saved_for_this_forge"
+                                        },
+                                    )
+                            }}
+                        </p>
                     </div>
                 </fieldset>
                 <div class="forge-actions">
-                    <button id="forge-clear-token" class="danger" type="button" hidden=move||!token_set.get() disabled=move||pending.get()||loading.get() on:click=move|_|save.with_value(|save|save(true))>{move||i18n.text("message.remove_saved_token")}</button>
+                    <button
+                        id="forge-clear-token"
+                        class="danger"
+                        type="button"
+                        hidden={move || !token_set.get()}
+                        disabled={move || pending.get() || loading.get()}
+                        on:click={move |_| save.with_value(|save| save(true))}
+                    >
+                        {move || i18n.text("message.remove_saved_token")}
+                    </button>
                     <div class="forge-save-actions">
-                        <button id="reload-forges" type="button" disabled=move||pending.get()||loading.get() on:click=move|_|{
-                            if own_dirty.get_untracked(){replace.set(true);}else{load.with_value(|load|load());}
-                        }>{move||i18n.text("message.refresh")}</button>
-                        <button id="save-forge" class="primary" type="submit" disabled=move||pending.get()||loading.get()||configurations.with(|value|value.is_none())||!own_dirty.get()>{move||i18n.text(if pending.get(){"message.saving"}else{"message.save"})}</button>
+                        <button
+                            id="reload-forges"
+                            type="button"
+                            disabled={move || pending.get() || loading.get()}
+                            on:click={move |_| {
+                                if own_dirty.get_untracked() {
+                                    replace.set(true);
+                                } else {
+                                    load.with_value(|load| load());
+                                }
+                            }}
+                        >
+                            {move || i18n.text("message.refresh")}
+                        </button>
+                        <button
+                            id="save-forge"
+                            class="primary"
+                            type="submit"
+                            disabled={move || {
+                                pending.get() || loading.get() || configurations.with(|value| value.is_none())
+                                    || !own_dirty.get()
+                            }}
+                        >
+                            {move || i18n.text(if pending.get() { "message.saving" } else { "message.save" })}
+                        </button>
                     </div>
                 </div>
             </form>
-            <div class="confirmation" hidden=move||!replace.get()>
-                <p>{move||i18n.text("message.discard_unsaved_changes")}</p>
+            <div class="confirmation" hidden={move || !replace.get()}>
+                <p>{move || i18n.text("message.discard_unsaved_changes")}</p>
                 <div class="editor-actions">
-                    <button id="confirm-reload-forges" type="button" on:click=move|_|load.with_value(|load|load())>{move||i18n.text("message.discard")}</button>
-                    <button type="button" on:click=move|_|replace.set(false)>{move||i18n.text("message.keep_editing")}</button>
+                    <button
+                        id="confirm-reload-forges"
+                        type="button"
+                        on:click={move |_| load.with_value(|load| load())}
+                    >
+                        {move || i18n.text("message.discard")}
+                    </button>
+                    <button type="button" on:click={move |_| replace.set(false)}>
+                        {move || i18n.text("message.keep_editing")}
+                    </button>
                 </div>
             </div>
-            <p class="error" id="forge-error" role="alert">{move||i18n.text(&error.get())}</p>
-            <p id="forge-notice" role="status">{move||i18n.text(&notice.get())}</p>
+            <p class="error" id="forge-error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p id="forge-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
         </section>
     }
 }

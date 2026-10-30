@@ -227,8 +227,7 @@ impl<'a> Store<'a> {
     }
 
     pub fn log(&self, id: &str, stream: &str, text: &str) -> Result<()> {
-        // Node slices UTF-16, then SQLite receives UTF-8 with replacement for a split surrogate.
-        let text = String::from_utf16_lossy(&text.encode_utf16().take(65_536).collect::<Vec<_>>());
+        let text = &text[..text.floor_char_boundary(text.len().min(65_536))];
         self.connection.execute(
             "INSERT INTO logs(runId,stream,text) VALUES (?,?,?)",
             params![id, stream, text],
@@ -607,14 +606,19 @@ mod tests {
     }
 
     #[test]
-    fn logs_match_javascript_utf16_slice_boundaries() {
+    fn logs_bound_utf8_bytes_without_replacing_a_split_character() {
         let connection = open(Path::new(":memory:")).unwrap();
         let store = Store::new(&connection);
         store
             .log("run", "stdout", &format!("{}🔧tail", "a".repeat(65_535)))
             .unwrap();
         let text = &store.logs("run", 0).unwrap()[0].text;
-        assert_eq!(text.encode_utf16().count(), 65_536);
-        assert!(text.ends_with('\u{fffd}'));
+        assert_eq!(text, &"a".repeat(65_535));
+        store
+            .log("unicode", "stdout", &"🔧".repeat(20_000))
+            .unwrap();
+        let text = &store.logs("unicode", 0).unwrap()[0].text;
+        assert_eq!(text.len(), 65_536);
+        assert_eq!(text.chars().count(), 16_384);
     }
 }

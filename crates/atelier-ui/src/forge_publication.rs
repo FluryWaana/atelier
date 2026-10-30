@@ -239,22 +239,237 @@ pub fn ForgePublication(
             }
         });
     });
-    view! {<section class="task-files" hidden=move||linked.get()&&!own_dirty.get()&&!uncertain.get() aria-labelledby="forge-publication-heading" aria-busy=move||pending.get().to_string()><h4 id="forge-publication-heading">{move||i18n.text("message.create_a_pr_mr")}</h4>
-        <p class="field-help">{move||i18n.text("message.preview_the_branches_and_content_if_needed_confirm_the_branch_pu")}</p>
-        <form on:submit=move|event:leptos::ev::SubmitEvent|{event.prevent_default();execute.with_value(|execute|execute("publication-preview"));}><fieldset disabled=move||pending.get()||blocked.get()||archived||linked.get()||unresolved.get()||configuration.with(|value|value.is_none())>
-            <label for="publication-kind">{move||i18n.text("message.forge")}</label><select id="publication-kind" prop:value=move||draft.get().kind.name() on:change=move|event|draft.update(|draft|draft.kind=match event_target_value(&event).as_str(){"gitlab"=>ForgeKind::Gitlab,"azure"=>ForgeKind::Azure,_=>ForgeKind::Github})><option value="github">"GitHub"</option><option value="gitlab">"GitLab"</option><option value="azure">"Azure DevOps Services"</option></select>
-            <label for="publication-repository">{move||i18n.text("message.pr_mr_repository")}</label><input id="publication-repository" required maxlength="1000" prop:value=move||draft.get().repository on:input=move|event|draft.update(|draft|draft.repository=event_target_value(&event)) />
-            <label for="publication-target">{move||i18n.text("message.target_branch")}</label><input id="publication-target" required maxlength="160" prop:value=move||draft.get().target on:input=move|event|draft.update(|draft|draft.target=event_target_value(&event)) />
-            <label for="publication-title">{move||i18n.text("message.pr_mr_title")}</label><input id="publication-title" required maxlength="255" prop:value=move||draft.get().title on:input=move|event|draft.update(|draft|draft.title=event_target_value(&event)) />
-            <label for="publication-body">{move||i18n.text("message.pr_mr_description")}</label><textarea id="publication-body" maxlength="3500" prop:value=move||draft.get().body on:input=move|event|draft.update(|draft|draft.body=event_target_value(&event)) />
-            <label><input id="publication-draft" type="checkbox" prop:checked=move||draft.get().draft on:change=move|event|draft.update(|draft|draft.draft=event_target_checked(&event)) />{move||i18n.text("message.create_as_draft")}</label>
-            <button id="preview-publication" type="submit">{move||i18n.text("message.prepare_publication_preview")}</button>
-        </fieldset></form>
-        {move||preview.get().map(|preview|view!{<p>{preview.worktree.branch}{i18n.text("message.to_separator")}{preview.target}</p><p><code>{preview.source_commit}</code>" / "<code>{preview.target_commit}</code></p><p>{move||i18n.text("message.expected_remote_commit")}" : "<code>{preview.remote_source.unwrap_or_else(||i18n.text("message.branch_absent"))}</code></p><p hidden=!preview.local_changes>{move||i18n.text("message.local_files_changed_they_are_not_included_in_this_publication")}</p>})}
-        <fieldset hidden=move||!matches.get()||!needs_push.get()||unresolved.get()||linked.get() disabled=move||pending.get()||blocked.get()||archived><p>{move||i18n.text("message.pushing_writes_to_the_forge_and_may_trigger_its_ci_rules_an_abse")}</p><label><input id="confirm-publication-push" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==push_approved.get()) on:change=move|event|push_approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("message.confirm_sending_this_commit_to_this_remote_branch")}</label><button id="push-publication-branch" type="button" disabled=move||key.get().is_none_or(|key|key!=push_approved.get()) on:click=move|_|execute.with_value(|execute|execute("publication-push"))>{move||i18n.text("message.push_branch_before_publication")}</button></fieldset>
-        <fieldset hidden=move||!matches.get()||needs_push.get()||unresolved.get()||linked.get() disabled=move||pending.get()||blocked.get()||archived><p>{move||i18n.text("message.creation_writes_to_the_forge_and_may_trigger_its_notifications_o")}</p><label><input id="confirm-publication" type="checkbox" prop:checked=move||key.get().is_some_and(|key|key==approved.get()) on:change=move|event|approved.set(if event_target_checked(&event){key.get_untracked().unwrap_or_default()}else{String::new()}) />{move||i18n.text("message.confirm_creating_this_pr_mr_with_these_branches_and_content")}</label><button id="create-publication" type="button" disabled=move||key.get().is_none_or(|key|key!=approved.get()) on:click=move|_|execute.with_value(|execute|execute("publication"))>{move||i18n.text("message.create_the_confirmed_pr_mr")}</button></fieldset>
-        <div class="confirmation" hidden=move||!uncertain.get()><p>{move||i18n.text("message.publication_uncertain_search_for_the_existing_pr_mr_no_automatic")}</p><button id="reconcile-publication" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute("publication-reconcile"))>{move||i18n.text("message.find_existing_publication")}</button></div>
-        <button id="cancel-publication" type="button" hidden=move||!own_dirty.get() disabled=move||pending.get()||unresolved.get() on:click=move|_|{draft.set(original.get_untracked());approved.set(String::new());}>{move||i18n.text("message.cancel_preparation")}</button>
-        <p id="publication-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="publication-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+    view! {
+        <section
+            class="task-files"
+            hidden={move || linked.get() && !own_dirty.get() && !uncertain.get()}
+            aria-labelledby="forge-publication-heading"
+            aria-busy={move || pending.get().to_string()}
+        >
+            <h4 id="forge-publication-heading">{move || i18n.text("message.create_a_pr_mr")}</h4>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.preview_the_branches_and_content_if_needed_confirm_the_branch_pu")
+                }}
+            </p>
+            <form on:submit={move |event: leptos::ev::SubmitEvent| {
+                event.prevent_default();
+                execute.with_value(|execute| execute("publication-preview"));
+            }}>
+                <fieldset disabled={move || {
+                    pending.get() || blocked.get() || archived || linked.get() || unresolved.get()
+                        || configuration.with(|value| value.is_none())
+                }}>
+                    <label for="publication-kind">{move || i18n.text("message.forge")}</label>
+                    <select
+                        id="publication-kind"
+                        prop:value={move || draft.get().kind.name()}
+                        on:change={move |event| {
+                            draft
+                                .update(|draft| {
+                                    draft.kind = match event_target_value(&event).as_str() {
+                                        "gitlab" => ForgeKind::Gitlab,
+                                        "azure" => ForgeKind::Azure,
+                                        _ => ForgeKind::Github,
+                                    };
+                                })
+                        }}
+                    >
+                        <option value="github">"GitHub"</option>
+                        <option value="gitlab">"GitLab"</option>
+                        <option value="azure">"Azure DevOps Services"</option>
+                    </select>
+                    <label for="publication-repository">
+                        {move || i18n.text("message.pr_mr_repository")}
+                    </label>
+                    <input
+                        id="publication-repository"
+                        required
+                        maxlength="1000"
+                        prop:value={move || draft.get().repository}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.repository = event_target_value(&event))
+                        }}
+                    />
+                    <label for="publication-target">{move || i18n.text("message.target_branch")}</label>
+                    <input
+                        id="publication-target"
+                        required
+                        maxlength="160"
+                        prop:value={move || draft.get().target}
+                        on:input={move |event| {
+                            draft.update(|draft| draft.target = event_target_value(&event))
+                        }}
+                    />
+                    <label for="publication-title">{move || i18n.text("message.pr_mr_title")}</label>
+                    <input
+                        id="publication-title"
+                        required
+                        maxlength="255"
+                        prop:value={move || draft.get().title}
+                        on:input={move |event| draft.update(|draft| draft.title = event_target_value(&event))}
+                    />
+                    <label for="publication-body">{move || i18n.text("message.pr_mr_description")}</label>
+                    <textarea
+                        id="publication-body"
+                        maxlength="3500"
+                        prop:value={move || draft.get().body}
+                        on:input={move |event| draft.update(|draft| draft.body = event_target_value(&event))}
+                    />
+                    <label>
+                        <input
+                            id="publication-draft"
+                            type="checkbox"
+                            prop:checked={move || draft.get().draft}
+                            on:change={move |event| {
+                                draft.update(|draft| draft.draft = event_target_checked(&event))
+                            }}
+                        />
+                        {move || i18n.text("message.create_as_draft")}
+                    </label>
+                    <button id="preview-publication" type="submit">
+                        {move || i18n.text("message.prepare_publication_preview")}
+                    </button>
+                </fieldset>
+            </form>
+            {move || {
+                preview
+                    .get()
+                    .map(|preview| {
+                        view! {
+                            <p>
+                                {preview.worktree.branch}{i18n.text("message.to_separator")}{preview.target}
+                            </p>
+                            <p>
+                                <code>{preview.source_commit}</code>
+                                " / "
+                                <code>{preview.target_commit}</code>
+                            </p>
+                            <p>
+                                {move || i18n.text("message.expected_remote_commit")}" : "
+                                <code>
+                                    {preview
+                                        .remote_source
+                                        .unwrap_or_else(|| i18n.text("message.branch_absent"))}
+                                </code>
+                            </p>
+                            <p hidden={!preview
+                                .local_changes}>
+                                {move || {
+                                    i18n
+                                        .text(
+                                            "message.local_files_changed_they_are_not_included_in_this_publication",
+                                        )
+                                }}
+                            </p>
+                        }
+                    })
+            }}
+            <fieldset
+                hidden={move || !matches.get() || !needs_push.get() || unresolved.get() || linked.get()}
+                disabled={move || pending.get() || blocked.get() || archived}
+            >
+                <p>
+                    {move || {
+                        i18n.text("message.pushing_writes_to_the_forge_and_may_trigger_its_ci_rules_an_abse")
+                    }}
+                </p>
+                <label>
+                    <input
+                        id="confirm-publication-push"
+                        type="checkbox"
+                        prop:checked={move || key.get().is_some_and(|key| key == push_approved.get())}
+                        on:change={move |event| {
+                            push_approved
+                                .set(
+                                    if event_target_checked(&event) {
+                                        key.get_untracked().unwrap_or_default()
+                                    } else {
+                                        String::new()
+                                    },
+                                )
+                        }}
+                    />
+                    {move || i18n.text("message.confirm_sending_this_commit_to_this_remote_branch")}
+                </label>
+                <button
+                    id="push-publication-branch"
+                    type="button"
+                    disabled={move || key.get().is_none_or(|key| key != push_approved.get())}
+                    on:click={move |_| execute.with_value(|execute| execute("publication-push"))}
+                >
+                    {move || i18n.text("message.push_branch_before_publication")}
+                </button>
+            </fieldset>
+            <fieldset
+                hidden={move || !matches.get() || needs_push.get() || unresolved.get() || linked.get()}
+                disabled={move || pending.get() || blocked.get() || archived}
+            >
+                <p>
+                    {move || {
+                        i18n.text("message.creation_writes_to_the_forge_and_may_trigger_its_notifications_o")
+                    }}
+                </p>
+                <label>
+                    <input
+                        id="confirm-publication"
+                        type="checkbox"
+                        prop:checked={move || key.get().is_some_and(|key| key == approved.get())}
+                        on:change={move |event| {
+                            approved
+                                .set(
+                                    if event_target_checked(&event) {
+                                        key.get_untracked().unwrap_or_default()
+                                    } else {
+                                        String::new()
+                                    },
+                                )
+                        }}
+                    />
+                    {move || i18n.text("message.confirm_creating_this_pr_mr_with_these_branches_and_content")}
+                </label>
+                <button
+                    id="create-publication"
+                    type="button"
+                    disabled={move || key.get().is_none_or(|key| key != approved.get())}
+                    on:click={move |_| execute.with_value(|execute| execute("publication"))}
+                >
+                    {move || i18n.text("message.create_the_confirmed_pr_mr")}
+                </button>
+            </fieldset>
+            <div class="confirmation" hidden={move || !uncertain.get()}>
+                <p>
+                    {move || {
+                        i18n.text("message.publication_uncertain_search_for_the_existing_pr_mr_no_automatic")
+                    }}
+                </p>
+                <button
+                    id="reconcile-publication"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| execute.with_value(|execute| execute("publication-reconcile"))}
+                >
+                    {move || i18n.text("message.find_existing_publication")}
+                </button>
+            </div>
+            <button
+                id="cancel-publication"
+                type="button"
+                hidden={move || !own_dirty.get()}
+                disabled={move || pending.get() || unresolved.get()}
+                on:click={move |_| {
+                    draft.set(original.get_untracked());
+                    approved.set(String::new());
+                }}
+            >
+                {move || i18n.text("message.cancel_preparation")}
+            </button>
+            <p id="publication-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p id="publication-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
+        </section>
+    }
 }

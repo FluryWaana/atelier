@@ -389,99 +389,947 @@ pub fn TaskEditor(
     });
     // Hide panels without unmounting their forms, pending operations or draft guards.
     view! {
-            <section id="task-page" class="task-workspace" aria-label=move ||i18n.text("message.task_details_a3f19152") on:keydown=move |event: web_sys::KeyboardEvent| {if event.key()=="Escape" && !event.default_prevented() && document().query_selector("dialog[open]").ok().flatten().is_none(){event.prevent_default();request_close();}}><div id="card-detail"><div id="task-editor" aria-labelledby="editor-heading">
-                <header class="task-heading"><button id="close-editor" class="task-back" type="button" disabled=move || pending.get() on:click=move |_| request_close()>{move || i18n.text("message.back_ef23a594")}</button><div class="task-heading-body"><div><div class="eyebrow">{move ||ticket_info.get().map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text(if archived {"message.archive"} else {"message.local_task"}))}</div><h1 id="editor-heading" tabindex="-1">{move ||draft.get().title}</h1></div><span class="task-status">{move ||status_label(&draft.get().status)}</span></div></header>
-                <nav class="task-tabs" role="tablist" aria-label=move || i18n.text("message.task_sections")>
-                    {TASK_TABS.into_iter().enumerate().map(move |(index, (tab, label))| view! {
-                        <button id=format!("task-tab-{tab}") type="button" role="tab" aria-controls=if matches!(tab,"diff"|"files") { "task-panel-repository".to_owned() } else { format!("task-panel-{tab}") } aria-selected=move || (active_tab.get()==tab).to_string() tabindex=move || if active_tab.get()==tab { 0 } else { -1 } on:click=move |_| select_tab(tab) on:keydown=move |event: leptos::ev::KeyboardEvent| {
-                            let next = match event.key().as_str() {
-                                "ArrowRight" => (index + 1) % TASK_TABS.len(),
-                                "ArrowLeft" => (index + TASK_TABS.len() - 1) % TASK_TABS.len(),
-                                "Home" => 0,
-                                "End" => TASK_TABS.len() - 1,
-                                _ => return,
-                            };
-                            event.prevent_default();
-                            let tab = TASK_TABS[next].0;
-                            select_tab(tab);
-                            if let Some(document) = web_sys::window().and_then(|window| window.document())
-                                && let Some(element) = document.get_element_by_id(&format!("task-tab-{tab}"))
-                                && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
-                            {
-                                let _ = element.focus();
+        <section
+            id="task-page"
+            class="task-workspace"
+            aria-label={move || i18n.text("message.task_details_a3f19152")}
+            on:keydown={move |event: web_sys::KeyboardEvent| {
+                if event.key() == "Escape" && !event.default_prevented()
+                    && document().query_selector("dialog[open]").ok().flatten().is_none()
+                {
+                    event.prevent_default();
+                    request_close();
+                }
+            }}
+        >
+            <div id="card-detail">
+                <div id="task-editor" aria-labelledby="editor-heading">
+                    <header class="task-heading">
+                        <button
+                            id="close-editor"
+                            class="task-back"
+                            type="button"
+                            disabled={move || pending.get()}
+                            on:click={move |_| request_close()}
+                        >
+                            {move || i18n.text("message.back_ef23a594")}
+                        </button>
+                        <div class="task-heading-body">
+                            <div>
+                                <div class="eyebrow">
+                                    {move || {
+                                        ticket_info
+                                            .get()
+                                            .map(|ticket| field(&ticket, "key"))
+                                            .filter(|key| !key.is_empty())
+                                            .unwrap_or_else(|| {
+                                                i18n
+                                                    .text(
+                                                        if archived {
+                                                            "message.archive"
+                                                        } else {
+                                                            "message.local_task"
+                                                        },
+                                                    )
+                                            })
+                                    }}
+                                </div>
+                                <h1 id="editor-heading" tabindex="-1">
+                                    {move || draft.get().title}
+                                </h1>
+                            </div>
+                            <span class="task-status">{move || status_label(&draft.get().status)}</span>
+                        </div>
+                    </header>
+                    <nav
+                        class="task-tabs"
+                        role="tablist"
+                        aria-label={move || i18n.text("message.task_sections")}
+                    >
+                        {TASK_TABS
+                            .into_iter()
+                            .enumerate()
+                            .map(move |(index, (tab, label))| {
+                                view! {
+                                    <button
+                                        id={format!("task-tab-{tab}")}
+                                        type="button"
+                                        role="tab"
+                                        aria-controls={if matches!(tab, "diff" | "files") {
+                                            "task-panel-repository".to_owned()
+                                        } else {
+                                            format!("task-panel-{tab}")
+                                        }}
+                                        aria-selected={move || (active_tab.get() == tab).to_string()}
+                                        tabindex={move || if active_tab.get() == tab { 0 } else { -1 }}
+                                        on:click={move |_| select_tab(tab)}
+                                        on:keydown={move |event: leptos::ev::KeyboardEvent| {
+                                            let next = match event.key().as_str() {
+                                                "ArrowRight" => (index + 1) % TASK_TABS.len(),
+                                                "ArrowLeft" => (index + TASK_TABS.len() - 1) % TASK_TABS.len(),
+                                                "Home" => 0,
+                                                "End" => TASK_TABS.len() - 1,
+                                                _ => return,
+                                            };
+                                            event.prevent_default();
+                                            let tab = TASK_TABS[next].0;
+                                            select_tab(tab);
+                                            if let Some(document) = web_sys::window()
+                                                .and_then(|window| window.document())
+                                                && let Some(element) = document
+                                                    .get_element_by_id(&format!("task-tab-{tab}"))
+                                                && let Ok(element) = element
+                                                    .dyn_into::<web_sys::HtmlElement>()
+                                            {
+                                                let _ = element.focus();
+                                            }
+                                        }}
+                                    >
+                                        {move || i18n.text(label)}
+                                    </button>
+                                }
+                            })
+                            .collect_view()}
+                    </nav>
+                    <crate::time::TimerBanner board token nested=true on_task={navigate} />
+                    <section
+                        id="task-panel-details"
+                        class="task-panel"
+                        role="tabpanel"
+                        aria-labelledby="task-tab-details"
+                        tabindex="0"
+                        hidden={move || active_tab.get() != "details"}
+                    >
+                        <div class="task-columns">
+                            <div class="task-main">
+                                {move || {
+                                    ticket_info
+                                        .get()
+                                        .map(|ticket| {
+                                            let url = field(&ticket, "url");
+                                            let key = field(&ticket, "key");
+                                            let status = field(&ticket, "status");
+                                            view! {
+                                                <section class="task-files">
+                                                    <h3>{move || i18n.text("message.linked_issue")}</h3>
+                                                    {if url.starts_with("https://")
+                                                        && !url.chars().any(char::is_control)
+                                                    {
+                                                        view! {
+                                                            <a href={url} target="_blank" rel="noopener noreferrer">
+                                                                {key}
+                                                            </a>
+                                                        }
+                                                            .into_any()
+                                                    } else {
+                                                        view! { <span>{key}</span> }.into_any()
+                                                    }}
+                                                    <p>{status}</p>
+                                                    <p class="field-help">
+                                                        {move || {
+                                                            i18n
+                                                                .text(
+                                                                    "message.the_title_and_description_of_this_card_are_preserved_locally_no",
+                                                                )
+                                                        }}
+                                                    </p>
+                                                </section>
+                                            }
+                                        })
+                                }}
+                                {move || {
+                                    board
+                                        .cards
+                                        .with(|cards| {
+                                            cards
+                                                .iter()
+                                                .find(|card| card.id == id.get_value())
+                                                .map(|card| {
+                                                    ["brainstormQuestions", "preparationQuestions"]
+                                                        .into_iter()
+                                                        .flat_map(|key| {
+                                                            card
+                                                                .fields
+                                                                .get::<Vec<String>>(key)
+                                                                .ok()
+                                                                .flatten()
+                                                                .unwrap_or_default()
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                })
+                                        })
+                                        .filter(|questions| !questions.is_empty())
+                                        .map(|questions| {
+                                            view! {
+                                                <section class="task-files">
+                                                    <h3>{move || i18n.text("message.questions_to_clarify")}</h3>
+                                                    <ul>
+                                                        {questions
+                                                            .into_iter()
+                                                            .map(|question| view! { <li>{question}</li> })
+                                                            .collect_view()}
+                                                    </ul>
+                                                </section>
+                                            }
+                                        })
+                                }}
+                                <form
+                                    class="task-editor"
+                                    on:submit={move |event| {
+                                        event.prevent_default();
+                                        perform(Action::Save);
+                                    }}
+                                    on:invalid:capture={move |event: web_sys::Event| {
+                                        select_tab("details");
+                                        if let Some(target) = event
+                                            .target()
+                                            .and_then(|target| target.dyn_into::<web_sys::HtmlElement>().ok())
+                                        {
+                                            request_animation_frame(move || {
+                                                let _ = target.focus();
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <fieldset disabled={move || {
+                                        pending.get() || automation_active.get() || workspace_dirty.get()
+                                            || time_dirty.get() || creation_dirty.get() || forge_dirty.get()
+                                            || connector_dirty.get() || commit_dirty.get() || archived
+                                            || show_template.get()
+                                    }}>
+                                        <label for="edit-title">{move || i18n.text("message.title")}</label>
+                                        <input
+                                            id="edit-title"
+                                            required
+                                            maxlength="300"
+                                            autofocus
+                                            readonly={move || ticket.get()}
+                                            prop:value={move || draft.get().title}
+                                            on:input={move |event| {
+                                                draft.update(|draft| draft.title = event_target_value(&event))
+                                            }}
+                                        />
+                                        <label for="edit-description">
+                                            {move || i18n.text("message.description")}
+                                        </label>
+                                        <textarea
+                                            id="edit-description"
+                                            rows="5"
+                                            maxlength="20000"
+                                            readonly={move || ticket.get()}
+                                            prop:value={move || draft.get().description}
+                                            on:input={move |event| {
+                                                draft
+                                                    .update(|draft| {
+                                                        draft.description = event_target_value(&event);
+                                                    })
+                                            }}
+                                        ></textarea>
+                                        <details class="disclosure criteria" open>
+                                            <summary id="criteria-heading">
+                                                {move || i18n.text("message.acceptance_criteria")}
+                                            </summary>
+                                            <p class="hint">
+                                                {move || {
+                                                    i18n
+                                                        .text(
+                                                            "message.check_criteria_after_verifying_them_up_to_20_criteria",
+                                                        )
+                                                }}
+                                            </p>
+                                            <For
+                                                each={move || {
+                                                    (0..draft.get().criteria.len()).collect::<Vec<_>>()
+                                                }}
+                                                key={|index| *index}
+                                                children={move |index| {
+                                                    view! {
+                                                        <div class="criterion">
+                                                            <label>
+                                                                <span class="sr-only">
+                                                                    {move || {
+                                                                        i18n
+                                                                            .text("message.criterion_0")
+                                                                            .replace("{0}", &(index + 1).to_string())
+                                                                    }}
+                                                                </span>
+                                                                <input
+                                                                    class="criterion-text"
+                                                                    required
+                                                                    maxlength="500"
+                                                                    prop:value={move || {
+                                                                        draft
+                                                                            .with(|draft| {
+                                                                                draft
+                                                                                    .criteria
+                                                                                    .get(index)
+                                                                                    .map(|criterion| criterion.text.clone())
+                                                                                    .unwrap_or_default()
+                                                                            })
+                                                                    }}
+                                                                    on:input={move |event| {
+                                                                        draft
+                                                                            .update(|draft| {
+                                                                                if let Some(criterion) = draft.criteria.get_mut(index) {
+                                                                                    criterion.text = event_target_value(&event).as_str().into();
+                                                                                }
+                                                                            })
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                            <label class="check-filter">
+                                                                <input
+                                                                    class="criterion-done"
+                                                                    type="checkbox"
+                                                                    prop:checked={move || {
+                                                                        draft
+                                                                            .with(|draft| {
+                                                                                draft
+                                                                                    .criteria
+                                                                                    .get(index)
+                                                                                    .is_some_and(|criterion| criterion.done)
+                                                                            })
+                                                                    }}
+                                                                    on:change={move |event| {
+                                                                        draft
+                                                                            .update(|draft| {
+                                                                                if let Some(criterion) = draft.criteria.get_mut(index) {
+                                                                                    criterion.done = event_target_checked(&event);
+                                                                                }
+                                                                            })
+                                                                    }}
+                                                                />
+                                                                {move || i18n.text("message.verified")}
+                                                            </label>
+                                                            <button
+                                                                type="button"
+                                                                aria-label={move || {
+                                                                    i18n
+                                                                        .text("message.remove_criterion_0")
+                                                                        .replace("{0}", &(index + 1).to_string())
+                                                                }}
+                                                                on:click={move |_| {
+                                                                    draft
+                                                                        .update(|draft| {
+                                                                            draft.criteria.remove(index);
+                                                                        })
+                                                                }}
+                                                            >
+                                                                {move || i18n.text("message.remove")}
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                id="add-criterion"
+                                                type="button"
+                                                disabled={move || draft.get().criteria.len() >= 20}
+                                                on:click={move |_| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft
+                                                                .criteria
+                                                                .push(Criterion {
+                                                                    text: "".into(),
+                                                                    done: false,
+                                                                })
+                                                        })
+                                                }}
+                                            >
+                                                {move || i18n.text("message.add_a_criterion")}
+                                            </button>
+                                        </details>
+                                        <div class="form-row">
+                                            <div>
+                                                <label for="edit-status">
+                                                    {move || i18n.text("message.local_progress")}
+                                                </label>
+                                                <select
+                                                    id="edit-status"
+                                                    prop:value={move || draft.get().status}
+                                                    on:change={move |event| {
+                                                        draft
+                                                            .update(|draft| draft.status = event_target_value(&event))
+                                                    }}
+                                                >
+                                                    {STATUSES
+                                                        .into_iter()
+                                                        .map(move |(status, _)| {
+                                                            view! {
+                                                                <option value={status}>
+                                                                    {move || status_label(status)}
+                                                                </option>
+                                                            }
+                                                        })
+                                                        .collect_view()}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label for="edit-agent">
+                                                    {move || i18n.text("message.agent")}
+                                                </label>
+                                                <select
+                                                    id="edit-agent"
+                                                    prop:value={move || draft.get().agent}
+                                                    on:change={move |event| {
+                                                        draft
+                                                            .update(|draft| {
+                                                                draft.agent = event_target_value(&event);
+                                                                draft.model.clear();
+                                                                draft.effort.clear();
+                                                            })
+                                                    }}
+                                                >
+                                                    <option value="" disabled>
+                                                        {move || i18n.text("message.choose_a_profile")}
+                                                    </option>
+                                                    <For
+                                                        each={move || {
+                                                            atelier_core::domain::agent_options::providers(
+                                                                    &board.settings.get(),
+                                                                )
+                                                                .unwrap_or_default()
+                                                        }}
+                                                        key={|profile| field(profile, "id")}
+                                                        children={move |profile| {
+                                                            view! {
+                                                                <option value={field(
+                                                                    &profile,
+                                                                    "id",
+                                                                )}>{field(&profile, "name")}</option>
+                                                            }
+                                                        }}
+                                                    />
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <details class="disclosure">
+                                            <summary>
+                                                {move || i18n.text("message.model_and_reasoning")}
+                                            </summary>
+                                            <div class="form-row">
+                                                <div>
+                                                    <label for="edit-model">
+                                                        {move || i18n.text("message.task_model")}
+                                                    </label>
+                                                    <input
+                                                        id="edit-model"
+                                                        maxlength="180"
+                                                        spellcheck="false"
+                                                        placeholder={move || {
+                                                            i18n.text("message.inherit_from_the_profile_when_empty")
+                                                        }}
+                                                        prop:value={move || draft.get().model}
+                                                        on:input={move |event| {
+                                                            draft
+                                                                .update(|draft| draft.model = event_target_value(&event))
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label for="edit-effort">
+                                                        {move || i18n.text("message.task_effort")}
+                                                    </label>
+                                                    <input
+                                                        id="edit-effort"
+                                                        maxlength="40"
+                                                        spellcheck="false"
+                                                        placeholder={move || {
+                                                            i18n.text("message.inherit_from_the_profile_when_empty")
+                                                        }}
+                                                        prop:value={move || draft.get().effort}
+                                                        on:input={move |event| {
+                                                            draft
+                                                                .update(|draft| draft.effort = event_target_value(&event))
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </details>
+                                        <details class="disclosure dependencies">
+                                            <summary id="dependencies-heading">
+                                                {move || i18n.text("message.blocked_by")}
+                                            </summary>
+                                            <p class="hint">
+                                                {move || {
+                                                    i18n
+                                                        .text(
+                                                            "message.choose_prerequisite_tasks_completed_tasks_no_longer_block_the_wo",
+                                                        )
+                                                }}
+                                            </p>
+                                            <For
+                                                each={move || {
+                                                    cards
+                                                        .get()
+                                                        .into_iter()
+                                                        .filter(|card| card.id != id.get_value())
+                                                        .collect::<Vec<_>>()
+                                                }}
+                                                key={|card| card.id.clone()}
+                                                children={move |card| {
+                                                    let dependency = StoredValue::new(card.id);
+                                                    view! {
+                                                        <label class="dependency-choice">
+                                                            <input
+                                                                type="checkbox"
+                                                                data-dependency={dependency.get_value()}
+                                                                prop:checked={move || {
+                                                                    draft
+                                                                        .with(|draft| {
+                                                                            draft.dependencies.contains(&dependency.get_value())
+                                                                        })
+                                                                }}
+                                                                disabled={move || {
+                                                                    draft
+                                                                        .with(|draft| {
+                                                                            draft.dependencies.len() >= 20
+                                                                                && !draft.dependencies.contains(&dependency.get_value())
+                                                                        })
+                                                                }}
+                                                                on:change={move |event| {
+                                                                    draft
+                                                                        .update(|draft| {
+                                                                            let id = dependency.get_value();
+                                                                            if event_target_checked(&event) {
+                                                                                if !draft.dependencies.contains(&id) {
+                                                                                    draft.dependencies.push(id);
+                                                                                }
+                                                                            } else {
+                                                                                draft.dependencies.retain(|value| value != &id);
+                                                                            }
+                                                                        })
+                                                                }}
+                                                            />
+                                                            <span>{card.title.clone()}</span>
+                                                        </label>
+                                                    }
+                                                }}
+                                            />
+                                            <p class="field-help" hidden={move || cards.get().len() > 1}>
+                                                {move || i18n.text("message.no_other_tasks_available")}
+                                            </p>
+                                        </details>
+                                        <details class="disclosure">
+                                            <summary>
+                                                {move || i18n.text("message.additional_instructions")}
+                                            </summary>
+                                            <label for="edit-instructions">
+                                                {move || i18n.text("message.agent_instructions")}
+                                            </label>
+                                            <textarea
+                                                id="edit-instructions"
+                                                rows="4"
+                                                maxlength="20000"
+                                                prop:value={move || draft.get().instructions}
+                                                on:input={move |event| {
+                                                    draft
+                                                        .update(|draft| {
+                                                            draft.instructions = event_target_value(&event);
+                                                        })
+                                                }}
+                                            ></textarea>
+                                        </details>
+                                    </fieldset>
+                                    <div class="form-actions">
+                                        <button
+                                            id="save-task"
+                                            class="primary"
+                                            type="submit"
+                                            hidden={archived}
+                                            disabled={move || {
+                                                pending.get() || time_dirty.get() || creation_dirty.get()
+                                                    || forge_dirty.get() || connector_dirty.get()
+                                                    || commit_dirty.get() || !dirty.get()
+                                            }}
+                                        >
+                                            {move || {
+                                                i18n
+                                                    .text(
+                                                        if pending.get() {
+                                                            "message.saving"
+                                                        } else {
+                                                            "message.save"
+                                                        },
+                                                    )
+                                            }}
+                                        </button>
+                                        <span role="status">
+                                            {move || {
+                                                i18n
+                                                    .text(
+                                                        if dirty.get() { "message.unsaved_changes" } else { "" },
+                                                    )
+                                            }}
+                                        </span>
+                                    </div>
+                                </form>
+                            </div>
+                            <aside class="task-aside">
+                                <crate::commits::Commits
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    dirty={commit_dirty}
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || connector_dirty.get() || workspace_dirty.get()
+                                            || time_dirty.get() || creation_dirty.get() || forge_dirty.get()
+                                            || automation_active.get() || show_template.get()
+                                    })}
+                                    archived
+                                />
+                                <crate::forge_task::ForgeTask
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    dirty={forge_dirty}
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                            || creation_dirty.get() || connector_dirty.get()
+                                            || commit_dirty.get() || automation_active.get()
+                                            || show_template.get()
+                                    })}
+                                    archived
+                                />
+                                <crate::jira_creation::JiraCreation
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    dirty={creation_dirty}
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                            || forge_dirty.get() || connector_dirty.get()
+                                            || commit_dirty.get() || automation_active.get()
+                                            || show_template.get()
+                                    })}
+                                    archived
+                                />
+                                <crate::time::TimeTask
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    dirty={time_dirty}
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || creation_dirty.get()
+                                            || forge_dirty.get() || connector_dirty.get()
+                                            || commit_dirty.get() || automation_active.get()
+                                            || show_template.get()
+                                    })}
+                                    archived
+                                />
+                                <Show when={move || !no_repository}>
+                                    <Workspace
+                                        card_id={id.get_value()}
+                                        board
+                                        token
+                                        pending
+                                        dirty={workspace_dirty}
+                                        blocked={Memo::new(move |_| {
+                                            dirty.get() || time_dirty.get() || creation_dirty.get()
+                                                || forge_dirty.get() || connector_dirty.get()
+                                                || commit_dirty.get() || automation_active.get()
+                                                || show_template.get()
+                                        })}
+                                        on_change={Callback::new(move |()| {
+                                            files_revision.update(|revision| *revision += 1)
+                                        })}
+                                    />
+                                </Show>
+                                <crate::connector_ticket::ConnectorTicket
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    dirty={connector_dirty}
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                            || creation_dirty.get() || forge_dirty.get() || commit_dirty.get()
+                                            || automation_active.get() || show_template.get() || archived
+                                    })}
+                                    on_applied={reload_draft}
+                                />
+                                <crate::jira_refresh::JiraRefresh
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                            || creation_dirty.get() || forge_dirty.get()
+                                            || connector_dirty.get() || commit_dirty.get()
+                                            || automation_active.get() || show_template.get() || archived
+                                    })}
+                                    on_applied={reload_draft}
+                                />
+                                <crate::jira_task::JiraTask
+                                    card_id={id.get_value()}
+                                    board
+                                    token
+                                    pending
+                                    blocked={Memo::new(move |_| {
+                                        dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                            || creation_dirty.get() || forge_dirty.get()
+                                            || connector_dirty.get() || commit_dirty.get()
+                                            || automation_active.get() || show_template.get()
+                                    })}
+                                />
+                            </aside>
+                        </div>
+                    </section>
+                    <section
+                        id="task-panel-activity"
+                        class="task-panel"
+                        role="tabpanel"
+                        aria-labelledby="task-tab-activity"
+                        tabindex="0"
+                        hidden={move || active_tab.get() != "activity"}
+                    >
+                        <crate::automation::Automation
+                            card_id={id.get_value()}
+                            board
+                            token
+                            pending
+                            on_applied={reload_draft}
+                            blocked={Memo::new(move |_| {
+                                dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || show_template.get() || archived
+                            })}
+                        />
+                        <crate::services::Services
+                            card_id={id.get_value()}
+                            board
+                            token
+                            pending
+                            blocked={Memo::new(move |_| {
+                                dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            })}
+                        />
+                        <crate::runs::Runs
+                            card_id={id.get_value()}
+                            board
+                            token
+                            pending
+                            reply_drafts
+                            on_open={navigate}
+                            on_applied={reload_draft}
+                            blocked={Memo::new(move |_| {
+                                dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            })}
+                        />
+                    </section>
+                    <section
+                        id="task-panel-repository"
+                        class="task-panel"
+                        role="tabpanel"
+                        aria-labelledby={move || {
+                            if file_mode.get() == FileMode::Changes {
+                                "task-tab-diff"
+                            } else {
+                                "task-tab-files"
                             }
-                        }>{move || i18n.text(label)}</button>
-                    }).collect_view()}
-                </nav>
-                <crate::time::TimerBanner board token nested=true on_task=navigate />
-                <section id="task-panel-details" class="task-panel" role="tabpanel" aria-labelledby="task-tab-details" tabindex="0" hidden=move || active_tab.get() != "details">
-                <div class="task-columns"><div class="task-main">
-                {move ||ticket_info.get().map(|ticket| {let url=field(&ticket,"url");let key=field(&ticket,"key");let status=field(&ticket,"status");view!{<section class="task-files"><h3>{move || i18n.text("message.linked_issue")}</h3>{if url.starts_with("https://") && !url.chars().any(char::is_control) {view!{<a href=url target="_blank" rel="noopener noreferrer">{key}</a>}.into_any()}else{view!{<span>{key}</span>}.into_any()}}<p>{status}</p><p class="field-help">{move || i18n.text("message.the_title_and_description_of_this_card_are_preserved_locally_no")}</p></section>}})}
-                {move||board.cards.with(|cards|cards.iter().find(|card|card.id==id.get_value()).map(|card|["brainstormQuestions","preparationQuestions"].into_iter().flat_map(|key|card.fields.get::<Vec<String>>(key).ok().flatten().unwrap_or_default()).collect::<Vec<_>>())).filter(|questions|!questions.is_empty()).map(|questions|view!{<section class="task-files"><h3>{move||i18n.text("message.questions_to_clarify")}</h3><ul>{questions.into_iter().map(|question|view!{<li>{question}</li>}).collect_view()}</ul></section>})}
-                <form class="task-editor" on:submit=move |event| { event.prevent_default(); perform(Action::Save); } on:invalid:capture=move |event: web_sys::Event| {
-                    select_tab("details");
-                    if let Some(target) = event.target().and_then(|target| target.dyn_into::<web_sys::HtmlElement>().ok()) {
-                        request_animation_frame(move || { let _ = target.focus(); });
-                    }
-                }>
-                    <fieldset disabled=move || pending.get() || automation_active.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || archived || show_template.get()>
-                        <label for="edit-title">{move || i18n.text("message.title")}</label><input id="edit-title" required maxlength="300" autofocus readonly=move ||ticket.get() prop:value=move || draft.get().title on:input=move |event| draft.update(|draft| draft.title = event_target_value(&event)) />
-                        <label for="edit-description">{move || i18n.text("message.description")}</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=move ||ticket.get() prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
-                        <details class="disclosure criteria" open><summary id="criteria-heading">{move || i18n.text("message.acceptance_criteria")}</summary><p class="hint">{move || i18n.text("message.check_criteria_after_verifying_them_up_to_20_criteria")}</p>
-                            <For each={move || (0..draft.get().criteria.len()).collect::<Vec<_>>()} key=|index| *index children=move |index| view! {
-                                <div class="criterion"><label><span class="sr-only">{move || i18n.text("message.criterion_0").replace("{0}", &(index + 1).to_string())}</span><input class="criterion-text" required maxlength="500" prop:value=move || draft.with(|draft| draft.criteria.get(index).map(|criterion| criterion.text.clone()).unwrap_or_default()) on:input=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.text = event_target_value(&event).as_str().into(); } }) /></label>
-                                <label class="check-filter"><input class="criterion-done" type="checkbox" prop:checked=move || draft.with(|draft| draft.criteria.get(index).is_some_and(|criterion| criterion.done)) on:change=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.done = event_target_checked(&event); } }) />{move || i18n.text("message.verified")}</label>
-                                <button type="button" aria-label=move || i18n.text("message.remove_criterion_0").replace("{0}", &(index + 1).to_string()) on:click=move |_| draft.update(|draft| { draft.criteria.remove(index); })>{move || i18n.text("message.remove")}</button></div>
-                            } />
-                            <button id="add-criterion" type="button" disabled={move || draft.get().criteria.len() >= 20} on:click=move |_| draft.update(|draft| draft.criteria.push(Criterion { text: "".into(), done: false }))>{move || i18n.text("message.add_a_criterion")}</button>
-                        </details>
-                        <div class="form-row"><div>                    <label for="edit-status">{move || i18n.text("message.local_progress")}</label><select id="edit-status" prop:value=move || draft.get().status on:change=move |event| draft.update(|draft| draft.status = event_target_value(&event))>{STATUSES.into_iter().map(move |(status, _)| view! { <option value=status>{move || status_label(status)}</option> }).collect_view()}</select>
-    </div><div>                    <label for="edit-agent">{move||i18n.text("message.agent")}</label><select id="edit-agent" prop:value=move||draft.get().agent on:change=move|event|draft.update(|draft|{draft.agent=event_target_value(&event);draft.model.clear();draft.effort.clear();})><option value="" disabled>{move||i18n.text("message.choose_a_profile")}</option><For each=move||atelier_core::domain::agent_options::providers(&board.settings.get()).unwrap_or_default() key=|profile|field(profile,"id") children=move|profile|view!{<option value=field(&profile,"id")>{field(&profile,"name")}</option>} /></select>
-    </div></div>
-                        <details class="disclosure"><summary>{move ||i18n.text("message.model_and_reasoning")}</summary><div class="form-row"><div>                    <label for="edit-model">{move||i18n.text("message.task_model")}</label><input id="edit-model" maxlength="180" spellcheck="false" placeholder=move||i18n.text("message.inherit_from_the_profile_when_empty") prop:value=move||draft.get().model on:input=move|event|draft.update(|draft|draft.model=event_target_value(&event)) />
-    </div><div>                    <label for="edit-effort">{move||i18n.text("message.task_effort")}</label><input id="edit-effort" maxlength="40" spellcheck="false" placeholder=move||i18n.text("message.inherit_from_the_profile_when_empty") prop:value=move||draft.get().effort on:input=move|event|draft.update(|draft|draft.effort=event_target_value(&event)) />
-    </div></div></details>
-                        <details class="disclosure dependencies"><summary id="dependencies-heading">{move || i18n.text("message.blocked_by")}</summary><p class="hint">{move || i18n.text("message.choose_prerequisite_tasks_completed_tasks_no_longer_block_the_wo")}</p>
-                            <For each={move || cards.get().into_iter().filter(|card| card.id != id.get_value()).collect::<Vec<_>>()} key=|card| card.id.clone() children=move |card| {
-                                let dependency = StoredValue::new(card.id);
-                                view! { <label class="dependency-choice"><input type="checkbox" data-dependency=dependency.get_value() prop:checked=move || draft.with(|draft| draft.dependencies.contains(&dependency.get_value())) disabled=move || draft.with(|draft| draft.dependencies.len() >= 20 && !draft.dependencies.contains(&dependency.get_value())) on:change=move |event| draft.update(|draft| { let id = dependency.get_value(); if event_target_checked(&event) { if !draft.dependencies.contains(&id) { draft.dependencies.push(id); } } else { draft.dependencies.retain(|value| value != &id); } }) /><span>{card.title.clone()}</span></label> }
-                            } />
-                            <p class="field-help" hidden={move || cards.get().len() > 1}>{move || i18n.text("message.no_other_tasks_available")}</p>
-                        </details>
-                        <details class="disclosure"><summary>{move ||i18n.text("message.additional_instructions")}</summary>                    <label for="edit-instructions">{move || i18n.text("message.agent_instructions")}</label><textarea id="edit-instructions" rows="4" maxlength="20000" prop:value=move || draft.get().instructions on:input=move |event| draft.update(|draft| draft.instructions = event_target_value(&event))></textarea>
-    </details>
-                    </fieldset>
-                    <div class="form-actions"><button id="save-task" class="primary" type="submit" hidden=archived disabled=move || pending.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || !dirty.get()>{move || i18n.text(if pending.get() { "message.saving" } else { "message.save" })}</button><span role="status">{move || i18n.text(if dirty.get() { "message.unsaved_changes" } else { "" })}</span></div>
-                </form>
-                </div><aside class="task-aside">
-                <crate::commits::Commits card_id=id.get_value() board token pending dirty=commit_dirty blocked=Memo::new(move |_|dirty.get()||connector_dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||forge_dirty.get()||automation_active.get()||show_template.get()) archived />
-                <crate::forge_task::ForgeTask card_id=id.get_value() board token pending dirty=forge_dirty blocked=Memo::new(move |_|dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||connector_dirty.get()||commit_dirty.get()||automation_active.get()||show_template.get()) archived />
-                <crate::jira_creation::JiraCreation card_id=id.get_value() board token pending dirty=creation_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) archived />
-                <crate::time::TimeTask card_id=id.get_value() board token pending dirty=time_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) archived />
-                <Show when=move||!no_repository><Workspace card_id=id.get_value() board token pending dirty=workspace_dirty blocked=Memo::new(move |_| dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) on_change=Callback::new(move |()| files_revision.update(|revision| *revision += 1)) /></Show>
-                <crate::connector_ticket::ConnectorTicket card_id=id.get_value() board token pending dirty=connector_dirty blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() || archived) on_applied=reload_draft />
-                <crate::jira_refresh::JiraRefresh card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() || archived) on_applied=reload_draft />
-                <crate::jira_task::JiraTask card_id=id.get_value() board token pending blocked=Memo::new(move |_|dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
-                </aside></div></section>
-                <section id="task-panel-activity" class="task-panel" role="tabpanel" aria-labelledby="task-tab-activity" tabindex="0" hidden=move || active_tab.get() != "activity">
-                <crate::automation::Automation card_id=id.get_value() board token pending on_applied=reload_draft blocked=Memo::new(move |_|dirty.get()||workspace_dirty.get()||time_dirty.get()||creation_dirty.get()||forge_dirty.get()||connector_dirty.get()||commit_dirty.get()||show_template.get()||archived) />
-                <crate::services::Services card_id=id.get_value() board token pending blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
-                <crate::runs::Runs card_id=id.get_value() board token pending reply_drafts on_open=navigate on_applied=reload_draft blocked=Memo::new(move |_| dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get()) />
-                </section>
-                <section id="task-panel-repository" class="task-panel" role="tabpanel" aria-labelledby=move || if file_mode.get()==FileMode::Changes { "task-tab-diff" } else { "task-tab-files" } tabindex="0" hidden=move || !matches!(active_tab.get(),"diff"|"files")>
-                    <Show when=move || !no_repository fallback=move || view! { <p class="field-help">{move || i18n.text("message.this_task_has_no_repository")}</p> }>
-                        <Files card_id=id.get_value() token mode=Signal::derive(move || file_mode.get()) active=Signal::derive(move || matches!(active_tab.get(),"diff"|"files")) revision=Signal::derive(move || files_revision.get()) />
-                    </Show>
-                </section>
-                <p id="editor-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-                <div class="editor-secondary"><button id="duplicate-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| perform(Action::Duplicate)>{move || i18n.text("message.duplicate")}</button><button id="archive-task" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| perform(Action::Archive)>{move || i18n.text(if archived { "message.restore" } else { "message.archive_8614cf00" })}</button><button id="delete-task" class="danger" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| confirmation.set("delete")>{move || i18n.text("message.delete")}</button><button id="make-template" type="button" disabled=move || pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get() || creation_dirty.get() || forge_dirty.get() || connector_dirty.get() || commit_dirty.get() || automation_active.get() || show_template.get() on:click=move |_| { notice.set(String::new()); show_template.set(true); }>{move || i18n.text("message.create_template")}</button></div>
-                <form class="template-form" hidden=move || !show_template.get() on:submit=move |event| { event.prevent_default(); perform(Action::Template); }><label for="template-name">{move || i18n.text("message.template_name")}</label><input id="template-name" required maxlength="100" disabled=move || pending.get() prop:value=move || template_name.get() on:input=move |event| template_name.set(event_target_value(&event)) /><p class="field-help">{move || i18n.text("message.the_template_includes_the_description_instructions_and_criteria")}</p><button id="save-template" class="primary" type="submit" disabled=move || pending.get()>{move || i18n.text("message.save_template")}</button><button type="button" disabled=move || pending.get() on:click=move |_| { template_name.set(String::new()); show_template.set(false); }>{move || i18n.text("message.cancel_template")}</button></form>
-                <p id="editor-notice" role="status">{move || i18n.text(&notice.get())}</p>
-                <div class="confirmation" role="alert" hidden=move || confirmation.get().is_empty()>
-                    <p>{move || i18n.text(if confirmation.get() == "delete" { "message.permanently_delete_this_task_this_cannot_be_undone" } else { "message.close_without_saving_changes" })}</p>
-                    <button id="confirm-editor" class="danger" type="button" disabled=move || pending.get() on:click=move |_| { if confirmation.get_untracked() == "delete" { perform(Action::Delete); } else if confirmation.get_untracked()=="switch" {let target=next_task.get_untracked();close();request_animation_frame(move ||on_open.run(target));} else { close(); } }>{move || i18n.text(if confirmation.get() == "delete" { "message.delete_permanently" } else { "message.discard_changes" })}</button>
-                <button id="cancel-confirmation" type="button" disabled=move || pending.get() on:click=move |_| {navigation.set_value(None);confirmation.set("");if let Some(element)=document().get_element_by_id(&close_focus.get_value()).and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}}>{move || i18n.text("message.keep_editing_746a82c6")}</button>
+                        }}
+                        tabindex="0"
+                        hidden={move || !matches!(active_tab.get(), "diff" | "files")}
+                    >
+                        <Show
+                            when={move || !no_repository}
+                            fallback={move || {
+                                view! {
+                                    <p class="field-help">
+                                        {move || i18n.text("message.this_task_has_no_repository")}
+                                    </p>
+                                }
+                            }}
+                        >
+                            <Files
+                                card_id={id.get_value()}
+                                token
+                                mode={Signal::derive(move || file_mode.get())}
+                                active={Signal::derive(move || matches!(active_tab.get(), "diff" | "files"))}
+                                revision={Signal::derive(move || files_revision.get())}
+                            />
+                        </Show>
+                    </section>
+                    <p id="editor-error" class="error" role="alert">
+                        {move || i18n.text(&error.get())}
+                    </p>
+                    <div class="editor-secondary">
+                        <button
+                            id="duplicate-task"
+                            type="button"
+                            disabled={move || {
+                                pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            }}
+                            on:click={move |_| perform(Action::Duplicate)}
+                        >
+                            {move || i18n.text("message.duplicate")}
+                        </button>
+                        <button
+                            id="archive-task"
+                            type="button"
+                            disabled={move || {
+                                pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            }}
+                            on:click={move |_| perform(Action::Archive)}
+                        >
+                            {move || {
+                                i18n
+                                    .text(
+                                        if archived { "message.restore" } else { "message.archive_8614cf00" },
+                                    )
+                            }}
+                        </button>
+                        <button
+                            id="delete-task"
+                            class="danger"
+                            type="button"
+                            disabled={move || {
+                                pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            }}
+                            on:click={move |_| confirmation.set("delete")}
+                        >
+                            {move || i18n.text("message.delete")}
+                        </button>
+                        <button
+                            id="make-template"
+                            type="button"
+                            disabled={move || {
+                                pending.get() || dirty.get() || workspace_dirty.get() || time_dirty.get()
+                                    || creation_dirty.get() || forge_dirty.get() || connector_dirty.get()
+                                    || commit_dirty.get() || automation_active.get() || show_template.get()
+                            }}
+                            on:click={move |_| {
+                                notice.set(String::new());
+                                show_template.set(true);
+                            }}
+                        >
+                            {move || i18n.text("message.create_template")}
+                        </button>
+                    </div>
+                    <form
+                        class="template-form"
+                        hidden={move || !show_template.get()}
+                        on:submit={move |event| {
+                            event.prevent_default();
+                            perform(Action::Template);
+                        }}
+                    >
+                        <label for="template-name">{move || i18n.text("message.template_name")}</label>
+                        <input
+                            id="template-name"
+                            required
+                            maxlength="100"
+                            disabled={move || pending.get()}
+                            prop:value={move || template_name.get()}
+                            on:input={move |event| template_name.set(event_target_value(&event))}
+                        />
+                        <p class="field-help">
+                            {move || {
+                                i18n
+                                    .text(
+                                        "message.the_template_includes_the_description_instructions_and_criteria",
+                                    )
+                            }}
+                        </p>
+                        <button
+                            id="save-template"
+                            class="primary"
+                            type="submit"
+                            disabled={move || pending.get()}
+                        >
+                            {move || i18n.text("message.save_template")}
+                        </button>
+                        <button
+                            type="button"
+                            disabled={move || pending.get()}
+                            on:click={move |_| {
+                                template_name.set(String::new());
+                                show_template.set(false);
+                            }}
+                        >
+                            {move || i18n.text("message.cancel_template")}
+                        </button>
+                    </form>
+                    <p id="editor-notice" role="status">
+                        {move || i18n.text(&notice.get())}
+                    </p>
+                    <div class="confirmation" role="alert" hidden={move || confirmation.get().is_empty()}>
+                        <p>
+                            {move || {
+                                i18n
+                                    .text(
+                                        if confirmation.get() == "delete" {
+                                            "message.permanently_delete_this_task_this_cannot_be_undone"
+                                        } else {
+                                            "message.close_without_saving_changes"
+                                        },
+                                    )
+                            }}
+                        </p>
+                        <button
+                            id="confirm-editor"
+                            class="danger"
+                            type="button"
+                            disabled={move || pending.get()}
+                            on:click={move |_| {
+                                if confirmation.get_untracked() == "delete" {
+                                    perform(Action::Delete);
+                                } else if confirmation.get_untracked() == "switch" {
+                                    let target = next_task.get_untracked();
+                                    close();
+                                    request_animation_frame(move || on_open.run(target));
+                                } else {
+                                    close();
+                                }
+                            }}
+                        >
+                            {move || {
+                                i18n
+                                    .text(
+                                        if confirmation.get() == "delete" {
+                                            "message.delete_permanently"
+                                        } else {
+                                            "message.discard_changes"
+                                        },
+                                    )
+                            }}
+                        </button>
+                        <button
+                            id="cancel-confirmation"
+                            type="button"
+                            disabled={move || pending.get()}
+                            on:click={move |_| {
+                                navigation.set_value(None);
+                                confirmation.set("");
+                                if let Some(element) = document()
+                                    .get_element_by_id(&close_focus.get_value())
+                                    .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+                                {
+                                    let _ = element.focus();
+                                }
+                            }}
+                        >
+                            {move || i18n.text("message.keep_editing_746a82c6")}
+                        </button>
+                    </div>
                 </div>
-            </div></div></section>
-        }
+            </div>
+        </section>
+    }
 }

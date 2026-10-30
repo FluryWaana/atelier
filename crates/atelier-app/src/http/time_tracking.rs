@@ -82,14 +82,9 @@ async fn execute(state: Shared, id: String, action: &str, request: Request) -> R
         .await
     {
         Ok(entry) => Json(entry).into_response(),
-        Err(error) => failure(
-            if error.is::<time_tracking::TimeConflict>() {
-                StatusCode::CONFLICT
-            } else {
-                StatusCode::BAD_REQUEST
-            },
-            &error.to_string(),
-        ),
+        Err(error) => {
+            super::responses::error(error, "message.unable_to_read_or_save_retry_or_reload")
+        }
     }
 }
 

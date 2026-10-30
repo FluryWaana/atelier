@@ -136,18 +136,131 @@ pub fn Backups(
     });
     on_cleanup(move || unload.remove());
     view! {
-        <dialog id="backups-dialog" class="editor" node_ref=dialog aria-labelledby="backups-title" on:cancel=move |event: web_sys::Event| { event.prevent_default(); close(); }>
-            <header class="editor-heading"><div><p class="eyebrow">{move || i18n.text("message.your_data")}</p><h2 id="backups-title">{move || i18n.text("message.backups_and_restore")}</h2></div><button id="close-backups" type="button" disabled=move || pending.get() on:click=move |_| close()>{move || i18n.text("message.close")}</button></header>
-            <p class="field-help">{move || i18n.text("message.backups_preserve_application_data_repository_and_worktree_files")}</p>
-            <div class="editor-actions"><button id="create-backup" class="primary" type="button" autofocus disabled=move || pending.get() on:click=move |_| execute(false)>{move || i18n.text("message.create_backup")}</button><button id="refresh-backups" type="button" disabled=move || pending.get() on:click=move |_| refresh()>{move || i18n.text("message.refresh")}</button></div>
-            <p id="backups-notice" class="field-help" role="status">{move || if pending.get() { i18n.text("message.working") } else { notice.get().map(|(key, value)| i18n.text(key).replace("{0}", &value)).unwrap_or_default() }}</p><p id="backups-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
-            <div class="backup-list" aria-label=move || i18n.text("message.local_backups") aria-busy=move || pending.get().to_string()><For each=move || items.get() key=|backup| field(backup,"name") children=move |backup| {
-                let name = StoredValue::new(field(&backup,"name"));
-                let date = field(&backup,"date").replace('T'," ").replace('Z'," UTC");
-                let size = backup.get::<u64>("bytes").ok().flatten().unwrap_or(0).div_ceil(1024);
-                view! { <button type="button" class="project-choice" data-backup=name.get_value() aria-pressed=move || (selected.get() == name.get_value()).to_string() disabled=move || pending.get() on:click=move |_| selected.set(name.get_value())><strong>{move || format!("{date} · {size} {}", if i18n.code() == "en-US" { "KiB" } else { "Kio" })}</strong><small>{name.get_value()}</small></button> }
-            } /><p class="field-help" hidden=move || pending.get() || !items.get().is_empty()>{move || i18n.text("message.no_backups_available")}</p></div>
-            <div class="confirmation" role="alert" hidden=move || selected.get().is_empty()><p>{move || i18n.text("message.restoring_this_backup_will_replace_current_tasks_projects_settin")}</p><p class="backup-name">{move || selected.get()}</p><button id="restore-backup" class="danger" type="button" disabled=move || pending.get() on:click=move |_| execute(true)>{move || i18n.text("message.restore_this_backup")}</button><button id="cancel-restore" type="button" disabled=move || pending.get() on:click=move |_| selected.set(String::new())>{move || i18n.text("message.cancel")}</button></div>
+        <dialog
+            id="backups-dialog"
+            class="editor"
+            node_ref={dialog}
+            aria-labelledby="backups-title"
+            on:cancel={move |event: web_sys::Event| {
+                event.prevent_default();
+                close();
+            }}
+        >
+            <header class="editor-heading">
+                <div>
+                    <p class="eyebrow">{move || i18n.text("message.your_data")}</p>
+                    <h2 id="backups-title">{move || i18n.text("message.backups_and_restore")}</h2>
+                </div>
+                <button
+                    id="close-backups"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| close()}
+                >
+                    {move || i18n.text("message.close")}
+                </button>
+            </header>
+            <p class="field-help">
+                {move || i18n.text("message.backups_preserve_application_data_repository_and_worktree_files")}
+            </p>
+            <div class="editor-actions">
+                <button
+                    id="create-backup"
+                    class="primary"
+                    type="button"
+                    autofocus
+                    disabled={move || pending.get()}
+                    on:click={move |_| execute(false)}
+                >
+                    {move || i18n.text("message.create_backup")}
+                </button>
+                <button
+                    id="refresh-backups"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| refresh()}
+                >
+                    {move || i18n.text("message.refresh")}
+                </button>
+            </div>
+            <p id="backups-notice" class="field-help" role="status">
+                {move || {
+                    if pending.get() {
+                        i18n.text("message.working")
+                    } else {
+                        notice
+                            .get()
+                            .map(|(key, value)| i18n.text(key).replace("{0}", &value))
+                            .unwrap_or_default()
+                    }
+                }}
+            </p>
+            <p id="backups-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <div
+                class="backup-list"
+                aria-label={move || i18n.text("message.local_backups")}
+                aria-busy={move || pending.get().to_string()}
+            >
+                <For
+                    each={move || items.get()}
+                    key={|backup| field(backup, "name")}
+                    children={move |backup| {
+                        let name = StoredValue::new(field(&backup, "name"));
+                        let date = field(&backup, "date").replace('T', " ").replace('Z', " UTC");
+                        let size = backup.get::<u64>("bytes").ok().flatten().unwrap_or(0).div_ceil(1024);
+                        view! {
+                            <button
+                                type="button"
+                                class="project-choice"
+                                data-backup={name.get_value()}
+                                aria-pressed={move || (selected.get() == name.get_value()).to_string()}
+                                disabled={move || pending.get()}
+                                on:click={move |_| selected.set(name.get_value())}
+                            >
+                                <strong>
+                                    {move || {
+                                        format!(
+                                            "{date} · {size} {}",
+                                            if i18n.code() == "en-US" { "KiB" } else { "Kio" },
+                                        )
+                                    }}
+                                </strong>
+                                <small>{name.get_value()}</small>
+                            </button>
+                        }
+                    }}
+                />
+                <p class="field-help" hidden={move || pending.get() || !items.get().is_empty()}>
+                    {move || i18n.text("message.no_backups_available")}
+                </p>
+            </div>
+            <div class="confirmation" role="alert" hidden={move || selected.get().is_empty()}>
+                <p>
+                    {move || {
+                        i18n.text("message.restoring_this_backup_will_replace_current_tasks_projects_settin")
+                    }}
+                </p>
+                <p class="backup-name">{move || selected.get()}</p>
+                <button
+                    id="restore-backup"
+                    class="danger"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| execute(true)}
+                >
+                    {move || i18n.text("message.restore_this_backup")}
+                </button>
+                <button
+                    id="cancel-restore"
+                    type="button"
+                    disabled={move || pending.get()}
+                    on:click={move |_| selected.set(String::new())}
+                >
+                    {move || i18n.text("message.cancel")}
+                </button>
+            </div>
         </dialog>
     }
 }

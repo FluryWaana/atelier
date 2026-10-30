@@ -292,14 +292,20 @@ async fn serve_mode(
     directory.write_session(&token)?;
     let database = directory.database()?;
     let cleanup_vault = vault.clone();
-    database
+    let retired = database
         .call(move |store| {
             crate::infrastructure::connectors::retire_local_connectors(
                 store,
                 &mut |value, decrypt| cleanup_vault.protect(value, decrypt),
             )
         })
-        .await?;
+        .await;
+    // A locked vault must not prevent local work or discard credentials during cleanup.
+    if let Err(error) = retired
+        && !error.is::<crate::infrastructure::settings::VaultFailure>()
+    {
+        return Err(error);
+    }
     database
         .call(|store| {
             let now = time::OffsetDateTime::now_utc()

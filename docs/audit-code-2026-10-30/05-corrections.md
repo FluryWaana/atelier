@@ -28,3 +28,25 @@ La taille HTTP est mesurée en octets encodés. Le scénario de dépassement uti
 Le contrôle natif inclut le travail local préexistant. Ces commandes ne lancent aucun test. Cargo signale la copie du cache incrémental faute de liens physiques disponibles. Les journaux locaux sont dans `.artifacts/audit-fixes-native-check.log` et `.artifacts/audit-fixes-wasm-check.log`. Ils ne sont pas des artefacts de qualification publiés.
 
 Conformément aux consignes actuelles, tests locaux, Clippy, parcours navigateur et CI ne sont pas exécutés. La durabilité réelle Linux, les parcours multi-OS, les coffres natifs, les paquets, les avis de sécurité des dépendances et les mesures de croissance restent à qualifier. Ces correctifs ne valident pas R07 et n'autorisent aucune publication.
+
+## Suite de l'audit clean code
+
+Les sept constats de la seconde revue sont traités dans les sources. Les gardes de mutation reconstruisent leur cible avec les paramètres décodés du routeur. Les identifiants contenant un séparateur décodé ou un caractère de contrôle sont refusés. Les mutations de cartes consultent aussi les exécutions persistées et la suppression consulte la file réelle.
+
+Le chargement du tableau et le démarrage restent disponibles lorsque le coffre ne peut pas être lu. Le nettoyage des anciens connecteurs est alors différé sans supprimer leurs identifiants. Les indicateurs de présence des jetons valent `null`, car leur état est inconnu. Un message traduit explique l'indisponibilité des connexions. Les écritures nécessitant le coffre restent refusées et les données chiffrées sont conservées.
+
+Les handlers Temps, Runs, Worktrees et Fichiers réutilisent la classification HTTP commune. Les erreurs internes reçoivent un message public et un statut 500. Les erreurs métier gardent leur classification. Les branches de conflit conservent leur statut par défaut lorsqu'aucune erreur métier plus précise n'est disponible.
+
+Les assertions de suppression refusent séparément les dépendances et les identifiants de temps mal typés. Les journaux sont bornés en octets UTF-8 à une frontière de caractère. Le contrat de découpage JavaScript et son attente de caractère de remplacement sont retirés.
+
+Le formulaire de création, ses modèles, son brouillon et ses actions sont regroupés dans `new_task.rs`. Le composant reste monté pour conserver la saisie après une fermeture. La navigation et les filtres restent dans `App`. Les vues sont mises en forme avec leptosfmt 0.1.33, largeur 110 et style `AlwaysUnlessLit`, puis avec `cargo fmt`. Les expressions génériques d'attributs restent entre accolades pour être comprises par Leptos. Cet outil ponctuel n'est ni une dépendance du produit ni une nouvelle étape obligatoire de fabrication.
+
+Des régressions synthétiques sont écrites pour les URL encodées, les séparateurs et l'UTF-8 invalides, l'activité persistée, la confidentialité des erreurs, les frontières Unicode des journaux et le travail local avec un coffre indisponible. Le parcours HTTP du coffre vérifie également la conservation des identifiants et des données après l'arrêt. Ces tests ne sont pas exécutés.
+
+Les modifications locales antérieures de formulaires, de modales et d'accès aux dépôts sont conservées. Un instantané séparé des corrections est préparé pour vérifier et committer le travail de cet audit sans y intégrer ces autres changements. Le suivi du rebuild reste ouvert. Aucune qualification fonctionnelle, multi-OS ou de publication n'est déduite de ces corrections.
+
+### Preuves de compilation de cette correction
+
+`cargo fmt --all -- --check` réussit sur l'arbre de travail et sur l'instantané isolé. Les commandes `cargo check --workspace --exclude atelier-ui --all-targets --locked --offline` et `cargo check -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked --offline` réussissent sur les deux états, cibles de tests comprises. Les contrôles isolés utilisent explicitement le dossier `target` du workspace. Les avertissements restants concernent la copie du cache incrémental lorsque les liens physiques ne sont pas disponibles.
+
+Les journaux locaux sont `.artifacts/clean-code-native-check.log`, `.artifacts/clean-code-wasm-check.log`, `.artifacts/clean-code-isolated-native-check.log` et `.artifacts/clean-code-isolated-wasm-check.log`. Ils restent hors Git. Aucun test, Clippy, scénario navigateur ou workflow CI n'est exécuté. La reconstruction et sa qualification finale ne sont pas déclarées terminées.

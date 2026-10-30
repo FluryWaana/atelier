@@ -25,20 +25,31 @@ pub(super) async fn update(
         Ok(body) => body,
         Err((status, message)) => return failure(status, message),
     };
-    match state.database.call(move |store| store.transaction(|store| {
-        let original = store.document::<Card>(Documents::Cards, &id)?.ok_or(CardFailure::Missing)?;
-        // shortcut: M04/M06 must supply live activity before enabling agents and automation.
-        let edit = task_editing::prepare(store, &original, &body, false)?;
-        if edit.sync_status && edit.card.fields.has_object("ticket")? { return Ok(Outcome::Unavailable("La synchronisation du ticket n’est pas encore disponible dans le prototype Rust.")); }
-        let mut card = edit.card;
-        store.put(Documents::Cards, &card)?;
-        if edit.requirements_changed {
-            let invalidation = task_editing::invalidate_reviews(&card.id, &mut card.fields, store.documents(Documents::Runs)?, task_editing::REVIEW_CHANGE_REASON)?;
-            for run in invalidation.runs { store.put(Documents::Runs, &run)?; }
-            if invalidation.automation_changed { store.put(Documents::Cards, &card)?; }
-        }
-        Ok(Outcome::Saved(card))
-    })).await {
+    let result = state.database.call(move |store| {
+        store.transaction(|store| {
+            let original = store.document::<Card>(Documents::Cards, &id)?.ok_or(CardFailure::Missing)?;
+            let busy = crate::infrastructure::runs::active_cards(store)?.contains(&id);
+            let edit = task_editing::prepare(store, &original, &body, busy)?;
+            if edit.sync_status && edit.card.fields.has_object("ticket")? {
+                return Ok(Outcome::Unavailable("La synchronisation du ticket n’est pas encore disponible dans le prototype Rust."));
+            }
+            let mut card = edit.card;
+            store.put(Documents::Cards, &card)?;
+            if edit.requirements_changed {
+                let invalidation = task_editing::invalidate_reviews(
+                    &card.id, &mut card.fields, store.documents(Documents::Runs)?, task_editing::REVIEW_CHANGE_REASON,
+                )?;
+                for run in invalidation.runs {
+                    store.put(Documents::Runs, &run)?;
+                }
+                if invalidation.automation_changed {
+                    store.put(Documents::Cards, &card)?;
+                }
+            }
+            Ok(Outcome::Saved(card))
+        })
+    }).await;
+    match result {
         Ok(Outcome::Saved(card)) => Json(card).into_response(),
         Ok(Outcome::Unavailable(message)) => failure(StatusCode::SERVICE_UNAVAILABLE, message),
         Err(error) => super::responses::error(error, "message.card_update_failed"),

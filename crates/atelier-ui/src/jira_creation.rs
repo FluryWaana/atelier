@@ -316,25 +316,288 @@ pub fn JiraCreation(
         .expect("Jira creation close serialization");
         execute.with_value(|execute| execute(Action::Close, body));
     };
-    view! {<section class="task-files" hidden=move||(linked.get()||!board.settings.get().string_equals("ticketProvider","jira").unwrap_or(false))&&intent.with(|intent|intent.is_none()) aria-labelledby="jira-create-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="jira-create-heading">{move||i18n.text("message.create_a_jira_issue")}</h3><p class="field-help">{move||i18n.text("message.prepare_an_issue_from_this_cards_saved_title_description_criteri")}</p>
-        <p role="status">{move||intent.get().map(|intent|i18n.text(match intent.state{Phase::Preparing=>"message.preparing_jira_creation",Phase::Sending=>"message.jira_creation_request_in_progress",Phase::Uncertain=>"message.jira_creation_is_uncertain_no_automatic_resubmission",Phase::Confirmed=>"message.jira_issue_link_saved",Phase::Failed=>"message.jira_preparation_interrupted_before_sending",Phase::Dismissed=>"message.jira_uncertainty_closed_after_verification"})).unwrap_or_default()}</p>
-        {move||intent.get().and_then(|intent|intent.result).map(|issue|view!{<p><a href=issue.url target="_blank" rel="noopener noreferrer">{issue.key}</a></p>})}
-        <fieldset hidden=move||linked.get()||uncertain.get()||writing.get() disabled=move||pending.get()||loading.get()||blocked.get()||archived||!board.settings.get().string_equals("ticketProvider","jira").unwrap_or(false)>
-            <label for="jira-create-project">{move||i18n.text("message.jira_project_key")}</label><input id="jira-create-project" maxlength="64" placeholder="SYN" prop:value=move||project.get() on:input=move|event|{project.set(event_target_value(&event).trim().to_ascii_uppercase());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);} />
-            <button id="load-jira-types" type="button" disabled=move||!domain::project_key(&project.get()) on:click=load_types>{move||i18n.text("message.load_issue_types")}</button>
-            <label for="jira-create-type">{move||i18n.text("message.ticket_type")}</label><select id="jira-create-type" prop:value=move||selected.get() on:change=move|event|{selected.set(event_target_value(&event));prepared.set(None);approved.set(None);} ><option value="">{move||i18n.text("message.choose_an_issue_type")}</option><For each=move||types.get() key=|kind|kind.id.clone() children=move|kind|view!{<option value=kind.id disabled=kind.subtask>{kind.name}</option>} /></select>
-            <p class="field-help">{move||i18n.text("message.create_subtasks_and_issues_requiring_additional_fields_in_jira_t")}</p><button id="prepare-jira-create" type="button" disabled=move||selected.get().is_empty() on:click=prepare>{move||i18n.text("message.prepare_issue_preview")}</button>
-            {move||prepared.get().map(|(source,_,_)|view!{<div><h4>{source.title.clone()}</h4><pre class="service-log">{domain::creation_text(&source).unwrap_or_default()}</pre></div>})}
-            <p class="error" role="alert">{move||i18n.text(&validation.get())}</p>
-            <label hidden=move||prepared.with(|prepared|prepared.is_none())><input id="confirm-jira-create" type="checkbox" prop:checked=move||prepared.with(|prepared|prepared.as_ref().is_some_and(|(_,_,proposal)|approved.get()==Some(*proposal))) on:change=move|event|approved.set(if event_target_checked(&event){prepared.with(|prepared|prepared.as_ref().map(|(_,_,proposal)|*proposal))}else{None}) />{move||i18n.text("message.create_this_issue_in_the_selected_jira_project_and_link_it_to_th")}</label>
-            <button id="send-jira-create" type="button" disabled=move||prepared.with(|prepared|prepared.as_ref().is_none_or(|(_,_,proposal)|approved.get()!=Some(*proposal)))||!validation.get().is_empty() on:click=create>{move||i18n.text("message.confirm_creation_in_jira")}</button>
-            <button id="cancel-jira-preparation" type="button" on:click=move|_|{project.set(String::new());types.set(Vec::new());selected.set(String::new());prepared.set(None);approved.set(None);}>{move||i18n.text("message.cancel_preparation")}</button>
-        </fieldset>
-        <fieldset hidden=move||!uncertain.get() disabled=move||pending.get()||loading.get()||blocked.get()><p>{move||i18n.text("message.check_the_project_in_jira_if_the_issue_exists_enter_its_key_if_a")}</p><label for="jira-created-key">{move||i18n.text("message.existing_issue_key")}</label><input id="jira-created-key" maxlength="100" placeholder="SYN-1" prop:value=move||key.get() on:input=move|event|key.set(event_target_value(&event).to_ascii_uppercase()) />
-            <button id="resolve-jira-creation" type="button" disabled=move||key.get().trim().is_empty()&&intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.result.is_none())) on:click=reconcile>{move||i18n.text("message.verify_and_link_without_creating_again")}</button>
-            <p class="field-help">{move||i18n.text("message.closing_uncertainty_does_not_delete_any_remote_issue_creating_ag")}</p><label><input id="close-jira-creation-ack" type="checkbox" prop:checked=move||intent.with(|intent|intent.as_ref().is_some_and(|intent|intent.id==close_ack.get())) on:change=move|event|close_ack.set(if event_target_checked(&event){intent.with(|intent|intent.as_ref().map(|intent|intent.id.clone()).unwrap_or_default())}else{String::new()}) />{move||i18n.text("message.i_checked_jira_and_want_to_close_this_uncertainty_without_sendin")}</label><button id="close-jira-creation" type="button" disabled=move||intent.with(|intent|intent.as_ref().is_none_or(|intent|intent.id!=close_ack.get())) on:click=close_uncertainty>{move||i18n.text("message.close_uncertainty_after_verification")}</button>
-        </fieldset>
-        <p class="field-help" hidden=move||!loading.get()>{move||i18n.text("message.reading_jira_metadata")}</p><p id="jira-create-error" class="error" role="alert">{move||i18n.text(&error.get())}</p><p id="jira-create-notice" role="status">{move||i18n.text(&notice.get())}</p>
-    </section>}
+    view! {
+        <section
+            class="task-files"
+            hidden={move || {
+                (linked.get()
+                    || !board.settings.get().string_equals("ticketProvider", "jira").unwrap_or(false))
+                    && intent.with(|intent| intent.is_none())
+            }}
+            aria-labelledby="jira-create-heading"
+            aria-busy={move || (pending.get() || loading.get()).to_string()}
+        >
+            <h3 id="jira-create-heading">{move || i18n.text("message.create_a_jira_issue")}</h3>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.prepare_an_issue_from_this_cards_saved_title_description_criteri")
+                }}
+            </p>
+            <p role="status">
+                {move || {
+                    intent
+                        .get()
+                        .map(|intent| {
+                            i18n
+                                .text(
+                                    match intent.state {
+                                        Phase::Preparing => "message.preparing_jira_creation",
+                                        Phase::Sending => "message.jira_creation_request_in_progress",
+                                        Phase::Uncertain => {
+                                            "message.jira_creation_is_uncertain_no_automatic_resubmission"
+                                        }
+                                        Phase::Confirmed => "message.jira_issue_link_saved",
+                                        Phase::Failed => "message.jira_preparation_interrupted_before_sending",
+                                        Phase::Dismissed => {
+                                            "message.jira_uncertainty_closed_after_verification"
+                                        }
+                                    },
+                                )
+                        })
+                        .unwrap_or_default()
+                }}
+            </p>
+            {move || {
+                intent
+                    .get()
+                    .and_then(|intent| intent.result)
+                    .map(|issue| {
+                        view! {
+                            <p>
+                                <a href={issue.url} target="_blank" rel="noopener noreferrer">
+                                    {issue.key}
+                                </a>
+                            </p>
+                        }
+                    })
+            }}
+            <fieldset
+                hidden={move || linked.get() || uncertain.get() || writing.get()}
+                disabled={move || {
+                    pending.get() || loading.get() || blocked.get() || archived
+                        || !board.settings.get().string_equals("ticketProvider", "jira").unwrap_or(false)
+                }}
+            >
+                <label for="jira-create-project">{move || i18n.text("message.jira_project_key")}</label>
+                <input
+                    id="jira-create-project"
+                    maxlength="64"
+                    placeholder="SYN"
+                    prop:value={move || project.get()}
+                    on:input={move |event| {
+                        project.set(event_target_value(&event).trim().to_ascii_uppercase());
+                        types.set(Vec::new());
+                        selected.set(String::new());
+                        prepared.set(None);
+                        approved.set(None);
+                    }}
+                />
+                <button
+                    id="load-jira-types"
+                    type="button"
+                    disabled={move || !domain::project_key(&project.get())}
+                    on:click={load_types}
+                >
+                    {move || i18n.text("message.load_issue_types")}
+                </button>
+                <label for="jira-create-type">{move || i18n.text("message.ticket_type")}</label>
+                <select
+                    id="jira-create-type"
+                    prop:value={move || selected.get()}
+                    on:change={move |event| {
+                        selected.set(event_target_value(&event));
+                        prepared.set(None);
+                        approved.set(None);
+                    }}
+                >
+                    <option value="">{move || i18n.text("message.choose_an_issue_type")}</option>
+                    <For
+                        each={move || types.get()}
+                        key={|kind| kind.id.clone()}
+                        children={move |kind| {
+                            view! {
+                                <option value={kind.id} disabled={kind.subtask}>
+                                    {kind.name}
+                                </option>
+                            }
+                        }}
+                    />
+                </select>
+                <p class="field-help">
+                    {move || {
+                        i18n.text("message.create_subtasks_and_issues_requiring_additional_fields_in_jira_t")
+                    }}
+                </p>
+                <button
+                    id="prepare-jira-create"
+                    type="button"
+                    disabled={move || selected.get().is_empty()}
+                    on:click={prepare}
+                >
+                    {move || i18n.text("message.prepare_issue_preview")}
+                </button>
+                {move || {
+                    prepared
+                        .get()
+                        .map(|(source, _, _)| {
+                            view! {
+                                <div>
+                                    <h4>{source.title.clone()}</h4>
+                                    <pre class="service-log">
+                                        {domain::creation_text(&source).unwrap_or_default()}
+                                    </pre>
+                                </div>
+                            }
+                        })
+                }}
+                <p class="error" role="alert">
+                    {move || i18n.text(&validation.get())}
+                </p>
+                <label hidden={move || prepared.with(|prepared| prepared.is_none())}>
+                    <input
+                        id="confirm-jira-create"
+                        type="checkbox"
+                        prop:checked={move || {
+                            prepared
+                                .with(|prepared| {
+                                    prepared
+                                        .as_ref()
+                                        .is_some_and(|(_, _, proposal)| approved.get() == Some(*proposal))
+                                })
+                        }}
+                        on:change={move |event| {
+                            approved
+                                .set(
+                                    if event_target_checked(&event) {
+                                        prepared
+                                            .with(|prepared| {
+                                                prepared.as_ref().map(|(_, _, proposal)| *proposal)
+                                            })
+                                    } else {
+                                        None
+                                    },
+                                )
+                        }}
+                    />
+                    {move || {
+                        i18n.text("message.create_this_issue_in_the_selected_jira_project_and_link_it_to_th")
+                    }}
+                </label>
+                <button
+                    id="send-jira-create"
+                    type="button"
+                    disabled={move || {
+                        prepared
+                            .with(|prepared| {
+                                prepared
+                                    .as_ref()
+                                    .is_none_or(|(_, _, proposal)| approved.get() != Some(*proposal))
+                            }) || !validation.get().is_empty()
+                    }}
+                    on:click={create}
+                >
+                    {move || i18n.text("message.confirm_creation_in_jira")}
+                </button>
+                <button
+                    id="cancel-jira-preparation"
+                    type="button"
+                    on:click={move |_| {
+                        project.set(String::new());
+                        types.set(Vec::new());
+                        selected.set(String::new());
+                        prepared.set(None);
+                        approved.set(None);
+                    }}
+                >
+                    {move || i18n.text("message.cancel_preparation")}
+                </button>
+            </fieldset>
+            <fieldset
+                hidden={move || !uncertain.get()}
+                disabled={move || pending.get() || loading.get() || blocked.get()}
+            >
+                <p>
+                    {move || {
+                        i18n.text("message.check_the_project_in_jira_if_the_issue_exists_enter_its_key_if_a")
+                    }}
+                </p>
+                <label for="jira-created-key">{move || i18n.text("message.existing_issue_key")}</label>
+                <input
+                    id="jira-created-key"
+                    maxlength="100"
+                    placeholder="SYN-1"
+                    prop:value={move || key.get()}
+                    on:input={move |event| key.set(event_target_value(&event).to_ascii_uppercase())}
+                />
+                <button
+                    id="resolve-jira-creation"
+                    type="button"
+                    disabled={move || {
+                        key.get().trim().is_empty()
+                            && intent
+                                .with(|intent| intent.as_ref().is_none_or(|intent| intent.result.is_none()))
+                    }}
+                    on:click={reconcile}
+                >
+                    {move || i18n.text("message.verify_and_link_without_creating_again")}
+                </button>
+                <p class="field-help">
+                    {move || {
+                        i18n.text("message.closing_uncertainty_does_not_delete_any_remote_issue_creating_ag")
+                    }}
+                </p>
+                <label>
+                    <input
+                        id="close-jira-creation-ack"
+                        type="checkbox"
+                        prop:checked={move || {
+                            intent
+                                .with(|intent| {
+                                    intent.as_ref().is_some_and(|intent| intent.id == close_ack.get())
+                                })
+                        }}
+                        on:change={move |event| {
+                            close_ack
+                                .set(
+                                    if event_target_checked(&event) {
+                                        intent
+                                            .with(|intent| {
+                                                intent
+                                                    .as_ref()
+                                                    .map(|intent| intent.id.clone())
+                                                    .unwrap_or_default()
+                                            })
+                                    } else {
+                                        String::new()
+                                    },
+                                )
+                        }}
+                    />
+                    {move || {
+                        i18n.text("message.i_checked_jira_and_want_to_close_this_uncertainty_without_sendin")
+                    }}
+                </label>
+                <button
+                    id="close-jira-creation"
+                    type="button"
+                    disabled={move || {
+                        intent
+                            .with(|intent| intent.as_ref().is_none_or(|intent| intent.id != close_ack.get()))
+                    }}
+                    on:click={close_uncertainty}
+                >
+                    {move || i18n.text("message.close_uncertainty_after_verification")}
+                </button>
+            </fieldset>
+            <p class="field-help" hidden={move || !loading.get()}>
+                {move || i18n.text("message.reading_jira_metadata")}
+            </p>
+            <p id="jira-create-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p id="jira-create-notice" role="status">
+                {move || i18n.text(&notice.get())}
+            </p>
+        </section>
+    }
 }

@@ -174,21 +174,198 @@ pub fn ForgeChecksView(
     let reviewer_count = Memo::new(move |_| {
         result.with(|result| result.as_ref().map_or(0, |report| report.reviewers.len()))
     });
-    view! {<section class="task-files" hidden=move||linked.with(|linked|linked.is_none()) aria-labelledby="forge-checks-heading" aria-busy=move||loading.get().to_string()><h4 id="forge-checks-heading">{move||i18n.text("message.forge_checks_and_reviews")}</h4>
-        <p class="field-help">{move||i18n.text("message.states_reported_by_the_forge_without_starting_ci_this_read_valid")}</p>
-        <button id="read-forge-checks" type="button" disabled=move||loading.get()||configuration.with(|configuration|configuration.is_none()) on:click=inspect>{move||i18n.text("message.read_checks_and_reviews")}</button>
-        <p id="forge-checks-error" class="error" role="alert">{move||i18n.text(&error.get())}</p>
-        <p role="status">{move||if loading.get(){i18n.text("message.reading")}else{result.with(|result|result.as_ref().map(|report|format!("{} · {}",report.pull_request.source_commit.as_deref().unwrap_or(""),report.pull_request.checked_at)).unwrap_or_default())}}</p>
-        <Show when=move||result.with(|result|result.is_some())>
-            <p hidden=move||count.get()!=0>{move||i18n.text("message.no_check_observed_for_this_snapshot_no_success_inferred")}</p>
-            <div class="table-scroll" tabindex="0" role="region" aria-label=move||i18n.text("message.check_results")><table class="report-table"><thead><tr><th>{move||i18n.text("message.check")}</th><th>{move||i18n.text("message.reported_state")}</th><th>{move||i18n.text("message.scope")}</th><th>{move||i18n.text("message.detail")}</th></tr></thead><tbody>{move||visible.get().into_iter().map(|check|view!{<tr><td>{check.name}</td><td>{i18n.text(state(check.state))}</td><td>{i18n.text(scope(check.scope))}</td><td>{check.description_key.as_deref().map(|key|i18n.text(key)).unwrap_or(check.description)}</td></tr>}).collect_view()}</tbody></table></div>
-            <button type="button" disabled=move||page.get()==0 on:click=move|_|page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("message.previous")}</button><button type="button" disabled={move||(page.get()+1)*100>=count.get()} on:click=move|_|page.update(|page|*page+=1)>{move||i18n.text("message.next")}</button>
-            <p>{move||result.with(|result|result.as_ref().map(|report|i18n.text("message.checks_for_other_snapshots_excluded_0").replace("{0}",&report.other_snapshot_count.to_string())).unwrap_or_default())}</p>
-            <h5>{move||i18n.text("message.reported_human_reviews")}</h5><p hidden=move||result.with(|result|result.as_ref().is_some_and(|report|report.reviewers_available))>{move||i18n.text("message.reviews_unavailable_no_absence_of_reviews_inferred")}</p>
-            <p hidden=move||reviewer_count.get()!=0||result.with(|result|result.as_ref().is_none_or(|report|!report.reviewers_available))>{move||i18n.text("message.no_human_review_observed")}</p>
-            <ul>{move||result.with(|result|result.as_ref().map(|report|report.reviewers.iter().skip(reviewer_page.get()*100).take(100).cloned().collect::<Vec<_>>()).unwrap_or_default()).into_iter().map(|reviewer|view!{<li>{reviewer.name}" · "{i18n.text(decision(reviewer.decision))}" · "{i18n.text(scope(reviewer.scope))}" · "<code>{reviewer.commit.unwrap_or_else(||i18n.text("message.commit_not_supplied"))}</code></li>}).collect_view()}</ul>
-            <div role="group" aria-label=move||i18n.text("message.human_review_pages")><button type="button" disabled=move||reviewer_page.get()==0 on:click=move|_|reviewer_page.update(|page|*page=page.saturating_sub(1))>{move||i18n.text("message.previous")}</button><button type="button" disabled={move||(reviewer_page.get()+1)*100>=reviewer_count.get()} on:click=move|_|reviewer_page.update(|page|*page+=1)>{move||i18n.text("message.next")}</button></div>
-            <ul>{move||result.with(|result|result.as_ref().map(|report|report.limits.clone()).unwrap_or_default()).into_iter().map(|limit|view!{<li>{i18n.text(&limit)}</li>}).collect_view()}</ul>
-        </Show>
-    </section>}
+    view! {
+        <section
+            class="task-files"
+            hidden={move || linked.with(|linked| linked.is_none())}
+            aria-labelledby="forge-checks-heading"
+            aria-busy={move || loading.get().to_string()}
+        >
+            <h4 id="forge-checks-heading">{move || i18n.text("message.forge_checks_and_reviews")}</h4>
+            <p class="field-help">
+                {move || {
+                    i18n.text("message.states_reported_by_the_forge_without_starting_ci_this_read_valid")
+                }}
+            </p>
+            <button
+                id="read-forge-checks"
+                type="button"
+                disabled={move || {
+                    loading.get() || configuration.with(|configuration| configuration.is_none())
+                }}
+                on:click={inspect}
+            >
+                {move || i18n.text("message.read_checks_and_reviews")}
+            </button>
+            <p id="forge-checks-error" class="error" role="alert">
+                {move || i18n.text(&error.get())}
+            </p>
+            <p role="status">
+                {move || {
+                    if loading.get() {
+                        i18n.text("message.reading")
+                    } else {
+                        result
+                            .with(|result| {
+                                result
+                                    .as_ref()
+                                    .map(|report| {
+                                        format!(
+                                            "{} · {}",
+                                            report.pull_request.source_commit.as_deref().unwrap_or(""),
+                                            report.pull_request.checked_at,
+                                        )
+                                    })
+                                    .unwrap_or_default()
+                            })
+                    }
+                }}
+            </p>
+            <Show when={move || result.with(|result| result.is_some())}>
+                <p hidden={move || {
+                    count.get() != 0
+                }}>{move || i18n.text("message.no_check_observed_for_this_snapshot_no_success_inferred")}</p>
+                <div
+                    class="table-scroll"
+                    tabindex="0"
+                    role="region"
+                    aria-label={move || i18n.text("message.check_results")}
+                >
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>{move || i18n.text("message.check")}</th>
+                                <th>{move || i18n.text("message.reported_state")}</th>
+                                <th>{move || i18n.text("message.scope")}</th>
+                                <th>{move || i18n.text("message.detail")}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {move || {
+                                visible
+                                    .get()
+                                    .into_iter()
+                                    .map(|check| {
+                                        view! {
+                                            <tr>
+                                                <td>{check.name}</td>
+                                                <td>{i18n.text(state(check.state))}</td>
+                                                <td>{i18n.text(scope(check.scope))}</td>
+                                                <td>
+                                                    {check
+                                                        .description_key
+                                                        .as_deref()
+                                                        .map(|key| i18n.text(key))
+                                                        .unwrap_or(check.description)}
+                                                </td>
+                                            </tr>
+                                        }
+                                    })
+                                    .collect_view()
+                            }}
+                        </tbody>
+                    </table>
+                </div>
+                <button
+                    type="button"
+                    disabled={move || page.get() == 0}
+                    on:click={move |_| page.update(|page| *page = page.saturating_sub(1))}
+                >
+                    {move || i18n.text("message.previous")}
+                </button>
+                <button
+                    type="button"
+                    disabled={move || (page.get() + 1) * 100 >= count.get()}
+                    on:click={move |_| page.update(|page| *page += 1)}
+                >
+                    {move || i18n.text("message.next")}
+                </button>
+                <p>
+                    {move || {
+                        result
+                            .with(|result| {
+                                result
+                                    .as_ref()
+                                    .map(|report| {
+                                        i18n
+                                            .text("message.checks_for_other_snapshots_excluded_0")
+                                            .replace("{0}", &report.other_snapshot_count.to_string())
+                                    })
+                                    .unwrap_or_default()
+                            })
+                    }}
+                </p>
+                <h5>{move || i18n.text("message.reported_human_reviews")}</h5>
+                <p hidden={move || {
+                    result.with(|result| result.as_ref().is_some_and(|report| report.reviewers_available))
+                }}>{move || i18n.text("message.reviews_unavailable_no_absence_of_reviews_inferred")}</p>
+                <p hidden={move || {
+                    reviewer_count.get() != 0
+                        || result
+                            .with(|result| result.as_ref().is_none_or(|report| !report.reviewers_available))
+                }}>{move || i18n.text("message.no_human_review_observed")}</p>
+                <ul>
+                    {move || {
+                        result
+                            .with(|result| {
+                                result
+                                    .as_ref()
+                                    .map(|report| {
+                                        report
+                                            .reviewers
+                                            .iter()
+                                            .skip(reviewer_page.get() * 100)
+                                            .take(100)
+                                            .cloned()
+                                            .collect::<Vec<_>>()
+                                    })
+                                    .unwrap_or_default()
+                            })
+                            .into_iter()
+                            .map(|reviewer| {
+                                view! {
+                                    <li>
+                                        {reviewer.name}" · "{i18n.text(decision(reviewer.decision))}" · "
+                                        {i18n.text(scope(reviewer.scope))}" · "
+                                        <code>
+                                            {reviewer
+                                                .commit
+                                                .unwrap_or_else(|| i18n.text("message.commit_not_supplied"))}
+                                        </code>
+                                    </li>
+                                }
+                            })
+                            .collect_view()
+                    }}
+                </ul>
+                <div role="group" aria-label={move || i18n.text("message.human_review_pages")}>
+                    <button
+                        type="button"
+                        disabled={move || reviewer_page.get() == 0}
+                        on:click={move |_| reviewer_page.update(|page| *page = page.saturating_sub(1))}
+                    >
+                        {move || i18n.text("message.previous")}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={move || (reviewer_page.get() + 1) * 100 >= reviewer_count.get()}
+                        on:click={move |_| reviewer_page.update(|page| *page += 1)}
+                    >
+                        {move || i18n.text("message.next")}
+                    </button>
+                </div>
+                <ul>
+                    {move || {
+                        result
+                            .with(|result| {
+                                result.as_ref().map(|report| report.limits.clone()).unwrap_or_default()
+                            })
+                            .into_iter()
+                            .map(|limit| view! { <li>{i18n.text(&limit)}</li> })
+                            .collect_view()
+                    }}
+                </ul>
+            </Show>
+        </section>
+    }
 }
