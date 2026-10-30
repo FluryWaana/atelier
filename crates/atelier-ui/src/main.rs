@@ -363,7 +363,6 @@ fn App() -> impl IntoView {
     let settings_section = RwSignal::new(match requested_parameter("section").as_deref() {
         Some("tickets") => "tickets",
         Some("time") => "time",
-        Some("connectors") => "connectors",
         Some("forges") => "forges",
         Some("updates") => "updates",
         _ => "general",
@@ -815,7 +814,6 @@ fn App() -> impl IntoView {
                 settings_section.set(match requested_parameter("section").as_deref() {
                     Some("tickets") => "tickets",
                     Some("time") => "time",
-                    Some("connectors") => "connectors",
                     Some("forges") => "forges",
                     Some("updates") => "updates",
                     _ => "general",

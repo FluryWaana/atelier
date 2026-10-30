@@ -3263,7 +3263,8 @@ async fn connectors_scenario(
         effects.join(".extension-fixture"),
         "atelier-r04-synthetic-only",
     )?;
-    click(client, "#settings-tab-connectors").await?;
+    wait_dom(client, "return !document.querySelector('#settings-tab-connectors') && !!document.querySelector('#settings-tab-updates');", vec![]).await?;
+    click(client, "#settings-tab-tickets").await?;
     wait_dom(client,"return document.querySelector('#connectors-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
     let fixture = root()
         .join("target/debug")
@@ -3324,7 +3325,7 @@ async fn connectors_scenario(
     choose_integration(client, "ticketProvider", "extension:synthetic-extension").await?;
     click(client, "#settings-tab-time").await?;
     choose_integration(client, "timeProvider", "extension:synthetic-extension").await?;
-    click(client, "#settings-tab-connectors").await?;
+    click(client, "#settings-tab-tickets").await?;
     click(client, "[data-connector=synthetic-extension]").await?;
     client
         .find(Locator::Css("#connector-field-fixture-root"))
@@ -3337,7 +3338,7 @@ async fn connectors_scenario(
         .send_keys("synthetic-extension-browser-token")
         .await?;
     click(client, "#settings-tab-general").await?;
-    click(client, "#settings-tab-connectors").await?;
+    click(client, "#settings-tab-tickets").await?;
     wait_dom(client,"return document.querySelector('#connector-field-token')?.value === 'synthetic-extension-browser-token' && document.querySelector('#check-connector')?.disabled === true;",vec![]).await?;
     click(client, "#overview-button").await?;
     click(client, "#keep-settings").await?;
@@ -3516,7 +3517,7 @@ async fn connectors_scenario(
     )
     .await?;
     click(client, "#manage-settings").await?;
-    click(client, "#settings-tab-connectors").await?;
+    click(client, "#settings-tab-tickets").await?;
     click(client, "#reload-connectors").await?;
     wait_dom(client,"return document.querySelector('[data-connector=synthetic-extension]')?.disabled === false;",vec![]).await?;
     click(client, "[data-connector=synthetic-extension]").await?;

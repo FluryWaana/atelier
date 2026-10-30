@@ -181,7 +181,7 @@ pub(super) async fn scenario(
     }
     click(client, "#close-editor").await?;
     click(client, "#manage-settings").await?;
-    click(client, "#settings-tab-connectors").await?;
+    click(client, "#settings-tab-tickets").await?;
     click(client, "#reload-connectors").await?;
     wait_dom(
         client,

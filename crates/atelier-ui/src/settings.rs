@@ -6,12 +6,11 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
-const TABS: [(&str, &str); 6] = [
+const TABS: [(&str, &str); 5] = [
     ("general", "message.general"),
     ("tickets", "message.tickets"),
     ("forges", "message.forges"),
     ("time", "message.time_tracking"),
-    ("connectors", "message.connectors"),
     ("updates", "message.updates"),
 ];
 
@@ -255,14 +254,14 @@ pub fn Settings(
                 <crate::integration_choice::IntegrationChoice kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_choice_dirty selected=time_preview blocked=integration_blocked/>
                 <crate::integration_choice::IntegrationConfiguration kind=atelier_core::application::integrations::Kind::Time board token pending dirty=time_module_dirty selected=time_preview/>
             </section>
-            <section id="settings-panel-connectors" role=move||if tab.get()==4{"tabpanel"}else{"region"} aria-labelledby=move||match tab.get(){1=>"settings-tab-tickets",3=>"settings-tab-time",_=>"settings-tab-connectors"} hidden=move||tab.get()!=4&&external_preview.get().is_empty()>
-                <p class="error" role="alert" hidden=move||tab.get()==4||preview_available.get()>{move||i18n.text("message.integration_unavailable")}</p>
-                <div hidden=move||tab.get()==4||!preview_available.get()||shown_module.get()==external_preview.get()||preview_error.get().is_empty()><p class="error" role="alert">{move||i18n.text(&preview_error.get())}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(4)>{move||i18n.text("message.open_module_manager")}</button></div>
-                <p role="status" hidden=move||tab.get()==4||shown_module.get()==external_preview.get()||connectors_dirty.get()||!preview_available.get()||!preview_error.get().is_empty()>{move||i18n.text("message.loading_module_configuration")}</p>
-                <div hidden=move||tab.get()==4||shown_module.get()==external_preview.get()||!connectors_dirty.get()><p>{move||i18n.text("message.save_current_module_draft_first")}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(4)>{move||i18n.text("message.open_module_manager")}</button></div>
-                <div hidden=move||tab.get()!=4&&(!preview_available.get()||shown_module.get()!=external_preview.get())><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module shown=shown_module preview_error=preview_error embedded=Signal::derive(move||tab.get()!=4) /></div>
+            <section id="settings-module-configuration" role="region" aria-labelledby=move||match tab.get(){1=>"settings-tab-tickets",3=>"settings-tab-time",_=>"settings-tab-tickets"} hidden=move||tab.get()!=1&&external_preview.get().is_empty()>
+                <p class="error" role="alert" hidden=move||tab.get()==1||preview_available.get()>{move||i18n.text("message.integration_unavailable")}</p>
+                <div hidden=move||tab.get()==1||!preview_available.get()||shown_module.get()==external_preview.get()||preview_error.get().is_empty()><p class="error" role="alert">{move||i18n.text(&preview_error.get())}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(1)>{move||i18n.text("message.tickets")}</button></div>
+                <p role="status" hidden=move||tab.get()==1||shown_module.get()==external_preview.get()||connectors_dirty.get()||!preview_available.get()||!preview_error.get().is_empty()>{move||i18n.text("message.loading_module_configuration")}</p>
+                <div hidden=move||tab.get()==1||shown_module.get()==external_preview.get()||!connectors_dirty.get()><p>{move||i18n.text("message.save_current_module_draft_first")}</p><button type="button" disabled=move||pending.get() on:click=move |_|tab.set(1)>{move||i18n.text("message.tickets")}</button></div>
+                <div hidden=move||tab.get()!=1&&(!preview_available.get()||shown_module.get()!=external_preview.get())><crate::connectors::Connectors board token pending dirty=connectors_dirty requested=requested_module shown=shown_module preview_error=preview_error embedded=Signal::derive(move||tab.get()!=1) /></div>
             </section>
-            <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=5><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
+            <section id="settings-panel-updates" role="tabpanel" aria-labelledby="settings-tab-updates" hidden=move || tab.get()!=4><crate::updates::Updates token pending dirty=updates_dirty blocked=updates_blocked /></section>
             </div></div>
             <p id="settings-error" class="error" role="alert">{move || i18n.text(&error.get())}</p>
             <div class="confirmation" role="alert" hidden=move || !discard.get()><p>{move || i18n.text("message.discard_unsaved_changes")}</p><button id="discard-settings" class="danger" type="button" on:click=move |_| close()>{move || i18n.text("message.discard")}</button><button id="keep-settings" type="button" on:click=move |_| {navigation.set_value(None);discard.set(false);if let Some(element)=document().get_element_by_id(&close_focus.get_value()).and_then(|element|element.dyn_into::<web_sys::HtmlElement>().ok()){let _=element.focus();}} >{move || i18n.text("message.keep_editing")}</button></div>

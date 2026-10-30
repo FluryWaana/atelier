@@ -352,3 +352,5 @@ Paramètres génériques Tickets/Temps candidats : Local par défaut, catalogue 
 
 
 Configuration du Kanban candidate par projet : noms et ordre des cinq étapes, récupération des colonnes Jira Cloud et Data Center et correspondances manuelles par groupes de statuts. Imports nouveaux classés par identifiant, cartes existantes préservées et synchronisation soumise à confirmation. Voir [les colonnes du Kanban](rust-kanban-columns.md). Tests synthétiques et parcours navigateur écrits, sans exécution ni qualification finale.
+
+Le 30 octobre 2026, l'onglet Connecteurs séparé est retiré des paramètres. Son gestionnaire est regroupé dans Tickets. La configuration reste accessible dans Tickets et Suivi du temps. Scénarios adaptés mais non exécutés selon les restrictions locales.
