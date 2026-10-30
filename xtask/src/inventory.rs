@@ -24,7 +24,7 @@ const GROUPS: &[&str] = &[
     ".cargo",
     "racine",
 ];
-const HEADER: &str = "# Inventaire des sources Rust\n\nGénéré par `cargo xtask inventory`. Vérification sans écriture : `cargo xtask inventory --check`.\n\nCartographie lexicale des fichiers actuels, sans analyse des appels ni preuve de compilation, de couverture ou de réussite. Les références fonctionnelles de l’ancien projet se consultent dans Git au commit `7f48996` ; elles ne font pas partie du projet actif.\n\nPérimètre : `crates/`, `xtask/`, `scripts/`, `.github/`, `.cargo/` et les fichiers racine Cargo, toolchain, README, AGENTS, LICENSE et règles Git. Les segments `target`, `data`, `.artifacts`, `.git` et `runtime` sont exclus ; les liens et points de réanalyse sont refusés. Aucune donnée utilisateur ni contenu de source n’est lu.\n\nLe plan et les capacités restent décrits dans [rust-migration-plan.md](rust-migration-plan.md) et [rust-rebuild-features.md](rust-rebuild-features.md).\n\n## Répartition\n\n| Périmètre | Fichiers |\n| --- | ---: |\n";
+const HEADER: &str = "# Inventaire des sources Rust\n\nGénéré par `cargo xtask inventory`. Vérification sans écriture : `cargo xtask inventory --check`.\n\nCartographie lexicale des fichiers actuels, sans analyse des appels ni preuve de compilation, de couverture ou de réussite. Les références fonctionnelles de l’ancien projet se consultent dans Git au commit `7f48996` ; elles ne font pas partie du projet actif.\n\nPérimètre : `crates/`, `xtask/`, `scripts/`, `.github/`, `.cargo/` et les fichiers racine Cargo, toolchain, README, AGENTS, LICENSE et règles Git. Les segments `target`, `data`, `.artifacts`, `.git` et `runtime` sont exclus ; les liens et points de réanalyse sont refusés. Aucune donnée utilisateur ni contenu de source n’est lu.\n\nLes capacités de l’application sont décrites dans [features.md](features.md).\n\n## Répartition\n\n| Périmètre | Fichiers |\n| --- | ---: |\n";
 
 fn ordinary(path: &Path) -> Result<fs::Metadata> {
     let metadata = fs::symlink_metadata(path)?;
@@ -145,7 +145,7 @@ pub(super) fn command(check: bool) -> Result<()> {
     if !ordinary(&docs)?.is_dir() {
         return Err("Dossier de documentation ordinaire requis.".into());
     }
-    let destination = docs.join("rust-migration-inventory.md");
+    let destination = docs.join("source-inventory.md");
     let metadata = ordinary(&destination)?;
     if !metadata.is_file() || metadata.len() > 8 * 1024 * 1024 {
         return Err("Inventaire existant invalide ou trop volumineux.".into());
@@ -155,10 +155,7 @@ pub(super) fn command(check: bool) -> Result<()> {
             return Err("Inventaire périmé : régénère avec cargo xtask inventory.".into());
         }
     } else {
-        let temporary = docs.join(format!(
-            ".rust-migration-inventory-{}.tmp",
-            std::process::id()
-        ));
+        let temporary = docs.join(format!(".source-inventory-{}.tmp", std::process::id()));
         let mut file = fs::OpenOptions::new()
             .create_new(true)
             .write(true)
