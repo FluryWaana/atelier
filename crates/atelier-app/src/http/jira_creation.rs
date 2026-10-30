@@ -1,8 +1,4 @@
-use super::{
-    Shared, failure,
-    jira_transitions::{client, input},
-    responses::response,
-};
+use super::{Shared, failure, input::parse, jira_transitions::client, responses::response};
 use crate::{Result, infrastructure::jira_creation as workflow};
 use atelier_core::{
     application::jira as domain,
@@ -23,7 +19,7 @@ pub(super) async fn create(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraCreateRequest = match input(request).await {
+    let input: JiraCreateRequest = match parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -109,7 +105,7 @@ pub(super) async fn reconcile(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraCreationResolve = match input(request).await {
+    let input: JiraCreationResolve = match parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

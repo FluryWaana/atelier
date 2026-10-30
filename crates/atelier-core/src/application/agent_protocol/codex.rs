@@ -181,7 +181,7 @@ impl Protocol {
             out.preview = Some(String::new());
         } else if method == "item/started" && p["item"]["type"] == "commandExecution" {
             if let Some(command) = p["item"]["command"].as_str() {
-                out.text.push(format!("→ {command}"));
+                out.text.push(format!("Commande : {command}"));
             }
         } else if method == "item/started" && p["item"]["type"] == "fileChange" {
             if self.items.len() >= 32 {

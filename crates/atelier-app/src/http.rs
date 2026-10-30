@@ -40,6 +40,7 @@ mod forge;
 mod forge_draft;
 mod forge_publication;
 mod git_push;
+mod input;
 mod integrations;
 mod jira;
 mod jira_creation;

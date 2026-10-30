@@ -11,7 +11,7 @@ pub(super) async fn convert(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Convert = match super::jira_transitions::input(request).await {
+    let input: Convert = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

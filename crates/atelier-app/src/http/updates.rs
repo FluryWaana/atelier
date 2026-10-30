@@ -93,7 +93,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
     };
     let path = request.uri().path().to_owned();
     if path.ends_with("/install") {
-        let selection: ReleaseSelection = match super::jira_transitions::input(request).await {
+        let selection: ReleaseSelection = match super::input::parse(request).await {
             Ok(value) => value,
             Err(response) => return *response,
         };
@@ -116,7 +116,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
         );
     }
     if path.ends_with("/preview") {
-        let source: Source = match super::jira_transitions::input(request).await {
+        let source: Source = match super::input::parse(request).await {
             Ok(value) => value,
             Err(response) => return *response,
         };
@@ -147,7 +147,7 @@ pub(super) async fn action(State(state): State<Shared>, request: Request) -> Res
             Err("message.update_preparation_was_interrupted_read_its_status_again".into())
         }))
     } else {
-        let input: Confirmation = match super::jira_transitions::input(request).await {
+        let input: Confirmation = match super::input::parse(request).await {
             Ok(value) => value,
             Err(response) => return *response,
         };

@@ -52,7 +52,7 @@ pub(super) async fn preview(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: LocalCommitRequest = match super::jira_transitions::input(request).await {
+    let input: LocalCommitRequest = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -112,7 +112,7 @@ pub(super) async fn reconcile(
     execute(state, id, request, true).await
 }
 async fn execute(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
-    let input: LocalCommitRequest = match super::jira_transitions::input(request).await {
+    let input: LocalCommitRequest = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

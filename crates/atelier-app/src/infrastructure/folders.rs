@@ -106,7 +106,7 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
             MessageBoxW(
                 std::ptr::null_mut(),
                 prompt.as_ptr(),
-                windows_sys::core::w!("Atelier Kanban — Import"),
+                windows_sys::core::w!("Atelier Kanban : Import"),
                 MB_YESNOCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2 | MB_SETFOREGROUND,
             )
         } {

@@ -1,5 +1,5 @@
 use super::{
-    agent_account::reflected, agent_diagnostics::Environment, process_tree::ContainedChild,
+    agent_diagnostics::Environment, confidential::reflected, process_tree::ContainedChild,
 };
 use atelier_core::{contracts::AgentModel, domain::agent_catalog::ProtocolKind};
 use serde_json::{Value, json};

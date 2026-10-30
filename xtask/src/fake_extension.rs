@@ -287,6 +287,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     match fault {
         "secret" => reply.output = json!({"nested":[{"value":request.secrets.get("token")}]}),
+        "secret-number" => {
+            let token = request
+                .secrets
+                .get("token")
+                .ok_or("Synthetic numeric token required")?;
+            reply.output = json!({"nested":[{"value":token.parse::<u64>()?}]});
+        }
         "secret-key" => {
             let mut object = serde_json::Map::new();
             object.insert(

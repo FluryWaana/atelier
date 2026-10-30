@@ -79,7 +79,7 @@ pub(super) async fn update(
     let result = state
         .database
         .call(move |store| {
-            // shortcut: wire actual activity, servers and repository connectors during M04–M06.
+            // Project middleware reserves runtime activity before this database operation.
             let edit = projects::prepare_update(
                 store,
                 &id,

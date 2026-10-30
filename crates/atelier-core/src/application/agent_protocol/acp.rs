@@ -133,7 +133,7 @@ fn form_questions(schema: &Value) -> Result<Vec<AgentQuestion>> {
                     if description.is_empty() {
                         String::new()
                     } else {
-                        format!(" — {description}")
+                        format!(". {description}")
                     }
                 ),
                 options,

@@ -29,13 +29,7 @@ pub fn parse(text: &str) -> Result<Answer, &'static str> {
     if text.len() > 64 * 1024 {
         return Err("message.brainstorm_response_too_large");
     }
-    let text = text.trim();
-    let text = text
-        .strip_prefix("```json")
-        .or_else(|| text.strip_prefix("```"))
-        .and_then(|text| text.strip_suffix("```"))
-        .unwrap_or(text)
-        .trim();
+    let text = super::json_content(text);
     let answer: Answer = serde_json::from_str(text)
         .map_err(|_| "message.invalid_brainstorm_response_check_the_log_no_tasks_created")?;
     if !valid(&answer.message, 12_000) || answer.questions.len() > 5 || answer.tickets.len() > 8 {

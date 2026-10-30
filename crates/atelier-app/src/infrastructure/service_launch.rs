@@ -85,7 +85,7 @@ pub async fn prepare(root: &Dir, roots: &[PathBuf], plan: LaunchPlan) -> Result<
             let directory = launch_detection::open_repository(root, roots, &selected)?;
             (path, directory)
         };
-        let relative = atelier_core::application::services::directory(&service.directory)?;
+        let relative = atelier_core::domain::files::relative_directory(&service.directory)?;
         let mut opened = directory;
         let mut path = path;
         for part in relative.split('/').filter(|part| !part.is_empty()) {

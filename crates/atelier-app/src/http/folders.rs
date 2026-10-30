@@ -16,7 +16,7 @@ pub(super) async fn choose(State(state): State<Shared>, request: Request) -> Res
             "message.the_folder_picker_is_available_through_the_native_launcher",
         );
     }
-    let input: Input = match super::jira_transitions::input(request).await {
+    let input: Input = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

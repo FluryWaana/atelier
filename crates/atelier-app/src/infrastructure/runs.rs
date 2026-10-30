@@ -4,6 +4,21 @@ use atelier_core::{contracts::Card, document::Document};
 
 pub const LOG_LIMIT: usize = 5 * 1024 * 1024;
 
+fn structured_purpose(purpose: &str) -> bool {
+    matches!(purpose, "brainstorm" | "preparation" | "review")
+}
+
+pub(super) fn record_summary(run: &mut Document, summary: &str) -> Result<()> {
+    let structured = structured_purpose(&run.get::<String>("purpose")?.unwrap_or_default());
+    let limit = if structured { 64 * 1024 } else { 12 * 1024 };
+    if structured && summary.len() > limit {
+        run.set("structuredOverflow", &true)?;
+    }
+    let start = summary.ceil_char_boundary(summary.len().saturating_sub(limit));
+    run.set("summary", &summary[start..])?;
+    Ok(())
+}
+
 pub fn active(run: &Document) -> Result<bool> {
     Ok(matches!(
         run.get::<String>("status")?.as_deref(),
@@ -223,9 +238,7 @@ pub fn transition(
         }
         run.set("status", &status)?;
         let purpose = run.get::<String>("purpose")?.unwrap_or_default();
-        if status == "completed"
-            && ["brainstorm", "preparation", "review"].contains(&purpose.as_str())
-        {
+        if status == "completed" && structured_purpose(&purpose) {
             let text = if run.string_equals("agentType", "command")? {
                 run.get::<String>("structuredOutput")?.unwrap_or_default()
             } else {
@@ -291,10 +304,7 @@ pub fn append(store: &Store<'_>, id: &str, stream: &str, message: &str) -> Resul
             return Err("message.run_finished".into());
         }
         if stream == "stdout"
-            && matches!(
-                run.get::<String>("purpose")?.as_deref(),
-                Some("brainstorm" | "preparation" | "review")
-            )
+            && structured_purpose(&run.get::<String>("purpose")?.unwrap_or_default())
             && run.string_equals("agentType", "command")?
         {
             let mut output = run.get::<String>("structuredOutput")?.unwrap_or_default();
@@ -374,4 +384,47 @@ fn recover_in_transaction(store: &Store<'_>, timestamp: &str) -> Result<usize> {
         recovered += 1;
     }
     Ok(recovered)
+}
+
+#[cfg(test)]
+mod summary_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn interactive_reviews_keep_complete_structured_output_until_final_parsing() {
+        let connection = super::super::store::open(std::path::Path::new(":memory:")).unwrap();
+        let store = Store::new(&connection);
+        let report = json!({
+            "summary": "é".repeat(4000),
+            "findings": [{"priority":"P1", "title":"Tâche", "file":"src/main.rs", "line":1,
+                "problem":"p".repeat(4000), "suggestion":"s".repeat(4000)}],
+            "criteria": []
+        });
+        let encoded = report.to_string();
+        assert!(encoded.len() > 12 * 1024 && encoded.len() < 64 * 1024);
+        let mut run: Document = serde_json::from_value(json!({
+            "id":"review", "cardId":"task", "status":"running", "purpose":"review", "agentType":"codex",
+            "reviewContext": {
+                "requirements":{"criteria":[]},
+                "worktree":{"source":"/synthetic/repo", "path":"/synthetic/work", "branch":"task",
+                    "base":"main", "baseCommit":"a".repeat(40), "state":"ready"},
+                "kind":"github", "revision":1, "repository":"owner/repo", "number":1,
+                "source":"b".repeat(40), "target":"a".repeat(40), "base":"a".repeat(40)
+            }
+        })).unwrap();
+        record_summary(&mut run, &encoded).unwrap();
+        store.put(Documents::Runs, &run).unwrap();
+        let completed =
+            transition(&store, "review", "completed", "synthetic-now", Some(0)).unwrap();
+        assert!(completed.raw("reviewError").is_none());
+        assert_eq!(
+            completed.get::<serde_json::Value>("review").unwrap(),
+            Some(report)
+        );
+
+        record_summary(&mut run, &"é".repeat(40_000)).unwrap();
+        assert!(run.flag("structuredOverflow").unwrap());
+        assert!(run.get::<String>("summary").unwrap().unwrap().len() <= 64 * 1024);
+    }
 }

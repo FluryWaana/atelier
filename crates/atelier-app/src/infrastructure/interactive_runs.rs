@@ -72,27 +72,7 @@ async fn apply(
             run.set("interactions", &interactions)?;
             run.set("waiting", &waiting)?;
             if let Some(summary) = effects.summary {
-                let limit = if matches!(
-                    run.get::<String>("purpose")?.as_deref(),
-                    Some("brainstorm" | "preparation")
-                ) {
-                    64 * 1024
-                } else {
-                    12 * 1024
-                };
-                if summary.len() > limit
-                    && matches!(
-                        run.get::<String>("purpose")?.as_deref(),
-                        Some("brainstorm" | "preparation")
-                    )
-                {
-                    run.set("structuredOverflow", &true)?;
-                }
-                let mut start = summary.len().saturating_sub(limit);
-                while !summary.is_char_boundary(start) {
-                    start += 1;
-                }
-                run.set("summary", &&summary[start..])?;
+                runs::record_summary(&mut run, &summary)?;
             }
             if let Some(usage) = effects.usage {
                 run.set("usage", &usage)?;

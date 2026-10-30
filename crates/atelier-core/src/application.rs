@@ -28,6 +28,15 @@ pub mod time_tracking;
 pub mod updates;
 pub mod worktrees;
 
+fn json_content(text: &str) -> &str {
+    let text = text.trim();
+    text.strip_prefix("```json")
+        .or_else(|| text.strip_prefix("```"))
+        .and_then(|text| text.strip_suffix("```"))
+        .unwrap_or(text)
+        .trim()
+}
+
 pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json::Result<Card> {
     let mut units = 0;
     let title = format!("Copie : {}", card.title)
@@ -87,6 +96,16 @@ fn reset_checklist(source: &Document) -> serde_json::Result<Vec<Document>> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn json_reports_accept_plain_or_complete_fences_without_repairing_invalid_output() {
+        for report in [" {} ", "```json\n{}\n```", "```\n{}\n```"] {
+            assert_eq!(json_content(report), "{}");
+        }
+        for invalid in ["```json\n{}", "{}\n```", "```python\n{}\n```"] {
+            assert!(serde_json::from_str::<serde_json::Value>(json_content(invalid)).is_err());
+        }
+    }
 
     #[test]
     fn contracts_preserve_additional_fields_and_absence() {

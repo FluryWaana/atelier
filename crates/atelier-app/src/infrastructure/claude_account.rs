@@ -229,7 +229,7 @@ impl Client {
         }
         let value: Value =
             serde_json::from_slice(&bytes).map_err(|_| "Réponse de quotas Claude invalide.")?;
-        if super::agent_account::reflected(&value, &[token.into()]) {
+        if super::confidential::reflected(&value, &[token]) {
             return Err("Secret réfléchi dans les quotas Claude.".into());
         }
         let windows = normalize(&value)?;

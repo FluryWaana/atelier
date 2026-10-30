@@ -14,7 +14,7 @@ pub(super) async fn preview(
     Path(id): Path<String>,
     request: axum::extract::Request,
 ) -> Response {
-    let input: TicketResetRead = match super::jira_transitions::input(request).await {
+    let input: TicketResetRead = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -96,7 +96,7 @@ pub(super) async fn apply(
     Path(id): Path<String>,
     request: axum::extract::Request,
 ) -> Response {
-    let input: TicketResetApply = match super::jira_transitions::input(request).await {
+    let input: TicketResetApply = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

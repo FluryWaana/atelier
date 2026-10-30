@@ -903,37 +903,11 @@
   },
   {
     "body": {
-      "frontDirectory": "\u00e9:\\folder"
+      "frontDirectory": "é:\\folder"
     },
     "settings": {},
     "expected": {
-      "value": {
-        "projectRules": "",
-        "agent": "",
-        "baseBranch": "",
-        "repositoryConnector": "",
-        "jiraMode": "inherit",
-        "jiraStatusMap": {
-          "todo": "",
-          "doing": "",
-          "review": "",
-          "done": "",
-          "standby": ""
-        },
-        "frontCommand": "",
-        "backCommand": "",
-        "frontRepo": "",
-        "backRepo": "",
-        "frontDirectory": "\u00e9:\\folder",
-        "backDirectory": "",
-        "frontPort": 0,
-        "backPort": 0,
-        "linkedProjectId": "",
-        "automationEnabled": false,
-        "autoFix": true,
-        "prTarget": "",
-        "testCommand": ""
-      }
+      "error": "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree"
     }
   },
   {

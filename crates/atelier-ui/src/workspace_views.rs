@@ -22,17 +22,13 @@ fn active(run: &Document) -> bool {
         "starting" | "running" | "stopping"
     )
 }
-fn needs_attention(card: &Card, runs: &[Document], cards: &[Card]) -> bool {
+fn needs_attention(card: &Card, runs: &[Document], cards: &[serde_json::Value]) -> bool {
     if field(&card.fields, "status") == "done" {
         return false;
     }
-    let blockers = serde_json::to_value(card).ok().is_some_and(|card| {
-        let cards = cards
-            .iter()
-            .filter_map(|card| serde_json::to_value(card).ok())
-            .collect::<Vec<_>>();
-        !atelier_core::domain::tasks::blockers(&card, &cards).is_empty()
-    });
+    let blockers = serde_json::to_value(card)
+        .ok()
+        .is_some_and(|card| !atelier_core::domain::tasks::blockers(&card, cards).is_empty());
     blockers
         || field(&nested(&card.fields, "ticketSync"), "state") == "error"
         || matches!(
@@ -289,9 +285,14 @@ fn Overview(
     let i18n = expect_context::<I18n>();
     let attention = Signal::derive(move || {
         cards.with(|cards| {
+            let runs = runs.get();
+            let values = cards
+                .iter()
+                .filter_map(|card| serde_json::to_value(card).ok())
+                .collect::<Vec<_>>();
             cards
                 .iter()
-                .filter(|card| needs_attention(card, &runs.get(), cards))
+                .filter(|card| needs_attention(card, &runs, &values))
                 .cloned()
                 .collect::<Vec<_>>()
         })

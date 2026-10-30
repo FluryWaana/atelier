@@ -132,21 +132,6 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
     })
 }
 
-fn contains_secret(value: &Value, secrets: &std::collections::BTreeMap<String, String>) -> bool {
-    match value {
-        Value::String(value) => secrets
-            .values()
-            .any(|secret| !secret.is_empty() && value.contains(secret)),
-        Value::Array(values) => values.iter().any(|value| contains_secret(value, secrets)),
-        Value::Object(values) => values.iter().any(|(key, value)| {
-            secrets
-                .values()
-                .any(|secret| !secret.is_empty() && key.contains(secret))
-                || contains_secret(value, secrets)
-        }),
-        _ => false,
-    }
-}
 pub(super) fn values(manifest: &Manifest, request: &Request) -> Result<()> {
     protocol::validate_manifest(manifest)?;
     protocol::effect(manifest, request)?;
@@ -359,7 +344,10 @@ impl PreparedCall {
             return Err("message.connector_execution_failed".into());
         }
         let reply = protocol::decode_reply(&output.stdout, &request)?;
-        if contains_secret(&serde_json::to_value(&reply)?, &request.secrets) {
+        if super::confidential::reflected(
+            &serde_json::to_value(&reply)?,
+            &request.secrets.values().collect::<Vec<_>>(),
+        ) {
             return Err("message.connector_response_contains_secrets".into());
         }
         executable

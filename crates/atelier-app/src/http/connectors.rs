@@ -22,7 +22,7 @@ pub(super) async fn import_tickets(
     request: axum::extract::Request,
 ) -> Response {
     let input: atelier_core::application::extensions::TicketImport =
-        match super::jira_transitions::input(request).await {
+        match super::input::parse(request).await {
             Ok(input) => input,
             Err(response) => return *response,
         };
@@ -42,7 +42,7 @@ pub(super) async fn refresh_ticket(
     request: axum::extract::Request,
 ) -> Response {
     let input: atelier_core::application::extensions::TicketRefresh =
-        match super::jira_transitions::input(request).await {
+        match super::input::parse(request).await {
             Ok(input) => input,
             Err(response) => return *response,
         };
@@ -88,7 +88,7 @@ pub(super) async fn configure(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Configuration = match super::jira_transitions::input(request).await {
+    let input: Configuration = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -109,7 +109,7 @@ pub(super) async fn remove(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Removal = match super::jira_transitions::input(request).await {
+    let input: Removal = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -135,7 +135,7 @@ pub(super) async fn invoke(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Invocation = match super::jira_transitions::input(request).await {
+    let input: Invocation = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

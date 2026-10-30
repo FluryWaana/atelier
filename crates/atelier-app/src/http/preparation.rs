@@ -10,7 +10,7 @@ pub(super) async fn apply(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Apply = match super::jira_transitions::input(request).await {
+    let input: Apply = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

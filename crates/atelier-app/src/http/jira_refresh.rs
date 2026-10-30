@@ -1,8 +1,4 @@
-use super::{
-    Shared, failure,
-    jira_transitions::{client, input},
-    responses::response,
-};
+use super::{Shared, failure, input::parse, jira_transitions::client, responses::response};
 use crate::infrastructure::jira_refresh as workflow;
 use atelier_core::contracts::{Card, JiraRefreshApply, JiraRefreshRequest};
 use axum::{
@@ -16,7 +12,7 @@ pub(super) async fn preview(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraRefreshRequest = match input(request).await {
+    let input: JiraRefreshRequest = match parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -74,7 +70,7 @@ pub(super) async fn apply(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraRefreshApply = match input(request).await {
+    let input: JiraRefreshApply = match parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

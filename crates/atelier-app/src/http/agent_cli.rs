@@ -14,7 +14,7 @@ pub(super) async fn update(
     Path(provider): Path<String>,
     request: Request,
 ) -> Response {
-    let input: UpdateRequest = match super::jira_transitions::input(request).await {
+    let input: UpdateRequest = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

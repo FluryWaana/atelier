@@ -1,26 +1,10 @@
-use super::process_tree::ContainedChild;
+use super::{confidential::reflected, process_tree::ContainedChild};
 use crate::Result;
 use atelier_core::application::agent_account::{Probe, Report};
 use serde_json::Value;
 use std::{collections::BTreeMap, ffi::OsString, path::Path, process::Stdio, time::Duration};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 const LIMIT: usize = 1024 * 1024;
-pub(super) fn reflected(value: &Value, secrets: &[String]) -> bool {
-    let contains = |text: &str| {
-        secrets
-            .iter()
-            .any(|secret| !secret.is_empty() && text.contains(secret))
-    };
-    match value {
-        Value::String(value) => contains(value),
-        Value::Number(value) => contains(&value.to_string()),
-        Value::Array(values) => values.iter().any(|value| reflected(value, secrets)),
-        Value::Object(values) => values
-            .iter()
-            .any(|(key, value)| contains(key) || reflected(value, secrets)),
-        _ => false,
-    }
-}
 async fn stream(
     stdin: &mut tokio::process::ChildStdin,
     stdout: &mut tokio::process::ChildStdout,
@@ -125,21 +109,4 @@ pub(super) async fn read(
         child.stop().await?;
     }
     result
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    #[test]
-    fn reflected_credentials_in_keys_labels_and_numeric_fields_are_rejected() {
-        let secrets = vec!["synthetic-private-token".into(), "2000000000".into()];
-        for value in [
-            json!({"limitName":"synthetic-private-token"}),
-            json!({"synthetic-private-token":null}),
-            json!({"primary":{"resetsAt":2000000000u64}}),
-        ] {
-            assert!(reflected(&value, &secrets));
-        }
-        assert!(!reflected(&json!({"primary":{"usedPercent":25}}), &secrets));
-    }
 }

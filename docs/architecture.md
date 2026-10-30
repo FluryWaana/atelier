@@ -7,7 +7,7 @@ Le dépôt est un workspace Cargo à la racine, avec exactement quatre membres :
 - `crates/atelier-ui` : interface Leptos CSR compilée en WebAssembly, servie avec ses assets par le binaire natif.
 - `xtask` : fabrication de l’interface, inventaire, qualification synthétique, signatures de préproduction et paquets.
 
-Les dépendances et la toolchain sont fixées par [Cargo.lock](../Cargo.lock) et [rust-toolchain.toml](../rust-toolchain.toml). Le produit n’embarque aucun runtime Node. Les dix fixtures JSON utiles aux régressions sont conservées dans les dossiers `tests/fixtures/` de leurs crates, sans changement de contenu.
+Les dépendances et la toolchain sont fixées par [Cargo.lock](../Cargo.lock) et [rust-toolchain.toml](../rust-toolchain.toml). Le produit n’embarque aucun runtime Node. Les fixtures JSON de régression sont conservées dans les dossiers `tests/fixtures/` de leurs crates. Leurs attentes suivent les contrats actuels. Les dossiers de services sont validés à l’enregistrement et au lancement avec les mêmes règles, notamment le refus des flux de fichiers Windows et des noms réservés.
 
 Le serveur écoute sur loopback et vérifie session locale, Host et Origin. Les identifiants restent dans le stockage protégé natif ; ils ne sont pas exposés au navigateur. Les accès aux dépôts demandent une autorisation explicite et restent bornés. Les processus d’agents et de connecteurs sont supervisés, avec entrées privées, sorties bornées et arrêt des descendants.
 

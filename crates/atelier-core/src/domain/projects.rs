@@ -26,25 +26,31 @@ fn setting(body: &Document, key: &str, limit: usize) -> Result<String> {
 }
 
 fn directory(path: String) -> Result<String> {
-    let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
-    // Validate relative directories without changing the supplied path.
-    let view = path.clone();
-    let bytes = view.as_bytes();
-    if view.starts_with(['/', '\\'])
-        || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
-    {
-        return Err(invalid);
-    }
-    let mut depth = 0usize;
-    // Apply the Windows traversal rules on every OS, as the historical validator does.
-    for part in view.split(['/', '\\']) {
-        match part {
-            "" | "." => {}
-            ".." => depth = depth.checked_sub(1).ok_or(invalid)?,
-            _ => depth += 1,
-        }
-    }
+    super::files::relative_directory(&path)?;
     Ok(path)
+}
+
+#[cfg(test)]
+mod directory_tests {
+    use super::*;
+
+    #[test]
+    fn saved_service_directories_follow_launch_rules_without_rewriting_the_input() {
+        for key in ["frontDirectory", "backDirectory"] {
+            for path in ["a:stream", "NUL", ".git", "a\0b", "a\nb", "../outside"] {
+                let mut body = Document::default();
+                body.set(key, path).unwrap();
+                assert!(
+                    project_settings(&body, &Document::default()).is_err(),
+                    "{key}: {path:?}"
+                );
+            }
+        }
+        assert_eq!(
+            directory(".\\client\\..\\web".into()).unwrap(),
+            ".\\client\\..\\web"
+        );
+    }
 }
 
 fn port(body: &Document, key: &str) -> Result<u16> {

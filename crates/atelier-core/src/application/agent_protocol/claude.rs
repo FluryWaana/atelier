@@ -123,7 +123,8 @@ impl Protocol {
                         if item["type"] == "text" {
                             out.text.push(text(&item["text"], 64 * 1024)?);
                         } else if item["type"] == "tool_use" {
-                            out.text.push(format!("→ {}", text(&item["name"], 128)?));
+                            out.text
+                                .push(format!("Outil : {}", text(&item["name"], 128)?));
                         }
                     }
                 }

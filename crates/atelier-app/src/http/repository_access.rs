@@ -33,7 +33,7 @@ pub(super) async fn register(State(state): State<Shared>, request: Request) -> R
             "message.authorize_repositories_from_the_native_launcher",
         );
     }
-    let input: Input = match super::jira_transitions::input(request).await {
+    let input: Input = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -62,7 +62,7 @@ pub(super) async fn revoke(State(state): State<Shared>, request: Request) -> Res
             "message.authorize_repositories_from_the_native_launcher",
         );
     }
-    let input: Input = match super::jira_transitions::input(request).await {
+    let input: Input = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -105,7 +105,7 @@ struct BranchInput {
 }
 
 pub(super) async fn default_branch(State(state): State<Shared>, request: Request) -> Response {
-    let input: BranchInput = match super::jira_transitions::input(request).await {
+    let input: BranchInput = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

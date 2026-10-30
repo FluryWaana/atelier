@@ -13,6 +13,7 @@ pub mod checked_file;
 pub mod claude_account;
 pub mod command_runs;
 pub mod commits;
+mod confidential;
 pub mod connector_effects;
 pub mod connector_repositories;
 pub mod connector_ticket_reset;

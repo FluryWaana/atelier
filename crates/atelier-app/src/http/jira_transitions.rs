@@ -1,4 +1,4 @@
-use super::{Shared, failure, object, responses::response};
+use super::{Shared, failure, responses::response};
 use crate::{
     Result,
     infrastructure::{jira, jira_transition as workflow},
@@ -15,30 +15,11 @@ use axum::{
     http::StatusCode,
     response::Response,
 };
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::Deserialize;
 use std::time::Duration;
 #[derive(Deserialize)]
 pub(super) struct Revision {
     revision: u64,
-}
-pub(super) async fn input<T: DeserializeOwned>(
-    request: Request,
-) -> std::result::Result<T, Box<Response>> {
-    let body = object(request.into_body())
-        .await
-        .map_err(|(status, message)| Box::new(failure(status, message)))?;
-    serde_json::from_str(&serde_json::to_string(&body).map_err(|_| {
-        Box::new(failure(
-            StatusCode::BAD_REQUEST,
-            "message.invalid_request_parameters",
-        ))
-    })?)
-    .map_err(|_| {
-        Box::new(failure(
-            StatusCode::BAD_REQUEST,
-            "message.invalid_request_parameters",
-        ))
-    })
 }
 pub(super) async fn client(state: &Shared, revision: u64) -> Result<jira::Jira> {
     let vault = state.vault.clone();
@@ -90,7 +71,7 @@ pub(super) async fn send(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraTransitionRequest = match input(request).await {
+    let input: JiraTransitionRequest = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -197,7 +178,7 @@ pub(super) async fn reconcile(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: JiraReconciliation = match input(request).await {
+    let input: JiraReconciliation = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

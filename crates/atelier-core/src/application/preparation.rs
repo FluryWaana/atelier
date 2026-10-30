@@ -17,13 +17,7 @@ pub fn parse(text: &str) -> Result<Preparation, &'static str> {
     if text.len() > 64 * 1024 {
         return Err("message.preparation_too_large");
     }
-    let text = text.trim();
-    let text = text
-        .strip_prefix("```json")
-        .or_else(|| text.strip_prefix("```"))
-        .and_then(|text| text.strip_suffix("```"))
-        .unwrap_or(text)
-        .trim();
+    let text = super::json_content(text);
     let result: Preparation = serde_json::from_str(text)
         .map_err(|_| "message.invalid_preparation_check_the_log_no_criteria_changed")?;
     criteria(&result)?;

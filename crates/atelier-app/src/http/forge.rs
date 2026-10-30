@@ -15,7 +15,7 @@ pub(super) async fn attach(
 ) -> Response {
     use crate::infrastructure::forge_association as workflow;
     use atelier_core::contracts::PullRequestAttach;
-    let input: PullRequestAttach = match super::jira_transitions::input(request).await {
+    let input: PullRequestAttach = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -80,11 +80,11 @@ pub(super) async fn detach(
     axum::extract::Path(id): axum::extract::Path<String>,
     request: Request,
 ) -> Response {
-    let input: atelier_core::contracts::PullRequestDetach =
-        match super::jira_transitions::input(request).await {
-            Ok(input) => input,
-            Err(response) => return *response,
-        };
+    let input: atelier_core::contracts::PullRequestDetach = match super::input::parse(request).await
+    {
+        Ok(input) => input,
+        Err(response) => return *response,
+    };
     if id != input.expected.id {
         return failure(StatusCode::BAD_REQUEST, "message.inconsistent_card");
     }
@@ -108,7 +108,7 @@ pub(super) async fn configurations(State(state): State<Shared>) -> Response {
     )
 }
 pub(super) async fn configure(State(state): State<Shared>, request: Request) -> Response {
-    let input: ForgeUpdate = match super::jira_transitions::input(request).await {
+    let input: ForgeUpdate = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

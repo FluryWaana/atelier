@@ -21,7 +21,7 @@ pub(super) async fn save(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: Input = match super::jira_transitions::input(request).await {
+    let input: Input = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

@@ -17,7 +17,7 @@ struct Choice {
 }
 
 pub(super) async fn choose(State(state): State<Shared>, request: Request) -> Response {
-    let input: Choice = match super::jira_transitions::input(request).await {
+    let input: Choice = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

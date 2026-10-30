@@ -3,7 +3,7 @@ use crate::Result;
 use crate::{
     contracts::{Card, Worktree, WorktreeState},
     document::Document,
-    domain::{files::validate_path, projects::same_repository},
+    domain::{files::relative_directory, projects::same_repository},
 };
 use serde::{Deserialize, Serialize};
 
@@ -27,30 +27,6 @@ pub struct LaunchPlan {
     pub project_ids: Vec<String>,
     pub services: Vec<ServiceLaunch>,
     pub isolated_ports: bool,
-}
-
-pub fn directory(value: &str) -> Result<String> {
-    let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
-    if value.len() > 2000
-        || value.starts_with(['/', '\\'])
-        || value.contains([':', '\0', '\r', '\n'])
-    {
-        return Err(invalid.into());
-    }
-    let mut parts = Vec::new();
-    for part in value.split(['/', '\\']) {
-        match part {
-            "" | "." => {}
-            ".." => {
-                parts.pop().ok_or(invalid)?;
-            }
-            _ => {
-                validate_path(part, true).map_err(|_| invalid)?;
-                parts.push(part);
-            }
-        }
-    }
-    Ok(parts.join("/"))
 }
 
 pub fn plan(
@@ -167,7 +143,7 @@ pub fn plan(
                 name: format!("{name} · {label}"),
                 repository: dedicated,
                 worktree,
-                directory: directory(
+                directory: relative_directory(
                     &project
                         .get::<String>(&format!("{role}Directory"))?
                         .unwrap_or_default(),
@@ -250,8 +226,8 @@ mod tests {
             "a:stream",
             "NUL",
         ] {
-            assert!(directory(path).is_err(), "{path}");
+            assert!(relative_directory(path).is_err(), "{path}");
         }
-        assert_eq!(directory(".\\client\\..\\web").unwrap(), "web");
+        assert_eq!(relative_directory(".\\client\\..\\web").unwrap(), "web");
     }
 }

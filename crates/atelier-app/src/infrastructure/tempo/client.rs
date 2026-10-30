@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::infrastructure::confidential::reflected;
 use atelier_core::{contracts::TempoPayload, document::Document};
 use reqwest::{
     Url,
@@ -13,17 +14,6 @@ pub struct Tempo {
     token: String,
     authorization: HeaderValue,
     last_request: tokio::sync::Mutex<Option<tokio::time::Instant>>,
-}
-
-fn confidential(value: &Value, token: &str) -> bool {
-    match value {
-        Value::String(value) => value.contains(token),
-        Value::Array(values) => values.iter().any(|value| confidential(value, token)),
-        Value::Object(values) => values
-            .iter()
-            .any(|(key, value)| key.contains(token) || confidential(value, token)),
-        _ => false,
-    }
 }
 
 pub fn validate(payload: &TempoPayload) -> Result<()> {
@@ -181,14 +171,17 @@ impl Tempo {
         }
         let value: Value =
             serde_json::from_slice(&bytes).map_err(|_| "message.invalid_tempo_json_response")?;
-        if confidential(&value, &self.token) {
+        if reflected(&value, std::slice::from_ref(&self.token)) {
             return Err("message.tempo_response_contains_unexpected_confidential_data".into());
         }
         Ok((value, bytes.len()))
     }
     pub fn validate(&self, payload: &TempoPayload) -> Result<()> {
         validate(payload)?;
-        if confidential(&serde_json::to_value(payload)?, &self.token) {
+        if reflected(
+            &serde_json::to_value(payload)?,
+            std::slice::from_ref(&self.token),
+        ) {
             return Err("message.time_data_contains_unexpected_confidential_information".into());
         }
         Ok(())
@@ -282,13 +275,13 @@ mod tests {
     fn escaped_and_nested_secrets_are_rejected_after_json_decoding() {
         let value: Value =
             serde_json::from_str(r#"{"outer":[{"nested":"\u0073ynthetic-token"}]}"#).unwrap();
-        assert!(confidential(&value, "synthetic-token"));
+        assert!(reflected(&value, &["synthetic-token"]));
         let value: Value =
             serde_json::from_str(r#"{"\u0073ynthetic-token":"not a public key"}"#).unwrap();
-        assert!(confidential(&value, "synthetic-token"));
-        assert!(!confidential(
+        assert!(reflected(&value, &["synthetic-token"]));
+        assert!(!reflected(
             &serde_json::json!({"description":"Public synthetic data"}),
-            "synthetic-token"
+            &["synthetic-token"]
         ));
     }
 }

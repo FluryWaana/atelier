@@ -272,6 +272,27 @@ async fn installed() -> (atelier_core::application::extensions::Binary, Manifest
 }
 
 #[tokio::test]
+async fn numeric_connector_secrets_cannot_return_as_public_metadata() {
+    let _fixture = EXTENSION_FIXTURE.lock().await;
+    let (binary, manifest) = installed().await;
+    let executable = Executable::open(PathBuf::from(&binary.path), Some(binary.sha256))
+        .await
+        .unwrap();
+    let mut request = request("secret-number");
+    request.secrets.insert("token".into(), "2000000000".into());
+    let error = executable
+        .prepare(&manifest, request, Duration::from_secs(15))
+        .unwrap()
+        .dispatch()
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "message.connector_response_contains_secrets"
+    );
+}
+
+#[tokio::test]
 async fn pinned_processes_keep_credentials_in_stdin_and_reject_untrusted_frames() {
     let _fixture = EXTENSION_FIXTURE.lock().await;
     let (binary, manifest) = installed().await;

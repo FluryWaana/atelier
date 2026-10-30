@@ -32,7 +32,7 @@ pub(super) async fn preview(
     Path(module): Path<String>,
     request: Request,
 ) -> Response {
-    let input: RemotePreview = match super::jira_transitions::input(request).await {
+    let input: RemotePreview = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -48,7 +48,7 @@ pub(super) async fn cancel(
     Path((module, id)): Path<(String, String)>,
     request: Request,
 ) -> Response {
-    let input: RemoteCommand = match super::jira_transitions::input(request).await {
+    let input: RemoteCommand = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -86,7 +86,7 @@ async fn execute(
     request: Request,
     reconcile: bool,
 ) -> Response {
-    let input: RemoteCommand = match super::jira_transitions::input(request).await {
+    let input: RemoteCommand = match super::input::parse(request).await {
         Ok(value) => value,
         Err(response) => return *response,
     };

@@ -50,6 +50,30 @@ pub fn diff_line_numbers(patch: &str) -> Vec<(Option<usize>, Option<usize>)> {
         .collect()
 }
 
+pub fn relative_directory(value: &str) -> Result<String, &'static str> {
+    let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
+    if value.len() > 2000
+        || value.starts_with(['/', '\\'])
+        || value.contains([':', '\0', '\r', '\n'])
+    {
+        return Err(invalid);
+    }
+    let mut parts = Vec::new();
+    for part in value.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop().ok_or(invalid)?;
+            }
+            _ => {
+                validate_path(part, true).map_err(|_| invalid)?;
+                parts.push(part);
+            }
+        }
+    }
+    Ok(parts.join("/"))
+}
+
 #[cfg(test)]
 mod diff_preview_tests {
     #[test]
@@ -82,7 +106,10 @@ pub fn validate_path(path: &str, windows: bool) -> Result<(), &'static str> {
                 .next()
                 .unwrap_or_default()
                 .to_ascii_uppercase();
-            if part.ends_with(['.', ' '])
+            if part
+                .bytes()
+                .any(|byte| matches!(byte, 0..=31 | b'<' | b'>' | b'"' | b'|' | b'?' | b'*'))
+                || part.ends_with(['.', ' '])
                 || matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
                 || ["COM", "LPT"].iter().any(|prefix| {
                     stem.strip_prefix(prefix).is_some_and(|value| {
@@ -130,6 +157,13 @@ mod tests {
             "COM¹",
             "trailing.",
             "trailing ",
+            "wild*.txt",
+            "query?.txt",
+            "pipe|name",
+            "quote\"name",
+            "less<name",
+            "greater>name",
+            "control\u{1f}name",
         ] {
             assert!(validate_path(path, true).is_err(), "{path}");
         }
@@ -137,5 +171,6 @@ mod tests {
             assert!(validate_path(path, true).is_ok(), "{path}");
         }
         assert!(validate_path(&"a".repeat(4097), false).is_err());
+        assert!(validate_path("wild*?.txt", false).is_ok());
     }
 }

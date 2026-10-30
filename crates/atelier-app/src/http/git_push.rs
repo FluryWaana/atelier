@@ -17,7 +17,7 @@ pub(super) async fn preview(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let input: GitPushRequest = match super::jira_transitions::input(request).await {
+    let input: GitPushRequest = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -93,7 +93,7 @@ pub(super) async fn publication_branch(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let publication: ForgePublicationRequest = match super::jira_transitions::input(request).await {
+    let publication: ForgePublicationRequest = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };
@@ -105,7 +105,7 @@ pub(super) async fn publication_branch(
     execute(state, id, input, false, Some(publication)).await
 }
 async fn request_input(state: Shared, id: String, request: Request, reconcile: bool) -> Response {
-    let input: GitPushRequest = match super::jira_transitions::input(request).await {
+    let input: GitPushRequest = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

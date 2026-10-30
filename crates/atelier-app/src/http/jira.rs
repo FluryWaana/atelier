@@ -210,7 +210,7 @@ pub(super) struct MetadataQuery {
 pub(super) async fn import_batch(State(state): State<Shared>, request: Request) -> Response {
     use crate::infrastructure::jira_import;
     use atelier_core::contracts::{JiraBatchImport, JiraImported};
-    let input: JiraBatchImport = match super::jira_transitions::input(request).await {
+    let input: JiraBatchImport = match super::input::parse(request).await {
         Ok(input) => input,
         Err(response) => return *response,
     };

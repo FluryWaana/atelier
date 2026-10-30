@@ -188,12 +188,12 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
             let result = active.take().ok_or("Action du tray absente.")?.join();
             let message = match result {
                 Ok(Ok(())) => "Prêt / Ready",
-                _ => "Action refusée ; consulte Atelier / Action refused; check Atelier",
+                _ => "Action refusée. Consulte Atelier / Action refused. Check Atelier",
             };
             status.set_text(message);
             open.set_enabled(true);
             stop.set_enabled(true);
-            let _ = tray.set_tooltip(Some(format!("Atelier Kanban — {message}")));
+            let _ = tray.set_tooltip(Some(format!("Atelier Kanban : {message}")));
         }
         while let Ok(event) = MenuEvent::receiver().try_recv() {
             if active.is_some() {

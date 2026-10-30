@@ -81,13 +81,7 @@ pub fn parse_requirements(output: &str, requirements: &Value) -> Result<Review, 
     if output.len() > 64 * 1024 {
         return Err("message.review_exceeds_size_limits");
     }
-    let output = output.trim();
-    let output = output
-        .strip_prefix("```json")
-        .or_else(|| output.strip_prefix("```"))
-        .and_then(|output| output.strip_suffix("```"))
-        .unwrap_or(output)
-        .trim();
+    let output = super::json_content(output);
     let mut review: Review =
         serde_json::from_str(output).map_err(|_| "message.invalid_review_format")?;
     if !text(&review.summary, 5000) || review.findings.len() > 30 {
