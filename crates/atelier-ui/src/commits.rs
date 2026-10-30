@@ -38,7 +38,7 @@ pub fn Commits(
     let awaited = RwSignal::new(None::<LocalCommitPreview>);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
-    let key = Signal::derive(move || {
+    let key = Memo::new(move |_| {
         serde_json::json!({"card":card.get(),"paths":selected.get(),"name":name.get(),"email":email.get(),"message":message.get()}).to_string()
     });
     Effect::new(move |_| {

@@ -407,11 +407,14 @@ pub fn TimeReport(
                         <option value="">{move || i18n.text("message.all_projects")}</option>
                         <For
                             each={move || board.projects.get()}
-                            key={|project| field(project, "id")}
+                            key={|project| (field(project, "id"), field(project, "repo"))}
                             children={move |project| {
+                                let id = field(&project, "id");
+                                let name = move || board.projects.with(|items| items.iter().find(|project| field(project, "id") == id).map(|project| field(project, "name")).unwrap_or_default());
                                 view! {
-                                    <option value={field(&project, "repo")}>{field(&project, "name")}</option>
+                                    <option value={field(&project, "repo")}>{name}</option>
                                 }
+
                             }}
                         />
                     </crate::form::Select></crate::form::Field>
@@ -538,7 +541,7 @@ pub fn TimeReport(
                     children={move |row| {
                         let card = row.card.clone();
                         let edit_card = card.clone();
-                        let entry_id = StoredValue::new(row.id.clone());
+                        let entry_id = StoredValue::new(row.id.strip_prefix("human:").unwrap_or(&row.id).to_owned());
                         view! {
                             <crate::card::Card class="workspace-row time-entry time-report-row" {..} >
                                 <div>

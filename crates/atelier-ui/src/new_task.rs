@@ -356,14 +356,17 @@ pub fn NewTask(
                             <option value="">{move || i18n.text("message.choose_a_project_c85ff122")}</option>
                             <For
                                 each={move || projects.get()}
-                                key={|project| field(project, "id")}
+                                key={|project| (field(project, "id"), field(project, "repo"))}
                                 children={move |project| {
+                                    let id = field(&project, "id");
+                                    let name = move || projects.with(|items| items.iter().find(|project| field(project, "id") == id).map(|project| field(project, "name")).unwrap_or_default());
                                     view! {
                                         <option value={field(
                                             &project,
                                             "repo",
-                                        )}>{field(&project, "name")}</option>
+                                        )}>{name}</option>
                                     }
+
                                 }}
                             />
                         </crate::form::Select></crate::form::Field>

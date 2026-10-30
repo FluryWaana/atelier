@@ -349,11 +349,14 @@ pub fn Results(
                         <option value="">{move || i18n.text("message.choose_a_project")}</option>
                         <For
                             each={move || board.projects.get()}
-                            key={|project| field(project, "id")}
+                            key={|project| (field(project, "id"), field(project, "repo"))}
                             children={move |project| {
+                                let id = field(&project, "id");
+                                let name = move || board.projects.with(|items| items.iter().find(|project| field(project, "id") == id).map(|project| field(project, "name")).unwrap_or_default());
                                 view! {
-                                    <option value={field(&project, "id")}>{field(&project, "name")}</option>
+                                    <option value={field(&project, "id")}>{name}</option>
                                 }
+
                             }}
                         />
                     </crate::form::Select>

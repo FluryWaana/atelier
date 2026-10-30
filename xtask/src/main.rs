@@ -20,6 +20,10 @@ fn root() -> PathBuf {
         .to_owned()
 }
 
+fn target() -> PathBuf {
+    root().join(std::env::var_os("CARGO_TARGET_DIR").unwrap_or_else(|| "target".into()))
+}
+
 fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
     let mut command = Command::new(program);
     command.current_dir(root());

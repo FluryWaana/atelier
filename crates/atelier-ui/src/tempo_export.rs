@@ -44,9 +44,8 @@ pub fn TempoExport(
             .ok()
             .flatten()
     });
-    let key = Signal::derive(move || {
-        serde_json::json!({"entry":entry.get(),"card":card.get()}).to_string()
-    });
+    let key =
+        Memo::new(move |_| serde_json::json!({"entry":entry.get(),"card":card.get()}).to_string());
     let approved = RwSignal::new(String::new());
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());

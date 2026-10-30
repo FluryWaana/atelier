@@ -39,6 +39,13 @@ pub fn Settings(
     let original = RwSignal::new(Draft::from_document(&board.settings.get_untracked()));
     let draft = RwSignal::new(original.get_untracked());
     let dirty = Memo::new(move |_| original.get() != draft.get());
+    Effect::new(move |_| {
+        let saved = Draft::from_document(&board.settings.get());
+        if !dirty.get_untracked() {
+            original.set(saved.clone());
+            draft.set(saved);
+        }
+    });
     let pending = RwSignal::new(false);
     let tab = RwSignal::new(
         TABS.iter()
