@@ -1,4 +1,4 @@
-use atelier_core::document::{Document, JsonString};
+use atelier_core::document::Document;
 use serde_json::{Value, value::RawValue};
 
 pub fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
@@ -9,8 +9,8 @@ pub fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
             actual.keys().count() == expected.keys().count()
                 && actual.keys().all(|key| {
                     expected
-                        .raw_key(key)
-                        .is_some_and(|expected| equivalent(actual.raw_key(key).unwrap(), expected))
+                        .raw(key)
+                        .is_some_and(|expected| equivalent(actual.raw(key).unwrap(), expected))
                 })
         }
         (b'[', b'[') => {
@@ -23,8 +23,8 @@ pub fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
                     .all(|(a, e)| equivalent(a, e))
         }
         (b'"', b'"') => {
-            serde_json::from_str::<JsonString>(actual.get()).unwrap()
-                == serde_json::from_str::<JsonString>(expected.get()).unwrap()
+            serde_json::from_str::<String>(actual.get()).unwrap()
+                == serde_json::from_str::<String>(expected.get()).unwrap()
         }
         _ => {
             serde_json::from_str::<Value>(actual.get()).unwrap()

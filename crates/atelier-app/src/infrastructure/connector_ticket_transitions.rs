@@ -114,7 +114,7 @@ pub fn prepare_preview(store: &Store<'_>, profile: &Installed, value: &Value) ->
         .ok_or("message.ticket_key_absent")?;
     let payload = TicketTransitionPayload {
         card_id: card.id.clone(),
-        card_title: card.title.utf8()?,
+        card_title: card.title.clone(),
         card_revision: revision(&card)?,
         ticket,
         ticket_key,

@@ -1,10 +1,8 @@
 use super::{Shared, failure, object};
 use crate::infrastructure::settings;
-use atelier_core::application::{card_lifecycle::CardFailure, settings::SettingsFailure};
 use axum::{
     Json,
     extract::{Path, Request, State},
-    http::StatusCode,
     response::{IntoResponse, Response},
 };
 
@@ -27,34 +25,7 @@ async fn execute(state: Shared, service: Option<String>, request: Request) -> Re
         .await
     {
         Ok(config) => Json(config).into_response(),
-        Err(error) => {
-            if matches!(
-                error.downcast_ref::<SettingsFailure>(),
-                Some(SettingsFailure::UnknownService)
-            ) {
-                failure(StatusCode::NOT_FOUND, "message.unknown_service")
-            } else if matches!(
-                error.downcast_ref::<SettingsFailure>(),
-                Some(SettingsFailure::Conflict)
-            ) {
-                failure(StatusCode::CONFLICT, &error.to_string())
-            } else if error.is::<settings::VaultFailure>() {
-                failure(StatusCode::SERVICE_UNAVAILABLE, &error.to_string())
-            } else if error.is::<rusqlite::Error>()
-                || error.is::<serde_json::Error>()
-                || matches!(
-                    error.downcast_ref::<CardFailure>(),
-                    Some(CardFailure::Document(_))
-                )
-            {
-                failure(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "message.the_settings_could_not_be_updated",
-                )
-            } else {
-                failure(StatusCode::BAD_REQUEST, &error.to_string())
-            }
-        }
+        Err(error) => super::responses::error(error, "message.the_settings_could_not_be_updated"),
     }
 }
 

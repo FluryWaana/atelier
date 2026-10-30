@@ -29,7 +29,7 @@ pub fn read(card: &Card) -> Result<Option<Flow>> {
     let Some(value) = card.fields.get::<Document>("automation")? else {
         return Ok(None);
     };
-    if !value.truthy("id")? {
+    if !value.has_text("id")? {
         if value.string_equals("state", "running")? {
             return Err(
                 "message.active_workflow_has_no_identifier_inspect_processes_before_conti".into(),
@@ -45,7 +45,7 @@ fn save(store: &Store<'_>, card: &mut Card, flow: &mut Flow) -> Result<()> {
         .get::<Document>("automation")?
         .and_then(|value| value.get::<State>("state").ok().flatten());
     let status = card.fields.get::<String>("status")?;
-    if !card.fields.truthy("archived")?
+    if !card.fields.flag("archived")?
         && status.as_deref() != Some("done")
         && previous.is_some_and(|previous| status.as_deref() == Some(previous.card_status()))
     {
@@ -691,7 +691,7 @@ pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
             || !run.string_equals("cardId", id)?
             || !run.string_equals("status", "completed")?
             || run.get::<i32>("exitCode")? != Some(0)
-            || run.truthy("attention")?
+            || run.has_text("attention")?
         {
             return Err(
                 "message.the_workflow_step_did_not_complete_read_the_log_before_resuming".into(),
@@ -726,7 +726,7 @@ pub fn settle(store: &Store<'_>, id: &str, operation: &str) -> Result<()> {
                 }
             }
             Step::Review => {
-                if run.truthy("reviewStaleReason")? || !run.truthy("reviewValidatedAt")? {
+                if run.has_text("reviewStaleReason")? || !run.has_text("reviewValidatedAt")? {
                     return Err(
                         "message.revalidate_the_workflow_review_against_the_current_commits".into(),
                     );

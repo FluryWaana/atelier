@@ -11,7 +11,7 @@ pub(super) fn create(parent: &Dir, name: &Path, target: &Path) -> Result<()> {
 #[cfg(windows)]
 fn junction_buffer(target: &Path) -> Result<Vec<u16>> {
     let print = super::task_creation::path_string(target)
-        .utf8()?
+        .clone()
         .replace('/', "\\");
     // Mount points support local volumes; network shares require a different link mechanism.
     if print.len() < 3

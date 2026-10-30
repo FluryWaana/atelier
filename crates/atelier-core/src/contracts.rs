@@ -1,4 +1,4 @@
-use crate::document::{Document, JsonString};
+use crate::document::Document;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -343,7 +343,7 @@ pub struct ServiceSession {
 #[derive(Clone, Debug)]
 pub struct Card {
     pub id: String,
-    pub title: JsonString,
+    pub title: String,
     pub fields: Document,
 }
 
@@ -368,7 +368,7 @@ impl<'de> Deserialize<'de> for Card {
             .map_err(serde::de::Error::custom)?
             .ok_or_else(|| serde::de::Error::missing_field("id"))?;
         let title = document
-            .get::<JsonString>("title")
+            .get::<String>("title")
             .map_err(serde::de::Error::custom)?
             .ok_or_else(|| serde::de::Error::missing_field("title"))?;
         document.remove("id");

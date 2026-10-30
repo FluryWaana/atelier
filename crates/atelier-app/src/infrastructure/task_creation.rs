@@ -2,14 +2,15 @@ use super::{
     store::{Documents, Store},
     time_tracking::Clock,
 };
+use crate::Result;
 use atelier_core::{
     application::{
         card_lifecycle::CardFailure,
-        task_creation::{CreationContext, Result, default_agent},
+        task_creation::{CreationContext, default_agent},
         time_tracking::TimeClock,
     },
-    document::{Document, JsonString},
-    domain::text_units,
+    document::Document,
+    domain::text,
 };
 use serde_json::value::RawValue;
 
@@ -21,7 +22,7 @@ impl CreationContext for Store<'_> {
         }
         Ok(settings)
     }
-    fn agent_for(&self, body: &Document) -> Result<JsonString> {
+    fn agent_for(&self, body: &Document) -> Result<String> {
         default_agent(
             &CreationContext::settings(self)?,
             &self.documents::<Document>(Documents::Projects)?,
@@ -29,11 +30,11 @@ impl CreationContext for Store<'_> {
             cfg!(windows),
         )
     }
-    fn repository(&self, value: &RawValue) -> Result<JsonString> {
-        let value: JsonString = serde_json::from_str(value.get())
+    fn repository(&self, value: &RawValue) -> Result<String> {
+        let value: String = serde_json::from_str(value.get())
             .map_err(|_| CardFailure::Invalid("message.invalid_or_overly_long_text"))?;
-        let value = text_units(&value, 2000).map_err(CardFailure::Invalid)?;
-        let value = String::from_utf16_lossy(&value.0);
+        let value = text(&value, 2000).map_err(CardFailure::Invalid)?;
+        let value = value.clone();
         let unavailable =
             |_| CardFailure::Invalid("message.the_repository_could_not_be_found_or_accessed");
         let path = std::fs::canonicalize(if value.is_empty() { "." } else { &value })
@@ -51,7 +52,7 @@ impl CreationContext for Store<'_> {
     }
 }
 
-pub(crate) fn path_string(path: &std::path::Path) -> JsonString {
+pub(crate) fn path_string(path: &std::path::Path) -> String {
     let path = path.to_string_lossy();
     #[cfg(windows)]
     let path = if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
@@ -59,5 +60,5 @@ pub(crate) fn path_string(path: &std::path::Path) -> JsonString {
     } else {
         path.strip_prefix(r"\\?\").unwrap_or(&path).to_owned()
     };
-    JsonString::from(path.as_ref())
+    path.to_string()
 }

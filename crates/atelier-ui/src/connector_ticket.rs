@@ -171,7 +171,7 @@ pub fn ConnectorTicket(
     };
     view! { <section class="task-files" hidden=move||module.get().is_empty() aria-labelledby="connector-ticket-heading">
         <h3 id="connector-ticket-heading">{move||i18n.text("message.connector_ticket_synchronization")}</h3>
-        <p role="status" hidden=move||!card.get().is_some_and(|card|card.fields.truthy("ticketOutOfScope").unwrap_or(false))>{move||i18n.text("message.this_ticket_is_outside_the_module_s_last_complete_scope_its_task")}</p>
+        <p role="status" hidden=move||!card.get().is_some_and(|card|card.fields.flag("ticketOutOfScope").unwrap_or(false))>{move||i18n.text("message.this_ticket_is_outside_the_module_s_last_complete_scope_its_task")}</p>
         <button id="read-connector-ticket" type="button" disabled=move||pending.get()||blocked.get()||transition_dirty.get() on:click=load>{move||i18n.text("message.read_remote_ticket")}</button>
         <Show when=move||preview.get().is_some()>
             <p>{move||preview.get().map(|preview|format!("{} · {}",preview.ticket.key,preview.report.observed_at)).unwrap_or_default()}</p>

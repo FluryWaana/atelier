@@ -1,4 +1,4 @@
-use super::task_creation::Result;
+use crate::Result;
 use crate::document::Document;
 
 #[derive(Debug)]
@@ -35,7 +35,7 @@ pub fn require_idle(
     }
     let mut busy = operations_busy;
     for entry in times {
-        busy |= entry.truthy("runningSince")?
+        busy |= entry.has_text("runningSince")?
             || entry.string_equals("exportState", "sending")?
             || entry.string_equals("exportState", "uncertain")?;
     }
@@ -64,7 +64,7 @@ pub fn restore_name(body: &Document) -> Result<String> {
 pub fn pause_restored_queue(settings: &mut Document) -> Result<()> {
     let mut queue: Document = serde_json::from_str(r#"{"ids":[],"paused":true,"message":""}"#)?;
     if let Some(value) = settings.raw("taskQueue") {
-        queue.overlay(&Document::spread(value)?);
+        queue.overlay(&Document::from_raw(value)?);
     }
     queue.set("paused", &true)?;
     queue.set(
@@ -125,18 +125,18 @@ mod tests {
             );
         }
         let mut settings = serde_json::from_str(
-            r#"{"taskQueue":{"ids":["\ud800"],"paused":false,"future":1},"other":"\udc00"}"#,
+            r#"{"taskQueue":{"ids":["\u00e9"],"paused":false,"future":1},"other":"\u00e8"}"#,
         )
         .unwrap();
         pause_restored_queue(&mut settings).unwrap();
         let queue = settings.get::<Document>("taskQueue").unwrap().unwrap();
-        assert!(queue.truthy("paused").unwrap());
-        assert_eq!(queue.raw("ids").unwrap().get(), r#"["\ud800"]"#);
+        assert!(queue.flag("paused").unwrap());
+        assert_eq!(queue.raw("ids").unwrap().get(), r#"["\u00e9"]"#);
         assert_eq!(queue.get::<i32>("future").unwrap(), Some(1));
-        assert_eq!(settings.raw("other").unwrap().get(), r#""\udc00""#);
+        assert_eq!(settings.raw("other").unwrap().get(), r#""\u00e8""#);
         for (value, field) in [
-            (r#"["\ud800"]"#, Some(r#""\ud800""#)),
-            (r#""\udc00x""#, Some(r#""\udc00""#)),
+            (r#"["\u00e9"]"#, Some(r#""\u00e9""#)),
+            (r#""\u00e8x""#, Some(r#""\u00e8""#)),
             ("null", None),
             ("3", None),
         ] {
@@ -145,7 +145,7 @@ mod tests {
             pause_restored_queue(&mut settings).unwrap();
             let queue = settings.get::<Document>("taskQueue").unwrap().unwrap();
             assert_eq!(queue.raw("0").map(|value| value.get()), field);
-            assert!(queue.truthy("paused").unwrap());
+            assert!(queue.flag("paused").unwrap());
         }
     }
 }

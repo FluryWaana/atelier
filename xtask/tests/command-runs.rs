@@ -7,7 +7,7 @@ use atelier_app::infrastructure::{
     command_runs::CommandRuns, database::Database, files::Repository,
     prototype::PrototypeDirectory, store::Documents,
 };
-use atelier_core::document::{Document, JsonString};
+use atelier_core::document::Document;
 use std::{path::Path, sync::Arc, time::Duration};
 use windows_sys::Win32::Foundation::WAIT_OBJECT_0;
 
@@ -29,7 +29,7 @@ async fn explicit_commands_persist_failure_and_stop_descendants_before_releasing
         let selected = Repository::synthetic(
             &root,
             std::slice::from_ref(&root_path),
-            &JsonString::from(repository.to_str().unwrap()),
+            repository.to_str().unwrap(),
         )
         .unwrap();
         let database = Arc::new(Database::open(&root_path.join("synthetic.sqlite")).unwrap());

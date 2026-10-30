@@ -128,9 +128,7 @@ pub fn TimeReport(
                 rows.push(Row {
                     id: format!("human:{id}"),
                     card,
-                    title: task
-                        .map(|card| String::from_utf16_lossy(&card.title.0))
-                        .unwrap_or_default(),
+                    title: task.map(|card| card.title.clone()).unwrap_or_default(),
                     ticket: task
                         .and_then(|card| card.fields.get::<Document>("ticket").ok().flatten())
                         .map(|ticket| field(&ticket, "key"))
@@ -146,7 +144,7 @@ pub fn TimeReport(
                     description: field(&entry, "description"),
                     state,
                     agent: false,
-                    running: entry.truthy("runningSince").unwrap_or(false),
+                    running: entry.has_text("runningSince").unwrap_or(false),
                 });
             }
         }
@@ -167,9 +165,7 @@ pub fn TimeReport(
                 rows.push(Row {
                     id: format!("agent:{}", field(&run, "id")),
                     card,
-                    title: task
-                        .map(|card| String::from_utf16_lossy(&card.title.0))
-                        .unwrap_or_default(),
+                    title: task.map(|card| card.title.clone()).unwrap_or_default(),
                     ticket: task
                         .and_then(|card| card.fields.get::<Document>("ticket").ok().flatten())
                         .map(|ticket| field(&ticket, "key"))
@@ -291,7 +287,7 @@ pub fn TimeReport(
         error.set(result.err().unwrap_or_default());
     };
     view! {<section id="time-report" class="time-view" tabindex="-1" aria-labelledby="time-report-heading" aria-busy=move||loading.get().to_string()>
-        <header class="panel-heading"><div><h2 id="time-report-heading">{move||i18n.text("message.entries_timers")}</h2><p class="hint">{move||i18n.text("message.local_entries_to_review_before_sending_to_the_connected_service")}</p></div><div class="row-actions"><button id="add-time" class="primary" type="button" disabled=move||loading.get()||!board.cards.with(|cards|cards.iter().any(|card|!card.fields.truthy("archived").unwrap_or(false))) on:click=move|_|{if let Some(card)=board.cards.with_untracked(|cards|cards.iter().find(|card|!card.fields.truthy("archived").unwrap_or(false)).cloned()){editing.set(Some((card.id,None)));}}>{move||i18n.text("message.log_time")}</button><button id="close-time-report" type="button" on:click=move|_|close()>{move||i18n.text("message.close")}</button></div></header>
+        <header class="panel-heading"><div><h2 id="time-report-heading">{move||i18n.text("message.entries_timers")}</h2><p class="hint">{move||i18n.text("message.local_entries_to_review_before_sending_to_the_connected_service")}</p></div><div class="row-actions"><button id="add-time" class="primary" type="button" disabled=move||loading.get()||!board.cards.with(|cards|cards.iter().any(|card|!card.fields.flag("archived").unwrap_or(false))) on:click=move|_|{if let Some(card)=board.cards.with_untracked(|cards|cards.iter().find(|card|!card.fields.flag("archived").unwrap_or(false)).cloned()){editing.set(Some((card.id,None)));}}>{move||i18n.text("message.log_time")}</button><button id="close-time-report" type="button" on:click=move|_|close()>{move||i18n.text("message.close")}</button></div></header>
         <p role="status" hidden=move||!loading.get()>{move||i18n.text("message.loading_the_board")}</p><p class="error" role="alert">{move||i18n.text(&load_error.get())}</p>
         <p class="field-help" role="status" hidden=move||board.connected.get()&&board.sync_error.get().is_empty()>{move||i18n.text(&if board.sync_error.get().is_empty(){"message.updates_interrupted_reconnecting".to_owned()}else{board.sync_error.get()})}</p>
         <p class="field-help">{move||i18n.text("message.human_entries_use_their_local_date_active_agent_durations_belong")}</p>
@@ -385,8 +381,8 @@ fn TimeEditor(
     on_cleanup(move || unload.remove());
     view! {<dialog id="time-dialog" class="time-entry-editor" node_ref=dialog aria-labelledby="time-title" on:cancel=move|event:web_sys::Event|{event.prevent_default();request_close();}>
         <header class="dialog-heading"><div><div class="eyebrow">{move||i18n.text("message.human_time_a2731ccf")}</div><h2 id="time-title">{move||i18n.text(if initial.with_value(Option::is_some){"message.edit_time"}else{"message.log_time"})}</h2></div><button id="close-time-editor" type="button" disabled=move||pending.get() on:click=move|_|request_close()>{move||i18n.text("message.close")}</button></header>
-        <label>{move||i18n.text("message.task")}<select id="time-card" prop:value=move||card.get() disabled=move||pending.get()||dirty.get()||initial.with_value(Option::is_some) on:change=move|event|card.set(event_target_value(&event))><For each={move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(false)||initial.with_value(Option::is_some)).collect::<Vec<_>>()} key=|card|card.id.clone() children=move|card|view!{<option value=card.id>{String::from_utf16_lossy(&card.title.0)}</option>}/></select></label>
-        {move||{let card_id=card.get();let archived=board.cards.with_untracked(|cards|cards.iter().find(|card|card.id==card_id).is_none_or(|card|card.fields.truthy("archived").unwrap_or(false)));view!{<crate::time::TimeTask card_id board token pending dirty blocked=Memo::new(move|_|false) archived initial_entry=initial.get_value() editor_only=true on_saved=Some(Callback::new(move|()|close()))/>}}}
+        <label>{move||i18n.text("message.task")}<select id="time-card" prop:value=move||card.get() disabled=move||pending.get()||dirty.get()||initial.with_value(Option::is_some) on:change=move|event|card.set(event_target_value(&event))><For each={move||board.cards.get().into_iter().filter(|card|!card.fields.flag("archived").unwrap_or(false)||initial.with_value(Option::is_some)).collect::<Vec<_>>()} key=|card|card.id.clone() children=move|card|view!{<option value=card.id>{card.title.clone()}</option>}/></select></label>
+        {move||{let card_id=card.get();let archived=board.cards.with_untracked(|cards|cards.iter().find(|card|card.id==card_id).is_none_or(|card|card.fields.flag("archived").unwrap_or(false)));view!{<crate::time::TimeTask card_id board token pending dirty blocked=Memo::new(move|_|false) archived initial_entry=initial.get_value() editor_only=true on_saved=Some(Callback::new(move|()|close()))/>}}}
         <div class="confirmation" role="alert" hidden=move||!discard.get()><p>{move||i18n.text("message.discard_the_unsaved_time_entry")}</p><button id="discard-time-editor" class="danger" type="button" disabled=move||pending.get() on:click=move|_|close()>{move||i18n.text("message.discard")}</button><button id="keep-time-editor" type="button" on:click=move|_|{discard.set(false);navigation.set_value(None);} >{move||i18n.text("message.keep_editing")}</button></div>
     </dialog>}
 }

@@ -472,15 +472,21 @@ pub(crate) async fn agent_command(
     Ok((command, secrets))
 }
 
-pub async fn diagnose(profile: Document, probe_model: Option<&str>, status_only: bool) -> Result<AgentDiagnostic> {
-    let _permit = DIAGNOSTICS.try_acquire().map_err(|_| "message.agent_diagnostic_busy")?;
+pub async fn diagnose(
+    profile: Document,
+    probe_model: Option<&str>,
+    status_only: bool,
+) -> Result<AgentDiagnostic> {
+    let _permit = DIAGNOSTICS
+        .try_acquire()
+        .map_err(|_| atelier_core::application::agent_providers::ProviderFailure::Busy)?;
     let (binary, inherited) = resolve(&profile).await?;
     let kind = profile
         .get::<String>("type")?
         .ok_or("message.invalid_agent")?;
     let api = profile.string_equals("auth", "api")?;
     let mut result = AgentDiagnostic {
-        executable: path_string(&binary).utf8()?,
+        executable: path_string(&binary),
         version: None,
         version_error: None,
         authentication: if api {
@@ -540,7 +546,9 @@ pub async fn diagnose(profile: Document, probe_model: Option<&str>, status_only:
             }
         }
     }
-    if status_only { return Ok(result); }
+    if status_only {
+        return Ok(result);
+    }
     if let Some(probe_model) = probe_model
         && result.version_error.is_none()
         && !api
@@ -553,7 +561,18 @@ pub async fn diagnose(profile: Document, probe_model: Option<&str>, status_only:
         } else if agent.protocol == atelier_core::domain::agent_catalog::ProtocolKind::Codex {
             vec!["app-server".into()]
         } else if agent.protocol == atelier_core::domain::agent_catalog::ProtocolKind::Claude {
-            ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--no-session-persistence"].into_iter().map(str::to_owned).collect()
+            [
+                "-p",
+                "--input-format",
+                "stream-json",
+                "--output-format",
+                "stream-json",
+                "--verbose",
+                "--no-session-persistence",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
         } else {
             agent
                 .launch_args

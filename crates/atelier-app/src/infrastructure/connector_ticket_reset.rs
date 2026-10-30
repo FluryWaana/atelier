@@ -59,7 +59,7 @@ pub fn source(store: &Store<'_>, profile: &Installed) -> Result<Vec<Source>> {
         }
         source.push(Source {
             digest: digest(&card)?,
-            title: card.title.utf8()?,
+            title: card.title.clone(),
             card_id: card.id,
             key: ticket
                 .get::<String>("key")?
@@ -400,7 +400,7 @@ mod tests {
                 .unwrap()
                 .unwrap()
                 .title,
-            atelier_core::document::JsonString::from("Changed after preview")
+            String::from("Changed after preview")
         );
     }
 }

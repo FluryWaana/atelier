@@ -1,10 +1,9 @@
 use super::{Shared, failure, object};
 use crate::infrastructure::store::Documents;
-use atelier_core::application::{card_lifecycle::CardFailure, task_creation};
+use atelier_core::application::task_creation;
 use axum::{
     Json,
     extract::{Request, State},
-    http::StatusCode,
     response::{IntoResponse, Response},
 };
 
@@ -26,22 +25,6 @@ pub(super) async fn create(State(state): State<Shared>, request: Request) -> Res
         .await
     {
         Ok(card) => Json(card).into_response(),
-        Err(error) if error.is::<serde_json::Error>() || error.is::<rusqlite::Error>() => failure(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "message.card_creation_failed",
-        ),
-        Err(error) => {
-            if matches!(
-                error.downcast_ref::<CardFailure>(),
-                Some(CardFailure::Document(_))
-            ) {
-                failure(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "message.card_creation_failed",
-                )
-            } else {
-                failure(StatusCode::BAD_REQUEST, &error.to_string())
-            }
-        }
+        Err(error) => super::responses::error(error, "message.card_creation_failed"),
     }
 }

@@ -8,7 +8,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.invalid_card_id"
@@ -22,7 +22,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.invalid_card_id"
@@ -36,7 +36,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.invalid_card_id"
@@ -50,7 +50,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.card_not_found"
@@ -64,7 +64,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.restore_this_task_before_logging_time"
@@ -78,7 +78,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": null
         },
         "expected": {
@@ -93,7 +93,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": 1
         },
         "expected": {
@@ -108,7 +108,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": "true"
         },
         "expected": {
@@ -123,7 +123,7 @@
           "seconds": 0,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.duration_must_be_between_1_second_and_24_hours"
@@ -137,7 +137,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "value": {
@@ -146,7 +146,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         },
@@ -157,7 +157,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -169,7 +169,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": false
         },
         "expected": {
@@ -179,7 +179,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         },
@@ -190,7 +190,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -199,7 +199,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -211,7 +211,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": true
         },
         "expected": {
@@ -221,7 +221,7 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:00.000Z",
             "exportState": "draft"
           }
@@ -233,7 +233,7 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:00.000Z",
             "exportState": "draft"
           },
@@ -243,7 +243,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -252,7 +252,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -264,7 +264,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "start": true
         },
         "expected": {
@@ -277,7 +277,7 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:00.000Z",
             "exportState": "draft"
           },
@@ -287,7 +287,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -296,7 +296,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -314,7 +314,7 @@
             "seconds": 1,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:01.000Z",
             "exportState": "draft"
           },
@@ -324,7 +324,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -333,7 +333,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -351,7 +351,7 @@
             "seconds": 2,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:02.000Z",
             "exportState": "draft"
           },
@@ -361,7 +361,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -370,7 +370,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -388,7 +388,7 @@
             "seconds": 2,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "runningSince": "2026-10-22T09:00:02.000Z",
             "exportState": "draft"
           },
@@ -398,7 +398,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -407,7 +407,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -423,7 +423,7 @@
             "seconds": 65,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         },
@@ -434,7 +434,7 @@
             "seconds": 65,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -443,7 +443,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -452,7 +452,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -472,7 +472,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -481,7 +481,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -499,7 +499,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           },
           {
@@ -508,7 +508,7 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft"
           }
         ]
@@ -525,10 +525,10 @@
         "seconds": 60,
         "date": "2026-10-22",
         "startTime": "09:00:00",
-        "description": " Work \ud800 ",
+        "description": " Work \u00e9 ",
         "exportState": "sending",
         "extra": {
-          "future": "\udc00",
+          "future": "\u00e8",
           "nullable": null
         },
         "runningSince": "2026-10-22T08:00:00.000Z",
@@ -546,10 +546,10 @@
         "seconds": 60,
         "date": "2026-10-22",
         "startTime": "09:00:00",
-        "description": " Work \ud800 ",
+        "description": " Work \u00e9 ",
         "exportState": "exported",
         "extra": {
-          "future": "\udc00",
+          "future": "\u00e8",
           "nullable": null
         },
         "runningSince": ""
@@ -564,7 +564,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
@@ -576,10 +576,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -590,10 +590,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "uncertain",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "exportPayload": {
@@ -623,10 +623,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -637,10 +637,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "uncertain",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "exportPayload": {
@@ -671,10 +671,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -685,10 +685,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "uncertain",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "exportPayload": {
@@ -716,10 +716,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": true
@@ -732,10 +732,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -746,10 +746,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": true
@@ -761,10 +761,10 @@
         "id": "seed",
         "body": {
           "cardId": "card",
-          "seconds": "0x78",
+          "seconds": 120,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "value": {
@@ -773,10 +773,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -789,10 +789,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -803,10 +803,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -829,10 +829,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -843,10 +843,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -866,10 +866,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -880,10 +880,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -904,10 +904,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -918,10 +918,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -942,10 +942,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -956,10 +956,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -974,7 +974,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.time_entry_not_found"
@@ -986,10 +986,10 @@
             "seconds": 60,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "exported",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": ""
@@ -1000,10 +1000,10 @@
             "seconds": 120,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": "Work \ud800",
+            "description": "Work \u00e9",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "interrupted": false
@@ -1018,10 +1018,10 @@
         "seconds": 60,
         "date": "2026-10-22",
         "startTime": "09:00:00",
-        "description": " Work \ud800 ",
+        "description": " Work \u00e9 ",
         "exportState": "exported",
         "extra": {
-          "future": "\udc00",
+          "future": "\u00e8",
           "nullable": null
         },
         "runningSince": ""
@@ -1032,10 +1032,10 @@
         "seconds": 60,
         "date": "2026-10-22",
         "startTime": "09:00:00",
-        "description": " Work \ud800 ",
+        "description": " Work \u00e9 ",
         "exportState": "uncertain",
         "extra": {
-          "future": "\udc00",
+          "future": "\u00e8",
           "nullable": null
         },
         "exportPayload": {
@@ -1060,10 +1060,10 @@
           "seconds": 86399,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "exportState": "draft",
           "extra": {
-            "future": "\udc00",
+            "future": "\u00e8",
             "nullable": null
           },
           "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1078,10 +1078,10 @@
             "seconds": 86399,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1096,10 +1096,10 @@
           "seconds": 0,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 ",
+          "description": " Work \u00e9 ",
           "exportState": "draft",
           "extra": {
-            "future": "\udc00",
+            "future": "\u00e8",
             "nullable": null
           },
           "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1114,10 +1114,10 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1128,10 +1128,10 @@
             "seconds": 86399,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1146,7 +1146,7 @@
           "seconds": 60,
           "date": "2026-10-22",
           "startTime": "09:00:00",
-          "description": " Work \ud800 "
+          "description": " Work \u00e9 "
         },
         "expected": {
           "error": "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
@@ -1158,10 +1158,10 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1172,10 +1172,10 @@
             "seconds": 86399,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1195,10 +1195,10 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1209,10 +1209,10 @@
             "seconds": 86399,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1232,10 +1232,10 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1246,10 +1246,10 @@
             "seconds": 86399,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.100Z"
@@ -1269,10 +1269,10 @@
             "seconds": 0,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:00.500Z"
@@ -1283,10 +1283,10 @@
             "seconds": 86400,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           }
@@ -1303,10 +1303,10 @@
             "seconds": 86400,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           }
@@ -1318,10 +1318,10 @@
             "seconds": 2,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             },
             "runningSince": "2026-10-22T09:00:02.500Z"
@@ -1332,10 +1332,10 @@
             "seconds": 86400,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           }
@@ -1354,10 +1354,10 @@
             "seconds": 2,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           },
@@ -1367,10 +1367,10 @@
             "seconds": 86400,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           }
@@ -1389,10 +1389,10 @@
             "seconds": 2,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           },
@@ -1402,10 +1402,10 @@
             "seconds": 86400,
             "date": "2026-10-22",
             "startTime": "09:00:00",
-            "description": " Work \ud800 ",
+            "description": " Work \u00e9 ",
             "exportState": "draft",
             "extra": {
-              "future": "\udc00",
+              "future": "\u00e8",
               "nullable": null
             }
           }

@@ -1,54 +1,34 @@
-use super::{agent_options::find_provider, tasks::STATUSES, text_units, truthy};
-use crate::document::{Document, JsonString};
+use super::{agent_options::find_provider, tasks::STATUSES, text};
+use crate::document::Document;
 use serde::Serialize;
 use serde_json::{Value, json};
 
 type Result<T> = std::result::Result<T, &'static str>;
 
 pub fn same_repository(a: &str, b: &str, windows: bool) -> bool {
-    same_repository_units(&JsonString::from(a), &JsonString::from(b), windows)
-}
-
-pub fn same_repository_units(a: &JsonString, b: &JsonString, windows: bool) -> bool {
     if windows {
-        fn key(value: &JsonString) -> Vec<u16> {
-            let mut result = Vec::new();
-            let mut segment = String::new();
-            for character in char::decode_utf16(value.0.iter().copied()) {
-                match character {
-                    Ok(character) => segment.push(if character == '\\' { '/' } else { character }),
-                    Err(surrogate) => {
-                        result.extend(segment.to_lowercase().encode_utf16());
-                        segment.clear();
-                        result.push(surrogate.unpaired_surrogate());
-                    }
-                }
-            }
-            result.extend(segment.to_lowercase().encode_utf16());
-            result
-        }
-        key(a) == key(b)
+        a.replace('\\', "/").to_lowercase() == b.replace('\\', "/").to_lowercase()
     } else {
         a == b
     }
 }
 
-fn setting(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
+fn setting(body: &Document, key: &str, limit: usize) -> Result<String> {
     let invalid = "message.invalid_project_setting";
     let value = body
         .raw(key)
         .filter(|value| value.get() != "null")
-        .map(|value| serde_json::from_str::<JsonString>(value.get()))
+        .map(|value| serde_json::from_str::<String>(value.get()))
         .transpose()
         .map_err(|_| invalid)?
         .unwrap_or_default();
-    text_units(&value, limit).map_err(|_| invalid)
+    text(&value, limit).map_err(|_| invalid)
 }
 
-fn directory(path: JsonString) -> Result<JsonString> {
+fn directory(path: String) -> Result<String> {
     let invalid = "message.the_service_folder_must_be_relative_and_stay_inside_the_worktree";
-    // Replacing a surrogate cannot introduce ASCII traversal; keep the original units in the result.
-    let view = String::from_utf16_lossy(&path.0);
+    // Validate relative directories without changing the supplied path.
+    let view = path.clone();
     let bytes = view.as_bytes();
     if view.starts_with(['/', '\\'])
         || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
@@ -93,35 +73,33 @@ fn port(body: &Document, key: &str) -> Result<u16> {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectSettings {
-    pub project_rules: JsonString,
-    pub agent: JsonString,
-    pub base_branch: JsonString,
-    pub repository_connector: JsonString,
+    pub project_rules: String,
+    pub agent: String,
+    pub base_branch: String,
+    pub repository_connector: String,
     pub jira_mode: String,
     pub jira_status_map: Document,
-    pub front_command: JsonString,
-    pub back_command: JsonString,
-    pub front_repo: JsonString,
-    pub back_repo: JsonString,
-    pub front_directory: JsonString,
-    pub back_directory: JsonString,
+    pub front_command: String,
+    pub back_command: String,
+    pub front_repo: String,
+    pub back_repo: String,
+    pub front_directory: String,
+    pub back_directory: String,
     pub front_port: u16,
     pub back_port: u16,
-    pub linked_project_id: JsonString,
+    pub linked_project_id: String,
     pub automation_enabled: bool,
     pub auto_fix: bool,
-    pub pr_target: JsonString,
-    pub test_command: JsonString,
+    pub pr_target: String,
+    pub test_command: String,
 }
 
 pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectSettings> {
     let invalid = "message.invalid_project_setting";
     let base_branch = setting(body, "baseBranch", 180)?;
     let connector = setting(body, "repositoryConnector", 64)?;
-    let connector_text = connector
-        .utf8()
-        .map_err(|_| "message.invalid_git_provider")?;
-    if !connector.0.is_empty()
+    let connector_text = connector.clone();
+    if !connector.is_empty()
         && (!connector_text.as_bytes()[0].is_ascii_lowercase()
             || !connector_text
                 .bytes()
@@ -129,28 +107,29 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
     {
         return Err("message.invalid_git_provider");
     }
-    let agent = if body.truthy("agent").map_err(|_| "message.invalid_agent")? {
-        body.get::<JsonString>("agent")
+    let agent = if body
+        .has_text("agent")
+        .map_err(|_| "message.invalid_agent")?
+    {
+        body.get::<String>("agent")
             .map_err(|_| "message.invalid_agent")?
             .unwrap_or_default()
     } else {
-        JsonString::default()
+        String::default()
     };
-    if !agent.0.is_empty() {
+    if !agent.is_empty() {
         find_provider(settings, &agent)
             .map_err(|_| "message.invalid_agent")?
             .ok_or("message.invalid_agent")?;
     }
-    let jira_mode = if body.truthy("jiraMode").map_err(|_| invalid)? {
+    let jira_mode = if body.has_text("jiraMode").map_err(|_| invalid)? {
         body.get::<String>("jiraMode")
             .map_err(|_| invalid)?
             .unwrap_or_default()
     } else {
         "inherit".into()
     };
-    if !["inherit", "off", "custom"].contains(&jira_mode.as_str())
-        || base_branch.0.first() == Some(&u16::from(b'-'))
-    {
+    if !["inherit", "off", "custom"].contains(&jira_mode.as_str()) || base_branch.starts_with('-') {
         return Err("message.invalid_project_setting");
     }
     let mapping = body
@@ -160,18 +139,17 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
         .transpose()
         .map_err(|_| "message.invalid_jira_mapping")?
         .unwrap_or_default();
-    if mapping.keys().any(|key| {
-        !STATUSES
-            .iter()
-            .any(|status| key == &JsonString::from(*status))
-    }) {
+    if mapping
+        .keys()
+        .any(|key| !STATUSES.iter().any(|status| key == *status))
+    {
         return Err("message.invalid_jira_mapping");
     }
     let mut status_map = Document::default();
     let mut has_status = false;
     for status in STATUSES {
         let value = setting(&mapping, status, 100)?;
-        has_status |= !value.0.is_empty();
+        has_status |= !value.is_empty();
         status_map.set(status, &value).map_err(|_| invalid)?;
     }
     if jira_mode == "custom" && !has_status {
@@ -184,13 +162,10 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
     }
     let pr_target = setting(body, "prTarget", 180)?;
     let test_command = setting(body, "testCommand", 2000)?;
-    let placeholder = JsonString::from("{port}");
+    let placeholder = String::from("{port}");
     for role in ["front", "back"] {
         if port(body, &format!("{role}Port"))? != 0
-            && !setting(body, &format!("{role}Command"), 2000)?
-                .0
-                .windows(placeholder.0.len())
-                .any(|units| units == placeholder.0)
+            && !setting(body, &format!("{role}Command"), 2000)?.contains(&placeholder)
         {
             return Err("message.add_port_to_the_command_to_apply_the_port_provided_by_atelier");
         }
@@ -199,8 +174,8 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
         .get::<bool>("automationEnabled")
         .map_err(|_| "message.invalid_automatic_option")?
         .unwrap_or(false);
-    if pr_target.0.first() == Some(&u16::from(b'-'))
-        || (automation_enabled && (pr_target.0.is_empty() || test_command.0.is_empty()))
+    if pr_target.starts_with('-')
+        || (automation_enabled && (pr_target.is_empty() || test_command.is_empty()))
     {
         return Err("message.enter_the_target_branch_and_verification_command_before_enabling");
     }
@@ -254,7 +229,7 @@ pub fn settings_for_project(
     let content = |key| {
         project
             .get(key)
-            .filter(|value| truthy(value))
+            .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
             .cloned()
             .unwrap_or(json!(""))
     };
@@ -268,19 +243,26 @@ pub fn settings_for_project(
     for key in ["repositoryConnector", "testCommand", "prTarget"] {
         result[key] = content(key);
     }
-    result["automationEnabled"] = json!(truthy(&project["automationEnabled"]));
+    result["automationEnabled"] = json!(project["automationEnabled"].as_bool().unwrap_or(false));
     result["autoFix"] = project
         .get("autoFix")
         .filter(|value| !value.is_null())
         .cloned()
         .unwrap_or(json!(true));
-    if truthy(&project["baseBranch"]) {
+    if project["baseBranch"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty())
+    {
         result["baseBranch"] = project["baseBranch"].clone();
     }
     result["agent"] = project
         .get("agent")
-        .filter(|value| truthy(value))
-        .or_else(|| settings.get("agent").filter(|value| truthy(value)))
+        .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+        .or_else(|| {
+            settings
+                .get("agent")
+                .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+        })
         .cloned()
         .unwrap_or(json!("codex"));
     match project["jiraMode"].as_str() {

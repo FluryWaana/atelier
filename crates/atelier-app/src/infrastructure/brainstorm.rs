@@ -17,7 +17,7 @@ pub fn conversation(
     expected: &Card,
     reply: &str,
 ) -> Result<String> {
-    if !card.fields.truthy("brainstormSession")?
+    if !card.fields.flag("brainstormSession")?
         || serde_json::to_value(card)? != serde_json::to_value(expected)?
     {
         return Err("message.the_session_changed_reload_it_before_continuing".into());
@@ -70,9 +70,9 @@ pub fn conversation(
         .fields
         .get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist")?
         .unwrap_or_default();
-    description.push_str(&atelier_core::domain::checklist::checklist_text(&criteria).utf8()?);
+    description.push_str(&atelier_core::domain::checklist::checklist_text(&criteria).clone());
     Ok(brainstorm::prompt(
-        &card.title.utf8()?,
+        &card.title.clone(),
         &description,
         &history,
         reply,
@@ -91,8 +91,8 @@ pub fn convert(store: &Store<'_>, input: Convert) -> Result<Vec<Card>> {
         let card = store
             .document::<Card>(Documents::Cards, &input.expected.id)?
             .ok_or("message.session_not_found")?;
-        if !card.fields.truthy("brainstormSession")?
-            || card.fields.truthy("archived")?
+        if !card.fields.flag("brainstormSession")?
+            || card.fields.flag("archived")?
             || atelier_core::application::jira::unresolved(&card.fields)?
             || serde_json::to_value(&card)? != serde_json::to_value(&input.expected)?
         {

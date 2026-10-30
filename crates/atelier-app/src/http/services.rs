@@ -158,15 +158,8 @@ pub(super) async fn restart(
 }
 
 fn respond(result: Result<atelier_core::contracts::ServiceSession>) -> Response {
-    match result {
-        Ok(session) => Json(session).into_response(),
-        Err(error) => failure(
-            match error.downcast_ref::<CardFailure>() {
-                Some(CardFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(CardFailure::Conflict(_)) => StatusCode::CONFLICT,
-                _ => StatusCode::BAD_REQUEST,
-            },
-            &error.to_string(),
-        ),
-    }
+    super::responses::with_message(
+        result,
+        "message.the_change_was_interrupted_refresh_the_current_state_before_tryi",
+    )
 }

@@ -16,7 +16,7 @@ use atelier_core::{
         JiraRefreshRequest, JiraRefreshState as Phase,
     },
     document::Document,
-    domain::text_units,
+    domain::text,
 };
 fn conflict() -> crate::Error {
     JiraFailure::OperationConflict(
@@ -46,7 +46,7 @@ pub fn reserve(store: &Store<'_>, input: &JiraRefreshRequest, operation: &str) -
         jira_transition::revalidate(store, &input.expected, input.revision)?;
         let (mut card, issue) =
             jira_transition::snapshot(store, &input.expected.id, input.revision)?;
-        if jira::unresolved(&card.fields)? || card.fields.truthy("archived")? {
+        if jira::unresolved(&card.fields)? || card.fields.flag("archived")? {
             return Err(conflict());
         }
         for run in store.documents::<Document>(Documents::Runs)? {
@@ -155,7 +155,7 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
         if !same_content(&card, &preview.expected)?
             || issue != preview.issue_id
             || jira::unresolved(&card.fields)?
-            || card.fields.truthy("archived")?
+            || card.fields.flag("archived")?
         {
             return Err(conflict());
         }
@@ -183,17 +183,15 @@ pub fn apply(store: &Store<'_>, input: &JiraRefreshApply) -> Result<Card> {
         if detail.issue.id != issue || detail.connection_revision != input.revision {
             return Err(conflict());
         }
-        let title =
-            text_units(&detail.issue.title.as_str().into(), 300).map_err(JiraFailure::Invalid)?;
-        let description = text_units(&detail.description.as_str().into(), 20_000)
-            .map_err(JiraFailure::Invalid)?;
-        if title.0.is_empty() {
+        let title = text(&detail.issue.title, 300).map_err(JiraFailure::Invalid)?;
+        let description = text(&detail.description, 20_000).map_err(JiraFailure::Invalid)?;
+        if title.is_empty() {
             return Err(JiraFailure::Invalid("message.a_jira_title_is_required").into());
         }
         let changed = card.title != title
             || card
                 .fields
-                .get::<atelier_core::document::JsonString>("description")?
+                .get::<String>("description")?
                 .unwrap_or_default()
                 != description;
         card.title = title;

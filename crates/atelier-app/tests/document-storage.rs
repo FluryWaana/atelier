@@ -1,5 +1,5 @@
 use atelier_app::infrastructure::{backups, database::Database, store::Documents};
-use atelier_core::document::{Document, JsonString};
+use atelier_core::document::Document;
 
 #[tokio::test]
 async fn sqlite_and_restore_preserve_raw_keys_and_strings_while_changing_known_fields() {
@@ -8,7 +8,7 @@ async fn sqlite_and_restore_preserve_raw_keys_and_strings_while_changing_known_f
     let backup = directory.path().join("backup.sqlite");
     let copy = backup.clone();
     database.call(move |store| {
-        let document: Document = serde_json::from_str(r#"{"id":"card","title":"\ud83d","status":null,"automation":{"state":"ready","\ud800":"\udc00"},"future":["\ud800",{"\udc00":null}]}"#)?;
+        let document: Document = serde_json::from_str(r#"{"id":"card","title":"\u00e9","status":null,"automation":{"state":"ready","\u00e9":"\u00e8"},"future":["\u00e9",{"\u00e8":null}]}"#)?;
         store.put(Documents::Cards, &document)?;
         store.save_settings(&document)?;
         store.backup(&copy)?;
@@ -26,20 +26,14 @@ async fn sqlite_and_restore_preserve_raw_keys_and_strings_while_changing_known_f
             let card = store
                 .document::<Document>(Documents::Cards, "card")?
                 .unwrap();
-            assert_eq!(
-                card.get::<JsonString>("title")?,
-                Some(JsonString(vec![0xd83d]))
-            );
+            assert_eq!(card.get::<String>("title")?, Some("é".to_owned()));
             assert!(card.string_equals("status", "standby")?);
             let raw = serde_json::to_string(&card)?;
-            assert!(raw.contains(r#""\ud800":"\udc00""#));
-            assert!(raw.contains(r#""future":["\ud800",{"\udc00":null}]"#));
+            assert!(raw.contains(r#""\u00e9":"\u00e8""#));
+            assert!(raw.contains(r#""future":["\u00e9",{"\u00e8":null}]"#));
             let settings = store.settings::<Document>()?;
             assert_eq!(settings.get::<bool>("credentialsReset")?, Some(true));
-            assert_eq!(
-                settings.get::<JsonString>("title")?,
-                Some(JsonString(vec![0xd83d]))
-            );
+            assert_eq!(settings.get::<String>("title")?, Some("é".to_owned()));
             Ok(())
         })
         .await

@@ -98,7 +98,7 @@ async fn test_prototype_vaults(platform: KeyringPlatform) -> Result<()> {
         let database = Database::open(&directory.path.join("kanban.sqlite"))?;
         let vault = PrototypeVault::new(first_service.clone())?;
         database.call(move |store| {
-            let body: Document = serde_json::from_str(r#"{"baseBranch":"synthetic","token":"prototype-one-\ud800","tempoToken":"synthetic-tempo"}"#)?;
+            let body: Document = serde_json::from_str(r#"{"baseBranch":"synthetic","token":"prototype-one-\u00e9","tempoToken":"synthetic-tempo"}"#)?;
             let config = settings::update(store, &body, &mut |value, decrypt| vault.protect(value, decrypt))?;
             if !config.get::<bool>("tokenSet")?.unwrap_or_default() || serde_json::to_string(&config)?.contains("prototype-one") { return Err("Réponse publique du coffre incorrecte.".into()); }
             Ok(())

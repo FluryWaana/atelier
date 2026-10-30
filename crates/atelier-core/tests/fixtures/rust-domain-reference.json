@@ -5202,12 +5202,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 1,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5263,12 +5258,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 60,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5282,12 +5272,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 100,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5301,12 +5286,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 16,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5320,12 +5300,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 3,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5339,12 +5314,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 8,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5358,12 +5328,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 1,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5421,12 +5386,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 60,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5444,12 +5404,7 @@
       }
     ],
     "expected": {
-      "value": {
-        "seconds": 60,
-        "date": "2026-10-24",
-        "startTime": "09:00:00",
-        "description": "Travail 🔧"
-      }
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5528,7 +5483,7 @@
       }
     ],
     "expected": {
-      "error": "message.invalid_duration_value"
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {
@@ -5546,7 +5501,7 @@
       }
     ],
     "expected": {
-      "error": "message.invalid_duration_value"
+      "error": "message.duration_must_be_between_1_second_and_24_hours"
     }
   },
   {

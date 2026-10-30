@@ -49,7 +49,7 @@ async fn commit_identity_survives_restart_and_backup_cannot_erase_an_observed_ef
         assert!(confirmed.fields.raw("localCommitEffect").is_some());
         assert!(confirmed.fields.raw("localCommitPreview").is_none());
         assert!(!atelier_core::application::forge::unresolved(&confirmed.fields)?);
-        assert_eq!(confirmed.title.utf8()?, "Human title");
+        assert_eq!(confirmed.title.clone(), "Human title");
         assert!(confirmed.fields.string_equals("description", "Keep human text")?);
         assert!(confirmed.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist")?.unwrap()[0].done);
         assert!(backups.restore(store, &old.name).is_err());

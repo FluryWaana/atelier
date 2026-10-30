@@ -36,7 +36,7 @@ pub fn Runs(
             cards
                 .iter()
                 .find(|item| item.id == card.get_value())
-                .is_some_and(|item| item.fields.truthy("brainstormSession").unwrap_or(false))
+                .is_some_and(|item| item.fields.flag("brainstormSession").unwrap_or(false))
         })
     });
     let message = RwSignal::new(String::new());
@@ -110,8 +110,8 @@ pub fn Runs(
                 .iter()
                 .find(|item| item.id == card.get_value())
                 .is_some_and(|item| {
-                    !item.fields.truthy("archived").unwrap_or(true)
-                        && (((item.fields.truthy("brainstormSession").unwrap_or(false)
+                    !item.fields.flag("archived").unwrap_or(true)
+                        && (((item.fields.flag("brainstormSession").unwrap_or(false)
                             || purpose.get() == "preparation")
                             && field(&item.fields, "repo").is_empty())
                             || item

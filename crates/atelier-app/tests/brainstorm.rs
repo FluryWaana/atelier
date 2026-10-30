@@ -31,7 +31,7 @@ async fn structured_command_conversation_converts_atomically_and_never_recreates
         input.indices=vec![0,1];input.confirmed=false;assert!(brainstorm::convert(store,input.clone()).is_err());input.confirmed=true;
         let mut stale=input.clone();stale.expected.title="Stale".into();assert!(brainstorm::convert(store,stale).is_err());
         let created=brainstorm::convert(store,input.clone())?;assert_eq!(created.len(),2);
-        assert!(created[0].fields.string_equals("status","todo")?);assert!(!created[0].fields.truthy("brainstormSession")?);
+        assert!(created[0].fields.string_equals("status","todo")?);assert!(!created[0].fields.flag("brainstormSession")?);
         assert!(created[0].fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist")?.unwrap().iter().all(|criterion|!criterion.done));
         assert_eq!(created[0].fields.get::<Vec<String>>("brainstormQuestions")?.unwrap(),vec!["Keep this question"]);
         let mut changed=created[0].clone();changed.fields.set("description",&"Local changes")?;store.put(Documents::Cards,&changed)?;

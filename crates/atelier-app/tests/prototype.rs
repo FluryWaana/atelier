@@ -37,6 +37,42 @@ async fn start(
 }
 
 #[tokio::test]
+async fn invalid_text_and_field_types_never_create_cards() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let state = || {
+        client
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+    };
+    let before: Value = state().send().await.unwrap().json().await.unwrap();
+    for body in [
+        r#"{"title":"\ud800"}"#,
+        r#"{"title":"Synthetic","future":{"text":"\udc00"}}"#,
+        r#"{"title":true}"#,
+        r#"{"title":"Synthetic","repo":false}"#,
+        r#"{"title":"Synthetic","agent":[]}"#,
+    ] {
+        let response = client
+            .post(format!("{address}/api/cards"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .header("content-type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 400, "{body}");
+    }
+    let after: Value = state().send().await.unwrap().json().await.unwrap();
+    assert_eq!(before, after);
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn folder_selection_requires_the_local_session_and_a_native_launcher() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
@@ -735,7 +771,7 @@ async fn guarded_task_edits_reject_lost_updates_and_merge_independent_fields() {
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
     let cards = database.cards().await.unwrap();
     assert_eq!(cards.len(), 1);
-    assert!(cards[0].title == "First".into() || cards[0].title == "Second".into());
+    assert!(cards[0].title == "First" || cards[0].title == "Second");
     assert!(
         cards[0]
             .fields
@@ -1253,7 +1289,7 @@ async fn provider_profiles_preserve_keys_references_and_rollback_on_storage_fail
 #[tokio::test]
 async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_back() {
     use atelier_app::infrastructure::{settings, token_vault};
-    use atelier_core::document::{Document, JsonString};
+    use atelier_core::document::Document;
     for fault in [false, true] {
         let data = tempfile::tempdir().unwrap();
         let assets = tempfile::tempdir().unwrap();
@@ -1261,11 +1297,11 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
         let directory = PrototypeDirectory::open(data.path()).unwrap();
         let database = Database::open(&directory.path.join("kanban.sqlite")).unwrap();
         database.call(|store| {
-            let settings: Document = serde_json::from_str(r#"{"baseBranch":"old","taskQueue":{"ids":["card"]},"future":{"\ud800":"\udc00"}}"#)?;
+            let settings: Document = serde_json::from_str(r#"{"baseBranch":"old","taskQueue":{"ids":["card"]},"future":{"\u00e9":"\u00e8"}}"#)?;
             store.save_settings(&settings)
         }).await.unwrap();
         let old: Document =
-            serde_json::from_str(r#"{"jira":"old-synthetic","future":{"\ud800":"\udc00"}}"#)
+            serde_json::from_str(r#"{"jira":"old-synthetic","future":{"\u00e9":"\u00e8"}}"#)
                 .unwrap();
         token_vault::save(&database, &old).await.unwrap();
         let encrypted = database
@@ -1316,7 +1352,7 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
                 .status(),
             404
         );
-        let mut body: Document = serde_json::from_str(r#"{"baseBranch":"new","jiraEmail":"\ud800","token":"new-synthetic-\udc00","taskQueue":null,"future":false}"#).unwrap();
+        let mut body: Document = serde_json::from_str(r#"{"baseBranch":"new","jiraEmail":"\u00e9","token":"new-synthetic-\u00e8","taskQueue":null,"future":false}"#).unwrap();
         body.set("repo", &repo.path().to_string_lossy()).unwrap();
         let response = request(reqwest::Method::PUT, "/api/settings")
             .header("content-type", "application/json")
@@ -1352,12 +1388,12 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
         assert_eq!(response.status(), 200);
         let config: Document = serde_json::from_str(&response.text().await.unwrap()).unwrap();
         assert_eq!(
-            config.get::<JsonString>("jiraEmail").unwrap(),
-            Some(JsonString(vec![0xd800]))
+            config.get::<String>("jiraEmail").unwrap(),
+            Some("é".to_owned())
         );
         assert_eq!(
             config.raw("future").unwrap().get(),
-            r#"{"\ud800":"\udc00"}"#
+            r#"{"\u00e9":"\u00e8"}"#
         );
         assert!(config.raw("taskQueue").is_some());
         assert!(
@@ -1454,7 +1490,7 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
         let tokens = token_vault::load(&database).await.unwrap();
         assert!(tokens.raw("future").is_some());
         for service in ["jira", "azure", "tempo"] {
-            assert!(!tokens.truthy(service).unwrap());
+            assert!(!tokens.has_text(service).unwrap());
         }
         database.close().await.unwrap();
     }
@@ -1823,9 +1859,7 @@ async fn local_time_routes_serialize_timer_starts_preserve_updates_and_close_cle
 async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews() {
     use atelier_app::infrastructure::{backups::BackupDirectory, store::Documents};
     use atelier_core::{
-        application::task_creation::CreationContext,
-        contracts::Board,
-        document::{Document, JsonString},
+        application::task_creation::CreationContext, contracts::Board, document::Document,
     };
     #[cfg(windows)]
     fn deny_creation(path: &Path, denied: bool) {
@@ -1878,14 +1912,14 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
             let repo = old.clone();
             let other_repo = other.clone();
             database.call(move |store| {
-                let repo = store.repository(&serde_json::value::to_raw_value(&repo)?)?.utf8()?;
-                let other_repo = store.repository(&serde_json::value::to_raw_value(&other_repo)?)?.utf8()?;
-                let mut project: Document = serde_json::from_str(r#"{"id":"project","name":"\ud800","frontRepo":null,"\ud800":"\udc00"}"#)?;
+                let repo = store.repository(&serde_json::value::to_raw_value(&repo)?)?.clone();
+                let other_repo = store.repository(&serde_json::value::to_raw_value(&other_repo)?)?.clone();
+                let mut project: Document = serde_json::from_str(r#"{"id":"project","name":"\u00e9","frontRepo":null,"\u00e9":"\u00e8"}"#)?;
                 project.set("repo", &repo)?;
                 store.put(Documents::Projects, &project)?;
                 store.put(Documents::Projects, &json!({"id":"other","name":"Other","repo":other_repo}))?;
                 for id in ["one", "two"] {
-                    let mut card: Document = serde_json::from_str(r#"{"title":"\ud800","status":"todo","automation":{"state":"ready","unknown":"\udc00"},"extra":"\udc00"}"#)?;
+                    let mut card: Document = serde_json::from_str(r#"{"title":"\u00e9","status":"todo","automation":{"state":"ready","unknown":"\u00e8"},"extra":"\u00e8"}"#)?;
                     card.set("id", &id)?; card.set("repo", &repo)?; card.set("archived", &(id == "two"))?;
                     store.put(Documents::Cards, &card)?;
                     store.put(Documents::Runs, &json!({"id":format!("review-{id}"),"cardId":id,"kind":"pr-review","status":"completed","repo":repo}))?;
@@ -1911,19 +1945,16 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
                 .send()
         };
         let rules: Document =
-            serde_json::from_str(r#"{"projectRules":" \ud800 ","unknown":"ignored"}"#).unwrap();
+            serde_json::from_str(r#"{"projectRules":" \u00e9 ","unknown":"ignored"}"#).unwrap();
         let response = patch(rules).await.unwrap();
         assert_eq!(response.status(), 200);
         let response: Document = response.json().await.unwrap();
         let saved_repo = response.get::<String>("repo").unwrap().unwrap();
         assert_eq!(
-            response.get::<JsonString>("projectRules").unwrap(),
-            Some(JsonString(vec![0xd800]))
+            response.get::<String>("projectRules").unwrap(),
+            Some("é".to_owned())
         );
-        assert_eq!(
-            response.raw_key(&JsonString(vec![0xd800])).unwrap().get(),
-            r#""\udc00""#
-        );
+        assert_eq!(response.raw(&"é".to_owned()).unwrap().get(), r#""\u00e8""#);
         assert!(response.raw("unknown").is_none());
         let (branch, target) = tokio::join!(
             patch(serde_json::from_str(r#"{"baseBranch":"develop"}"#).unwrap()),
@@ -2006,7 +2037,7 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
             Some("main")
         );
         for card in &board.cards {
-            assert_eq!(card.title, JsonString(vec![0xd800]));
+            assert_eq!(card.title, "é".to_owned());
             assert_eq!(
                 std::fs::canonicalize(card.fields.get::<String>("repo").unwrap().unwrap()).unwrap(),
                 std::fs::canonicalize(expected).unwrap()
@@ -2021,8 +2052,8 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
                 })
             );
             assert_eq!(
-                automation.get::<JsonString>("unknown").unwrap(),
-                Some(JsonString(vec![0xdc00]))
+                automation.get::<String>("unknown").unwrap(),
+                Some("è".to_owned())
             );
         }
         stop(&address, &token, task).await;
@@ -2040,8 +2071,8 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
                 .unwrap();
             assert_eq!(project.get::<String>("repo").unwrap().unwrap(), saved_repo);
             assert_eq!(
-                project.get::<JsonString>("projectRules").unwrap(),
-                Some(JsonString(vec![0xd800]))
+                project.get::<String>("projectRules").unwrap(),
+                Some("é".to_owned())
             );
             for run in read(&snapshot, "runs") {
                 assert!(run.raw("reviewStaleReason").is_none());
@@ -2220,10 +2251,7 @@ async fn project_detection_reads_only_synthetic_repositories_and_never_saves_dra
 
 #[tokio::test]
 async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival_with_deletion() {
-    use atelier_core::{
-        contracts::Board,
-        document::{Document, JsonString},
-    };
+    use atelier_core::{contracts::Board, document::Document};
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
     let repositories = tempfile::tempdir().unwrap();
@@ -2238,7 +2266,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
             .header("x-local-request", "1")
     };
     let mut body = Document::default();
-    body.set("name", &JsonString(vec![0xd800])).unwrap();
+    body.set("name", &"é".to_owned()).unwrap();
     body.set("repo", &repo).unwrap();
     let (first, second) = tokio::join!(
         request(reqwest::Method::POST, "/api/projects")
@@ -2260,10 +2288,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
     let project = project.unwrap();
     let id = project.get::<String>("id").unwrap().unwrap();
     let repo_string = project.get::<String>("repo").unwrap().unwrap();
-    assert_eq!(
-        project.get::<JsonString>("name").unwrap(),
-        Some(JsonString(vec![0xd800]))
-    );
+    assert_eq!(project.get::<String>("name").unwrap(), Some("é".to_owned()));
     let mut cards = Vec::new();
     for title in ["First", "Second"] {
         let response = request(reqwest::Method::POST, "/api/cards")
@@ -2357,11 +2382,11 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
     assert_eq!(board.cards.len(), 2);
     assert_eq!(board.times.len(), 1);
     for card in &board.cards {
-        assert!(!card.fields.truthy("archived").unwrap());
+        assert!(!card.fields.flag("archived").unwrap());
     }
     assert_eq!(
-        board.projects[0].get::<JsonString>("name").unwrap(),
-        Some(JsonString(vec![0xd800]))
+        board.projects[0].get::<String>("name").unwrap(),
+        Some("é".to_owned())
     );
     stop(&address, &token, task).await;
     {
@@ -2410,7 +2435,7 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
     assert_eq!(board.cards.len(), 2);
     assert_eq!(board.times.len(), 1);
     for card in &board.cards {
-        assert!(card.fields.truthy("archived").unwrap());
+        assert!(card.fields.flag("archived").unwrap());
     }
     stop(&address, &token, task).await;
 }
@@ -2418,17 +2443,14 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
 #[tokio::test]
 async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported_effects() {
     use atelier_app::infrastructure::store::Documents;
-    use atelier_core::{
-        contracts::Board,
-        document::{Document, JsonString},
-    };
+    use atelier_core::{contracts::Board, document::Document};
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
     {
         let root = PrototypeDirectory::open(data.path()).unwrap();
         let database = Database::open(&root.path.join("kanban.sqlite")).unwrap();
         database.call(|store| {
-            let seed: Document = serde_json::from_str(r#"{"id":"local","title":"Source","description":"\ud800","instructions":"","agent":"codex","mode":"edit","status":"todo","updatedAt":"before","unknown":"\udc00","checklist":[{"text":"\ud800","done":false}],"automation":{"state":"ready","future":"\ud800"}}"#)?;
+            let seed: Document = serde_json::from_str(r#"{"id":"local","title":"Source","description":"\u00e9","instructions":"","agent":"codex","mode":"edit","status":"todo","updatedAt":"before","unknown":"\u00e8","checklist":[{"text":"\u00e9","done":false}],"automation":{"state":"ready","future":"\u00e9"}}"#)?;
             for id in ["local", "ticket", "worktree", "archived", "rollback"] {
                 let mut card = seed.clone(); card.set("id", &id)?;
                 match id {
@@ -2458,7 +2480,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
     };
     let checked = edit("local")
         .header("content-type", "application/json")
-        .body(r#"{"checklist":[{"text":"\ud800","done":true}]}"#)
+        .body(r#"{"checklist":[{"text":"\u00e9","done":true}]}"#)
         .send()
         .await
         .unwrap();
@@ -2485,8 +2507,8 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
         Some(true)
     );
     assert_eq!(
-        renamed.fields.get::<JsonString>("description").unwrap(),
-        Some(JsonString(vec![0xd800]))
+        renamed.fields.get::<String>("description").unwrap(),
+        Some("é".to_owned())
     );
     let automation = renamed
         .fields
@@ -2495,8 +2517,8 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
         .unwrap();
     assert!(automation.string_equals("state", "interrupted").unwrap());
     assert_eq!(
-        automation.get::<JsonString>("future").unwrap(),
-        Some(JsonString(vec![0xd800]))
+        automation.get::<String>("future").unwrap(),
+        Some("é".to_owned())
     );
     let (description, instructions) = tokio::join!(
         edit("local")
@@ -2549,10 +2571,10 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
         .unwrap();
     assert_eq!(ticket.status(), 200);
     let ticket: Card = ticket.json().await.unwrap();
-    assert_eq!(ticket.title, JsonString::from("Source"));
+    assert_eq!(ticket.title, String::from("Source"));
     assert_eq!(
-        ticket.fields.get::<JsonString>("description").unwrap(),
-        Some(JsonString(vec![0xd800]))
+        ticket.fields.get::<String>("description").unwrap(),
+        Some("é".to_owned())
     );
     assert_eq!(
         ticket
@@ -2601,7 +2623,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
             let rollback = store
                 .document::<Card>(Documents::Cards, "rollback")?
                 .unwrap();
-            assert_eq!(rollback.title, JsonString::from("Source"));
+            assert_eq!(rollback.title, String::from("Source"));
             assert!(rollback.fields.string_equals("updatedAt", "before")?);
             assert!(
                 rollback
@@ -2626,7 +2648,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
         .await
         .unwrap();
     let local = board.cards.iter().find(|card| card.id == "local").unwrap();
-    assert_eq!(local.title, JsonString::from("Renamed"));
+    assert_eq!(local.title, String::from("Renamed"));
     assert!(local.fields.string_equals("status", "doing").unwrap());
     assert!(
         local
@@ -2641,8 +2663,8 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
             .unwrap()
     );
     assert_eq!(
-        local.fields.get::<JsonString>("unknown").unwrap(),
-        Some(JsonString(vec![0xdc00]))
+        local.fields.get::<String>("unknown").unwrap(),
+        Some("è".to_owned())
     );
     stop(&address, &token, task).await;
 }
@@ -2650,10 +2672,7 @@ async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported
 #[tokio::test]
 async fn complete_creation_uses_templates_projects_native_paths_and_atomic_storage() {
     use atelier_app::infrastructure::store::Documents;
-    use atelier_core::{
-        contracts::Board,
-        document::{Document, JsonString},
-    };
+    use atelier_core::{contracts::Board, document::Document};
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
     let repositories = tempfile::tempdir().unwrap();
@@ -2666,7 +2685,7 @@ async fn complete_creation_uses_templates_projects_native_paths_and_atomic_stora
         let database = Database::open(&root.path.join("kanban.sqlite")).unwrap();
         let repo = repo.clone();
         database.call(move |store| {
-            let mut settings: Document = serde_json::from_str(r#"{"agent":"codex","unknown":"\ud800","taskTemplates":[{"id":"template","description":"\ud800","instructions":" inherited ","mode":"analyze","checklist":[{"text":" \udc00 ","done":false}]}]}"#)?;
+            let mut settings: Document = serde_json::from_str(r#"{"agent":"codex","unknown":"\u00e9","taskTemplates":[{"id":"template","description":"\u00e9","instructions":" inherited ","mode":"analyze","checklist":[{"text":" \u00e8 ","done":false}]}]}"#)?;
             settings.set("repo", &repo)?;
             store.save_settings(&settings)?;
             store.put(Documents::Projects, &json!({"id":"project", "repo":repo, "agent":"claude", "unknown":"keep"}))?;
@@ -2697,8 +2716,8 @@ async fn complete_creation_uses_templates_projects_native_paths_and_atomic_stora
     assert!(first.fields.string_equals("agent", "claude").unwrap());
     assert!(first.fields.string_equals("status", "doing").unwrap());
     assert_eq!(
-        first.fields.get::<JsonString>("description").unwrap(),
-        Some(JsonString(vec![0xd800]))
+        first.fields.get::<String>("description").unwrap(),
+        Some("é".to_owned())
     );
     assert!(first.fields.raw("unknown").is_none());
     assert!(second.fields.string_equals("model", "model/v1").unwrap());
@@ -2771,8 +2790,8 @@ async fn complete_creation_uses_templates_projects_native_paths_and_atomic_stora
         .unwrap()
         .unwrap();
     assert_eq!(
-        criteria[0].get::<JsonString>("text").unwrap(),
-        Some(JsonString(vec![0xdc00]))
+        criteria[0].get::<String>("text").unwrap(),
+        Some("è".to_owned())
     );
     stop(&address, &token, task).await;
 }
@@ -3264,11 +3283,8 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
 }
 
 #[tokio::test]
-async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
-    use atelier_core::{
-        contracts::Board,
-        document::{Document, JsonString},
-    };
+async fn http_and_restart_preserve_unicode_and_unknown_json_keys() {
+    use atelier_core::{contracts::Board, document::Document};
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
     std::fs::write(
@@ -3282,16 +3298,16 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
         .bearer_auth(&token)
         .header("x-local-request", "1")
         .header("content-type", "application/json")
-        .body(r#"{"title":"\ufeff\ud83d\u00a0"}"#)
+        .body(r#"{"title":"\ufeff\u00e9\u00a0"}"#)
         .send()
         .await
         .unwrap();
     assert_eq!(response.status(), 200);
     let mut card: Card = response.json().await.unwrap();
-    assert_eq!(card.title, JsonString(vec![0xd83d]));
+    assert_eq!(card.title, "é".to_owned());
     stop(&address, &token, server).await;
     card.fields =
-        serde_json::from_str::<Document>(r#"{"\ud800":{"unknown":"\udc00"},"nullable":null}"#)
+        serde_json::from_str::<Document>(r#"{"\u00e9":{"unknown":"\u00e8"},"nullable":null}"#)
             .unwrap();
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
     database.put_card(card).await.unwrap();
@@ -3305,9 +3321,9 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
         .unwrap();
     assert_eq!(response.status(), 200);
     let raw = response.text().await.unwrap();
-    assert!(raw.contains(r#""\ud800":{"unknown":"\udc00"}"#));
+    assert!(raw.contains(r#""\u00e9":{"unknown":"\u00e8"}"#));
     let board: Board = serde_json::from_str(&raw).unwrap();
-    assert_eq!(board.cards[0].title, JsonString(vec![0xd83d]));
+    assert_eq!(board.cards[0].title, "é".to_owned());
     let client = reqwest::Client::new();
     let duplicate = || {
         client
@@ -3327,8 +3343,8 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
     let first: Card = first.json().await.unwrap();
     let second: Card = second.json().await.unwrap();
     assert_ne!(first.id, second.id);
-    let mut copied_title = JsonString::from("Copie — ");
-    copied_title.0.push(0xd83d);
+    let mut copied_title = String::from("Copie : ");
+    copied_title.push('é');
     assert_eq!(first.title, copied_title);
     assert_eq!(second.title, copied_title);
     assert!(first.fields.string_equals("status", "todo").unwrap());
@@ -3361,7 +3377,7 @@ async fn http_and_restart_preserve_isolated_utf16_and_unknown_json_keys() {
     let database = Database::open(&data.path().join("kanban.sqlite")).unwrap();
     let saved = database.cards().await.unwrap();
     assert_eq!(saved.len(), 3);
-    assert_eq!(saved[2].title, JsonString(vec![0xd83d]));
+    assert_eq!(saved[2].title, "é".to_owned());
     assert!(saved[2].fields.raw("nullable").is_some());
     database.close().await.unwrap();
 }

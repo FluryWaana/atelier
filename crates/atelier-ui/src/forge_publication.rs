@@ -81,7 +81,7 @@ pub fn ForgePublication(
             target: "main".into(),
             title: card
                 .get_untracked()
-                .and_then(|card| card.title.utf8().ok())
+                .map(|card| card.title.clone())
                 .unwrap_or_default(),
             body: card
                 .get_untracked()

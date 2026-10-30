@@ -101,9 +101,7 @@ pub fn retire_local_connectors(
     let mut tokens = settings::load(store, protect)?;
     let removed: Vec<_> = tokens
         .keys()
-        .map(|key| key.utf8())
-        .collect::<std::result::Result<Vec<_>, _>>()?
-        .into_iter()
+        .map(str::to_owned)
         .filter(|key| {
             key.strip_prefix("extension:").is_some_and(|key| {
                 key.split_once(':')
@@ -185,8 +183,7 @@ pub fn describe(
                             "atelier"
                         })
                 })
-                .map(|path| super::task_creation::path_string(&path).utf8())
-                .transpose()?
+                .map(|path| super::task_creation::path_string(&path))
         },
     })
 }

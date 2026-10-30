@@ -1,9 +1,8 @@
 use super::{Shared, failure, object};
-use atelier_core::application::{card_lifecycle::CardFailure, task_templates};
+use atelier_core::application::task_templates;
 use axum::{
     Json,
     extract::{Path, Request, State},
-    http::StatusCode,
     response::{IntoResponse, Response},
 };
 
@@ -31,22 +30,7 @@ async fn execute(state: Shared, remove: Option<String>, request: Request) -> Res
         .await
     {
         Ok(template) => Json(template).into_response(),
-        Err(error) => {
-            let status = match error.downcast_ref::<CardFailure>() {
-                Some(CardFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(CardFailure::Conflict(_)) => StatusCode::CONFLICT,
-                Some(CardFailure::Document(_)) => StatusCode::INTERNAL_SERVER_ERROR,
-                _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => {
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }
-                _ => StatusCode::BAD_REQUEST,
-            };
-            if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "message.templates_update_failed")
-            } else {
-                failure(status, &error.to_string())
-            }
-        }
+        Err(error) => super::responses::error(error, "message.templates_update_failed"),
     }
 }
 

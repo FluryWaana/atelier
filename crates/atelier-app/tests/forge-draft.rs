@@ -206,7 +206,7 @@ async fn content_recovery_requires_the_requested_text_and_preserves_human_card_f
         let mut observed=pr;observed.title="New title".into();
         let result=workflow::record(store,"task",&id,observed,true)?;
         assert_eq!(result.fields.get::<ForgeDraftIntent>("forgeDraft")?.unwrap().state,Phase::Reconciled);
-        assert_eq!(result.title,atelier_core::document::JsonString::from("Human local title"));
+        assert_eq!(result.title,String::from("Human local title"));
         assert!(result.fields.string_equals("description","Human local description")?);
         Ok(())
     }).await.unwrap();

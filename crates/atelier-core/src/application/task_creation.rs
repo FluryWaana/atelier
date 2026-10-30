@@ -1,26 +1,26 @@
 use super::card_lifecycle::CardFailure;
 use crate::{
     contracts::Card,
-    document::{Document, JsonString},
-    domain::{agent_options::options_document, checklist::checklist, text_units},
+    document::Document,
+    domain::{agent_options::options_document, checklist::checklist},
 };
 use serde_json::{Value, value::RawValue};
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+use crate::Result;
 
 pub trait CreationContext {
     fn settings(&self) -> Result<Document>;
-    fn agent_for(&self, body: &Document) -> Result<JsonString>;
-    fn repository(&self, value: &RawValue) -> Result<JsonString>;
+    fn agent_for(&self, body: &Document) -> Result<String>;
+    fn repository(&self, value: &RawValue) -> Result<String>;
     fn new_id(&self) -> String;
     fn timestamp(&self) -> Result<String>;
 }
 
-pub(super) fn text(value: Option<&RawValue>, limit: usize) -> Result<JsonString> {
+pub(super) fn text(value: Option<&RawValue>, limit: usize) -> Result<String> {
     let invalid = || CardFailure::Invalid("message.invalid_or_overly_long_text");
     let value = value.ok_or_else(invalid)?;
-    let value = serde_json::from_str::<JsonString>(value.get()).map_err(|_| invalid())?;
-    Ok(text_units(&value, limit).map_err(CardFailure::Invalid)?)
+    let value = serde_json::from_str::<String>(value.get()).map_err(|_| invalid())?;
+    Ok(crate::domain::text(&value, limit).map_err(CardFailure::Invalid)?)
 }
 
 pub(super) fn present(value: Option<&RawValue>) -> Option<&RawValue> {
@@ -32,12 +32,13 @@ pub fn default_agent(
     projects: &[Document],
     body: &Document,
     windows: bool,
-) -> Result<JsonString> {
+) -> Result<String> {
     let invalid = || CardFailure::Invalid("message.invalid_or_overly_long_text");
     let repository = |document: &Document| -> Result<Option<String>> {
         Ok(document
-            .get::<String>("repo")
+            .get::<Option<String>>("repo")
             .map_err(|_| invalid())?
+            .flatten()
             .filter(|path| !path.is_empty()))
     };
     let repo = match repository(body)? {
@@ -53,7 +54,7 @@ pub fn default_agent(
                 .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
                 .filter(|agent| !agent.is_empty())
             {
-                return Ok(JsonString::from(agent.as_str()));
+                return Ok(agent);
             }
             break;
         }
@@ -63,15 +64,15 @@ pub fn default_agent(
         .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
         .filter(|agent| !agent.is_empty())
         .unwrap_or_else(|| "codex".into());
-    Ok(JsonString::from(agent.as_str()))
+    Ok(agent)
 }
 
-pub(super) fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {
+pub(super) fn provider(settings: &Document, agent: &str) -> Result<Document> {
     crate::domain::agent_options::find_provider(settings, agent)?
         .ok_or_else(|| CardFailure::Invalid("message.invalid_agent").into())
 }
 
-pub(super) fn options(agent: &JsonString, body: &Document, settings: &Document) -> Result<Value> {
+pub(super) fn options(agent: &str, body: &Document, settings: &Document) -> Result<Value> {
     let provider = provider(settings, agent)?;
     let kind = provider
         .get::<String>("type")
@@ -86,20 +87,23 @@ pub fn create(
     brainstorming: bool,
 ) -> Result<Card> {
     let title = text(body.raw("title"), 300)?;
-    if title.0.is_empty() {
+    if title.is_empty() {
         return Err(CardFailure::Invalid("message.a_title_is_required").into());
     }
-    let template = if body.truthy("templateId")? {
+    let template = if body
+        .has_text("templateId")
+        .map_err(|_| "message.invalid_request")?
+    {
         let templates = context.settings()?;
         let mut found = None;
-        if templates.truthy("taskTemplates")? {
+        if templates.has_list("taskTemplates")? {
             for template in templates
                 .get::<Vec<Document>>("taskTemplates")?
                 .unwrap_or_default()
             {
                 if let (Ok(Some(id)), Ok(Some(selected))) = (
-                    template.get::<JsonString>("id"),
-                    body.get::<JsonString>("templateId"),
+                    template.get::<String>("id"),
+                    body.get::<String>("templateId"),
                 ) && id == selected
                 {
                     found = Some(template);
@@ -111,8 +115,11 @@ pub fn create(
     } else {
         None
     };
-    let agent = if body.truthy("agent")? {
-        body.get::<JsonString>("agent")
+    let agent = if body
+        .has_text("agent")
+        .map_err(|_| "message.invalid_agent")?
+    {
+        body.get::<String>("agent")
             .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
             .ok_or(CardFailure::Invalid("message.invalid_agent"))?
     } else {
@@ -120,36 +127,39 @@ pub fn create(
     };
     let template = template.unwrap_or_default();
     let mode = if brainstorming {
-        JsonString::from("analyze")
-    } else if body.truthy("mode")? {
-        body.get::<JsonString>("mode")
+        String::from("analyze")
+    } else if body
+        .has_text("mode")
+        .map_err(|_| "message.invalid_agent_or_mode")?
+    {
+        body.get::<String>("mode")
             .ok()
             .flatten()
             .unwrap_or_default()
-    } else if template.truthy("mode")? {
+    } else if template.has_text("mode")? {
         template
-            .get::<JsonString>("mode")
+            .get::<String>("mode")
             .ok()
             .flatten()
             .unwrap_or_default()
     } else {
-        JsonString::from("edit")
+        String::from("edit")
     };
     provider(&context.settings()?, &agent)?;
-    if ![JsonString::from("analyze"), JsonString::from("edit")].contains(&mode) {
+    if ![String::from("analyze"), String::from("edit")].contains(&mode) {
         return Err(CardFailure::Invalid("message.invalid_agent_or_mode").into());
     }
     let status = if brainstorming {
-        JsonString::from("todo")
+        String::from("todo")
     } else if let Some(value) = present(body.raw("status")) {
-        serde_json::from_str::<JsonString>(value.get()).unwrap_or_default()
+        serde_json::from_str::<String>(value.get()).unwrap_or_default()
     } else {
-        JsonString::from("todo")
+        String::from("todo")
     };
     if ![
-        JsonString::from("todo"),
-        JsonString::from("doing"),
-        JsonString::from("review"),
+        String::from("todo"),
+        String::from("doing"),
+        String::from("review"),
     ]
     .contains(&status)
     {
@@ -169,10 +179,13 @@ pub fn create(
             )?,
         )?;
     }
-    if body.truthy("repo")? {
+    if body
+        .has_text("repo")
+        .map_err(|_| "message.invalid_or_overly_long_text")?
+    {
         fields.set(
             "repo",
-            &context.repository(body.raw("repo").expect("truthy field exists"))?,
+            &context.repository(body.raw("repo").expect("validated text field exists"))?,
         )?;
     } else if brainstorming {
         fields.set("repo", &"")?;

@@ -1,10 +1,11 @@
 use super::{
     card_lifecycle::CardFailure,
-    task_creation::{CreationContext, Result, options, present, provider, text},
+    task_creation::{CreationContext, options, present, provider, text},
 };
+use crate::Result;
 use crate::{
     contracts::Card,
-    document::{Document, JsonString},
+    document::Document,
     domain::{
         checklist::checklist,
         tasks::{STATUSES, dependencies},
@@ -124,8 +125,9 @@ fn same_scalar(a: Option<&RawValue>, b: Option<&RawValue>) -> Result<bool> {
         return Ok(a.is_none() && b.is_none());
     };
     match (a.get().as_bytes()[0], b.get().as_bytes()[0]) {
-        (b'"', b'"') => Ok(serde_json::from_str::<JsonString>(a.get())?
-            == serde_json::from_str::<JsonString>(b.get())?),
+        (b'"', b'"') => Ok(
+            serde_json::from_str::<String>(a.get())? == serde_json::from_str::<String>(b.get())?
+        ),
         (b'{' | b'[', _) | (_, b'{' | b'[') => Ok(false),
         (b'"', _) | (_, b'"') => Ok(false),
         _ => {
@@ -142,13 +144,13 @@ pub fn requirements_changed(before: &Card, after: &Card) -> Result<bool> {
     }
     let empty = RawValue::from_string("\"\"".into())?;
     for key in ["description", "instructions"] {
-        let a = if before.fields.truthy(key)? {
+        let a = if before.fields.has_text(key)? {
             before.fields.raw(key)
         } else {
             None
         }
         .unwrap_or(&empty);
-        let b = if after.fields.truthy(key)? {
+        let b = if after.fields.has_text(key)? {
             after.fields.raw(key)
         } else {
             None
@@ -159,7 +161,7 @@ pub fn requirements_changed(before: &Card, after: &Card) -> Result<bool> {
         }
     }
     let criteria = |card: &Card| -> Result<Vec<Document>> {
-        Ok(if card.fields.truthy("checklist")? {
+        Ok(if card.fields.has_list("checklist")? {
             card.fields.get("checklist")?.unwrap_or_default()
         } else {
             Vec::new()
@@ -188,7 +190,7 @@ pub fn prepare(
     busy: bool,
 ) -> Result<Edit> {
     let mut card = original.clone();
-    if card.fields.truthy("ticket")?
+    if card.fields.has_object("ticket")?
         && (body.raw("title").is_some() || body.raw("description").is_some())
     {
         return Err(CardFailure::Conflict(
@@ -196,10 +198,8 @@ pub fn prepare(
         )
         .into());
     }
-    if card.fields.truthy("archived")? {
-        return Err(
-            CardFailure::Conflict("message.restore_this_task_before_resuming_work").into(),
-        );
+    if card.fields.flag("archived")? {
+        return Err(CardFailure::Conflict("message.restore_this_task_before_resuming_work").into());
     }
     if busy {
         return Err(
@@ -209,10 +209,10 @@ pub fn prepare(
     check_expected(&card, body)?;
     // Validate stored requirements before touching the card.
     requirements_changed(&card, &card)?;
-    if card.fields.truthy("worktree")? {
+    if card.fields.has_object("worktree")? {
         let empty = RawValue::from_string("\"\"".into())?;
         for key in ["repo", "branch", "baseBranch"] {
-            let previous = if key == "baseBranch" && !card.fields.truthy(key)? {
+            let previous = if key == "baseBranch" && !card.fields.has_text(key)? {
                 Some(empty.as_ref())
             } else {
                 card.fields.raw(key)
@@ -238,7 +238,7 @@ pub fn prepare(
     }
     if body.raw("title").is_some() {
         card.title = text(body.raw("title"), 300)?;
-        if card.title.0.is_empty() {
+        if card.title.is_empty() {
             return Err(CardFailure::Invalid("message.title_required").into());
         }
     }
@@ -247,16 +247,19 @@ pub fn prepare(
             .set("description", &text(body.raw("description"), 20_000)?)?;
     }
     if let Some(repo) = body.raw("repo") {
-        let repo = if body.truthy("repo")? {
+        let repo = if body
+            .has_text("repo")
+            .map_err(|_| "message.invalid_or_overly_long_text")?
+        {
             context.repository(repo)?
         } else {
-            JsonString::default()
+            String::default()
         };
         card.fields.set("repo", &repo)?;
     }
     if body.raw("agent").is_some() {
         let agent = body
-            .get::<JsonString>("agent")
+            .get::<String>("agent")
             .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
             .ok_or(CardFailure::Invalid("message.invalid_agent"))?;
         provider(&context.settings()?, &agent)?;
@@ -268,7 +271,7 @@ pub fn prepare(
     let unchanged_agent = same_scalar(card.fields.raw("agent"), original.fields.raw("agent"))?;
     let agent = card
         .fields
-        .get::<JsonString>("agent")
+        .get::<String>("agent")
         .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
         .ok_or(CardFailure::Invalid("message.invalid_agent"))?;
     let mut selected = Document::default();

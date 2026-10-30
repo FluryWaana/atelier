@@ -34,7 +34,7 @@ async fn review_results_are_complete_snapshot_bound_and_never_tick_human_criteri
         let (selected,prompt)=reviews::correction(store,&card,"review",&[0])?;assert_eq!(selected,context);assert!(prompt.contains("Synthetic selected finding"));
         let correction=document(json!({"id":"correction","cardId":"task","repo":"/synthetic/work","mode":"edit","purpose":"correction","status":"starting","reviewContext":context,"correctionOf":"review","correctionIndexes":[0]}));
         runs::reserve(store,&correction)?;
-        assert!(store.document::<Document>(Documents::Runs,"review")?.unwrap().truthy("reviewStaleReason")?);
+        assert!(store.document::<Document>(Documents::Runs,"review")?.unwrap().has_text("reviewStaleReason")?);
         runs::transition(store,"correction","failed","time",None)?;
         assert!(reviews::correction(store,&card,"review",&[0]).is_err());
         let mut advanced=context.clone();advanced.source="c".repeat(40);assert!(reviews::validate(store,&card,"review",&advanced,"later").is_err());

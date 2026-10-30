@@ -49,7 +49,7 @@ fn target(
     if (!already_linked
         && serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
             != serde_json::to_value(atelier_core::application::jira::card_snapshot(expected))?)
-        || card.fields.truthy("archived")?
+        || card.fields.flag("archived")?
     {
         return Err(conflict());
     }
@@ -257,7 +257,7 @@ fn finish_one(
         {
             return Err("message.this_issue_is_already_linked_to_another_card".into());
         }
-        if card.fields.truthy("ticket")? {
+        if card.fields.has_object("ticket")? {
             if existing
                 .as_ref()
                 .is_none_or(|existing| existing.id != card.id)

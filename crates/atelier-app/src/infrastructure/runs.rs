@@ -41,7 +41,7 @@ pub fn reserve(store: &Store<'_>, run: &Document) -> Result<()> {
         let mut card = store
             .document::<Card>(Documents::Cards, &card_id)?
             .ok_or("message.card_not_found")?;
-        if card.fields.truthy("archived")? {
+        if card.fields.flag("archived")? {
             return Err("message.restore_task_before_agent".into());
         }
         super::automation::require_run(

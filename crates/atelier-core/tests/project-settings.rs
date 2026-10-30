@@ -3,7 +3,7 @@ use atelier_core::{document::Document, domain::projects::project_settings};
 mod json;
 
 #[test]
-fn historical_project_settings_preserve_utf16_paths_and_error_precedence() {
+fn historical_project_settings_preserve_unicode_paths_and_error_precedence() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
         "fixtures/rust-project-settings-reference.json"
     ))

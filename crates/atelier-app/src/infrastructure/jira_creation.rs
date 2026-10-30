@@ -52,8 +52,8 @@ pub fn reserve(store: &Store<'_>, request: &JiraCreateRequest, operation: &str) 
             return Err("message.confirm_the_jira_project_and_issue_type_to_create".into());
         }
         let mut card = revalidate(store, &request.expected, request.revision)?;
-        if card.fields.truthy("archived")?
-            || card.fields.truthy("ticket")?
+        if card.fields.flag("archived")?
+            || card.fields.has_object("ticket")?
             || domain::unresolved(&card.fields)?
         {
             return Err(
@@ -110,7 +110,7 @@ pub fn sending(store: &Store<'_>, expected: &Card, operation: &str) -> Result<Ca
         if serde_json::to_value(before)? != serde_json::to_value(after)? {
             return Err(conflict());
         }
-        if intent.state != Phase::Preparing || card.fields.truthy("ticket")? {
+        if intent.state != Phase::Preparing || card.fields.has_object("ticket")? {
             return Err(conflict());
         }
         intent.state = Phase::Sending;
@@ -135,7 +135,7 @@ pub fn failed_or_uncertain(store: &Store<'_>, card_id: &str, operation: &str) ->
 pub fn record(store: &Store<'_>, card_id: &str, operation: &str, issue: JiraIssue) -> Result<Card> {
     store.transaction(|store|{
         let (mut card,mut intent)=active(store,card_id,operation)?;
-        if !matches!(intent.state,Phase::Sending|Phase::Uncertain) || !domain::issue_identity(&issue.id,&issue.key) || issue.url!=format!("{}/browse/{}",intent.base.trim_end_matches('/'),issue.key) || card.fields.truthy("ticket")?{return Err(conflict());}
+        if !matches!(intent.state,Phase::Sending|Phase::Uncertain) || !domain::issue_identity(&issue.id,&issue.key) || issue.url!=format!("{}/browse/{}",intent.base.trim_end_matches('/'),issue.key) || card.fields.has_object("ticket")?{return Err(conflict());}
         if intent.result.as_ref().is_some_and(|known|known.id!=issue.id){return Err("message.this_issue_does_not_match_the_identified_creation".into());}
         let mut duplicate=false;
         for other in store.documents::<Card>(Documents::Cards)? {

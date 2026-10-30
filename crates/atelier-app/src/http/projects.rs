@@ -2,17 +2,16 @@ use super::{Shared, failure, object};
 use crate::{Result, infrastructure::store::Documents};
 use atelier_core::{
     application::{
-        projects::{self, ProjectFailure},
+        projects::{self},
         task_creation::CreationContext,
         task_editing,
     },
     document::Document,
 };
 use axum::{
-    Json,
     extract::{Path, Request, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 
 enum Action {
@@ -65,27 +64,8 @@ async fn mutate(state: Shared, action: Action, request: Request) -> Response {
 }
 
 fn response(result: Result<Document>) -> Response {
-    match result {
-        Ok(result) => Json(result).into_response(),
-        Err(error) => {
-            let status = match error.downcast_ref::<ProjectFailure>() {
-                Some(ProjectFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(ProjectFailure::Conflict(_)) => StatusCode::CONFLICT,
-                _ if error.is::<BackupFailure>() => StatusCode::INTERNAL_SERVER_ERROR,
-                _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => {
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }
-                _ => StatusCode::BAD_REQUEST,
-            };
-            if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "message.the_project_could_not_be_updated")
-            } else {
-                failure(status, &error.to_string())
-            }
-        }
-    }
+    super::responses::with_message(result, "message.the_project_could_not_be_updated")
 }
-
 pub(super) async fn update(
     State(state): State<Shared>,
     Path(id): Path<String>,

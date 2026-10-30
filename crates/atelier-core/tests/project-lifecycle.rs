@@ -1,10 +1,11 @@
+use atelier_core::Result;
 use atelier_core::{
     application::{
         projects::{self, ProjectRepository},
-        task_creation::{CreationContext, Result},
+        task_creation::CreationContext,
     },
-    document::{Document, JsonString},
-    domain::text_units,
+    document::Document,
+    domain::text,
 };
 use serde_json::value::RawValue;
 use std::cell::RefCell;
@@ -139,20 +140,20 @@ impl CreationContext for Context {
     fn settings(&self) -> Result<Document> {
         Ok(self.scenario.get("settings")?.unwrap_or_default())
     }
-    fn agent_for(&self, _: &Document) -> Result<JsonString> {
+    fn agent_for(&self, _: &Document) -> Result<String> {
         panic!("Project lifecycle does not select agents");
     }
-    fn repository(&self, value: &RawValue) -> Result<JsonString> {
+    fn repository(&self, value: &RawValue) -> Result<String> {
         let mut event = Document::default();
         event.set("repository", &value)?;
         self.events
             .borrow_mut()
             .push(serde_json::value::to_raw_value(&event)?);
-        let value: JsonString =
+        let value: String =
             serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
-        let value = text_units(&value, 2000)?;
-        let mut repo = JsonString::from("checked:");
-        repo.0.extend(value.0);
+        let value = text(&value, 2000)?;
+        let mut repo = String::from("checked:");
+        repo.push_str(&value);
         Ok(repo)
     }
     fn new_id(&self) -> String {
@@ -215,7 +216,7 @@ impl ProjectRepository for Context {
 }
 
 #[test]
-fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollback() {
+fn historical_project_lifecycle_preserves_guards_unicode_archive_scope_and_rollback() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
         "fixtures/rust-project-lifecycle-reference.json"
     ))
@@ -238,7 +239,7 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
         }
         let active: Vec<String> = context.scenario.get("active").unwrap().unwrap_or_default();
         let busy = |id: &str| active.iter().any(|active| active == id);
-        let windows = context.scenario.truthy("windows").unwrap();
+        let windows = context.scenario.flag("windows").unwrap();
         let result = (|| -> Result<Document> {
             match context.scenario.get::<String>("action")?.unwrap().as_str() {
                 "create" => projects::create(&context, &body, windows),
@@ -253,15 +254,15 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
                         &body,
                         windows,
                         busy,
-                        |_| context.scenario.truthy("connectorAvailable").unwrap(),
-                        context.scenario.truthy("running")?,
+                        |_| context.scenario.flag("connectorAvailable").unwrap(),
+                        context.scenario.flag("running")?,
                     )?;
                     if edit.moved {
                         context
                             .events
                             .borrow_mut()
                             .push(serde_json::value::to_raw_value(&"backup")?);
-                        if context.scenario.truthy("failBackup")? {
+                        if context.scenario.flag("failBackup")? {
                             return Err("Synthetic backup failure".into());
                         }
                         context
@@ -307,7 +308,7 @@ fn historical_project_lifecycle_preserves_guards_utf16_archive_scope_and_rollbac
                         &body,
                         windows,
                         busy,
-                        context.scenario.truthy("running")?,
+                        context.scenario.flag("running")?,
                     )?;
                     let mut result = Document::default();
                     result.set("ok", &true)?;

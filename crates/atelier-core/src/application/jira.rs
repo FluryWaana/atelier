@@ -259,9 +259,7 @@ pub fn creation_text(card: &crate::contracts::Card) -> Result<String, JiraFailur
         .get::<Vec<crate::domain::checklist::Criterion>>("checklist")
         .map_err(|_| JiraFailure::Invalid("message.card_criteria_invalid"))?
         .unwrap_or_default();
-    let checklist = crate::domain::checklist::checklist_text(&criteria)
-        .utf8()
-        .map_err(|_| JiraFailure::Invalid("message.card_criteria_invalid"))?;
+    let checklist = crate::domain::checklist::checklist_text(&criteria).clone();
     text.push_str(&checklist);
     let instructions = card
         .fields
@@ -282,10 +280,7 @@ pub fn validate_creation(
     metadata: &crate::contracts::JiraCreationMetadata,
     card: &crate::contracts::Card,
 ) -> Result<(), JiraFailure> {
-    let title = card
-        .title
-        .utf8()
-        .map_err(|_| JiraFailure::Invalid("message.card_title_invalid"))?;
+    let title = card.title.clone();
     if title.trim().is_empty()
         || title.encode_utf16().count() > 255
         || title.chars().any(char::is_control)

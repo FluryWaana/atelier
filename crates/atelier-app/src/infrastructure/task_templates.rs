@@ -1,8 +1,6 @@
 use super::store::{Documents, Store};
-use atelier_core::{
-    application::task_templates::{Result, TemplateRepository},
-    document::Document,
-};
+use crate::Result;
+use atelier_core::{application::task_templates::TemplateRepository, document::Document};
 
 impl TemplateRepository for Store<'_> {
     fn card(&self, id: &str) -> Result<Option<Document>> {

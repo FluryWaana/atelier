@@ -69,7 +69,7 @@ pub async fn prepare_review(state: &Shared, card: &Card) -> Result<RepositoryRev
         expected_revision: revision,
         method: Method::RepositoriesReview,
         action: None,
-        input: json!({"expected":expected,"target":linked.pull_request.target_branch,"title":card.title.utf8()?,"body":card.fields.get::<String>("description")?.unwrap_or_default(),"draft":linked.pull_request.draft}),
+        input: json!({"expected":expected,"target":linked.pull_request.target_branch,"title":card.title.clone(),"body":card.fields.get::<String>("description")?.unwrap_or_default(),"draft":linked.pull_request.draft}),
         confirmed: true,
     };
     let (profile, mut request) = state

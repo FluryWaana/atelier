@@ -244,7 +244,7 @@ async fn jira_time_tempo_round_trip_uses_real_tls_and_never_replays_a_lost_write
         "description",
         &"Human notes retained across TLS import retry",
     )?;
-    card.title = atelier_core::document::JsonString::from("Human title stays local");
+    card.title = String::from("Human title stays local");
     card.fields.set(
         "checklist",
         &json!([{"text":"Human accepted criterion","done":true}]),

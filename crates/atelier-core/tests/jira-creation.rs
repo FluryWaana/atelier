@@ -40,8 +40,7 @@ fn creation_rejects_invalid_unicode_controls_and_oversized_content_without_trunc
         assert!(validate_creation(&metadata, &card).is_err());
     }
     let mut card = card();
-    card.title.0 = vec![0xd800];
-    assert!(validate_creation(&metadata, &card).is_err());
+    assert!(serde_json::from_str::<Card>(r#"{"id":"synthetic","title":"\ud800"}"#).is_err());
     card.fields.set("description", &"x".repeat(60_001)).unwrap();
     assert!(creation_text(&card).is_err());
     card.fields.set("description", &"hidden\0content").unwrap();

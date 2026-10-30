@@ -21,8 +21,8 @@ pub fn apply(store: &Store<'_>, input: Apply) -> Result<Card> {
         let mut card = store
             .document::<Card>(Documents::Cards, &input.expected.id)?
             .ok_or("message.card_not_found")?;
-        if card.fields.truthy("archived")?
-            || card.fields.truthy("brainstormSession")?
+        if card.fields.flag("archived")?
+            || card.fields.flag("brainstormSession")?
             || atelier_core::application::jira::unresolved(&card.fields)?
             || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?
                 != serde_json::to_value(atelier_core::application::jira::card_snapshot(

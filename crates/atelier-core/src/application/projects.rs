@@ -1,8 +1,6 @@
-use super::task_creation::{CreationContext, Result, text};
-use crate::{
-    document::{Document, JsonString},
-    domain::projects::same_repository_units,
-};
+use super::task_creation::{CreationContext, text};
+use crate::Result;
+use crate::{document::Document, domain::projects::same_repository};
 
 #[derive(Debug)]
 pub enum ProjectFailure {
@@ -124,8 +122,8 @@ pub fn detect(
     project: Option<&Document>,
     body: &Document,
     use_draft: bool,
-    mut repository: impl FnMut(&serde_json::value::RawValue) -> Result<JsonString>,
-    mut scan: impl FnMut(&JsonString) -> Result<Document>,
+    mut repository: impl FnMut(&serde_json::value::RawValue) -> Result<String>,
+    mut scan: impl FnMut(&str) -> Result<Document>,
 ) -> Result<Document> {
     let project = project.ok_or(ProjectFailure::Missing)?;
     let role = if body.raw("role").is_some() {
@@ -147,26 +145,28 @@ pub fn detect(
                     || key == "repo"
                     || role.is_some_and(|role| key == format!("{role}Repo")))
             {
-                let value = if key == "repo" || body.truthy(key)? {
+                let value = if key == "repo"
+                    || body.has_text(key).map_err(|_| "message.invalid_request")?
+                {
                     repository(value)?
                 } else {
-                    JsonString::default()
+                    String::default()
                 };
                 sources.set(key, &value)?;
             }
         }
     }
-    let mut scans: Vec<(JsonString, Document)> = Vec::new();
+    let mut scans: Vec<(String, Document)> = Vec::new();
     let mut candidates: Vec<Document> = Vec::new();
-    let mut warnings: Vec<JsonString> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
     for current in ["front", "back"] {
         if role.is_some_and(|role| role != current) {
             continue;
         }
         let key = format!("{current}Repo");
-        let dedicated = sources.truthy(&key)?;
+        let dedicated = sources.has_text(&key)?;
         let repo = sources
-            .get::<JsonString>(if dedicated { &key } else { "repo" })?
+            .get::<String>(if dedicated { &key } else { "repo" })?
             .unwrap_or_default();
         let index = if let Some(index) = scans.iter().position(|(source, _)| source == &repo) {
             index
@@ -186,10 +186,7 @@ pub fn detect(
                 candidates.push(candidate);
             }
         }
-        for warning in detected
-            .get::<Vec<JsonString>>("warnings")?
-            .unwrap_or_default()
-        {
+        for warning in detected.get::<Vec<String>>("warnings")?.unwrap_or_default() {
             if !warnings.contains(&warning) {
                 warnings.push(warning);
             }
@@ -207,7 +204,7 @@ pub fn prepare_update(
     body: &Document,
     windows: bool,
     busy: impl Fn(&str) -> bool,
-    connector_available: impl Fn(&JsonString) -> bool,
+    connector_available: impl Fn(&str) -> bool,
     servers_running: bool,
 ) -> Result<ProjectEdit> {
     let projects = repository.projects()?;
@@ -267,7 +264,7 @@ pub fn prepare_update(
             }
         }
     }
-    let previous_repo = project.get::<JsonString>("repo")?.unwrap_or_default();
+    let previous_repo = project.get::<String>("repo")?.unwrap_or_default();
     let mut cards = Vec::new();
     for card in repository.cards()? {
         if same_repo(&card, &previous_repo, windows)? {
@@ -285,7 +282,7 @@ pub fn prepare_update(
     let mut options = crate::domain::projects::project_settings(&input, &repository.settings()?)
         .map_err(ProjectFailure::Invalid)?;
     if body.raw("repositoryConnector").is_some()
-        && !options.repository_connector.0.is_empty()
+        && !options.repository_connector.is_empty()
         && !connector_available(&options.repository_connector)
     {
         return Err(ProjectFailure::Invalid(
@@ -297,23 +294,23 @@ pub fn prepare_update(
         ("front", &mut options.front_repo),
         ("back", &mut options.back_repo),
     ] {
-        if !selected.0.is_empty() {
+        if !selected.is_empty() {
             *selected = repository.repository(&serde_json::value::to_raw_value(selected)?)?;
         }
         let key = format!("{role}Repo");
-        let previous = if project.truthy(&key)? {
-            project.get::<JsonString>(&key)?.unwrap_or_default()
+        let previous = if project.has_text(&key)? {
+            project.get::<String>(&key)?.unwrap_or_default()
         } else {
-            JsonString::default()
+            String::default()
         };
-        if !same_repository_units(selected, &previous, windows) {
+        if !same_repository(selected, &previous, windows) {
             for card in &cards {
                 if let Some(raw) = card
                     .raw("serviceWorktrees")
                     .filter(|raw| raw.get().starts_with('{'))
                 {
                     let worktrees: Document = serde_json::from_str(raw.get())?;
-                    if worktrees.truthy(role)? {
+                    if worktrees.has_object(role)? {
                         return Err(ProjectFailure::Conflict(if role == "front" {
                             "Retire les worktrees associés au Front avant de changer son dépôt."
                         } else {
@@ -325,10 +322,10 @@ pub fn prepare_update(
             }
         }
     }
-    if !options.linked_project_id.0.is_empty()
-        && (options.linked_project_id == JsonString::from(id)
+    if !options.linked_project_id.is_empty()
+        && (options.linked_project_id == String::from(id)
             || !projects.iter().any(|project| {
-                project.get::<JsonString>("id").ok().flatten().as_ref()
+                project.get::<String>("id").ok().flatten().as_ref()
                     == Some(&options.linked_project_id)
             }))
     {
@@ -341,10 +338,10 @@ pub fn prepare_update(
     } else {
         previous_repo.clone()
     };
-    let moved = !same_repository_units(&repo, &previous_repo, windows);
+    let moved = !same_repository(&repo, &previous_repo, windows);
     if moved {
         for card in &cards {
-            if card.truthy("worktree")? {
+            if card.has_object("worktree")? {
                 return Err(ProjectFailure::Conflict(
                     "message.remove_this_projects_worktrees_before_changing_its_location_no_f",
                 )
@@ -369,7 +366,7 @@ pub fn prepare_update(
     let mut updated = project.clone();
     if body.raw("name").is_some() {
         let name = text(body.raw("name"), 100)?;
-        if name.0.is_empty() {
+        if name.is_empty() {
             return Err(ProjectFailure::Invalid("message.a_project_name_is_required").into());
         }
         updated.set("name", &name)?;
@@ -383,13 +380,13 @@ pub fn prepare_update(
     })
 }
 
-fn same_repo(document: &Document, repo: &JsonString, windows: bool) -> Result<bool> {
-    let value = if document.truthy("repo")? {
-        document.get::<JsonString>("repo")?.unwrap_or_default()
+fn same_repo(document: &Document, repo: &str, windows: bool) -> Result<bool> {
+    let value = if document.has_text("repo")? {
+        document.get::<String>("repo")?.unwrap_or_default()
     } else {
-        JsonString::default()
+        String::default()
     };
-    Ok(same_repository_units(&value, repo, windows))
+    Ok(same_repository(&value, repo, windows))
 }
 
 pub fn create(
@@ -398,7 +395,7 @@ pub fn create(
     windows: bool,
 ) -> Result<Document> {
     let name = text(body.raw("name"), 100)?;
-    if name.0.is_empty() {
+    if name.is_empty() {
         return Err(ProjectFailure::Invalid("message.a_project_name_is_required").into());
     }
     let repo = repository.repository(body.raw("repo").ok_or(ProjectFailure::Invalid(
@@ -422,7 +419,7 @@ pub fn create(
 
 fn archive_cards(
     repository: &impl ProjectRepository,
-    repo: &JsonString,
+    repo: &str,
     windows: bool,
     busy: &impl Fn(&str) -> bool,
 ) -> Result<usize> {
@@ -445,7 +442,7 @@ fn archive_cards(
     for entry in repository.times()? {
         let id = entry.get::<String>("cardId").ok().flatten();
         if id.as_ref().is_some_and(|id| ids.contains(id))
-            && (entry.truthy("runningSince")? || entry.string_equals("exportState", "sending")?)
+            && (entry.has_text("runningSince")? || entry.string_equals("exportState", "sending")?)
         {
             return Err(conflict().into());
         }
@@ -466,7 +463,7 @@ pub fn archive_tasks(
     busy: impl Fn(&str) -> bool,
 ) -> Result<usize> {
     let repo = text(body.raw("repo"), 2000)?;
-    if repo.0.is_empty() {
+    if repo.is_empty() {
         return Err(ProjectFailure::Invalid("message.directory_required").into());
     }
     archive_cards(repository, &repo, windows, &busy)
@@ -498,7 +495,7 @@ pub fn remove(
         )
         .into());
     }
-    let repo = project.get::<JsonString>("repo")?.unwrap_or_default();
+    let repo = project.get::<String>("repo")?.unwrap_or_default();
     for card in repository.cards()? {
         if same_repo(&card, &repo, windows)?
             && busy(&card.get::<String>("id")?.ok_or("message.card_id_missing")?)
@@ -516,7 +513,10 @@ pub fn remove(
     if body.raw("archiveTasks").is_some() && body.get::<bool>("archiveTasks").is_err() {
         return Err(ProjectFailure::Invalid("message.invalid_archiving_option").into());
     }
-    let archived = if body.truthy("archiveTasks")? {
+    let archived = if body
+        .flag("archiveTasks")
+        .map_err(|_| "message.invalid_request")?
+    {
         archive_cards(repository, &repo, windows, &busy)?
     } else {
         0

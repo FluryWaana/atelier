@@ -53,7 +53,7 @@ pub fn ForgeContentEditor(
     });
     let available = Memo::new(move |_| {
         card.get().is_some_and(|card| {
-            !card.fields.truthy("archived").unwrap_or(true)
+            !card.fields.flag("archived").unwrap_or(true)
                 && !atelier_core::application::forge::unresolved(&card.fields).unwrap_or(true)
         }) && pr
             .get()

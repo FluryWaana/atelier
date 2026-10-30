@@ -1,5 +1,5 @@
 use atelier_app::infrastructure::{files::Repository, process_tree};
-use atelier_core::{document::JsonString, domain::files::PREVIEW_LIMIT};
+use atelier_core::domain::files::PREVIEW_LIMIT;
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
@@ -63,12 +63,7 @@ async fn source_fingerprints_detect_staging_disk_and_untracked_changes_but_prese
     )
     .await;
     let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
-    let repository = Repository::synthetic(
-        &root,
-        &[root_path],
-        &JsonString::from(path.to_str().unwrap()),
-    )
-    .unwrap();
+    let repository = Repository::synthetic(&root, &[root_path], path.to_str().unwrap()).unwrap();
     let index = std::fs::read(path.join(".git/index")).unwrap();
     let baseline = repository.fingerprint().await.unwrap();
     assert_eq!(baseline, repository.fingerprint().await.unwrap());
@@ -173,7 +168,7 @@ async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_program
     let config = std::fs::read(repo.join(".git/config")).unwrap();
     let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
     let roots = [root_path.clone()];
-    let value = JsonString::from(repo.to_str().unwrap());
+    let value = String::from(repo.to_str().unwrap());
     let open = || Repository::synthetic(&root, &roots, &value).unwrap();
     let changes = open().changes(Some(&base)).await.unwrap();
     assert_eq!(changes.base, base);
@@ -305,7 +300,7 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
     let index = std::fs::read(repo.join(".git/index")).unwrap();
     let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
     let roots = [root_path.clone()];
-    let value = JsonString::from(repo.to_str().unwrap());
+    let value = String::from(repo.to_str().unwrap());
     let open = || Repository::synthetic(&root, &roots, &value).unwrap();
     let listing = open().list().await.unwrap();
     assert!(listing.files.contains(&"src/tracked.txt".into()));
@@ -344,9 +339,7 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
     ] {
         assert!(open().preview(path.into()).await.is_err(), "{path}");
     }
-    assert!(
-        Repository::synthetic(&root, &roots, &JsonString::from(outside.to_str().unwrap())).is_err()
-    );
+    assert!(Repository::synthetic(&root, &roots, outside.to_str().unwrap()).is_err());
     assert_eq!(std::fs::read(repo.join(".git/index")).unwrap(), index);
     assert!(!marker.exists());
     assert_eq!(

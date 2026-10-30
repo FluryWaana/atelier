@@ -7,7 +7,6 @@ use crate::Result;
 use atelier_core::{
     application::worktrees::validate_reference as reference,
     contracts::{Worktree, WorktreeState},
-    document::JsonString,
     domain::projects::same_repository,
 };
 use cap_fs_ext::DirExt;
@@ -67,10 +66,10 @@ fn managed_path(roots: &[PathBuf], worktree: &Worktree) -> Result<PathBuf> {
         .and_then(|name| name.to_str())
         .ok_or("message.invalid_worktree_folder")?;
     let id = uuid::Uuid::parse_str(name).map_err(|_| "message.invalid_worktree_folder")?;
-    if name != id.to_string() || !same(&worktree.path, &path_string(&parent.join(name)).utf8()?) {
+    if name != id.to_string() || !same(&worktree.path, &path_string(&parent.join(name))) {
         return Err("message.the_worktree_is_outside_its_managed_folder".into());
     }
-    Ok(PathBuf::from(path_string(&parent.join(name)).utf8()?))
+    Ok(PathBuf::from(path_string(&parent.join(name))))
 }
 
 fn managed_directory(root: &Dir) -> Result<Dir> {
@@ -93,7 +92,7 @@ pub async fn prepare(
 ) -> Result<Worktree> {
     reference(&branch)?;
     reference(&base)?;
-    let source = Repository::synthetic(root, roots, &JsonString::from(repo))?;
+    let source = Repository::synthetic(root, roots, repo)?;
     source.verify_root().await?;
     source
         .git(&["check-ref-format", "--branch", &branch])
@@ -127,8 +126,8 @@ pub async fn prepare(
         .join("repositories/atelier-worktrees")
         .join(uuid::Uuid::new_v4().to_string());
     Ok(Worktree {
-        path: path_string(&path).utf8()?,
-        source: path_string(&source.path).utf8()?,
+        path: path_string(&path),
+        source: path_string(&source.path),
         branch,
         base,
         base_commit,
@@ -138,7 +137,7 @@ pub async fn prepare(
 
 async fn source(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<Repository> {
     managed_path(roots, worktree)?;
-    let source = Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
+    let source = Repository::synthetic(root, roots, worktree.source.as_str())?;
     source.verify_root().await?;
     Ok(source)
 }
@@ -243,11 +242,11 @@ pub(super) async fn fetch_origin_commit(
     let remote_path = if let Some(authentication) = authentication {
         authentication.origin(origin)?
     } else {
-        let remote = Repository::synthetic(root, roots, &JsonString::from(origin)).map_err(
+        let remote = Repository::synthetic(root, roots, origin).map_err(
             |_| "message.origin_must_identify_an_authorized_local_repository_or_an_explic",
         )?;
         remote.verify_root().await?;
-        path_string(&remote.path).utf8()?
+        path_string(&remote.path)
     };
     let private_ref = format!("refs/atelier-fetch/{}", uuid::Uuid::new_v4());
     let fetched = async {
@@ -313,8 +312,7 @@ pub async fn inspect(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Resu
     {
         return Err("message.the_associated_worktree_is_missing_or_its_branch_has_changed".into());
     }
-    let target =
-        Repository::open_synthetic(root, roots, &JsonString::from(worktree.path.as_str()))?;
+    let target = Repository::open_synthetic(root, roots, worktree.path.as_str())?;
     metadata(&source, &target)?;
     target.verify_root().await?;
     let branch = String::from_utf8(target.git(&["symbolic-ref", "HEAD"]).await?)?;
@@ -359,7 +357,7 @@ pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> 
         .ok_or("message.invalid_git_worktree_association")?;
     if !same(
         gitdir,
-        &path_string(&source.path.join(".git/worktrees").join(name)).utf8()?,
+        &path_string(&source.path.join(".git/worktrees").join(name)),
     ) {
         return Err("message.the_source_repository_no_longer_matches_the_worktree".into());
     }
@@ -375,7 +373,7 @@ pub(super) fn metadata(source: &Repository, target: &Repository) -> Result<Dir> 
     if common.trim() != "../.."
         || !same(
             backlink.trim_end_matches(['\r', '\n']),
-            &path_string(&target.path.join(".git")).utf8()?,
+            &path_string(&target.path.join(".git")),
         )
     {
         return Err("message.invalid_git_worktree_association".into());

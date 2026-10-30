@@ -40,7 +40,7 @@ pub fn csv(
     out.push_str("\r\n");
     for entry in entries {
         if entry
-            .truthy("runningSince")
+            .has_text("runningSince")
             .map_err(|_| "message.invalid_time_entry")?
         {
             continue;
@@ -53,10 +53,7 @@ pub fn csv(
         };
         let card_id = text("cardId")?;
         let card = by_id.get(card_id.as_str()).copied();
-        let title = card
-            .map(|card| card.title.utf8().map_err(|_| "message.invalid_task_title"))
-            .transpose()?
-            .unwrap_or_default();
+        let title = card.map(|card| card.title.clone()).unwrap_or_default();
         let ticket = card
             .map(|card| card.fields.get::<Document>("ticket"))
             .transpose()

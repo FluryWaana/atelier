@@ -1,7 +1,7 @@
 use atelier_app::infrastructure::{database::Database, store::Documents, time_tracking::Clock};
 use atelier_core::{
     application::time_tracking::{self, TimeClock},
-    document::{Document, JsonString},
+    document::Document,
 };
 use serde::Serialize;
 use serde_json::{Value, value::RawValue};
@@ -15,7 +15,7 @@ impl TimeClock for FixedClock {
     fn parse(&self, timestamp: &str) -> Option<i64> {
         Clock.parse(timestamp)
     }
-    fn format(&self, milliseconds: i64) -> time_tracking::Result<String> {
+    fn format(&self, milliseconds: i64) -> atelier_core::Result<String> {
         Clock.format(milliseconds)
     }
 }
@@ -27,7 +27,7 @@ fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
             let expected: Document = serde_json::from_str(expected.get()).unwrap();
             actual.keys().count() == expected.keys().count()
                 && actual.keys().all(|key| {
-                    let key = key.utf8().unwrap();
+                    let key = key;
                     expected
                         .raw(&key)
                         .is_some_and(|expected| equivalent(actual.raw(&key).unwrap(), expected))
@@ -43,8 +43,8 @@ fn equivalent(actual: &RawValue, expected: &RawValue) -> bool {
                     .all(|(a, e)| equivalent(a, e))
         }
         (b'"', b'"') => {
-            serde_json::from_str::<JsonString>(actual.get()).unwrap()
-                == serde_json::from_str::<JsonString>(expected.get()).unwrap()
+            serde_json::from_str::<String>(actual.get()).unwrap()
+                == serde_json::from_str::<String>(expected.get()).unwrap()
         }
         _ => serde_json::from_str::<Value>(actual.get())
             .unwrap()

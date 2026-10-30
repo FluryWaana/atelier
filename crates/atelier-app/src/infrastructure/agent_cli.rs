@@ -125,7 +125,7 @@ fn managed_root(
         return Ok(None);
     }
     let binary = super::task_creation::path_string(binary)
-        .utf8()?
+        .clone()
         .replace('\\', "/")
         .to_lowercase();
     if let Some(update) =
@@ -133,12 +133,12 @@ fn managed_root(
     {
         let root = home.join(update.root);
         let bin = super::task_creation::path_string(&root.join("bin"))
-            .utf8()?
+            .clone()
             .replace('\\', "/");
         if binary.starts_with(&(bin.to_lowercase() + "/")) {
             return Ok(Some(
                 super::task_creation::path_string(&root)
-                    .utf8()?
+                    .clone()
                     .replace('\\', "/"),
             ));
         }
@@ -149,12 +149,12 @@ fn managed_root(
         home.join(".local/share").join(kind),
     ] {
         let root = super::task_creation::path_string(&root)
-            .utf8()?
+            .clone()
             .replace('\\', "/");
         if binary.starts_with(&(root.to_lowercase() + "/")) {
             return Ok(Some(
                 super::task_creation::path_string(&home.join(".local"))
-                    .utf8()?
+                    .clone()
                     .replace('\\', "/"),
             ));
         }
@@ -312,7 +312,7 @@ pub(super) async fn pin(
         checked.open_same(&path)?;
         Ok((
             atelier_core::application::extensions::Binary {
-                path: super::task_creation::path_string(&path).utf8()?,
+                path: super::task_creation::path_string(&path),
                 sha256: crate::infrastructure::session::hexadecimal(&digest.digest.finalize()),
             },
             checked,
@@ -437,7 +437,7 @@ pub(crate) fn reserve(
             return Err("message.pause_queue_before_cli_update".into());
         }
         for entry in store.documents::<Document>(Documents::Times)? {
-            if entry.truthy("runningSince")?
+            if entry.has_text("runningSince")?
                 || entry.string_equals("exportState", "sending")?
                 || entry.string_equals("exportState", "uncertain")?
             {

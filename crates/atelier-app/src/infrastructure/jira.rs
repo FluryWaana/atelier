@@ -758,10 +758,7 @@ impl Jira {
         }
         jira::validate_creation(metadata, card)?;
         let description = jira::creation_text(card)?;
-        let title = card
-            .title
-            .utf8()
-            .map_err(|_| "message.card_title_invalid")?;
+        let title = card.title.clone();
         let mut fields = json!({"project":{"key":metadata.project_key},"issuetype":{"id":metadata.issue_type.id},"summary":title});
         if !description.is_empty() {
             fields["description"] = if self.configuration.mode == JiraMode::Cloud {

@@ -166,7 +166,7 @@ async fn keyring_protect_service(
             .map_err(|_| "Coffre illisible ou altéré.")?;
         Ok(String::from_utf8(plain.to_vec())?)
     } else {
-        // Every encryption uses a fresh 96-bit CSPRNG nonce, matching the existing Node format.
+        // Every encryption uses a fresh 96-bit CSPRNG nonce to prevent nonce reuse.
         let mut iv = [0; 12];
         getrandom::fill(&mut iv).map_err(|_| "Générateur aléatoire indisponible.")?;
         let mut data = value.as_bytes().to_vec();
@@ -441,12 +441,13 @@ pub async fn encrypt_tokens(
 }
 
 pub fn tokens_plaintext(tokens: &Document) -> Result<Option<String>> {
+    let mut populated = false;
     for key in tokens.keys() {
-        if tokens.truthy_key(key)? {
-            return Ok(Some(serde_json::to_string(tokens)?));
-        }
+        populated |= tokens.has_text(key)?;
     }
-    Ok(None)
+    populated
+        .then(|| serde_json::to_string(tokens).map_err(Into::into))
+        .transpose()
 }
 
 pub async fn save(database: &Database, tokens: &Document) -> Result<()> {
@@ -459,7 +460,7 @@ pub async fn save(database: &Database, tokens: &Document) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use atelier_core::document::JsonString;
+
     use serde_json::{Value, json};
 
     #[test]
@@ -587,8 +588,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn token_documents_preserve_utf16_keys_values_and_empty_containers() {
-        let tokens: Document = serde_json::from_str(r#"{"jira":"synthetic-\ud800","connector:\udc00:token":"\ud800","legacy":{"\ud800":"\udc00"}}"#).unwrap();
+    async fn token_documents_preserve_unicode_and_reject_invalid_token_types() {
+        let tokens: Document = serde_json::from_str(
+            r#"{"jira":"synthetic-\u00e9","connector:\u00e8:token":"\u00e9"}"#,
+        )
+        .unwrap();
         let mut capture = async |plain: &str, decrypt: bool| -> Result<String> {
             assert!(!decrypt);
             Ok(plain.to_owned())
@@ -598,23 +602,27 @@ mod tests {
             .unwrap()
             .unwrap();
         let decoded: Document = serde_json::from_str(&plain).unwrap();
-        let mut key = JsonString::from("connector:");
-        key.0.push(0xdc00);
-        key.0.extend(":token".encode_utf16());
+        let mut key = String::from("connector:");
+        key.push('è');
+        key.push_str(":token");
         assert_eq!(
-            serde_json::from_str::<JsonString>(decoded.raw_key(&key).unwrap().get()).unwrap(),
-            JsonString(vec![0xd800])
+            serde_json::from_str::<String>(decoded.raw(&key).unwrap().get()).unwrap(),
+            "é".to_owned()
         );
-        assert!(decoded.truthy_key(&key).unwrap());
-        for input in [r#"{"legacy":{}}"#, r#"{"legacy":[]}"#] {
+        assert!(decoded.has_text(&key).unwrap());
+        for input in [
+            r#"{"jira":{}}"#,
+            r#"{"jira":[]}"#,
+            r#"{"jira":true}"#,
+            r#"{"jira":"valid","other":{}}"#,
+        ] {
             let tokens = serde_json::from_str(input).unwrap();
-            assert!(
-                encrypt_tokens(&tokens, &mut capture)
-                    .await
-                    .unwrap()
-                    .is_some()
-            );
+            let mut refuse = async |_: &str, _: bool| -> Result<String> {
+                panic!("Invalid credentials must be rejected before encryption")
+            };
+            assert!(encrypt_tokens(&tokens, &mut refuse).await.is_err());
         }
+        assert!(tokens_plaintext(&Document::default()).unwrap().is_none());
         #[cfg(windows)]
         {
             let root = tempfile::tempdir().unwrap();
@@ -794,7 +802,7 @@ mod tests {
         assert!(
             encrypt_tokens(
                 &serde_json::from_str(
-                    r#"{"jira":"","tempo":null,"\ud800":"","disabled":false,"zero":0}"#
+                    r#"{"jira":"","tempo":null,"\u00e9":"","disabled":false,"zero":0}"#
                 )
                 .unwrap(),
                 &mut unavailable

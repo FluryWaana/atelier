@@ -1,15 +1,17 @@
 use super::{
     settings::{SettingsUpdate, config},
-    task_creation::{Result, text},
+    task_creation::text,
 };
+use crate::Result;
 use crate::{
-    document::{Document, JsonString},
+    document::Document,
     domain::agent_options::{provider_settings, providers},
 };
 
 #[derive(Debug)]
 pub enum ProviderFailure {
     Missing,
+    Busy,
     Invalid(&'static str),
     Conflict(&'static str),
 }
@@ -17,6 +19,7 @@ impl std::fmt::Display for ProviderFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
             Self::Missing => "message.provider_not_found",
+            Self::Busy => "message.agent_diagnostic_busy",
             Self::Invalid(message) | Self::Conflict(message) => message,
         })
     }
@@ -32,7 +35,10 @@ fn check_expected(stored: &Document, tokens: &Document, body: &Document, id: &st
             .find(|profile| profile.string_equals("id", id).unwrap_or(false));
         let current = current.as_ref().map(serde_json::to_value).transpose()?;
         if expected != current {
-            return Err(ProviderFailure::Conflict("message.this_profile_changed_elsewhere_your_draft_is_preserved_reload_th").into());
+            return Err(ProviderFailure::Conflict(
+                "message.this_profile_changed_elsewhere_your_draft_is_preserved_reload_th",
+            )
+            .into());
         }
     }
     Ok(())
@@ -48,7 +54,7 @@ pub fn prepare_save(
         .map_err(ProviderFailure::Invalid)?;
     let mut settings = config(stored)?;
     let mut profiles = providers(&settings)?;
-    if body.get::<JsonString>("apiKey").is_err() || body.get::<bool>("clearApiKey").is_err() {
+    if body.get::<String>("apiKey").is_err() || body.get::<bool>("clearApiKey").is_err() {
         return Err(ProviderFailure::Invalid("message.invalid_api_key").into());
     }
     let id: String = profile.get("id")?.ok_or("message.profile_id_missing")?;
@@ -74,25 +80,30 @@ pub fn prepare_save(
         return Err(ProviderFailure::Invalid("message.maximum_50_providers").into());
     }
     check_expected(stored, tokens, body, &id)?;
-    let key = if body.truthy("apiKey")? {
+    let key = if body
+        .has_text("apiKey")
+        .map_err(|_| "message.invalid_request")?
+    {
         text(body.raw("apiKey"), 4000)?
     } else {
-        JsonString::default()
+        String::default()
     };
     let api = profile.string_equals("auth", "api")?;
-    if !key.0.is_empty() && !api {
-        return Err(
-            ProviderFailure::Invalid("message.select_api_key_authentication").into(),
-        );
+    if !key.is_empty() && !api {
+        return Err(ProviderFailure::Invalid("message.select_api_key_authentication").into());
     }
-    if key.0.iter().any(|unit| [0, 10, 13].contains(unit)) {
+    if key.contains(['\0', '\n', '\r']) {
         return Err(ProviderFailure::Invalid("message.invalid_api_key").into());
     }
     let mut tokens = tokens.clone();
     let name = format!("agent:{id}:key");
-    if body.truthy("clearApiKey")? || !api {
+    if body
+        .flag("clearApiKey")
+        .map_err(|_| "message.invalid_request")?
+        || !api
+    {
         tokens.set(&name, &"")?;
-    } else if !key.0.is_empty() {
+    } else if !key.is_empty() {
         tokens.set(&name, &key)?;
     }
     // A key rotation must invalidate a stale editor even when apiKeySet stays true.
@@ -143,7 +154,10 @@ pub fn prepare_remove(
             .chain(projects)
             .any(|record| record.string_equals("agent", id).unwrap_or(false))
     {
-        return Err(ProviderFailure::Conflict("message.this_provider_is_in_use_change_tasks_projects_and_the_default_se").into());
+        return Err(ProviderFailure::Conflict(
+            "message.this_provider_is_in_use_change_tasks_projects_and_the_default_se",
+        )
+        .into());
     }
     let mut tokens = tokens.clone();
     tokens.set(&format!("agent:{id}:key"), &"")?;
@@ -158,22 +172,22 @@ pub fn prepare_remove(
 pub fn describe(stored: &Document, tokens: &Document) -> Result<Vec<Document>> {
     let mut profiles = providers(&config(stored)?)?;
     for profile in &mut profiles {
-        let id: JsonString = profile.get("id")?.ok_or("message.profile_id_missing")?;
-        let mut key = JsonString::from("agent:");
-        key.0.extend(id.0);
-        key.0.extend(":key".encode_utf16());
-        let mut alias = JsonString::from("connector:");
-        alias.0.extend(&key.0);
-        alias.0.extend(":token".encode_utf16());
+        let id: String = profile.get("id")?.ok_or("message.profile_id_missing")?;
+        let mut key = String::from("agent:");
+        key.push_str(&id);
+        key.push_str(":key");
+        let mut alias = String::from("connector:");
+        alias.push_str(&key);
+        alias.push_str(":token");
         let selected = if tokens
-            .raw_key(&alias)
+            .raw(&alias)
             .is_some_and(|value| value.get() != "null")
         {
             &alias
         } else {
             &key
         };
-        profile.set("apiKeySet", &tokens.truthy_key(selected)?)?;
+        profile.set("apiKeySet", &tokens.has_text(selected)?)?;
         // shortcut: CLI updates are unavailable until M04; connect the real reservation and progress then.
         profile.set("updating", &false)?;
         profile.set("updatePhase", &"")?;
@@ -274,7 +288,7 @@ mod tests {
     fn profiles_preserve_keys_and_references_while_rejecting_busy_or_invalid_changes() {
         let stored = document(json!({"taskQueue":{"ids":["keep"]},"future":{"keep":true}}));
         let tokens = document(json!({"jira":"unrelated"}));
-        let mut body: Document = serde_json::from_str(r#"{"id":"api","name":"\ud800","type":"codex","auth":"api","apiKey":" synthetic-\udc00 ","model":"custom/model","effort":"high"}"#).unwrap();
+        let mut body: Document = serde_json::from_str(r#"{"id":"api","name":"\u00e9","type":"codex","auth":"api","apiKey":" synthetic-\u00e8 ","model":"custom/model","effort":"high"}"#).unwrap();
         let next = prepare_save(&stored, &tokens, &body, false).unwrap();
         assert!(next.tokens.string_equals("jira", "unrelated").unwrap());
         assert_eq!(

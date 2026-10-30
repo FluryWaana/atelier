@@ -1,5 +1,5 @@
 use atelier_app::infrastructure::{files::Repository, launch_detection, repository_access};
-use atelier_core::document::JsonString;
+
 use cap_std::{ambient_authority, fs::Dir};
 use std::fs;
 #[test]
@@ -24,7 +24,7 @@ fn external_repositories_require_exact_local_authorization_and_keep_human_files(
     assert!(repository_access::register(&root, other.to_str().unwrap(), 0, true).is_err());
     assert!(repository_access::open(&root, &other).is_err());
     let roots = [data.clone(), data];
-    let repo = JsonString::from(source_text);
+    let repo = String::from(source_text);
     drop(Repository::synthetic(&root, &roots, &repo).unwrap());
     assert!(launch_detection::detect_synthetic(&root, &roots, &repo).is_ok());
     assert_eq!(

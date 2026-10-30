@@ -37,7 +37,7 @@ fn source(entry: &Document, card: &Card) -> Result<TimeSource> {
         .get::<String>("id")?
         .ok_or("message.time_identity_missing")?;
     uuid::Uuid::parse_str(&id).map_err(|_| "message.time_identity_invalid")?;
-    if !entry.string_equals("cardId", &card.id)? || entry.truthy("runningSince")? {
+    if !entry.string_equals("cardId", &card.id)? || entry.has_text("runningSince")? {
         return Err("message.stop_the_timer_and_reread_the_task_before_this_export".into());
     }
     let ticket = card
@@ -63,12 +63,12 @@ fn source(entry: &Document, card: &Card) -> Result<TimeSource> {
     Ok(TimeSource {
         id,
         card_id: card.id.clone(),
-        card_title: card.title.utf8()?,
+        card_title: card.title.clone(),
         ticket,
         seconds: fields.seconds,
         date: fields.date,
         start_time: fields.start_time,
-        description: fields.description.utf8()?,
+        description: fields.description.clone(),
     })
 }
 
@@ -198,7 +198,7 @@ pub fn synchronize(store: &Store<'_>, operation: &RemoteOperation) -> Result<()>
         if fields.seconds != proposal.source.seconds
             || fields.date != proposal.source.date
             || fields.start_time != proposal.source.start_time
-            || fields.description.utf8()? != proposal.source.description
+            || fields.description.clone() != proposal.source.description
             || !entry.string_equals("cardId", &proposal.source.card_id)?
         {
             return Err(

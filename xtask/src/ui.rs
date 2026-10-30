@@ -1562,7 +1562,7 @@ async fn brainstorm_scenario(
     let converted: Vec<_> = board
         .cards
         .iter()
-        .filter(|card| String::from_utf16_lossy(&card.title.0) == "Synthetic converted task")
+        .filter(|card| card.title.clone() == "Synthetic converted task")
         .collect();
     if converted.len() != 1 || !converted[0].fields.string_equals("status", "todo")? {
         return Err("La conversion de brainstorm est absente ou dupliquée.".into());
@@ -2806,7 +2806,7 @@ async fn projects_scenario(
     let card = board
         .cards
         .iter()
-        .find(|card| card.title == "Tâche du nouveau projet".into())
+        .find(|card| card.title == "Tâche du nouveau projet")
         .ok_or("Tâche du projet absente")?;
     if card.fields.get::<String>("repo")? != project.get::<String>("repo")? {
         return Err("La tâche n’est pas associée au projet sélectionné.".into());

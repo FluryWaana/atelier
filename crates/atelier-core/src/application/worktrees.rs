@@ -1,7 +1,8 @@
-use super::{card_lifecycle::CardFailure, task_creation::Result};
+use super::card_lifecycle::CardFailure;
+use crate::Result;
 use crate::{
     contracts::{Card, ForgeKind, Worktree},
-    document::{Document, JsonString},
+    document::Document,
     domain::projects::same_repository,
 };
 use std::collections::BTreeMap;
@@ -113,14 +114,14 @@ pub fn validate_reference(value: &str) -> Result<()> {
 }
 
 pub fn create_options(card: &Card, settings: &Document, body: &Document) -> Result<CreateOptions> {
-    if card.fields.truthy("archived")? {
+    if card.fields.flag("archived")? {
         return Err(CardFailure::Conflict("message.restore_this_task_before_resuming_work").into());
     }
     let repo = card
         .fields
-        .get::<JsonString>("repo")?
+        .get::<String>("repo")?
         .ok_or("message.choose_the_source_git_repository_for_this_card")?
-        .utf8()?;
+        .clone();
     let branch = body
         .get::<String>("branch")?
         .filter(|value| !value.is_empty())
@@ -193,9 +194,9 @@ pub fn associate(
     if let Some(worktree) = next {
         let repo = card
             .fields
-            .get::<JsonString>("repo")?
+            .get::<String>("repo")?
             .ok_or("message.repository_missing")?
-            .utf8()?;
+            .clone();
         if !same_repository(&repo, &worktree.source, windows) {
             return Err(CardFailure::Conflict(
                 "message.the_task_repository_changed_during_the_operation",

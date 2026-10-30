@@ -1,7 +1,7 @@
 use atelier_core::{
     application::settings::{config, prepare_update, public_config, remove_token},
-    document::{Document, JsonString},
-    domain::text_units,
+    document::Document,
+    domain::text,
 };
 #[path = "support/json.rs"]
 mod json;
@@ -16,7 +16,7 @@ fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {
             &Document::default(),
             body,
             |_| Err("No repository access expected".into()),
-            |value| Ok(value.clone()),
+            |value| Ok(value.to_owned()),
         )
     };
     let saved = prepare(&stored, &body).unwrap();
@@ -39,7 +39,7 @@ fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {
 }
 
 #[test]
-fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() {
+fn historical_settings_preserve_credentials_unicode_fields_and_validation_order() {
     let reference: Document =
         serde_json::from_str(include_str!("fixtures/rust-settings-reference.json")).unwrap();
     let mut defaults: Document = reference.get("defaults").unwrap().unwrap();
@@ -58,23 +58,23 @@ fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() 
             &tokens,
             &body,
             |raw| {
-                let value = serde_json::from_str::<JsonString>(raw.get())
+                let value = serde_json::from_str::<String>(raw.get())
                     .map_err(|_| "message.invalid_or_overly_long_text")?;
-                let value = text_units(&value, 2000)?;
-                if value == JsonString::from("missing") {
+                let value = text(&value, 2000)?;
+                if value == String::from("missing") {
                     return Err("Dépôt synthétique absent.".into());
                 }
-                let mut resolved = JsonString::from("resolved:");
-                resolved.0.extend(value.0);
+                let mut resolved = String::from("resolved:");
+                resolved.push_str(&value);
                 Ok(resolved)
             },
             |value| {
-                if value == &JsonString::from("invalid") {
+                if value == "invalid" {
                     return Err("Adresse synthétique invalide.".into());
                 }
-                let mut value = value.clone();
-                if value.0.last() == Some(&u16::from(b'/')) {
-                    value.0.pop();
+                let mut value = value.to_owned();
+                if value.ends_with('/') {
+                    value.pop();
                 }
                 Ok(value)
             },
@@ -117,9 +117,9 @@ fn historical_settings_preserve_credentials_utf16_fields_and_validation_order() 
 
 #[test]
 fn public_flags_and_removal_never_copy_vault_values_into_settings() {
-    let stored: Document = serde_json::from_str(r#"{"future":{"\ud800":"\udc00"}}"#).unwrap();
+    let stored: Document = serde_json::from_str(r#"{"future":{"\u00e9":"\u00e8"}}"#).unwrap();
     let tokens: Document = serde_json::from_str(
-        r#"{"jira":"synthetic-secret","azure":[],"tempo":"","future":"keep"}"#,
+        r#"{"jira":"synthetic-secret","azure":"synthetic-azure","tempo":"","future":"keep"}"#,
     )
     .unwrap();
     let public = public_config(&stored, &tokens, "fixture").unwrap();

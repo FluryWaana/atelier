@@ -331,7 +331,7 @@ pub fn ForgeTask(
     let brain = Memo::new(move |_| {
         card.with(|card| {
             card.as_ref()
-                .is_some_and(|card| card.fields.truthy("brainstormSession").unwrap_or(false))
+                .is_some_and(|card| card.fields.flag("brainstormSession").unwrap_or(false))
         })
     });
     view! {<section class="task-files" hidden=move||brain.get() aria-labelledby="forge-task-heading" aria-busy=move||(pending.get()||loading.get()).to_string()><h3 id="forge-task-heading">{move||i18n.text("message.task_pr_mr")}</h3>

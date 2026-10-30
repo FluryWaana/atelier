@@ -1,10 +1,7 @@
 use super::card_lifecycle::CardFailure;
-use crate::{
-    document::{Document, JsonString},
-    domain::text_units,
-};
+use crate::{document::Document, domain::text};
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+use crate::Result;
 
 pub trait TemplateRepository {
     fn card(&self, id: &str) -> Result<Option<Document>>;
@@ -13,7 +10,7 @@ pub trait TemplateRepository {
 }
 
 fn templates(settings: &Document) -> Result<Vec<Document>> {
-    Ok(if settings.truthy("taskTemplates")? {
+    Ok(if settings.has_list("taskTemplates")? {
         settings.get("taskTemplates")?.unwrap_or_default()
     } else {
         Vec::new()
@@ -26,13 +23,9 @@ pub fn create(
     new_id: impl FnOnce() -> String,
 ) -> Result<Document> {
     let invalid = CardFailure::Invalid("message.invalid_or_overly_long_text");
-    let name = body
-        .get::<JsonString>("name")
-        .ok()
-        .flatten()
-        .ok_or(invalid)?;
-    let name = text_units(&name, 100).map_err(CardFailure::Invalid)?;
-    if name.0.is_empty() {
+    let name = body.get::<String>("name").ok().flatten().ok_or(invalid)?;
+    let name = text(&name, 100).map_err(CardFailure::Invalid)?;
+    if name.is_empty() {
         return Err(CardFailure::Invalid("message.template_name_required").into());
     }
     let card_id = body
@@ -52,7 +45,7 @@ pub fn create(
     template.set("id", &new_id())?;
     template.set("name", &name)?;
     for (key, default) in [("description", ""), ("instructions", ""), ("mode", "edit")] {
-        if card.truthy(key)? {
+        if card.has_text(key)? {
             if let Some(value) = card.raw(key) {
                 template.set(key, &value)?;
             }

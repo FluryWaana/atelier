@@ -78,7 +78,7 @@ pub fn save_preview(
     store.transaction(|store| {
         tempo::validate_payload(&payload)?;
         let (mut entry, card, ticket) = selected(store, input)?;
-        if !entry.string_equals("exportState", "draft")? || entry.truthy("runningSince")? {
+        if !entry.string_equals("exportState", "draft")? || entry.has_text("runningSince")? {
             return Err("message.stop_the_timer_only_unsent_time_can_be_prepared".into());
         }
         let id = entry
@@ -94,7 +94,7 @@ pub fn save_preview(
             || payload.time_spent_seconds != fields.seconds
             || payload.start_date != fields.date
             || payload.start_time != fields.start_time
-            || payload.description != format!("{}\n[atelier:{id}]", fields.description.utf8()?)
+            || payload.description != format!("{}\n[atelier:{id}]", fields.description.clone())
         {
             return Err(
                 "message.the_tempo_preview_does_not_match_the_time_entry_and_ticket".into(),
@@ -138,7 +138,7 @@ pub fn reserve(store: &Store<'_>, input: &TempoExportRequest, id: &str) -> Resul
             .get::<TempoConfiguration>("tempoConnection")?
             .unwrap_or_default();
         if !entry.string_equals("exportState", "draft")?
-            || entry.truthy("runningSince")?
+            || entry.has_text("runningSince")?
             || serde_json::to_value(entry_snapshot(&entry)?)?
                 != serde_json::to_value(&preview.entry)?
             || serde_json::to_value(&ticket)? != serde_json::to_value(&preview.ticket)?

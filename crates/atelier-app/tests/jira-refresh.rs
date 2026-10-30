@@ -196,7 +196,7 @@ async fn previews_are_bound_to_the_saved_card_expire_and_preserve_local_criteria
                     apply_status: false,
                 },
             )?;
-            assert_eq!(applied.title.utf8().unwrap(), "Remote title");
+            assert_eq!(applied.title.clone(), "Remote title");
             assert!(
                 applied
                     .fields

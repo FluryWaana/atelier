@@ -1,5 +1,4 @@
 pub mod http;
 pub mod infrastructure;
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
-pub type Result<T> = std::result::Result<T, Error>;
+pub use atelier_core::{Error, Result};

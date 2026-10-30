@@ -185,7 +185,9 @@ async fn preview(state: &Shared, input: TempoExportRequest) -> Result<Document> 
             .database
             .call(move |store| {
                 let (entry, _, ticket) = workflow::selected(store, &requested)?;
-                if !entry.string_equals("exportState", "draft")? || entry.truthy("runningSince")? {
+                if !entry.string_equals("exportState", "draft")?
+                    || entry.has_text("runningSince")?
+                {
                     return Err("message.stop_the_timer_only_unsent_time_can_be_prepared".into());
                 }
                 let (configuration, tempo_token) =
@@ -229,7 +231,7 @@ async fn preview(state: &Shared, input: TempoExportRequest) -> Result<Document> 
             time_spent_seconds: fields.seconds,
             start_date: fields.date,
             start_time: fields.start_time,
-            description: format!("{}\n[atelier:{id}]", fields.description.utf8()?),
+            description: format!("{}\n[atelier:{id}]", fields.description.clone()),
         };
         tempo::Tempo::new(&configuration.base, tempo_token)?.validate(&payload)?;
         state

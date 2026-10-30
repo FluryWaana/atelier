@@ -62,7 +62,7 @@ pub async fn capture_pinned(
     use std::process::Stdio;
     let program = std::path::PathBuf::from(
         super::task_creation::path_string(std::path::Path::new(command.as_std().get_program()))
-            .utf8()?,
+            .clone(),
     );
     let parent = super::repository_access::absolute(
         program.parent().ok_or("Dossier du programme absent.")?,

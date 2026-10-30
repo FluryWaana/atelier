@@ -710,7 +710,7 @@ async fn publication_recovery_real_commit_review_and_automation_keep_human_crite
     let retained = card(&database).await;
     let flow = automation::read(&retained).unwrap().unwrap();
     assert!(flow.state == FlowState::Ready && flow.step == Step::Review);
-    assert_eq!(retained.title.utf8().unwrap(), "Human title");
+    assert_eq!(retained.title.clone(), "Human title");
     assert_eq!(
         retained.fields.get::<Value>("checklist").unwrap(),
         initial.fields.get::<Value>("checklist").unwrap()

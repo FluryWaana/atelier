@@ -1,6 +1,7 @@
 use super::store::{Documents, Store};
+use crate::Result;
 use atelier_core::{
-    application::time_tracking::{Result, TimeClock, TimeRepository},
+    application::time_tracking::{TimeClock, TimeRepository},
     document::Document,
 };
 

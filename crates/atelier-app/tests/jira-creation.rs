@@ -306,7 +306,7 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
                         )?;
                         store.put(Documents::Cards, &other)?;
                         let card = workflow::record(store, "card", "operation", known)?;
-                        assert!(!card.fields.truthy("ticket")?);
+                        assert!(!card.fields.has_object("ticket")?);
                         assert!(
                             card.fields
                                 .get::<JiraCreationIntent>("jiraCreation")?
@@ -328,7 +328,7 @@ async fn synthetic_creation_sends_once_and_recovers_lost_response_without_resubm
             database
                 .call(move |store| {
                     let card = store.document::<Card>(Documents::Cards, "card")?.unwrap();
-                    assert_eq!(card.title.utf8().unwrap(), "Synthetic 🦀");
+                    assert_eq!(card.title.clone(), "Synthetic 🦀");
                     assert!(card.fields.string_equals("status", "todo")?);
                     assert!(
                         card.fields

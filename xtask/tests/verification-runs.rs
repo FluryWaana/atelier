@@ -5,7 +5,7 @@ use atelier_app::infrastructure::{
     process_tree,
     store::Documents,
 };
-use atelier_core::document::{Document, JsonString};
+use atelier_core::document::Document;
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::json;
 use std::{path::Path, sync::Arc, time::Duration};
@@ -59,12 +59,9 @@ async fn compiled_verification_records_success_failure_and_changed_sources_witho
         git(&repo, &["add", "."]).await;
         git(&repo, &["commit", "-qm", "Synthetic baseline"]).await;
         let root = Dir::open_ambient_dir(&base, ambient_authority()).unwrap();
-        let repository = Repository::synthetic(
-            &root,
-            std::slice::from_ref(&base),
-            &JsonString::from(repo.to_str().unwrap()),
-        )
-        .unwrap();
+        let repository =
+            Repository::synthetic(&root, std::slice::from_ref(&base), repo.to_str().unwrap())
+                .unwrap();
         let fingerprint = repository.fingerprint().await.unwrap();
         let database = Arc::new(Database::open(&base.join("synthetic.sqlite")).unwrap());
         let command = format!("synthetic verify {mode}");

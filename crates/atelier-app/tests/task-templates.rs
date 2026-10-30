@@ -1,22 +1,19 @@
 use atelier_app::infrastructure::{database::Database, store::Documents};
-use atelier_core::{
-    application::task_templates,
-    document::{Document, JsonString},
-};
+use atelier_core::{application::task_templates, document::Document};
 
 #[tokio::test]
-async fn templates_keep_settings_and_utf16_copy_only_editable_content_and_enforce_limits() {
+async fn templates_keep_settings_and_unicode_copy_only_editable_content_and_enforce_limits() {
     let database = Database::open(std::path::Path::new(":memory:")).unwrap();
     database.call(|store| {
-        let card: Document = serde_json::from_str(r#"{"id":"card","title":"title","description":"\ud800","instructions":"keep","mode":"analyze","checklist":[{"text":"\udc00","done":true,"extra":1}],"ticket":{"key":"TEST-1"},"repo":"ignored"}"#)?;
-        let settings: Document = serde_json::from_str(r#"{"future":{"\ud800":"\udc00"},"taskQueue":{"paused":true,"ids":["card"]}}"#)?;
+        let card: Document = serde_json::from_str(r#"{"id":"card","title":"title","description":"\u00e9","instructions":"keep","mode":"analyze","checklist":[{"text":"\u00e8","done":true,"extra":1}],"ticket":{"key":"TEST-1"},"repo":"ignored"}"#)?;
+        let settings: Document = serde_json::from_str(r#"{"future":{"\u00e9":"\u00e8"},"taskQueue":{"paused":true,"ids":["card"]}}"#)?;
         store.put(Documents::Cards, &card)?; store.save_settings(&settings)?;
-        let body: Document = serde_json::from_str(r#"{"name":" \ud800 ","cardId":"card"}"#)?;
+        let body: Document = serde_json::from_str(r#"{"name":" \u00e9 ","cardId":"card"}"#)?;
         let template = store.transaction(|store| task_templates::create(store, &body, || "first".into()))?;
-        assert_eq!(template.get::<JsonString>("name")?, Some(JsonString(vec![0xd800])));
-        assert_eq!(template.get::<JsonString>("description")?, Some(JsonString(vec![0xd800])));
+        assert_eq!(template.get::<String>("name")?, Some("é".to_owned()));
+        assert_eq!(template.get::<String>("description")?, Some("é".to_owned()));
         let criteria = template.get::<Vec<Document>>("checklist")?.unwrap();
-        assert_eq!(criteria[0].get::<JsonString>("text")?, Some(JsonString(vec![0xdc00])));
+        assert_eq!(criteria[0].get::<String>("text")?, Some("è".to_owned()));
         assert_eq!(criteria[0].get::<bool>("done")?, Some(false));
         assert!(criteria[0].raw("extra").is_none());
         assert!(template.raw("repo").is_none()); assert!(template.raw("ticket").is_none());

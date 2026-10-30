@@ -1,5 +1,5 @@
 use atelier_app::infrastructure::{files::Repository, local_commit, process_tree};
-use atelier_core::document::JsonString;
+
 use cap_std::{ambient_authority, fs::Dir};
 use std::{path::Path, time::Duration};
 
@@ -50,7 +50,7 @@ async fn committed_disk_can_be_reviewed_while_preserving_a_partially_staged_huma
     let repository = Repository::synthetic(
         &root,
         &[home.path().to_owned()],
-        &JsonString::from(source.to_string_lossy().replace('\\', "/").as_str()),
+        source.to_string_lossy().replace('\\', "/").as_str(),
     )
     .unwrap();
     let preview = local_commit::preview(&repository, vec!["file.txt".into()])
@@ -128,7 +128,7 @@ async fn selected_snapshot_preserves_human_index_disk_and_fetch_head_and_rejects
     let repository = Repository::synthetic(
         &root,
         &[home.path().to_owned()],
-        &JsonString::from(source.to_string_lossy().replace('\\', "/").as_str()),
+        source.to_string_lossy().replace('\\', "/").as_str(),
     )
     .unwrap();
     let preview = local_commit::preview(&repository, vec!["selected.txt".into()])

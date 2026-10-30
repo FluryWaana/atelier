@@ -1,11 +1,11 @@
-use super::text_units;
-use crate::document::{Document, JsonString};
+use super::text;
+use crate::document::Document;
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Criterion {
-    pub text: JsonString,
+    pub text: String,
     pub done: bool,
 }
 
@@ -19,15 +19,15 @@ pub fn checklist(value: &RawValue) -> Result<Vec<Criterion>, &'static str> {
         .map(|item| {
             let invalid = "message.each_criterion_must_contain_text_and_a_valid_state";
             let item: Document = serde_json::from_str(item.get()).map_err(|_| invalid)?;
-            let label = text_units(
+            let label = text(
                 &item
-                    .get::<JsonString>("text")
+                    .get::<String>("text")
                     .map_err(|_| invalid)?
                     .ok_or(invalid)?,
                 500,
             )
             .map_err(|_| invalid)?;
-            if label.0.is_empty() {
+            if label.is_empty() {
                 return Err(invalid);
             }
             Ok(Criterion {
@@ -41,19 +41,14 @@ pub fn checklist(value: &RawValue) -> Result<Vec<Criterion>, &'static str> {
         .collect()
 }
 
-pub fn checklist_text(items: &[Criterion]) -> JsonString {
+pub fn checklist_text(items: &[Criterion]) -> String {
     if items.is_empty() {
-        return JsonString::default();
+        return String::new();
     }
-    let mut result = JsonString::from("\n\nCritères de réussite (validation humaine) :\n");
-    for (index, item) in items.iter().enumerate() {
-        if index != 0 {
-            result.0.push(u16::from(b'\n'));
-        }
-        result
-            .0
-            .extend(if item.done { "- [x] " } else { "- [ ] " }.encode_utf16());
-        result.0.extend_from_slice(&item.text.0);
-    }
-    result
+    let lines = items
+        .iter()
+        .map(|item| format!("- [{}] {}", if item.done { "x" } else { " " }, item.text))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!("\n\nCritères de réussite (validation humaine) :\n{lines}")
 }

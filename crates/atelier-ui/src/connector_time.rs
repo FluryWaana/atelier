@@ -51,13 +51,13 @@ pub fn ConnectorTime(
             .get()
             .into_iter()
             .filter(|entry| {
-                !entry.truthy("runningSince").unwrap_or(true)
+                !entry.has_text("runningSince").unwrap_or(true)
                     && entry.string_equals("exportState", "draft").unwrap_or(false)
                     && atelier_core::domain::time::time_fields(entry).is_ok()
                     && board.cards.with(|cards| {
                         cards.iter().any(|card| {
                             card.id == field(entry, "cardId")
-                                && !card.fields.truthy("archived").unwrap_or(true)
+                                && !card.fields.flag("archived").unwrap_or(true)
                         })
                     })
             })
@@ -97,7 +97,7 @@ pub fn ConnectorTime(
         ) else {
             return;
         };
-        if entry.truthy("runningSince").unwrap_or(true)
+        if entry.has_text("runningSince").unwrap_or(true)
             || !entry.string_equals("exportState", "draft").unwrap_or(false)
         {
             return;
@@ -180,7 +180,7 @@ pub fn ConnectorTime(
         <select id="connector-time-entry" prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))>
             <option value="">{move||i18n.text("message.choose_an_entry")}</option>
             {move||eligible.get().into_iter().map(|entry|{
-                let id=field(&entry,"id");let title=board.cards.with(|cards|cards.iter().find(|card|card.id==field(&entry,"cardId")).map(|card|card.title.utf8().unwrap_or_default()).unwrap_or_default());
+                let id=field(&entry,"id");let title=board.cards.with(|cards|cards.iter().find(|card|card.id==field(&entry,"cardId")).map(|card|card.title.clone()).unwrap_or_default());
                 view!{<option value=id>{format!("{} {} · {} s · {}",field(&entry,"date"),field(&entry,"startTime"),atelier_core::domain::time::time_fields(&entry).map(|fields|fields.seconds).unwrap_or(0),title)}</option>}
             }).collect_view()}
         </select>

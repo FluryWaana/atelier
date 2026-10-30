@@ -1,8 +1,6 @@
 use super::store::{Documents, Store};
-use atelier_core::{
-    application::{projects::ProjectRepository, task_creation::Result},
-    document::Document,
-};
+use crate::Result;
+use atelier_core::{application::projects::ProjectRepository, document::Document};
 
 impl ProjectRepository for Store<'_> {
     fn projects(&self) -> Result<Vec<Document>> {

@@ -389,20 +389,7 @@ async fn mutate(state: Shared, id: String, request: Request, remove: bool) -> Re
     let _ = state.changed.send(());
     match result {
         Ok(card) => Json(card).into_response(),
-        Err(error) => {
-            let status = match error.downcast_ref::<CardFailure>() {
-                Some(CardFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(CardFailure::Conflict(_)) => StatusCode::CONFLICT,
-                _ if error.is::<rusqlite::Error>() => StatusCode::INTERNAL_SERVER_ERROR,
-                _ => StatusCode::BAD_REQUEST,
-            };
-            let message = if status == StatusCode::INTERNAL_SERVER_ERROR {
-                "message.the_worktree_could_not_be_saved".to_owned()
-            } else {
-                error.to_string()
-            };
-            failure(status, &message)
-        }
+        Err(error) => super::responses::error(error, "message.the_worktree_could_not_be_saved"),
     }
 }
 

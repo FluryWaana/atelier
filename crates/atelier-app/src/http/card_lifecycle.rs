@@ -66,22 +66,7 @@ async fn mutate(state: Shared, id: String, action: Action, request: Request) -> 
         .await;
     match changed {
         Ok(result) => Json(result).into_response(),
-        Err(error) => {
-            if let Some(failure_kind) = error.downcast_ref::<CardFailure>() {
-                let status = match failure_kind {
-                    CardFailure::Missing => StatusCode::NOT_FOUND,
-                    CardFailure::Invalid(_) => StatusCode::BAD_REQUEST,
-                    CardFailure::Conflict(_) => StatusCode::CONFLICT,
-                    CardFailure::Document(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                };
-                failure(status, &failure_kind.to_string())
-            } else {
-                failure(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "message.card_update_failed",
-                )
-            }
-        }
+        Err(error) => super::responses::error(error, "message.card_update_failed"),
     }
 }
 

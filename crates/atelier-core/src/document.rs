@@ -1,165 +1,74 @@
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self, MapAccess, Visitor},
+    ser::SerializeMap,
 };
 use serde_json::value::RawValue;
 use std::fmt;
 
-/// JSON strings use UTF-16 units, including isolated surrogates produced by Node's slice.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct JsonString(pub Vec<u16>);
-
-impl From<&str> for JsonString {
-    fn from(value: &str) -> Self {
-        Self(value.encode_utf16().collect())
-    }
-}
-
-impl JsonString {
-    pub fn utf8(&self) -> Result<String, std::string::FromUtf16Error> {
-        String::from_utf16(&self.0)
-    }
-
-    fn escaped(&self) -> String {
-        use std::fmt::Write;
-        let mut result = String::from("\"");
-        for character in char::decode_utf16(self.0.iter().copied()) {
-            match character {
-                Ok('"') => result.push_str("\\\""),
-                Ok('\\') => result.push_str("\\\\"),
-                Ok(character) if character <= '\u{1f}' => {
-                    write!(result, "\\u{:04x}", u32::from(character))
-                        .expect("String writes cannot fail");
-                }
-                Ok(character) => result.push(character),
-                Err(surrogate) => {
-                    write!(result, "\\u{:04x}", surrogate.unpaired_surrogate())
-                        .expect("String writes cannot fail");
-                }
-            }
-        }
-        result.push('"');
-        result
-    }
-}
-
-impl Serialize for JsonString {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        RawValue::from_string(self.escaped())
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for JsonString {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct StringVisitor;
-        impl Visitor<'_> for StringVisitor {
-            type Value = JsonString;
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a JSON string")
-            }
-            fn visit_bytes<E: de::Error>(self, mut bytes: &[u8]) -> Result<JsonString, E> {
-                let mut units = Vec::new();
-                while !bytes.is_empty() {
-                    match std::str::from_utf8(bytes) {
-                        Ok(value) => {
-                            units.extend(value.encode_utf16());
-                            break;
-                        }
-                        Err(error) => {
-                            let prefix = error.valid_up_to();
-                            units.extend(
-                                std::str::from_utf8(&bytes[..prefix])
-                                    .map_err(E::custom)?
-                                    .encode_utf16(),
-                            );
-                            bytes = &bytes[prefix..];
-                            // serde_json::deserialize_bytes represents lone UTF-16 surrogates as WTF-8.
-                            if bytes.len() < 3
-                                || bytes[0] != 0xed
-                                || !(0xa0..=0xbf).contains(&bytes[1])
-                                || !(0x80..=0xbf).contains(&bytes[2])
-                            {
-                                return Err(E::custom("Invalid WTF-8 JSON string"));
-                            }
-                            units.push(
-                                0xd000
-                                    | (u16::from(bytes[1] & 0x3f) << 6)
-                                    | u16::from(bytes[2] & 0x3f),
-                            );
-                            bytes = &bytes[3..];
-                        }
-                    }
-                }
-                Ok(JsonString(units))
-            }
-        }
-        deserializer.deserialize_bytes(StringVisitor)
-    }
-}
-
-/// Unknown values remain raw JSON; changing a known field cannot normalize them.
+/// Open JSON fields are retained for extensions and forward-compatible metadata.
 #[derive(Clone, Debug, Default)]
-pub struct Document(Vec<(JsonString, Box<RawValue>)>);
+pub struct Document(Vec<(String, Box<RawValue>)>);
 
 impl Document {
-    pub fn keys(&self) -> impl Iterator<Item = &JsonString> {
-        self.0.iter().map(|(key, _)| key)
-    }
-    pub fn raw(&self, key: &str) -> Option<&RawValue> {
-        self.raw_key(&JsonString::from(key))
+    pub fn keys(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(|(key, _)| key.as_str())
     }
 
-    pub fn raw_key(&self, key: &JsonString) -> Option<&RawValue> {
+    pub fn raw(&self, key: &str) -> Option<&RawValue> {
         self.0
             .iter()
             .find(|(name, _)| name == key)
             .map(|(_, raw)| raw.as_ref())
     }
 
-    pub fn truthy(&self, key: &str) -> serde_json::Result<bool> {
-        self.truthy_key(&JsonString::from(key))
+    pub fn flag(&self, key: &str) -> serde_json::Result<bool> {
+        Ok(self.get::<Option<bool>>(key)?.flatten().unwrap_or(false))
     }
 
-    pub fn truthy_key(&self, key: &JsonString) -> serde_json::Result<bool> {
-        let Some(raw) = self.raw_key(key) else {
-            return Ok(false);
-        };
-        match raw.get().as_bytes().first() {
-            Some(b'{' | b'[') => Ok(true),
-            Some(b'"') => Ok(!serde_json::from_str::<JsonString>(raw.get())?.0.is_empty()),
-            _ => Ok(crate::domain::truthy(&serde_json::from_str(raw.get())?)),
-        }
+    pub fn has_text(&self, key: &str) -> serde_json::Result<bool> {
+        Ok(self
+            .get::<Option<String>>(key)?
+            .flatten()
+            .is_some_and(|value| !value.is_empty()))
+    }
+
+    pub fn has_object(&self, key: &str) -> serde_json::Result<bool> {
+        Ok(self.get::<Option<Document>>(key)?.flatten().is_some())
+    }
+
+    pub fn has_list(&self, key: &str) -> serde_json::Result<bool> {
+        Ok(self.get::<Option<Vec<Document>>>(key)?.flatten().is_some())
     }
 
     pub fn string_equals(&self, key: &str, expected: &str) -> serde_json::Result<bool> {
-        let Some(raw) = self.raw(key).filter(|raw| raw.get().starts_with('"')) else {
-            return Ok(false);
-        };
-        Ok(serde_json::from_str::<JsonString>(raw.get())? == JsonString::from(expected))
+        Ok(self
+            .get::<String>(key)?
+            .is_some_and(|value| value == expected))
     }
 
     pub fn get<T: de::DeserializeOwned>(&self, key: &str) -> serde_json::Result<Option<T>> {
-        let key = JsonString::from(key);
-        self.0
-            .iter()
-            .find(|(name, _)| name == &key)
-            .map(|(_, raw)| serde_json::from_str(raw.get()))
+        self.raw(key)
+            .map(|raw| serde_json::from_str(raw.get()))
             .transpose()
     }
 
-    pub fn set(&mut self, key: &str, value: &impl Serialize) -> serde_json::Result<()> {
-        self.set_key(JsonString::from(key), value)
+    pub fn set<T: Serialize + ?Sized>(&mut self, key: &str, value: &T) -> serde_json::Result<()> {
+        self.set_key(key.to_owned(), value)
     }
 
-    pub fn set_key(&mut self, key: JsonString, value: &impl Serialize) -> serde_json::Result<()> {
+    pub fn set_key<T: Serialize + ?Sized>(
+        &mut self,
+        key: String,
+        value: &T,
+    ) -> serde_json::Result<()> {
         let raw = serde_json::value::to_raw_value(value)?;
+        serde_json::from_str::<serde_json::Value>(raw.get())?;
         self.insert(key, raw);
         Ok(())
     }
 
-    fn insert(&mut self, key: JsonString, raw: Box<RawValue>) {
+    fn insert(&mut self, key: String, raw: Box<RawValue>) {
         if let Some((_, previous)) = self.0.iter_mut().find(|(name, _)| name == &key) {
             *previous = raw;
         } else {
@@ -173,53 +82,22 @@ impl Document {
         }
     }
 
-    pub fn spread(raw: &RawValue) -> serde_json::Result<Self> {
-        let mut document = Self::default();
-        match raw.get().as_bytes().first() {
-            Some(b'{') => return serde_json::from_str(raw.get()),
-            Some(b'[') => {
-                for (index, value) in serde_json::from_str::<Vec<Box<RawValue>>>(raw.get())?
-                    .iter()
-                    .enumerate()
-                {
-                    document.set(&index.to_string(), value)?;
-                }
-            }
-            Some(b'"') => {
-                for (index, unit) in serde_json::from_str::<JsonString>(raw.get())?
-                    .0
-                    .into_iter()
-                    .enumerate()
-                {
-                    document.set(&index.to_string(), &JsonString(vec![unit]))?;
-                }
-            }
-            _ => {}
-        }
-        Ok(document)
+    pub fn from_raw(raw: &RawValue) -> serde_json::Result<Self> {
+        serde_json::from_str(raw.get())
     }
 
     pub fn remove(&mut self, key: &str) {
-        let key = JsonString::from(key);
-        self.0.retain(|(name, _)| name != &key);
+        self.0.retain(|(name, _)| name != key);
     }
 }
 
 impl Serialize for Document {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut json = String::from("{");
-        for (index, (key, value)) in self.0.iter().enumerate() {
-            if index != 0 {
-                json.push(',');
-            }
-            json.push_str(&key.escaped());
-            json.push(':');
-            json.push_str(value.get());
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (key, raw) in &self.0 {
+            map.serialize_entry(key, raw)?;
         }
-        json.push('}');
-        RawValue::from_string(json)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        map.end()
     }
 }
 
@@ -229,11 +107,13 @@ impl<'de> Deserialize<'de> for Document {
         impl<'de> Visitor<'de> for ObjectVisitor {
             type Value = Document;
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a JSON object")
+                formatter.write_str("a JSON object with valid Unicode text")
             }
             fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Document, M::Error> {
                 let mut document = Document::default();
-                while let Some((key, value)) = map.next_entry::<JsonString, Box<RawValue>>()? {
+                while let Some((key, value)) = map.next_entry::<String, Box<RawValue>>()? {
+                    serde_json::from_str::<serde_json::Value>(value.get())
+                        .map_err(de::Error::custom)?;
                     document.insert(key, value);
                 }
                 Ok(document)
@@ -248,49 +128,61 @@ mod tests {
     use super::*;
 
     #[test]
-    fn utf16_strings_preserve_every_unit_and_escape_json_boundaries() {
-        let original = JsonString((0..=u16::MAX).collect());
-        let encoded = serde_json::to_string(&original).unwrap();
-        assert_eq!(
-            serde_json::from_str::<JsonString>(&encoded).unwrap(),
-            original
-        );
-        assert!(original.utf8().is_err());
-        for invalid in [r#""\ud800\x""#, r#""\udc0z""#, r#""unfinished"#] {
-            assert!(serde_json::from_str::<JsonString>(invalid).is_err());
+    fn flags_and_optional_fields_never_coerce_other_json_types() {
+        let mut document = Document::default();
+        assert!(!document.flag("archived").unwrap());
+        document.set("archived", &false).unwrap();
+        assert!(!document.flag("archived").unwrap());
+        for raw in ["1", "0", "\"false\"", "[]", "{}"] {
+            document
+                .set("archived", &RawValue::from_string(raw.into()).unwrap())
+                .unwrap();
+            assert!(document.flag("archived").is_err(), "{raw}");
         }
+        document.set("repo", &false).unwrap();
+        assert!(document.has_text("repo").is_err());
+        document.set("ticket", &"SYN-1").unwrap();
+        assert!(document.has_object("ticket").is_err());
+        document.set("checklist", &serde_json::json!({})).unwrap();
+        assert!(document.has_list("checklist").is_err());
     }
 
     #[test]
-    fn document_edits_preserve_nested_values_keys_and_isolated_surrogates() {
-        let raw = r#"{"id":"a","title":"\ud83d","\udc00":{"nested":["\ud800",null]},"future":1.2300,"status":"todo","status":"review"}"#;
-        let mut document: Document = serde_json::from_str(raw).unwrap();
-        assert_eq!(
-            document.get::<String>("status").unwrap().as_deref(),
-            Some("review")
-        );
-        assert_eq!(
-            document.get::<JsonString>("title").unwrap(),
-            Some(JsonString(vec![0xd83d]))
-        );
-        assert!(document.get::<String>("title").is_err());
-        document.set("archived", &true).unwrap();
-        document
-            .set("title", &JsonString(vec![0xdc00, 0xd800, 0x61]))
-            .unwrap();
-        document.remove("status");
+    fn edits_preserve_open_fields_and_numeric_representation() {
+        let mut document: Document = serde_json::from_str(
+            r#"{"title":"Tâche 🔧","extra":{"é":[true,null]},"number":1.2300}"#,
+        )
+        .unwrap();
+        document.set("title", &"Nouvelle tâche 🦀").unwrap();
+        document.set("archived", &false).unwrap();
         let encoded = serde_json::to_string(&document).unwrap();
-        assert!(encoded.contains(r#""\udc00":{"nested":["\ud800",null]}"#));
-        assert!(encoded.contains(r#""future":1.2300"#));
+        assert!(encoded.contains("1.2300"));
         let reopened: Document = serde_json::from_str(&encoded).unwrap();
         assert_eq!(
-            reopened.get::<JsonString>("title").unwrap(),
-            Some(JsonString(vec![0xdc00, 0xd800, 0x61]))
+            reopened.get::<String>("title").unwrap().as_deref(),
+            Some("Nouvelle tâche 🦀")
         );
-        assert_eq!(reopened.get::<bool>("archived").unwrap(), Some(true));
-        assert!(reopened.get::<bool>("status").unwrap().is_none());
-        for invalid in ["[]", "null", "{", r#"{"id":"x","future":INVALID}"#] {
-            assert!(serde_json::from_str::<Document>(invalid).is_err());
+        assert_eq!(
+            reopened.raw("extra").unwrap().get(),
+            document.raw("extra").unwrap().get()
+        );
+    }
+
+    #[test]
+    fn malformed_unicode_is_rejected_at_every_document_boundary() {
+        for raw in [
+            r#"{"title":"\ud800"}"#,
+            r#"{"\udc00":true}"#,
+            r#"{"future":{"nested":["\ud83d"]}}"#,
+        ] {
+            assert!(serde_json::from_str::<Document>(raw).is_err());
+        }
+        let raw = RawValue::from_string(r#""\ud800""#.into()).unwrap();
+        let mut document = Document::default();
+        assert!(document.set("title", &raw).is_err());
+        assert!(document.raw("title").is_none());
+        for raw in ["[]", "null", "true", "1", "\"text\""] {
+            assert!(Document::from_raw(&RawValue::from_string(raw.into()).unwrap()).is_err());
         }
     }
 }

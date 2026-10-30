@@ -1,12 +1,12 @@
 [
   {
     "body": {
-      "projectRules": " \ud800🔧\udc00 "
+      "projectRules": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
       "value": {
-        "projectRules": "\ud800🔧\udc00",
+        "projectRules": "\u00e9🔧\u00e8",
         "agent": "",
         "baseBranch": "",
         "repositoryConnector": "",
@@ -36,12 +36,12 @@
   },
   {
     "body": {
-      "projectRules": "﻿\ud800 "
+      "projectRules": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
       "value": {
-        "projectRules": "\ud800",
+        "projectRules": "\u00e9",
         "agent": "",
         "baseBranch": "",
         "repositoryConnector": "",
@@ -71,14 +71,14 @@
   },
   {
     "body": {
-      "baseBranch": " \ud800🔧\udc00 "
+      "baseBranch": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
       "value": {
         "projectRules": "",
         "agent": "",
-        "baseBranch": "\ud800🔧\udc00",
+        "baseBranch": "\u00e9🔧\u00e8",
         "repositoryConnector": "",
         "jiraMode": "inherit",
         "jiraStatusMap": {
@@ -106,14 +106,14 @@
   },
   {
     "body": {
-      "baseBranch": "﻿\ud800 "
+      "baseBranch": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
       "value": {
         "projectRules": "",
         "agent": "",
-        "baseBranch": "\ud800",
+        "baseBranch": "\u00e9",
         "repositoryConnector": "",
         "jiraMode": "inherit",
         "jiraStatusMap": {
@@ -141,7 +141,7 @@
   },
   {
     "body": {
-      "frontCommand": " \ud800🔧\udc00 "
+      "frontCommand": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -158,7 +158,7 @@
           "done": "",
           "standby": ""
         },
-        "frontCommand": "\ud800🔧\udc00",
+        "frontCommand": "\u00e9🔧\u00e8",
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
@@ -176,7 +176,7 @@
   },
   {
     "body": {
-      "frontCommand": "﻿\ud800 "
+      "frontCommand": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -193,7 +193,7 @@
           "done": "",
           "standby": ""
         },
-        "frontCommand": "\ud800",
+        "frontCommand": "\u00e9",
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
@@ -211,7 +211,7 @@
   },
   {
     "body": {
-      "backCommand": " \ud800🔧\udc00 "
+      "backCommand": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -229,7 +229,7 @@
           "standby": ""
         },
         "frontCommand": "",
-        "backCommand": "\ud800🔧\udc00",
+        "backCommand": "\u00e9🔧\u00e8",
         "frontRepo": "",
         "backRepo": "",
         "frontDirectory": "",
@@ -246,7 +246,7 @@
   },
   {
     "body": {
-      "backCommand": "﻿\ud800 "
+      "backCommand": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -264,7 +264,7 @@
           "standby": ""
         },
         "frontCommand": "",
-        "backCommand": "\ud800",
+        "backCommand": "\u00e9",
         "frontRepo": "",
         "backRepo": "",
         "frontDirectory": "",
@@ -281,42 +281,7 @@
   },
   {
     "body": {
-      "frontRepo": " \ud800🔧\udc00 "
-    },
-    "settings": {},
-    "expected": {
-      "value": {
-        "projectRules": "",
-        "agent": "",
-        "baseBranch": "",
-        "repositoryConnector": "",
-        "jiraMode": "inherit",
-        "jiraStatusMap": {
-          "todo": "",
-          "doing": "",
-          "review": "",
-          "done": "",
-          "standby": ""
-        },
-        "frontCommand": "",
-        "backCommand": "",
-        "frontRepo": "\ud800🔧\udc00",
-        "backRepo": "",
-        "frontDirectory": "",
-        "backDirectory": "",
-        "frontPort": 0,
-        "backPort": 0,
-        "linkedProjectId": "",
-        "automationEnabled": false,
-        "autoFix": true,
-        "prTarget": "",
-        "testCommand": ""
-      }
-    }
-  },
-  {
-    "body": {
-      "frontRepo": "﻿\ud800 "
+      "frontRepo": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -335,7 +300,7 @@
         },
         "frontCommand": "",
         "backCommand": "",
-        "frontRepo": "\ud800",
+        "frontRepo": "\u00e9🔧\u00e8",
         "backRepo": "",
         "frontDirectory": "",
         "backDirectory": "",
@@ -351,7 +316,7 @@
   },
   {
     "body": {
-      "backRepo": " \ud800🔧\udc00 "
+      "frontRepo": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -370,8 +335,8 @@
         },
         "frontCommand": "",
         "backCommand": "",
-        "frontRepo": "",
-        "backRepo": "\ud800🔧\udc00",
+        "frontRepo": "\u00e9",
+        "backRepo": "",
         "frontDirectory": "",
         "backDirectory": "",
         "frontPort": 0,
@@ -386,7 +351,7 @@
   },
   {
     "body": {
-      "backRepo": "﻿\ud800 "
+      "backRepo": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -406,7 +371,7 @@
         "frontCommand": "",
         "backCommand": "",
         "frontRepo": "",
-        "backRepo": "\ud800",
+        "backRepo": "\u00e9🔧\u00e8",
         "frontDirectory": "",
         "backDirectory": "",
         "frontPort": 0,
@@ -421,7 +386,7 @@
   },
   {
     "body": {
-      "frontDirectory": " \ud800🔧\udc00 "
+      "backRepo": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -441,8 +406,8 @@
         "frontCommand": "",
         "backCommand": "",
         "frontRepo": "",
-        "backRepo": "",
-        "frontDirectory": "\ud800🔧\udc00",
+        "backRepo": "\u00e9",
+        "frontDirectory": "",
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
@@ -456,7 +421,7 @@
   },
   {
     "body": {
-      "frontDirectory": "﻿\ud800 "
+      "frontDirectory": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -477,7 +442,7 @@
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
-        "frontDirectory": "\ud800",
+        "frontDirectory": "\u00e9🔧\u00e8",
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
@@ -491,7 +456,7 @@
   },
   {
     "body": {
-      "backDirectory": " \ud800🔧\udc00 "
+      "frontDirectory": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -512,8 +477,8 @@
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
-        "frontDirectory": "",
-        "backDirectory": "\ud800🔧\udc00",
+        "frontDirectory": "\u00e9",
+        "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
         "linkedProjectId": "",
@@ -526,7 +491,7 @@
   },
   {
     "body": {
-      "backDirectory": "﻿\ud800 "
+      "backDirectory": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -548,7 +513,7 @@
         "frontRepo": "",
         "backRepo": "",
         "frontDirectory": "",
-        "backDirectory": "\ud800",
+        "backDirectory": "\u00e9🔧\u00e8",
         "frontPort": 0,
         "backPort": 0,
         "linkedProjectId": "",
@@ -561,7 +526,7 @@
   },
   {
     "body": {
-      "linkedProjectId": " \ud800🔧\udc00 "
+      "backDirectory": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -583,10 +548,10 @@
         "frontRepo": "",
         "backRepo": "",
         "frontDirectory": "",
-        "backDirectory": "",
+        "backDirectory": "\u00e9",
         "frontPort": 0,
         "backPort": 0,
-        "linkedProjectId": "\ud800🔧\udc00",
+        "linkedProjectId": "",
         "automationEnabled": false,
         "autoFix": true,
         "prTarget": "",
@@ -596,7 +561,7 @@
   },
   {
     "body": {
-      "linkedProjectId": "﻿\ud800 "
+      "linkedProjectId": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -621,7 +586,7 @@
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
-        "linkedProjectId": "\ud800",
+        "linkedProjectId": "\u00e9🔧\u00e8",
         "automationEnabled": false,
         "autoFix": true,
         "prTarget": "",
@@ -631,7 +596,7 @@
   },
   {
     "body": {
-      "prTarget": " \ud800🔧\udc00 "
+      "linkedProjectId": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -656,17 +621,17 @@
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
-        "linkedProjectId": "",
+        "linkedProjectId": "\u00e9",
         "automationEnabled": false,
         "autoFix": true,
-        "prTarget": "\ud800🔧\udc00",
+        "prTarget": "",
         "testCommand": ""
       }
     }
   },
   {
     "body": {
-      "prTarget": "﻿\ud800 "
+      "prTarget": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -694,14 +659,14 @@
         "linkedProjectId": "",
         "automationEnabled": false,
         "autoFix": true,
-        "prTarget": "\ud800",
+        "prTarget": "\u00e9🔧\u00e8",
         "testCommand": ""
       }
     }
   },
   {
     "body": {
-      "testCommand": " \ud800🔧\udc00 "
+      "prTarget": "﻿\u00e9 "
     },
     "settings": {},
     "expected": {
@@ -729,14 +694,14 @@
         "linkedProjectId": "",
         "automationEnabled": false,
         "autoFix": true,
-        "prTarget": "",
-        "testCommand": "\ud800🔧\udc00"
+        "prTarget": "\u00e9",
+        "testCommand": ""
       }
     }
   },
   {
     "body": {
-      "testCommand": "﻿\ud800 "
+      "testCommand": " \u00e9🔧\u00e8 "
     },
     "settings": {},
     "expected": {
@@ -765,7 +730,42 @@
         "automationEnabled": false,
         "autoFix": true,
         "prTarget": "",
-        "testCommand": "\ud800"
+        "testCommand": "\u00e9🔧\u00e8"
+      }
+    }
+  },
+  {
+    "body": {
+      "testCommand": "﻿\u00e9 "
+    },
+    "settings": {},
+    "expected": {
+      "value": {
+        "projectRules": "",
+        "agent": "",
+        "baseBranch": "",
+        "repositoryConnector": "",
+        "jiraMode": "inherit",
+        "jiraStatusMap": {
+          "todo": "",
+          "doing": "",
+          "review": "",
+          "done": "",
+          "standby": ""
+        },
+        "frontCommand": "",
+        "backCommand": "",
+        "frontRepo": "",
+        "backRepo": "",
+        "frontDirectory": "",
+        "backDirectory": "",
+        "frontPort": 0,
+        "backPort": 0,
+        "linkedProjectId": "",
+        "automationEnabled": false,
+        "autoFix": true,
+        "prTarget": "",
+        "testCommand": "\u00e9"
       }
     }
   },
@@ -815,14 +815,14 @@
   },
   {
     "body": {
-      "baseBranch": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+      "baseBranch": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
     },
     "settings": {},
     "expected": {
       "value": {
         "projectRules": "",
         "agent": "",
-        "baseBranch": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800",
+        "baseBranch": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
         "repositoryConnector": "",
         "jiraMode": "inherit",
         "jiraStatusMap": {
@@ -850,7 +850,7 @@
   },
   {
     "body": {
-      "baseBranch": "\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800\ud800"
+      "baseBranch": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
     },
     "settings": {},
     "expected": {
@@ -859,7 +859,7 @@
   },
   {
     "body": {
-      "frontDirectory": "\ud800/../safe"
+      "frontDirectory": "\u00e9/../safe"
     },
     "settings": {},
     "expected": {
@@ -880,7 +880,7 @@
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
-        "frontDirectory": "\ud800/../safe",
+        "frontDirectory": "\u00e9/../safe",
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
@@ -894,7 +894,7 @@
   },
   {
     "body": {
-      "frontDirectory": "\ud800/../../outside"
+      "frontDirectory": "\u00e9/../../outside"
     },
     "settings": {},
     "expected": {
@@ -903,7 +903,7 @@
   },
   {
     "body": {
-      "frontDirectory": "\ud800:\\folder"
+      "frontDirectory": "\u00e9:\\folder"
     },
     "settings": {},
     "expected": {
@@ -924,7 +924,7 @@
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
-        "frontDirectory": "\ud800:\\folder",
+        "frontDirectory": "\u00e9:\\folder",
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
@@ -938,7 +938,7 @@
   },
   {
     "body": {
-      "frontDirectory": "C:\\ud800"
+      "frontDirectory": "C:\\u00e9"
     },
     "settings": {},
     "expected": {
@@ -947,7 +947,7 @@
   },
   {
     "body": {
-      "frontDirectory": "\ud800\\..\\.."
+      "frontDirectory": "\u00e9\\..\\.."
     },
     "settings": {},
     "expected": {
@@ -956,7 +956,7 @@
   },
   {
     "body": {
-      "frontDirectory": "\ud800\\..\\safe"
+      "frontDirectory": "\u00e9\\..\\safe"
     },
     "settings": {},
     "expected": {
@@ -977,7 +977,7 @@
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
-        "frontDirectory": "\ud800\\..\\safe",
+        "frontDirectory": "\u00e9\\..\\safe",
         "backDirectory": "",
         "frontPort": 0,
         "backPort": 0,
@@ -993,7 +993,7 @@
     "body": {
       "jiraMode": "custom",
       "jiraStatusMap": {
-        "review": " \ud800 "
+        "review": " \u00e9 "
       }
     },
     "settings": {},
@@ -1007,7 +1007,7 @@
         "jiraStatusMap": {
           "todo": "",
           "doing": "",
-          "review": "\ud800",
+          "review": "\u00e9",
           "done": "",
           "standby": ""
         },
@@ -1030,7 +1030,7 @@
   {
     "body": {
       "jiraStatusMap": {
-        "\ud800": "unknown status"
+        "\u00e9": "unknown status"
       }
     },
     "settings": {},
@@ -1041,7 +1041,7 @@
   {
     "body": {
       "frontPort": 4318,
-      "frontCommand": "\ud800 run {port}"
+      "frontCommand": "\u00e9 run {port}"
     },
     "settings": {},
     "expected": {
@@ -1058,7 +1058,7 @@
           "done": "",
           "standby": ""
         },
-        "frontCommand": "\ud800 run {port}",
+        "frontCommand": "\u00e9 run {port}",
         "backCommand": "",
         "frontRepo": "",
         "backRepo": "",
@@ -1077,7 +1077,7 @@
   {
     "body": {
       "frontPort": 4318,
-      "frontCommand": "run {po\ud800rt}"
+      "frontCommand": "run {po\u00e9rt}"
     },
     "settings": {},
     "expected": {
@@ -1086,21 +1086,21 @@
   },
   {
     "body": {
-      "agent": "\ud800"
+      "agent": "\u00e9"
     },
     "settings": {
       "agentProviders": [
         {
-          "id": "\ud800",
+          "id": "\u00e9",
           "type": "command",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         }
       ]
     },
     "expected": {
       "value": {
         "projectRules": "",
-        "agent": "\ud800",
+        "agent": "\u00e9",
         "baseBranch": "",
         "repositoryConnector": "",
         "jiraMode": "inherit",
@@ -1129,7 +1129,7 @@
   },
   {
     "body": {
-      "agent": "\ud800"
+      "agent": "\u00e9"
     },
     "settings": {},
     "expected": {
@@ -1140,11 +1140,11 @@
     "body": {
       "agent": "codex",
       "unknown": {
-        "\ud800": "\udc00"
+        "\u00e9": "\u00e8"
       }
     },
     "settings": {
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
@@ -1189,7 +1189,7 @@
   {
     "body": {
       "agent": "missing",
-      "repositoryConnector": "\ud800"
+      "repositoryConnector": "\u00e9"
     },
     "settings": {},
     "expected": {
@@ -1199,7 +1199,7 @@
   {
     "body": {
       "agent": "missing",
-      "jiraMode": "\ud800"
+      "jiraMode": "\u00e9"
     },
     "settings": {},
     "expected": {
@@ -1219,7 +1219,7 @@
   {
     "body": {
       "baseBranch": "-bad",
-      "repositoryConnector": "\ud800"
+      "repositoryConnector": "\u00e9"
     },
     "settings": {},
     "expected": {
@@ -1228,7 +1228,7 @@
   },
   {
     "body": {
-      "jiraMode": "\ud800",
+      "jiraMode": "\u00e9",
       "jiraStatusMap": []
     },
     "settings": {},
@@ -1249,7 +1249,7 @@
   {
     "body": {
       "frontPort": 1,
-      "frontCommand": "\ud800",
+      "frontCommand": "\u00e9",
       "projectRules": false
     },
     "settings": {},
@@ -1280,7 +1280,7 @@
   },
   {
     "body": {
-      "frontPort": "\ud800"
+      "frontPort": "\u00e9"
     },
     "settings": {},
     "expected": {
@@ -1290,8 +1290,8 @@
   {
     "body": {
       "automationEnabled": true,
-      "prTarget": "\ud800",
-      "testCommand": "\udc00"
+      "prTarget": "\u00e9",
+      "testCommand": "\u00e8"
     },
     "settings": {},
     "expected": {
@@ -1319,8 +1319,8 @@
         "linkedProjectId": "",
         "automationEnabled": true,
         "autoFix": true,
-        "prTarget": "\ud800",
-        "testCommand": "\udc00"
+        "prTarget": "\u00e9",
+        "testCommand": "\u00e8"
       }
     }
   }

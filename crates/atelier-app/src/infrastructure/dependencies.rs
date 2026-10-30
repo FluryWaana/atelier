@@ -10,7 +10,6 @@ use super::{
 use crate::Result;
 use atelier_core::{
     contracts::Worktree,
-    document::JsonString,
     domain::{files::validate_path, projects::same_repository},
 };
 use cap_fs_ext::DirExt;
@@ -89,8 +88,8 @@ fn verify(target: &Dir, source_path: &Path, name: &str) -> Result<bool> {
         .read_link_contents(file)
         .map_err(|_| "message.the_dependency_link_has_changed_operation_refused")?;
     if !same_repository(
-        &path_string(&destination).utf8()?,
-        &path_string(&source_path.join(name)).utf8()?,
+        &path_string(&destination),
+        &path_string(&source_path.join(name)),
         cfg!(windows),
     ) {
         return Err("message.the_dependency_link_has_changed_operation_refused".into());
@@ -181,7 +180,7 @@ fn candidates(
 }
 
 pub(super) async fn sync(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<()> {
-    let source = Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
+    let source = Repository::synthetic(root, roots, worktree.source.as_str())?;
     let target = worktrees::inspect(root, roots, worktree).await?;
     let metadata = worktrees::metadata(&source, &target)?;
     let tracked_source = String::from_utf8(source.git(&["ls-files", "--cached", "-z"]).await?)?;

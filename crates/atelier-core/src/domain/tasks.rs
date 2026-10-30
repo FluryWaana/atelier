@@ -1,4 +1,3 @@
-use super::truthy;
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 
@@ -7,7 +6,7 @@ pub const STATUSES: &[&str] = &["todo", "doing", "review", "done", "standby"];
 pub fn review_requirements(card: &Value) -> Value {
     let content = |key| {
         card.get(key)
-            .filter(|value| truthy(value))
+            .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
             .cloned()
             .unwrap_or(json!(""))
     };

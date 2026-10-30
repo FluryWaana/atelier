@@ -1,8 +1,6 @@
-use super::task_creation::{Result, options, present, provider, text};
-use crate::{
-    document::{Document, JsonString},
-    domain::tasks::STATUSES,
-};
+use super::task_creation::{options, present, provider, text};
+use crate::Result;
+use crate::{document::Document, domain::tasks::STATUSES};
 use serde_json::value::RawValue;
 
 #[derive(Debug)]
@@ -53,7 +51,7 @@ pub fn public_config(stored: &Document, tokens: &Document, platform: &str) -> Re
         ("azure", "azureTokenSet"),
         ("tempo", "tempoTokenSet"),
     ] {
-        config.set(flag, &tokens.truthy(service)?)?;
+        config.set(flag, &tokens.has_text(service)?)?;
     }
     Ok(config)
 }
@@ -72,47 +70,27 @@ pub struct SettingsUpdate {
     pub tokens: Document,
 }
 
-// A truthy JSON object/array is never strictly equal to a separately supplied object/array.
+// Optional mapping values compare structurally, including objects and arrays.
 fn same_mapping_value(left: Option<&RawValue>, right: Option<&RawValue>) -> Result<bool> {
     fn value(raw: Option<&RawValue>) -> Result<Option<Box<RawValue>>> {
-        let mut document = Document::default();
-        if let Some(raw) = raw {
-            document.set("value", &raw)?;
-        }
-        Ok(document
-            .truthy("value")?
-            .then(|| raw.expect("truthy field exists").to_owned()))
+        Ok(raw
+            .filter(|value| value.get() != "null")
+            .map(ToOwned::to_owned))
     }
     let (left, right) = (value(left)?, value(right)?);
     same_value(left.as_deref(), right.as_deref())
 }
 
 fn same_value(left: Option<&RawValue>, right: Option<&RawValue>) -> Result<bool> {
-    match (left, right) {
-        (None, None) => Ok(true),
-        (Some(left), Some(right))
-            if left.get().starts_with('"') && right.get().starts_with('"') =>
-        {
-            Ok(serde_json::from_str::<JsonString>(left.get())?
-                == serde_json::from_str::<JsonString>(right.get())?)
-        }
-        (Some(left), Some(right))
-            if !left.get().starts_with(['{', '[', '"'])
-                && !right.get().starts_with(['{', '[', '"']) =>
-        {
-            Ok(serde_json::from_str::<serde_json::Value>(left.get())?
-                == serde_json::from_str::<serde_json::Value>(right.get())?)
-        }
-        _ => Ok(false),
-    }
+    let parse = |raw: &RawValue| serde_json::from_str::<serde_json::Value>(raw.get());
+    Ok(left.map(parse).transpose()? == right.map(parse).transpose()?)
 }
-
 pub fn prepare_update(
     stored: &Document,
     tokens: &Document,
     supplied: &Document,
-    repository: impl Fn(&RawValue) -> Result<JsonString>,
-    jira_base: impl Fn(&JsonString) -> Result<JsonString>,
+    repository: impl Fn(&RawValue) -> Result<String>,
+    jira_base: impl Fn(&str) -> Result<String>,
 ) -> Result<SettingsUpdate> {
     let previous = config(stored)?;
     if let Some(raw) = supplied.raw("expected") {
@@ -177,64 +155,70 @@ pub fn prepare_update(
     let mut body = previous.clone();
     body.overlay(supplied);
     let mut next = previous.clone();
-    if !previous.truthy("taskTemplates")? {
+    if !previous.has_list("taskTemplates")? {
         next.set("taskTemplates", &Vec::<Document>::new())?;
     }
-    let repo = if body.truthy("repo")? {
-        repository(body.raw("repo").expect("truthy field exists"))?
+    let repo = if body
+        .has_text("repo")
+        .map_err(|_| "message.invalid_or_overly_long_text")?
+    {
+        repository(body.raw("repo").expect("validated text field exists"))?
     } else {
-        JsonString::default()
+        String::default()
     };
     next.set("repo", &repo)?;
     next.set("jiraType", &body.raw("jiraType"))?;
-    let url = if body.truthy("jiraUrl")? {
+    let url = if body
+        .has_text("jiraUrl")
+        .map_err(|_| "message.invalid_or_overly_long_text")?
+    {
         jira_base(&text(body.raw("jiraUrl"), 2000)?)?
     } else {
-        JsonString::default()
+        String::default()
     };
     next.set("jiraUrl", &url)?;
     next.set("jiraEmail", &text(body.raw("jiraEmail"), 300)?)?;
     next.set("jql", &text(body.raw("jql"), 4000)?)?;
     let agent = present(body.raw("agent"))
         .or_else(|| present(previous.raw("agent")))
-        .map(|raw| serde_json::from_str::<JsonString>(raw.get()))
+        .map(|raw| serde_json::from_str::<String>(raw.get()))
         .transpose()
         .map_err(|_| SettingsFailure::Invalid("message.invalid_agent"))?
-        .unwrap_or_else(|| JsonString::from("codex"));
+        .unwrap_or_else(|| String::from("codex"));
     provider(&previous, &agent)?;
     next.set("agent", &agent)?;
     let providers = crate::domain::agent_options::providers(&previous)?;
     let mut updated_providers = Vec::new();
     for mut profile in providers {
         let id = profile
-            .get::<JsonString>("id")?
+            .get::<String>("id")?
             .ok_or(SettingsFailure::Invalid("message.invalid_agent"))?;
         let mut input = Document::default();
         for (key, suffix) in [("model", "Model"), ("effort", "Effort")] {
             let mut field = id.clone();
-            field.0.extend(suffix.encode_utf16());
-            if let Some(raw) = present(supplied.raw_key(&field)).or_else(|| profile.raw(key)) {
+            field.push_str(suffix);
+            if let Some(raw) = present(supplied.raw(&field)).or_else(|| profile.raw(key)) {
                 input.set(key, &raw)?;
             }
         }
         let selected = options(&id, &input, &previous)?;
         for (key, suffix) in [("model", "Model"), ("effort", "Effort")] {
             let mut field = id.clone();
-            field.0.extend(suffix.encode_utf16());
+            field.push_str(suffix);
             next.set_key(field, &selected[key])?;
             profile.set(key, &selected[key])?;
         }
         updated_providers.push(profile);
     }
-    if previous.truthy("agentProviders")? {
+    if previous.has_list("agentProviders")? {
         next.set("agentProviders", &updated_providers)?;
     }
     let mut branch = text(
         present(body.raw("baseBranch")).or_else(|| previous.raw("baseBranch")),
         180,
     )?;
-    if branch.0.is_empty() {
-        branch = JsonString::from("HEAD");
+    if branch.is_empty() {
+        branch = String::from("HEAD");
     }
     next.set("baseBranch", &branch)?;
     let automatic = present(body.raw("jiraAutoTransition"))
@@ -246,11 +230,10 @@ pub fn prepare_update(
         .or_else(|| previous.raw("jiraStatusMap"))
         .and_then(|raw| serde_json::from_str::<Document>(raw.get()).ok())
         .ok_or(SettingsFailure::Invalid("message.invalid_jira_mapping"))?;
-    if mapping.keys().any(|key| {
-        !STATUSES
-            .iter()
-            .any(|status| key == &JsonString::from(*status))
-    }) {
+    if mapping
+        .keys()
+        .any(|key| !STATUSES.iter().any(|status| key == *status))
+    {
         return Err(SettingsFailure::Invalid("message.invalid_jira_mapping").into());
     }
     let empty = RawValue::from_string("\"\"".into())?;
@@ -258,11 +241,11 @@ pub fn prepare_update(
     let mut has_status = false;
     for status in STATUSES {
         let value = text(Some(present(mapping.raw(status)).unwrap_or(&empty)), 100)?;
-        has_status |= !value.0.is_empty();
+        has_status |= !value.is_empty();
         normalized.set(status, &value)?;
     }
     let url_changed = !same_value(previous.raw("jiraUrl"), next.raw("jiraUrl"))?;
-    if previous.truthy("jiraUrl")? && url_changed && !new_mapping {
+    if previous.has_text("jiraUrl")? && url_changed && !new_mapping {
         next.set("jiraAutoTransition", &false)?;
         normalized = Document::default();
     } else if automatic && !has_status {
@@ -286,14 +269,21 @@ pub fn prepare_update(
         ("azure", "azureToken", "clearAzureToken"),
         ("tempo", "tempoToken", "clearTempoToken"),
     ] {
-        if body.truthy(field)? {
+        if body
+            .has_text(field)
+            .map_err(|_| "message.invalid_or_overly_long_text")?
+        {
             credentials.set(service, &text(body.raw(field), 4000)?)?;
         }
-        if body.truthy(clear)? {
+        if body.flag(clear).map_err(|_| "message.invalid_request")? {
             credentials.set(service, &"")?;
         }
     }
-    if url_changed && !body.truthy("tempoToken")? {
+    if url_changed
+        && !body
+            .has_text("tempoToken")
+            .map_err(|_| "message.invalid_request")?
+    {
         credentials.set("tempo", &"")?;
     }
     Ok(SettingsUpdate {

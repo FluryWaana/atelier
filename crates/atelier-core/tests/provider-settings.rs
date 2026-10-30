@@ -3,7 +3,7 @@ use atelier_core::{document::Document, domain::agent_options::provider_settings}
 mod json;
 
 #[test]
-fn provider_settings_preserve_utf16_and_error_priority() {
+fn provider_settings_preserve_unicode_and_validation() {
     let reference: Document = serde_json::from_str(include_str!(
         "fixtures/rust-provider-settings-reference.json"
     ))

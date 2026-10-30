@@ -6,7 +6,6 @@ use super::{
 use crate::Result;
 use atelier_core::{
     contracts::Worktree,
-    document::JsonString,
     domain::agent_context::{COUNT_LIMIT, FILE_LIMIT, TOTAL_LIMIT, allowed},
 };
 use cap_fs_ext::DirExt;
@@ -266,7 +265,7 @@ fn synchronize(
 }
 
 pub(super) async fn sync(root: &Dir, roots: &[PathBuf], worktree: &Worktree) -> Result<()> {
-    let source = Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
+    let source = Repository::synthetic(root, roots, worktree.source.as_str())?;
     let target = worktrees::inspect(root, roots, worktree).await?;
     let metadata = worktrees::metadata(&source, &target)?;
     for name in [

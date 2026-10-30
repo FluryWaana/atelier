@@ -21,7 +21,7 @@ fn succeeded(run: &Document, active: &QueuedRun) -> Result<bool> {
     Ok(run.string_equals("status", "completed")?
         && run.string_equals("cardId", &active.card_id)?
         && run.get::<i32>("exitCode")? == Some(0)
-        && !run.truthy("attention")?)
+        && !run.has_text("attention")?)
 }
 pub fn read(store: &Store<'_>) -> Result<RunQueue> {
     let queue = store
@@ -273,8 +273,7 @@ pub fn claim(store: &Store<'_>, run_id: String) -> Result<Option<(Card, Document
             .fields
             .get::<String>("mode")?
             .unwrap_or_else(|| "edit".into());
-        if card.fields.truthy("brainstormSession")? || !["analyze", "edit"].contains(&mode.as_str())
-        {
+        if card.fields.flag("brainstormSession")? || !["analyze", "edit"].contains(&mode.as_str()) {
             return Err("message.only_saved_tasks_can_run_in_the_queue".into());
         }
         let mut body = Document::default();

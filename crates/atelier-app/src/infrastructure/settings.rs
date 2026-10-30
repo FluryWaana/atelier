@@ -2,7 +2,7 @@ use super::{store::Store, token_vault};
 use crate::Result;
 use atelier_core::{
     application::{settings, task_creation::CreationContext},
-    document::{Document, JsonString},
+    document::Document,
 };
 
 #[derive(Debug)]
@@ -24,9 +24,8 @@ pub fn platform() -> &'static str {
     }
 }
 
-pub fn jira_base(value: &JsonString) -> Result<JsonString> {
-    let url =
-        reqwest::Url::parse(&String::from_utf16_lossy(&value.0)).map_err(|_| "Invalid URL")?;
+pub fn jira_base(value: &str) -> Result<String> {
+    let url = reqwest::Url::parse(&value).map_err(|_| "Invalid URL")?;
     if url.scheme() != "https"
         || !url.username().is_empty()
         || url.password().is_some_and(|value| !value.is_empty())
@@ -38,7 +37,7 @@ pub fn jira_base(value: &JsonString) -> Result<JsonString> {
         );
     }
     let value = url.as_str();
-    Ok(JsonString::from(value.strip_suffix('/').unwrap_or(value)))
+    Ok(String::from(value.strip_suffix('/').unwrap_or(value)))
 }
 
 pub(super) fn load(
@@ -86,11 +85,11 @@ pub fn update(
         jira_base,
     )?;
     if stored.raw("jiraConnection").is_some()
-        && tokens.get::<JsonString>("jira")? != next.tokens.get::<JsonString>("jira")?
+        && tokens.get::<String>("jira")? != next.tokens.get::<String>("jira")?
     {
         super::jira::invalidate_configuration(&mut next.settings, None)?;
     }
-    if tokens.get::<JsonString>("tempo")? != next.tokens.get::<JsonString>("tempo")? {
+    if tokens.get::<String>("tempo")? != next.tokens.get::<String>("tempo")? {
         super::tempo::invalidate(&mut next.settings, None)?;
     }
     let response = settings::public_config(&next.settings, &next.tokens, platform())?;
@@ -172,7 +171,7 @@ mod tests {
                     Ok(format!("opaque:{value}"))
                 }
             };
-            let body: Document = serde_json::from_str(r#"{"baseBranch":"changed","token":"synthetic-\ud800","taskTemplates":[],"taskQueue":null}"#).unwrap();
+            let body: Document = serde_json::from_str(r#"{"baseBranch":"changed","token":"synthetic-\u00e9","taskTemplates":[],"taskQueue":null}"#).unwrap();
             let response = update(&store, &body, &mut protector);
             if fault != "none" {
                 assert!(response.is_err());
@@ -197,12 +196,12 @@ mod tests {
                     store.settings::<serde_json::Value>().unwrap()["taskQueue"],
                     original["taskQueue"]
                 );
-                let mut expected = JsonString::from("synthetic-");
-                expected.0.push(0xd800);
+                let mut expected = String::from("synthetic-");
+                expected.push('é');
                 assert_eq!(
                     load(&store, &mut protector)
                         .unwrap()
-                        .get::<JsonString>("jira")
+                        .get::<String>("jira")
                         .unwrap(),
                     Some(expected)
                 );

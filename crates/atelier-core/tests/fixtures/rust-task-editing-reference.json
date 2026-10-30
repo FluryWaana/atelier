@@ -3,7 +3,7 @@
     "body": {},
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -13,7 +13,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -21,13 +21,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -37,7 +37,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -45,12 +45,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -60,7 +60,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -68,7 +68,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -77,7 +77,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -87,7 +87,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -95,7 +95,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -108,7 +108,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -118,7 +118,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -126,14 +126,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.title_required",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -143,7 +143,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -151,7 +151,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -163,7 +163,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -173,7 +173,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -181,14 +181,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.title_required",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -198,7 +198,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -206,7 +206,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -218,7 +218,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -228,7 +228,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -236,14 +236,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -253,7 +253,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -261,7 +261,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -273,7 +273,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -283,7 +283,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -291,14 +291,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -308,7 +308,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -316,7 +316,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -324,11 +324,11 @@
   },
   {
     "body": {
-      "title": "New \ud800"
+      "title": "New \u00e9"
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -338,7 +338,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -346,13 +346,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "New \ud800",
+        "title": "New \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -362,7 +362,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -370,12 +370,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "New \ud800",
+        "title": "New \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -385,7 +385,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -393,7 +393,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -402,7 +402,7 @@
           "put",
           {
             "id": "card",
-            "title": "New \ud800",
+            "title": "New \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -412,7 +412,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -420,7 +420,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -430,11 +430,11 @@
   },
   {
     "body": {
-      "title": "Title \ud800"
+      "title": "Title \u00e9"
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -444,7 +444,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -452,13 +452,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -468,7 +468,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -476,12 +476,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -491,7 +491,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -499,7 +499,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -508,7 +508,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -518,7 +518,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -526,7 +526,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -539,7 +539,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -549,7 +549,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -557,14 +557,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -574,7 +574,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -582,7 +582,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -594,7 +594,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -604,7 +604,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -612,13 +612,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -628,7 +628,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -636,12 +636,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -651,7 +651,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -659,7 +659,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -668,7 +668,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -678,7 +678,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -686,7 +686,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -699,7 +699,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -709,7 +709,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -717,13 +717,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -733,7 +733,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -741,12 +741,12 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -756,7 +756,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -764,7 +764,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -772,7 +772,7 @@
           "launch",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -782,7 +782,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -790,7 +790,7 @@
             "createdAt": "created",
             "updatedAt": "old",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           },
           {
@@ -809,7 +809,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -819,7 +819,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -827,13 +827,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -843,7 +843,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -851,12 +851,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -866,7 +866,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -874,7 +874,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -883,7 +883,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -893,7 +893,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -901,7 +901,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -915,7 +915,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -925,7 +925,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -933,13 +933,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -949,7 +949,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -957,12 +957,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -972,7 +972,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -980,7 +980,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -989,7 +989,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -999,7 +999,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1007,7 +1007,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -1021,7 +1021,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1031,7 +1031,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1039,13 +1039,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1055,7 +1055,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1063,12 +1063,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1078,7 +1078,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1086,7 +1086,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1095,7 +1095,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -1105,7 +1105,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1113,7 +1113,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -1127,7 +1127,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1137,7 +1137,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1145,14 +1145,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_status",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1162,7 +1162,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1170,7 +1170,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -1182,7 +1182,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1192,7 +1192,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1200,14 +1200,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_status",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1217,7 +1217,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1225,7 +1225,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -1237,7 +1237,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1247,7 +1247,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1255,13 +1255,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1271,7 +1271,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1279,12 +1279,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1294,7 +1294,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1302,7 +1302,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1311,7 +1311,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -1321,7 +1321,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1329,7 +1329,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -1343,7 +1343,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1353,7 +1353,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1361,7 +1361,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
@@ -1377,7 +1377,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1385,7 +1385,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
@@ -1400,7 +1400,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1408,7 +1408,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1426,7 +1426,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1434,7 +1434,7 @@
             "createdAt": "created",
             "updatedAt": "old",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           },
           {
@@ -1456,7 +1456,7 @@
     "launchError": true,
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1466,7 +1466,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1474,14 +1474,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "Synthetic launch failure",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1491,7 +1491,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1499,7 +1499,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1517,7 +1517,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1525,7 +1525,7 @@
             "createdAt": "created",
             "updatedAt": "old",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           },
           {
@@ -1544,7 +1544,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1554,7 +1554,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1562,7 +1562,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "ticket": {
         "key": "TEST-1"
@@ -1571,7 +1571,7 @@
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1581,7 +1581,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1589,7 +1589,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "ticket": {
           "key": "TEST-1"
@@ -1597,7 +1597,7 @@
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1607,7 +1607,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1615,7 +1615,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "ticket": {
           "key": "TEST-1"
@@ -1627,7 +1627,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -1637,7 +1637,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1645,7 +1645,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "ticket": {
               "key": "TEST-1"
@@ -1663,7 +1663,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1673,7 +1673,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1681,7 +1681,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "ticket": {
         "key": "TEST-1"
@@ -1690,7 +1690,7 @@
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "Keep",
         "repo": "old",
@@ -1700,7 +1700,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1708,7 +1708,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "ticket": {
           "key": "TEST-1"
@@ -1716,7 +1716,7 @@
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "Keep",
         "repo": "old",
@@ -1726,7 +1726,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1734,7 +1734,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "ticket": {
           "key": "TEST-1"
@@ -1746,7 +1746,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "Keep",
             "repo": "old",
@@ -1756,7 +1756,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -1764,7 +1764,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "ticket": {
               "key": "TEST-1"
@@ -1779,14 +1779,14 @@
     "body": {
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": true
         }
       ]
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1796,7 +1796,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1804,13 +1804,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1820,7 +1820,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": true
           }
         ],
@@ -1828,12 +1828,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1843,7 +1843,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": true
           }
         ],
@@ -1851,7 +1851,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1860,7 +1860,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -1870,7 +1870,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": true
               }
             ],
@@ -1878,7 +1878,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -1896,7 +1896,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -1906,7 +1906,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -1914,13 +1914,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1938,12 +1938,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -1961,7 +1961,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -1970,7 +1970,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -1988,7 +1988,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -2002,7 +2002,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2012,7 +2012,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2020,14 +2020,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.maximum_20_acceptance_criteria",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2037,7 +2037,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2045,7 +2045,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2053,11 +2053,11 @@
   },
   {
     "body": {
-      "instructions": " Instruction \ud800 "
+      "instructions": " Instruction \u00e9 "
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2067,7 +2067,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2075,15 +2075,15 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
-        "instructions": "Instruction \ud800",
+        "instructions": "Instruction \u00e9",
         "repo": "old",
         "agent": "codex",
         "model": "model",
@@ -2091,7 +2091,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2099,14 +2099,14 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
-        "instructions": "Instruction \ud800",
+        "instructions": "Instruction \u00e9",
         "repo": "old",
         "agent": "codex",
         "model": "model",
@@ -2114,7 +2114,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2122,7 +2122,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -2131,9 +2131,9 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
-            "instructions": "Instruction \ud800",
+            "instructions": "Instruction \u00e9",
             "repo": "old",
             "agent": "codex",
             "model": "model",
@@ -2141,7 +2141,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2149,7 +2149,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ],
@@ -2163,7 +2163,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2173,7 +2173,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2181,14 +2181,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2198,7 +2198,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2206,7 +2206,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2218,7 +2218,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2228,7 +2228,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2236,14 +2236,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_mode",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2253,7 +2253,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2261,7 +2261,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2273,7 +2273,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2283,7 +2283,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2291,13 +2291,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2307,7 +2307,7 @@
         "mode": "analyze",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2315,12 +2315,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2330,7 +2330,7 @@
         "mode": "analyze",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2338,7 +2338,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -2347,7 +2347,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -2357,7 +2357,7 @@
             "mode": "analyze",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2365,7 +2365,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -2378,7 +2378,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2388,7 +2388,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2396,13 +2396,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2412,7 +2412,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2420,13 +2420,13 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "agentExplicit": true
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2436,7 +2436,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2444,7 +2444,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "agentExplicit": true
       },
@@ -2454,7 +2454,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -2464,7 +2464,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2472,7 +2472,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "agentExplicit": true
           }
@@ -2486,7 +2486,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2496,7 +2496,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2504,13 +2504,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2520,7 +2520,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2528,12 +2528,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2543,7 +2543,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2551,7 +2551,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -2560,7 +2560,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -2570,7 +2570,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2578,7 +2578,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -2591,7 +2591,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2601,7 +2601,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2609,14 +2609,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_agent",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2626,7 +2626,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2634,7 +2634,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2646,7 +2646,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2656,7 +2656,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2664,14 +2664,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_agent",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2681,7 +2681,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2689,7 +2689,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2702,7 +2702,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2712,7 +2712,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2720,13 +2720,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2736,7 +2736,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2744,12 +2744,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2759,7 +2759,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2767,7 +2767,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -2776,7 +2776,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -2786,7 +2786,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2794,7 +2794,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -2804,11 +2804,11 @@
   {
     "body": {
       "model": false,
-      "effort": "\ud800"
+      "effort": "\u00e9"
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2818,7 +2818,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2826,14 +2826,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_model",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2843,7 +2843,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2851,7 +2851,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -2865,7 +2865,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2875,7 +2875,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2883,13 +2883,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2899,7 +2899,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2907,13 +2907,13 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "agentExplicit": true
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -2923,7 +2923,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -2931,7 +2931,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "agentExplicit": true
       },
@@ -2941,7 +2941,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -2951,7 +2951,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -2959,7 +2959,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "agentExplicit": true
           }
@@ -2971,7 +2971,7 @@
     "body": {},
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -2981,7 +2981,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -2989,14 +2989,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_model",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3006,7 +3006,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3014,7 +3014,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -3024,7 +3024,7 @@
     "body": {},
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3032,7 +3032,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3040,13 +3040,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3054,7 +3054,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3062,14 +3062,14 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "model": "",
         "effort": ""
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3077,7 +3077,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3085,7 +3085,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "model": "",
         "effort": ""
@@ -3096,7 +3096,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -3104,7 +3104,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -3112,7 +3112,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "model": "",
             "effort": ""
@@ -3127,7 +3127,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3137,7 +3137,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3145,7 +3145,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3155,7 +3155,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3165,7 +3165,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3173,7 +3173,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3188,7 +3188,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3198,7 +3198,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3206,7 +3206,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3216,7 +3216,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3226,7 +3226,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3234,7 +3234,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3249,7 +3249,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3259,7 +3259,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3267,7 +3267,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3277,7 +3277,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3287,7 +3287,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3295,7 +3295,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3310,7 +3310,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3320,7 +3320,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3328,7 +3328,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3338,7 +3338,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3348,7 +3348,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3356,7 +3356,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3371,7 +3371,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3381,7 +3381,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3389,7 +3389,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3398,7 +3398,7 @@
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3408,7 +3408,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3416,7 +3416,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3425,7 +3425,7 @@
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3435,7 +3435,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3443,7 +3443,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3456,7 +3456,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -3466,7 +3466,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -3474,7 +3474,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "worktree": {
               "path": "protected"
@@ -3491,7 +3491,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3501,7 +3501,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3509,7 +3509,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3519,7 +3519,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3529,7 +3529,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3537,7 +3537,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3552,7 +3552,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3562,7 +3562,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3570,7 +3570,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "worktree": {
         "path": "protected"
@@ -3580,7 +3580,7 @@
       "error": "message.remove_the_worktree_before_changing_the_repository_or_branch",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -3590,7 +3590,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3598,7 +3598,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "worktree": {
           "path": "protected"
@@ -3613,7 +3613,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3623,7 +3623,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3631,13 +3631,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "checked:old",
@@ -3647,7 +3647,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3655,12 +3655,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "checked:old",
@@ -3670,7 +3670,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3678,7 +3678,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -3691,7 +3691,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "checked:old",
@@ -3701,7 +3701,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -3709,7 +3709,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -3722,7 +3722,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3732,7 +3732,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3740,13 +3740,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "",
@@ -3756,7 +3756,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3764,12 +3764,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "",
@@ -3779,7 +3779,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3787,7 +3787,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -3796,7 +3796,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "",
@@ -3806,7 +3806,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -3814,7 +3814,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -3827,7 +3827,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3837,7 +3837,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3845,13 +3845,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "",
@@ -3861,7 +3861,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3869,12 +3869,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "",
@@ -3884,7 +3884,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3892,7 +3892,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -3901,7 +3901,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "",
@@ -3911,7 +3911,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -3919,7 +3919,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -3932,7 +3932,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -3942,7 +3942,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -3950,13 +3950,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "checked:new",
@@ -3966,7 +3966,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3974,12 +3974,12 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "checked:new",
@@ -3989,7 +3989,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -3997,7 +3997,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -4010,7 +4010,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "checked:new",
@@ -4020,7 +4020,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -4028,7 +4028,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             }
           }
         ]
@@ -4041,7 +4041,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4051,7 +4051,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4059,14 +4059,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4076,7 +4076,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4084,7 +4084,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -4102,7 +4102,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4112,7 +4112,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4120,13 +4120,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4136,7 +4136,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4144,14 +4144,14 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "branch": "branch",
         "baseBranch": "base"
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4161,7 +4161,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4169,7 +4169,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "branch": "branch",
         "baseBranch": "base"
@@ -4180,7 +4180,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -4190,7 +4190,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -4198,7 +4198,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "branch": "branch",
             "baseBranch": "base"
@@ -4213,7 +4213,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4223,7 +4223,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4231,14 +4231,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4248,7 +4248,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4256,7 +4256,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4270,7 +4270,7 @@
     "repositoryError": true,
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4280,7 +4280,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4288,14 +4288,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "Synthetic repository failure",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4305,7 +4305,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4313,7 +4313,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": [
@@ -4331,7 +4331,7 @@
     "busy": true,
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4341,7 +4341,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4349,14 +4349,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.stop_the_agent_before_editing_this_card",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4366,7 +4366,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4374,7 +4374,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4387,7 +4387,7 @@
     "busy": true,
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4397,7 +4397,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4405,7 +4405,7 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       },
       "archived": true
     },
@@ -4413,7 +4413,7 @@
       "error": "message.restore_this_task_before_resuming_work",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4423,7 +4423,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4431,7 +4431,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "archived": true
       },
@@ -4443,7 +4443,7 @@
     "missing": true,
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4453,7 +4453,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4461,14 +4461,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.card_not_found",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4478,7 +4478,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4486,7 +4486,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4498,7 +4498,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4508,7 +4508,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4516,13 +4516,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4532,7 +4532,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4540,13 +4540,13 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": []
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4556,7 +4556,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4564,7 +4564,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": []
       },
@@ -4574,7 +4574,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -4584,7 +4584,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -4592,7 +4592,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "blockedBy": []
           }
@@ -4608,7 +4608,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4618,7 +4618,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4626,13 +4626,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4642,7 +4642,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4650,7 +4650,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": [
           "other"
@@ -4658,7 +4658,7 @@
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4668,7 +4668,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4676,7 +4676,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": [
           "other"
@@ -4688,7 +4688,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -4698,7 +4698,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -4706,7 +4706,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "blockedBy": [
               "other"
@@ -4724,7 +4724,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4734,7 +4734,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4742,14 +4742,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4759,7 +4759,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4767,7 +4767,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4781,7 +4781,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4791,7 +4791,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4799,14 +4799,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4816,7 +4816,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4824,7 +4824,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4839,7 +4839,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4849,7 +4849,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4857,14 +4857,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4874,7 +4874,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4882,7 +4882,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4894,7 +4894,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4904,7 +4904,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4912,14 +4912,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4929,7 +4929,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4937,7 +4937,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -4949,7 +4949,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4959,7 +4959,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4967,14 +4967,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_dependencies_20_tasks_maximum_without_duplicates_or_self",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4984,7 +4984,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4992,7 +4992,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -5014,7 +5014,7 @@
     ],
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -5024,7 +5024,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -5032,14 +5032,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.this_dependency_would_create_a_cycle",
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -5049,7 +5049,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -5057,7 +5057,7 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         }
       },
       "events": []
@@ -5078,7 +5078,7 @@
     ],
     "card": {
       "id": "card",
-      "title": "Title \ud800",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -5088,7 +5088,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\udc00",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -5096,13 +5096,13 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\ud800"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "value": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -5112,7 +5112,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -5120,7 +5120,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": [
           "other"
@@ -5128,7 +5128,7 @@
       },
       "saved": {
         "id": "card",
-        "title": "Title \ud800",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -5138,7 +5138,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -5146,7 +5146,7 @@
         "createdAt": "created",
         "updatedAt": "now",
         "unknown": {
-          "keep": "\ud800"
+          "keep": "\u00e9"
         },
         "blockedBy": [
           "other"
@@ -5158,7 +5158,7 @@
           "put",
           {
             "id": "card",
-            "title": "Title \ud800",
+            "title": "Title \u00e9",
             "description": "Description",
             "instructions": "",
             "repo": "old",
@@ -5168,7 +5168,7 @@
             "mode": "edit",
             "checklist": [
               {
-                "text": "\udc00",
+                "text": "\u00e8",
                 "done": false
               }
             ],
@@ -5176,7 +5176,7 @@
             "createdAt": "created",
             "updatedAt": "now",
             "unknown": {
-              "keep": "\ud800"
+              "keep": "\u00e9"
             },
             "blockedBy": [
               "other"

@@ -465,7 +465,7 @@ async fn compiled_repository_module_publication_recovers_once_and_reviews_real_c
     .unwrap();
     let retained = card(&db).await;
     assert!(automation::read(&retained).unwrap().unwrap().state == State::Ready);
-    assert_eq!(retained.title.utf8().unwrap(), "Human title");
+    assert_eq!(retained.title.clone(), "Human title");
     assert_eq!(
         retained.fields.get::<Value>("checklist").unwrap(),
         initial.fields.get::<Value>("checklist").unwrap()
@@ -520,7 +520,7 @@ async fn compiled_repository_module_publication_recovers_once_and_reviews_real_c
         let run = store
             .document::<Document>(Documents::Runs, "review")?
             .unwrap();
-        assert!(run.truthy("reviewStaleReason")?);
+        assert!(run.has_text("reviewStaleReason")?);
         let card = store.document::<Card>(Documents::Cards, "task")?.unwrap();
         assert!(automation::read(&card)?.unwrap().state == State::Interrupted);
         Ok(())

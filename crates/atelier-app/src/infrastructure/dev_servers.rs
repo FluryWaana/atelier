@@ -198,7 +198,7 @@ impl DevServers {
                     state: ServiceState {
                         id: launch.id.clone(),
                         name: launch.name.clone(),
-                        directory: path_string(&directory.path).utf8()?,
+                        directory: path_string(&directory.path),
                         status: ServiceStatus::Starting,
                         pid: None,
                         port,
@@ -444,7 +444,7 @@ impl DevServers {
                 state: ServiceState {
                     id: launch.id.clone(),
                     name: launch.name.clone(),
-                    directory: path_string(&directory.path).utf8()?,
+                    directory: path_string(&directory.path),
                     status: ServiceStatus::Starting,
                     pid: None,
                     port: lease.as_ref().map(|lease| lease.port),

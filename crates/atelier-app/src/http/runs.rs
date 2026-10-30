@@ -94,11 +94,11 @@ pub(super) async fn launch(
                 let requested:serde_json::Value=serde_json::from_str(&serde_json::to_string(&requested)?)?;
                 let options=atelier_core::domain::agent_options::resolve_agent_options(&settings,&card_value,&requested)?;
                 profile.set("model",&options["model"])?; profile.set("effort",&options["effort"])?;
-                if card.fields.truthy("archived")? {
+                if card.fields.flag("archived")? {
                     return Err("message.restore_task_before_agent".into());
                 }
                 let rules=settings["projectRules"].as_str().unwrap_or_default().to_owned();
-                let conversation=if card.fields.truthy("brainstormSession")? {
+                let conversation=if card.fields.flag("brainstormSession")? {
                     if conversation_body.get::<String>("mode")?.as_deref()!=Some("analyze"){return Err("message.a_brainstorm_only_uses_analyze_mode".into());}
                     let expected=conversation_body.get::<Card>("expected")?.ok_or("message.session_snapshot_required")?;
                     let reply=conversation_body.get::<String>("message")?.ok_or("message.brainstorm_message_required")?;
@@ -124,7 +124,7 @@ pub(super) async fn launch(
         }else{None};
         let review_context=if !connector_review&&["review","correction"].contains(&purpose.as_str()) {
             let expected=body.get::<Card>("expected")?.ok_or("message.task_snapshot_required")?;
-            if card.fields.truthy("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("message.the_task_changed_reload_before_reviewing".into());}
+            if card.fields.flag("brainstormSession")? || serde_json::to_value(atelier_core::application::jira::card_snapshot(&card))?!=serde_json::to_value(atelier_core::application::jira::card_snapshot(&expected))? {return Err("message.the_task_changed_reload_before_reviewing".into());}
             let linked=card.fields.get::<atelier_core::contracts::PullRequest>("pullRequest")?.ok_or("message.a_pr_mr_and_its_worktree_are_required_for_review")?;
             let vault=state.vault.clone();let kind=linked.kind;let revision=linked.revision;
             let (configuration,token)=state.database.call(move|store|crate::infrastructure::forge::credentials(store,kind,revision,&mut|value,decrypt|vault.protect(value,decrypt))).await?;
@@ -136,7 +136,7 @@ pub(super) async fn launch(
             if review_context.as_ref()!=Some(&expected) {return Err("message.commits_or_requirements_changed_run_the_review_again".into());}
             Some(prompt)
         }else if let Some(context)=&review_context {Some(atelier_core::application::reviews::prompt(context)?)}else{conversation};
-        let no_repository=(card.fields.truthy("brainstormSession")? || body.get::<String>("purpose")?.as_deref()==Some("preparation")) && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
+        let no_repository=(card.fields.flag("brainstormSession")? || body.get::<String>("purpose")?.as_deref()==Some("preparation")) && card.fields.get::<String>("repo")?.unwrap_or_default().is_empty();
         let (directory,branch)=if no_repository {
             if card.fields.raw("worktree").is_some(){return Err("message.remove_the_worktree_before_continuing_without_a_repository".into());}
             (RunDirectory::conversation()?,String::new())
@@ -148,7 +148,7 @@ pub(super) async fn launch(
             let repository=worktrees::inspect(&state.prototype_directory,&state.prototype_paths,&worktree).await?;
             (RunDirectory::Worktree(repository),worktree.branch)
         };
-        let working_path=crate::infrastructure::task_creation::path_string(directory.path()).utf8()?;
+        let working_path=crate::infrastructure::task_creation::path_string(directory.path());
         let kind=profile.get::<String>("type")?.ok_or("message.invalid_agent")?;
         let model = profile.get::<String>("model")?.unwrap_or_default();
         let effort = profile.get::<String>("effort")?.unwrap_or_default();
@@ -168,10 +168,10 @@ pub(super) async fn launch(
             .current_dir(&working_path);
         let criteria = card.fields.get::<Vec<Document>>("checklist")?.unwrap_or_default().iter().map(|criterion| criterion.get::<String>("text").map(|text| text.unwrap_or_default())).collect::<std::result::Result<Vec<_>,_>>()?.join("\n- ");
         let instruction = if mode == "analyze" { "Analyse seulement, sans modifier les fichiers." } else { "Effectue les modifications nécessaires et indique les vérifications et limites." };
-        let prompt = if let Some(conversation)=conversation {if no_repository{let context=if card.fields.truthy("brainstormSession")?{"Conversation sans dépôt"}else{"Préparation sans dépôt"};format!("{context}, dans un dossier temporaire vide. Aucun fichier utilisateur ni projet à inspecter. Ne crée aucun fichier.\n{conversation}")}else{format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",branch)}} else {format!(
+        let prompt = if let Some(conversation)=conversation {if no_repository{let context=if card.fields.flag("brainstormSession")?{"Conversation sans dépôt"}else{"Préparation sans dépôt"};format!("{context}, dans un dossier temporaire vide. Aucun fichier utilisateur ni projet à inspecter. Ne crée aucun fichier.\n{conversation}")}else{format!("Branche : {}. Ne change pas de branche. Règles du projet :\n{rules}\n\n{conversation}",branch)}} else {format!(
             "{instruction} Branche : {}. Ne change pas de branche. Ne crée aucun commit, ne pousse rien et ne publie rien.\nRègles du projet :\n{rules}\n\n{}\n\n{}\n\n{}\n\nCritères :\n- {criteria}",
             branch,
-            card.title.utf8()?,
+            card.title.clone(),
             card.fields
                 .get::<String>("description")?
                 .unwrap_or_default(),
@@ -200,8 +200,8 @@ pub(super) async fn launch(
             if purpose=="review" {run.set("kind",&"pr-review")?;run.set("reviewStaleReason",&crate::infrastructure::reviews::UNCHECKED)?;}
             else {run.set("correctionOf",&body.get::<String>("reviewId")?)?;run.set("correctionIndexes",&body.get::<Vec<usize>>("indexes")?)?;}
         }
-        if card.fields.truthy("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("message.brainstorm_message_required")?)?;}
-        if !card.fields.truthy("brainstormSession")? && body.get::<String>("purpose")?.as_deref()==Some("preparation"){run.set("purpose",&"preparation")?;run.set("requirements",&atelier_core::application::preparation::requirements(&card)?)?;}
+        if card.fields.flag("brainstormSession")? {run.set("purpose",&"brainstorm")?;run.set("userMessage",&body.get::<String>("message")?.ok_or("message.brainstorm_message_required")?)?;}
+        if !card.fields.flag("brainstormSession")? && body.get::<String>("purpose")?.as_deref()==Some("preparation"){run.set("purpose",&"preparation")?;run.set("requirements",&atelier_core::application::preparation::requirements(&card)?)?;}
         run.set("model", &model)?;
         run.set("effort", &effort)?;
         run.set("repo", &working_path)?;

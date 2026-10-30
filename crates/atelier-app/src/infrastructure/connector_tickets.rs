@@ -135,7 +135,7 @@ pub fn refresh(store: &Store<'_>, module: &str, input: &protocol::TicketRefresh)
         {
             return Err("message.the_report_does_not_match_the_ticket_linked_to_this_card".into());
         }
-        let changed = (input.replace_title && card.title != remote.title.as_str().into())
+        let changed = (input.replace_title && card.title != remote.title)
             || (input.replace_description
                 && card
                     .fields
@@ -511,7 +511,7 @@ mod tests {
             .execute_batch("DROP TRIGGER refuse_refresh;")
             .unwrap();
         let result = refresh(&store, "synthetic-tickets", &input).unwrap();
-        assert_eq!(result.title, "Remote title".into());
+        assert_eq!(result.title, "Remote title");
         for key in ["description", "status", "instructions", "checklist", "repo"] {
             assert_eq!(
                 serde_json::to_value(result.fields.get::<serde_json::Value>(key).unwrap()).unwrap(),

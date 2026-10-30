@@ -33,7 +33,7 @@ struct Draft {
 impl Draft {
     fn from_card(card: &Card) -> Self {
         Self {
-            title: String::from_utf16_lossy(&card.title.0),
+            title: card.title.clone(),
             description: field(&card.fields, "description"),
             instructions: field(&card.fields, "instructions"),
             status: field(&card.fields, "status"),
@@ -94,7 +94,7 @@ pub fn TaskEditor(
     let i18n = expect_context::<I18n>();
     let cards = board.cards;
     let templates = board.templates;
-    let archived = card.fields.truthy("archived").unwrap_or(false);
+    let archived = card.fields.flag("archived").unwrap_or(false);
     let no_repository = field(&card.fields, "repo").is_empty();
 
     let original = StoredValue::new(Draft::from_card(&card));
@@ -429,7 +429,7 @@ pub fn TaskEditor(
                         <label for="edit-description">{move || i18n.text("message.description")}</label><textarea id="edit-description" rows="5" maxlength="20000" readonly=move ||ticket.get() prop:value=move || draft.get().description on:input=move |event| draft.update(|draft| draft.description = event_target_value(&event))></textarea>
                         <details class="disclosure criteria" open><summary id="criteria-heading">{move || i18n.text("message.acceptance_criteria")}</summary><p class="hint">{move || i18n.text("message.check_criteria_after_verifying_them_up_to_20_criteria")}</p>
                             <For each={move || (0..draft.get().criteria.len()).collect::<Vec<_>>()} key=|index| *index children=move |index| view! {
-                                <div class="criterion"><label><span class="sr-only">{move || i18n.text("message.criterion_0").replace("{0}", &(index + 1).to_string())}</span><input class="criterion-text" required maxlength="500" prop:value=move || draft.with(|draft| draft.criteria.get(index).map(|criterion| String::from_utf16_lossy(&criterion.text.0)).unwrap_or_default()) on:input=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.text = event_target_value(&event).as_str().into(); } }) /></label>
+                                <div class="criterion"><label><span class="sr-only">{move || i18n.text("message.criterion_0").replace("{0}", &(index + 1).to_string())}</span><input class="criterion-text" required maxlength="500" prop:value=move || draft.with(|draft| draft.criteria.get(index).map(|criterion| criterion.text.clone()).unwrap_or_default()) on:input=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.text = event_target_value(&event).as_str().into(); } }) /></label>
                                 <label class="check-filter"><input class="criterion-done" type="checkbox" prop:checked=move || draft.with(|draft| draft.criteria.get(index).is_some_and(|criterion| criterion.done)) on:change=move |event| draft.update(|draft| { if let Some(criterion) = draft.criteria.get_mut(index) { criterion.done = event_target_checked(&event); } }) />{move || i18n.text("message.verified")}</label>
                                 <button type="button" aria-label=move || i18n.text("message.remove_criterion_0").replace("{0}", &(index + 1).to_string()) on:click=move |_| draft.update(|draft| { draft.criteria.remove(index); })>{move || i18n.text("message.remove")}</button></div>
                             } />
@@ -444,7 +444,7 @@ pub fn TaskEditor(
                         <details class="disclosure dependencies"><summary id="dependencies-heading">{move || i18n.text("message.blocked_by")}</summary><p class="hint">{move || i18n.text("message.choose_prerequisite_tasks_completed_tasks_no_longer_block_the_wo")}</p>
                             <For each={move || cards.get().into_iter().filter(|card| card.id != id.get_value()).collect::<Vec<_>>()} key=|card| card.id.clone() children=move |card| {
                                 let dependency = StoredValue::new(card.id);
-                                view! { <label class="dependency-choice"><input type="checkbox" data-dependency=dependency.get_value() prop:checked=move || draft.with(|draft| draft.dependencies.contains(&dependency.get_value())) disabled=move || draft.with(|draft| draft.dependencies.len() >= 20 && !draft.dependencies.contains(&dependency.get_value())) on:change=move |event| draft.update(|draft| { let id = dependency.get_value(); if event_target_checked(&event) { if !draft.dependencies.contains(&id) { draft.dependencies.push(id); } } else { draft.dependencies.retain(|value| value != &id); } }) /><span>{String::from_utf16_lossy(&card.title.0)}</span></label> }
+                                view! { <label class="dependency-choice"><input type="checkbox" data-dependency=dependency.get_value() prop:checked=move || draft.with(|draft| draft.dependencies.contains(&dependency.get_value())) disabled=move || draft.with(|draft| draft.dependencies.len() >= 20 && !draft.dependencies.contains(&dependency.get_value())) on:change=move |event| draft.update(|draft| { let id = dependency.get_value(); if event_target_checked(&event) { if !draft.dependencies.contains(&id) { draft.dependencies.push(id); } } else { draft.dependencies.retain(|value| value != &id); } }) /><span>{card.title.clone()}</span></label> }
                             } />
                             <p class="field-help" hidden={move || cards.get().len() > 1}>{move || i18n.text("message.no_other_tasks_available")}</p>
                         </details>

@@ -64,7 +64,7 @@ pub fn TempoExport(
             .get()
             .string_equals("exportState", "draft")
             .unwrap_or(false)
-            && !entry.get().truthy("runningSince").unwrap_or(true)
+            && !entry.get().has_text("runningSince").unwrap_or(true)
     });
     let other_draft = Memo::new(move |_| {
         drafts.with(|drafts| drafts.iter().any(|other| other != &id.get_value()))

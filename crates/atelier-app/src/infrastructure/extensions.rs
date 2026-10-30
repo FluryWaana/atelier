@@ -119,7 +119,7 @@ fn inspect(path: PathBuf, expected: Option<String>) -> Result<Executable> {
     }
     file.open_same(&path)?;
     let binary = Binary {
-        path: super::task_creation::path_string(&path).utf8()?,
+        path: super::task_creation::path_string(&path),
         sha256: hash,
     };
     if binary.path.len() > 32_000 || binary.path.chars().any(char::is_control) {

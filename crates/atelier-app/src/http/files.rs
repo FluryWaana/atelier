@@ -2,7 +2,6 @@ use super::{Shared, failure};
 use crate::infrastructure::{files::Repository, store::Documents, worktrees};
 use atelier_core::{
     contracts::{Card, Worktree, WorktreeState},
-    document::JsonString,
     domain::projects::same_repository,
 };
 use axum::{
@@ -54,8 +53,8 @@ async fn inspect(
             );
         }
     };
-    let repo = match card.fields.get::<JsonString>("repo") {
-        Ok(Some(repo)) if !repo.0.is_empty() => repo,
+    let repo = match card.fields.get::<String>("repo") {
+        Ok(Some(repo)) if !repo.is_empty() => repo,
         _ => {
             return failure(
                 StatusCode::BAD_REQUEST,
@@ -70,11 +69,7 @@ async fn inspect(
                 "message.verify_or_finish_the_interrupted_operation_on_this_worktree",
             );
         }
-        if !same_repository(
-            &String::from_utf16_lossy(&repo.0),
-            &worktree.source,
-            cfg!(windows),
-        ) {
+        if !same_repository(&repo.clone(), &worktree.source, cfg!(windows)) {
             return failure(
                 StatusCode::CONFLICT,
                 "message.the_source_repository_no_longer_matches_the_worktree",

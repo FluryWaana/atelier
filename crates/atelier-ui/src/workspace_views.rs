@@ -11,7 +11,7 @@ use wasm_bindgen::{JsCast, closure::Closure};
 use wasm_bindgen_futures::spawn_local;
 
 fn title(card: &Card) -> String {
-    String::from_utf16_lossy(&card.title.0)
+    card.title.clone()
 }
 fn nested(document: &Document, key: &str) -> Document {
     document.get(key).ok().flatten().unwrap_or_default()
@@ -186,12 +186,12 @@ pub fn WorkspaceViews(
             cards
                 .iter()
                 .filter(|card| {
-                    !card.fields.truthy("brainstormSession").unwrap_or(false)
+                    !card.fields.flag("brainstormSession").unwrap_or(false)
                         && (view.get() == WorkspaceView::Processes
                             || repo.is_empty()
                             || same_repository(&field(&card.fields, "repo"), &repo, windows))
                         && (view.get() != WorkspaceView::Overview
-                            || !card.fields.truthy("archived").unwrap_or(false))
+                            || !card.fields.flag("archived").unwrap_or(false))
                 })
                 .cloned()
                 .collect::<Vec<_>>()
@@ -319,7 +319,7 @@ fn Overview(
             <button data-go-view="board" data-focus-target="review" on:click=move |_|on_focus.run("review".into())><span>{i18n.text("message.to_review")}</span><strong>{move ||cards.with(|cards|cards.iter().filter(|card|field(&card.fields,"status")=="review").count())}</strong><small>{i18n.text("message.review_completed_work")}</small></button>
             <button data-go-view="board" data-focus-target="attention" on:click=move |_|on_focus.run("attention".into())><span>{i18n.text("message.to_resume")}</span><strong>{move ||attention.with(Vec::len)}</strong><small>{i18n.text("message.examine_interruptions")}</small></button>
             <button data-go-view="agents" on:click=move |_|on_view.run(WorkspaceView::Agents)><span>{i18n.text("message.active_agents")}</span><strong>{move ||runs.with(|runs|runs.iter().filter(|run|active(run)).count())}</strong><small>{i18n.text("message.follow_runs")}</small></button>
-            <button data-go-view="time" on:click=move |_|on_view.run(WorkspaceView::Time)><span>{i18n.text("message.time_awaiting_approval")}</span><strong>{move ||board.times.with(|entries|entries.iter().filter(|entry|board.cards.with(|cards|cards.iter().any(|card|card.id==field(entry,"cardId")&&(project.get().is_empty()||same_repository(&field(&card.fields,"repo"),&project.get(),board.settings.with(|settings|field(settings,"platform")=="win32")))))&&!entry.truthy("runningSince").unwrap_or(false)&&field(entry,"exportState")!="exported").count())}</strong><small>{i18n.text("message.review_before_sending_to_tempo")}</small></button>
+            <button data-go-view="time" on:click=move |_|on_view.run(WorkspaceView::Time)><span>{i18n.text("message.time_awaiting_approval")}</span><strong>{move ||board.times.with(|entries|entries.iter().filter(|entry|board.cards.with(|cards|cards.iter().any(|card|card.id==field(entry,"cardId")&&(project.get().is_empty()||same_repository(&field(&card.fields,"repo"),&project.get(),board.settings.with(|settings|field(settings,"platform")=="win32")))))&&!entry.has_text("runningSince").unwrap_or(false)&&field(entry,"exportState")!="exported").count())}</strong><small>{i18n.text("message.review_before_sending_to_tempo")}</small></button>
         </div>
         <div class="overview-columns"><section class="overview-section"><div class="panel-heading"><h2>{i18n.text("message.your_next_step_2b7bb8fc")}</h2></div>
             <For each={move ||priority.get()} key=|card|serde_json::to_string(card).unwrap_or_default() children=move |card| {
@@ -455,7 +455,7 @@ fn Processes(
                 cards.iter().any(|card| {
                     card.id == candidate
                         && card.fields.raw("worktree").is_some()
-                        && !card.fields.truthy("archived").unwrap_or(false)
+                        && !card.fields.flag("archived").unwrap_or(false)
                         && same_repository(&field(&card.fields, "repo"), &repo, windows)
                 })
             };
@@ -613,7 +613,7 @@ fn Processes(
         <div class="panel-heading"><div><h2>{i18n.text("message.launch_projects")}</h2><p class="hint">{i18n.text("message.choose_a_worktree_for_each_project_its_front_and_back_commands_s")}</p></div><div class="row-actions"><button id="start-selected-projects" class="primary" disabled=move ||busy.get()||start_selected().is_empty() on:click=move |_|action.run(start_selected())>{i18n.text("message.launch_selected")}</button><button id="refresh-processes" disabled=move ||busy.get() on:click=move |_|manual_refresh()>{i18n.text("message.refresh")}</button><button id="stop-visible-processes" class="danger" disabled=move ||busy.get()||!visible_sessions.with(|sessions|sessions.iter().any(session_active)) on:click=move |_|action.run(visible_sessions.get_untracked().iter().filter(|session|session_active(session)).map(|session|(session.card_id.clone(),"stop",None)).collect())>{i18n.text("message.stop_everything_in_this_view")}</button></div></div>
         <For each={move ||visible_projects.get()} key=|item|serde_json::to_string(item).unwrap_or_default() children=move |item|{
             let id=StoredValue::new(field(&item,"id"));let repo=field(&item,"repo");
-            let choices=Signal::derive(move ||cards.get().into_iter().filter(|card|card.fields.raw("worktree").is_some()&&!card.fields.truthy("archived").unwrap_or(false)&&same_repository(&field(&card.fields,"repo"),&repo,board.settings.with(|settings|field(settings,"platform")=="win32"))).collect::<Vec<_>>());
+            let choices=Signal::derive(move ||cards.get().into_iter().filter(|card|card.fields.raw("worktree").is_some()&&!card.fields.flag("archived").unwrap_or(false)&&same_repository(&field(&card.fields,"repo"),&repo,board.settings.with(|settings|field(settings,"platform")=="win32"))).collect::<Vec<_>>());
             let current=Signal::derive(move ||selected.with(|selected|selected.get(&id.get_value()).cloned().unwrap_or_default()));
             let configured=!field(&item,"frontCommand").is_empty()||!field(&item,"backCommand").is_empty();
             let managed=[field(&item,"frontCommand"),field(&item,"backCommand")].iter().filter(|command|!command.is_empty()).all(|command|command.contains("{port}"));
@@ -624,9 +624,9 @@ fn Processes(
         <For each={move ||cards.get().into_iter().filter(|card|visible_sessions.with(|sessions|sessions.iter().any(|session|session.card_id==card.id))).collect::<Vec<_>>()} key=|card|serde_json::to_string(card).unwrap_or_default() children=move |card|{
             let id=StoredValue::new(card.id.clone());let current=Signal::derive(move ||sessions.with(|sessions|sessions.iter().find(|session|session.card_id==id.get_value()).cloned()));
             let owner=board.projects.with_untracked(|projects|projects.iter().find(|project|same_repository(&field(project,"repo"),&field(&card.fields,"repo"),board.settings.with_untracked(|settings|field(settings,"platform")=="win32"))).cloned());
-            let ready=card.fields.raw("worktree").is_some()&&!card.fields.truthy("archived").unwrap_or(false)&&owner.as_ref().is_some_and(|project|!field(project,"frontCommand").is_empty()||!field(project,"backCommand").is_empty());
+            let ready=card.fields.raw("worktree").is_some()&&!card.fields.flag("archived").unwrap_or(false)&&owner.as_ref().is_some_and(|project|!field(project,"frontCommand").is_empty()||!field(project,"backCommand").is_empty());
             let branch=card.fields.get::<Worktree>("worktree").ok().flatten().map(|worktree|worktree.branch).unwrap_or_else(||i18n.text("message.card_worktree"));
-            view!{<article class="process-stack"><div class="panel-heading"><div><span class="eyebrow">{owner.map(|owner|field(&owner,"name")).unwrap_or_else(||i18n.text("message.project_removed"))}</span><h3>{title(&card)}</h3><p class="hint">{branch}{if card.fields.truthy("archived").unwrap_or(false){i18n.text("message.archived_card")}else{String::new()}}</p></div><div class="row-actions"><button data-open-card=id.get_value() disabled=move ||busy.get() on:click=move |_|on_open.run(id.get_value())>{i18n.text("message.view_card")}</button><button data-process-action="start" data-process-card=id.get_value() disabled=move ||busy.get()||!ready||current.with(|session|session.as_ref().is_some_and(session_active)) on:click=move |_|action.run(vec![(id.get_value(),"start",None)])>{i18n.text("message.start_all")}</button><button class="danger" data-process-action="stop" data-process-card=id.get_value() disabled=move ||busy.get()||current.with(|session|session.as_ref().is_none_or(|session|!session_active(session))) on:click=move |_|action.run(vec![(id.get_value(),"stop",None)])>{i18n.text("message.stop_all")}</button></div></div><div class="process-services"><For each={move ||current.get().map(|session|session.services).unwrap_or_default()} key=|service|service.id.clone() children=move |service|{
+            view!{<article class="process-stack"><div class="panel-heading"><div><span class="eyebrow">{owner.map(|owner|field(&owner,"name")).unwrap_or_else(||i18n.text("message.project_removed"))}</span><h3>{title(&card)}</h3><p class="hint">{branch}{if card.fields.flag("archived").unwrap_or(false){i18n.text("message.archived_card")}else{String::new()}}</p></div><div class="row-actions"><button data-open-card=id.get_value() disabled=move ||busy.get() on:click=move |_|on_open.run(id.get_value())>{i18n.text("message.view_card")}</button><button data-process-action="start" data-process-card=id.get_value() disabled=move ||busy.get()||!ready||current.with(|session|session.as_ref().is_some_and(session_active)) on:click=move |_|action.run(vec![(id.get_value(),"start",None)])>{i18n.text("message.start_all")}</button><button class="danger" data-process-action="stop" data-process-card=id.get_value() disabled=move ||busy.get()||current.with(|session|session.as_ref().is_none_or(|session|!session_active(session))) on:click=move |_|action.run(vec![(id.get_value(),"stop",None)])>{i18n.text("message.stop_all")}</button></div></div><div class="process-services"><For each={move ||current.get().map(|session|session.services).unwrap_or_default()} key=|service|service.id.clone() children=move |service|{
                 let service_id=StoredValue::new(service.id.clone());let service=Signal::derive(move ||current.get().and_then(|session|session.services.into_iter().find(|service|service.id==service_id.get_value())));
                 view!{<ProcessService service card_id=id busy ready on_action=action />}
             } /></div><p class="hint" hidden=ready>{i18n.text("message.worktree_missing_prepare_it_from_the_card_before_restarting")}</p><details class="process-journal" data-process-journal=id.get_value()><summary>{i18n.text("message.combined_log")}</summary><pre class="log" data-process-log=id.get_value()>{move ||current.get().map(|session|session.services.into_iter().map(|service|format!("{}\n{}",service.name,service.log)).collect::<Vec<_>>().join("\n")).unwrap_or_default()}</pre></details></article>}
@@ -655,7 +655,7 @@ fn ProcessService(
 fn cleanup_candidate(card: &Card) -> bool {
     card.fields.raw("worktree").is_some()
         && (field(&card.fields, "status") == "done"
-            || card.fields.truthy("archived").unwrap_or(false)
+            || card.fields.flag("archived").unwrap_or(false)
             || field(&nested(&card.fields, "pullRequest"), "status") == "completed")
 }
 

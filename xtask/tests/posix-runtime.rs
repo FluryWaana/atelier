@@ -16,7 +16,7 @@ async fn persistent_commands_keep_the_activity_guard_until_the_owned_group_is_st
         prototype::PrototypeDirectory,
         store::Documents,
     };
-    use atelier_core::document::JsonString;
+
     use std::sync::Arc;
     let root = tempfile::tempdir().unwrap();
     let data = PrototypeDirectory::open(root.path()).unwrap();
@@ -30,7 +30,7 @@ async fn persistent_commands_keep_the_activity_guard_until_the_owned_group_is_st
     let opened = Repository::synthetic(
         &data.opened_directory().unwrap(),
         std::slice::from_ref(&data.path),
-        &JsonString::from(repository.to_str().unwrap()),
+        (repository.to_str().unwrap()),
     )
     .unwrap();
     let database = Arc::new(Database::open(std::path::Path::new(":memory:")).unwrap());

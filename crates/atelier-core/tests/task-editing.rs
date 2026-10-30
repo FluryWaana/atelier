@@ -1,12 +1,13 @@
+use atelier_core::Result;
 use atelier_core::{
     application::{
         card_lifecycle::CardFailure,
-        task_creation::{CreationContext, Result},
+        task_creation::CreationContext,
         task_editing::{self, EditingContext},
     },
     contracts::Card,
-    document::{Document, JsonString},
-    domain::text_units,
+    document::Document,
+    domain::text,
 };
 use serde_json::value::RawValue;
 use std::cell::RefCell;
@@ -28,22 +29,22 @@ impl CreationContext for Context {
     fn settings(&self) -> Result<Document> {
         Ok(Document::default())
     }
-    fn agent_for(&self, _: &Document) -> Result<JsonString> {
+    fn agent_for(&self, _: &Document) -> Result<String> {
         panic!("Edits do not inherit the project agent");
     }
     fn new_id(&self) -> String {
         panic!("Edits do not allocate an id");
     }
-    fn repository(&self, value: &RawValue) -> Result<JsonString> {
+    fn repository(&self, value: &RawValue) -> Result<String> {
         self.event(&("repository", value));
-        let value: JsonString =
+        let value: String =
             serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
-        let value = text_units(&value, 2000)?;
-        if self.scenario.truthy("repositoryError")? {
+        let value = text(&value, 2000)?;
+        if self.scenario.flag("repositoryError")? {
             return Err("Synthetic repository failure".into());
         }
-        let mut path = JsonString::from("checked:");
-        path.0.extend(value.0);
+        let mut path = String::from("checked:");
+        path.push_str(&value);
         Ok(path)
     }
     fn timestamp(&self) -> Result<String> {
@@ -108,15 +109,15 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
         // Linked ticket text is now changed only by its explicit refresh use case.
         // Keep the historical vectors intact, while checking this intentional rebuild contract.
-        if !context.scenario.truthy("missing").unwrap()
-            && saved.fields.truthy("ticket").unwrap()
+        if !context.scenario.flag("missing").unwrap()
+            && saved.fields.has_object("ticket").unwrap()
             && (body.raw("title").is_some() || body.raw("description").is_some())
         {
             let error = task_editing::prepare(
                 &context,
                 &saved,
                 &body,
-                context.scenario.truthy("busy").unwrap(),
+                context.scenario.flag("busy").unwrap(),
             )
             .err()
             .expect("Linked ticket text must not be edited locally");
@@ -134,11 +135,11 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
             continue;
         }
         let result = (|| -> Result<Card> {
-            if context.scenario.truthy("missing")? {
+            if context.scenario.flag("missing")? {
                 return Err(CardFailure::Missing.into());
             }
             let edit =
-                task_editing::prepare(&context, &saved, &body, context.scenario.truthy("busy")?)?;
+                task_editing::prepare(&context, &saved, &body, context.scenario.flag("busy")?)?;
             context.event(&("put", &edit.card));
             saved = edit.card;
             if edit.requirements_changed {

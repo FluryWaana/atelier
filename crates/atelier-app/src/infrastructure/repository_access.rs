@@ -112,7 +112,7 @@ fn identity(directory: &Dir) -> Result<String> {
     }
 }
 pub fn open(root: &Dir, path: &Path) -> Result<Dir> {
-    let selected = path_string(path).utf8()?;
+    let selected = path_string(path);
     let registry = read(root)?;
     let entry = registry
         .repositories
@@ -137,18 +137,20 @@ pub fn register(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Resul
     if registry.revision != expected {
         return Err("message.repository_authorizations_changed_reload_the_list".into());
     }
-    let normalized = path_string(Path::new(path)).utf8()?;
+    let normalized = path_string(Path::new(path));
     let directory = absolute(Path::new(&normalized))?;
     let metadata = directory
         .symlink_metadata(".git")
         .map_err(|_| "message.this_directory_does_not_contain_a_main_git_repository")?;
     require_plain(&metadata)?;
     if !metadata.is_dir() {
-        return Err("message.authorize_the_main_repository_rather_than_an_external_worktree".into());
+        return Err(
+            "message.authorize_the_main_repository_rather_than_an_external_worktree".into(),
+        );
     }
     let git = directory.open_dir_nofollow(".git")?;
     let _ = git.dir_metadata()?;
-    let selected = path_string(Path::new(path)).utf8()?;
+    let selected = path_string(Path::new(path));
     let entry = Registration {
         path: selected,
         identity: identity(&directory)?,
@@ -182,12 +184,14 @@ pub fn revoke(
     confirmed: bool,
     in_use: bool,
 ) -> Result<Registry> {
-    let selected = path_string(Path::new(path)).utf8()?;
+    let selected = path_string(Path::new(path));
     if !confirmed {
         return Err("message.confirm_removal_of_this_local_authorization".into());
     }
     if in_use {
-        return Err("message.this_repository_is_still_referenced_by_settings_projects_or_task".into());
+        return Err(
+            "message.this_repository_is_still_referenced_by_settings_projects_or_task".into(),
+        );
     }
     let mut registry = read(root)?;
     if registry.revision != expected {

@@ -1,5 +1,10 @@
-use super::failure;
-use axum::{http::StatusCode, response::Response};
+use super::{Shared, failure, runs, services, updates};
+use axum::{
+    extract::{Request, State},
+    http::{Method, StatusCode},
+    middleware::Next,
+    response::Response,
+};
 use std::{future::Future, sync::Arc};
 use tokio::sync::{OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock};
 
@@ -39,7 +44,7 @@ impl ApiRoutes for axum::Router<super::Shared> {
     ) -> Self {
         self.route(
             path,
-            handler.layer(axum::middleware::from_fn_with_state(policy, super::mutate)),
+            handler.layer(axum::middleware::from_fn_with_state(policy, mutate)),
         )
     }
 }
@@ -87,6 +92,93 @@ pub(super) async fn detached(
     }
 }
 
+pub(super) async fn mutate(
+    State(policy): State<Policy>,
+    axum::Extension(state): axum::Extension<Shared>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if request.method() != Method::GET {
+        let cancellation = request.method() == Method::POST && policy == Policy::Cancellation;
+        let gate = state.mutations.clone();
+        let changed = state.changed.clone();
+        let services = state.services.clone();
+        let runs = state.runs.clone();
+        let operation = async move {
+            if !cancellation {
+                if let Some(response) = updates::guard(state.installation_root.as_deref()) {
+                    return response;
+                }
+                let guard_path = if policy.project_guard() {
+                    "/api/projects"
+                } else {
+                    request.uri().path()
+                };
+                if let Some(response) = services::guard(&services, guard_path) {
+                    return response;
+                }
+                if let Some(response) = runs::guard(&runs, guard_path) {
+                    return response;
+                }
+                let guarded_path = guard_path.to_owned();
+                let operation_path = request.uri().path().to_owned();
+                match state
+                    .database
+                    .call(move |store| {
+                        let tempo_path =
+                            if crate::infrastructure::connector_effects::reconciles_time(
+                                store,
+                                &operation_path,
+                            )? {
+                                &operation_path
+                            } else {
+                                &guarded_path
+                            };
+                        Ok(crate::infrastructure::connector_effects::blocks(
+                            store,
+                            &operation_path,
+                        )? || atelier_core::application::agent_cli::busy(
+                            &store.settings::<atelier_core::document::Document>()?,
+                        )? || crate::infrastructure::jira_transition::blocks(
+                            store,
+                            &guarded_path,
+                        )? || crate::infrastructure::tempo_export::blocks(store, tempo_path)?
+                            || crate::infrastructure::forge_draft::blocks(store, &guarded_path)?
+                            || crate::infrastructure::automation::blocks(store, &guarded_path)?)
+                    })
+                    .await
+                {
+                    Ok(true) => {
+                        return failure(
+                            StatusCode::CONFLICT,
+                            "message.finish_or_inspect_the_current_operation_before_changing_this_tas",
+                        );
+                    }
+                    Err(_) => {
+                        return failure(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "message.unable_to_read_jira_operations",
+                        );
+                    }
+                    Ok(false) => {}
+                }
+            }
+            let response = next.run(request).await;
+            if response.status().is_success() {
+                let _ = changed.send(());
+            }
+            response
+        };
+        if cancellation {
+            detached(operation).await
+        } else {
+            run(gate, policy.exclusive(), operation).await
+        }
+    } else {
+        next.run(request).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,7 +186,7 @@ mod tests {
 
     #[test]
     fn every_api_registration_declares_its_concurrency_policy() {
-        let routes = include_str!("../http.rs");
+        let routes = include_str!("routes.rs");
         assert!(!routes.contains(".route("));
         assert!(Policy::External.exclusive());
         assert!(Policy::ProjectExternal.exclusive());

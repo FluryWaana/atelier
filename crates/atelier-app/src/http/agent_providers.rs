@@ -1,34 +1,14 @@
 use super::{Shared, failure, object};
-use crate::infrastructure::{agent_providers, settings::VaultFailure};
-use atelier_core::application::agent_providers::ProviderFailure;
+use crate::infrastructure::agent_providers;
+
 use axum::{
-    Json,
     extract::{Path, Request, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 
 fn response<T: serde::Serialize>(result: crate::Result<T>) -> Response {
-    match result {
-        Ok(providers) => Json(providers).into_response(),
-        Err(error) => {
-            let status = match error.downcast_ref::<ProviderFailure>() {
-                Some(ProviderFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(ProviderFailure::Conflict(_)) => StatusCode::CONFLICT,
-                _ if error.to_string() == "message.agent_diagnostic_busy" => StatusCode::TOO_MANY_REQUESTS,
-                _ if error.is::<VaultFailure>() => StatusCode::SERVICE_UNAVAILABLE,
-                _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => {
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }
-                _ => StatusCode::BAD_REQUEST,
-            };
-            if status == StatusCode::INTERNAL_SERVER_ERROR {
-                failure(status, "message.could_not_update_profiles")
-            } else {
-                failure(status, &error.to_string())
-            }
-        }
-    }
+    super::responses::with_message(result, "message.could_not_update_profiles")
 }
 pub(super) async fn cli_status(State(state): State<Shared>) -> Response {
     response(
@@ -79,7 +59,12 @@ pub(super) async fn diagnose(
         .await;
     let result = match profile {
         Ok(profile) => {
-            crate::infrastructure::agent_diagnostics::diagnose(profile, probe_model.as_deref(), status_only).await
+            crate::infrastructure::agent_diagnostics::diagnose(
+                profile,
+                probe_model.as_deref(),
+                status_only,
+            )
+            .await
         }
         Err(error) => Err(error),
     };

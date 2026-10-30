@@ -540,7 +540,7 @@ impl HttpsAuthentication {
             if !output.status.success() {
                 return Err("message.unable_to_prepare_the_isolated_push".into());
             }
-            let source_path = super::task_creation::path_string(&source.path).utf8()?;
+            let source_path = super::task_creation::path_string(&source.path);
             let mut import = git_command().await?;
             Self::isolate(&mut import, home.path());
             import.args([
@@ -746,7 +746,7 @@ impl HttpsAuthentication {
                 .map_err(
                     |_| "message.git_download_exceeds_storage_limits_or_cannot_be_inspected",
                 )?;
-            let path = super::task_creation::path_string(home.path()).utf8()?;
+            let path = super::task_creation::path_string(home.path());
             source
                 .without_programs(&[
                     "-c",

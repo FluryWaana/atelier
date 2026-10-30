@@ -16,7 +16,7 @@ use atelier_core::{
         reviews,
     },
     contracts::{Card, Worktree},
-    document::{Document, JsonString},
+    document::Document,
 };
 use cap_std::fs::Dir;
 use reqwest::Url;
@@ -200,8 +200,7 @@ impl Guard {
             return Err("message.choose_distinct_target_branch".into());
         }
         let repository = worktrees::inspect(root, roots, &worktree).await?;
-        let source =
-            Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
+        let source = Repository::synthetic(root, roots, worktree.source.as_str())?;
         let disk = disk(&repository, &source).await?;
         url(String::from_utf8(disk.origin.clone())?.trim())?;
         if !repository
@@ -544,8 +543,8 @@ pub fn correction(
     if !run.string_equals("cardId", &card.id)?
         || !run.string_equals("kind", "pr-review")?
         || !run.string_equals("status", "completed")?
-        || run.truthy("reviewStaleReason")?
-        || !run.truthy("reviewValidatedAt")?
+        || run.has_text("reviewStaleReason")?
+        || !run.has_text("reviewValidatedAt")?
     {
         return Err("message.select_a_completed_and_revalidated_module_review".into());
     }

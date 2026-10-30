@@ -1,4 +1,5 @@
-use super::{card_lifecycle::CardFailure, task_creation::Result, worktrees::ServiceWorktrees};
+use super::{card_lifecycle::CardFailure, worktrees::ServiceWorktrees};
+use crate::Result;
 use crate::{
     contracts::{Card, Worktree, WorktreeState},
     document::Document,
@@ -58,10 +59,8 @@ pub fn plan(
     standalone: bool,
     windows: bool,
 ) -> Result<LaunchPlan> {
-    if card.fields.truthy("archived")? {
-        return Err(
-            CardFailure::Conflict("message.restore_this_task_before_resuming_work").into(),
-        );
+    if card.fields.flag("archived")? {
+        return Err(CardFailure::Conflict("message.restore_this_task_before_resuming_work").into());
     }
     let primary = card
         .fields
@@ -139,16 +138,12 @@ pub fn plan(
                 if same_repository(&dedicated, &primary.source, windows) {
                     Some(primary.clone())
                 } else {
-                    let service = owned
-                        .get(role)
-                        .ok_or("message.prepare_service_worktrees")?;
+                    let service = owned.get(role).ok_or("message.prepare_service_worktrees")?;
                     if service.state != WorktreeState::Ready
                         || service.branch != primary.branch
                         || !same_repository(&service.source, &dedicated, windows)
                     {
-                        return Err(
-                            "message.verify_service_worktrees".into(),
-                        );
+                        return Err("message.verify_service_worktrees".into());
                     }
                     Some(service.clone())
                 }

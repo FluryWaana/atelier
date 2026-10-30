@@ -1,7 +1,4 @@
-use crate::{
-    contracts::Card,
-    document::{Document, JsonString},
-};
+use crate::{contracts::Card, document::Document};
 use serde_json::value::RawValue;
 
 #[derive(Debug)]
@@ -44,7 +41,7 @@ pub fn archive(
     if !active {
         for entry in times {
             if entry.string_equals("cardId", &card.id)?
-                && (entry.truthy("runningSince")?
+                && (entry.has_text("runningSince")?
                     || entry.string_equals("exportState", "sending")?
                     || (archived && entry.string_equals("exportState", "uncertain")?))
             {
@@ -67,44 +64,18 @@ fn includes(value: Option<&RawValue>, id: &str) -> Result<bool, CardFailure> {
     let Some(value) = value else {
         return Ok(false);
     };
-    let id = JsonString::from(id);
-    match value.get().as_bytes()[0] {
-        b'n' => Ok(false),
-        b'[' => {
-            for item in serde_json::from_str::<Vec<Box<RawValue>>>(value.get())? {
-                if item.get().starts_with('"')
-                    && serde_json::from_str::<JsonString>(item.get())? == id
-                {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        }
-        b'"' => {
-            let text: JsonString = serde_json::from_str(value.get())?;
-            Ok(id.0.is_empty() || text.0.windows(id.0.len()).any(|window| window == id.0))
-        }
-        _ => Err(CardFailure::Invalid("message.invalid_blocked_by")),
-    }
+    let ids: Option<Vec<String>> = serde_json::from_str(value.get())
+        .map_err(|_| CardFailure::Invalid("message.invalid_blocked_by"))?;
+    Ok(ids.is_some_and(|ids| ids.iter().any(|candidate| candidate == id)))
 }
 
 fn has_keys(value: Option<&RawValue>) -> Result<bool, CardFailure> {
     let Some(value) = value else {
         return Ok(false);
     };
-    Ok(match value.get().as_bytes()[0] {
-        b'{' => serde_json::from_str::<Document>(value.get())?
-            .keys()
-            .next()
-            .is_some(),
-        b'[' => !serde_json::from_str::<Vec<Box<RawValue>>>(value.get())?.is_empty(),
-        b'"' => !serde_json::from_str::<JsonString>(value.get())?
-            .0
-            .is_empty(),
-        _ => false,
-    })
+    let object: Option<Document> = serde_json::from_str(value.get())?;
+    Ok(object.is_some_and(|object| object.keys().next().is_some()))
 }
-
 pub fn remove(
     card: &Card,
     cards: &[Document],
@@ -112,15 +83,21 @@ pub fn remove(
     queued: &[String],
     busy: impl Fn(&str) -> bool,
 ) -> Result<(), CardFailure> {
-    if card.fields.truthy("ticketCreation")? {
-        return Err(CardFailure::Conflict("message.verify_and_link_the_jira_ticket_from_the_uncertain_delivery_befo"));
+    if card.fields.has_object("ticketCreation")? {
+        return Err(CardFailure::Conflict(
+            "message.verify_and_link_the_jira_ticket_from_the_uncertain_delivery_befo",
+        ));
     }
     if queued.contains(&card.id) {
-        return Err(CardFailure::Conflict("message.remove_this_task_from_the_queue_before_deleting_it"));
+        return Err(CardFailure::Conflict(
+            "message.remove_this_task_from_the_queue_before_deleting_it",
+        ));
     }
     for other in cards {
         if includes(other.raw("blockedBy"), &card.id)? {
-            return Err(CardFailure::Conflict("message.remove_blocked_by_links_before_deleting_this_task"));
+            return Err(CardFailure::Conflict(
+                "message.remove_blocked_by_links_before_deleting_this_task",
+            ));
         }
     }
     if busy(&card.id) {
@@ -128,11 +105,15 @@ pub fn remove(
     }
     for entry in times {
         if entry.string_equals("cardId", &card.id)? {
-            return Err(CardFailure::Conflict("message.this_card_has_time_entries_keep_it_to_preserve_their_history"));
+            return Err(CardFailure::Conflict(
+                "message.this_card_has_time_entries_keep_it_to_preserve_their_history",
+            ));
         }
     }
-    if card.fields.truthy("worktree")? || has_keys(card.fields.raw("serviceWorktrees"))? {
-        return Err(CardFailure::Conflict("message.remove_this_cards_worktrees_first_branches_will_be_kept"));
+    if card.fields.has_object("worktree")? || has_keys(card.fields.raw("serviceWorktrees"))? {
+        return Err(CardFailure::Conflict(
+            "message.remove_this_cards_worktrees_first_branches_will_be_kept",
+        ));
     }
     Ok(())
 }
@@ -146,7 +127,7 @@ mod tests {
         serde_json::from_str(&value.to_string()).unwrap()
     }
     fn card() -> Card {
-        serde_json::from_str(r#"{"id":"card","title":"\ud800","unknown":{"future":"\udc00"}}"#)
+        serde_json::from_str(r#"{"id":"card","title":"\u00e9","unknown":{"future":"\u00e8"}}"#)
             .unwrap()
     }
 

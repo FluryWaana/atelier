@@ -6,7 +6,6 @@ use super::{
 use crate::Result;
 use atelier_core::{
     contracts::{ChangeListing, FileChange, FileDiff, FileListing, FilePreview},
-    document::JsonString,
     domain::files::{PREVIEW_LIMIT, validate_path},
 };
 use cap_fs_ext::DirExt;
@@ -92,7 +91,7 @@ impl Repository {
         Ok(hash)
     }
 
-    pub fn synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
+    pub fn synthetic(root: &Dir, roots: &[PathBuf], repo: &str) -> Result<Self> {
         let repository = Self::open_synthetic(root, roots, repo)?;
         if !repository.directory.symlink_metadata(".git")?.is_dir() {
             return Err(
@@ -102,13 +101,13 @@ impl Repository {
         Ok(repository)
     }
 
-    pub(super) fn open_synthetic(root: &Dir, roots: &[PathBuf], repo: &JsonString) -> Result<Self> {
+    pub(super) fn open_synthetic(root: &Dir, roots: &[PathBuf], repo: &str) -> Result<Self> {
         let path = launch_detection::synthetic_repository(
             root,
             roots,
             &serde_json::value::to_raw_value(repo)?,
         )?;
-        let path = PathBuf::from(path.utf8()?);
+        let path = PathBuf::from(path.clone());
         let directory = launch_detection::open_repository(root, roots, repo)?;
         let metadata = directory
             .symlink_metadata(".git")
@@ -125,8 +124,8 @@ impl Repository {
         let top = std::fs::canonicalize(top.trim_end_matches(['\r', '\n']))?;
         let selected = std::fs::canonicalize(&self.path)?;
         if !atelier_core::domain::projects::same_repository(
-            &path_string(&top).utf8()?,
-            &path_string(&selected).utf8()?,
+            &path_string(&top),
+            &path_string(&selected),
             cfg!(windows),
         ) {
             return Err("message.worktree_root_mismatch".into());

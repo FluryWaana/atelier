@@ -73,7 +73,7 @@ pub fn ConnectorRepositories(
         let _ = key.get();
         if !touched.get_untracked() {
             if let Some(card) = card.get_untracked() {
-                title.set(card.title.utf8().unwrap_or_default());
+                title.set(card.title.clone());
                 body.set(
                     card.fields
                         .get::<String>("description")
@@ -235,7 +235,7 @@ pub fn ConnectorRepositories(
     view! {<fieldset hidden=move||!supported.get() disabled=move||pending.get()||blocked.get()>
         <legend>{move||i18n.text("message.pr_mr_through_this_module")}</legend>
         <p class="field-help">{move||i18n.text("message.prepare_a_local_commit_and_keep_the_worktree_clean_the_module_ha")}</p>
-        <label for="connector-repository-card">{move||i18n.text("message.task")}</label><select id="connector-repository-card" disabled=move||touched.get()||report.get().is_some() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))><option value="">{move||i18n.text("message.choose_a_task")}</option>{move||board.cards.get().into_iter().filter(|card|!card.fields.truthy("archived").unwrap_or(true)&&card.fields.raw("worktree").is_some()&&card.fields.raw("pullRequest").is_none()).map(|card|view!{<option value=card.id>{card.title.utf8().unwrap_or_default()}</option>}).collect_view()}</select>
+        <label for="connector-repository-card">{move||i18n.text("message.task")}</label><select id="connector-repository-card" disabled=move||touched.get()||report.get().is_some() prop:value=move||selected.get() on:change=move|event|selected.set(event_target_value(&event))><option value="">{move||i18n.text("message.choose_a_task")}</option>{move||board.cards.get().into_iter().filter(|card|!card.fields.flag("archived").unwrap_or(true)&&card.fields.raw("worktree").is_some()&&card.fields.raw("pullRequest").is_none()).map(|card|view!{<option value=card.id>{card.title.clone()}</option>}).collect_view()}</select>
         <label for="connector-repository-target">{move||i18n.text("message.target_branch")}</label><input id="connector-repository-target" maxlength="180" prop:value=move||target.get() on:input=move|event|{target.set(event_target_value(&event));touched.set(true);report.set(None);}/>
         <label for="connector-repository-title">{move||i18n.text("message.title")}</label><input id="connector-repository-title" maxlength="255" prop:value=move||title.get() on:input=move|event|{title.set(event_target_value(&event));touched.set(true);report.set(None);}/>
         <label for="connector-repository-body">{move||i18n.text("message.description")}</label><textarea id="connector-repository-body" maxlength="3500" prop:value=move||body.get() on:input=move|event|{body.set(event_target_value(&event));touched.set(true);report.set(None);}></textarea>

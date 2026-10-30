@@ -4,7 +4,7 @@
     "repo": "root",
     "frontRepo": "",
     "backRepo": "",
-    "unknown": "\ud800"
+    "unknown": "\u00e9"
   },
   "detected": {
     "candidates": [
@@ -12,19 +12,19 @@
         "id": "ui",
         "role": "front",
         "command": "npm run dev",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       {
         "id": "api",
         "role": "back",
         "command": "dotnet run",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       }
     ],
     "warnings": [
       "warning",
       "warning",
-      "\ud800"
+      "\u00e9"
     ]
   },
   "cases": [
@@ -38,20 +38,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -73,13 +73,13 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -101,13 +101,13 @@
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -212,20 +212,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -248,20 +248,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "checked:new"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "checked:new"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -290,20 +290,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "checked:front"
             },
             {
               "id": "api",
               "role": "front",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "checked:front"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -327,7 +327,7 @@
         "repo": "root",
         "frontRepo": "front",
         "backRepo": "back",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -336,34 +336,34 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "front"
             },
             {
               "id": "api",
               "role": "front",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "front"
             },
             {
               "id": "ui",
               "role": "back",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "back"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "back"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -384,7 +384,7 @@
         "repo": "root",
         "frontRepo": "shared",
         "backRepo": "shared",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -393,34 +393,34 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "shared"
             },
             {
               "id": "api",
               "role": "front",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "shared"
             },
             {
               "id": "ui",
               "role": "back",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "shared"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "shared"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -441,7 +441,7 @@
         "repo": "root",
         "frontRepo": "front",
         "backRepo": "",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -450,20 +450,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -484,7 +484,7 @@
         "repo": "root",
         "frontRepo": "front",
         "backRepo": "",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -493,20 +493,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -527,7 +527,7 @@
         "repo": "root",
         "frontRepo": "front",
         "backRepo": "",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -536,20 +536,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -570,7 +570,7 @@
         "repo": "root",
         "frontRepo": "front",
         "backRepo": "",
-        "unknown": "\ud800"
+        "unknown": "\u00e9"
       },
       "expected": {
         "value": {
@@ -579,20 +579,20 @@
               "id": "ui",
               "role": "front",
               "command": "npm run dev",
-              "unknown": "\ud800",
+              "unknown": "\u00e9",
               "sourceRepo": "root"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
+              "unknown": "\u00e8",
               "sourceRepo": "root"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
@@ -637,7 +637,7 @@
       "name": "UTF16 source and candidate fields",
       "body": {
         "role": "back",
-        "backRepo": " \ud800 "
+        "backRepo": " \u00e9 "
       },
       "useDraft": true,
       "expected": {
@@ -647,28 +647,28 @@
               "id": "ui",
               "role": "back",
               "command": "npm run dev",
-              "unknown": "\ud800",
-              "sourceRepo": "checked:\ud800"
+              "unknown": "\u00e9",
+              "sourceRepo": "checked:\u00e9"
             },
             {
               "id": "api",
               "role": "back",
               "command": "dotnet run",
-              "unknown": "\udc00",
-              "sourceRepo": "checked:\ud800"
+              "unknown": "\u00e8",
+              "sourceRepo": "checked:\u00e9"
             }
           ],
           "warnings": [
             "warning",
-            "\ud800"
+            "\u00e9"
           ]
         },
         "events": [
           {
-            "repository": " \ud800 "
+            "repository": " \u00e9 "
           },
           {
-            "scan": "checked:\ud800"
+            "scan": "checked:\u00e9"
           }
         ]
       }

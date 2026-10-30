@@ -96,7 +96,7 @@ pub fn choose(
     kind: Kind,
     provider: &str,
     expected: &str,
-) -> super::task_creation::Result<Document> {
+) -> crate::Result<Document> {
     use super::settings::SettingsFailure;
     if provider.len() > 80 || !available(settings, kind, provider)? {
         return Err(SettingsFailure::Invalid("message.integration_unavailable").into());

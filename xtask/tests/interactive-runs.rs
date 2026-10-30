@@ -8,7 +8,7 @@ use atelier_app::infrastructure::{
 use atelier_core::{
     application::agent_protocol::{Kind, Protocol, ProtocolConfig},
     contracts::{AgentAnswer, AgentInteraction},
-    document::{Document, JsonString},
+    document::Document,
 };
 use serde_json::json;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
@@ -66,7 +66,7 @@ async fn fake_clis_ask_wait_reply_finish_mask_secrets_and_reject_stale_answers_o
             let selected = Repository::synthetic(
                 &root,
                 std::slice::from_ref(&prototype.path),
-                &JsonString::from(path.to_str().unwrap()),
+                path.to_str().unwrap(),
             )
             .unwrap();
             let database = Arc::new(prototype.database().unwrap());

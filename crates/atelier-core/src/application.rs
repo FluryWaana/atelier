@@ -1,7 +1,4 @@
-use crate::{
-    contracts::Card,
-    document::{Document, JsonString},
-};
+use crate::{contracts::Card, document::Document};
 
 pub mod agent_account;
 pub mod agent_cli;
@@ -32,9 +29,14 @@ pub mod updates;
 pub mod worktrees;
 
 pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json::Result<Card> {
-    let mut title = JsonString::from("Copie — ");
-    title.0.extend_from_slice(&card.title.0);
-    title.0.truncate(300);
+    let mut units = 0;
+    let title = format!("Copie : {}", card.title)
+        .chars()
+        .take_while(|character| {
+            units += character.len_utf16();
+            units <= 300
+        })
+        .collect();
     let mut fields = Document::default();
     for (key, default) in [
         ("description", ""),
@@ -45,7 +47,7 @@ pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json:
         ("instructions", ""),
         ("baseBranch", ""),
     ] {
-        if card.fields.truthy(key)? {
+        if card.fields.has_text(key)? {
             if let Some(value) = card.fields.raw(key) {
                 fields.set(key, &value)?;
             }
@@ -65,7 +67,7 @@ pub fn duplicate_card(card: &Card, id: String, timestamp: String) -> serde_json:
 
 fn reset_checklist(source: &Document) -> serde_json::Result<Vec<Document>> {
     let mut criteria = Vec::new();
-    if source.truthy("checklist")? {
+    if source.has_list("checklist")? {
         for original in source
             .get::<Vec<Document>>("checklist")?
             .unwrap_or_default()
@@ -95,14 +97,31 @@ mod tests {
     }
 
     #[test]
+    fn duplication_bounds_unicode_without_creating_an_invalid_string() {
+        let card = Card {
+            id: "source".into(),
+            title: format!("a{}", "🔧".repeat(149)),
+            fields: Document::default(),
+        };
+        let copy = duplicate_card(&card, "copy".into(), "now".into()).unwrap();
+        assert!(copy.title.starts_with("Copie : a"));
+        assert_eq!(copy.title.encode_utf16().count(), 299);
+        assert!(copy.title.ends_with('🔧'));
+        assert_eq!(
+            serde_json::from_str::<String>(&serde_json::to_string(&copy.title).unwrap()).unwrap(),
+            copy.title
+        );
+    }
+
+    #[test]
     fn duplication_copies_only_editable_content_and_resets_human_criteria() {
-        let card: Card = serde_json::from_str(r#"{"id":"old","title":"Source","description":"\ud800","agent":"work","model":"model","effort":"high","mode":"analyze","instructions":"Keep","repo":"/repo","baseBranch":"main","checklist":[{"text":"\udc00","done":true,"unknown":1}],"status":"done","archived":true,"blockedBy":["other"],"ticket":{"id":"1"},"worktree":{"path":"/work"},"serviceWorktrees":{"front":{}},"pullRequest":{"id":1},"automation":{"state":"done"},"unknown":"discard"}"#).unwrap();
+        let card: Card = serde_json::from_str(r#"{"id":"old","title":"Source","description":"\u00e9","agent":"work","model":"model","effort":"high","mode":"analyze","instructions":"Keep","repo":"/repo","baseBranch":"main","checklist":[{"text":"\u00e8","done":true,"unknown":1}],"status":"done","archived":true,"blockedBy":["other"],"ticket":{"id":"1"},"worktree":{"path":"/work"},"serviceWorktrees":{"front":{}},"pullRequest":{"id":1},"automation":{"state":"done"},"unknown":"discard"}"#).unwrap();
         let copy = duplicate_card(&card, "new".into(), "now".into()).unwrap();
-        assert_eq!(copy.title, JsonString::from("Copie — Source"));
+        assert_eq!(copy.title, String::from("Copie : Source"));
         assert!(copy.fields.string_equals("status", "todo").unwrap());
         assert_eq!(
-            copy.fields.get::<JsonString>("description").unwrap(),
-            Some(JsonString(vec![0xd800]))
+            copy.fields.get::<String>("description").unwrap(),
+            Some("é".to_owned())
         );
         let criteria = copy
             .fields
@@ -111,8 +130,8 @@ mod tests {
             .unwrap();
         assert_eq!(criteria[0].get::<bool>("done").unwrap(), Some(false));
         assert_eq!(
-            criteria[0].get::<JsonString>("text").unwrap(),
-            Some(JsonString(vec![0xdc00]))
+            criteria[0].get::<String>("text").unwrap(),
+            Some("è".to_owned())
         );
         assert!(criteria[0].raw("unknown").is_none());
         for key in [
@@ -130,6 +149,6 @@ mod tests {
                 "Unexpected copied field: {key}"
             );
         }
-        assert!(card.fields.truthy("archived").unwrap());
+        assert!(card.fields.flag("archived").unwrap());
     }
 }

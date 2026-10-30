@@ -1,9 +1,10 @@
+use atelier_core::Result;
 use atelier_core::{
-    application::task_creation::{self, CreationContext, Result},
-    document::{Document, JsonString},
+    application::task_creation::{self, CreationContext},
+    document::Document,
     domain::{
         checklist::{Criterion, checklist_text},
-        text_units,
+        text,
     },
 };
 use serde_json::value::RawValue;
@@ -20,9 +21,9 @@ fn default_agent_validates_repository_text_and_matches_native_paths() {
         serde_json::from_str(r#"{"repo":"c:\\synthetic\\repo","agent":"claude"}"#).unwrap();
     assert_eq!(
         task_creation::default_agent(&settings, &[project], &Document::default(), true).unwrap(),
-        JsonString::from("claude")
+        String::from("claude")
     );
-    for invalid in ["true", "1", "[]", "{}", "null", r#""\ud800""#] {
+    for invalid in ["true", "1", "[]", "{}", "null"] {
         let body: Document = serde_json::from_str(&format!(r#"{{"repo":{invalid}}}"#)).unwrap();
         assert_eq!(
             task_creation::default_agent(&settings, &[], &body, false)
@@ -64,23 +65,23 @@ impl CreationContext for Context {
         }
         Ok(settings)
     }
-    fn agent_for(&self, body: &Document) -> Result<JsonString> {
+    fn agent_for(&self, body: &Document) -> Result<String> {
         self.event(&("agentFor", body.raw("repo")));
         if let Some(projects) = self.scenario.get::<Vec<Document>>("projects")? {
             return task_creation::default_agent(&self.settings()?, &projects, body, cfg!(windows));
         }
-        Ok(JsonString::from("claude"))
+        Ok(String::from("claude"))
     }
-    fn repository(&self, value: &RawValue) -> Result<JsonString> {
+    fn repository(&self, value: &RawValue) -> Result<String> {
         self.event(&("repository", value));
-        let value: JsonString =
+        let value: String =
             serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
-        let value = text_units(&value, 2000)?;
-        if self.scenario.truthy("repositoryError")? {
+        let value = text(&value, 2000)?;
+        if self.scenario.flag("repositoryError")? {
             return Err("Synthetic repository failure".into());
         }
-        let mut path = JsonString::from("checked:");
-        path.0.extend(value.0);
+        let mut path = String::from("checked:");
+        path.push_str(&value);
         Ok(path)
     }
     fn new_id(&self) -> String {
@@ -96,7 +97,7 @@ impl CreationContext for Context {
 }
 
 #[test]
-fn historical_task_creation_preserves_fields_utf16_and_validation_order() {
+fn historical_task_creation_preserves_fields_unicode_and_validation_order() {
     let cases: Vec<Document> =
         serde_json::from_str(include_str!("fixtures/rust-task-creation-reference.json")).unwrap();
     assert!(cases.len() >= 70);
@@ -111,7 +112,7 @@ fn historical_task_creation_preserves_fields_utf16_and_validation_order() {
         match task_creation::create(
             &context,
             &body,
-            context.scenario.truthy("brainstorming").unwrap(),
+            context.scenario.flag("brainstorming").unwrap(),
         ) {
             Ok(card) => {
                 let criteria = card

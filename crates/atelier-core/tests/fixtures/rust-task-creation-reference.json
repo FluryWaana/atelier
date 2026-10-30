@@ -53,12 +53,12 @@
   },
   {
     "body": {
-      "title": "﻿ é \ud800  "
+      "title": "﻿ é \u00e9  "
     },
     "expected": {
       "value": {
         "id": "created",
-        "title": "é \ud800",
+        "title": "é \u00e9",
         "description": "",
         "instructions": "",
         "repo": "",
@@ -772,13 +772,13 @@
   {
     "body": {
       "title": "Task",
-      "description": "﻿𐀀\ud800 "
+      "description": "﻿𐀀\u00e9 "
     },
     "expected": {
       "value": {
         "id": "created",
         "title": "Task",
-        "description": "𐀀\ud800",
+        "description": "𐀀\u00e9",
         "instructions": "",
         "repo": "",
         "agent": "claude",
@@ -903,14 +903,14 @@
   {
     "body": {
       "title": "Task",
-      "instructions": "﻿𐀀\ud800 "
+      "instructions": "﻿𐀀\u00e9 "
     },
     "expected": {
       "value": {
         "id": "created",
         "title": "Task",
         "description": "",
-        "instructions": "𐀀\ud800",
+        "instructions": "𐀀\u00e9",
         "repo": "",
         "agent": "claude",
         "model": "",
@@ -1001,7 +1001,7 @@
   {
     "body": {
       "title": "Task",
-      "model": "\ud800"
+      "model": "\u00e9"
     },
     "expected": {
       "error": "message.invalid_model",
@@ -1114,7 +1114,7 @@
   {
     "body": {
       "title": "Task",
-      "effort": "\ud800"
+      "effort": "\u00e9"
     },
     "expected": {
       "error": "message.invalid_reasoning_effort_for_this_agent",
@@ -1198,7 +1198,7 @@
       "title": "Task",
       "checklist": [
         {
-          "text": " \ud800 ",
+          "text": " \u00e9 ",
           "done": true,
           "extra": 1
         }
@@ -1217,7 +1217,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\ud800",
+            "text": "\u00e9",
             "done": true
           }
         ],
@@ -1225,7 +1225,7 @@
         "createdAt": "2026-10-24T00:00:00.000Z",
         "updatedAt": "2026-10-24T00:00:00.001Z"
       },
-      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [x] \ud800",
+      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [x] \u00e9",
       "events": [
         [
           "agentFor",
@@ -1451,24 +1451,24 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
         "id": "created",
         "title": "Task",
-        "description": "\ud800",
+        "description": "\u00e9",
         "instructions": "template",
         "repo": "default-repo",
         "agent": "claude",
@@ -1477,7 +1477,7 @@
         "mode": "analyze",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1485,7 +1485,7 @@
         "createdAt": "2026-10-24T00:00:00.000Z",
         "updatedAt": "2026-10-24T00:00:00.001Z"
       },
-      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \udc00",
+      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \u00e8",
       "events": [
         [
           "agentFor",
@@ -1510,24 +1510,24 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
         "id": "created",
         "title": "Task",
-        "description": "\ud800",
+        "description": "\u00e9",
         "instructions": "template",
         "repo": "default-repo",
         "agent": "claude",
@@ -1536,7 +1536,7 @@
         "mode": "analyze",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1544,7 +1544,7 @@
         "createdAt": "2026-10-24T00:00:00.000Z",
         "updatedAt": "2026-10-24T00:00:00.001Z"
       },
-      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \udc00",
+      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \u00e8",
       "events": [
         [
           "agentFor",
@@ -1570,18 +1570,18 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
@@ -1621,18 +1621,18 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "error": "message.template_not_found",
@@ -1649,18 +1649,18 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
@@ -1700,18 +1700,18 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "error": "message.template_not_found",
@@ -1730,18 +1730,18 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
@@ -1784,24 +1784,24 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\ud800",
+          "description": "\u00e9",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\udc00",
+              "text": "\u00e8",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\ud800"
+      "unknown": "\u00e9"
     },
     "expected": {
       "value": {
         "id": "created",
         "title": "Idea",
-        "description": "\ud800",
+        "description": "\u00e9",
         "instructions": "template",
         "repo": "checked:synthetic",
         "agent": "claude",
@@ -1810,7 +1810,7 @@
         "mode": "analyze",
         "checklist": [
           {
-            "text": "\udc00",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -1819,7 +1819,7 @@
         "createdAt": "2026-10-24T00:00:00.000Z",
         "updatedAt": "2026-10-24T00:00:00.001Z"
       },
-      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \udc00",
+      "prompt": "\n\nCritères de réussite (validation humaine) :\n- [ ] \u00e8",
       "events": [
         [
           "agentFor",
@@ -1839,7 +1839,7 @@
     "body": {
       "title": "Task",
       "repo": " synthetic ",
-      "ignored": "\ud800",
+      "ignored": "\u00e9",
       "status": "doing"
     },
     "expected": {
@@ -1947,7 +1947,7 @@
         {
           "id": "work",
           "type": "command",
-          "name": "\ud800"
+          "name": "\u00e9"
         }
       ]
     },
@@ -2033,8 +2033,8 @@
     "body": {
       "title": "Task",
       "agent": "work",
-      "model": "\ud800",
-      "effort": "\ud800"
+      "model": "\u00e9",
+      "effort": "\u00e9"
     },
     "settings": {
       "agentProviders": [
@@ -2055,7 +2055,7 @@
     "body": {
       "title": "Task",
       "model": false,
-      "effort": "\ud800"
+      "effort": "\u00e9"
     },
     "expected": {
       "error": "message.invalid_model",
@@ -2071,12 +2071,12 @@
   {
     "body": {
       "title": "Task",
-      "agent": "\ud800"
+      "agent": "\u00e9"
     },
     "settings": {
       "agentProviders": [
         {
-          "id": "\ud800",
+          "id": "\u00e9",
           "type": "codex"
         }
       ]
@@ -2088,7 +2088,7 @@
         "description": "",
         "instructions": "",
         "repo": "",
-        "agent": "\ud800",
+        "agent": "\u00e9",
         "model": "",
         "effort": "",
         "mode": "edit",

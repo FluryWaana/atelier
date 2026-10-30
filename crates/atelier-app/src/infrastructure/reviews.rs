@@ -9,7 +9,7 @@ use crate::Result;
 use atelier_core::{
     application::reviews::{self, Context, Review},
     contracts::{Card, ForgeConfiguration, PullRequest},
-    document::{Document, JsonString},
+    document::Document,
 };
 use cap_std::fs::Dir;
 use std::path::PathBuf;
@@ -97,8 +97,7 @@ pub async fn prepare_with_adapters(
         .fields
         .get::<atelier_core::contracts::Worktree>("worktree")?
         .ok_or("message.pr_mr_worktree_missing")?;
-    let principal =
-        Repository::synthetic(root, roots, &JsonString::from(worktree.source.as_str()))?;
+    let principal = Repository::synthetic(root, roots, worktree.source.as_str())?;
     principal.verify_root().await?;
     // The target is fetched by branch and must equal the forge's advertised commit.
     let fetched = worktrees::fetch_origin_commit(
@@ -200,8 +199,8 @@ pub fn correction(
     if !run.string_equals("cardId", &card.id)?
         || !run.string_equals("kind", "pr-review")?
         || !run.string_equals("status", "completed")?
-        || run.truthy("reviewStaleReason")?
-        || !run.truthy("reviewValidatedAt")?
+        || run.has_text("reviewStaleReason")?
+        || !run.has_text("reviewValidatedAt")?
     {
         return Err(
             "message.choose_a_completed_and_revalidated_review_before_correcting_its".into(),
@@ -262,12 +261,8 @@ mod tests {
             .trim()
             .to_owned();
         let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
-        let repository = Repository::synthetic(
-            &root,
-            &[root_path],
-            &JsonString::from(path.to_str().unwrap()),
-        )
-        .unwrap();
+        let repository =
+            Repository::synthetic(&root, &[root_path], path.to_str().unwrap()).unwrap();
         clean(&repository, &head).await.unwrap();
         assert!(clean(&repository, &"f".repeat(40)).await.is_err());
         std::fs::write(path.join("tracked"), "human staged").unwrap();

@@ -29,8 +29,8 @@ pub fn snapshot(store: &Store<'_>, expected: &Card) -> Result<Card> {
         .document::<Card>(Documents::Cards, &expected.id)?
         .ok_or_else(conflict)?;
     if serde_json::to_value(card_snapshot(&card))? != serde_json::to_value(card_snapshot(expected))?
-        || card.fields.truthy("archived")?
-        || card.fields.truthy("brainstormSession")?
+        || card.fields.flag("archived")?
+        || card.fields.flag("brainstormSession")?
         || atelier_core::application::jira::unresolved(&card.fields)?
         || atelier_core::application::forge::unresolved(&card.fields)?
     {
@@ -167,10 +167,8 @@ pub async fn verify(
         .get::<Worktree>("worktree")?
         .ok_or("message.prepare_the_worktree_before_linking_a_pr_mr")?;
     let repository_path = card.fields.get::<String>("repo")?.unwrap_or_default();
-    let repository_path =
-        super::task_creation::path_string(std::path::Path::new(&repository_path)).utf8()?;
-    let source_path =
-        super::task_creation::path_string(std::path::Path::new(&worktree.source)).utf8()?;
+    let repository_path = super::task_creation::path_string(std::path::Path::new(&repository_path));
+    let source_path = super::task_creation::path_string(std::path::Path::new(&worktree.source));
     if worktree.state != WorktreeState::Ready
         || !atelier_core::domain::projects::same_repository(
             &repository_path,

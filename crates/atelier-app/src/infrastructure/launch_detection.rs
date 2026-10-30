@@ -1,9 +1,6 @@
 use super::checked_file::CheckedFile;
 use crate::Result;
-use atelier_core::{
-    document::{Document, JsonString},
-    domain::text,
-};
+use atelier_core::{document::Document, domain::text};
 use cap_fs_ext::DirExt;
 use cap_std::{ambient_authority, fs::Dir};
 use icu_collator::{Collator, CollatorBorrowed};
@@ -31,38 +28,20 @@ static EXECUTABLE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-fn name_text(value: &OsStr) -> JsonString {
-    #[cfg(windows)]
-    let units: Vec<u16> = {
-        use std::os::windows::ffi::OsStrExt;
-        value.encode_wide().collect()
-    };
-    #[cfg(unix)]
-    let units: Vec<u16> = value.to_string_lossy().encode_utf16().collect();
-    JsonString(units)
+fn name_text(value: &OsStr) -> String {
+    value.to_string_lossy().into_owned()
 }
 
-fn path_text(value: &OsStr) -> JsonString {
-    let mut units = name_text(value).0;
-    for unit in &mut units {
-        if *unit == u16::from(b'\\') {
-            *unit = u16::from(b'/');
-        }
-    }
-    JsonString(units)
+fn path_text(value: &OsStr) -> String {
+    name_text(value).replace('\\', "/")
 }
 
-fn message(prefix: &str, directory: &JsonString, suffix: &str) -> JsonString {
-    let mut result = JsonString::from(prefix);
-    result.0.extend(if directory.0.is_empty() {
-        vec![u16::from(b'.')]
-    } else {
-        directory.0.clone()
-    });
-    result.0.extend(suffix.encode_utf16());
-    result
+fn message(prefix: &str, directory: &str, suffix: &str) -> String {
+    format!(
+        "{prefix}{}{suffix}",
+        if directory.is_empty() { "." } else { directory }
+    )
 }
-
 fn read(directory: &Dir, file: &Path) -> Result<String> {
     let bytes = CheckedFile::open_in(directory, file)?.read(1024 * 1024)?;
     Ok(String::from_utf8_lossy(&bytes).into_owned())
@@ -73,7 +52,7 @@ fn object(value: &str) -> Result<Document> {
     if raw.get() == "null" {
         return Err("Manifeste nul.".into());
     }
-    Ok(Document::spread(&raw)?)
+    Ok(Document::from_raw(&raw)?)
 }
 
 fn default_locale() -> String {
@@ -120,9 +99,8 @@ fn detect_opened(directory: &Dir) -> Result<Document> {
     };
     scan.directory(directory, Path::new(""), 0, "npm")?;
     if scan.visited > 300 {
-        scan.warnings.push(JsonString::from(
-            "Analyse limitée aux 300 premiers dossiers.",
-        ));
+        scan.warnings
+            .push(String::from("Analyse limitée aux 300 premiers dossiers."));
     }
     let mut result = Document::default();
     result.set("candidates", &scan.candidates)?;
@@ -137,19 +115,15 @@ pub fn detect(repo: &Path) -> Result<Document> {
     )?)
 }
 
-fn synthetic_relative(
-    roots: &[std::path::PathBuf],
-    repo: &JsonString,
-) -> Result<std::path::PathBuf> {
-    let path = std::path::PathBuf::from(String::from_utf16_lossy(&repo.0));
-    let path = std::path::PathBuf::from(super::task_creation::path_string(&path).utf8()?);
+fn synthetic_relative(roots: &[std::path::PathBuf], repo: &str) -> Result<std::path::PathBuf> {
+    let path = std::path::PathBuf::from(repo);
+    let path = std::path::PathBuf::from(super::task_creation::path_string(&path));
     // Recognize only the selected root's canonical spelling and its original startup spelling.
     let relative = roots
         .iter()
         .find_map(|root| {
-            let root =
-                std::path::PathBuf::from(super::task_creation::path_string(root).utf8().ok()?)
-                    .join("repositories");
+            let root = std::path::PathBuf::from(super::task_creation::path_string(root))
+                .join("repositories");
             path.strip_prefix(root).ok()
         })
         .ok_or(
@@ -165,23 +139,15 @@ fn synthetic_relative(
     Ok(Path::new("repositories").join(relative))
 }
 
-pub fn detect_synthetic(
-    root: &Dir,
-    roots: &[std::path::PathBuf],
-    repo: &JsonString,
-) -> Result<Document> {
+pub fn detect_synthetic(root: &Dir, roots: &[std::path::PathBuf], repo: &str) -> Result<Document> {
     // The HTTP prototype must never scan a caller-supplied directory outside its synthetic data root.
     detect_opened(&open_repository(root, roots, repo)?)
 }
 
-pub(super) fn open_repository(
-    root: &Dir,
-    roots: &[std::path::PathBuf],
-    repo: &JsonString,
-) -> Result<Dir> {
+pub(super) fn open_repository(root: &Dir, roots: &[std::path::PathBuf], repo: &str) -> Result<Dir> {
     match synthetic_relative(roots, repo) {
         Ok(relative) => Ok(root.open_dir_nofollow(relative)?),
-        Err(_) => super::repository_access::open(root, Path::new(&repo.utf8()?)),
+        Err(_) => super::repository_access::open(root, Path::new(&repo)),
     }
 }
 
@@ -189,14 +155,14 @@ pub fn synthetic_repository(
     root: &Dir,
     roots: &[std::path::PathBuf],
     value: &serde_json::value::RawValue,
-) -> Result<JsonString> {
-    let input: JsonString =
+) -> Result<String> {
+    let input: String =
         serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
-    let repo = atelier_core::domain::text_units(&input, 2000)?;
+    let repo = atelier_core::domain::text(&input, 2000)?;
     let relative = match synthetic_relative(roots, &repo) {
         Ok(relative) => relative,
         Err(_) => {
-            let _ = super::repository_access::open(root, Path::new(&repo.utf8()?))?;
+            let _ = super::repository_access::open(root, Path::new(&repo.clone()))?;
             return Ok(repo);
         }
     };
@@ -213,7 +179,7 @@ struct Scan {
     collator: CollatorBorrowed<'static>,
     visited: usize,
     candidates: Vec<Document>,
-    warnings: Vec<JsonString>,
+    warnings: Vec<String>,
 }
 
 impl Scan {
@@ -246,10 +212,10 @@ impl Scan {
                 return Ok(());
             }
         };
-        // Node's stable locale sort retains libuv's lexical order for canonically equivalent names.
+        // Use a deterministic path tie-breaker for names with the same locale collation.
         entries.sort_by(|(left, _), (right, _)| {
             self.collator
-                .compare_utf16(&name_text(left).0, &name_text(right).0)
+                .compare(&name_text(left), &name_text(right))
                 .then_with(|| left.to_string_lossy().cmp(&right.to_string_lossy()))
         });
         let has = |name: &str| {
@@ -282,10 +248,10 @@ impl Scan {
                 match self.dotnet(opened, relative, Path::new(file)) {
                     Ok(candidate) => self.candidates.push(candidate),
                     Err(_) => {
-                        let mut warning = JsonString::from("Projet .NET illisible : ");
-                        warning.0.extend(directory.0.clone());
-                        warning.0.push(u16::from(b'/'));
-                        warning.0.extend(path_text(file).0);
+                        let mut warning = String::from("Projet .NET illisible : ");
+                        warning.push_str(&directory);
+                        warning.push('/');
+                        warning.push_str(&path_text(file));
                         self.warnings.push(warning);
                     }
                 }
@@ -341,8 +307,8 @@ impl Scan {
             .raw("packageManager")
             .filter(|value| value.get() != "null")
         {
-            let declared: JsonString = serde_json::from_str(raw.get())?;
-            let declared = String::from_utf16_lossy(&declared.0);
+            let declared: String = serde_json::from_str(raw.get())?;
+            let declared = declared.clone();
             match declared.split('@').next().unwrap_or("") {
                 "npm" => *manager = "npm",
                 "pnpm" => *manager = "pnpm",
@@ -352,16 +318,16 @@ impl Scan {
         }
         let scripts = manifest
             .raw("scripts")
-            .map(Document::spread)
+            .map(Document::from_raw)
             .transpose()?
             .unwrap_or_default();
         let mut dependencies = manifest
             .raw("dependencies")
-            .map(Document::spread)
+            .map(Document::from_raw)
             .transpose()?
             .unwrap_or_default();
         if let Some(value) = manifest.raw("devDependencies") {
-            dependencies.overlay(&Document::spread(value)?);
+            dependencies.overlay(&Document::from_raw(value)?);
         }
         let Some(script) = ["dev", "start:dev", "serve", "start"]
             .into_iter()
@@ -373,8 +339,8 @@ impl Scan {
         else {
             return Ok(None);
         };
-        let source = scripts.get::<JsonString>(script)?.unwrap_or_default();
-        let source = String::from_utf16_lossy(&source.0);
+        let source = scripts.get::<String>(script)?.unwrap_or_default();
+        let source = source.clone();
         let source = text(&source, usize::MAX)?;
         let framework =
             if !source.contains([';', '&', '|', '<', '>']) && FRAMEWORK.is_match(&source) {
@@ -397,7 +363,7 @@ impl Scan {
                 ("fastify", "Fastify"),
                 ("react-scripts", "Create React App"),
             ] {
-                if dependencies.truthy(name)? {
+                if dependencies.has_text(name)? {
                     technology = label;
                     break;
                 }
@@ -456,10 +422,10 @@ impl Scan {
         let web = WEB.is_match(&source);
         let default_profile = profiles
             .iter()
-            .find(|profile| profile.truthy("supported").unwrap_or(false))
-            .and_then(|profile| profile.get::<JsonString>("name").ok().flatten())
+            .find(|profile| profile.flag("supported").unwrap_or(false))
+            .and_then(|profile| profile.get::<String>("name").ok().flatten())
             .unwrap_or_default();
-        let runnable = web || EXECUTABLE.is_match(&source) || !default_profile.0.is_empty();
+        let runnable = web || EXECUTABLE.is_match(&source) || !default_profile.is_empty();
         let base = format!(
             "dotnet run --project \"{}\"",
             file.to_str().ok_or("Nom de projet invalide.")?
@@ -467,10 +433,10 @@ impl Scan {
         let command = if runnable {
             format!(
                 "{base} {}{}",
-                if default_profile.0.is_empty() {
+                if default_profile.is_empty() {
                     "--no-launch-profile".into()
                 } else {
-                    format!("--launch-profile \"{}\"", default_profile.utf8()?)
+                    format!("--launch-profile \"{}\"", default_profile.clone())
                 },
                 if web {
                     " -- --urls http://127.0.0.1:{port}"
@@ -506,8 +472,8 @@ impl Scan {
 fn candidate(relative: &Path, file: &Path) -> Result<Document> {
     let directory = path_text(relative.as_os_str());
     let mut id = directory.clone();
-    id.0.push(u16::from(b'/'));
-    id.0.extend(path_text(file.as_os_str()).0);
+    id.push('/');
+    id.push_str(&path_text(file.as_os_str()));
     let mut result = Document::default();
     result.set("id", &id)?;
     result.set("directory", &directory)?;
@@ -520,44 +486,38 @@ fn profiles(opened: &Dir) -> Result<Vec<Document>> {
     let settings = object(&read(&properties, Path::new("launchSettings.json"))?)?;
     let profiles = settings
         .raw("profiles")
-        .map(Document::spread)
+        .map(Document::from_raw)
         .transpose()?
         .unwrap_or_default();
     let mut keys: Vec<_> = profiles.keys().collect();
-    // Object.entries lists canonical array-index keys before insertion-ordered string keys.
     keys.sort_by_key(|name| {
-        name.utf8()
+        name.parse::<u32>()
             .ok()
-            .and_then(|text| {
-                text.parse::<u32>()
-                    .ok()
-                    .filter(|index| *index != u32::MAX && index.to_string() == text)
-            })
+            .filter(|index| *index != u32::MAX && index.to_string() == **name)
             .map_or((1, 0), |index| (0, index))
     });
     let mut result = Vec::new();
     for name in keys {
-        let raw = profiles.raw_key(name).ok_or("Profil absent.")?;
+        let raw = profiles.raw(name).ok_or("Profil absent.")?;
         if !raw.get().starts_with(['{', '[']) {
             continue;
         }
-        let profile = Document::spread(raw)?;
-        let supported = profile.string_equals("commandName", "Project")?
-            && name.utf8().is_ok_and(|name| PROFILE.is_match(&name));
+        let profile = Document::from_raw(raw)?;
+        let supported = profile.string_equals("commandName", "Project")? && PROFILE.is_match(name);
         let command_name = match profile
             .raw("commandName")
             .filter(|value| value.get().starts_with('"'))
         {
-            Some(value) => serde_json::from_str::<JsonString>(value.get())?,
-            None => JsonString::default(),
+            Some(value) => serde_json::from_str::<String>(value.get())?,
+            None => String::default(),
         };
         let mut urls = Vec::new();
         if let Some(value) = profile
             .raw("applicationUrl")
             .filter(|value| value.get().starts_with('"'))
         {
-            let value: JsonString = serde_json::from_str(value.get())?;
-            for value in String::from_utf16_lossy(&value.0).split(';') {
+            let value: String = serde_json::from_str(value.get())?;
+            for value in value.clone().split(';') {
                 if let Ok(url) = reqwest::Url::parse(&text(value, usize::MAX)?)
                     && matches!(url.scheme(), "http" | "https")
                 {
@@ -612,7 +572,7 @@ mod tests {
             detect_synthetic(
                 &root,
                 &roots,
-                &serde_json::from_str::<JsonString>(original.get()).unwrap()
+                &serde_json::from_str::<String>(original.get()).unwrap()
             )
             .is_ok()
         );
@@ -697,7 +657,7 @@ mod tests {
             r#"<Project Sdk="Microsoft.NET.Sdk.Web"/>"#,
         )
         .unwrap();
-        fs::write(root.path().join("app/Properties/launchSettings.json"), r#"{"profiles":{"http":{"commandName":"Project","applicationUrl":"https://localhost:7000;http://localhost:5000/path","environmentVariables":{"secret":"do-not-expose"}},"bad%NAME%":{"commandName":"Project"},"\ud800":{"commandName":"Other"}}}"#).unwrap();
+        fs::write(root.path().join("app/Properties/launchSettings.json"), r#"{"profiles":{"http":{"commandName":"Project","applicationUrl":"https://localhost:7000;http://localhost:5000/path","environmentVariables":{"secret":"do-not-expose"}},"bad%NAME%":{"commandName":"Project"},"\u00e9":{"commandName":"Other"}}}"#).unwrap();
         let detected = detect(root.path()).unwrap();
         let candidates: Vec<Document> = detected.get("candidates").unwrap().unwrap();
         assert_eq!(candidates.len(), 2);
@@ -712,10 +672,10 @@ mod tests {
         assert!(candidates[1].string_equals("command", "dotnet run --project \"Api.csproj\" --launch-profile \"http\" -- --urls http://127.0.0.1:{port}").unwrap());
         let profiles: Vec<Document> = candidates[1].get("profiles").unwrap().unwrap();
         assert_eq!(profiles.len(), 3);
-        assert!(!profiles[1].truthy("supported").unwrap());
+        assert!(!profiles[1].flag("supported").unwrap());
         assert_eq!(
-            profiles[2].get::<JsonString>("name").unwrap().unwrap(),
-            JsonString(vec![0xd800])
+            profiles[2].get::<String>("name").unwrap().unwrap(),
+            "é".to_owned()
         );
         let encoded = serde_json::to_string(&detected).unwrap();
         assert!(!encoded.contains("do-not-expose"));
@@ -735,6 +695,6 @@ mod tests {
                 .string_equals("command", "pnpm run dev")
                 .unwrap()
         );
-        assert!(!candidates[0].truthy("automaticPort").unwrap());
+        assert!(!candidates[0].flag("automaticPort").unwrap());
     }
 }

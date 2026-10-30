@@ -7,20 +7,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -40,20 +40,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -79,20 +79,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -112,20 +112,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -151,20 +151,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -184,20 +184,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -223,20 +223,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -256,20 +256,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -289,26 +289,26 @@
   {
     "action": "create",
     "body": {
-      "name": " \ud800 ",
+      "name": " \u00e9 ",
       "repo": "new"
     },
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -326,31 +326,31 @@
     "expected": {
       "value": {
         "id": "new-project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:new"
       },
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         },
         {
           "id": "new-project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:new"
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -376,20 +376,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -413,10 +413,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         },
         {
@@ -428,10 +428,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -457,20 +457,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -490,20 +490,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -529,20 +529,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -562,20 +562,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -600,20 +600,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -633,20 +633,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -672,20 +672,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -705,20 +705,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -745,20 +745,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -778,20 +778,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -818,20 +818,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -855,10 +855,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         },
         {
@@ -870,10 +870,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -896,20 +896,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -929,20 +929,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -967,20 +967,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1000,20 +1000,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1038,20 +1038,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1071,20 +1071,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1109,20 +1109,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1142,20 +1142,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1180,20 +1180,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1215,20 +1215,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1256,20 +1256,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1291,20 +1291,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1332,20 +1332,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1367,20 +1367,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1411,20 +1411,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1444,20 +1444,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1488,20 +1488,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1521,20 +1521,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1565,20 +1565,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1600,20 +1600,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1647,20 +1647,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1682,20 +1682,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1729,20 +1729,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1764,20 +1764,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1808,20 +1808,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1841,20 +1841,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -1880,10 +1880,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1906,10 +1906,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -1938,20 +1938,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -1971,20 +1971,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2007,20 +2007,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2044,10 +2044,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2072,20 +2072,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2105,20 +2105,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2143,20 +2143,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2180,10 +2180,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2208,20 +2208,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2245,10 +2245,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "archived": true,
           "updatedAt": "now"
         },
@@ -2276,20 +2276,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2309,20 +2309,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2347,20 +2347,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2380,20 +2380,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2417,20 +2417,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2450,20 +2450,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2492,20 +2492,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2525,20 +2525,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2564,20 +2564,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2597,20 +2597,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2641,20 +2641,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2674,20 +2674,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2718,20 +2718,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2755,10 +2755,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2784,20 +2784,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2817,20 +2817,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2853,20 +2853,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -2884,10 +2884,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -2918,10 +2918,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -2953,10 +2953,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -2985,20 +2985,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3016,10 +3016,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -3050,10 +3050,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -3085,10 +3085,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3111,25 +3111,25 @@
   {
     "action": "update",
     "body": {
-      "projectRules": " \ud800 "
+      "projectRules": " \u00e9 "
     },
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3147,12 +3147,12 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
-        "projectRules": "\ud800",
+        "projectRules": "\u00e9",
         "agent": "",
         "baseBranch": "",
         "repositoryConnector": "",
@@ -3181,12 +3181,12 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
-          "projectRules": "\ud800",
+          "projectRules": "\u00e9",
           "agent": "",
           "baseBranch": "",
           "repositoryConnector": "",
@@ -3216,10 +3216,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3247,20 +3247,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3278,10 +3278,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:new",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -3312,10 +3312,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:new",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -3347,10 +3347,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:new",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "updatedAt": "now"
         },
         {
@@ -3397,20 +3397,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3428,10 +3428,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -3462,10 +3462,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -3497,10 +3497,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3531,20 +3531,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3564,20 +3564,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3607,20 +3607,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3640,20 +3640,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3684,20 +3684,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3715,10 +3715,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -3749,10 +3749,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -3784,10 +3784,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3821,20 +3821,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3854,20 +3854,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3893,20 +3893,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3926,20 +3926,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -3960,27 +3960,27 @@
   {
     "action": "update",
     "body": {
-      "projectRules": "\ud800"
+      "projectRules": "\u00e9"
     },
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
-        "\ud800": "\udc00",
+        "\u00e9": "\u00e8",
         "frontRepo": null
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -3998,14 +3998,14 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
-        "\ud800": "\udc00",
+        "\u00e9": "\u00e8",
         "frontRepo": "",
-        "projectRules": "\ud800",
+        "projectRules": "\u00e9",
         "agent": "",
         "baseBranch": "",
         "repositoryConnector": "",
@@ -4033,14 +4033,14 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
-          "\ud800": "\udc00",
+          "\u00e9": "\u00e8",
           "frontRepo": "",
-          "projectRules": "\ud800",
+          "projectRules": "\u00e9",
           "agent": "",
           "baseBranch": "",
           "repositoryConnector": "",
@@ -4069,10 +4069,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4101,20 +4101,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4134,20 +4134,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4176,20 +4176,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4209,20 +4209,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4249,20 +4249,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4280,10 +4280,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:REPO",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -4314,10 +4314,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:REPO",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -4349,10 +4349,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4384,20 +4384,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4415,10 +4415,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:REPO",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -4449,10 +4449,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:REPO",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -4484,10 +4484,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:REPO",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "updatedAt": "now"
         },
         {
@@ -4534,10 +4534,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "worktree": {
           "path": "kept"
         }
@@ -4546,20 +4546,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -4590,10 +4590,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -4625,10 +4625,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "worktree": {
             "path": "kept"
           }
@@ -4651,20 +4651,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4682,10 +4682,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -4716,10 +4716,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -4751,10 +4751,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4785,10 +4785,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "worktree": {
           "path": "kept"
         }
@@ -4797,10 +4797,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
@@ -4809,20 +4809,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "worktree": {
             "path": "kept"
           }
@@ -4844,20 +4844,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -4877,20 +4877,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -4920,10 +4920,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "serviceWorktrees": {
           "front": {
             "path": "kept"
@@ -4934,10 +4934,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "frontRepo": "checked:service"
       }
@@ -4945,10 +4945,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "frontRepo": "checked:service",
         "projectRules": "",
@@ -4979,10 +4979,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "frontRepo": "checked:service",
           "projectRules": "",
@@ -5014,10 +5014,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "serviceWorktrees": {
             "front": {
               "path": "kept"
@@ -5041,10 +5041,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "serviceWorktrees": {
           "front": {
             "path": "kept"
@@ -5055,10 +5055,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "frontRepo": "checked:service"
       }
@@ -5068,10 +5068,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "frontRepo": "checked:service"
         }
@@ -5079,10 +5079,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "serviceWorktrees": {
             "front": {
               "path": "kept"
@@ -5105,10 +5105,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "serviceWorktrees": {
           "back": {
             "path": "kept"
@@ -5119,10 +5119,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "backRepo": "checked:service"
       }
@@ -5130,10 +5130,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "backRepo": "checked:service",
         "projectRules": "",
@@ -5164,10 +5164,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "backRepo": "checked:service",
           "projectRules": "",
@@ -5199,10 +5199,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "serviceWorktrees": {
             "back": {
               "path": "kept"
@@ -5226,10 +5226,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00",
+        "unknown": "\u00e8",
         "serviceWorktrees": {
           "back": {
             "path": "kept"
@@ -5240,10 +5240,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "backRepo": "checked:service"
       }
@@ -5253,10 +5253,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "backRepo": "checked:service"
         }
@@ -5264,10 +5264,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00",
+          "unknown": "\u00e8",
           "serviceWorktrees": {
             "back": {
               "path": "kept"
@@ -5290,10 +5290,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       },
       {
@@ -5305,10 +5305,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5328,10 +5328,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         },
         {
@@ -5343,10 +5343,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5376,10 +5376,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       },
       {
@@ -5391,10 +5391,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5412,10 +5412,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -5446,10 +5446,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -5486,10 +5486,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5517,20 +5517,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5550,20 +5550,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5590,20 +5590,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5621,10 +5621,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "projectRules": "",
         "agent": "",
@@ -5655,10 +5655,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "projectRules": "",
           "agent": "",
@@ -5690,10 +5690,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5719,10 +5719,10 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "repositoryConnector": "missing"
       }
@@ -5730,10 +5730,10 @@
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5751,10 +5751,10 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         },
         "repositoryConnector": "missing",
         "projectRules": "",
@@ -5785,10 +5785,10 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           },
           "repositoryConnector": "missing",
           "projectRules": "",
@@ -5820,10 +5820,10 @@
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5852,20 +5852,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5885,20 +5885,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -5930,20 +5930,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -5963,20 +5963,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",
@@ -6018,20 +6018,20 @@
     "projects": [
       {
         "id": "project",
-        "name": "\ud800",
+        "name": "\u00e9",
         "repo": "checked:repo",
         "unknown": {
-          "keep": "\udc00"
+          "keep": "\u00e8"
         }
       }
     ],
     "cards": [
       {
         "id": "card",
-        "title": "\ud800",
+        "title": "\u00e9",
         "repo": "checked:repo",
         "status": "doing",
-        "unknown": "\udc00"
+        "unknown": "\u00e8"
       },
       {
         "id": "archived",
@@ -6051,20 +6051,20 @@
       "projects": [
         {
           "id": "project",
-          "name": "\ud800",
+          "name": "\u00e9",
           "repo": "checked:repo",
           "unknown": {
-            "keep": "\udc00"
+            "keep": "\u00e8"
           }
         }
       ],
       "cards": [
         {
           "id": "card",
-          "title": "\ud800",
+          "title": "\u00e9",
           "repo": "checked:repo",
           "status": "doing",
-          "unknown": "\udc00"
+          "unknown": "\u00e8"
         },
         {
           "id": "archived",

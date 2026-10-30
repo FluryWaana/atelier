@@ -1,16 +1,16 @@
-use super::{text, text_units, truthy};
-use crate::document::{Document, JsonString};
+use super::text;
+use crate::document::Document;
 use serde_json::{Value, json, value::RawValue};
 
 type Result<T> = std::result::Result<T, &'static str>;
 
 pub(crate) fn find_provider(
     settings: &Document,
-    agent: &JsonString,
+    agent: &str,
 ) -> serde_json::Result<Option<Document>> {
     Ok(providers(settings)?
         .into_iter()
-        .find(|provider| provider.get::<JsonString>("id").ok().flatten().as_ref() == Some(agent)))
+        .find(|provider| provider.get::<String>("id").ok().flatten().as_deref() == Some(agent)))
 }
 
 pub fn providers(settings: &Document) -> serde_json::Result<Vec<Document>> {
@@ -33,7 +33,7 @@ pub fn providers(settings: &Document) -> serde_json::Result<Vec<Document>> {
             provider.set("auth", &"cli")?;
             for (key, suffix) in [("model", "Model"), ("effort", "Effort")] {
                 let field = format!("{id}{suffix}");
-                if settings.truthy(&field)? {
+                if settings.has_text(&field)? {
                     provider.set(key, &settings.raw(&field))?;
                 } else {
                     provider.set(key, &"")?;
@@ -46,21 +46,12 @@ pub fn providers(settings: &Document) -> serde_json::Result<Vec<Document>> {
 }
 
 pub fn agent_providers(settings: &Value) -> Result<Vec<Value>> {
-    if let Some(providers) = settings
-        .get("agentProviders")
-        .filter(|value| !value.is_null())
-    {
-        return providers.as_array().cloned().ok_or("message.invalid_agent");
-    }
-    Ok(super::agent_catalog::AGENTS.iter().filter(|agent| agent.default_profile)
-        .map(|agent| {
-            let (id, name) = (agent.id, agent.name);
-            let default = |suffix| settings.get(format!("{id}{suffix}")).filter(|value| truthy(value)).cloned().unwrap_or(json!(""));
-            json!({"id": id, "name": name, "type": id, "auth": "cli", "model": default("Model"), "effort": default("Effort")})
-        })
-        .collect())
+    let settings: Document =
+        serde_json::from_value(settings.clone()).map_err(|_| "message.invalid_agent")?;
+    providers(&settings)
+        .and_then(|providers| providers.into_iter().map(serde_json::to_value).collect())
+        .map_err(|_| "message.invalid_agent")
 }
-
 pub fn agent_provider(settings: &Value, id: &str) -> Result<Value> {
     agent_providers(settings)?
         .into_iter()
@@ -134,8 +125,12 @@ pub fn resolve_agent_options(settings: &Value, card: &Value, body: &Value) -> Re
     let fallback = |key| {
         options
             .get(key)
-            .filter(|value| truthy(value))
-            .or_else(|| provider.get(key).filter(|value| truthy(value)))
+            .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+            .or_else(|| {
+                provider
+                    .get(key)
+                    .filter(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+            })
             .cloned()
             .unwrap_or(json!(""))
     };
@@ -150,7 +145,7 @@ pub fn options_document(kind: &str, body: &Document) -> Result<Value> {
     let mut options = serde_json::Map::new();
     for key in ["model", "effort"] {
         if let Some(raw) = body.raw(key) {
-            // Both fields are ASCII-only; malformed UTF-16 keeps the normal validation priority.
+            // Provider-specific validation checks the declared model and effort.
             options.insert(
                 key.into(),
                 serde_json::from_str(raw.get()).unwrap_or(Value::Null),
@@ -160,16 +155,16 @@ pub fn options_document(kind: &str, body: &Document) -> Result<Value> {
     agent_options(kind, &Value::Object(options), None)
 }
 
-fn provider_text(body: &Document, key: &str, limit: usize) -> Result<JsonString> {
+fn provider_text(body: &Document, key: &str, limit: usize) -> Result<String> {
     let invalid = "message.invalid_provider_setting";
     let value = body
-        .get::<JsonString>(key)
+        .get::<String>(key)
         .map_err(|_| invalid)?
         .unwrap_or_default();
-    if value.0.iter().any(|unit| *unit <= 0x1f) {
+    if value.chars().any(|character| character <= '\u{1f}') {
         return Err(invalid);
     }
-    text_units(&value, limit).map_err(|_| invalid)
+    text(&value, limit).map_err(|_| invalid)
 }
 
 fn absolute(path: &str) -> bool {
@@ -191,7 +186,7 @@ fn package_part(value: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || b"._-".contains(&c))
 }
 
-fn arguments(value: Option<&RawValue>) -> Result<Vec<JsonString>> {
+fn arguments(value: Option<&RawValue>) -> Result<Vec<String>> {
     let Some(value) = value else {
         return Ok(Vec::new());
     };
@@ -202,9 +197,9 @@ fn arguments(value: Option<&RawValue>) -> Result<Vec<JsonString>> {
     }
     list.iter()
         .map(|raw| {
-            let value: JsonString =
+            let value: String =
                 serde_json::from_str(raw.get()).map_err(|_| "message.invalid_argument")?;
-            if value.0.len() > 4000 || value.0.contains(&0) {
+            if value.encode_utf16().count() > 4000 || value.contains('\0') {
                 return Err("message.invalid_argument");
             }
             Ok(value)
@@ -216,7 +211,7 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
     let body: Document = serde_json::from_str(raw.get()).map_err(|_| "message.invalid_provider")?;
     let id = provider_text(&body, "id", 64)?;
     let name = provider_text(&body, "name", 100)?;
-    let id = id.utf8().map_err(|_| "message.invalid_provider")?;
+    let id = id.clone();
     let kind = body
         .get::<String>("type")
         .ok()
@@ -228,7 +223,7 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
             .bytes()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
         || ["constructor", "prototype", "__proto__"].contains(&id.as_str())
-        || name.0.is_empty()
+        || name.is_empty()
         || super::agent_catalog::find(kind).is_none()
     {
         return Err("message.invalid_provider");
@@ -250,9 +245,9 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
     let config_dir = provider_text(&body, "configDir", 2000)?;
     let account_label = provider_text(&body, "accountLabel", 200)?;
     let npm_package = provider_text(&body, "npmPackage", 200)?;
-    // Classification uses ASCII delimiters; preserve original UTF-16 units in the saved profile.
-    let command_view = String::from_utf16_lossy(&command.0);
-    let config_view = String::from_utf16_lossy(&config_dir.0);
+    // Inspect paths without altering the saved command or configuration folder.
+    let command_view = command.clone();
+    let config_view = config_dir.clone();
     if [&command_view, &config_view]
         .iter()
         .any(|path| path.len() >= 2 && path.as_bytes()[..2].iter().all(|c| b"/\\".contains(c)))
@@ -273,9 +268,7 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
     if command_view.contains(['/', '\\']) && !absolute(&command_view) {
         return Err("message.the_executable_path_must_be_absolute");
     }
-    let npm_package = npm_package
-        .utf8()
-        .map_err(|_| "message.invalid_npm_package")?;
+    let npm_package = npm_package.clone();
     if !npm_package.is_empty()
         && !match npm_package.strip_prefix('@') {
             Some(scoped) => scoped
@@ -295,10 +288,10 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
     let options = options_document(kind, &body)?;
     let mut provider = Document::default();
     for (key, value) in [
-        ("id", JsonString::from(id.as_str())),
+        ("id", id.to_owned()),
         ("name", name),
-        ("type", JsonString::from(kind)),
-        ("auth", JsonString::from(auth)),
+        ("type", String::from(kind)),
+        ("auth", String::from(auth)),
         ("command", command),
         ("configDir", config_dir),
         ("accountLabel", account_label),
@@ -323,7 +316,7 @@ pub fn provider_settings(raw: &RawValue) -> Result<Document> {
             .filter(|value| value.get() != "null")
         {
             Some(value) => arguments(Some(value))?,
-            None => vec![JsonString::from("--version")],
+            None => vec![String::from("--version")],
         };
         provider
             .set("versionArgs", &version)

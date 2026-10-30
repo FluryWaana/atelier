@@ -45,7 +45,7 @@ pub fn JiraCreation(
     let linked = Memo::new(move |_| {
         card.with(|card| {
             card.as_ref()
-                .is_some_and(|card| card.fields.truthy("ticket").unwrap_or(false))
+                .is_some_and(|card| card.fields.has_object("ticket").unwrap_or(false))
         })
     });
     let uncertain = Memo::new(move |_| {
@@ -325,7 +325,7 @@ pub fn JiraCreation(
             <button id="load-jira-types" type="button" disabled=move||!domain::project_key(&project.get()) on:click=load_types>{move||i18n.text("message.load_issue_types")}</button>
             <label for="jira-create-type">{move||i18n.text("message.ticket_type")}</label><select id="jira-create-type" prop:value=move||selected.get() on:change=move|event|{selected.set(event_target_value(&event));prepared.set(None);approved.set(None);} ><option value="">{move||i18n.text("message.choose_an_issue_type")}</option><For each=move||types.get() key=|kind|kind.id.clone() children=move|kind|view!{<option value=kind.id disabled=kind.subtask>{kind.name}</option>} /></select>
             <p class="field-help">{move||i18n.text("message.create_subtasks_and_issues_requiring_additional_fields_in_jira_t")}</p><button id="prepare-jira-create" type="button" disabled=move||selected.get().is_empty() on:click=prepare>{move||i18n.text("message.prepare_issue_preview")}</button>
-            {move||prepared.get().map(|(source,_,_)|view!{<div><h4>{String::from_utf16_lossy(&source.title.0)}</h4><pre class="service-log">{domain::creation_text(&source).unwrap_or_default()}</pre></div>})}
+            {move||prepared.get().map(|(source,_,_)|view!{<div><h4>{source.title.clone()}</h4><pre class="service-log">{domain::creation_text(&source).unwrap_or_default()}</pre></div>})}
             <p class="error" role="alert">{move||i18n.text(&validation.get())}</p>
             <label hidden=move||prepared.with(|prepared|prepared.is_none())><input id="confirm-jira-create" type="checkbox" prop:checked=move||prepared.with(|prepared|prepared.as_ref().is_some_and(|(_,_,proposal)|approved.get()==Some(*proposal))) on:change=move|event|approved.set(if event_target_checked(&event){prepared.with(|prepared|prepared.as_ref().map(|(_,_,proposal)|*proposal))}else{None}) />{move||i18n.text("message.create_this_issue_in_the_selected_jira_project_and_link_it_to_th")}</label>
             <button id="send-jira-create" type="button" disabled=move||prepared.with(|prepared|prepared.as_ref().is_none_or(|(_,_,proposal)|approved.get()!=Some(*proposal)))||!validation.get().is_empty() on:click=create>{move||i18n.text("message.confirm_creation_in_jira")}</button>

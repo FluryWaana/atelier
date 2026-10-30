@@ -50,7 +50,7 @@ async fn recovery_keeps_the_candidate_identity_without_replaying_or_overwriting_
         let duplicate=workflow::record(store,"task",&operation,pr.clone())?;assert!(duplicate.fields.raw("pullRequest").is_none());assert_eq!(duplicate.fields.get::<ForgePublicationIntent>("forgePublication")?.unwrap().state,Phase::Uncertain);
         store.delete(Documents::Cards,"other")?;let linked=workflow::record(store,"task",&operation,pr)?;
         assert_eq!(linked.fields.get::<ForgePublicationIntent>("forgePublication")?.unwrap().state,Phase::Confirmed);assert!(linked.fields.raw("forgePublicationEffect").is_some());assert!(linked.fields.raw("forgePublicationPreview").is_none());
-        assert_eq!(linked.title.utf8()?,"Human title");assert!(linked.fields.string_equals("description","Keep human text")?);assert!(linked.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist")?.unwrap()[0].done);
+        assert_eq!(linked.title.clone(),"Human title");assert!(linked.fields.string_equals("description","Keep human text")?);assert!(linked.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist")?.unwrap()[0].done);
         assert!(workflow::sending(store,&reserved,&operation).is_err());assert!(backups.restore(store,&old.name).is_err());Ok(())
     }).await.unwrap();
     database.close().await.unwrap();

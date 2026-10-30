@@ -29,7 +29,7 @@ pub(super) async fn update(
         let original = store.document::<Card>(Documents::Cards, &id)?.ok_or(CardFailure::Missing)?;
         // shortcut: M04/M06 must supply live activity before enabling agents and automation.
         let edit = task_editing::prepare(store, &original, &body, false)?;
-        if edit.sync_status && edit.card.fields.truthy("ticket")? { return Ok(Outcome::Unavailable("La synchronisation du ticket n’est pas encore disponible dans le prototype Rust.")); }
+        if edit.sync_status && edit.card.fields.has_object("ticket")? { return Ok(Outcome::Unavailable("La synchronisation du ticket n’est pas encore disponible dans le prototype Rust.")); }
         let mut card = edit.card;
         store.put(Documents::Cards, &card)?;
         if edit.requirements_changed {
@@ -41,16 +41,6 @@ pub(super) async fn update(
     })).await {
         Ok(Outcome::Saved(card)) => Json(card).into_response(),
         Ok(Outcome::Unavailable(message)) => failure(StatusCode::SERVICE_UNAVAILABLE, message),
-        Err(error) => {
-            let status = match error.downcast_ref::<CardFailure>() {
-                Some(CardFailure::Missing) => StatusCode::NOT_FOUND,
-                Some(CardFailure::Conflict(_)) => StatusCode::CONFLICT,
-                Some(CardFailure::Document(_)) => StatusCode::INTERNAL_SERVER_ERROR,
-                _ if error.is::<rusqlite::Error>() || error.is::<serde_json::Error>() => StatusCode::INTERNAL_SERVER_ERROR,
-                _ => StatusCode::BAD_REQUEST,
-            };
-            if status == StatusCode::INTERNAL_SERVER_ERROR { failure(status, "message.card_update_failed") }
-            else { failure(status, &error.to_string()) }
-        }
+        Err(error) => super::responses::error(error, "message.card_update_failed"),
     }
 }

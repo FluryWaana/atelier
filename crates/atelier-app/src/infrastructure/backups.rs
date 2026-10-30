@@ -437,13 +437,13 @@ fn restore_checked(
             return Err(BackupFailure::Invalid(unfinished).into());
         }
         if let Some(raw) = card.value.raw("automation")
-            && Document::spread(raw)?.string_equals("state", "running")?
+            && Document::from_raw(raw)?.string_equals("state", "running")?
         {
             return Err(BackupFailure::Invalid(unfinished).into());
         }
     }
     for time in times.values() {
-        if time.truthy("runningSince")?
+        if time.has_text("runningSince")?
             || time.string_equals("exportState", "sending")?
             || time.string_equals("exportState", "uncertain")?
         {
@@ -532,9 +532,10 @@ fn restore_checked(
             }
         }
         for mut card in store.documents::<Document>(Documents::Cards)? {
-            if card.truthy("automation")? {
-                let mut automation =
-                    Document::spread(card.raw("automation").ok_or("message.automation_missing")?)?;
+            if card.has_object("automation")? {
+                let mut automation = Document::from_raw(
+                    card.raw("automation").ok_or("message.automation_missing")?,
+                )?;
                 automation.set("state", &"interrupted")?;
                 automation.set("step", &"tests")?;
                 automation.set(
@@ -542,7 +543,7 @@ fn restore_checked(
                     &"message.data_restored_resume_verification_and_review_on_the_current_work",
                 )?;
                 card.set("automation", &automation)?;
-                if !card.truthy("archived")? && !card.string_equals("status", "done")? {
+                if !card.flag("archived")? && !card.string_equals("status", "done")? {
                     card.set("status", &"standby")?;
                 }
                 store.put(Documents::Cards, &card)?;

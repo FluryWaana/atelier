@@ -178,30 +178,61 @@ async fn write(
     path: &str,
     body: &serde_json::Value,
 ) -> Result<Response, String> {
-    let deadline = path.ends_with("/diagnose").then(|| web_sys::AbortSignal::timeout_with_u32(60_000));
+    let deadline = path
+        .ends_with("/diagnose")
+        .then(|| web_sys::AbortSignal::timeout_with_u32(60_000));
     let send = || async {
-    let response = RequestBuilder::new(path)
-        .method(method.clone())
-        .abort_signal(deadline.as_ref())
-        .header("Authorization", &format!("Bearer {token}"))
-        .header("X-Local-Request", "1")
-        .json(body)
-        .map_err(|_| "message.invalid_request")?
-        .send()
-        .await
-        .map_err(|_| if deadline.as_ref().is_some_and(|signal| signal.aborted()) { "message.agent_diagnostic_timeout" } else { "message.connection_interrupted_check_the_current_state_before_trying_aga" })?;
-    checked_response(response).await
+        let response = RequestBuilder::new(path)
+            .method(method.clone())
+            .abort_signal(deadline.as_ref())
+            .header("Authorization", &format!("Bearer {token}"))
+            .header("X-Local-Request", "1")
+            .json(body)
+            .map_err(|_| "message.invalid_request")?
+            .send()
+            .await
+            .map_err(|_| {
+                if deadline.as_ref().is_some_and(|signal| signal.aborted()) {
+                    "message.agent_diagnostic_timeout"
+                } else {
+                    "message.connection_interrupted_check_the_current_state_before_trying_aga"
+                }
+            })?;
+        checked_response(response).await
     };
-    if path.ends_with("/diagnose") { retry_agent_request(send).await } else { send().await }
+    if path.ends_with("/diagnose") {
+        retry_agent_request(send).await
+    } else {
+        send().await
+    }
 }
 
 async fn retry_agent_request<F, Fut>(mut send: F) -> Result<Response, String>
-where F: FnMut() -> Fut, Fut: std::future::Future<Output = Result<Response, String>> {
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<Response, String>>,
+{
     for attempt in 0..60 {
         let result = send().await;
-        if attempt == 59 || !matches!(result.as_ref().err().map(String::as_str), Some("message.agent_diagnostic_busy" | "message.executable_lookup_is_busy_try_again_shortly" | "message.a_change_is_in_progress_try_again_shortly")) { return result; }
+        if attempt == 59
+            || !matches!(
+                result.as_ref().err().map(String::as_str),
+                Some(
+                    "message.agent_diagnostic_busy"
+                        | "message.executable_lookup_is_busy_try_again_shortly"
+                        | "message.a_change_is_in_progress_try_again_shortly"
+                )
+            )
+        {
+            return result;
+        }
         let pause = js_sys::Promise::new(&mut |resolve, _| {
-            set_timeout(move || { let _ = resolve.call0(&wasm_bindgen::JsValue::NULL); }, std::time::Duration::from_secs(1));
+            set_timeout(
+                move || {
+                    let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
+                },
+                std::time::Duration::from_secs(1),
+            );
         });
         let _ = wasm_bindgen_futures::JsFuture::from(pause).await;
     }
@@ -307,17 +338,22 @@ fn session() -> Result<String, String> {
 }
 
 async fn read(token: &str, path: &str) -> Result<Response, String> {
-    let deadline = (path == "/api/agent-providers/discover").then(|| web_sys::AbortSignal::timeout_with_u32(60_000));
+    let deadline = (path == "/api/agent-providers/discover")
+        .then(|| web_sys::AbortSignal::timeout_with_u32(60_000));
     let send = || async {
-    let response = Request::get(path)
-        .abort_signal(deadline.as_ref())
-        .header("Authorization", &format!("Bearer {token}"))
-        .send()
-        .await
-        .map_err(|_| "message.connection_interrupted")?;
-    checked_response(response).await
+        let response = Request::get(path)
+            .abort_signal(deadline.as_ref())
+            .header("Authorization", &format!("Bearer {token}"))
+            .send()
+            .await
+            .map_err(|_| "message.connection_interrupted")?;
+        checked_response(response).await
     };
-    if path == "/api/agent-providers/discover" { retry_agent_request(send).await } else { send().await }
+    if path == "/api/agent-providers/discover" {
+        retry_agent_request(send).await
+    } else {
+        send().await
+    }
 }
 
 async fn load(token: &str) -> Result<Board, String> {
@@ -485,12 +521,33 @@ fn App() -> impl IntoView {
                                     let _ = agent_checking.try_set(false);
                                     for (id, profile, status_request) in details {
                                         let path = format!("/api/agent-providers/{id}/diagnose");
-                                        if let Ok(response) = write(&agent_token, Method::POST, &path, &serde_json::json!({"expected":profile})).await
-                                            && let Ok(diagnostic) = response.json::<atelier_core::contracts::AgentDiagnostic>().await
-                                            && agent_status.try_update(|checks| checks.finish(&id, status_request, Some(diagnostic))).is_none() { return; }
+                                        if let Ok(response) = write(
+                                            &agent_token,
+                                            Method::POST,
+                                            &path,
+                                            &serde_json::json!({"expected":profile}),
+                                        )
+                                        .await
+                                            && let Ok(diagnostic) = response
+                                                .json::<atelier_core::contracts::AgentDiagnostic>()
+                                                .await
+                                            && agent_status
+                                                .try_update(|checks| {
+                                                    checks.finish(
+                                                        &id,
+                                                        status_request,
+                                                        Some(diagnostic),
+                                                    )
+                                                })
+                                                .is_none()
+                                        {
+                                            return;
+                                        }
                                     }
                                 }
-                                Err(message) => { let _ = agent_check_error.try_set(message); }
+                                Err(message) => {
+                                    let _ = agent_check_error.try_set(message);
+                                }
                             }
                             let _ = agent_checking.try_set(false);
                         });
@@ -509,7 +566,10 @@ fn App() -> impl IntoView {
                         }
                         selected.set(active);
                     }
-                    Err(message) => { error.set(message); agent_checking.set(false); },
+                    Err(message) => {
+                        error.set(message);
+                        agent_checking.set(false);
+                    }
                 }
                 loading.set(false);
             });
@@ -526,14 +586,14 @@ fn App() -> impl IntoView {
             .get()
             .into_iter()
             .filter(|card| {
-                card.fields.truthy("brainstormSession").unwrap_or(false) == brainstorms
-                    && card.fields.truthy("archived").unwrap_or(false)
+                card.fields.flag("brainstormSession").unwrap_or(false) == brainstorms
+                    && card.fields.flag("archived").unwrap_or(false)
                         == (view.get() == WorkspaceView::Archives)
                     && (repo.is_empty() || field(&card.fields, "repo") == repo)
                     && (query.is_empty()
                         || format!(
                             "{} {} {}",
-                            String::from_utf16_lossy(&card.title.0),
+                            card.title.clone(),
                             field(&card.fields, "description"),
                             card.fields
                                 .get::<atelier_core::document::Document>("ticket")
@@ -553,7 +613,7 @@ fn App() -> impl IntoView {
             && !cards.with(|cards| {
                 cards
                     .iter()
-                    .any(|card| !card.fields.truthy("brainstormSession").unwrap_or(false))
+                    .any(|card| !card.fields.flag("brainstormSession").unwrap_or(false))
             })
     };
     let commit_view = Callback::new(move |next: WorkspaceView| {
@@ -980,7 +1040,7 @@ fn App() -> impl IntoView {
                         let id = StoredValue::new(card.id);
                         let current = move || cards.with(|cards| cards.iter().find(|card| card.id == id.get_value()).cloned());
                         let running=move || board.runs.with(|runs|runs.iter().any(|run|field(run,"cardId")==id.get_value()&&matches!(field(run,"status").as_str(),"starting"|"running"|"stopping")));
-                        let busy=move ||pending.get()||current().is_some_and(|card|card.fields.truthy("publishing").unwrap_or(false)||card.fields.get::<atelier_core::document::Document>("automation").ok().flatten().is_some_and(|flow|field(&flow,"state")=="running"));
+                        let busy=move ||pending.get()||current().is_some_and(|card|card.fields.flag("publishing").unwrap_or(false)||card.fields.get::<atelier_core::document::Document>("automation").ok().flatten().is_some_and(|flow|field(&flow,"state")=="running"));
                         view! { <article class="card" data-id=id.get_value() draggable=move ||(!busy()).to_string() class:dragging=move ||dragging.with(|value|value.as_ref().is_some_and(|(card,_)|card==&id.get_value())) on:dragstart=move |event:leptos::ev::DragEvent|{
                             if busy(){event.prevent_default();return;}
                             if let Some(card)=current(){if let Some(transfer)=event.data_transfer(){if transfer.set_data("text/plain",&card.id).is_err(){event.prevent_default();return;}transfer.set_effect_allowed("move");}dragging.set(Some((card.id,field(&card.fields,"status"))));}
@@ -991,7 +1051,7 @@ fn App() -> impl IntoView {
                                 <button type="button" class="danger" hidden=running disabled=busy popovertarget=format!("card-actions-{}",id.get_value()) popovertargetaction="hide" on:click=move |_|card_action.run((id.get_value(),"delete"))><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>{move ||i18n.text("message.delete_locally")}</button>
                             </div></div>
                             <span class="card-label">{move || current().and_then(|card|card.fields.get::<atelier_core::document::Document>("ticket").ok().flatten()).map(|ticket|field(&ticket,"key")).filter(|key|!key.is_empty()).unwrap_or_else(||i18n.text("message.local_task"))}</span>
-                            <button type="button" class="card-title card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| String::from_utf16_lossy(&card.title.0)).unwrap_or_default()}</button>
+                            <button type="button" class="card-title card-open" id=format!("card-open-{}", id.get_value()) on:click=move |_|open_task.run(id.get_value())>{move || current().map(|card| card.title.clone()).unwrap_or_default()}</button>
                             <span class="card-description">{move || current().map(|card| field(&card.fields, "description")).unwrap_or_default()}</span>
                             {move || current().and_then(|card|card.fields.get::<Vec<atelier_core::domain::checklist::Criterion>>("checklist").ok().flatten()).filter(|criteria|!criteria.is_empty()).map(|criteria|view!{<span class="card-criteria">{i18n.text("message.0_1_criteria_checked").replace("{0}",&criteria.iter().filter(|criterion|criterion.done).count().to_string()).replace("{1}",&criteria.len().to_string())}</span>})}
                             <div class="card-bottom">{move || current().and_then(|card|{let agent=field(&card.fields,"agent");board.settings.with(|settings|atelier_core::domain::agent_options::providers(settings).unwrap_or_default().into_iter().find(|profile|field(profile,"id")==agent))}).map(|profile|view!{<span class="agent-pill">{field(&profile,"name")}</span>})}<span class="project-pill">{move || current().map(|card|{let repo=field(&card.fields,"repo");projects.with(|projects|projects.iter().find(|project|field(project,"repo")==repo).map(|project|field(project,"name"))).unwrap_or_else(||if repo.is_empty(){i18n.text("message.no_project")}else{repo.rsplit(['/', '\\']).find(|part|!part.is_empty()).unwrap_or(&repo).to_owned()})}).unwrap_or_default()}</span>
@@ -1002,7 +1062,7 @@ fn App() -> impl IntoView {
                 } />
             </section>
             <Show when=move || matches!(view.get(),WorkspaceView::Overview|WorkspaceView::Agents|WorkspaceView::Processes|WorkspaceView::Worktrees)><workspace_views::WorkspaceViews board token view=Signal::derive(move ||view.get()) project=Signal::derive(move ||repository.get()) on_open=open_task on_view=navigate on_focus=Callback::new(move |filter:String|{focus_filter.set(filter);search.set(String::new());navigate.run(WorkspaceView::Board);}) on_projects=Callback::new(move |()|show_projects.set(true)) /></Show>
-            <Show when=move || view.get()==WorkspaceView::Archives><section id="workspace-archives" class="workspace-panel"><div class="panel-heading"><div><h2>{move ||i18n.text("message.your_history")}</h2><p class="hint">{move ||i18n.text("message.archived_tasks_with_their_time_entries_branches_and_logs_restori")}</p></div></div><For each=move ||visible(false) key=|card|card.id.clone() children=move |card|{let id=StoredValue::new(card.id.clone());view!{<article class="workspace-row archive-row" data-id=id.get_value()><div><span class="section-kicker">{move ||i18n.text("message.archived_task")}</span><h3>{String::from_utf16_lossy(&card.title.0)}</h3><p class="hint">{move ||i18n.text("message.history_kept")}</p></div><div class="row-actions"><button id=format!("card-open-{}",id.get_value()) class="card-open" on:click=move |_|open_task.run(id.get_value())>{move ||i18n.text("message.open_task")}</button><button disabled=move ||pending.get() on:click=move |_|{if pending.get_untracked(){return;}let Ok(token)=token.get_value()else{return;};pending.set(true);spawn_local(async move{let result=write(&token,Method::POST,&format!("/api/cards/{}/archive",id.get_value()),&serde_json::json!({"archived":false})).await;match result{Ok(_)=>{let _=board.refresh(&token).await;},Err(message)=>error.set(message)}pending.set(false);});}>{move ||i18n.text("message.restore")}</button></div></article>}} /><p class="empty" hidden=move ||!visible(false).is_empty()>{move ||i18n.text("message.no_archived_tasks")}</p></section></Show>
+            <Show when=move || view.get()==WorkspaceView::Archives><section id="workspace-archives" class="workspace-panel"><div class="panel-heading"><div><h2>{move ||i18n.text("message.your_history")}</h2><p class="hint">{move ||i18n.text("message.archived_tasks_with_their_time_entries_branches_and_logs_restori")}</p></div></div><For each=move ||visible(false) key=|card|card.id.clone() children=move |card|{let id=StoredValue::new(card.id.clone());view!{<article class="workspace-row archive-row" data-id=id.get_value()><div><span class="section-kicker">{move ||i18n.text("message.archived_task")}</span><h3>{card.title.clone()}</h3><p class="hint">{move ||i18n.text("message.history_kept")}</p></div><div class="row-actions"><button id=format!("card-open-{}",id.get_value()) class="card-open" on:click=move |_|open_task.run(id.get_value())>{move ||i18n.text("message.open_task")}</button><button disabled=move ||pending.get() on:click=move |_|{if pending.get_untracked(){return;}let Ok(token)=token.get_value()else{return;};pending.set(true);spawn_local(async move{let result=write(&token,Method::POST,&format!("/api/cards/{}/archive",id.get_value()),&serde_json::json!({"archived":false})).await;match result{Ok(_)=>{let _=board.refresh(&token).await;},Err(message)=>error.set(message)}pending.set(false);});}>{move ||i18n.text("message.restore")}</button></div></article>}} /><p class="empty" hidden=move ||!visible(false).is_empty()>{move ||i18n.text("message.no_archived_tasks")}</p></section></Show>
             <Show when=move ||view.get()==WorkspaceView::Brainstorm><BrainstormPage board token on_open=open_task on_new=open_new /></Show>
             {move || selected.get().filter(|_|view.get()==WorkspaceView::Task).map(|card| view! { <TaskEditor card board token on_open=open_task on_close=Callback::new(move |()| commit_view.run(return_view.get_untracked())) /> })}
             {move || match view.get(){WorkspaceView::Settings|WorkspaceView::Updates=>Some(view!{<Settings board token initial_tab=if view.get()==WorkspaceView::Updates{"updates"}else{settings_section.get_untracked()} on_close=Callback::new(move |()|commit_view.run(WorkspaceView::Overview)) />}),_=>None}}
@@ -1229,11 +1289,7 @@ fn CommandPalette(
                 .flatten()
                 .map(|ticket| field(&ticket, "key"))
                 .unwrap_or_else(|| i18n.text("message.local_task_71560e02"));
-            (
-                CommandTarget::Card(card.id),
-                String::from_utf16_lossy(&card.title.0),
-                ticket,
-            )
+            (CommandTarget::Card(card.id), card.title.clone(), ticket)
         }));
         let words = command_search(&query.get())
             .split_whitespace()
@@ -1367,15 +1423,14 @@ fn DeleteCardDialog(
     };
     view! {<dialog id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-message" node_ref=dialog on:cancel=move |event:web_sys::Event|{event.prevent_default();close();}><form on:submit=move |event|{event.prevent_default();on_confirm.run(());}>
         <div class="dialog-heading"><div class="confirm-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10.3 4.6 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></svg></div><button type="button" disabled=move ||pending.get() aria-label=move ||i18n.text("message.close") on:click=move |_|close()>"×"</button></div>
-        <h2 id="confirm-title">{move ||i18n.text("message.permanently_delete_this_task")}</h2><p>{String::from_utf16_lossy(&card.title.0)}</p><p id="confirm-message">{move ||i18n.text("message.permanently_delete_this_task_this_cannot_be_undone")}</p><p class="error" role="alert">{move ||i18n.text(&error.get())}</p><div class="form-actions"><button type="button" autofocus disabled=move ||pending.get() on:click=move |_|close()>{move ||i18n.text("message.cancel")}</button><button id="confirm-action" class="confirm-action" type="submit" disabled=move ||pending.get()>{move ||i18n.text("message.delete_permanently")}</button></div>
+        <h2 id="confirm-title">{move ||i18n.text("message.permanently_delete_this_task")}</h2><p>{card.title.clone()}</p><p id="confirm-message">{move ||i18n.text("message.permanently_delete_this_task_this_cannot_be_undone")}</p><p class="error" role="alert">{move ||i18n.text(&error.get())}</p><div class="form-actions"><button type="button" autofocus disabled=move ||pending.get() on:click=move |_|close()>{move ||i18n.text("message.cancel")}</button><button id="confirm-action" class="confirm-action" type="submit" disabled=move ||pending.get()>{move ||i18n.text("message.delete_permanently")}</button></div>
     </form></dialog>}
 }
 fn field(document: &atelier_core::document::Document, key: &str) -> String {
     document
-        .get::<atelier_core::document::JsonString>(key)
+        .get::<String>(key)
         .ok()
         .flatten()
-        .map(|value| String::from_utf16_lossy(&value.0))
         .unwrap_or_default()
 }
 

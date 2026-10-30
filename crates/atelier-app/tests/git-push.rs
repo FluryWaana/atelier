@@ -5,10 +5,7 @@ fn null() -> &'static str {
 use atelier_app::infrastructure::{
     files::Repository, git_transport::HttpsAuthentication, process_tree,
 };
-use atelier_core::{
-    contracts::{ForgeConfiguration, ForgeKind},
-    document::JsonString,
-};
+use atelier_core::contracts::{ForgeConfiguration, ForgeKind};
 use axum::{
     Router,
     extract::{Request, State},
@@ -318,12 +315,7 @@ async fn isolated_push_preserves_human_state_rejects_remote_races_and_observes_l
     let refs = git(&source_path, &["show-ref"]).await;
     let root = Dir::open_ambient_dir(&root_path, ambient_authority()).unwrap();
     let roots = vec![root_path.clone()];
-    let source = Repository::synthetic(
-        &root,
-        &roots,
-        &JsonString::from(path(&source_path).as_str()),
-    )
-    .unwrap();
+    let source = Repository::synthetic(&root, &roots, path(&source_path).as_str()).unwrap();
     let auth = HttpsAuthentication::synthetic(
         ForgeConfiguration {
             kind: ForgeKind::Github,

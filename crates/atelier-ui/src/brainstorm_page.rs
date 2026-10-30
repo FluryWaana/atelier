@@ -52,7 +52,7 @@ fn active(run: &Document) -> bool {
     )
 }
 fn name(card: &Card) -> String {
-    String::from_utf16_lossy(&card.title.0)
+    card.title.clone()
 }
 fn agent_name(board: BoardState, id: &str) -> String {
     providers(&board.settings.get_untracked())
@@ -99,8 +99,8 @@ pub fn BrainstormPage(
             .get()
             .into_iter()
             .filter(|card| {
-                !card.fields.truthy("archived").unwrap_or(false)
-                    && card.fields.truthy("brainstormSession").unwrap_or(false)
+                !card.fields.flag("archived").unwrap_or(false)
+                    && card.fields.flag("brainstormSession").unwrap_or(false)
             })
             .collect::<Vec<_>>()
     });

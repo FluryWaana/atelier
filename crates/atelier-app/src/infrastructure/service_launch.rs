@@ -2,7 +2,7 @@
 use super::task_creation::path_string;
 use super::{checked_file::require_plain, launch_detection, worktrees};
 use crate::Result;
-use atelier_core::{application::services::LaunchPlan, document::JsonString};
+use atelier_core::application::services::LaunchPlan;
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ pub(crate) async fn shell(command: &str) -> Result<tokio::process::Command> {
     profile.set("type", &"command")?;
     profile.set(
         "command",
-        &path_string(&PathBuf::from(system).join("System32/cmd.exe")).utf8()?,
+        &path_string(&PathBuf::from(system).join("System32/cmd.exe")),
     )?;
     let mut child = super::agent_diagnostics::command(&profile).await?;
     child
@@ -79,9 +79,9 @@ pub async fn prepare(root: &Dir, roots: &[PathBuf], plan: LaunchPlan) -> Result<
             let selected = launch_detection::synthetic_repository(
                 root,
                 roots,
-                &serde_json::value::to_raw_value(&JsonString::from(service.repository.as_str()))?,
+                &serde_json::value::to_raw_value(service.repository.as_str())?,
             )?;
-            let path = PathBuf::from(selected.utf8()?);
+            let path = PathBuf::from(selected.clone());
             let directory = launch_detection::open_repository(root, roots, &selected)?;
             (path, directory)
         };
@@ -120,9 +120,7 @@ mod tests {
                 id: "linked:back".into(),
                 project_id: "linked".into(),
                 name: "Linked · Back".into(),
-                repository: path_string(&path.join("repositories/linked"))
-                    .utf8()
-                    .unwrap(),
+                repository: path_string(&path.join("repositories/linked")),
                 worktree: None,
                 directory: "api".into(),
                 command: "never execute this fixture".into(),

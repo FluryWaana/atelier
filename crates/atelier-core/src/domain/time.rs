@@ -1,9 +1,6 @@
-use crate::{
-    document::{Document, JsonString},
-    domain::text_units,
-};
+use crate::{document::Document, domain::text};
 use serde::Serialize;
-use serde_json::{Value, value::RawValue};
+use serde_json::value::RawValue;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,78 +8,21 @@ pub struct TimeFields {
     pub seconds: u32,
     pub date: String,
     pub start_time: String,
-    pub description: JsonString,
-}
-
-// Number(array) uses Array.toString; JSON objects cannot supply callable conversion methods.
-fn array_text(raw: &RawValue) -> Result<String, &'static str> {
-    match raw.get().as_bytes()[0] {
-        b'[' => serde_json::from_str::<Vec<Box<RawValue>>>(raw.get())
-            .map_err(|_| "message.duration_must_be_between_1_second_and_24_hours")?
-            .iter()
-            .map(|item| array_text(item))
-            .collect::<Result<Vec<_>, _>>()
-            .map(|items| items.join(",")),
-        b'{' => {
-            let object: Document = serde_json::from_str(raw.get())
-                .map_err(|_| "message.duration_must_be_between_1_second_and_24_hours")?;
-            if object.raw("toString").is_some() {
-                Err("message.invalid_duration_value")
-            } else {
-                Ok("[object Object]".into())
-            }
-        }
-        b'"' => Ok(serde_json::from_str::<JsonString>(raw.get())
-            .ok()
-            .and_then(|value| value.utf8().ok())
-            .unwrap_or_else(|| "NaN".into())),
-        b'n' => Ok(String::new()),
-        _ => Ok(raw.get().into()),
-    }
+    pub description: String,
 }
 
 fn seconds(raw: Option<&RawValue>) -> Result<u32, &'static str> {
     const ERROR: &str = "message.duration_must_be_between_1_second_and_24_hours";
-    let raw = raw.ok_or(ERROR)?;
-    let value = match raw.get().as_bytes()[0] {
-        b't' => 1.0,
-        b'f' | b'n' => 0.0,
-        b'"' | b'[' | b'{' => {
-            let value = array_text(raw)?;
-            let value = crate::domain::text(&value, usize::MAX).map_err(|_| ERROR)?;
-            let radix = if value.starts_with("0x") || value.starts_with("0X") {
-                Some(16)
-            } else if value.starts_with("0b") || value.starts_with("0B") {
-                Some(2)
-            } else if value.starts_with("0o") || value.starts_with("0O") {
-                Some(8)
-            } else {
-                None
-            };
-            if let Some(radix) = radix {
-                if value.len() == 2 {
-                    return Err(ERROR);
-                }
-                value[2..].chars().try_fold(0.0, |n, c| {
-                    c.to_digit(radix)
-                        .map(|digit| n * f64::from(radix) + f64::from(digit))
-                        .ok_or(ERROR)
-                })?
-            } else {
-                value.parse::<f64>().map_err(|_| ERROR)?
-            }
-        }
-        _ => serde_json::from_str::<Value>(raw.get())
-            .ok()
-            .and_then(|v| v.as_f64())
-            .ok_or(ERROR)?,
-    };
-    if !value.is_finite() || value.fract() != 0.0 || !(1.0..=86400.0).contains(&value) {
-        return Err(ERROR);
-    }
+    let number: serde_json::Number =
+        serde_json::from_str(raw.ok_or(ERROR)?.get()).map_err(|_| ERROR)?;
+    let value = number
+        .as_f64()
+        .filter(|value| {
+            value.is_finite() && value.fract() == 0.0 && (1.0..=86400.0).contains(value)
+        })
+        .ok_or(ERROR)?;
     Ok(value as u32)
 }
-
 pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
     let seconds = seconds(body.raw("seconds"))?;
     let date = body
@@ -133,12 +73,12 @@ pub fn time_fields(body: &Document) -> Result<TimeFields, &'static str> {
     }
     const DESCRIPTION: &str = "message.a_description_of_1_to_4_000_characters_is_required";
     let description = body
-        .get::<JsonString>("description")
+        .get::<String>("description")
         .ok()
         .flatten()
         .ok_or(DESCRIPTION)?;
-    let description = text_units(&description, 4000).map_err(|_| DESCRIPTION)?;
-    if description.0.is_empty() {
+    let description = text(&description, 4000).map_err(|_| DESCRIPTION)?;
+    if description.is_empty() {
         return Err(DESCRIPTION);
     }
     let start_time = body
@@ -173,21 +113,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn time_descriptions_preserve_isolated_utf16_units() {
-        let body: Document = serde_json::from_str(
-            r#"{"seconds":60,"date":"2026-10-24","startTime":"09:00:00","description":" \ud83d "}"#,
-        )
-        .unwrap();
-        let fields = time_fields(&body).unwrap();
-        assert_eq!(fields.description, JsonString(vec![0xd83d]));
-        assert!(
-            serde_json::to_string(&fields)
-                .unwrap()
-                .contains(r#""description":"\ud83d""#)
-        );
+    fn time_input_is_numeric_and_preserves_valid_unicode() {
+        let mut body: Document = serde_json::from_str(r#"{"seconds":60.0,"date":"2026-10-24","startTime":"09:00:00","description":" Travail 🔧 "}"#).unwrap();
+        assert_eq!(time_fields(&body).unwrap().description, "Travail 🔧");
+        for raw in [
+            "true", "false", "null", "[]", "[60]", "{}", "\"60\"", "60.5", "0", "86401",
+        ] {
+            body.set("seconds", &RawValue::from_string(raw.into()).unwrap())
+                .unwrap();
+            assert!(time_fields(&body).is_err(), "{raw}");
+        }
     }
 }
-
 /// Human duration input is explicit; no floating-point minutes or implicit coercion.
 pub fn parse_duration(value: &str) -> Option<u32> {
     let parts = value.split(':').collect::<Vec<_>>();

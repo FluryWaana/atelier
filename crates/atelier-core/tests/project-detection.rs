@@ -1,14 +1,11 @@
-use atelier_core::{
-    application::{projects, task_creation::Result},
-    document::{Document, JsonString},
-    domain::text_units,
-};
+use atelier_core::Result;
+use atelier_core::{application::projects, document::Document, domain::text};
 use std::cell::RefCell;
 #[path = "support/json.rs"]
 mod json;
 
 #[test]
-fn historical_project_detection_preserves_sources_drafts_roles_caching_and_utf16() {
+fn historical_project_detection_preserves_sources_drafts_roles_caching_and_unicode() {
     let fixture: Document = serde_json::from_str(include_str!(
         "fixtures/rust-project-detection-reference.json"
     ))
@@ -23,21 +20,21 @@ fn historical_project_detection_preserves_sources_drafts_roles_caching_and_utf16
             None => Some(default_project.clone()),
         };
         let events = RefCell::new(Vec::<Document>::new());
-        let mut resolve = |value: &serde_json::value::RawValue| -> Result<JsonString> {
+        let mut resolve = |value: &serde_json::value::RawValue| -> Result<String> {
             let mut event = Document::default();
             event.set("repository", &value)?;
             events.borrow_mut().push(event);
-            let input: JsonString =
-                serde_json::from_str(value.get()).map_err(|_| "message.invalid_or_overly_long_text")?;
-            let mut result = JsonString::from("checked:");
-            result.0.extend(text_units(&input, 2000)?.0);
+            let input: String = serde_json::from_str(value.get())
+                .map_err(|_| "message.invalid_or_overly_long_text")?;
+            let mut result = String::from("checked:");
+            result.push_str(&text(&input, 2000)?);
             Ok(result)
         };
-        let mut scan = |repo: &JsonString| -> Result<Document> {
+        let mut scan = |repo: &str| -> Result<Document> {
             let mut event = Document::default();
             event.set("scan", repo)?;
             events.borrow_mut().push(event);
-            if scenario.truthy("failScan")? {
+            if scenario.flag("failScan")? {
                 return Err("Synthetic scan failure".into());
             }
             Ok(detected.clone())
@@ -45,7 +42,7 @@ fn historical_project_detection_preserves_sources_drafts_roles_caching_and_utf16
         let result = projects::detect(
             project.as_ref(),
             &scenario.get::<Document>("body").unwrap().unwrap(),
-            scenario.truthy("useDraft").unwrap(),
+            scenario.flag("useDraft").unwrap(),
             &mut resolve,
             &mut scan,
         );

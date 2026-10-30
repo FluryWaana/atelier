@@ -72,7 +72,7 @@ pub fn reserve(
         }
         revalidate(store, &input.expected, input.revision)?;
         let (mut card, issue) = snapshot(store, &input.expected.id, input.revision)?;
-        if jira::unresolved(&card.fields)? || card.fields.truthy("archived")? {
+        if jira::unresolved(&card.fields)? || card.fields.flag("archived")? {
             return Err("message.finish_or_check_the_jira_operation_before_continuing".into());
         }
         for run in store.documents::<Document>(Documents::Runs)? {

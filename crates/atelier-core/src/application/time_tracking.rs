@@ -1,6 +1,6 @@
 use crate::{document::Document, domain::time::time_fields};
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+use crate::Result;
 
 #[derive(Debug)]
 pub struct TimeConflict;
@@ -27,7 +27,7 @@ pub trait TimeClock {
 
 pub fn initialize(repository: &impl TimeRepository) -> Result<()> {
     for mut entry in repository.entries()? {
-        if entry.truthy("runningSince")? {
+        if entry.has_text("runningSince")? {
             entry.remove("runningSince");
             entry.set("interrupted", &true)?;
         }
@@ -48,7 +48,7 @@ pub fn initialize(repository: &impl TimeRepository) -> Result<()> {
 pub fn tick(repository: &impl TimeRepository, clock: &impl TimeClock) -> Result<bool> {
     let mut changed = false;
     for mut entry in repository.entries()? {
-        if !entry.truthy("runningSince")? {
+        if !entry.has_text("runningSince")? {
             continue;
         }
         let Some(started) = entry
@@ -85,7 +85,7 @@ pub fn tick(repository: &impl TimeRepository, clock: &impl TimeClock) -> Result<
 pub fn close(repository: &impl TimeRepository, clock: &impl TimeClock) -> Result<bool> {
     let mut changed = tick(repository, clock)?;
     for mut entry in repository.entries()? {
-        if entry.truthy("runningSince")? {
+        if entry.has_text("runningSince")? {
             entry.remove("runningSince");
             repository.save(&entry)?;
             changed = true;
@@ -119,7 +119,7 @@ pub fn execute(
             .filter(|id| !id.trim().is_empty())
             .ok_or("message.invalid_card_id")?;
         let card = repository.card(&card_id)?.ok_or("message.card_not_found")?;
-        if card.truthy("archived")? {
+        if card.flag("archived")? {
             return Err("message.restore_this_task_before_logging_time".into());
         }
         let start = body
@@ -131,7 +131,7 @@ pub fn execute(
         apply_fields(&mut entry, body)?;
         if start {
             for existing in repository.entries()? {
-                if existing.truthy("runningSince")? {
+                if existing.has_text("runningSince")? {
                     return Err("message.stop_the_active_timer_before_starting_another".into());
                 }
             }
@@ -167,7 +167,7 @@ pub fn execute(
             entry.remove("runningSince");
         }
         "update" | "remove" => {
-            if entry.truthy("runningSince")? || !entry.string_equals("exportState", "draft")? {
+            if entry.has_text("runningSince")? || !entry.string_equals("exportState", "draft")? {
                 return Err(
                     "message.stop_the_timer_only_entries_that_have_not_been_sent_can_be_edite"
                         .into(),
