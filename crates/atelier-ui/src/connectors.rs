@@ -1,7 +1,7 @@
 use crate::{i18n::I18n, live::BoardState, read, write};
 use atelier_core::application::extensions::{
-    self as protocol, Candidate, Connection, Effect as ConnectorEffect, FieldKind, ImportedTicket,
-    Manifest, Method as ConnectorMethod, Registry, Report, TicketIdentity,
+    self as protocol, Connection, Effect as ConnectorEffect, FieldKind, ImportedTicket, Manifest,
+    Method as ConnectorMethod, Registry, Report, TicketIdentity,
 };
 use gloo_net::http::Method;
 use leptos::prelude::*;
@@ -52,10 +52,7 @@ pub(super) fn translated(i18n: I18n, manifest: &Manifest, message: &str) -> Stri
 #[derive(Clone)]
 enum Action {
     Reload,
-    Probe,
-    Install,
     Save,
-    Remove,
     Invoke(ConnectorMethod, Option<String>),
     Search(Option<String>),
     Import,
@@ -70,10 +67,8 @@ pub fn Connectors(
     #[prop(optional)] requested: Option<RwSignal<String>>,
     #[prop(optional)] shown: Option<RwSignal<String>>,
     #[prop(optional)] preview_error: Option<RwSignal<String>>,
-    #[prop(optional)] embedded: Option<Signal<bool>>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
-    let embedded = move || embedded.map(|embedded| embedded.get()).unwrap_or(false);
     let registry = RwSignal::new(None::<Registry>);
     let loading = RwSignal::new(false);
     let original = RwSignal::new(None::<Connection>);
@@ -88,13 +83,7 @@ pub fn Connectors(
         }
     });
     let draft = RwSignal::new(Draft::default());
-    let module = RwSignal::new(String::new());
-    let path = RwSignal::new(String::new());
-    let trusted = RwSignal::new(false);
-    let candidate = RwSignal::new(None::<(u64, Candidate)>);
-    let approved = RwSignal::new(false);
     let reload = RwSignal::new(false);
-    let remove = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     Effect::new(move |_| {
         if let Some(preview_error) = preview_error {
@@ -112,15 +101,8 @@ pub fn Connectors(
             .get()
             .is_some_and(|connection| draft.get() != Draft::from_connection(&connection))
     });
-    let own_dirty = Memo::new(move |_| {
-        profile_dirty.get()
-            || effects_dirty.get()
-            || import_dirty.get()
-            || !module.get().is_empty()
-            || !path.get().is_empty()
-            || trusted.get()
-            || candidate.get().is_some()
-    });
+    let own_dirty =
+        Memo::new(move |_| profile_dirty.get() || effects_dirty.get() || import_dirty.get());
     Effect::new(move |_| dirty.set(own_dirty.get()));
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
@@ -136,7 +118,6 @@ pub fn Connectors(
         tickets.set(BTreeSet::new());
         project.set(None);
         import_approved.set(false);
-        remove.set(false);
         error.set(String::new());
         notice.set(String::new());
     };
@@ -165,32 +146,6 @@ pub fn Connectors(
             .map(|connection| connection.installed.revision);
         let request = match &action {
             Action::Reload => None,
-            Action::Probe => {
-                if !trusted.get_untracked() || profile_dirty.get_untracked() {
-                    return;
-                }
-                let Some(current) = registry.get_untracked() else {
-                    return;
-                };
-                Some((
-                    Method::POST,
-                    "/api/extensions/probe".to_owned(),
-                    json!({"module":module.get_untracked(),"path":path.get_untracked(),"expectedRevision":current.revision,"confirmed":true}),
-                ))
-            }
-            Action::Install => {
-                if !approved.get_untracked() || profile_dirty.get_untracked() {
-                    return;
-                }
-                let Some((revision, candidate)) = candidate.get_untracked() else {
-                    return;
-                };
-                Some((
-                    Method::POST,
-                    "/api/extensions/install".to_owned(),
-                    json!({"expectedRevision":revision,"candidate":candidate,"confirmed":true}),
-                ))
-            }
             Action::Save => {
                 let Some(connection) = selected.as_ref() else {
                     return;
@@ -207,19 +162,6 @@ pub fn Connectors(
                     Method::PUT,
                     endpoint.clone().unwrap(),
                     json!({"expectedRevision":revision,"values":next.values,"forgetValues":forgotten,"secrets":next.secrets,"forgetSecrets":next.forget}),
-                ))
-            }
-            Action::Remove => {
-                if !remove.get_untracked() || profile_dirty.get_untracked() {
-                    return;
-                }
-                let Some(endpoint) = endpoint.clone() else {
-                    return;
-                };
-                Some((
-                    Method::DELETE,
-                    endpoint,
-                    json!({"expectedRevision":revision,"confirmed":true}),
                 ))
             }
             Action::Invoke(method, action) => {
@@ -271,7 +213,6 @@ pub fn Connectors(
                 ))
             }
         };
-        let probe_revision = registry.get_untracked().map(|value| value.revision);
         let reading = matches!(action, Action::Reload);
         if reading {
             loading.set(true);
@@ -301,15 +242,6 @@ pub fn Connectors(
                 Ok(value) => {
                     let applied = (|| -> Result<(), String> {
                         match action {
-                            Action::Probe => {
-                                let found = serde_json::from_value::<Candidate>(value)
-                                    .map_err(|_| "message.invalid_server_response")?;
-                                candidate.set(Some((
-                                    probe_revision.ok_or("message.invalid_server_response")?,
-                                    found,
-                                )));
-                                approved.set(false);
-                            }
                             Action::Invoke(_, _) | Action::Search(_) => {
                                 let report = serde_json::from_value::<Report>(value)
                                     .map_err(|_| "message.invalid_server_response")?;
@@ -361,13 +293,6 @@ pub fn Connectors(
                                     .cloned();
                                 registry.set(Some(saved));
                                 select(next);
-                                if matches!(action, Action::Reload | Action::Install) {
-                                    module.set(String::new());
-                                    path.set(String::new());
-                                    trusted.set(false);
-                                    candidate.set(None);
-                                    approved.set(false);
-                                }
                                 reload.set(false);
                                 notice.set("message.connectors_saved_or_reloaded_atelier_has_not_verified_remote_acc".into());
                             }
@@ -380,10 +305,7 @@ pub fn Connectors(
                 }
                 Err(message) => error.set(message),
             }
-            if matches!(
-                action,
-                Action::Import | Action::Install | Action::Remove | Action::Save
-            ) {
+            if matches!(action, Action::Import | Action::Save) {
                 let _ = board.refresh(&credential).await;
             }
             if reading {
@@ -418,11 +340,6 @@ pub fn Connectors(
             }
         }
     });
-    let invalidate = move || {
-        candidate.set(None);
-        approved.set(false);
-        trusted.set(false);
-    };
     let page = move || {
         original.get().and_then(|connection| {
             connection
@@ -432,23 +349,15 @@ pub fn Connectors(
         })
     };
     view! {<section id="connectors-settings" aria-labelledby="connectors-heading" aria-busy=move||(pending.get()||loading.get()).to_string()>
-        <h3 id="connectors-heading">{move||if embedded(){original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name)).unwrap_or_else(||i18n.text("message.connectors"))}else{i18n.text("message.local_connectors")}}</h3>
-        <p class="field-help" hidden=embedded>{move||i18n.text("message.on_linux_macos_stopping_targets_the_process_group_a_program_that")}</p>
+        <h3 id="connectors-heading">{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name)).unwrap_or_else(||i18n.text("message.connectors"))}</h3>
         <fieldset disabled=move||loading.get()>
-        <p hidden=embedded>{move||i18n.text("message.a_connector_is_a_trusted_program_running_with_your_account_permi")}</p>
         <p hidden=move||registry.get().is_none_or(|value|value.native_available)>{move||i18n.text("message.connector_execution_is_not_yet_available_on_this_platform")}</p>
         <button id="reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|{if own_dirty.get_untracked(){reload.set(true);}else{execute.with_value(|execute|execute(Action::Reload));}}>{move||i18n.text("message.reload_connectors")}</button>
         <div class="confirmation" hidden=move||!reload.get()><p>{move||i18n.text("message.discard_connector_drafts_and_reload")}</p><button id="confirm-reload-connectors" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Reload))>{move||i18n.text("message.discard_and_reload")}</button><button type="button" disabled=move||pending.get() on:click=move|_|reload.set(false)>{move||i18n.text("message.back")}</button></div>
         <p hidden=move||registry.get().is_none_or(|value|!value.modules.is_empty())>{move||i18n.text("message.no_local_connector_installed")}</p>
-        <div class="editor-actions" hidden=embedded><For each=move||registry.get().map(|value|value.modules).unwrap_or_default() key=|connection|(connection.installed.manifest.id.clone(),connection.installed.revision,connection.installed.report.as_ref().map(|report|report.id.clone())) children=move|connection|{
-            let manifest=StoredValue::new(connection.installed.manifest.clone());
-            let connection=StoredValue::new(connection);
-            view!{<button type="button" data-connector=manifest.with_value(|manifest|manifest.id.clone()) disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get() on:click=move|_|select(Some(connection.get_value()))>{move||manifest.with_value(|manifest|translated(i18n,manifest,&manifest.name))}</button>}
-        }/></div>
+
         <div hidden=move||original.get().is_none()>
-            <h4 hidden=embedded>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.name))}</h4>
             <p>{move||original.get().map(|connection|translated(i18n,&connection.installed.manifest,&connection.installed.manifest.description))}</p>
-            <p hidden=embedded>{move||original.get().map(|connection|connection.installed.binary.path)}</p>
             <fieldset disabled=move||pending.get()||import_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.fields).unwrap_or_default() key=move|field|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),field.id.clone()) children=move|field|{
                     let field=StoredValue::new(field);
@@ -473,9 +382,7 @@ pub fn Connectors(
                 <button id="save-connector" type="button" disabled=move||!profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Save))>{move||i18n.text("message.save_connector")}</button>
                 <button id="check-connector" type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Check,None)))>{move||i18n.text("message.run_connector_check")}</button>
                 <For each=move||original.get().map(|connection|connection.installed.manifest.tabs.into_iter().flat_map(|tab|tab.actions).filter(|action|action.effect==ConnectorEffect::Read).collect::<Vec<_>>()).unwrap_or_default() key=move|action|(original.get_untracked().map(|connection|(connection.installed.manifest.id,connection.installed.revision)),action.id.clone()) children=move|action|{let action=StoredValue::new(action);view!{<button type="button" disabled=move||profile_dirty.get() on:click=move|_|execute.with_value(|execute|execute(Action::Invoke(ConnectorMethod::Action,Some(action.with_value(|action|action.id.clone())))))>{move||original.get().map(|connection|action.with_value(|action|translated(i18n,&connection.installed.manifest,&action.label)))}</button>}}/>
-                <button id="remove-connector" hidden=embedded class="danger" type="button" disabled=move||profile_dirty.get() on:click=move|_|remove.set(true)>{move||i18n.text("message.remove_connector")}</button>
             </fieldset>
-            <div class="confirmation" hidden=move||!remove.get()><p>{move||i18n.text("message.remove_this_connector_and_its_secrets_imported_tasks_will_be_kep")}</p><button id="confirm-remove-connector" type="button" disabled=move||pending.get() on:click=move|_|execute.with_value(|execute|execute(Action::Remove))>{move||i18n.text("message.confirm")}</button><button type="button" disabled=move||pending.get() on:click=move|_|remove.set(false)>{move||i18n.text("message.cancel")}</button></div>
             <div role="status"><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|report.observed_at))}</p><p>{move||original.get().and_then(|connection|connection.installed.report.map(|report|translated(i18n,&connection.installed.manifest,&report.message)))}</p></div>
             <dl>{move||original.get().map(|connection|connection.installed.report.as_ref().and_then(|report|protocol::report_items(report).ok()).unwrap_or_default().into_iter().map(|item|view!{<dt>{translated(i18n,&connection.installed.manifest,&item.label)}</dt><dd>{item.value}</dd>}).collect_view())}</dl>
             <fieldset disabled=move||pending.get()||profile_dirty.get()>
@@ -496,19 +403,7 @@ pub fn Connectors(
                 </div>
             </fieldset>
         </div>
-        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||!module.get().is_empty()||!path.get().is_empty()||registry.get().is_none_or(|registry|!registry.native_available))/>
-        <h4 hidden=embedded>{move||i18n.text("message.add_a_connector")}</h4>
-        <fieldset hidden=embedded disabled=move||pending.get()||profile_dirty.get()||import_dirty.get()||effects_dirty.get()||registry.get().is_none_or(|value|!value.native_available)>
-            <button id="prepare-azure-tickets" type="button" disabled=move||!path.get().is_empty()||!module.get().is_empty()||registry.get().is_none_or(|registry|registry.builtin_azure_path.is_none()) on:click=move |_|{if let Some(binary)=registry.get_untracked().and_then(|registry|registry.builtin_azure_path){module.set("azure-tickets".into());path.set(binary);trusted.set(false);invalidate();}}>{move||i18n.text("message.prepare_bundled_azure_work_items")}</button>
-            <p class="field-help">{move||i18n.text("message.the_azure_connector_uses_the_shipped_atelier_program_read_its_ma")}</p>
-            <label for="connector-module">{move||i18n.text("message.module_identifier")}</label><input id="connector-module" maxlength="64" spellcheck="false" prop:value=move||module.get() on:input=move|event|{module.set(event_target_value(&event));invalidate();}/>
-            <label for="connector-path">{move||i18n.text("message.connector_program")}</label><input id="connector-path" maxlength="32000" spellcheck="false" prop:value=move||path.get() on:input=move|event|{path.set(event_target_value(&event));invalidate();}/>
-            <label><input id="connector-trusted" type="checkbox" prop:checked=move||trusted.get() on:change=move|event|{trusted.set(event_target_checked(&event));candidate.set(None);approved.set(false);}/>{move||i18n.text("message.i_trust_this_program_and_allow_it_to_read_its_manifest")}</label>
-            <button id="probe-connector" type="button" disabled=move||!trusted.get()||module.get().is_empty()||path.get().is_empty() on:click=move|_|execute.with_value(|execute|execute(Action::Probe))>{move||i18n.text("message.read_manifest")}</button>
-            <div hidden=move||candidate.get().is_none()><h4>{move||candidate.get().map(|(_,candidate)|translated(i18n,&candidate.manifest,&candidate.manifest.name))}</h4><p>{move||candidate.get().map(|(_,candidate)|translated(i18n,&candidate.manifest,&candidate.manifest.description))}</p><p>{move||candidate.get().map(|(_,candidate)|candidate.binary.path)}</p><p>{move||candidate.get().map(|(_,candidate)|candidate.binary.sha256)}</p>
-                <label><input id="approve-connector" type="checkbox" prop:checked=move||approved.get() on:change=move|event|approved.set(event_target_checked(&event))/>{move||i18n.text("message.install_this_exact_manifest_and_program")}</label><button id="install-connector" type="button" disabled=move||!approved.get() on:click=move|_|execute.with_value(|execute|execute(Action::Install))>{move||i18n.text("message.install_connector")}</button>
-            </div>
-        </fieldset>
+        <crate::connector_effects::ConnectorEffects connection=Signal::derive(move||original.get()) board token pending dirty=effects_dirty blocked=Memo::new(move |_|profile_dirty.get()||import_dirty.get()||registry.get().is_none_or(|registry|!registry.native_available))/>
         </fieldset>
         <p id="connectors-error" class="error" role="alert">{move||{let message=error.get();original.get().and_then(|connection|connection.installed.manifest.translations.get(i18n.code()).and_then(|messages|messages.get(&message)).or_else(||connection.installed.manifest.translations.get(&connection.installed.manifest.source_locale).and_then(|messages|messages.get(&message))).cloned()).unwrap_or_else(||i18n.text(&message))}}</p><p id="connectors-notice" role="status">{move||i18n.text(&notice.get())}</p>
     </section>}

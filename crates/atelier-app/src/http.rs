@@ -517,6 +517,15 @@ async fn serve_mode(
     };
     directory.write_session(&token)?;
     let database = directory.database()?;
+    let cleanup_vault = vault.clone();
+    database
+        .call(move |store| {
+            crate::infrastructure::connectors::retire_local_connectors(
+                store,
+                &mut |value, decrypt| cleanup_vault.protect(value, decrypt),
+            )
+        })
+        .await?;
     database
         .call(|store| {
             let now = time::OffsetDateTime::now_utc()
@@ -574,8 +583,6 @@ async fn serve_mode(
             post(connector_effects::reconcile),
         )
         .route("/api/cards/{id}/runs/start", post(runs::start))
-        .route("/api/extensions/probe", post(connectors::probe))
-        .route("/api/extensions/install", post(connectors::install))
         .route(
             "/api/extensions/{id}",
             axum::routing::put(connectors::configure).delete(connectors::remove),

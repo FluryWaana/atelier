@@ -79,6 +79,69 @@ fn save_profiles(settings: &mut Document, profiles: &[Installed]) -> Result<()> 
 fn secret_name(id: &str, field: &str) -> String {
     format!("extension:{id}:{field}")
 }
+pub fn retire_local_connectors(
+    store: &Store<'_>,
+    protect: &mut impl FnMut(&str, bool) -> Result<String>,
+) -> Result<()> {
+    let mut stored = store.settings::<Document>()?;
+    if stored.raw("processConnectors").is_none() && stored.raw("connectorEffects").is_none() {
+        return Ok(());
+    }
+    let operations = super::connector_effects::read(&stored)?;
+    // Keep uncertain remote writes and their credentials available for reconciliation.
+    let pending: BTreeSet<_> = operations
+        .iter()
+        .filter(|operation| super::connector_effects::pending(operation))
+        .map(|operation| operation.module.as_str())
+        .collect();
+    let retained: Vec<_> = profiles(&stored)?
+        .into_iter()
+        .filter(|profile| pending.contains(profile.manifest.id.as_str()))
+        .collect();
+    let mut tokens = settings::load(store, protect)?;
+    let removed: Vec<_> = tokens
+        .keys()
+        .map(|key| key.utf8())
+        .collect::<std::result::Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|key| {
+            key.strip_prefix("extension:").is_some_and(|key| {
+                key.split_once(':')
+                    .is_some_and(|(module, _)| !pending.contains(module))
+            })
+        })
+        .collect();
+    for key in removed {
+        tokens.remove(&key);
+    }
+    for kind in [
+        atelier_core::application::integrations::Kind::Tickets,
+        atelier_core::application::integrations::Kind::Time,
+    ] {
+        let selected = atelier_core::application::integrations::selected(&stored, kind)?;
+        if selected
+            .strip_prefix("extension:")
+            .is_some_and(|module| !pending.contains(module))
+        {
+            stored.set(kind.setting(), &"local")?;
+        }
+    }
+    if pending.is_empty() {
+        stored.remove("processConnectors");
+        stored.remove("connectorEffects");
+        stored.remove("connectorRevision");
+    } else {
+        save_profiles(&mut stored, &retained)?;
+    }
+    settings::persist(
+        store,
+        &SettingsUpdate {
+            settings: stored,
+            tokens,
+        },
+        protect,
+    )
+}
 pub fn describe(
     store: &Store<'_>,
     protect: &mut impl FnMut(&str, bool) -> Result<String>,
@@ -479,6 +542,158 @@ mod tests {
     }
     fn candidate() -> Candidate {
         Candidate {binary:protocol::Binary {path:"C:/synthetic/module.exe".into(),sha256:"ab".repeat(32)},manifest:serde_json::from_value(json!({"id":"synthetic-demo","name":"Synthetic demo","description":"No account or remote effect","sourceLocale":"en-US","methods":["check"],"fields":[{"id":"site","label":"Site","kind":"url","credentialScope":true},{"id":"enabled","label":"Enabled","kind":"checkbox"},{"id":"token","label":"Token","kind":"password"}],"tabs":[],"translations":{}})).unwrap()}
+    }
+    #[test]
+    fn retirement_preserves_an_uncertain_remote_write_and_its_credentials() {
+        let connection = super::super::store::open(std::path::Path::new(":memory:")).unwrap();
+        let store = Store::new(&connection);
+        let mut valid = candidate();
+        let mut manifest = serde_json::to_value(&valid.manifest).unwrap();
+        manifest["methods"] = json!(["check", "action", "reconcile"]);
+        manifest["tabs"] = json!([{"id":"actions","label":"Actions","description":"Synthetic only","actions":[{"id":"write","label":"Write","effect":"remote"}]}]);
+        valid.manifest = serde_json::from_value(manifest).unwrap();
+        install(
+            &store,
+            &Installation {
+                expected_revision: 0,
+                candidate: valid.clone(),
+                confirmed: true,
+            },
+            valid,
+            &mut protect,
+        )
+        .unwrap();
+        let stored = store.settings::<Document>().unwrap();
+        let tokens: Document =
+            serde_json::from_value(json!({"extension:synthetic-demo:token":"synthetic-secret"}))
+                .unwrap();
+        settings::persist(
+            &store,
+            &SettingsUpdate {
+                settings: stored,
+                tokens,
+            },
+            &mut protect,
+        )
+        .unwrap();
+        let preview = super::super::connector_effects::preview(
+            &store,
+            "synthetic-demo",
+            &protocol::RemotePreview {
+                expected_revision: 1,
+                method: protocol::Method::Action,
+                action: "write".into(),
+                input: serde_json::Value::Null,
+            },
+        )
+        .unwrap();
+        let (_, request) = super::super::connector_effects::prepare(
+            &store,
+            "synthetic-demo",
+            &preview.id,
+            preview.version,
+            1,
+            false,
+            &mut protect,
+        )
+        .unwrap();
+        let sent = super::super::connector_effects::sending(
+            &store,
+            "synthetic-demo",
+            &preview.id,
+            preview.version,
+            1,
+            &request.request_id,
+        )
+        .unwrap();
+        super::super::connector_effects::recover(&store).unwrap();
+        retire_local_connectors(&store, &mut protect).unwrap();
+        assert_eq!(
+            profiles(&store.settings::<Document>().unwrap())
+                .unwrap()
+                .len(),
+            1
+        );
+        let operation =
+            super::super::connector_effects::current(&store, "synthetic-demo", &sent.id).unwrap();
+        assert_eq!(
+            operation.state,
+            atelier_core::contracts::ForgeWriteState::Uncertain
+        );
+        assert!(
+            settings::load(&store, &mut protect)
+                .unwrap()
+                .string_equals("extension:synthetic-demo:token", "synthetic-secret")
+                .unwrap()
+        );
+    }
+    #[test]
+    fn retirement_removes_native_settings_and_secrets_but_keeps_local_data() {
+        let connection = super::super::store::open(std::path::Path::new(":memory:")).unwrap();
+        let store = Store::new(&connection);
+        store.save_settings(&json!({"agent":"codex","ticketProvider":"jira","timeProvider":"tempo","future":{"keep":true}})).unwrap();
+        let valid = candidate();
+        install(
+            &store,
+            &Installation {
+                expected_revision: 0,
+                candidate: valid.clone(),
+                confirmed: true,
+            },
+            valid,
+            &mut protect,
+        )
+        .unwrap();
+        let mut stored = store.settings::<Document>().unwrap();
+        stored
+            .set("ticketProvider", &"extension:synthetic-demo")
+            .unwrap();
+        let tokens: Document = serde_json::from_value(json!({"jira":"synthetic-jira","tempo":"synthetic-tempo","extension:synthetic-demo:token":"synthetic-secret"})).unwrap();
+        settings::persist(
+            &store,
+            &SettingsUpdate {
+                settings: stored,
+                tokens,
+            },
+            &mut protect,
+        )
+        .unwrap();
+        let card: Document =
+            serde_json::from_value(json!({"id":"synthetic-card","title":"Keep me"})).unwrap();
+        store
+            .put(super::super::store::Documents::Cards, &card)
+            .unwrap();
+        let before = store.settings::<Document>().unwrap();
+        assert!(
+            retire_local_connectors(&store, &mut |_, _| Err("Synthetic vault failure".into()))
+                .is_err()
+        );
+        assert_eq!(
+            serde_json::to_value(store.settings::<Document>().unwrap()).unwrap(),
+            serde_json::to_value(before).unwrap()
+        );
+        retire_local_connectors(&store, &mut protect).unwrap();
+        let stored = store.settings::<Document>().unwrap();
+        assert!(stored.raw("processConnectors").is_none());
+        assert!(stored.raw("connectorRevision").is_none());
+        assert!(stored.string_equals("ticketProvider", "local").unwrap());
+        assert!(stored.string_equals("timeProvider", "tempo").unwrap());
+        assert_eq!(
+            stored.get::<serde_json::Value>("future").unwrap(),
+            Some(json!({"keep":true}))
+        );
+        let tokens = settings::load(&store, &mut protect).unwrap();
+        assert!(tokens.raw("extension:synthetic-demo:token").is_none());
+        assert!(tokens.string_equals("jira", "synthetic-jira").unwrap());
+        assert!(tokens.string_equals("tempo", "synthetic-tempo").unwrap());
+        assert_eq!(
+            store
+                .documents::<Document>(super::super::store::Documents::Cards)
+                .unwrap()
+                .len(),
+            1
+        );
+        retire_local_connectors(&store, &mut |_, _| panic!("Cleanup must be idempotent")).unwrap();
     }
     #[test]
     fn registry_installation_removal_and_restore_never_reuse_a_previous_generation() {

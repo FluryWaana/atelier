@@ -72,103 +72,15 @@ pub(super) async fn refresh_ticket(
 
 use {
     crate::{Result, infrastructure::extensions::Executable},
-    atelier_core::application::extensions::{
-        Candidate, Configuration, Installation, Invocation, Report, Status,
-    },
-    axum::{
-        extract::{Path, Request},
-        http::StatusCode,
-    },
+    atelier_core::application::extensions::{Configuration, Invocation, Report, Status},
+    axum::extract::{Path, Request},
     std::{path::PathBuf, time::Duration},
 };
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Probe {
-    module: String,
-    path: String,
-    expected_revision: u64,
-    confirmed: bool,
-}
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Removal {
     expected_revision: u64,
     confirmed: bool,
-}
-
-pub(super) async fn probe(State(state): State<Shared>, request: Request) -> Response {
-    let input: Probe = match super::jira_transitions::input(request).await {
-        Ok(input) => input,
-        Err(response) => return *response,
-    };
-    if !input.confirmed
-        || !atelier_core::application::extensions::identifier(&input.module)
-        || input.path.chars().any(char::is_control)
-        || input.path.len() > 32_000
-    {
-        return super::failure(StatusCode::BAD_REQUEST, "message.confirm_trusted_program");
-    }
-    let operation = async {
-        state
-            .database
-            .call(move |store| connectors::require_registry(store, input.expected_revision))
-            .await?;
-        let executable = Executable::open(PathBuf::from(input.path), None).await?;
-        let (binary, manifest) = executable.describe(&input.module).await?;
-        state
-            .database
-            .call(move |store| connectors::require_registry(store, input.expected_revision))
-            .await?;
-        Ok::<_, crate::Error>(Candidate { binary, manifest })
-    };
-    response(
-        tokio::time::timeout(Duration::from_secs(30), operation)
-            .await
-            .unwrap_or_else(|_| Err("message.connector_discovery_timeout".into())),
-    )
-}
-
-pub(super) async fn install(State(state): State<Shared>, request: Request) -> Response {
-    let input: Installation = match super::jira_transitions::input(request).await {
-        Ok(input) => input,
-        Err(response) => return *response,
-    };
-    if !input.confirmed {
-        return super::failure(
-            StatusCode::BAD_REQUEST,
-            "message.confirm_connector_manifest",
-        );
-    }
-    let operation = async {
-        let revision = input.expected_revision;
-        state
-            .database
-            .call(move |store| connectors::require_registry(store, revision))
-            .await?;
-        let executable = Executable::open(
-            PathBuf::from(&input.candidate.binary.path),
-            Some(input.candidate.binary.sha256.clone()),
-        )
-        .await?;
-        let (binary, manifest) = executable.describe(&input.candidate.manifest.id).await?;
-        let vault = state.vault.clone();
-        state
-            .database
-            .call(move |store| {
-                connectors::install(
-                    store,
-                    &input,
-                    Candidate { binary, manifest },
-                    &mut |value, decrypt| vault.protect(value, decrypt),
-                )
-            })
-            .await
-    };
-    response(
-        tokio::time::timeout(Duration::from_secs(30), operation)
-            .await
-            .unwrap_or_else(|_| Err("message.connector_install_timeout".into())),
-    )
 }
 
 pub(super) async fn configure(
