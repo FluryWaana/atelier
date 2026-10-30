@@ -291,10 +291,7 @@ async fn test_locked(
     plain: &str,
     execute: &mut impl AsyncFnMut(&str, &[&str], Option<&str>) -> Result<(i32, String)>,
 ) -> Result<()> {
-    use zbus::{
-        proxy::CacheProperties,
-        zvariant::{OwnedObjectPath, OwnedValue, Value},
-    };
+    use zbus::{OwnedObjectPath, OwnedVariant, Variant, proxy::CacheProperties};
 
     let connection = zbus::Connection::session().await?;
     let service = zbus::Proxy::new(
@@ -306,9 +303,9 @@ async fn test_locked(
     .await?;
     let path: OwnedObjectPath = service.call("ReadAlias", &("default",)).await?;
     let collection = zbus::proxy::Builder::<zbus::Proxy<'_>>::new(&connection)
-        .destination("org.freedesktop.secrets")?
-        .path(path.clone())?
-        .interface("org.freedesktop.Secret.Collection")?
+        .destination("org.freedesktop.secrets")
+        .path(path.clone())
+        .interface("org.freedesktop.Secret.Collection")
         .cache_properties(CacheProperties::No)
         .build()
         .await?;
@@ -316,8 +313,8 @@ async fn test_locked(
         return Err("Le trousseau synthétique doit être ouvert avant le contrôle.".into());
     }
     let items: Vec<OwnedObjectPath> = collection.get_property("Items").await?;
-    let (_, session): (OwnedValue, OwnedObjectPath) = service
-        .call("OpenSession", &("plain", Value::from("")))
+    let (_, session): (OwnedVariant, OwnedObjectPath) = service
+        .call("OpenSession", &("plain", Variant::from("")))
         .await?;
     let control = zbus::Proxy::new(
         &connection,

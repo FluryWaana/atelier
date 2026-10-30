@@ -70,6 +70,7 @@ pub fn unpack(bytes: &[u8], target: &str, parent: &Path) -> Result<StagedPackage
     let binary = package::binary_name(target)?;
     let (count, central) = footer(bytes)?;
     let mut archive = ZipArchive::new(Cursor::new(bytes))?;
+    archive.validate_header_consistency()?;
     if archive.len() != count {
         return Err("Entrées ZIP manquantes ou dupliquées.".into());
     }
@@ -78,20 +79,21 @@ pub fn unpack(bytes: &[u8], target: &str, parent: &Path) -> Result<StagedPackage
     let mut ranges = Vec::new();
     for index in 0..archive.len() {
         let entry = archive.by_index(index)?;
-        let limit = if entry.name() == "atelier-package.json"
-            || matches!(entry.name(), "LICENSE" | "README.txt")
+        let name = entry.name()?;
+        let limit = if name == "atelier-package.json"
+            || matches!(name.as_ref(), "LICENSE" | "README.txt")
         {
             1024 * 1024
-        } else if entry.name() == "THIRD-PARTY-NOTICES.txt" {
+        } else if name == "THIRD-PARTY-NOTICES.txt" {
             32 * 1024 * 1024
-        } else if entry.name().starts_with("ui/") {
+        } else if name.starts_with("ui/") {
             64 * 1024 * 1024
         } else {
             128 * 1024 * 1024
         };
-        if !name_allowed(entry.name(), binary)
-            || entry.name_raw() != entry.name().as_bytes()
-            || !names.insert(entry.name().to_ascii_lowercase())
+        if !name_allowed(&name, binary)
+            || entry.name_raw() != name.as_bytes()
+            || !names.insert(name.to_ascii_lowercase())
             || !entry.is_file()
             || entry.is_symlink()
             || entry.encrypted()
@@ -145,7 +147,7 @@ pub fn unpack(bytes: &[u8], target: &str, parent: &Path) -> Result<StagedPackage
     fs::create_dir(directory.path().join("ui"))?;
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
-        let path = directory.path().join(entry.name());
+        let path = directory.path().join(entry.name()?.as_ref());
         let mut output = fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -161,7 +163,11 @@ pub fn unpack(bytes: &[u8], target: &str, parent: &Path) -> Result<StagedPackage
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(
                 &path,
-                fs::Permissions::from_mode(if entry.name() == binary { 0o755 } else { 0o644 }),
+                fs::Permissions::from_mode(if entry.name()? == binary {
+                    0o755
+                } else {
+                    0o644
+                }),
             )?;
         }
     }
@@ -268,6 +274,22 @@ mod tests {
         }
         archive.finish().unwrap().into_inner()
     }
+    #[test]
+    fn extraction_rejects_disagreeing_local_and_central_names_before_writing() {
+        let root = tempfile::tempdir().unwrap();
+        let mut bytes = archive(&["atelier-package.json"]);
+        bytes[30..50].copy_from_slice(b"outside-package.json");
+        let error = match unpack(&bytes, package::TARGETS[1], root.path()) {
+            Ok(_) => panic!("Conflicting ZIP headers must be refused"),
+            Err(error) => error,
+        };
+        assert!(
+            error.to_string().contains("header inconsistency"),
+            "{error}"
+        );
+        assert_eq!(fs::read_dir(root.path()).unwrap().count(), 0);
+    }
+
     #[test]
     fn extraction_rejects_traversal_links_case_collisions_corruption_and_forged_counts() {
         let root = tempfile::tempdir().unwrap();

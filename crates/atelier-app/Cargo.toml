@@ -19,14 +19,14 @@ reqwest.workspace = true
 hyper = "=1.12.0"
 axum = "=0.8.9"
 futures-util = { version = "=0.3.34", default-features = false, features = ["std"] }
-rusqlite = { version = "=0.40.2", features = ["bundled", "backup"] }
+rusqlite = { version = "=0.41.1", features = ["bundled", "backup"] }
 getrandom = "=0.4.3"
 hmac = "=0.13.0"
 sha2 = "=0.11.1"
 subtle = "=2.6.1"
 ring = "=0.17.14"
-base64 = "=0.22.1"
-html-escape = "=0.2.15"
+base64 = "=0.23.1"
+html-escape = "=0.3.0"
 cap-std = "=4.0.3"
 cap-fs-ext = "=4.0.3"
 regex = "=1.13.1"
@@ -34,7 +34,7 @@ icu_collator = "=2.4.0"
 icu_locale_core = "=2.4.0"
 uuid = { version = "=1.29.0", features = ["v4"] }
 time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }
-zip = { version = "=8.6.0", default-features = false }
+zip = { version = "=9.1.3", default-features = false }
 
 [dev-dependencies]
 tokio-rustls = { version = "=0.26.6", default-features = false, features = ["aws_lc_rs", "tls12"] }
@@ -55,4 +55,4 @@ objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std
 objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSDate", "NSRunLoop"] }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
-zbus = "=5.19.0"
+zbus = { version = "=6.2.0", features = ["tokio"] }

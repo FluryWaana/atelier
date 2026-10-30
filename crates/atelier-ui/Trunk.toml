@@ -4,4 +4,4 @@ dist = "../../.artifacts/rust-ui"
 locked = true
 
 [tools]
-wasm_bindgen = "0.2.129"
+wasm_bindgen = "0.2.130"

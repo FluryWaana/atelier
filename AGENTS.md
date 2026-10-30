@@ -43,7 +43,7 @@ Use `rust-toolchain.toml` and the committed `Cargo.lock`. The final manual verif
 - separate `atelier-ui` Clippy/check for `wasm32-unknown-unknown`
 - real WebDriver journeys against synthetic data.
 
-`cargo xtask build-ui` uses pinned Trunk 0.22.0 and wasm-bindgen CLI 0.2.129; fetch locked dependencies before its offline build. Browser selection is not browser qualification. Read actual job logs before claiming success.
+`cargo xtask build-ui` uses pinned Trunk 0.22.1 and wasm-bindgen CLI 0.2.130; fetch locked dependencies before its offline build. Browser selection is not browser qualification. Read actual job logs before claiming success.
 
 Use the real Rust `serve` entry point for synthetic development and browser qualification. The `serve-prototype` command, Node comparators and legacy UI bridge have been retired. Do not regenerate an old expectation to disguise a bug: document intentional contract changes and test the new behavior.
 

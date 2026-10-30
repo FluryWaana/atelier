@@ -19,7 +19,7 @@ async fn the_product_tray_removes_itself_on_owner_disconnect_without_opening_dat
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     #[cfg(target_os = "linux")]
-    let before = linux_items();
+    let before = linux_items().await;
     let mut command = Command::new(env!("CARGO_BIN_EXE_atelier"));
     command
         .arg("tray-helper")
@@ -41,7 +41,7 @@ async fn the_product_tray_removes_itself_on_owner_disconnect_without_opening_dat
         .unwrap();
     assert_eq!(&ready, b"atelier-tray/1 ready\n");
     #[cfg(target_os = "linux")]
-    let registration = linux_product_registration(&before, child.id().unwrap());
+    let registration = linux_product_registration(&before, child.id().unwrap()).await;
     assert!(!data.exists());
     drop(child.stdin.take());
     let status = tokio::time::timeout(Duration::from_secs(10), child.wait())
@@ -52,12 +52,12 @@ async fn the_product_tray_removes_itself_on_owner_disconnect_without_opening_dat
     #[cfg(target_os = "linux")]
     {
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
-        while linux_items().contains(&registration) {
+        while linux_items().await.contains(&registration) {
             assert!(
                 std::time::Instant::now() < deadline,
                 "The desktop retained the product tray after owner disconnect"
             );
-            std::thread::sleep(Duration::from_millis(50));
+            tokio::time::sleep(Duration::from_millis(50)).await;
         }
     }
     assert!(!data.exists());
@@ -75,7 +75,7 @@ async fn the_product_tray_removes_itself_on_owner_disconnect_without_opening_dat
 async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
     use atelier_app::infrastructure::{data_lock::DataLock, local_http::LocalHttp, session};
     use std::{collections::HashMap, time::Instant};
-    use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value};
+    use zbus::{OwnedObjectPath, OwnedVariant, Variant};
 
     assert_eq!(std::env::var("CI").as_deref(), Ok("true"));
     assert_eq!(
@@ -91,7 +91,7 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = listener.local_addr().unwrap().port();
     drop(listener);
-    let before = linux_items();
+    let before = linux_items().await;
     let mut server = Command::new(env!("CARGO_BIN_EXE_atelier"))
         .arg("serve")
         .arg("--data-dir")
@@ -129,28 +129,31 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     assert!(DataLock::acquire(&data).is_err());
-    let connection = zbus::blocking::connection::Builder::session()
-        .unwrap()
+    let connection = zbus::connection::Builder::session()
         .method_timeout(Duration::from_secs(3))
         .build()
+        .await
         .unwrap();
     let deadline = Instant::now() + Duration::from_secs(10);
     let registration = loop {
         let mut candidates = vec![];
         for registration in linux_items()
+            .await
             .into_iter()
             .filter(|item| !before.contains(item))
         {
             let separator = registration.find('/').unwrap();
-            let item = zbus::blocking::Proxy::new(
+            let item = zbus::Proxy::new(
                 &connection,
                 &registration[..separator],
                 &registration[separator..],
                 "org.kde.StatusNotifierItem",
             )
+            .await
             .unwrap();
             if item
                 .get_property::<String>("Id")
+                .await
                 .unwrap()
                 .starts_with("atelier-rust-")
             {
@@ -173,15 +176,16 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
     };
     let separator = registration.find('/').unwrap();
     let destination = &registration[..separator];
-    let item = zbus::blocking::Proxy::new(
+    let item = zbus::Proxy::new(
         &connection,
         destination,
         &registration[separator..],
         "org.kde.StatusNotifierItem",
     )
+    .await
     .unwrap();
     assert_eq!(std::env::var("XDG_CURRENT_DESKTOP").as_deref(), Ok("XFCE"));
-    let helper = item.get_property::<String>("Id").unwrap();
+    let helper = item.get_property::<String>("Id").await.unwrap();
     let helper: u32 = helper
         .strip_prefix("atelier-rust-")
         .unwrap()
@@ -205,25 +209,27 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             "The tray helper lost its desktop context: {key}"
         );
     }
-    let path = item.get_property::<OwnedObjectPath>("Menu").unwrap();
-    let menu = zbus::blocking::Proxy::new(
+    let path = item.get_property::<OwnedObjectPath>("Menu").await.unwrap();
+    let menu = zbus::Proxy::new(
         &connection,
         destination,
         path.as_str(),
         "com.canonical.dbusmenu",
     )
+    .await
     .unwrap();
-    let _: bool = menu.call("AboutToShow", &(0i32,)).unwrap();
+    let _: bool = menu.call("AboutToShow", &(0i32,)).await.unwrap();
     // Exercise the public desktop protocol used by a native panel, never an internal callback.
-    type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
-    let properties = || -> Properties {
+    type Properties = Vec<(i32, HashMap<String, OwnedVariant>)>;
+    let properties = async || -> Properties {
         menu.call(
             "GetGroupProperties",
             &(Vec::<i32>::new(), vec!["label", "enabled"]),
         )
+        .await
         .unwrap()
     };
-    let label = |properties: &HashMap<String, OwnedValue>| {
+    let label = |properties: &HashMap<String, OwnedVariant>| {
         properties
             .get("label")
             .map(|value| {
@@ -233,8 +239,9 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             })
             .unwrap_or_default()
     };
-    let find = |expected: &str| {
+    let find = async |expected: &str| {
         let matching: Vec<_> = properties()
+            .await
             .into_iter()
             .filter(|(_, props)| label(props) == expected)
             .collect();
@@ -248,14 +255,19 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
         );
         id
     };
-    let open = find("Ouvrir Atelier / Open Atelier");
+    let open = find("Ouvrir Atelier / Open Atelier").await;
     assert!(!data.join("local-browser.html").exists());
     let _: () = menu
-        .call("Event", &(open, "clicked", Value::from(0i32), 0u32))
+        .call("Event", &(open, "clicked", Variant::from(0i32), 0u32))
+        .await
         .unwrap();
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
-        let labels: Vec<_> = properties().iter().map(|(_, props)| label(props)).collect();
+        let labels: Vec<_> = properties()
+            .await
+            .iter()
+            .map(|(_, props)| label(props))
+            .collect();
         assert!(
             !labels.iter().any(|text| text.starts_with("Action refusée")),
             "Native Open action failed; owned browser session prepared: {}",
@@ -279,9 +291,10 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             .is_some()
     );
     assert!(DataLock::acquire(&data).is_err());
-    let quit = find("Quitter Atelier / Quit Atelier");
+    let quit = find("Quitter Atelier / Quit Atelier").await;
     let _: () = menu
-        .call("Event", &(quit, "clicked", Value::from(0i32), 0u32))
+        .call("Event", &(quit, "clicked", Variant::from(0i32), 0u32))
+        .await
         .unwrap();
     assert!(
         tokio::time::timeout(Duration::from_secs(20), server.wait())
@@ -298,7 +311,7 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
     );
     drop(DataLock::acquire(&data).expect("Native Quit left the data lock held"));
     let deadline = Instant::now() + Duration::from_secs(5);
-    while linux_items().contains(&registration) {
+    while linux_items().await.contains(&registration) {
         assert!(
             Instant::now() < deadline,
             "Native Quit left the tray registered"
@@ -308,60 +321,69 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
 }
 
 #[cfg(target_os = "linux")]
-fn linux_items() -> Vec<String> {
-    let connection = zbus::blocking::connection::Builder::session()
-        .unwrap()
+async fn linux_items() -> Vec<String> {
+    let connection = zbus::connection::Builder::session()
         .method_timeout(Duration::from_secs(3))
         .build()
+        .await
         .unwrap();
-    let watcher = zbus::blocking::Proxy::new(
+    let watcher = zbus::Proxy::new(
         &connection,
         "org.kde.StatusNotifierWatcher",
         "/StatusNotifierWatcher",
         "org.kde.StatusNotifierWatcher",
     )
+    .await
     .unwrap();
     assert!(
         watcher
             .get_property::<bool>("IsStatusNotifierHostRegistered")
+            .await
             .unwrap(),
         "The final journey requires a real isolated desktop host"
     );
     let items = watcher
         .get_property::<Vec<String>>("RegisteredStatusNotifierItems")
+        .await
         .unwrap();
     assert!(items.len() <= 100 && items.iter().all(|item| item.len() <= 4096));
     items
 }
 
 #[cfg(target_os = "linux")]
-fn linux_product_registration(before: &[String], pid: u32) -> String {
+async fn linux_product_registration(before: &[String], pid: u32) -> String {
     let expected = format!("atelier-rust-{pid}");
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         for registration in linux_items()
+            .await
             .into_iter()
             .filter(|item| !before.contains(item))
         {
             let separator = registration
                 .find('/')
                 .expect("Desktop item path is missing");
-            let connection = zbus::blocking::connection::Builder::session()
-                .unwrap()
+            let connection = zbus::connection::Builder::session()
                 .method_timeout(Duration::from_secs(3))
                 .build()
+                .await
                 .unwrap();
-            let item = zbus::blocking::Proxy::new(
+            let item = zbus::Proxy::new(
                 &connection,
                 &registration[..separator],
                 &registration[separator..],
                 "org.kde.StatusNotifierItem",
             )
+            .await
             .unwrap();
-            if item.get_property::<String>("Id").ok().as_deref() == Some(expected.as_str()) {
-                assert_eq!(item.get_property::<String>("Status").unwrap(), "Active");
+            if item.get_property::<String>("Id").await.ok().as_deref() == Some(expected.as_str()) {
+                assert_eq!(
+                    item.get_property::<String>("Status").await.unwrap(),
+                    "Active"
+                );
                 let pixels = item
                     .get_property::<Vec<(i32, i32, Vec<u8>)>>("IconPixmap")
+                    .await
                     .unwrap();
                 assert!(pixels.iter().any(|(width, height, bytes)| *width == 16
                     && *height == 16
@@ -374,7 +396,7 @@ fn linux_product_registration(before: &[String], pid: u32) -> String {
             std::time::Instant::now() < deadline,
             "The product tray never registered with the native desktop"
         );
-        std::thread::sleep(Duration::from_millis(50));
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
 

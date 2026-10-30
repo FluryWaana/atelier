@@ -2,4 +2,5 @@
 xtask = "run --locked -p xtask --"
 
 [env]
-LIBSQLITE3_FLAGS = "SQLITE_ENABLE_FILESTAT"
+# shortcut: bundled SQLite registers WALSTAT with FILESTAT, drop WALSTAT when its guards are fixed.
+LIBSQLITE3_FLAGS = "SQLITE_ENABLE_FILESTAT SQLITE_ENABLE_WALSTAT"

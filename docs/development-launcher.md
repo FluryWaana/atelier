@@ -4,7 +4,7 @@ Le 28 octobre 2026, le propriétaire autorise les tests locaux Windows du lanceu
 
 ## Comportement attendu sur les trois systèmes
 
-- Utiliser Rust installé par l'utilisateur, le PATH, `rust-toolchain.toml` et `Cargo.lock`. Ne pas imposer un Cargo/Rustup privé dans le dépôt. Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 doivent être installés dans le PATH.
+- Utiliser Rust installé par l'utilisateur, le PATH, `rust-toolchain.toml` et `Cargo.lock`. Ne pas imposer un Cargo/Rustup privé dans le dépôt. Trunk 0.22.1 et wasm-bindgen CLI 0.2.130 doivent être installés dans le PATH.
 - Démarrer avec les dernières sorties valides si les sources sont inchangées. Recompiler si une sortie requise manque. Une tentative échouée ne valide jamais son cache.
 - Surveiller les sources, les traductions, HTML/CSS et la configuration ; exclure `target`, `.artifacts`, `.git` et `data` à tous les niveaux, sans parcourir ces dossiers. Refuser les chemins sources liés. Regrouper les sauvegardes rapprochées. Détecter aussi les ajouts et suppressions.
 - Reconstruire seulement l'UI pour ses changements, seulement le serveur pour les siens, les deux pour le code partagé. Récupérer les dépendances après changement des manifestes, du verrou ou de la configuration Cargo.

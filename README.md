@@ -8,7 +8,7 @@ Atelier Kanban est une application locale pour préparer des tâches, travailler
 
 Le style de l’application reprend directement la feuille CSS de `7f48996:public/style.css`, comprenant Bootstrap 5.3.8 sous licence MIT. Ce CSS est une source intégrée au le projet Rust ; les adaptations aux composants sont écrites dans cette même feuille. Aucun Sass, npm, JavaScript Bootstrap ou runtime Node n’est nécessaire à sa fabrication. La licence complète reste dans le CSS et dans les avis des paquets Rust.
 
-Le workspace contient `atelier-core` (domaine), `atelier-app` (serveur et intégrations), `atelier-ui` (interface) et `xtask` (fabrication et qualification). Utiliser [rust-toolchain.toml](rust-toolchain.toml) et [Cargo.lock](Cargo.lock). La fabrication UI utilise Trunk 0.22.0 et wasm-bindgen CLI 0.2.129 ; les dépendances natives et outils d’installation sont décrits dans [les paquets Rust](docs/rust-packages.md).
+Le workspace contient `atelier-core` (domaine), `atelier-app` (serveur et intégrations), `atelier-ui` (interface) et `xtask` (fabrication et qualification). Utiliser [rust-toolchain.toml](rust-toolchain.toml) et [Cargo.lock](Cargo.lock). La fabrication UI utilise Trunk 0.22.1 et wasm-bindgen CLI 0.2.130 ; les dépendances natives et outils d’installation sont décrits dans [les paquets Rust](docs/rust-packages.md).
 
 Le projet actif est le workspace Rust à la racine. Les sources, lanceurs, outils de livraison, tests et archives de code Node ont été retirés ; leur référence complète reste accessible dans l’historique Git au snapshot `7f48996b9626ccff79ecf0e1be7f8fa43b7b90e6`. Le snapshot historique de migration est également conservé au commit `7326122`. Aucun runtime Node ne fait partie du produit ou des paquets Rust.
 

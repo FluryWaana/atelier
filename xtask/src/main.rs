@@ -67,8 +67,8 @@ fn externalize_loader(html: &str) -> Result<(String, String)> {
 }
 
 fn build_ui(dev: bool) -> Result<()> {
-    pinned("trunk", "trunk 0.22.0")?;
-    pinned("wasm-bindgen", "wasm-bindgen 0.2.129")?;
+    pinned("trunk", "trunk 0.22.1")?;
+    pinned("wasm-bindgen", "wasm-bindgen 0.2.130")?;
     let directory = root().join(if dev {
         ".artifacts/rust-ui-dev"
     } else {

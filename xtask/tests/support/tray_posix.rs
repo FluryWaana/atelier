@@ -16,70 +16,82 @@ fn icon() -> Result<TrayIcon> {
 
 #[cfg(target_os = "linux")]
 pub fn probe() -> Result<()> {
-    use std::time::{Duration, Instant};
-    use zbus::blocking::{Proxy, connection::Builder};
+    zbus::block_on(async {
+        use std::time::{Duration, Instant};
+        use zbus::{Proxy, connection::Builder};
 
-    let connection = Builder::session()?
-        .method_timeout(Duration::from_secs(3))
-        .build()?;
-    let watcher = Proxy::new(
-        &connection,
-        "org.kde.StatusNotifierWatcher",
-        "/StatusNotifierWatcher",
-        "org.kde.StatusNotifierWatcher",
-    )?;
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while !watcher
-        .get_property::<bool>("IsStatusNotifierHostRegistered")
-        .unwrap_or(false)
-    {
-        if Instant::now() >= deadline {
-            return Err("A native StatusNotifier desktop host is required".into());
+        let connection = Builder::session()
+            .method_timeout(Duration::from_secs(3))
+            .build()
+            .await?;
+        let watcher = Proxy::new(
+            &connection,
+            "org.kde.StatusNotifierWatcher",
+            "/StatusNotifierWatcher",
+            "org.kde.StatusNotifierWatcher",
+        )
+        .await?;
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !watcher
+            .get_property::<bool>("IsStatusNotifierHostRegistered")
+            .await
+            .unwrap_or(false)
+        {
+            if Instant::now() >= deadline {
+                return Err("A native StatusNotifier desktop host is required".into());
+            }
+            std::thread::sleep(Duration::from_millis(50));
         }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    let before: Vec<String> = watcher.get_property("RegisteredStatusNotifierItems")?;
-    let tray = icon()?;
-    let deadline = Instant::now() + Duration::from_secs(10);
-    let registration = loop {
-        let items: Vec<String> = watcher.get_property("RegisteredStatusNotifierItems")?;
-        if let Some(item) = items.into_iter().find(|item| !before.contains(item)) {
-            break item;
+        let before: Vec<String> = watcher
+            .get_property("RegisteredStatusNotifierItems")
+            .await?;
+        let tray = icon()?;
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let registration = loop {
+            let items: Vec<String> = watcher
+                .get_property("RegisteredStatusNotifierItems")
+                .await?;
+            if let Some(item) = items.into_iter().find(|item| !before.contains(item)) {
+                break item;
+            }
+            if Instant::now() >= deadline {
+                return Err("Tray did not register with the native desktop".into());
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        };
+        let separator = registration.find('/').ok_or("Missing tray object path")?;
+        let item = Proxy::new(
+            &connection,
+            &registration[..separator],
+            &registration[separator..],
+            "org.kde.StatusNotifierItem",
+        )
+        .await?;
+        assert_eq!(item.get_property::<String>("Id").await?, tray.id().as_ref());
+        assert_eq!(item.get_property::<String>("Status").await?, "Active");
+        let pixels: Vec<(i32, i32, Vec<u8>)> = item.get_property("IconPixmap").await?;
+        assert!(
+            pixels
+                .iter()
+                .any(|(w, h, bytes)| *w == 16 && *h == 16 && bytes.len() == 1024)
+        );
+        drop(tray);
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            let items: Vec<String> = watcher
+                .get_property("RegisteredStatusNotifierItems")
+                .await?;
+            if !items.contains(&registration) {
+                break;
+            }
+            if Instant::now() >= deadline {
+                return Err("Native desktop retained the removed tray".into());
+            }
+            std::thread::sleep(Duration::from_millis(50));
         }
-        if Instant::now() >= deadline {
-            return Err("Tray did not register with the native desktop".into());
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    };
-    let separator = registration.find('/').ok_or("Missing tray object path")?;
-    let item = Proxy::new(
-        &connection,
-        &registration[..separator],
-        &registration[separator..],
-        "org.kde.StatusNotifierItem",
-    )?;
-    assert_eq!(item.get_property::<String>("Id")?, tray.id().as_ref());
-    assert_eq!(item.get_property::<String>("Status")?, "Active");
-    let pixels: Vec<(i32, i32, Vec<u8>)> = item.get_property("IconPixmap")?;
-    assert!(
-        pixels
-            .iter()
-            .any(|(w, h, bytes)| *w == 16 && *h == 16 && bytes.len() == 1024)
-    );
-    drop(tray);
-    let deadline = Instant::now() + Duration::from_secs(10);
-    loop {
-        let items: Vec<String> = watcher.get_property("RegisteredStatusNotifierItems")?;
-        if !items.contains(&registration) {
-            break;
-        }
-        if Instant::now() >= deadline {
-            return Err("Native desktop retained the removed tray".into());
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    println!("Native Linux tray registered, pixels verified and registration removed");
-    Ok(())
+        println!("Native Linux tray registered, pixels verified and registration removed");
+        Ok(())
+    })
 }
 
 #[cfg(target_os = "macos")]

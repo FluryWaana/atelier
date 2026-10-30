@@ -102,10 +102,10 @@ jobs:
         id: wasm-tools
         with:
           path: ${{ runner.temp }}/atelier-tools
-          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.0-bindgen0.2.129
-      - run: cargo install --locked trunk --version 0.22.0 --root "${{ runner.temp }}/atelier-tools"
+          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.1-bindgen0.2.130
+      - run: cargo install --locked trunk --version 0.22.1 --root "${{ runner.temp }}/atelier-tools"
         if: steps.wasm-tools.outputs.cache-hit != 'true'
-      - run: cargo install --locked wasm-bindgen-cli --version 0.2.129 --root "${{ runner.temp }}/atelier-tools"
+      - run: cargo install --locked wasm-bindgen-cli --version 0.2.130 --root "${{ runner.temp }}/atelier-tools"
         if: steps.wasm-tools.outputs.cache-hit != 'true'
       - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
       - run: cargo fetch --locked
