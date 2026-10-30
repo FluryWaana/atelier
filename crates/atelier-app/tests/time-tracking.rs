@@ -100,7 +100,7 @@ async fn a_failed_timer_tick_rolls_back_every_entry_in_the_same_job() {
 }
 
 #[tokio::test]
-async fn historical_time_transitions_match_node_on_sqlite() {
+async fn time_transitions_preserve_timers_exports_and_validation_on_sqlite() {
     let cases: Vec<Document> =
         serde_json::from_str(include_str!("fixtures/rust-time-reference.json")).unwrap();
     let mut count = 0;
@@ -196,7 +196,7 @@ async fn historical_time_transitions_match_node_on_sqlite() {
         }
         database.close().await.unwrap();
     }
-    assert_eq!(count, 46);
+    assert_eq!(count, 38);
 }
 
 #[tokio::test]

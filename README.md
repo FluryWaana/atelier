@@ -47,7 +47,7 @@ Ce sont des commandes candidates, pas des téléchargements disponibles. La fabr
 
 ## Développement et qualification
 
-Suivre [AGENTS.md](AGENTS.md). Depuis l'accord explicite du 27 octobre, les builds locaux peuvent utiliser les ressources normales du poste. Les tests, Clippy et scénarios automatisés restent dans la campagne CI manuelle ; ses relances correctives ont été autorisées. Une compilation ne vaut pas preuve de parcours réussi. Utiliser exclusivement des données, dépôts, identifiants et agents synthétiques ; ne pas ouvrir le `data/` utilisateur, un compte réel ou un service payant.
+Suivre [AGENTS.md](AGENTS.md). Depuis l'accord explicite du 27 octobre, les builds locaux peuvent utiliser les ressources normales du poste. Les tests locaux, Clippy et scénarios navigateur restent interdits sans autorisation distincte. Tout lancement ou relance de CI est interdit depuis le 27 octobre. Le workflow reste manuel et son existence ne vaut pas autorisation. Une compilation ne vaut pas preuve de parcours réussi. Utiliser exclusivement des données, dépôts, identifiants et agents synthétiques ; ne pas ouvrir le `data/` utilisateur, un compte réel ou un service payant.
 
 L’[inventaire des sources](docs/rust-migration-inventory.md) relie les capacités de référence au travail restant. Les [connecteurs Rust](docs/rust-connectors.md) documentent leurs contrats et limites. Les preuves et lacunes de qualification restent suivies dans le plan actif, sans présenter un scénario non exécuté comme réussi.
 

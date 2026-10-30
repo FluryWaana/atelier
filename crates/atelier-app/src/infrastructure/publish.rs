@@ -79,7 +79,24 @@ pub(super) fn write_private_from(
     directory: &Dir,
     name: &Path,
     bytes: &[u8],
+    executable: bool,
+) -> Result<()> {
+    write_private_from_with_sync(staging, directory, name, bytes, executable, |directory| {
+        #[cfg(target_os = "linux")]
+        sync_directory(directory)?;
+        #[cfg(not(target_os = "linux"))]
+        let _ = directory;
+        Ok(())
+    })
+}
+
+fn write_private_from_with_sync(
+    staging: &Dir,
+    directory: &Dir,
+    name: &Path,
+    bytes: &[u8],
     _executable: bool,
+    synchronize: impl Fn(&Dir) -> Result<()>,
 ) -> Result<()> {
     if !matches!(
         name.components().collect::<Vec<_>>().as_slice(),
@@ -102,6 +119,9 @@ pub(super) fn write_private_from(
         file.sync_all()?;
         drop(file);
         staging.rename(&temporary, directory, name)?;
+        // Persist the published name before acknowledging it, then the staging removal.
+        synchronize(directory)?;
+        synchronize(staging)?;
         Ok(())
     })();
     if result.is_err() {
@@ -236,6 +256,41 @@ mod tests {
     use super::*;
     use cap_std::ambient_authority;
     use std::fs;
+
+    #[test]
+    fn synchronization_errors_are_reported_after_publication_without_removing_the_result() {
+        use std::cell::Cell;
+        let root = tempfile::tempdir().unwrap();
+        let directory = Dir::open_ambient_dir(root.path(), ambient_authority()).unwrap();
+        directory.create_dir("stage").unwrap();
+        let staging = directory.open_dir("stage").unwrap();
+        for failure in [1, 2, 3] {
+            let calls = Cell::new(0);
+            let result = write_private_from_with_sync(
+                &staging,
+                &directory,
+                Path::new("journal"),
+                b"saved phase",
+                false,
+                |anchor| {
+                    calls.set(calls.get() + 1);
+                    if calls.get() == 1 {
+                        assert_eq!(anchor.read("journal")?, b"saved phase");
+                    } else {
+                        assert_eq!(anchor.entries()?.count(), 0);
+                    }
+                    if calls.get() == failure {
+                        return Err("synthetic directory sync failure".into());
+                    }
+                    Ok(())
+                },
+            );
+            assert_eq!(result.is_err(), failure <= 2);
+            assert_eq!(calls.get(), failure.min(2));
+            assert_eq!(directory.read("journal").unwrap(), b"saved phase");
+            assert_eq!(staging.entries().unwrap().count(), 0);
+        }
+    }
 
     #[cfg(target_os = "linux")]
     #[test]

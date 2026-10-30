@@ -13,6 +13,7 @@ Audit statique daté du 30 octobre 2026. Atelier Kanban est une application loca
 | [Technologies et raisons de leur utilisation](03-technologies.md) | Langages, bibliothèques directes, stockage, sécurité, intégrations et outils |
 | [Méthode et plan de vérification](04-methode-et-verifications.md) | État audité, couverture réelle, priorités et validations restantes |
 | [Inventaire des fichiers](inventaire-fichiers.csv) | Chemins, empreintes SHA256 et niveau de lecture pour retrouver l'état examiné |
+| [Corrections après l'audit](05-corrections.md) | Correctifs apportés ensuite, changements de contrats et vérifications encore ouvertes |
 
 ## État de référence
 

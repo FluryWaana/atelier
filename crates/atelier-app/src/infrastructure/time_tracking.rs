@@ -4,11 +4,9 @@ use atelier_core::{
     document::Document,
 };
 
-use serde_json::value::RawValue;
-
 impl TimeRepository for Store<'_> {
-    fn card(&self, id: Option<&RawValue>) -> Result<Option<Document>> {
-        self.document_input(Documents::Cards, id)
+    fn card(&self, id: &str) -> Result<Option<Document>> {
+        self.document(Documents::Cards, id)
     }
     fn entry(&self, id: &str) -> Result<Option<Document>> {
         self.document(Documents::Times, id)

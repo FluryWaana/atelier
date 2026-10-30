@@ -1,4 +1,5 @@
 {
+  "message.invalid_card_id": "L’identifiant de la tâche doit être un texte non vide.",
   "message.github_update_backup": "La base de données est sauvegardée avant le changement de version. Si la sauvegarde échoue, la mise à jour est refusée.",
   "message.update_data_backup_failed": "La sauvegarde des données a échoué. Mise à jour refusée.",
   "message.github_update_mib": "Mio",

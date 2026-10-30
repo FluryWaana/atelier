@@ -1,4 +1,5 @@
 {
+  "message.invalid_card_id": "The task ID must be nonempty text.",
   "message.github_update_backup": "The database is backed up before switching versions. If the backup fails, the update is refused.",
   "message.update_data_backup_failed": "The data backup failed. Update refused.",
   "message.github_update_mib": "MiB",

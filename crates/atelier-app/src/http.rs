@@ -67,6 +67,8 @@ mod updates;
 mod workflow_publication;
 mod worktrees;
 
+use mutations::{ApiRoutes, Policy};
+
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 struct AppState {
@@ -78,6 +80,7 @@ struct AppState {
     vault: crate::infrastructure::token_vault::PrototypeVault,
     backups: Arc<crate::infrastructure::backups::BackupDirectory>,
     token: String,
+    event_token: String,
     port: u16,
     shutdown: watch::Sender<bool>,
     changed: tokio::sync::broadcast::Sender<()>,
@@ -118,7 +121,7 @@ async fn security(State(state): State<Shared>, request: Request, next: Next) -> 
     response
 }
 
-async fn authorize(state: Shared, request: Request, next: Next) -> Response {
+async fn authorize(state: Shared, mut request: Request, next: Next) -> Response {
     let host = header_value(&request, "host").unwrap_or("");
     if host != format!("127.0.0.1:{}", state.port) && host != format!("localhost:{}", state.port) {
         return failure(StatusCode::FORBIDDEN, "message.host_not_allowed");
@@ -136,16 +139,17 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
         && path == "/api/health"
         && challenge.as_deref().is_some_and(valid_token);
     if path.starts_with("/api/") && !public_proof {
-        let event_session = (path == "/api/events")
-            .then(|| Query::<events::Credentials>::try_from_uri(request.uri()).ok())
-            .flatten()
-            .and_then(|query| query.0.session);
-        let token = header_value(&request, "authorization")
+        let bearer = header_value(&request, "authorization")
             .map(|value| value.strip_prefix("Bearer ").unwrap_or(value))
-            .filter(|value| !value.is_empty())
-            .or(event_session.as_deref())
-            .unwrap_or("");
-        if !session::same_secret(token, &state.token) {
+            .filter(|value| !value.is_empty());
+        let authenticated = if let Some(token) = bearer {
+            session::same_secret(token, &state.token)
+        } else {
+            path == "/api/events"
+                && request.method() == Method::GET
+                && events::authenticated(&request, state.port, &state.event_token)
+        };
+        if !authenticated {
             return failure(
                 StatusCode::UNAUTHORIZED,
                 "message.session_expired_or_missing_reopen_atelier_using_its_launcher",
@@ -164,52 +168,19 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
             return failure(StatusCode::CONFLICT, "message.atelier_is_shutting_down");
         }
     }
-    if request.method() != Method::GET && path.starts_with("/api/") {
-        let exclusive = path.ends_with("/jira/create")
-            || path.ends_with("/connector-refresh")
-            || path.starts_with("/api/updates/")
-            || path.starts_with("/api/extensions")
-            || (path.starts_with("/api/time/")
-                && ["/export-preview", "/export", "/reconcile", "/reset-export"]
-                    .iter()
-                    .any(|suffix| path.ends_with(suffix)))
-            || path.ends_with("/commit/preview")
-            || path.ends_with("/commit/create")
-            || path.ends_with("/commit/reconcile")
-            || path.ends_with("/jira/creation-reconcile")
-            || path.ends_with("/jira/refresh-preview")
-            || path.ends_with("/jira/refresh-apply")
-            || path.ends_with("/jira/transition")
-            || path.ends_with("/jira/reconcile")
-            || path == "/api/jira/import"
-            || path == "/api/jira/import-batch"
-            || path.ends_with("/forge/attach")
-            || path.ends_with("/forge/draft")
-            || path.ends_with("/forge/draft-reconcile")
-            || path.ends_with("/forge/push-preview")
-            || path.ends_with("/forge/push")
-            || path.ends_with("/forge/push-reconcile")
-            || path.ends_with("/forge/publication-preview")
-            || path.ends_with("/forge/publication")
-            || path.ends_with("/forge/publication-reconcile")
-            || path.ends_with("/forge/publication-push")
-            || path.ends_with("/worktree")
-            || path.ends_with("/worktree/remove")
-            || path.ends_with("/services/start")
-            || path.ends_with("/services/stop")
-            || path.ends_with("/services/restart")
-            || path.ends_with("/runs/start")
-            || path.ends_with("/verification/start")
-            || path.ends_with("/automation")
-            || path == "/api/queue"
-            || path == "/api/repositories"
-            || path == "/api/folders/choose"
-            || (path.starts_with("/api/extensions/") && path.contains("/operations"))
-            || path.ends_with("/review/validate")
-            || (path.starts_with("/api/runs/") && path.ends_with("/stop"));
-        let exclusive = exclusive
-            || (path.starts_with("/api/agent-providers/") && path.ends_with("/cli-update"));
-        let cancellation = request.method() == Method::POST && mutations::is_cancellation(path);
+    request.extensions_mut().insert(state);
+    next.run(request).await
+}
+
+async fn mutate(
+    State(policy): State<mutations::Policy>,
+    axum::Extension(state): axum::Extension<Shared>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if request.method() != Method::GET {
+        let cancellation =
+            request.method() == Method::POST && policy == mutations::Policy::Cancellation;
         let gate = state.mutations.clone();
         let changed = state.changed.clone();
         let services = state.services.clone();
@@ -219,13 +190,7 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
                 if let Some(response) = updates::guard(state.installation_root.as_deref()) {
                     return response;
                 }
-                let guard_path = if request.uri().path() == "/api/repositories"
-                    || (request.uri().path().starts_with("/api/agent-providers/")
-                        && request.uri().path().ends_with("/cli-update"))
-                    || (request.uri().path().starts_with("/api/extensions/")
-                        && (request.uri().path().contains("/operations")
-                            || request.uri().path().contains("/tickets/reset/")))
-                {
+                let guard_path = if policy.project_guard() {
                     "/api/projects"
                 } else {
                     request.uri().path()
@@ -288,7 +253,7 @@ async fn authorize(state: Shared, request: Request, next: Next) -> Response {
         if cancellation {
             mutations::detached(operation).await
         } else {
-            mutations::run(gate, exclusive, operation).await
+            mutations::run(gate, policy.exclusive(), operation).await
         }
     } else {
         next.run(request).await
@@ -359,15 +324,12 @@ async fn board(State(state): State<Shared>) -> Response {
 }
 
 async fn object(body: Body) -> std::result::Result<Document, (StatusCode, &'static str)> {
-    // Node counts UTF-16 code units; the byte ceiling bounds allocation before the exact check.
+    // Bound the encoded request before parsing or allocating its fields.
     let bytes = to_bytes(body, 400_000)
         .await
         .map_err(|_| (StatusCode::PAYLOAD_TOO_LARGE, "message.request_too_large"))?;
     let raw = std::str::from_utf8(&bytes)
         .map_err(|_| (StatusCode::BAD_REQUEST, "message.invalid_json"))?;
-    if raw.encode_utf16().count() > 100_000 {
-        return Err((StatusCode::PAYLOAD_TOO_LARGE, "message.request_too_large"));
-    }
     let value: &serde_json::value::RawValue =
         serde_json::from_str(if raw.is_empty() { "{}" } else { raw })
             .map_err(|_| (StatusCode::BAD_REQUEST, "message.invalid_json"))?;
@@ -559,6 +521,7 @@ async fn serve_mode(
         vault,
         backups: Arc::new(directory.backups()?),
         token,
+        event_token: session::new_token()?,
         port: listener.local_addr()?.port(),
         shutdown,
         services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
@@ -569,244 +532,508 @@ async fn serve_mode(
         mutations: Arc::new(tokio::sync::RwLock::new(())),
     });
     #[cfg(windows)]
-    let app = app.route(
+    let app = app.api_route(
         "/api/agent-providers/{id}/cli-update",
+        Policy::ProjectExternal,
         post(agent_cli::update),
     );
     let app = app
-        .route(
+        .api_route(
             "/api/extensions/{module}/operations/{id}/send",
+            Policy::ProjectExternal,
             post(connector_effects::send),
         )
-        .route(
+        .api_route(
             "/api/extensions/{module}/operations/{id}/reconcile",
+            Policy::ProjectExternal,
             post(connector_effects::reconcile),
         )
-        .route("/api/cards/{id}/runs/start", post(runs::start))
-        .route(
+        .api_route(
+            "/api/cards/{id}/runs/start",
+            Policy::External,
+            post(runs::start),
+        )
+        .api_route(
             "/api/extensions/{id}",
+            Policy::External,
             axum::routing::put(connectors::configure).delete(connectors::remove),
         )
-        .route("/api/extensions/{id}/invoke", post(connectors::invoke))
-        .route(
+        .api_route(
+            "/api/extensions/{id}/invoke",
+            Policy::External,
+            post(connectors::invoke),
+        )
+        .api_route(
             "/api/extensions/{id}/tickets/reset/preview",
+            Policy::ProjectExternal,
             post(connector_ticket_reset::preview),
         )
-        .route(
+        .api_route(
             "/api/extensions/{id}/tickets/reset/apply",
+            Policy::ProjectExternal,
             post(connector_ticket_reset::apply),
         )
-        .route("/api/queue", get(queue::get).post(queue::change))
-        .route("/api/cards/{id}/automation", post(automation::change))
-        .route("/api/cards/{id}/automation/stop", post(automation::stop))
-        .route("/api/queue/pause", post(queue::pause))
-        .route("/api/cards/{id}/verification/start", post(runs::verify))
-        .route(
+        .api_route(
+            "/api/queue",
+            Policy::External,
+            get(queue::get).post(queue::change),
+        )
+        .api_route(
+            "/api/cards/{id}/automation",
+            Policy::External,
+            post(automation::change),
+        )
+        .api_route(
+            "/api/cards/{id}/automation/stop",
+            Policy::Cancellation,
+            post(automation::stop),
+        )
+        .api_route("/api/queue/pause", Policy::Cancellation, post(queue::pause))
+        .api_route(
+            "/api/cards/{id}/verification/start",
+            Policy::External,
+            post(runs::verify),
+        )
+        .api_route(
             "/api/cards/{id}/runs/{run}/review/validate",
+            Policy::External,
             post(reviews::validate),
         )
-        .route("/api/runs/{id}/stop", post(runs::stop))
-        .route("/api/runs/{id}/reply", post(runs::reply))
-        .route("/api/runs/{id}/logs", get(runs::logs))
-        .route("/api/cards/{id}/services", get(services::get))
-        .route("/api/cards/{id}/services/start", post(services::start))
-        .route("/api/cards/{id}/services/restart", post(services::restart))
-        .route("/api/cards/{id}/services/stop", post(services::stop));
+        .api_route(
+            "/api/runs/{id}/stop",
+            Policy::Cancellation,
+            post(runs::stop),
+        )
+        .api_route("/api/runs/{id}/reply", Policy::Ordinary, post(runs::reply))
+        .api_route("/api/runs/{id}/logs", Policy::Ordinary, get(runs::logs))
+        .api_route(
+            "/api/cards/{id}/services",
+            Policy::Ordinary,
+            get(services::get),
+        )
+        .api_route(
+            "/api/cards/{id}/services/start",
+            Policy::External,
+            post(services::start),
+        )
+        .api_route(
+            "/api/cards/{id}/services/restart",
+            Policy::External,
+            post(services::restart),
+        )
+        .api_route(
+            "/api/cards/{id}/services/stop",
+            Policy::Cancellation,
+            post(services::stop),
+        );
     let app = app
-        .route("/api/health", get(health))
-        .route(
+        .api_route("/api/health", Policy::Ordinary, get(health))
+        .api_route(
             "/api/cards/{id}/forge/publication-push",
+            Policy::External,
             post(git_push::publication_branch),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/forge/publication-preview",
+            Policy::External,
             post(forge_publication::preview),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/forge/publication",
+            Policy::External,
             post(forge_publication::create),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/forge/publication-reconcile",
+            Policy::External,
             post(forge_publication::reconcile),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/forge/push-preview",
+            Policy::External,
             post(git_push::preview),
         )
-        .route("/api/cards/{id}/forge/push", post(git_push::push))
-        .route(
+        .api_route(
+            "/api/cards/{id}/forge/push",
+            Policy::External,
+            post(git_push::push),
+        )
+        .api_route(
             "/api/cards/{id}/forge/push-reconcile",
+            Policy::External,
             post(git_push::reconcile),
         )
-        .route("/api/cards/{id}/commit/preview", post(commits::preview))
-        .route("/api/cards/{id}/commit/changes", get(commits::changes))
-        .route("/api/cards/{id}/commit/create", post(commits::create))
-        .route("/api/cards/{id}/commit/reconcile", post(commits::reconcile))
-        .route("/api/events", get(events))
-        .route("/api/time", any(time_tracking::create))
-        .route("/api/time/{id}", any(time_tracking::entry))
-        .route("/api/time/{id}/{action}", any(time_tracking::action))
-        .route("/api/state", get(board))
-        .route("/api/jira/config", get(jira::get).put(jira::save))
-        .route("/api/tempo/config", get(tempo::get).put(tempo::save))
-        .route("/api/extensions", get(connectors::get))
-        .route(
+        .api_route(
+            "/api/cards/{id}/commit/preview",
+            Policy::External,
+            post(commits::preview),
+        )
+        .api_route(
+            "/api/cards/{id}/commit/changes",
+            Policy::Ordinary,
+            get(commits::changes),
+        )
+        .api_route(
+            "/api/cards/{id}/commit/create",
+            Policy::External,
+            post(commits::create),
+        )
+        .api_route(
+            "/api/cards/{id}/commit/reconcile",
+            Policy::External,
+            post(commits::reconcile),
+        )
+        .api_route("/api/events", Policy::Ordinary, get(events))
+        .api_route(
+            "/api/events/session",
+            Policy::Ordinary,
+            get(events::session),
+        )
+        .api_route("/api/time", Policy::Ordinary, any(time_tracking::create))
+        .api_route(
+            "/api/time/{id}",
+            Policy::Ordinary,
+            any(time_tracking::entry),
+        )
+        .api_route(
+            "/api/time/{id}/{action}",
+            Policy::Ordinary,
+            any(time_tracking::action),
+        )
+        .api_route(
+            "/api/time/{id}/stop",
+            Policy::Cancellation,
+            any(time_tracking::known_action),
+        )
+        .api_route(
+            "/api/time/{id}/export-preview",
+            Policy::External,
+            any(time_tracking::known_action),
+        )
+        .api_route(
+            "/api/time/{id}/export",
+            Policy::External,
+            any(time_tracking::known_action),
+        )
+        .api_route(
+            "/api/time/{id}/reconcile",
+            Policy::External,
+            any(time_tracking::known_action),
+        )
+        .api_route(
+            "/api/time/{id}/reset-export",
+            Policy::External,
+            any(time_tracking::known_action),
+        )
+        .api_route("/api/state", Policy::Ordinary, get(board))
+        .api_route(
+            "/api/jira/config",
+            Policy::Ordinary,
+            get(jira::get).put(jira::save),
+        )
+        .api_route(
+            "/api/tempo/config",
+            Policy::Ordinary,
+            get(tempo::get).put(tempo::save),
+        )
+        .api_route("/api/extensions", Policy::External, get(connectors::get))
+        .api_route(
             "/api/agent-providers/cli-update",
+            Policy::Ordinary,
             get(agent_providers::cli_status),
         )
-        .route("/api/folders/choose", post(folders::choose))
-        .route("/api/extensions/pending", get(connector_effects::pending))
-        .route(
+        .api_route(
+            "/api/folders/choose",
+            Policy::External,
+            post(folders::choose),
+        )
+        .api_route(
+            "/api/extensions/pending",
+            Policy::External,
+            get(connector_effects::pending),
+        )
+        .api_route(
             "/api/extensions/{module}/operations",
+            Policy::ProjectExternal,
             get(connector_effects::list).post(connector_effects::preview),
         )
-        .route(
+        .api_route(
             "/api/extensions/{module}/operations/{id}/cancel",
+            Policy::ProjectExternal,
             post(connector_effects::cancel),
         )
-        .route("/api/updates", get(updates::get))
-        .route("/api/updates/check", get(updates::check))
-        .route("/api/updates/install", post(updates::action))
-        .route("/api/updates/preview", post(updates::action))
-        .route("/api/updates/apply", post(updates::action))
-        .route("/api/updates/cancel", post(updates::action))
-        .route("/api/updates/recover", post(updates::action))
-        .route(
+        .api_route("/api/updates", Policy::Ordinary, get(updates::get))
+        .api_route("/api/updates/check", Policy::External, get(updates::check))
+        .api_route(
+            "/api/updates/install",
+            Policy::External,
+            post(updates::action),
+        )
+        .api_route(
+            "/api/updates/preview",
+            Policy::External,
+            post(updates::action),
+        )
+        .api_route(
+            "/api/updates/apply",
+            Policy::External,
+            post(updates::action),
+        )
+        .api_route(
+            "/api/updates/cancel",
+            Policy::External,
+            post(updates::action),
+        )
+        .api_route(
+            "/api/updates/recover",
+            Policy::Cancellation,
+            post(updates::action),
+        )
+        .api_route(
             "/api/extensions/{id}/tickets/import",
+            Policy::External,
             post(connectors::import_tickets),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/connector-refresh",
+            Policy::External,
             post(connectors::refresh_ticket),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/jira/transitions",
+            Policy::Ordinary,
             get(jira_transitions::choices),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/jira/transition",
+            Policy::External,
             post(jira_transitions::send),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/jira/reconcile",
+            Policy::External,
             post(jira_transitions::reconcile),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/jira/refresh-preview",
+            Policy::External,
             post(jira_refresh::preview),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/jira/refresh-apply",
+            Policy::External,
             post(jira_refresh::apply),
         )
-        .route("/api/cards/{id}/jira/create", post(jira_creation::create))
-        .route(
+        .api_route(
+            "/api/cards/{id}/jira/create",
+            Policy::External,
+            post(jira_creation::create),
+        )
+        .api_route(
             "/api/cards/{id}/jira/creation-reconcile",
+            Policy::External,
             post(jira_creation::reconcile),
         )
-        .route("/api/jira/creation-metadata", get(jira::creation_metadata))
-        .route("/api/jira/search", get(jira::search))
-        .route(
+        .api_route(
+            "/api/jira/creation-metadata",
+            Policy::Ordinary,
+            get(jira::creation_metadata),
+        )
+        .api_route("/api/jira/search", Policy::Ordinary, get(jira::search))
+        .api_route(
             "/api/jira/boards/{id}/configuration",
+            Policy::Ordinary,
             get(jira::board_configuration),
         )
-        .route("/api/jira/import", post(jira::import))
-        .route(
+        .api_route("/api/jira/import", Policy::External, post(jira::import))
+        .api_route(
             "/api/forges",
+            Policy::Ordinary,
             get(forge::configurations).put(forge::configure),
         )
-        .route("/api/forges/pull-request", get(forge::pull_request))
-        .route("/api/forges/checks", get(forge::checks))
-        .route("/api/cards/{id}/forge/draft", post(forge_draft::change))
-        .route(
+        .api_route(
+            "/api/forges/pull-request",
+            Policy::Ordinary,
+            get(forge::pull_request),
+        )
+        .api_route("/api/forges/checks", Policy::Ordinary, get(forge::checks))
+        .api_route(
+            "/api/cards/{id}/forge/draft",
+            Policy::External,
+            post(forge_draft::change),
+        )
+        .api_route(
             "/api/cards/{id}/forge/draft-reconcile",
+            Policy::External,
             post(forge_draft::reconcile),
         )
-        .route("/api/forges/pull-requests", get(forge::pull_requests))
-        .route("/api/cards/{id}/forge/attach", post(forge::attach))
-        .route("/api/cards/{id}/forge/detach", post(forge::detach))
-        .route("/api/jira/import-batch", post(jira::import_batch))
-        .route("/api/jira/issues/{id}", get(jira::detail))
-        .route("/api/backups", get(backups::list).post(backups::create))
-        .route("/api/backups/restore", post(backups::restore))
-        .route(
+        .api_route(
+            "/api/forges/pull-requests",
+            Policy::Ordinary,
+            get(forge::pull_requests),
+        )
+        .api_route(
+            "/api/cards/{id}/forge/attach",
+            Policy::External,
+            post(forge::attach),
+        )
+        .api_route(
+            "/api/cards/{id}/forge/detach",
+            Policy::Ordinary,
+            post(forge::detach),
+        )
+        .api_route(
+            "/api/jira/import-batch",
+            Policy::External,
+            post(jira::import_batch),
+        )
+        .api_route("/api/jira/issues/{id}", Policy::Ordinary, get(jira::detail))
+        .api_route(
+            "/api/backups",
+            Policy::Ordinary,
+            get(backups::list).post(backups::create),
+        )
+        .api_route(
+            "/api/backups/restore",
+            Policy::Ordinary,
+            post(backups::restore),
+        )
+        .api_route(
             "/api/agent-providers",
+            Policy::Ordinary,
             get(agent_providers::describe).post(agent_providers::save),
         )
-        .route(
+        .api_route(
             "/api/agent-providers/discover",
+            Policy::Ordinary,
             get(agent_providers::discover),
         )
-        .route(
+        .api_route(
             "/api/agent-providers/{id}",
+            Policy::Ordinary,
             axum::routing::delete(agent_providers::remove),
         )
-        .route(
+        .api_route(
             "/api/agent-providers/{id}/diagnose",
+            Policy::Ordinary,
             post(agent_providers::diagnose),
         )
-        .route("/api/settings", axum::routing::put(settings::update))
-        .route(
+        .api_route(
+            "/api/settings",
+            Policy::Ordinary,
+            axum::routing::put(settings::update),
+        )
+        .api_route(
             "/api/integrations/defaults",
+            Policy::Ordinary,
             axum::routing::put(integrations::choose),
         )
-        .route(
+        .api_route(
             "/api/settings/tokens/{service}",
+            Policy::Ordinary,
             axum::routing::delete(settings::remove_token),
         )
-        .route("/api/projects", post(projects::create))
-        .route(
+        .api_route("/api/projects", Policy::Ordinary, post(projects::create))
+        .api_route(
             "/api/projects/{id}/kanban",
+            Policy::Ordinary,
             axum::routing::put(kanban::save),
         )
-        .route(
+        .api_route(
             "/api/repositories",
+            Policy::ProjectExternal,
             get(repository_access::read)
                 .post(repository_access::register)
                 .delete(repository_access::revoke),
         )
-        .route("/api/projects/archive-tasks", post(projects::archive))
-        .route(
+        .api_route(
+            "/api/projects/archive-tasks",
+            Policy::Ordinary,
+            post(projects::archive),
+        )
+        .api_route(
             "/api/projects/{id}",
+            Policy::Ordinary,
             axum::routing::delete(projects::remove).patch(projects::update),
         )
-        .route(
+        .api_route(
             "/api/projects/{id}/detect-launch",
+            Policy::Ordinary,
             get(projects::detect).post(projects::detect),
         )
-        .route("/api/cards", post(task_creation::create))
-        .route("/api/brainstorms", post(task_creation::create))
-        .route(
+        .api_route("/api/cards", Policy::Ordinary, post(task_creation::create))
+        .api_route(
+            "/api/brainstorms",
+            Policy::Ordinary,
+            post(task_creation::create),
+        )
+        .api_route(
             "/api/cards/{id}/preparation/apply",
+            Policy::Ordinary,
             post(preparation::apply),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}/brainstorm/convert",
+            Policy::Ordinary,
             post(brainstorm::convert),
         )
-        .route("/api/templates", post(task_templates::create))
-        .route(
+        .api_route(
+            "/api/templates",
+            Policy::Ordinary,
+            post(task_templates::create),
+        )
+        .api_route(
             "/api/templates/{id}",
+            Policy::Ordinary,
             axum::routing::delete(task_templates::remove),
         )
-        .route(
+        .api_route(
             "/api/cards/{id}",
+            Policy::Ordinary,
             axum::routing::delete(card_lifecycle::remove).patch(task_editing::update),
         )
-        .route("/api/cards/{id}/archive", post(card_lifecycle::archive))
-        .route("/api/cards/{id}/duplicate", post(duplicate))
-        .route("/api/cards/{id}/files", get(files::list))
-        .route("/api/cards/{id}/file", get(files::preview))
-        .route("/api/cards/{id}/changes", get(files::changes))
-        .route("/api/cards/{id}/file-diff", get(files::diff))
-        .route("/api/cards/{id}/worktree", post(worktrees::create))
-        .route(
+        .api_route(
+            "/api/cards/{id}/archive",
+            Policy::Ordinary,
+            post(card_lifecycle::archive),
+        )
+        .api_route(
+            "/api/cards/{id}/duplicate",
+            Policy::Ordinary,
+            post(duplicate),
+        )
+        .api_route("/api/cards/{id}/files", Policy::Ordinary, get(files::list))
+        .api_route(
+            "/api/cards/{id}/file",
+            Policy::Ordinary,
+            get(files::preview),
+        )
+        .api_route(
+            "/api/cards/{id}/changes",
+            Policy::Ordinary,
+            get(files::changes),
+        )
+        .api_route(
+            "/api/cards/{id}/file-diff",
+            Policy::Ordinary,
+            get(files::diff),
+        )
+        .api_route(
+            "/api/cards/{id}/worktree",
+            Policy::External,
+            post(worktrees::create),
+        )
+        .api_route(
             "/api/cards/{id}/worktree/inspection",
+            Policy::Ordinary,
             get(worktrees::inspect_status),
         )
-        .route("/api/cards/{id}/worktree/remove", post(worktrees::remove))
-        .route("/api/shutdown", post(stop))
+        .api_route(
+            "/api/cards/{id}/worktree/remove",
+            Policy::External,
+            post(worktrees::remove),
+        )
+        .api_route("/api/shutdown", Policy::Cancellation, post(stop))
         .fallback(unavailable)
         .layer(middleware::from_fn_with_state(state.clone(), security))
         .with_state(state.clone());

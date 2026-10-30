@@ -115,29 +115,28 @@ pub(super) async fn entry(
     execute(state, id, action, request).await
 }
 
-pub(super) async fn action(
+pub(super) async fn known_action(
     State(state): State<Shared>,
-    Path((id, action)): Path<(String, String)>,
+    Path(id): Path<String>,
     request: Request,
 ) -> Response {
-    let action = if ![
-        "stop",
-        "export-preview",
-        "export",
-        "reconcile",
-        "reset-export",
-    ]
-    .contains(&action.as_str())
-    {
-        "route"
-    } else if request.method() != Method::POST {
-        "method"
+    let action = if request.method() == Method::POST {
+        request
+            .uri()
+            .path()
+            .rsplit('/')
+            .next()
+            .unwrap_or("")
+            .to_owned()
     } else {
-        &action
+        "method".to_owned()
     };
-    execute(state, id, action, request).await
+    execute(state, id, &action, request).await
 }
 
+pub(super) async fn action() -> Response {
+    failure(StatusCode::BAD_REQUEST, "message.unknown_time_route")
+}
 pub(super) async fn run(state: Shared) -> Result<()> {
     let mut closing = state.shutdown.subscribe();
     let interval = Duration::from_secs(5);

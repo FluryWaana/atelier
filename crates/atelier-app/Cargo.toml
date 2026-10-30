@@ -33,7 +33,6 @@ regex = "=1.13.1"
 icu_collator = "=2.4.0"
 icu_locale_core = "=2.4.0"
 uuid = { version = "=1.29.0", features = ["v4"] }
-tower-http = { version = "=0.7.1", features = ["fs"] }
 time = { version = "=0.3.55", features = ["formatting", "parsing", "macros"] }
 zip = { version = "=8.6.0", default-features = false }
 

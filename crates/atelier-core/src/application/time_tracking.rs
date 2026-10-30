@@ -1,5 +1,4 @@
 use crate::{document::Document, domain::time::time_fields};
-use serde_json::value::RawValue;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -13,7 +12,7 @@ impl std::fmt::Display for TimeConflict {
 impl std::error::Error for TimeConflict {}
 
 pub trait TimeRepository {
-    fn card(&self, id: Option<&RawValue>) -> Result<Option<Document>>;
+    fn card(&self, id: &str) -> Result<Option<Document>>;
     fn entry(&self, id: &str) -> Result<Option<Document>>;
     fn entries(&self) -> Result<Vec<Document>>;
     fn save(&self, entry: &Document) -> Result<()>;
@@ -114,8 +113,12 @@ pub fn execute(
     exporting: impl Fn(&str) -> bool,
 ) -> Result<Document> {
     if action == "create" {
-        let card_id = body.raw("cardId");
-        let card = repository.card(card_id)?.ok_or("message.card_not_found")?;
+        let card_id = body
+            .get::<String>("cardId")
+            .map_err(|_| "message.invalid_card_id")?
+            .filter(|id| !id.trim().is_empty())
+            .ok_or("message.invalid_card_id")?;
+        let card = repository.card(&card_id)?.ok_or("message.card_not_found")?;
         if card.truthy("archived")? {
             return Err("message.restore_this_task_before_logging_time".into());
         }

@@ -3,12 +3,11 @@ use crate::{
     document::{Document, JsonString},
     domain::text_units,
 };
-use serde_json::value::RawValue;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 pub trait TemplateRepository {
-    fn card(&self, id: Option<&RawValue>) -> Result<Option<Document>>;
+    fn card(&self, id: &str) -> Result<Option<Document>>;
     fn settings(&self) -> Result<Document>;
     fn save_settings(&self, settings: &Document) -> Result<()>;
 }
@@ -36,9 +35,12 @@ pub fn create(
     if name.0.is_empty() {
         return Err(CardFailure::Invalid("message.template_name_required").into());
     }
-    let card = repository
-        .card(body.raw("cardId"))?
-        .ok_or(CardFailure::Missing)?;
+    let card_id = body
+        .get::<String>("cardId")
+        .map_err(|_| CardFailure::Invalid("message.invalid_card_id"))?
+        .filter(|id| !id.trim().is_empty())
+        .ok_or(CardFailure::Invalid("message.invalid_card_id"))?;
+    let card = repository.card(&card_id)?.ok_or(CardFailure::Missing)?;
     let mut settings = repository.settings()?;
     let mut templates = templates(&settings)?;
     if templates.len() >= 50 {

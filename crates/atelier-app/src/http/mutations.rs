@@ -3,6 +3,47 @@ use axum::{http::StatusCode, response::Response};
 use std::{future::Future, sync::Arc};
 use tokio::sync::{OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Policy {
+    Ordinary,
+    External,
+    ProjectExternal,
+    Cancellation,
+}
+
+impl Policy {
+    pub(super) fn exclusive(self) -> bool {
+        matches!(self, Self::External | Self::ProjectExternal)
+    }
+
+    pub(super) fn project_guard(self) -> bool {
+        self == Self::ProjectExternal
+    }
+}
+
+pub(super) trait ApiRoutes {
+    fn api_route(
+        self,
+        path: &str,
+        policy: Policy,
+        handler: axum::routing::MethodRouter<super::Shared>,
+    ) -> Self;
+}
+
+impl ApiRoutes for axum::Router<super::Shared> {
+    fn api_route(
+        self,
+        path: &str,
+        policy: Policy,
+        handler: axum::routing::MethodRouter<super::Shared>,
+    ) -> Self {
+        self.route(
+            path,
+            handler.layer(axum::middleware::from_fn_with_state(policy, super::mutate)),
+        )
+    }
+}
+
 enum Reservation {
     Ordinary { _guard: OwnedRwLockReadGuard<()> },
     External { _guard: OwnedRwLockWriteGuard<()> },
@@ -33,25 +74,6 @@ pub(super) async fn run(
     .await
 }
 
-pub(super) fn is_cancellation(path: &str) -> bool {
-    path == "/api/shutdown"
-        || path == "/api/updates/recover"
-        || path == "/api/queue/pause"
-        || path.strip_prefix("/api/time/").is_some_and(|tail| {
-            tail.split_once('/')
-                .is_some_and(|(id, action)| !id.is_empty() && action == "stop")
-        })
-        || path.strip_prefix("/api/runs/").is_some_and(|tail| {
-            tail.split_once('/')
-                .is_some_and(|(id, action)| !id.is_empty() && action == "stop")
-        })
-        || path.strip_prefix("/api/cards/").is_some_and(|tail| {
-            tail.split_once('/').is_some_and(|(id, action)| {
-                !id.is_empty() && matches!(action, "services/stop" | "automation/stop")
-            })
-        })
-}
-
 // Accepted writes and cancellations must finish even when the browser disconnects.
 pub(super) async fn detached(
     operation: impl Future<Output = Response> + Send + 'static,
@@ -71,30 +93,13 @@ mod tests {
     use axum::response::IntoResponse;
 
     #[test]
-    fn only_known_stop_routes_bypass_the_mutation_gate() {
-        for path in [
-            "/api/shutdown",
-            "/api/updates/recover",
-            "/api/queue/pause",
-            "/api/time/entry/stop",
-            "/api/runs/run/stop",
-            "/api/cards/card/services/stop",
-            "/api/cards/card/automation/stop",
-        ] {
-            assert!(is_cancellation(path));
-        }
-        for path in [
-            "/api/prototype/stop",
-            "/api/runs//stop",
-            "/api/cards/card/services/restart",
-            "/api/runs/run/stop/extra",
-            "/api/cards/card/jira/transition",
-            "/api/cards/card/stop",
-            "/api/backups/stop",
-            "/api/shutdown/extra",
-        ] {
-            assert!(!is_cancellation(path));
-        }
+    fn every_api_registration_declares_its_concurrency_policy() {
+        let routes = include_str!("../http.rs");
+        assert!(!routes.contains(".route("));
+        assert!(Policy::External.exclusive());
+        assert!(Policy::ProjectExternal.exclusive());
+        assert!(!Policy::Ordinary.exclusive());
+        assert!(!Policy::Cancellation.exclusive());
     }
     #[tokio::test]
     async fn cancellation_finishes_while_an_external_operation_holds_the_gate() {

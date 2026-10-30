@@ -1,8 +1,7 @@
 use crate::Result;
-use atelier_core::document::{Document, JsonString};
-use rusqlite::{Connection, OptionalExtension, params, types::Value};
+use atelier_core::document::Document;
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Serialize, de::DeserializeOwned};
-use serde_json::value::RawValue;
 use std::{path::Path, time::Duration};
 
 const APPLICATION_ID: i32 = 0x41544b52;
@@ -191,50 +190,6 @@ impl<'a> Store<'a> {
             .transpose()
     }
 
-    pub(crate) fn document_input<T: DeserializeOwned>(
-        &self,
-        table: Documents,
-        id: Option<&RawValue>,
-    ) -> Result<Option<T>> {
-        // node:sqlite binds JS numbers as REAL, booleans as INTEGER and objects as named parameters.
-        let id = id.ok_or("Provided value cannot be bound to SQLite parameter 1.")?;
-        let parameter = match id.get().as_bytes()[0] {
-            b'"' => Value::Text(String::from_utf16_lossy(
-                &serde_json::from_str::<JsonString>(id.get())?.0,
-            )),
-            b'n' => Value::Null,
-            b't' => Value::Integer(1),
-            b'f' => Value::Integer(0),
-            b'{' => {
-                let object: Document = serde_json::from_str(id.get())?;
-                if let Some(key) = object.keys().next() {
-                    return Err(format!(
-                        "Unknown named parameter '{}'",
-                        String::from_utf16_lossy(&key.0)
-                    )
-                    .into());
-                }
-                Value::Null
-            }
-            b'[' => {
-                if !serde_json::from_str::<Vec<Box<RawValue>>>(id.get())?.is_empty() {
-                    return Err("Unknown named parameter '0'".into());
-                }
-                Value::Null
-            }
-            _ => Value::Real(serde_json::from_str(id.get())?),
-        };
-        let data: Option<String> = self
-            .connection
-            .query_row(
-                &format!("SELECT data FROM {} WHERE id=?", table.table()),
-                [parameter],
-                |row| row.get(0),
-            )
-            .optional()?;
-        data.map(|data| serde_json::from_str(&data).map_err(Into::into))
-            .transpose()
-    }
     pub fn put(&self, table: Documents, document: &impl Serialize) -> Result<()> {
         let encoded = serde_json::to_string(document)?;
         let document: Document =

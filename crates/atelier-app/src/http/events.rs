@@ -3,13 +3,41 @@ use axum::response::{
     sse::{Event, KeepAlive, Sse},
 };
 use futures_util::stream::{self, Stream};
-use serde::Deserialize;
 use std::{convert::Infallible, time::Duration};
 use tokio::sync::{broadcast, watch};
 
-#[derive(Deserialize)]
-pub(super) struct Credentials {
-    pub session: Option<String>,
+pub(super) fn authenticated(request: &axum::extract::Request, port: u16, expected: &str) -> bool {
+    let prefix = format!("atelier-events-{port}=");
+    request
+        .headers()
+        .get_all(axum::http::header::COOKIE)
+        .iter()
+        .any(|header| {
+            header.to_str().ok().is_some_and(|cookies| {
+                cookies.split(';').any(|cookie| {
+                    cookie.trim().strip_prefix(&prefix).is_some_and(|token| {
+                        crate::infrastructure::session::same_secret(token, expected)
+                    })
+                })
+            })
+        })
+}
+
+pub(super) async fn session(
+    axum::extract::State(state): axum::extract::State<super::Shared>,
+) -> Response {
+    // This independent credential grants only the notification stream, never API access.
+    (
+        [(
+            axum::http::header::SET_COOKIE,
+            format!(
+                "atelier-events-{}={}; HttpOnly; SameSite=Strict; Path=/api/events",
+                state.port, state.event_token
+            ),
+        )],
+        axum::Json(serde_json::json!({"ok": true})),
+    )
+        .into_response()
 }
 
 fn notifications(
@@ -71,6 +99,24 @@ pub(super) fn response(
 mod tests {
     use super::*;
     use futures_util::StreamExt;
+
+    #[test]
+    fn stream_cookies_are_scoped_to_one_listener_and_compare_the_whole_secret() {
+        for (cookies, accepted) in [
+            ("unrelated=x; atelier-events-4328=synthetic", true),
+            ("atelier-events-4329=synthetic", false),
+            ("atelier-events-4328=synthetic-extra", false),
+            ("atelier-events-4328=wrong", false),
+            ("prefix-atelier-events-4328=synthetic", false),
+            ("", false),
+        ] {
+            let request = axum::http::Request::builder()
+                .header("cookie", cookies)
+                .body(axum::body::Body::empty())
+                .unwrap();
+            assert_eq!(authenticated(&request, 4328, "synthetic"), accepted);
+        }
+    }
 
     #[tokio::test]
     async fn slow_or_closing_subscribers_end_and_release_their_subscription() {

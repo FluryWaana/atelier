@@ -33,53 +33,37 @@ pub fn default_agent(
     body: &Document,
     windows: bool,
 ) -> Result<JsonString> {
-    let empty = RawValue::from_string("\"\"".into())?;
-    let repo = if body.truthy("repo")? {
-        body.raw("repo")
-    } else if settings.truthy("repo")? {
-        settings.raw("repo")
-    } else {
-        None
-    }
-    .unwrap_or(&empty);
+    let invalid = || CardFailure::Invalid("message.invalid_or_overly_long_text");
+    let repository = |document: &Document| -> Result<Option<String>> {
+        Ok(document
+            .get::<String>("repo")
+            .map_err(|_| invalid())?
+            .filter(|path| !path.is_empty()))
+    };
+    let repo = match repository(body)? {
+        Some(repo) => repo,
+        None => repository(settings)?.unwrap_or_default(),
+    };
     for project in projects {
-        let path = if project.truthy("repo")? {
-            project.raw("repo")
-        } else {
-            None
-        }
-        .unwrap_or(&empty);
-        let matches = if windows || (path.get().starts_with('"') && repo.get().starts_with('"')) {
-            let invalid = "(value || \"\").replaceAll is not a function";
-            let path = serde_json::from_str::<JsonString>(path.get()).map_err(|_| invalid)?;
-            let repo = serde_json::from_str::<JsonString>(repo.get()).map_err(|_| invalid)?;
-            crate::domain::projects::same_repository_units(&path, &repo, windows)
-        } else if [path, repo]
-            .iter()
-            .any(|raw| raw.get().starts_with(['{', '[', '"']))
-        {
-            false
-        } else {
-            serde_json::from_str::<Value>(path.get())? == serde_json::from_str::<Value>(repo.get())?
-        };
+        let path = repository(project)?.unwrap_or_default();
+        let matches = crate::domain::projects::same_repository(&path, &repo, windows);
         if matches {
-            if project.truthy("agent")? {
-                return Ok(project
-                    .get::<JsonString>("agent")
-                    .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
-                    .ok_or(CardFailure::Invalid("message.invalid_agent"))?);
+            if let Some(agent) = project
+                .get::<String>("agent")
+                .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+                .filter(|agent| !agent.is_empty())
+            {
+                return Ok(JsonString::from(agent.as_str()));
             }
             break;
         }
     }
-    if settings.truthy("agent")? {
-        Ok(settings
-            .get::<JsonString>("agent")
-            .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
-            .ok_or(CardFailure::Invalid("message.invalid_agent"))?)
-    } else {
-        Ok(JsonString::from("codex"))
-    }
+    let agent = settings
+        .get::<String>("agent")
+        .map_err(|_| CardFailure::Invalid("message.invalid_agent"))?
+        .filter(|agent| !agent.is_empty())
+        .unwrap_or_else(|| "codex".into());
+    Ok(JsonString::from(agent.as_str()))
 }
 
 pub(super) fn provider(settings: &Document, agent: &JsonString) -> Result<Document> {

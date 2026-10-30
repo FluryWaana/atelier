@@ -2265,11 +2265,11 @@
   {
     "body": {
       "title": "Task",
-      "repo": "\ud800"
+      "repo": "dossier-é🔧"
     },
     "projects": [
       {
-        "repo": "\ud800",
+        "repo": "dossier-é🔧",
         "agent": "claude"
       }
     ],
@@ -2282,7 +2282,7 @@
         "title": "Task",
         "description": "",
         "instructions": "",
-        "repo": "checked:\ud800",
+        "repo": "checked:dossier-é🔧",
         "agent": "claude",
         "model": "",
         "effort": "",
@@ -2296,12 +2296,12 @@
       "events": [
         [
           "agentFor",
-          "\ud800"
+          "dossier-é🔧"
         ],
         "id",
         [
           "repository",
-          "\ud800"
+          "dossier-é🔧"
         ],
         "timestamp",
         "timestamp"

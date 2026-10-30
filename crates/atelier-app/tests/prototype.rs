@@ -2861,15 +2861,128 @@ async fn template_routes_serialize_the_limit_and_preserve_it_across_restart() {
 }
 
 #[tokio::test]
+async fn time_routes_and_text_identifiers_reject_invalid_requests_before_writing() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    let (address, token, task) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let post = |path: &str| {
+        client
+            .post(format!("{address}{path}"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+    };
+    for path in ["/api/time", "/api/templates"] {
+        for id in [
+            json!(true),
+            json!(1),
+            json!([]),
+            json!({}),
+            json!(null),
+            json!(" "),
+        ] {
+            let response = post(path)
+                .json(&json!({
+                    "name":"Synthetic", "cardId":id, "seconds":60,
+                    "date":"2026-10-30", "startTime":"10:00:00", "description":"Synthetic"
+                }))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), 400);
+            assert_eq!(
+                response.json::<Value>().await.unwrap()["error"],
+                "message.invalid_card_id"
+            );
+        }
+    }
+    for path in ["/api/time/missing/unknown", "/api/time/missing/%65xport"] {
+        let response = post(path).json(&json!({})).send().await.unwrap();
+        assert_eq!(response.status(), 400);
+        assert_eq!(
+            response.json::<Value>().await.unwrap()["error"],
+            "message.unknown_time_route"
+        );
+    }
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["times"], json!([]));
+    assert!(
+        board["settings"]["taskTemplates"]
+            .as_array()
+            .is_none_or(Vec::is_empty)
+    );
+    let response = post("/api/cards")
+        .json(&json!({"title":"Synthetic", "unused":"é".repeat(110_000)}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    stop(&address, &token, task).await;
+}
+
+#[tokio::test]
 async fn events_authenticate_notify_commits_reconnect_and_end_on_shutdown() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();
     let (address, token, task) = start(data.path(), assets.path()).await;
     let client = reqwest::Client::new();
-    let url = format!("{address}/api/events?session={token}");
+    assert_eq!(
+        client
+            .get(format!("{address}/api/events?session={token}"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    assert_eq!(
+        client
+            .get(format!("{address}/api/events/session"))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    let credentials = client
+        .get(format!("{address}/api/events/session"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(credentials.status(), 200);
+    let cookie = credentials.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .to_owned();
+    assert!(cookie.contains("HttpOnly; SameSite=Strict; Path=/api/events"));
+    let cookie = cookie.split(';').next().unwrap();
+    assert!(!cookie.contains(&token));
+    for path in ["/api/state", "/api/events/session"] {
+        assert_eq!(
+            client
+                .get(format!("{address}{path}"))
+                .header("cookie", cookie)
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            401
+        );
+    }
+    let url = format!("{address}/api/events");
     assert_eq!(
         client
             .get(&url)
+            .header("cookie", cookie)
             .bearer_auth("wrong")
             .send()
             .await
@@ -2887,7 +3000,12 @@ async fn events_authenticate_notify_commits_reconnect_and_end_on_shutdown() {
             .status(),
         403
     );
-    let mut response = client.get(&url).send().await.unwrap();
+    let mut response = client
+        .get(&url)
+        .header("cookie", cookie)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), 200);
     assert_eq!(response.headers()["content-type"], "text/event-stream");
     assert_eq!(response.headers()["x-accel-buffering"], "no");
@@ -3088,7 +3206,7 @@ async fn authenticated_http_preserves_tasks_after_close_and_rotates_sessions() {
             .post(format!("{address}/api/cards"))
             .bearer_auth(&token)
             .header("x-local-request", "1")
-            .json(&json!({"title":"a".repeat(100_001)}))
+            .json(&json!({"title":"a".repeat(400_001)}))
             .send()
             .await
             .unwrap()

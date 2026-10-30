@@ -3,11 +3,10 @@ use atelier_core::{
     application::task_templates::{Result, TemplateRepository},
     document::Document,
 };
-use serde_json::value::RawValue;
 
 impl TemplateRepository for Store<'_> {
-    fn card(&self, id: Option<&RawValue>) -> Result<Option<Document>> {
-        self.document_input(Documents::Cards, id)
+    fn card(&self, id: &str) -> Result<Option<Document>> {
+        self.document(Documents::Cards, id)
     }
     fn settings(&self) -> Result<Document> {
         Store::settings(self)

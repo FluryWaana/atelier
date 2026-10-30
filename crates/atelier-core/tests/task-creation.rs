@@ -12,6 +12,35 @@ use std::cell::{Cell, RefCell};
 mod json;
 use json::equivalent;
 
+#[test]
+fn default_agent_validates_repository_text_and_matches_native_paths() {
+    let settings: Document =
+        serde_json::from_str(r#"{"repo":"C:/Synthetic/Repo","agent":"codex"}"#).unwrap();
+    let project: Document =
+        serde_json::from_str(r#"{"repo":"c:\\synthetic\\repo","agent":"claude"}"#).unwrap();
+    assert_eq!(
+        task_creation::default_agent(&settings, &[project], &Document::default(), true).unwrap(),
+        JsonString::from("claude")
+    );
+    for invalid in ["true", "1", "[]", "{}", "null", r#""\ud800""#] {
+        let body: Document = serde_json::from_str(&format!(r#"{{"repo":{invalid}}}"#)).unwrap();
+        assert_eq!(
+            task_creation::default_agent(&settings, &[], &body, false)
+                .unwrap_err()
+                .to_string(),
+            "message.invalid_or_overly_long_text"
+        );
+        let settings: Document =
+            serde_json::from_str(&format!(r#"{{"agent":{invalid}}}"#)).unwrap();
+        assert_eq!(
+            task_creation::default_agent(&settings, &[], &Document::default(), false)
+                .unwrap_err()
+                .to_string(),
+            "message.invalid_agent"
+        );
+    }
+}
+
 struct Context {
     scenario: Document,
     events: RefCell<Vec<Box<RawValue>>>,

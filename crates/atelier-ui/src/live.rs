@@ -81,7 +81,32 @@ impl BoardState {
     }
 
     pub fn listen(self, token: String) -> Result<(), String> {
-        let source = web_sys::EventSource::new(&format!("/api/events?session={token}"))
+        let owner = Owner::current().ok_or("message.automatic_refresh_is_unavailable")?;
+        let alive = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let cleanup = alive.clone();
+        on_cleanup(move || cleanup.store(false, std::sync::atomic::Ordering::Relaxed));
+        spawn_local(async move {
+            let result = match gloo_net::http::Request::get("/api/events/session")
+                .header("Authorization", &format!("Bearer {token}"))
+                .send()
+                .await
+            {
+                Ok(response) => crate::checked_response(response).await.map(|_| ()),
+                Err(_) => Err("message.automatic_refresh_is_unavailable".into()),
+            };
+            if !alive.load(std::sync::atomic::Ordering::Relaxed) {
+                return;
+            }
+            let result = result.and_then(|()| owner.with(|| self.connect(token)));
+            if let Err(message) = result {
+                self.sync_error.set(message);
+            }
+        });
+        Ok(())
+    }
+
+    fn connect(self, token: String) -> Result<(), String> {
+        let source = web_sys::EventSource::new("/api/events")
             .map_err(|_| "message.automatic_refresh_is_unavailable")?;
         let pending = Rc::new(Cell::new(false));
         let again = Rc::new(Cell::new(false));
