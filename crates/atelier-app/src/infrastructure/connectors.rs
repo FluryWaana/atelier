@@ -355,6 +355,7 @@ pub fn invocation(
         || ![
             protocol::Method::Check,
             protocol::Method::TicketsSearch,
+            protocol::Method::TicketsSync,
             protocol::Method::TicketsRead,
             protocol::Method::TicketsTransitions,
             protocol::Method::TimePreview,
@@ -405,6 +406,12 @@ pub fn invocation(
 }
 pub fn record(store: &Store<'_>, id: &str, expected: u64, report: Report) -> Result<()> {
     protocol::report_items(&report)?;
+    if report.method == protocol::Method::TicketsSync {
+        let sync: protocol::TicketSync = serde_json::from_value(report.output.clone())?;
+        if matches!(sync, protocol::TicketSync::Ready { .. }) {
+            super::connector_tickets::page(&report)?;
+        }
+    }
     if matches!(
         report.method,
         protocol::Method::TicketsSearch | protocol::Method::TicketsRead
@@ -560,6 +567,7 @@ mod tests {
         let store = Store::new(&connection);
         let mut valid = candidate();
         valid.manifest.methods.extend([
+            protocol::Method::TicketsSync,
             protocol::Method::TicketsSearch,
             protocol::Method::TicketsRead,
         ]);

@@ -72,7 +72,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_str)
         .unwrap_or("success");
     let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixture-root","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
+        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSync","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixture-root","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
     )?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
@@ -88,6 +88,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             Method::RepositoriesPreview | Method::RepositoriesRefresh | Method::RepositoriesReview
         ) {
             fake_repository::observation(&request)?
+        } else if request.method == Method::TicketsSync {
+            if request
+                .secrets
+                .get("token")
+                .is_none_or(|token| token.is_empty())
+            {
+                json!({"state":"configurationRequired"})
+            } else {
+                json!({"state":"ready","page":{"items":[ticket(&ticket_status(&request)?)],"next":null}})
+            }
         } else if request.method == Method::TicketsSearch {
             if fault.starts_with("reset-") {
                 if request.input["cursor"].is_null() {

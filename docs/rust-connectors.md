@@ -65,7 +65,7 @@ Les champs password sont distincts des réglages publics et ne peuvent apparaît
 | Groupe | Méthodes |
 | --- | --- |
 | Description/diagnostic | describe, check |
-| Tickets | ticketsSearch, ticketsRead, ticketsReset, ticketsCreate, ticketsTransitions, ticketsTransition |
+| Tickets | ticketsSync, ticketsSearch, ticketsRead, ticketsReset, ticketsCreate, ticketsTransitions, ticketsTransition |
 | Dépôts | repositoriesPreview, repositoriesPublish, repositoriesRefresh, repositoriesReview |
 | Temps | timePreview, timeSend, timeReconcile |
 | Actions/rapprochement | action, reconcile |
@@ -142,3 +142,13 @@ L’écran du connecteur offre choix de tâche, titre/description/cible et broui
 Scénarios écrits : `xtask/tests/connector-repositories.rs` utilise deux commits réels, un worktree géré, le faux module compilé et quatre vrais processus du moteur. Il couvre plan module, perte de réponse après effet synthétique `create_new`, rapprochement sans second effet, review/revalidation/état prêt, refus d’une modification de source par le module, projection sans contexte privé et invalidation après nouvelle révision. `xtask/src/ui_repositories.rs`, raccordé au parcours WebDriver des connecteurs, prépare de vrais commits et couvre les boutons aperçu/journal/reprise, puis un profil commande synthétique, une review et sa revalidation avec critères humains inchangés. Ces fixtures n’appellent aucun compte ni réseau distant. Elles ne constituent pas un parcours WebDriver TLS ; les scénarios HTTPS natifs restent distincts dans `rust-synthetic-tls.md`.
 
 **État exact : implémentation et scénarios écrits ; formatage effectué, aucun build/test/Clippy/WebDriver exécuté. Aucune réussite ni qualification de plateforme déduite du code.**
+
+### Synchronisation depuis le Kanban
+
+Un module sélectionnable comme source de tickets déclare `ticketsSync`. Cette méthode est une lecture distante. Elle reçoit `input.cursor`, nul au premier appel. Les filtres viennent des réglages enregistrés du module.
+
+Réponse configurée : `{"state":"ready","page":{"items":[Ticket],"next":null}}`. Les tickets et le curseur respectent les mêmes limites que `ticketsSearch`. Réponse sans configuration : `{"state":"configurationRequired"}`. Ce résultat seul ouvre les paramètres. Une erreur réseau ou une autorisation refusée reste affichée sur le Kanban.
+
+Le bouton appelle cette méthode directement puis importe les tickets dans le projet sélectionné, par groupes de 20. Aucun dialogue de sélection ni confirmation supplémentaire. Les cartes déjà liées sont conservées, y compris leur contenu et leur avancement local. Les nouvelles cartes utilisent les règles d’import existantes. Le mode local reste toujours disponible et masque ce bouton.
+
+La récupération est incrémentale et bornée à 100 pages, 8 Mio de réponses et 180 secondes entre les appels. Les imports terminés sont conservés si une page échoue. Une nouvelle tentative ne crée pas de doublons. Une pagination répétée est refusée. Azure et le module de démonstration déclarent cette action. Jira utilise son adaptateur intégré avec le même comportement utilisateur.

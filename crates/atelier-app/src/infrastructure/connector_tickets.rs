@@ -293,6 +293,10 @@ mod tests {
         let connection = super::super::store::open(&home.path().join("synthetic.sqlite")).unwrap();
         let store = Store::new(&connection);
         let mut profile = profile();
+        let report = profile.report.as_mut().unwrap();
+        report.output = json!({"state":"ready","page":report.output});
+        report.method = protocol::Method::TicketsSync;
+        profile.manifest.methods.push(protocol::Method::TicketsSync);
         settings(&store, &profile);
         let project:Document=serde_json::from_str(&json!({"id":"synthetic-project","name":"Synthetic project","repo":home.path().to_string_lossy()}).to_string()).unwrap();
         store.put(Documents::Projects, &project).unwrap();

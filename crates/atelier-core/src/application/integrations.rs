@@ -55,12 +55,7 @@ pub fn catalog(settings: &Document) -> serde_json::Result<Vec<Provider>> {
     {
         let methods = &installed.manifest.methods;
         let mut kinds = Vec::new();
-        if methods.iter().any(|method| {
-            matches!(
-                method,
-                Method::TicketsSearch | Method::TicketsRead | Method::TicketsCreate
-            )
-        }) {
+        if methods.contains(&Method::TicketsSync) {
             kinds.push(Kind::Tickets);
         }
         if [Method::TimePreview, Method::TimeSend, Method::TimeReconcile]

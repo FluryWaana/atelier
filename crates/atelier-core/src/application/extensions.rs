@@ -336,6 +336,12 @@ pub struct TicketPage {
     pub next: Option<String>,
 }
 #[derive(Deserialize, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase", deny_unknown_fields)]
+pub enum TicketSync {
+    Ready { page: TicketPage },
+    ConfigurationRequired,
+}
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TicketImport {
     pub expected_revision: u64,
@@ -392,6 +398,14 @@ pub fn report_items(report: &Report) -> Result<Vec<ReportItem>> {
 
 pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
     let page = match method {
+        Method::TicketsSync => match serde_json::from_value::<TicketSync>(output.clone())
+            .map_err(|_| "message.invalid_connector_ticket_page")?
+        {
+            TicketSync::Ready { page } => page,
+            TicketSync::ConfigurationRequired => {
+                return Err("message.ticket_sync_configuration_required");
+            }
+        },
         Method::TicketsSearch => serde_json::from_value::<TicketPage>(output.clone())
             .map_err(|_| "message.invalid_connector_ticket_page")?,
         Method::TicketsRead => TicketPage {
@@ -435,6 +449,7 @@ pub enum Method {
     Describe,
     Check,
     TicketsSearch,
+    TicketsSync,
     TicketsRead,
     TicketsReset,
     TicketsCreate,
@@ -816,6 +831,39 @@ pub fn decode_reply(bytes: &[u8], request: &Request) -> Result<Reply> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn synchronization_declares_read_only_pages_or_missing_configuration() {
+        use super::*;
+        assert_eq!(Method::TicketsSync.effect(), Effect::Read);
+        let missing = serde_json::json!({"state":"configurationRequired"});
+        assert!(matches!(
+            serde_json::from_value::<TicketSync>(missing.clone()).unwrap(),
+            TicketSync::ConfigurationRequired
+        ));
+        assert!(ticket_page(Method::TicketsSync, &missing).is_err());
+        let ready = serde_json::json!({"state":"ready","page":{"items":[],"next":"page-2"}});
+        assert_eq!(
+            ticket_page(Method::TicketsSync, &ready)
+                .unwrap()
+                .next
+                .as_deref(),
+            Some("page-2")
+        );
+        assert!(
+            ticket_page(
+                Method::TicketsSync,
+                &serde_json::json!({"state":"ready","page":{"items":[],"next":""}})
+            )
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<TicketSync>(
+                serde_json::json!({"state":"configurationRequired","items":[]})
+            )
+            .is_err()
+        );
+    }
+
     use super::*;
     #[test]
     fn structured_report_items_have_explicit_text_and_count_bounds() {

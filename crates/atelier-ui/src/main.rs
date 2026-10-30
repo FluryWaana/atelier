@@ -27,7 +27,6 @@ mod git_push;
 mod i18n;
 mod integration_choice;
 mod jira;
-mod jira_batch;
 mod jira_creation;
 mod jira_refresh;
 mod jira_task;
@@ -45,6 +44,7 @@ mod settings;
 mod task_editor;
 mod tempo;
 mod tempo_export;
+mod ticket_sync;
 mod time;
 mod time_report;
 mod updates;
@@ -403,6 +403,7 @@ fn App() -> impl IntoView {
         template_candidate.set(None);
     });
     let error = RwSignal::new(String::new());
+    let ticket_sync_notice = RwSignal::new(String::new());
     let pending = RwSignal::new(false);
     let selected = RwSignal::new(None::<Card>);
     let show_projects = RwSignal::new(false);
@@ -958,12 +959,12 @@ fn App() -> impl IntoView {
                 <label class="project-choice" for="board-project">{move || i18n.text("message.project")}<select id="board-project" prop:value=move ||repository.get() on:change=move |event| {repository.set(event_target_value(&event));focus_filter.set("all".into());search.set(String::new());}><option value="">{move ||i18n.text("message.all_projects")}</option><For each=move ||projects.get() key=|project|field(project,"id") children=move |project|view!{<option value=field(&project,"repo")>{field(&project,"name")}</option>} /></select></label>
                 <input id="board-search" type="search" hidden=move || view.get()!=WorkspaceView::Board placeholder=move ||i18n.text("message.title_ticket_or_description") aria-label=move ||i18n.text("message.search_tasks") prop:value=move ||search.get() on:input=move |event|search.set(event_target_value(&event)) />
                 <button id="configure-columns" hidden=move||view.get()!=WorkspaceView::Board type="button" on:click=move |_|show_kanban_settings.set(true)>{move||i18n.text("message.configure_kanban_columns")}</button>
-                <button id="sync-button" type="button" hidden=move||board.settings.get().string_equals("ticketProvider","local").unwrap_or(true) on:click=move |_| {settings_section.set("tickets");navigate.run(WorkspaceView::Settings);}>{move ||i18n.text("message.synchronize_tickets")}</button>
+                <button id="sync-button" type="button" hidden=move||board.settings.get().string_equals("ticketProvider","local").unwrap_or(true) disabled=move||pending.get() on:click=move |_| {if pending.get_untracked(){return;}let Ok(credential)=token.get_value() else{return;};ticket_sync_notice.set("message.ticket_sync_running".into());let provider=field(&board.settings.get_untracked(),"ticketProvider");let project=projects.with_untracked(|items|items.iter().find(|project|field(project,"repo")==repository.get_untracked()).cloned());pending.set(true);error.set(String::new());spawn_local(async move {let result=crate::ticket_sync::synchronize(&credential,&provider,project).await;let _=board.refresh(&credential).await;pending.set(false);ticket_sync_notice.set(String::new());match result {Ok(crate::ticket_sync::Outcome::ConfigurationRequired)=>{settings_section.set("tickets");navigate.run(WorkspaceView::Settings);},Ok(crate::ticket_sync::Outcome::Complete)=>ticket_sync_notice.set("message.ticket_sync_complete".into()),Err(message)=>error.set(message)}});}>{move ||i18n.text("message.synchronize_tickets")}</button>
             </section>
             <p class="connection-notice" id="live-status" role="status" hidden=move || !workspace_controls() || token.get_value().is_err() || (board.connected.get() && board.sync_error.get().is_empty()) data-connected=move ||board.connected.get().to_string()>{move ||i18n.text(&(if !board.sync_error.get().is_empty(){board.sync_error.get()}else{"message.updates_interrupted_reconnecting".into()}))}</p>
             <div id="focus-bar" class="focus-bar" hidden=move || view.get()!=WorkspaceView::Board || cards.get().is_empty()><span class="results-count"><strong id="total">{move ||visible(false).into_iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),&focus_filter.get())).count()}</strong>" "{move ||i18n.text("message.task_s")}</span><div class="focus-options">{[("all","message.all"),("review","message.to_review"),("attention","message.to_resume")].into_iter().map(move |(filter,label)|view!{<button data-focus=filter aria-pressed=move ||(focus_filter.get()==filter).to_string() on:click=move |_|focus_filter.set(filter.into())>{move ||i18n.text(label)}<span hidden=filter=="all">{move ||visible(false).iter().filter(|card|matches_focus(card,&cards.get(),&board.runs.get(),filter)).count()}</span></button>}).collect_view()}</div><span class="keyboard-hint"><kbd>"/"</kbd>" "{move ||i18n.text("message.search_2fe057eb")}" · "<kbd>"N"</kbd>" "{move ||i18n.text("message.new_task_b7d039ad")}</span></div>
             <crate::time::TimerBanner board token on_task=open_task />
-            <p role="alert" id="error">{move || i18n.text(&error.get())}</p><p class="loading" role="status" hidden=move || !loading.get()>{move ||i18n.text("message.loading_the_board")}</p>
+            <p id="ticket-sync-notice" role="status" hidden=move||ticket_sync_notice.get().is_empty()>{move||i18n.text(&ticket_sync_notice.get())}</p><p role="alert" id="error">{move || i18n.text(&error.get())}</p><p class="loading" role="status" hidden=move || !loading.get()>{move ||i18n.text("message.loading_the_board")}</p>
             <section id="welcome" class="welcome-guide" aria-labelledby="welcome-title" hidden=move || !onboarding()>
                 <div class="welcome-intro"><h2 id="welcome-title">{move ||i18n.text("message.prepare_your_first_task")}</h2><p>{move ||i18n.text("message.welcome_task_intro")}</p></div>
                 <div class="welcome-paths">

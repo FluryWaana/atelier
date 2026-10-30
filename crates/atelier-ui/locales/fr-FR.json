@@ -132,7 +132,7 @@
   "message.changing_the_jira_address_account_or_version_removes_the_previou": "Changer l’adresse, le compte ou la version de Jira retire le jeton précédent si tu n’en fournis pas un nouveau.",
   "message.issues_to_search_jql": "Tickets à rechercher (JQL)",
   "message.save_jira_connection": "Enregistrer la connexion Jira",
-  "message.reload_jira_connection": "Recharger la connexion Jira",
+  "message.reload_jira_connection": "Recharger les réglages",
   "message.search_jira_issues": "Rechercher les tickets Jira",
   "message.jira_connection_saved": "Connexion Jira enregistrée.",
   "message.searching_jira": "Recherche Jira en cours…",
@@ -2928,5 +2928,13 @@
   "message.select_one_service_to_restart": "Sélectionne un seul service à relancer.",
   "message.port_inspection_busy": "Inspection des ports occupée.",
   "message.port_inspection_timeout": "Inspection des ports trop lente.",
-  "message.service_supervisor_unconfirmed_stop": "Le superviseur du service s’est arrêté sans confirmation."
+  "message.service_supervisor_unconfirmed_stop": "Le superviseur du service s’est arrêté sans confirmation.",
+  "message.ticket_sync_configuration_required": "Configure le module de tickets.",
+  "message.ticket_sync_select_project": "Sélectionne un projet pour récupérer ses tickets.",
+  "message.ticket_sync_unsupported": "Ce module ne propose pas la synchronisation des tickets.",
+  "message.ticket_sync_pagination_limit": "Récupération interrompue. Les tickets déjà récupérés sont conservés.",
+  "message.ticket_sync_running": "Récupération des tickets…",
+  "message.ticket_sync_complete": "Tickets récupérés.",
+  "message.cancel_jira_token_removal": "Annuler le retrait du jeton",
+  "message.jira_token_removal_pending": "Le jeton sera retiré à l’enregistrement."
 }

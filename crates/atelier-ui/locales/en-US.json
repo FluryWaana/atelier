@@ -132,7 +132,7 @@
   "message.changing_the_jira_address_account_or_version_removes_the_previou": "Changing the Jira address, account or version removes the previous token unless you provide a new one.",
   "message.issues_to_search_jql": "Issues to search (JQL)",
   "message.save_jira_connection": "Save Jira connection",
-  "message.reload_jira_connection": "Reload Jira connection",
+  "message.reload_jira_connection": "Reload settings",
   "message.search_jira_issues": "Search Jira issues",
   "message.jira_connection_saved": "Jira connection saved.",
   "message.searching_jira": "Searching Jira…",
@@ -2928,5 +2928,13 @@
   "message.select_one_service_to_restart": "Select one service to restart.",
   "message.port_inspection_busy": "Port inspection is busy.",
   "message.port_inspection_timeout": "Port inspection timed out.",
-  "message.service_supervisor_unconfirmed_stop": "The service supervisor stopped without confirmation."
+  "message.service_supervisor_unconfirmed_stop": "The service supervisor stopped without confirmation.",
+  "message.ticket_sync_configuration_required": "Configure the ticket module.",
+  "message.ticket_sync_select_project": "Select a project to retrieve its tickets.",
+  "message.ticket_sync_unsupported": "This module does not support ticket synchronization.",
+  "message.ticket_sync_pagination_limit": "Retrieval stopped. Tickets already retrieved were kept.",
+  "message.ticket_sync_running": "Retrieving tickets…",
+  "message.ticket_sync_complete": "Tickets retrieved.",
+  "message.cancel_jira_token_removal": "Cancel token removal",
+  "message.jira_token_removal_pending": "The token will be removed when you save."
 }

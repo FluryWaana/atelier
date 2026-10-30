@@ -9,7 +9,7 @@ use serde_json::json;
 
 fn settings() -> Document {
     serde_json::from_value(json!({"processConnectors":[{
-        "manifest":{"id":"synthetic-tracker","name":"Synthetic tracker","description":"Synthetic module","sourceLocale":"en-US","methods":["check","ticketsSearch","ticketsRead","timePreview","timeSend","timeReconcile"],"fields":[],"tabs":[]},
+        "manifest":{"id":"synthetic-tracker","name":"Synthetic tracker","description":"Synthetic module","sourceLocale":"en-US","methods":["check","ticketsSync","ticketsSearch","ticketsRead","timePreview","timeSend","timeReconcile"],"fields":[],"tabs":[]},
         "binary":{"path":"synthetic-agent","sha256":"a".repeat(64)},"revision":1,"values":{},"report":null
     }],"ticketLink":{"connector":"jira","id":"42"},"timeOperation":{"provider":"tempo","state":"uncertain"}})).unwrap()
 }

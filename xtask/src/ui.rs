@@ -1149,86 +1149,9 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     click(client, "#manage-settings").await?;
     click(client, "#settings-tab-tickets").await?;
     choose_integration(client, "ticketProvider", "jira").await?;
-    wait_dom(client,"return document.querySelector('.jira-batch-select[data-jira-card=\"jira-batch-1\"]')?.disabled === false;",vec![]).await?;
-    for index in 1..=2 {
-        click(
-            client,
-            &format!(".jira-batch-select[data-jira-card='jira-batch-{index}']"),
-        )
-        .await?;
-    }
-    click(client, "#recover-jira-batch").await?;
-    for index in 1..=2 {
-        click(
-            client,
-            &format!("article[data-jira-card='jira-batch-{index}'] .jira-batch-apply"),
-        )
-        .await?;
-    }
-    click(client, "#confirm-jira-batch").await?;
-    click(client, "#overview-button").await?;
-    click(client, "#keep-settings").await?;
-    wait_dom(
-        client,
-        "return document.querySelector('#confirm-jira-batch')?.checked === true;",
-        vec![],
-    )
-    .await?;
-    let response=http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"description":"Human concurrent edit","expected":{"description":"Keep batch description"}})).send().await?;
-    if response.status() != reqwest::StatusCode::CONFLICT
-        || !response.json::<serde_json::Value>().await?["error"]
-            .as_str()
-            .is_some_and(|error| error.contains("liée à un ticket"))
-    {
-        return Err("La description liée au ticket doit refuser une modification locale.".into());
-    }
-    http.patch(format!("{address}/api/cards/jira-batch-2")).bearer_auth(&token).header("x-local-request","1").json(&json!({"instructions":"Human concurrent instructions","expected":{"instructions":"Keep batch instructions"}})).send().await?.checked_status().await?;
-    wait_dom(
-        client,
-        "return document.querySelector('#confirm-jira-batch')?.checked === false;",
-        vec![],
-    )
-    .await?;
-    click(client, "#confirm-jira-batch").await?;
-    click(client, "#apply-jira-batch").await?;
-    wait_dom(client,"return document.querySelector('article[data-jira-card=\"jira-batch-1\"]')?.textContent.includes('Aperçu appliqué.') && document.querySelector('article[data-jira-card=\"jira-batch-2\"]')?.textContent.includes('changé') && document.querySelector('#clear-jira-batch')?.disabled === false;",vec![]).await?;
-    let batch: atelier_core::contracts::Board = http
-        .get(format!("{address}/api/state"))
-        .bearer_auth(&token)
-        .send()
-        .await?
-        .checked_status()
-        .await?
-        .json()
-        .await?;
-    let first = batch
-        .cards
-        .iter()
-        .find(|card| card.id == "jira-batch-1")
-        .ok_or("Batch card absent")?;
-    let second = batch
-        .cards
-        .iter()
-        .find(|card| card.id == "jira-batch-2")
-        .ok_or("Batch card absent")?;
-    if first.title != atelier_core::document::JsonString::from("Remote batch 1")
-        || !first.fields.string_equals("status", "review")?
-        || !first
-            .fields
-            .string_equals("instructions", "Keep batch instructions")?
-        || !second
-            .fields
-            .string_equals("description", "Keep batch description")?
-        || !second
-            .fields
-            .string_equals("instructions", "Human concurrent instructions")?
-        || second.title != atelier_core::document::JsonString::from("Local batch 2")
-    {
-        return Err(
-            "La synchronisation en lot a perdu une modification humaine ou masqué un échec.".into(),
-        );
-    }
-    click(client, "#clear-jira-batch").await?;
+    show_board(client).await?;
+    click(client, "#sync-button").await?;
+    wait_dom(client,"return document.querySelector('#settings-panel-tickets')?.hidden === false && !document.querySelector('#jira-batch-heading');",vec![]).await?;
     click(client, "#overview-button").await?;
     client
         .goto(&format!("{address}/tasks/jira-refresh"))
@@ -3045,7 +2968,7 @@ async fn settings_scenario(
 ) -> Result<()> {
     let _ = data;
     click(client, "#manage-settings").await?;
-    wait_dom(client,"return !document.querySelector('#settings-repo') && !document.querySelector('#settings-branch') && !document.querySelector('#settings-jira-enabled');",vec![]).await?;
+    wait_dom(client,"return !document.querySelector('#settings-repo') && !document.querySelector('#settings-branch') && !document.querySelector('#settings-jira-enabled') && !document.querySelector('#jira-batch-heading');",vec![]).await?;
     client.execute("const select=document.querySelector('#settings-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     click(client, "#save-settings").await?;
     wait_dom(client,"return document.querySelector('#settings-notice')?.textContent === 'Paramètres enregistrés.' && document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;
@@ -3147,15 +3070,19 @@ async fn settings_scenario(
     click(client, "#reload-jira").await?;
     click(client, "#confirm-reload-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-query')?.value === 'project = REMOTE' && document.querySelector('#jira-token')?.value === '' && document.querySelector('#search-jira')?.disabled === false;",vec![]).await?;
-    wait_dom(client, "return document.querySelector('#forge-clear-token')?.tagName === 'BUTTON' && document.querySelector('#forge-clear-token')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions') && document.querySelector('#reload-forges')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions');", vec![]).await?;
-    click(client, "#forge-clear-token").await?;
-    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === true && document.querySelector('#forge-token-help')?.textContent.includes('retiré') && document.querySelector('#save-forge')?.disabled === false;", vec![]).await?;
-    click(client, "#forge-clear-token").await?;
-    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === false && document.querySelector('#save-forge')?.disabled === true;", vec![]).await?;
     wait_dom(client,"return document.querySelector('#jira-connection-editor')?.open === false && document.querySelector('#jira-connection-summary')?.textContent.includes('https://synthetic-one.example.test') && document.querySelector('#jira-query')?.offsetParent !== null;",vec![]).await?;
     click(client, "#edit-jira-connection").await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#jira-clear-token')?.tagName === 'BUTTON';",
+        vec![],
+    )
+    .await?;
     click(client, "#jira-clear-token").await?;
-    wait_dom(client, "return document.querySelector('#forge-clear-token')?.hidden === true && document.querySelector('#forge-token')?.disabled === false;", vec![]).await?;
+    wait_dom(client,"return document.querySelector('#jira-clear-token')?.getAttribute('aria-pressed') === 'true' && document.querySelector('#jira-token')?.disabled === true;",vec![]).await?;
+    click(client, "#jira-clear-token").await?;
+    wait_dom(client,"return document.querySelector('#jira-clear-token')?.getAttribute('aria-pressed') === 'false' && document.querySelector('#jira-token')?.disabled === false;",vec![]).await?;
+    click(client, "#jira-clear-token").await?;
     click(client, "#save-jira").await?;
     wait_dom(client,"return document.querySelector('#jira-notice')?.textContent === 'Connexion Jira enregistrée.' && document.querySelector('#search-jira')?.disabled === true && document.querySelector('#save-jira')?.disabled === true;",vec![]).await?;
     click(client, "#settings-tab-forges").await?;
@@ -3215,9 +3142,15 @@ async fn settings_scenario(
     click(client, "#reload-forges").await?;
     click(client, "#confirm-reload-forges").await?;
     wait_dom(client,"return document.querySelector('#forge-base')?.value === 'https://github-synthetic.example.test' && document.querySelector('#forge-token')?.value === '' && document.querySelector('#save-forge')?.disabled === true;",vec![]).await?;
+    wait_dom(client, "return document.querySelector('#forge-clear-token')?.tagName === 'BUTTON' && document.querySelector('#forge-clear-token')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions') && document.querySelector('#reload-forges')?.closest('.forge-actions') === document.querySelector('#save-forge')?.closest('.forge-actions');", vec![]).await?;
+    click(client, "#forge-clear-token").await?;
+    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === true && document.querySelector('#forge-token-help')?.textContent.includes('retiré') && document.querySelector('#save-forge')?.disabled === false;", vec![]).await?;
+    click(client, "#forge-clear-token").await?;
+    wait_dom(client, "return document.querySelector('#forge-token')?.disabled === false && document.querySelector('#save-forge')?.disabled === true;", vec![]).await?;
     click(client, "#forge-clear-token").await?;
     click(client, "#save-forge").await?;
     wait_dom(client,"return document.querySelector('#save-forge')?.disabled === true && document.querySelector('#forge-notice')?.textContent.includes('Aucun accès distant vérifié');",vec![]).await?;
+    wait_dom(client, "return document.querySelector('#forge-clear-token')?.hidden === true && document.querySelector('#forge-token')?.disabled === false;", vec![]).await?;
     // Jira changed above: read the current scope before entering a new token.
     click(client, "#settings-tab-time").await?;
     client.execute("const select=document.querySelector('#timeProvider');select.value='tempo';select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
@@ -3479,6 +3412,29 @@ async fn connectors_scenario(
         .await?
         .json()
         .await?;
+    show_board(client).await?;
+    client.execute("const select=document.querySelector('#board-project');select.value=arguments[0];select.dispatchEvent(new Event('change',{bubbles:true}));",vec![project["repo"].clone()]).await?;
+    click(client, "#sync-button").await?;
+    wait_dom(client,"return document.querySelector('#ticket-sync-notice')?.textContent === 'Tickets récupérés.' && !document.querySelector('dialog[open]') && document.querySelector('#board-project')?.offsetParent !== null;",vec![]).await?;
+    let synchronized: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if synchronized["cards"]
+        .as_array()
+        .ok_or("Cartes absentes")?
+        .iter()
+        .filter(|card| card["ticket"]["connector"] == "extension:synthetic-extension")
+        .count()
+        != 1
+    {
+        return Err("La synchronisation directe a créé un doublon.".into());
+    }
     let mut imported = state["cards"]
         .as_array()
         .ok_or("Cartes absentes")?

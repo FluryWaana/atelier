@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 fn manifest() -> Manifest {
     serde_json::from_value(json!({
         "id":"demo","name":"Connecteur de démonstration","description":"Exemple Rust synthétique, sans compte ni réseau.","sourceLocale":"fr-FR",
-        "methods":["check","ticketsSearch","ticketsRead","action"],
+        "methods":["check","ticketsSearch","ticketsSync","ticketsRead","action"],
         "fields":[{"id":"title","label":"Titre du ticket de démonstration","kind":"text","options":[],"credentialScope":false}],
         "tabs":[{"id":"diagnostic","label":"Diagnostic démo","description":"Cet onglet est déclaré par le module.","actions":[{"id":"count","label":"Compter les tickets importés","effect":"read"}]}],
         "translations":{"en-US":{"Connecteur de démonstration":"Demo connector","Exemple Rust synthétique, sans compte ni réseau.":"Synthetic Rust example, without an account or network.","Titre du ticket de démonstration":"Demo ticket title","Diagnostic démo":"Demo diagnostics","Cet onglet est déclaré par le module.":"This tab is declared by the module.","Compter les tickets importés":"Count imported tickets"}}
@@ -47,6 +47,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Method::Check => (
             "Démonstration locale uniquement ; aucun accès distant vérifié.",
             json!({"available":true,"message":"Aucun appel réseau ni écriture distante."}),
+        ),
+        Method::TicketsSync => (
+            "Un ticket synthétique",
+            json!({"state":"ready","page":{"items":[ticket],"next":null}}),
         ),
         Method::TicketsSearch => (
             "Un ticket synthétique",
