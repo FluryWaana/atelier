@@ -565,3 +565,70 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
     );
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore = "compiles a second native application version for package regression"]
+    async fn compiled_successor_preserves_its_runtime_version_and_can_be_packaged() {
+        let temporary = tempfile::tempdir().unwrap();
+        let mut parts = payload::version_parts(env!("CARGO_PKG_VERSION")).unwrap();
+        parts[2] += 1;
+        let next = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
+        let binary = next_binary(temporary.path(), &next).unwrap();
+        let output = command(&binary).arg("inspect-runtime").output().unwrap();
+        assert!(output.status.success());
+        let runtime: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(runtime["version"], next);
+        let assets = temporary.path().join("assets");
+        std::fs::create_dir(&assets).unwrap();
+        for (name, content) in [
+            ("index.html", &b"synthetic index"[..]),
+            ("atelier-loader.js", &b"synthetic loader"[..]),
+            ("atelier-ui-test.js", &b"synthetic bindings"[..]),
+            ("atelier-ui-test_bg.wasm", &b"\0asm\x01\0\0\0"[..]),
+            ("style-test.css", &b"synthetic style"[..]),
+        ] {
+            std::fs::write(assets.join(name), content).unwrap();
+        }
+        std::fs::write(
+            temporary.path().join("third-party-notices.txt"),
+            "Atelier Rust third-party notices\nSynthetic regression fixture only.\n",
+        )
+        .unwrap();
+        update_package::generate_synthetic(&temporary.path().join("keys")).unwrap();
+        let (archive, _) = archive(temporary.path(), "successor", &binary, &assets, &next).unwrap();
+        package_archive::verify(&archive, payload::native_target().unwrap()).unwrap();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+        let data = temporary.path().join("synthetic-data");
+        let args = [
+            "launch".into(),
+            "--data-dir".into(),
+            data.clone().into_os_string(),
+            "--assets".into(),
+            assets.into_os_string(),
+            "--port".into(),
+            port.to_string().into(),
+            "--no-browser".into(),
+        ];
+        let launched = tokio::time::timeout(
+            Duration::from_secs(20),
+            crate::package_delivery::cli(&binary, &args),
+        )
+        .await;
+        let observed = LocalHttp::new()
+            .unwrap()
+            .authenticated_health(&format!("http://127.0.0.1:{port}"), || {
+                session::read_optional(&data)
+            })
+            .await;
+        let stopped = launcher::stop(&data, port).await;
+        launched.unwrap().unwrap();
+        assert_eq!(observed.unwrap().unwrap()["version"], next);
+        stopped.unwrap();
+    }
+}

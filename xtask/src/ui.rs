@@ -271,7 +271,19 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
                     "chrome"
                 }),
             );
-            capabilities.insert(if browser == "edge" { "ms:edgeOptions" } else { "goog:chromeOptions" }.into(), json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]}));
+            let mut options = json!({"args":["--headless=new", "--disable-gpu", "--no-first-run", "--window-size=1280,900"]});
+            if let Ok(binary) = std::env::var("ATELIER_TEST_BROWSER_BINARY") {
+                options["binary"] = json!(binary);
+            }
+            capabilities.insert(
+                if browser == "edge" {
+                    "ms:edgeOptions"
+                } else {
+                    "goog:chromeOptions"
+                }
+                .into(),
+                options,
+            );
         }
         "firefox" => {
             capabilities.insert("browserName".into(), json!("firefox"));
@@ -1153,6 +1165,8 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
                 .display()
         );
         database.call(move |store| {
+            // Match the application boundary, including Windows short-path aliases.
+            let brainstorm_repo = atelier_core::application::task_creation::CreationContext::repository(store, &serde_json::value::to_raw_value(&brainstorm_repo)?)?;
             store.put(Documents::Runs,&json!({"id":"usage-fixture","cardId":"jira-refresh","agentType":"codex","agent":"synthetic-usage-profile","model":"synthetic-usage-model","status":"completed","startedAt":"2026-10-25T10:00:00Z","usage":{"inputTokens":11,"cachedInputTokens":null,"outputTokens":2}}))?;
             // Report fixture only: no agent execution or remote identity proof is implied.
             store.put(Documents::Cards,&json!({"id":"review-report","title":"Synthetic review report","status":"todo","repo":"","checklist":[{"text":"Synthetic review criterion","done":false}]}))?;
@@ -1746,6 +1760,27 @@ async fn brainstorm_scenario(
         .collect();
     if converted.len() != 1 || !converted[0].fields.string_equals("status", "todo")? {
         return Err("La conversion de brainstorm est absente ou dupliquée.".into());
+    }
+    let project = board
+        .projects
+        .iter()
+        .find(|project| {
+            project
+                .string_equals("id", "brainstorm-project")
+                .unwrap_or(false)
+        })
+        .ok_or("Projet synthétique absent après conversion.")?;
+    if !atelier_core::domain::projects::same_repository(
+        &project
+            .get::<String>("repo")?
+            .ok_or("Dépôt du projet synthétique absent.")?,
+        &converted[0]
+            .fields
+            .get::<String>("repo")?
+            .ok_or("Dépôt de la tâche convertie absent.")?,
+        cfg!(windows),
+    ) {
+        return Err("Le projet synthétique et la tâche convertie doivent utiliser le même chemin de dépôt normalisé.".into());
     }
     let fixture = crate::target()
         .join("debug")

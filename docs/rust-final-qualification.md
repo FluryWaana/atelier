@@ -308,3 +308,28 @@ Les journaux des livraisons Linux x64 et ARM, macOS ARM et Windows montrent que 
 Edge passe les parcours application, diagnostics et updates. Le parcours Jira échoue plus loin, avant la vérification des sources, sur un bouton `start-verification` désactivé. Le journal et la capture disponibles ne suffisent pas à établir lequel des gardes le désactive. Une nouvelle exécution locale ciblée Edge/Jira a réussi. Cet échec CI reste ouvert, sans délai augmenté ni nouvelle tentative automatique. En cas de nouvel échec, le parcours fournira aussi l'état synthétique de la carte, des projets et des contrôles concernés.
 
 Après ces modifications : formatage, Clippy Windows, 13 tests unitaires du runner, 6 tests synthétiques de découverte des exécutables et préparation locale du staging réussis. Aucune autre CI lancée. Les corrections de nommage et de lint ne sont pas présentées comme qualifiées sur les plateformes distantes.
+
+## Corrections locales après collecte complète des deux campagnes
+
+Les 30 journaux de jobs des campagnes `41152530615` et `41156202234`, avec leurs métadonnées, sont récupérés dans `.artifacts/ci-diagnosis/all`. Aucune CI supplémentaire n'est lancée. Les erreurs de lint Unix, de collection des conversations, de pipes du lanceur, de nom du successeur et des parcours navigateur décrites ci-dessus sont corrigées. Les messages d'artefacts absents restent identifiés comme conséquences des arrêts de qualification.
+
+Le dernier blocage Edge est reproduit avant correction avec Edge **155.0.4283.62**, version exacte de la campagne, et un dossier temporaire Windows exprimé avec ses alias courts 8.3. Le projet injecté directement en base conserve cet alias, alors que la conversion de conversation normalise le dépôt de la tâche. La comparaison ne retrouve donc pas la commande de vérification du projet et désactive le bouton. La fixture passe maintenant par `CreationContext::repository`, comme la frontière applicative. Le parcours exige aussi que le projet et la tâche convertie désignent le même dépôt normalisé. Aucun garde produit ni délai n'est assoupli.
+
+Le même cas réussit après correction, puis les quatre parcours complets `application`, `diagnostics`, `jira` et `updates` réussissent ensemble avec Edge 155, les assets exacts de la campagne et le dossier temporaire court. Le runner accepte un binaire navigateur explicite pour reproduire cette version sans remplacer le navigateur installé. Les traces temporaires de diagnostic ont été retirées du code.
+
+Une chaîne Rust Linux 1.99.1 et ses prérequis sont disponibles localement sous WSL. Cela remplace la limitation d'environnement relevée dans la section précédente. Le contrôle réel révèle aussi des parenthèses inutiles dans `posix-runtime.rs`, corrigées, et une assertion concurrente de réattribution immédiate d'un port éphémère. Un autre test peut reprendre ce numéro dès sa libération. Le test conserve l'unicité, le loopback et l'exclusivité des réservations vivantes, sans imposer la réattribution du même numéro. Le comportement de production des ports ne change pas.
+
+Vérifications finales locales :
+
+| Contrôle | Résultat réel |
+| --- | --- |
+| `cargo fmt --all -- --check` et `git diff --check` | Réussite |
+| Clippy natif, workspace hors UI, toutes cibles, dépendances verrouillées et warnings de code refusés | Réussite Windows et Linux x64 |
+| Clippy et check `atelier-ui` pour `wasm32-unknown-unknown` | Réussite |
+| Suite native complète Windows | 443 passés, 0 échec, 8 ignorés |
+| Suite native complète Linux x64 | 437 passés, 0 échec, 8 ignorés |
+| Edge 155, quatre parcours réels et données synthétiques, alias court Windows | Réussite |
+
+Un nouveau test lent compile réellement la version suivante, vérifie sa version à l'exécution, construit et vérifie son archive, puis lance le serveur par le helper CLI réel avant de contrôler sa santé authentifiée et de l'arrêter. Il détecte les deux régressions du nom du successeur et des pipes hérités. Ignoré dans la suite ordinaire à cause de cette seconde compilation, il est exécuté explicitement et réussit sous Windows et Linux x64. Les autres tests ignorés et les sondes natives protégées restent non qualifiés. Les tests Linux utilisent un HOME, un XDG et un trousseau jetables dans une session D-Bus isolée, sans activer les gardes CI.
+
+Les journaux complets, les reproductions avant/après et les outils locaux restent hors Git. Les avertissements locaux de copie du cache incrémental Windows concernent les liens physiques du cache et ne sont pas des lints du code. Les installeurs macOS, ARM et les qualifications natives réservées à la CI ne sont pas déclarés réussis par ces contrôles locaux.

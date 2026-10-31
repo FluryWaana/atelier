@@ -30,7 +30,7 @@ async fn persistent_commands_keep_the_activity_guard_until_the_owned_group_is_st
     let opened = Repository::synthetic(
         &data.opened_directory().unwrap(),
         std::slice::from_ref(&data.path),
-        (repository.to_str().unwrap()),
+        repository.to_str().unwrap(),
     )
     .unwrap();
     let database = Arc::new(Database::open(std::path::Path::new(":memory:")).unwrap());

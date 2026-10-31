@@ -61,7 +61,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn reservations_are_loopback_unique_exclusive_and_released_on_drop() {
+    async fn reservations_are_loopback_unique_and_exclusive() {
         let mut leases = Vec::new();
         for _ in 0..16 {
             let lease = PortLease::reserve(0).unwrap();
@@ -95,10 +95,7 @@ mod tests {
                 .is_err()
         );
         drop(competing);
+        // A released ephemeral port can immediately belong to another concurrent test.
         leases.remove(0).release();
-        let replacement = PortLease::bind(port).unwrap();
-        assert_eq!(replacement.port, port);
-        drop(replacement);
-        let _reopened = PortLease::bind(port).unwrap();
     }
 }

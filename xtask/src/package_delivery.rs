@@ -20,7 +20,7 @@ fn campaign() -> Result<()> {
     Ok(())
 }
 
-async fn cli(binary: &Path, args: &[std::ffi::OsString]) -> Result<()> {
+pub(super) async fn cli(binary: &Path, args: &[std::ffi::OsString]) -> Result<()> {
     let mut command = tokio::process::Command::new(binary);
     command
         .args(args)
