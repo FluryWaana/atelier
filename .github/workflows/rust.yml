@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: 'Verification family; full covers all families on the selected platform'
+        description: 'Verification family; desktop targets Safari and Windows Setup'
         type: choice
         default: browser
-        options: [browser, delivery, native, full]
+        options: [browser, delivery, native, desktop, full]
       browser:
         description: 'Browser for scope=browser'
         type: choice
@@ -50,7 +50,7 @@ jobs:
           REQUESTED_PLATFORM: ${{ inputs.platform }}
           RUN_ALL_PLATFORMS: ${{ inputs.full_matrix }}
         run: |
-          case "$REQUESTED_SCOPE" in full|native|browser|delivery) ;; *) exit 2;; esac
+          case "$REQUESTED_SCOPE" in full|native|browser|delivery|desktop) ;; *) exit 2;; esac
           case "$REQUESTED_BROWSER" in all|edge|chrome|firefox|safari) ;; *) exit 2;; esac
           case "$REQUESTED_JOURNEY" in all|application|jira|updates) ;; *) exit 2;; esac
           case "$REQUESTED_PLATFORM" in windows|linux|linux-arm|macos|macos-intel|all) ;; *) exit 2;; esac
@@ -63,7 +63,10 @@ jobs:
             macos-intel) target_os='["macos-15-intel"]';;
             all) target_os='["windows-latest","ubuntu-24.04","ubuntu-24.04-arm","macos-15-intel","macos-15"]';;
           esac
-          if [ "$REQUESTED_SCOPE" = full ]; then
+          if [ "$REQUESTED_SCOPE" = desktop ]; then
+            target_os='["windows-latest"]'
+            browser_os='["macos-15"]'
+          elif [ "$REQUESTED_SCOPE" = full ]; then
             case "$REQUESTED_PLATFORM" in
               windows) browser_os='["windows-latest"]';;
               linux|linux-arm) browser_os='["ubuntu-24.04"]';;
@@ -81,6 +84,7 @@ jobs:
           printf 'browser_os=%s\n' "$browser_os" >> "$GITHUB_OUTPUT"
           printf 'target_os=%s\n' "$target_os" >> "$GITHUB_OUTPUT"
           printf 'Scope: %s; browser/journey (browser scope only): %s/%s; platform: %s\n\nA partial selection is not global qualification. No release is published.\n' "$REQUESTED_SCOPE" "$REQUESTED_BROWSER" "$REQUESTED_JOURNEY" "$REQUESTED_PLATFORM" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nNative/delivery runners: %s\nBrowser runners: %s\n' "$target_os" "$browser_os" >> "$GITHUB_STEP_SUMMARY"
   checks:
     if: inputs.scope == 'native' || inputs.scope == 'full'
     runs-on: ubuntu-24.04
@@ -359,7 +363,7 @@ jobs:
           key: rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   browser-build:
     needs: selection
-    if: inputs.scope == 'browser' || inputs.scope == 'full'
+    if: inputs.scope == 'browser' || inputs.scope == 'full' || inputs.scope == 'desktop'
     strategy:
       fail-fast: false
       matrix:
@@ -386,9 +390,9 @@ jobs:
       - run: cargo build --locked -p atelier-app --bin atelier
       - run: cargo build --locked -p xtask --bin xtask --bin native-fixture
       - run: cargo fetch --locked
-        if: inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates'
+        if: inputs.scope == 'full' || inputs.scope == 'desktop' || inputs.journey == 'all' || inputs.journey == 'updates'
       - name: Prepare dependency notices without requiring Cargo in browser jobs
-        if: inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates'
+        if: inputs.scope == 'full' || inputs.scope == 'desktop' || inputs.journey == 'all' || inputs.journey == 'updates'
         shell: bash
         run: |
           mkdir -p .artifacts/browser-notices
@@ -397,7 +401,7 @@ jobs:
         shell: bash
         env:
           EXE_SUFFIX: ${{ runner.os == 'Windows' && '.exe' || '' }}
-          PREPARE_NOTICES: ${{ inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates' }}
+          PREPARE_NOTICES: ${{ inputs.scope == 'full' || inputs.scope == 'desktop' || inputs.journey == 'all' || inputs.journey == 'updates' }}
         run: |
           mkdir -p .artifacts
           tar -C target/debug -cf .artifacts/browser-binaries.tar "atelier$EXE_SUFFIX" "xtask$EXE_SUFFIX" "native-fixture$EXE_SUFFIX"
@@ -420,9 +424,9 @@ jobs:
           key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   browser:
     needs: [selection, ui-payload, browser-build]
-    if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && needs.browser-build.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full') }}
+    if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && needs.browser-build.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full' || inputs.scope == 'desktop') }}
     env:
-      ATELIER_TEST_JOURNEY: ${{ inputs.scope == 'full' && 'all' || inputs.journey }}
+      ATELIER_TEST_JOURNEY: ${{ (inputs.scope == 'full' || inputs.scope == 'desktop') && 'all' || inputs.journey }}
     strategy:
       fail-fast: false
       matrix:
@@ -511,7 +515,7 @@ jobs:
           if-no-files-found: ignore
   delivery:
     needs: [selection, ui-payload]
-    if: inputs.scope == 'delivery' || inputs.scope == 'full'
+    if: inputs.scope == 'delivery' || inputs.scope == 'full' || inputs.scope == 'desktop'
     strategy:
       fail-fast: false
       matrix:

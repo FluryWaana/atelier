@@ -6,11 +6,19 @@ if (-not [IO.Path]::IsPathRooted($LockFile) -or $Port -lt 1 -or $Port -gt 65535 
 $failureLog = Join-Path ([IO.Path]::GetDirectoryName($LockFile)) 'tray-qualification-error.log'
 trap {
   $details = $_ | Out-String
+  $details.Substring(0, [Math]::Min($details.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
   try {
     $processes = Get-CimInstance Win32_Process -Filter "Name='explorer.exe' OR Name='atelier.exe'" -OperationTimeoutSec 3 -ErrorAction Stop |
       Where-Object { $_.Name -eq 'explorer.exe' -or ($_.ExecutablePath -and $_.ExecutablePath.StartsWith($fixtureBase, [StringComparison]::OrdinalIgnoreCase)) } |
       Select-Object -First 32 ProcessId, ParentProcessId, SessionId, Name, ExecutablePath
     $details += "`nNative process context (qualification PID $PID):`n" + ($processes | Format-List | Out-String)
+    $details.Substring(0, [Math]::Min($details.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
+    try {
+      $controls = @($processes | Where-Object { $_.Name -eq 'explorer.exe' } | Select-Object -First 4 | ForEach-Object { Get-TrayControlContext $_.ProcessId })
+      $details += "`nNative Explorer controls:`n" + ($controls | Format-List | Out-String)
+    } catch {
+      $details += "`nNative Explorer controls unavailable.`n"
+    }
   } catch {
     $details += "`nNative process context unavailable.`n"
   }
@@ -21,6 +29,23 @@ trap {
 $readyName = 'Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+function Format-TrayControlContext($Current) {
+  $record = [ordered]@{ ProcessId = $Current.ProcessId; Type = $Current.ControlType.ProgrammaticName; Offscreen = $Current.IsOffscreen }
+  foreach ($field in @('Name', 'ClassName', 'AutomationId')) {
+    $text = [string]$Current.$field
+    $record[$field] = $text.Substring(0, [Math]::Min($text.Length, 256))
+  }
+  return [pscustomobject]$record
+}
+function Get-TrayControlContext([int]$ExplorerId) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $ExplorerId)
+  $elements = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+  $records = for ($index = 0; $index -lt [Math]::Min($elements.Count, 512); $index++) {
+    Format-TrayControlContext ($elements[$index].Current)
+  }
+  'Explorer PID {0}: {1} controls found, {2} inspected.' -f $ExplorerId, $elements.Count, [Math]::Min($elements.Count, 512)
+  $records | Sort-Object @{ Expression = { $_.Name -like 'Atelier*' }; Descending = $true } | Select-Object -First 128
+}
 function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type) {
   $condition = [System.Windows.Automation.AndCondition]::new(
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name),
