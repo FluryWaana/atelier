@@ -65,20 +65,20 @@ jobs:
           esac
           if [ "$REQUESTED_SCOPE" = desktop ]; then
             target_os='["windows-latest"]'
-            browser_os='["macos-15"]'
+            browser_os='["macos-26"]'
           elif [ "$REQUESTED_SCOPE" = full ]; then
             case "$REQUESTED_PLATFORM" in
               windows) browser_os='["windows-latest"]';;
               linux|linux-arm) browser_os='["ubuntu-24.04"]';;
-              macos|macos-intel) browser_os='["macos-15"]';;
-              all) browser_os='["windows-latest","ubuntu-24.04","macos-15"]';;
+              macos|macos-intel) browser_os='["macos-26"]';;
+              all) browser_os='["windows-latest","ubuntu-24.04","macos-26"]';;
             esac
           else
             case "$REQUESTED_BROWSER" in
               edge) browser_os='["windows-latest"]';;
               chrome|firefox) browser_os='["ubuntu-24.04"]';;
-              safari) browser_os='["macos-15"]';;
-              all) browser_os='["windows-latest","ubuntu-24.04","macos-15"]';;
+              safari) browser_os='["macos-26"]';;
+              all) browser_os='["windows-latest","ubuntu-24.04","macos-26"]';;
             esac
           fi
           printf 'browser_os=%s\n' "$browser_os" >> "$GITHUB_OUTPUT"
@@ -383,10 +383,10 @@ jobs:
           path: |
             ~/.cargo/registry
             target
-          key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
-            rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-browser-v2-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
       - run: cargo build --locked -p atelier-app --bin atelier
       - run: cargo build --locked -p xtask --bin xtask --bin native-fixture
       - run: cargo fetch --locked
@@ -421,7 +421,7 @@ jobs:
           path: |
             ~/.cargo/registry
             target
-          key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   browser:
     needs: [selection, ui-payload, browser-build]
     if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && needs.browser-build.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full' || inputs.scope == 'desktop') }}

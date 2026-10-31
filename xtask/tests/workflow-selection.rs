@@ -20,6 +20,7 @@ fn desktop_selection_targets_only_windows_setup_and_safari_and_preserves_other_m
         "macos-15-intel",
         "macos-15",
     ];
+    let safari = "macos-26";
     for (scope, platform, browser, all_platforms, targets, browsers) in [
         (
             "desktop",
@@ -27,16 +28,16 @@ fn desktop_selection_targets_only_windows_setup_and_safari_and_preserves_other_m
             "chrome",
             "false",
             vec![all[0]],
-            vec![all[4]],
+            vec![safari],
         ),
-        ("desktop", "all", "all", "true", vec![all[0]], vec![all[4]]),
+        ("desktop", "all", "all", "true", vec![all[0]], vec![safari]),
         (
             "full",
             "all",
             "all",
             "false",
             all.to_vec(),
-            vec![all[0], all[1], all[4]],
+            vec![all[0], all[1], safari],
         ),
         (
             "full",
@@ -52,8 +53,9 @@ fn desktop_selection_targets_only_windows_setup_and_safari_and_preserves_other_m
             "chrome",
             "false",
             vec![all[3]],
-            vec![all[4]],
+            vec![safari],
         ),
+        ("full", "macos", "all", "false", vec![all[4]], vec![safari]),
         (
             "native",
             "windows",
@@ -68,7 +70,15 @@ fn desktop_selection_targets_only_windows_setup_and_safari_and_preserves_other_m
             "safari",
             "false",
             vec![all[0]],
+            vec![safari],
+        ),
+        (
+            "browser",
+            "macos",
+            "all",
+            "false",
             vec![all[4]],
+            vec![all[0], all[1], safari],
         ),
         (
             "delivery",

@@ -46,10 +46,17 @@ function Get-TrayControlContext([int]$ExplorerId) {
   'Explorer PID {0}: {1} controls found, {2} inspected.' -f $ExplorerId, $elements.Count, [Math]::Min($elements.Count, 512)
   $records | Sort-Object @{ Expression = { $_.Name -like 'Atelier*' }; Descending = $true } | Select-Object -First 128
 }
-function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type) {
+function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type, [string]$AlternativeName) {
   $condition = [System.Windows.Automation.AndCondition]::new(
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase),
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $Type))
+  if ($AlternativeName) {
+    $condition = [System.Windows.Automation.AndCondition]::new(
+      [System.Windows.Automation.OrCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase),
+        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $AlternativeName, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)),
+      [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $Type))
+  }
   $found = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   if ($found.Count -gt 1) { throw 'Ambiguous native tray control; no action sent.' }
   if ($found.Count -eq 1) { return $found[0] }
@@ -68,23 +75,39 @@ function Invoke-TrayControl($Control) {
   $pattern = $Control.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
   ([System.Windows.Automation.InvokePattern]$pattern).Invoke()
 }
+function Wait-TrayButton([string]$Name) {
+  $deadline = [DateTime]::UtcNow.AddSeconds(15)
+  $pendingPanelPolls = 0
+  do {
+    $button = Find-OwnedTrayControl $Name ([System.Windows.Automation.ControlType]::Button)
+    if ($null -ne $button -and -not $button.Current.IsOffscreen) { return $button }
+    # Opening the browser dismisses the notification overflow while the action completes.
+    $initial = Find-OwnedTrayControl 'Atelier Kanban' ([System.Windows.Automation.ControlType]::Button) $Name
+    if ($null -ne $initial -and -not $initial.Current.IsOffscreen) {
+      $pendingPanelPolls = 0
+    } elseif ($pendingPanelPolls -gt 0) {
+      $pendingPanelPolls--
+    } else {
+      $overflow = Find-OwnedTrayControl 'Show hidden icons' ([System.Windows.Automation.ControlType]::Button)
+      # Allow the flyout to appear, then recover if focus dismissed it before observation.
+      if ($null -ne $overflow) { Invoke-TrayControl $overflow; $pendingPanelPolls = 5 }
+    }
+    Start-Sleep -Milliseconds 100
+  } while ([DateTime]::UtcNow -lt $deadline)
+  throw "Native tray button not observed: $Name"
+}
 function Confirm-TrayQuit([string]$LockFile, [int]$Port) {
   # This guarded disposable runner has one installed Atelier instance; ambiguity refuses any click.
-  $button = Find-OwnedTrayControl 'Atelier Kanban' ([System.Windows.Automation.ControlType]::Button)
-  if ($null -eq $button) {
-    $overflow = Find-OwnedTrayControl 'Show hidden icons' ([System.Windows.Automation.ControlType]::Button)
-    if ($null -ne $overflow) { Invoke-TrayControl $overflow }
-    $button = Wait-TrayControl 'Atelier Kanban' ([System.Windows.Automation.ControlType]::Button)
-  }
+  $button = Wait-TrayButton 'Atelier Kanban'
   Invoke-TrayControl $button
   $open = Wait-TrayControl 'Ouvrir Atelier / Open Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $open
-  $button = Wait-TrayControl $readyName ([System.Windows.Automation.ControlType]::Button)
   # Windows opens the authenticated URL directly; only Unix creates local-browser.html.
   $openedConnection = [Net.Sockets.TcpClient]::new()
   try {
     if (-not $openedConnection.ConnectAsync([Net.IPAddress]::Loopback, $Port).Wait(5000) -or -not $openedConnection.Connected) { throw 'Native Open lost the local server.' }
   } finally { $openedConnection.Dispose() }
+  $button = Wait-TrayButton $readyName
   Invoke-TrayControl $button
   $quit = Wait-TrayControl 'Quitter Atelier / Quit Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $quit

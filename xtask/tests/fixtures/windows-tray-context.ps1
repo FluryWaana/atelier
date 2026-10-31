@@ -21,6 +21,46 @@ $nameCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [Sy
 $typeCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [System.Windows.Automation.AutomationElement]::ControlTypeProperty }
 if (-not ($nameCondition.Flags -band [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase) -or $typeCondition.Value -ne $Type.Id) { throw 'Tray control condition lost case tolerance or its exact control type.' }
 if (-not [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons') -or [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons other')) { throw 'Observed overflow label does not match exactly ignoring case.' }
+$assignments = @($find.FindAll({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left.VariablePath.UserPath -eq 'condition' }, $true))
+$Name='Atelier Kanban'; $AlternativeName='Atelier Kanban : synthetic ready'
+$condition = & ([scriptblock]::Create($assignments[1].Right.Extent.Text))
+$parts=$condition.GetConditions()
+$names=@($parts[0].GetConditions() | ForEach-Object { $_.Value })
+if ($parts[1].Value -ne $Type.Id -or $names.Count -ne 2 -or $names -notcontains $Name -or $names -notcontains $AlternativeName) { throw 'Atomic tray-label transition condition failed.' }
+$wait = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Wait-TrayButton' }, $true)
+. ([scriptblock]::Create($wait.Extent.Text))
+function Find-OwnedTrayControl {
+  param($Name, $Type, $AlternativeName)
+  if ($Name -eq $script:targetName) {
+    $script:poll++
+    if ($script:poll -gt 12) { throw 'Synthetic notification panel never recovered.' }
+    if ($script:scenario -in @('dismissed', 'dismissed-before-poll') -and $script:poll -eq 2) { $script:panelVisible = $false }
+    if ($script:scenario -eq 'pending' -and $script:poll -eq 3) { $script:panelVisible = $true }
+    if ($script:panelVisible -and $script:poll -ge $script:readyAt) { return [pscustomobject]@{Name=$Name; Current=[pscustomobject]@{IsOffscreen=$false}} }
+  } elseif ($Name -eq 'Atelier Kanban' -and ($script:panelVisible -or $script:scenario -eq 'offscreen')) {
+    if ($script:scenario -eq 'renamed' -and $AlternativeName -ne $script:targetName) { throw 'Visible ready label was lost during its transition.' }
+    return [pscustomobject]@{Name=$Name; Current=[pscustomobject]@{IsOffscreen=(-not $script:panelVisible)}}
+  } elseif ($Name -eq 'Show hidden icons') {
+    return [pscustomobject]@{Name='Show Hidden Icons'}
+  }
+  return $null
+}
+function Invoke-TrayControl {
+  param($Control)
+  if ($Control.Name -ne 'Show Hidden Icons') { throw 'Synthetic action escaped the notification panel.' }
+  $script:opens++
+  if ($script:scenario -ne 'pending') { $script:panelVisible = $true }
+}
+function Start-Sleep { param($Milliseconds) }
+foreach ($scenario in @('immediate', 'closed', 'dismissed', 'dismissed-before-poll', 'pending', 'offscreen', 'renamed')) {
+  $script:scenario=$scenario; $script:poll=0; $script:opens=0
+  $script:panelVisible=$scenario -in @('immediate', 'dismissed', 'renamed')
+  $script:readyAt=if ($scenario -eq 'immediate') { 1 } elseif ($scenario -in @('dismissed', 'dismissed-before-poll', 'pending')) { 4 } else { 3 }
+  $script:targetName='Atelier Kanban : synthetic ready'
+  $button=Wait-TrayButton $script:targetName
+  $expectedOpens=if ($scenario -in @('immediate', 'renamed')) { 0 } elseif ($scenario -eq 'dismissed-before-poll') { 2 } else { 1 }
+  if ($button.Name -ne $script:targetName -or $script:opens -ne $expectedOpens) { throw "Notification panel state failed: $scenario" }
+}
 $prelude = @'
 param($Fixture, $Scenario)
 $fixtureBase = $Fixture + [IO.Path]::DirectorySeparatorChar
