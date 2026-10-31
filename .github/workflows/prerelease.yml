@@ -1,0 +1,172 @@
+name: Windows prerelease
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful full Windows Rust campaign on this exact main commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: windows-prerelease
+  cancel-in-progress: false
+jobs:
+  sign-and-qualify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+    env:
+      ATELIER_RUST_FINAL_CAMPAIGN: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Require the exact qualified source commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run }}
+        shell: pwsh
+        run: ./xtask/packaging/verify-release-source.ps1 -SourceRun $env:SOURCE_RUN -Commit $env:GITHUB_SHA
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: rust-preproduction-candidate-Windows-X64
+          path: .artifacts/qualified-source
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-prerelease-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+      - run: cargo build -p xtask --bin xtask --locked
+      - name: Prepare only qualified Windows payloads
+        id: prepare
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content Cargo.toml -Raw
+          $version = [regex]::Match($manifest, '(?m)^version = "([0-9]+\.[0-9]+\.[0-9]+)"\r?$').Groups[1].Value
+          if (-not $version) { throw 'Numeric workspace release version required.' }
+          $report = Get-Content .artifacts/qualified-source/portable-qualification.json -Raw | ConvertFrom-Json
+          if ($report.commit -cne $env:GITHUB_SHA -or $report.version -cne $version -or $report.target -cne 'x86_64-pc-windows-msvc' -or -not $report.portable.runtimeVersionObserved -or -not $report.portable.signatureVerified -or -not $report.portable.stopped) { throw 'Qualified payload identity mismatch.' }
+          $archive = ".artifacts/qualified-source/atelier-kanban-$version-x86_64-pc-windows-msvc.zip"
+          & ./target/debug/xtask.exe verify-signed-package $archive .artifacts/qualified-source/signed-package.json .artifacts/qualified-source/synthetic-update-public.json x86_64-pc-windows-msvc 0.0.0
+          if ($LASTEXITCODE -ne 0) { throw 'Qualified source archive rejected.' }
+          New-Item -ItemType Directory .artifacts/release-assets, .artifacts/release-work/successor | Out-Null
+          Copy-Item -LiteralPath $archive -Destination ".artifacts/release-assets/atelier-$version-x86_64-pc-windows-msvc.zip"
+          Copy-Item -LiteralPath .artifacts/qualified-source/successor/next.zip -Destination .artifacts/release-work/successor/next.zip
+          & ./target/debug/xtask.exe release-update-trust .artifacts/release-assets/atelier-update-public.json
+          if ($LASTEXITCODE -ne 0) { throw 'Release trust export failed.' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Sign update archives with the existing distribution key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        shell: pwsh
+        run: |
+          & ./target/debug/xtask.exe sign-release-package ".artifacts/release-assets/atelier-${env:RELEASE_VERSION}-x86_64-pc-windows-msvc.zip" x86_64-pc-windows-msvc ".artifacts/release-assets/atelier-${env:RELEASE_VERSION}-x86_64-pc-windows-msvc.zip.signed.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Release archive signing failed.' }
+          & ./target/debug/xtask.exe sign-release-package .artifacts/release-work/successor/next.zip x86_64-pc-windows-msvc .artifacts/release-work/successor/next.json
+          if ($LASTEXITCODE -ne 0) { throw 'Private qualification successor signing failed.' }
+      - name: Build the Setup from the distribution-signed archive
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'Inno Setup 6 missing.' }
+          $env:ATELIER_ISCC = $compiler
+          $archive = ".artifacts/release-assets/atelier-${env:RELEASE_VERSION}-x86_64-pc-windows-msvc.zip"
+          $metadata = Get-Content "$archive.signed.json" -Raw | ConvertFrom-Json
+          if ($metadata.payload.version -cne $env:RELEASE_VERSION) { throw 'Signed runtime version mismatch.' }
+          & ./target/debug/xtask.exe build-installers $archive "$archive.signed.json" .artifacts/release-assets/atelier-update-public.json .artifacts/release-work/installers
+          if ($LASTEXITCODE -ne 0) { throw 'Distribution Setup build failed.' }
+      - name: Qualify the actual distribution Setup including installed upgrade and removal
+        shell: pwsh
+        run: |
+          ./xtask/packaging/qualify-windows.ps1 -Delivery .artifacts/release-work
+          $report = Get-Content .artifacts/release-work/native-installer-qualification.json -Raw | ConvertFrom-Json
+          foreach ($field in @('setupInstalled', 'nativeTrayQuitInvoked', 'dataLockReleasedBeforeRestart', 'installedUpgradeExecuted', 'newRuntimeVersionObserved', 'conversationPreserved', 'uninstallExecuted', 'databasePreserved', 'reinstallExecuted')) {
+            if ($report.$field -ne $true) { throw "Distribution Setup qualification incomplete: $field" }
+          }
+          Copy-Item -LiteralPath ".artifacts/release-work/installers/atelier-kanban-${env:RELEASE_VERSION}-windows-x64-setup.exe" -Destination .artifacts/release-assets
+      - name: Calculate the exact published asset checksums
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -LiteralPath .artifacts/release-assets -File | Sort-Object Name)
+          if ($files.Count -ne 4) { throw 'Unexpected release asset inventory.' }
+          $lines = @($files | ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name })
+          [IO.File]::WriteAllText((Join-Path $PWD '.artifacts/release-assets/SHA256SUMS'), ($lines -join "`n") + "`n", [Text.UTF8Encoding]::new($false))
+      - name: Sign the checksums including the Setup
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        shell: pwsh
+        run: |
+          & ./target/debug/xtask.exe sign-release-checksums .artifacts/release-assets/SHA256SUMS .artifacts/release-assets/SHA256SUMS.sig
+          if ($LASTEXITCODE -ne 0) { throw 'Release checksum signing failed.' }
+      - name: Verify the detached signature and every asset hash
+        shell: pwsh
+        run: |
+          & ./target/debug/xtask.exe verify-release-checksums .artifacts/release-assets/SHA256SUMS .artifacts/release-assets/SHA256SUMS.sig
+          if ($LASTEXITCODE -ne 0) { throw 'Release checksum signature verification failed.' }
+          $lines = @(Get-Content .artifacts/release-assets/SHA256SUMS)
+          if ($lines.Count -ne 4) { throw 'Unexpected signed asset count.' }
+          foreach ($line in $lines) {
+            if ($line -cnotmatch '^([0-9a-f]{64})  ([a-zA-Z0-9._-]+)$') { throw 'Invalid signed checksum entry.' }
+            $hash = (Get-FileHash -LiteralPath (Join-Path .artifacts/release-assets $Matches[2]) -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($hash -cne $Matches[1]) { throw 'Release asset checksum mismatch.' }
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-distribution-signed
+          path: .artifacts/release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+      # The signed synthetic successor is confined to the disposable runner and never uploaded.
+  publish:
+    needs: sign-and-qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-distribution-signed
+          path: release-assets
+      - name: Publish the qualified Windows prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.sign-and-qualify.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          cd release-assets
+          sha256sum --strict --check SHA256SUMS
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 6
+          tag="v$RELEASE_VERSION"
+          cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
+          Prérelease Windows x64 de l'application Rust et de son interface Leptos WASM.
+
+          Le Setup, ses menus natifs, la mise à jour installée, la conservation des données, la désinstallation et la réinstallation ont été qualifiés sur le runner Windows avec des données synthétiques.
+
+          Les mises à jour et SHA256SUMS sont signés avec la clé Ed25519 de distribution historique. SHA256SUMS.sig signe les octets de SHA256SUMS précédés de `atelier-kanban-release-checksums/1` et d'un saut de ligne. La clé publique de confiance reste épinglée dans l'application.
+
+          Les exécutables ne portent pas de certificat Authenticode. Windows peut afficher un avertissement SmartScreen. Linux et macOS ne sont pas distribués dans cette prérelease. Le format de données Rust refuse les anciens formats non pris en charge. Conservez vos anciennes données séparément.
+
+          Cette prérelease ne remplace pas la release stable et n'est pas proposée par la recherche automatique de mises à jour stables.
+          NOTES
+          gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" > /dev/null
+          gh release create "$tag" --verify-tag --draft --prerelease --latest=false --title "Atelier Kanban $tag · Rust Windows preview" --notes-file "$RUNNER_TEMP/release-notes.txt" \
+            "atelier-$RELEASE_VERSION-x86_64-pc-windows-msvc.zip" \
+            "atelier-$RELEASE_VERSION-x86_64-pc-windows-msvc.zip.signed.json" \
+            "atelier-kanban-$RELEASE_VERSION-windows-x64-setup.exe" \
+            atelier-update-public.json SHA256SUMS SHA256SUMS.sig
+          gh release edit "$tag" --draft=false --prerelease --latest=false

@@ -1,6 +1,18 @@
 # Paquets Rust de préproduction
 
-Les composants décrits ici sont des **candidats en cours de qualification finale**. Aucun paquet n'est encore déclaré qualifié. Le workflow Rust reste uniquement manuel ; aucune exécution n'a été lancée pendant l'implémentation. La campagne finale sur `1ba8e3b` est suivie dans [le relevé des résultats](rust-final-qualification.md) ; les paragraphes « non exécuté » ci-dessous décrivent la préparation et ne préjugent pas de son résultat. Aucun tag, release ni déploiement n'est autorisé.
+Les composants décrits ici sont des candidats de préproduction. Les résultats réels sont suivis dans [le relevé des résultats](rust-final-qualification.md). La campagne Windows `41250211473` et le passage Safari `41247401699` ont réussi sur `2af5517`. Ces passages ne constituent pas une qualification globale des cinq plateformes. Les workflows restent manuels. Les paragraphes historiques « non exécuté » ci-dessous décrivent leur préparation initiale.
+
+## Prérelease Windows et signature de distribution
+
+La version Rust suivante est `0.1.10`. Le workflow manuel `Windows prerelease` reçoit l'identifiant d'une campagne `Rust rebuild` réussie sur le même commit de `main`. Les contrôles, les tests natifs, le navigateur et la livraison Windows doivent tous avoir réussi. Un autre dépôt, une branche différente, un autre workflow, un job ignoré ou un commit différent sont refusés.
+
+La clé publique Ed25519 est celle des anciennes releases Node, extraite du document public au tag `v0.1.9`. Son encodage brut base64 est `Me0AEzOtX3PmBRk70z5cCW81EFsYENLNOxcG1qpEWOs=`. La confiance de distribution utilise `synthetic=false` et cette clé est épinglée dans le binaire. Les clés synthétiques restent réservées aux fixtures choisies explicitement. La clé privée PKCS8 PEM demeure dans le secret GitHub existant `RELEASE_SIGNING_KEY`. Aucun nouveau secret ni fichier privé local n'est créé. Seules les deux étapes de signature lancent le runner déjà compilé avec ce secret. Les compilateurs, le Setup et les processus applicatifs ne le reçoivent pas.
+
+Le workflow récupère le payload déjà qualifié, produit le manifeste `.zip.signed.json` attendu par le moteur de mises à jour, puis reconstruit le Setup avec cette confiance. Le vrai Setup est requalifié avec menus natifs, arrêt, mise à jour installée, conservation des données, désinstallation et réinstallation. Son successeur synthétique signé reste dans le runner jetable et n'est jamais téléversé ni publié.
+
+Les quatre assets de distribution sont l'archive de mise à jour `atelier-VERSION-x86_64-pc-windows-msvc.zip`, son manifeste signé, le Setup et `atelier-update-public.json`. Le fichier `SHA256SUMS` couvre ces quatre fichiers. `SHA256SUMS.sig` contient une signature Ed25519 base64 canonique sur les octets exacts du préfixe `atelier-kanban-release-checksums/1\n` suivi des octets de `SHA256SUMS`. Le préfixe contient un véritable saut de ligne. La commande `cargo xtask verify-release-checksums SHA256SUMS SHA256SUMS.sig` utilise la clé publique épinglée. Chaque empreinte est aussi vérifiée avant publication.
+
+La publication crée une prérelease GitHub sans remplacer la dernière release stable. La recherche automatique des mises à jour stables ne propose pas les préreleases. Cette signature de distribution ne constitue pas un certificat Windows Authenticode et ne supprime pas les avertissements SmartScreen. Linux et macOS ne sont pas distribués dans cette prérelease. Une archive de mise à jour n'est pas une installation portable déjà initialisée.
 
 ## Fabrication et contenu
 
@@ -38,7 +50,7 @@ cargo xtask sign-package ARCHIVE.zip TARGET NEW_KEYS SIGNED_METADATA.json
 cargo xtask verify-signed-package ARCHIVE.zip SIGNED_METADATA.json NEW_KEYS/synthetic-update-public.json TARGET CURRENT_VERSION
 ```
 
-Les clés sont exclusivement synthétiques. Le générateur refuse réutilisation/remplacement ; la clé privée PKCS8 reste dans le temporaire privé et n’entre jamais dans une livraison. La clé publique doit être choisie séparément du paquet : un document ne peut pas s’autoriser lui-même. La signature lie application/schéma, cible, version, taille/SHA256 d’archive et empreinte du manifeste. La préparation vérifie signature et version strictement supérieure avant lecture/extraction. Aucune clé de release n’est annoncée.
+Les clés produites par `synthetic-update-key` sont exclusivement synthétiques. Le générateur refuse réutilisation/remplacement et la clé privée PKCS8 n'entre jamais dans une livraison. La clé publique doit être choisie séparément du paquet : un document ne peut pas s'autoriser lui-même. La signature lie application/schéma, cible, version, taille/SHA256 d'archive et empreinte du manifeste. La préparation vérifie signature et version strictement supérieure avant lecture/extraction. La voie de distribution distincte est décrite plus haut.
 
 ## Installation et update Rust
 

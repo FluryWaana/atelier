@@ -143,6 +143,10 @@ async fn main() -> Result<()> {
         ["verify-archive", archive, target] => atelier_app::infrastructure::package_archive::verify(Path::new(archive),target),
         ["synthetic-update-key", directory] => atelier_app::infrastructure::update_package::generate_synthetic(Path::new(directory)),
         ["sign-package", archive, target, keys, output] => atelier_app::infrastructure::update_package::sign(Path::new(archive),target,Path::new(keys),Path::new(output)),
+        ["sign-release-package", archive, target, output] => atelier_app::infrastructure::update_package::sign_release(Path::new(archive),target,Path::new(output)),
+        ["release-update-trust", output] => atelier_app::infrastructure::package::write(Path::new(output), &serde_json::to_vec_pretty(&atelier_app::infrastructure::update_package::Trust::release()?)?),
+        ["sign-release-checksums", input, output] => atelier_app::infrastructure::update_package::sign_release_checksums(Path::new(input),Path::new(output)),
+        ["verify-release-checksums", input, signature] => atelier_app::infrastructure::update_package::verify_release_checksums(Path::new(input),Path::new(signature)),
         ["verify-signed-package", archive, metadata, trust, target, current] => {
             let trust=atelier_app::infrastructure::update_package::Trust::load(Path::new(trust))?;
             let scratch=tempfile::tempdir()?;

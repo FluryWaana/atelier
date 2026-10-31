@@ -15,6 +15,7 @@ use std::{fs, io::Write, path::Path};
 
 const PRIVATE_KEY: &str = "synthetic-update.pkcs8";
 pub const PUBLIC_KEY: &str = "synthetic-update-public.json";
+const RELEASE_PUBLIC_KEY: &str = "Me0AEzOtX3PmBRk70z5cCW81EFsYENLNOxcG1qpEWOs=";
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -29,10 +30,10 @@ impl Trust {
     fn key(&self) -> Result<[u8; 32]> {
         if self.schema_version != 1
             || self.application != "atelier-kanban-rust-update-key"
-            || !self.synthetic
+            || (!self.synthetic && self.public_key != RELEASE_PUBLIC_KEY)
             || self.public_key.len() != 44
         {
-            return Err("Clé de confiance synthétique de mise à jour invalide.".into());
+            return Err("Clé de confiance de mise à jour invalide.".into());
         }
         let bytes: [u8; 32] = STANDARD
             .decode(&self.public_key)
@@ -57,6 +58,18 @@ impl Trust {
     }
     pub fn key_id(&self) -> &str {
         &self.key_id
+    }
+    pub fn release() -> Result<Self> {
+        let bytes = STANDARD.decode(RELEASE_PUBLIC_KEY)?;
+        let trust = Self {
+            schema_version: 1,
+            application: "atelier-kanban-rust-update-key".into(),
+            key_id: key_id(&bytes),
+            public_key: RELEASE_PUBLIC_KEY.into(),
+            synthetic: false,
+        };
+        trust.key()?;
+        Ok(trust)
     }
 }
 
@@ -147,13 +160,8 @@ pub fn generate_synthetic(directory: &Path) -> Result<()> {
 }
 
 pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<()> {
-    if output.try_exists()? {
-        return Err("Le manifeste signé existe déjà. Aucun fichier remplacé.".into());
-    }
-    let bytes = package::read(archive, package_archive::ARCHIVE_LIMIT)?;
-    let scratch = tempfile::tempdir()?;
-    let staged = package_archive::unpack(&bytes, target, scratch.path())?;
     let trust = Trust::load(&keys.join(PUBLIC_KEY))?;
+    let payload = signing_payload(archive, target, output, &trust)?;
     let path = keys.join(PRIVATE_KEY);
     let mut secret = CheckedFile::open(&path, &Identity::inspect(&path)?)?
         .private()?
@@ -161,14 +169,117 @@ pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<
     let pair = Ed25519KeyPair::from_pkcs8(&secret)
         .map_err(|_| "Clé privée synthétique de signature invalide.");
     secret.fill(0);
-    let pair = pair?;
-    if pair.public_key().as_ref() != trust.key()?.as_slice() {
-        return Err(
-            "La clé de signature ne correspond pas à la confiance synthétique choisie.".into(),
-        );
+    sign_with_pair(payload, &pair?, &trust, output)
+}
+
+fn pem_key(pem: &[u8]) -> Result<Ed25519KeyPair> {
+    if pem.len() > 4096 {
+        return Err("Clé privée de signature trop volumineuse.".into());
     }
+    let pem = std::str::from_utf8(pem).map_err(|_| "Clé privée PEM invalide.")?;
+    let mut lines = pem.lines();
+    if lines.next() != Some("-----BEGIN PRIVATE KEY-----") {
+        return Err("Clé privée PEM PKCS8 requise.".into());
+    }
+    let mut encoded = Vec::new();
+    let result = (|| {
+        let mut ended = false;
+        for line in lines.by_ref() {
+            if line == "-----END PRIVATE KEY-----" {
+                ended = true;
+                break;
+            }
+            if line.is_empty()
+                || !line
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'='))
+            {
+                return Err("Clé privée PEM invalide.".into());
+            }
+            encoded.extend_from_slice(line.as_bytes());
+        }
+        if !ended || lines.next().is_some() || encoded.is_empty() {
+            return Err("Un seul document PEM PKCS8 est requis.".into());
+        }
+        let mut secret = STANDARD
+            .decode(&encoded)
+            .map_err(|_| "Encodage de clé privée PEM invalide.")?;
+        // OpenSSL exports PKCS8 v1 without the public key. The caller checks the pinned key.
+        let pair = Ed25519KeyPair::from_pkcs8_maybe_unchecked(&secret)
+            .map_err(|_| "Clé privée Ed25519 PKCS8 invalide.");
+        secret.fill(0);
+        Ok(pair?)
+    })();
+    encoded.fill(0);
+    result
+}
+
+pub fn sign_release(archive: &Path, target: &str, output: &Path) -> Result<()> {
+    let trust = Trust::release()?;
+    let payload = signing_payload(archive, target, output, &trust)?;
+    sign_with_pair(payload, &release_pair()?, &trust, output)
+}
+
+fn release_pair() -> Result<Ed25519KeyPair> {
+    let mut secret = std::env::var("RELEASE_SIGNING_KEY")
+        .map_err(|_| "Variable RELEASE_SIGNING_KEY absente ou invalide.")?
+        .into_bytes();
+    let pair = pem_key(&secret);
+    secret.fill(0);
+    let pair = pair?;
+    require_key(&pair, &Trust::release()?)?;
+    Ok(pair)
+}
+
+fn checksum_message(input: &Path) -> Result<Vec<u8>> {
+    let checksums = package::read(input, 64 * 1024)?;
+    if checksums.is_empty() {
+        return Err("La liste des empreintes est vide.".into());
+    }
+    let mut message = b"atelier-kanban-release-checksums/1\n".to_vec();
+    message.extend_from_slice(&checksums);
+    Ok(message)
+}
+
+pub fn sign_release_checksums(input: &Path, output: &Path) -> Result<()> {
+    if output.try_exists()? {
+        return Err("La signature existe déjà. Aucun fichier remplacé.".into());
+    }
+    let message = checksum_message(input)?;
+    let pair = release_pair()?;
+    package::write(
+        output,
+        STANDARD.encode(pair.sign(&message).as_ref()).as_bytes(),
+    )
+}
+
+pub fn verify_release_checksums(input: &Path, signature: &Path) -> Result<()> {
+    verify_checksums(input, signature, &Trust::release()?.key()?)
+}
+
+fn verify_checksums(input: &Path, signature: &Path, key: &[u8; 32]) -> Result<()> {
+    let message = checksum_message(input)?;
+    let encoded = package::read(signature, 88)?;
+    let signature = STANDARD
+        .decode(&encoded)
+        .map_err(|_| "Signature des empreintes invalide.")?;
+    if signature.len() != 64 || STANDARD.encode(&signature).as_bytes() != encoded.as_slice() {
+        return Err("Signature des empreintes invalide.".into());
+    }
+    signature::UnparsedPublicKey::new(&signature::ED25519, key)
+        .verify(&message, &signature)
+        .map_err(|_| "Signature des empreintes non reconnue.".into())
+}
+
+fn signing_payload(archive: &Path, target: &str, output: &Path, trust: &Trust) -> Result<Payload> {
+    if output.try_exists()? {
+        return Err("Le manifeste signé existe déjà. Aucun fichier remplacé.".into());
+    }
+    let bytes = package::read(archive, package_archive::ARCHIVE_LIMIT)?;
+    let scratch = tempfile::tempdir()?;
+    let staged = package_archive::unpack(&bytes, target, scratch.path())?;
     let manifest = staged.manifest();
-    let payload = Payload {
+    Ok(Payload {
         schema_version: 1,
         application: "atelier-kanban-rust-update".into(),
         target: manifest["target"]
@@ -185,10 +296,26 @@ pub fn sign(archive: &Path, target: &str, keys: &Path, output: &Path) -> Result<
             package::read(&staged.path().join("atelier-package.json"), 1024 * 1024)?,
         )),
         key_id: trust.key_id.clone(),
-    };
+    })
+}
+
+fn sign_with_pair(
+    payload: Payload,
+    pair: &Ed25519KeyPair,
+    trust: &Trust,
+    output: &Path,
+) -> Result<()> {
+    require_key(pair, trust)?;
     let signature = STANDARD.encode(pair.sign(&serde_json::to_vec(&payload)?).as_ref());
     let signed = Signed { payload, signature };
     package::write(output, &serde_json::to_vec_pretty(&signed)?)
+}
+
+fn require_key(pair: &Ed25519KeyPair, trust: &Trust) -> Result<()> {
+    if pair.public_key().as_ref() != trust.key()?.as_slice() {
+        return Err("La clé de signature ne correspond pas à la confiance choisie.".into());
+    }
+    Ok(())
 }
 
 pub fn authenticated_payload(metadata: &[u8], trust: &Trust, target: &str) -> Result<Payload> {
@@ -302,6 +429,138 @@ pub fn prepare(
 pub(super) mod tests {
     use super::*;
     use serde_json::json;
+
+    fn pem(bytes: &[u8]) -> Vec<u8> {
+        format!(
+            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
+            STANDARD.encode(bytes)
+        )
+        .into_bytes()
+    }
+
+    #[test]
+    fn release_trust_is_pinned_and_synthetic_keys_cannot_claim_release_authority() {
+        let release = Trust::release().unwrap();
+        assert!(!release.synthetic);
+        assert_eq!(STANDARD.encode(release.key().unwrap()), RELEASE_PUBLIC_KEY);
+        let roundtrip = Trust::from_bytes(&serde_json::to_vec(&release).unwrap()).unwrap();
+        assert_eq!(roundtrip.key_id(), release.key_id());
+        let root = tempfile::tempdir().unwrap();
+        generate_synthetic(&root.path().join("keys")).unwrap();
+        let mut synthetic = Trust::load(&root.path().join("keys").join(PUBLIC_KEY)).unwrap();
+        let document = fs::read(root.path().join("keys").join(PRIVATE_KEY)).unwrap();
+        let pair = Ed25519KeyPair::from_pkcs8(&document).unwrap();
+        assert!(require_key(&pair, &synthetic).is_ok());
+        assert!(require_key(&pair, &release).is_err());
+        synthetic.synthetic = false;
+        assert!(Trust::from_bytes(&serde_json::to_vec(&synthetic).unwrap()).is_err());
+        let mut modified = release;
+        modified.key_id = "0".repeat(64);
+        assert!(Trust::from_bytes(&serde_json::to_vec(&modified).unwrap()).is_err());
+    }
+
+    #[test]
+    fn pem_accepts_ed25519_pkcs8_v1_and_v2_and_rejects_other_documents() {
+        let v2 = Ed25519KeyPair::generate_pkcs8(&SystemRandom::new()).unwrap();
+        let pair = pem_key(&pem(v2.as_ref())).unwrap();
+        assert_eq!(
+            pair.public_key().as_ref(),
+            Ed25519KeyPair::from_pkcs8(v2.as_ref())
+                .unwrap()
+                .public_key()
+                .as_ref()
+        );
+        let mut v1 = vec![
+            0x30, 0x2e, 0x02, 0x01, 0, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04,
+            0x20,
+        ];
+        v1.extend_from_slice(&[7; 32]);
+        let pair = pem_key(&pem(&v1)).unwrap();
+        assert_eq!(
+            pair.public_key().as_ref(),
+            Ed25519KeyPair::from_seed_unchecked(&[7; 32])
+                .unwrap()
+                .public_key()
+                .as_ref()
+        );
+        let crlf = String::from_utf8(pem(&v1)).unwrap().replace('\n', "\r\n");
+        assert!(pem_key(crlf.as_bytes()).is_ok());
+        let valid = pem(v2.as_ref());
+        for invalid in [
+            vec![b'x'; 4097],
+            vec![0xff],
+            pem(b"not a private key"),
+            [valid.clone(), valid.clone()].concat(),
+            [valid.clone(), b"trailing data".to_vec()].concat(),
+            b"-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----\n".to_vec(),
+            b"-----BEGIN PRIVATE KEY-----\n!\n-----END PRIVATE KEY-----\n".to_vec(),
+            b"-----BEGIN PRIVATE KEY-----\nAAAA\n".to_vec(),
+            b"-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n".to_vec(),
+        ] {
+            assert!(pem_key(&invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn checksum_signatures_are_bounded_pinned_and_separated_from_update_signatures() {
+        let root = tempfile::tempdir().unwrap();
+        let input = root.path().join("SHA256SUMS");
+        let signature = root.path().join("SHA256SUMS.sig");
+        let checksums = format!("{}  synthetic-setup.exe\n", "a".repeat(64));
+        fs::write(&input, &checksums).unwrap();
+        let pair = Ed25519KeyPair::from_seed_unchecked(&[7; 32]).unwrap();
+        let key: [u8; 32] = pair.public_key().as_ref().try_into().unwrap();
+        let signed = STANDARD.encode(pair.sign(&checksum_message(&input).unwrap()).as_ref());
+        fs::write(&signature, &signed).unwrap();
+        verify_checksums(&input, &signature, &key).unwrap();
+        assert!(verify_release_checksums(&input, &signature).is_err());
+        fs::write(&input, checksums.replace('a', "b")).unwrap();
+        assert!(verify_checksums(&input, &signature, &key).is_err());
+        fs::write(&input, &checksums).unwrap();
+        fs::write(
+            &signature,
+            STANDARD.encode(pair.sign(checksums.as_bytes()).as_ref()),
+        )
+        .unwrap();
+        assert!(verify_checksums(&input, &signature, &key).is_err());
+        fs::write(&signature, format!("{signed}\n")).unwrap();
+        assert!(verify_checksums(&input, &signature, &key).is_err());
+        for bytes in [Vec::new(), vec![b'x'; 64 * 1024 + 1]] {
+            fs::write(&input, bytes).unwrap();
+            assert!(checksum_message(&input).is_err());
+        }
+    }
+
+    #[test]
+    fn release_signing_checks_inputs_and_preserves_outputs_before_accessing_the_secret() {
+        let root = tempfile::tempdir().unwrap();
+        let missing = root.path().join("missing");
+        let output = root.path().join("signature");
+        fs::write(&output, b"preserve").unwrap();
+        assert!(
+            sign_release(&missing, package::TARGETS[1], &output)
+                .unwrap_err()
+                .to_string()
+                .contains("existe déjà")
+        );
+        assert!(
+            sign_release_checksums(&missing, &output)
+                .unwrap_err()
+                .to_string()
+                .contains("existe déjà")
+        );
+        assert_eq!(fs::read(&output).unwrap(), b"preserve");
+        let empty = root.path().join("empty");
+        let fresh = root.path().join("new-signature");
+        fs::write(&empty, []).unwrap();
+        assert!(
+            sign_release_checksums(&empty, &fresh)
+                .unwrap_err()
+                .to_string()
+                .contains("vide")
+        );
+        assert!(!fresh.exists());
+    }
     pub(crate) fn fixture() -> (tempfile::TempDir, Trust) {
         let root = tempfile::tempdir().unwrap();
         let payload = root.path().join("payload");
