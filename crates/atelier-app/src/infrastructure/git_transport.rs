@@ -18,7 +18,7 @@ pub(super) async fn git_command() -> Result<tokio::process::Command> {
     );
     Ok(command)
 }
-const DOWNLOAD_LIMIT: u64 = 512 * 1024 * 1024;
+pub(super) const DOWNLOAD_LIMIT: u64 = 512 * 1024 * 1024;
 fn synthetic_git_failure(stderr: &[u8]) -> &'static str {
     let diagnostic = String::from_utf8_lossy(stderr).to_ascii_lowercase();
     // Return fixed classifications only: Git stderr can contain URLs and credentials.
@@ -73,7 +73,7 @@ fn synthetic_git_failure(stderr: &[u8]) -> &'static str {
         "Synthetic Git TLS: unclassified Git failure; raw diagnostic withheld."
     }
 }
-fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
+pub(super) fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
     let mut pending = vec![(path.to_owned(), 0usize)];
     let mut bytes = 0u64;
     let mut entries = 0usize;
@@ -102,7 +102,7 @@ fn check_download(path: &std::path::Path, limit: u64) -> Result<()> {
     }
     Ok(())
 }
-async fn download_guard(path: std::path::PathBuf) -> crate::Error {
+pub(super) async fn download_guard(path: std::path::PathBuf) -> crate::Error {
     // shortcut: polling can overshoot the temporary-storage threshold; use OS quotas for a hard disk cap.
     loop {
         let directory = path.clone();
@@ -278,7 +278,7 @@ impl HttpsAuthentication {
         }
         Ok(())
     }
-    fn isolate(command: &mut tokio::process::Command, home: &std::path::Path) {
+    pub(super) fn isolate(command: &mut tokio::process::Command, home: &std::path::Path) {
         command
             .current_dir(home)
             .env("HOME", home)
@@ -331,7 +331,7 @@ impl HttpsAuthentication {
         ]);
         Ok(())
     }
-    fn configure_network(
+    pub(super) fn configure_network(
         &self,
         command: &mut tokio::process::Command,
         home: &std::path::Path,

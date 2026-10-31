@@ -55,6 +55,7 @@ pub mod portable_import;
 pub mod preparation;
 mod process_inspection;
 pub mod process_tree;
+pub mod project_clone;
 pub mod projects;
 pub mod prototype;
 mod publish;

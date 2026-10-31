@@ -418,6 +418,16 @@ pub(super) fn router(app: Router<Shared>) -> Router<Shared> {
         )
         .api_route("/api/projects", Policy::Ordinary, post(projects::create))
         .api_route(
+            "/api/repositories/clone",
+            Policy::External,
+            post(super::project_clone::clone),
+        )
+        .api_route(
+            "/api/repositories/clone/{operation}/cancel",
+            Policy::Cancellation,
+            post(super::project_clone::cancel),
+        )
+        .api_route(
             "/api/projects/{id}/kanban",
             Policy::Ordinary,
             axum::routing::put(kanban::save),

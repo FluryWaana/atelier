@@ -1,6 +1,86 @@
 use atelier_app::infrastructure::git_transport::HttpsAuthentication;
 use atelier_core::contracts::{ForgeConfiguration, ForgeKind};
 
+#[tokio::test]
+async fn clone_connections_scope_credentials_to_github_gitlab_and_azure_paths() {
+    use atelier_app::infrastructure::{database::Database, forge, project_clone};
+    use atelier_core::{application::project_clone::CloneRequest, contracts::ForgeUpdate};
+    for (kind, base, origin) in [
+        (
+            ForgeKind::Github,
+            "https://github.example.test",
+            "https://github.example.test/owner/repo.git",
+        ),
+        (
+            ForgeKind::Gitlab,
+            "https://gitlab.example.test/prefix",
+            "https://gitlab.example.test/prefix/group/nested/repo.git",
+        ),
+        (
+            ForgeKind::Azure,
+            "https://dev.azure.com/org",
+            "https://dev.azure.com/org/project/_git/repo",
+        ),
+    ] {
+        let database = Database::open(std::path::Path::new(":memory:")).unwrap();
+        database
+            .call(move |store| {
+                let mut protect = |value: &str, decrypt: bool| -> atelier_app::Result<String> {
+                    if decrypt {
+                        Ok(value
+                            .strip_prefix("synthetic-envelope:")
+                            .ok_or("synthetic envelope required")?
+                            .into())
+                    } else {
+                        Ok(format!("synthetic-envelope:{value}"))
+                    }
+                };
+                forge::configure(
+                    store,
+                    ForgeUpdate {
+                        expected_revision: 0,
+                        configuration: ForgeConfiguration {
+                            kind,
+                            base: base.into(),
+                        },
+                        token: Some("synthetic-clone-token".into()),
+                        clear_token: false,
+                    },
+                    &mut protect,
+                )?;
+                let mut input = CloneRequest {
+                    url: origin.into(),
+                    parent: "/synthetic".into(),
+                    directory: "repo".into(),
+                    connection: Some(kind),
+                    operation: "synthetic-clone".into(),
+                    confirmed: true,
+                };
+                let auth = project_clone::authentication(store, &input, &mut protect)?.unwrap();
+                assert_eq!(auth.origin(origin)?, origin);
+                for invalid in [
+                    origin.replace("https://", "https://other."),
+                    format!("{origin}?token=synthetic-clone-token"),
+                    "git@forge.example.test:owner/repo.git".into(),
+                ] {
+                    input.url = invalid;
+                    assert!(project_clone::authentication(store, &input, &mut protect).is_err());
+                }
+                input.url = origin.into();
+                input.connection = None;
+                assert!(
+                    project_clone::authentication(store, &input, &mut |_, _| panic!(
+                        "Public cloning must not read credentials"
+                    ))?
+                    .is_none()
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}
+
 #[test]
 fn authentication_is_scoped_to_the_exact_forge_site_and_repository() {
     for (kind, base, repository, origin) in [

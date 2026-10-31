@@ -17,6 +17,15 @@ struct ServiceDraft {
 }
 
 #[derive(Clone, Default, PartialEq)]
+struct CloneDraft {
+    enabled: bool,
+    url: String,
+    parent: String,
+    directory: String,
+    connection: String,
+}
+
+#[derive(Clone, Default, PartialEq)]
 struct Draft {
     id: String,
     name: String,
@@ -111,6 +120,9 @@ pub fn Projects(
     let projects = board.projects;
     let original = RwSignal::new(Draft::default());
     let draft = RwSignal::new(Draft::default());
+    let clone_draft = RwSignal::new(CloneDraft::default());
+    let clone_operation = RwSignal::new(String::new());
+    let cloned = RwSignal::new(false);
     let access_dirty = RwSignal::new(false);
     let create_access_dirty = RwSignal::new(false);
     let front_access_dirty = RwSignal::new(false);
@@ -126,6 +138,7 @@ pub fn Projects(
             current.branch.clear();
         }
         saved != current
+            || clone_draft.get() != CloneDraft::default()
             || access_dirty.get()
             || create_access_dirty.get()
             || front_access_dirty.get()
@@ -298,6 +311,8 @@ pub fn Projects(
     });
     on_cleanup(move || unload.remove());
     let select = move |value: Draft| {
+        clone_draft.set(CloneDraft::default());
+        cloned.set(false);
         automatic_branch.set(None);
         for flag in [
             access_dirty,
@@ -377,6 +392,10 @@ pub fn Projects(
                     .await
                     .map_err(|_| "message.invalid_server_response")?;
                 if let Some(path) = chosen["path"].as_str().filter(|path| !path.is_empty()) {
+                    if clone_draft.get_untracked().enabled {
+                        clone_draft.update(|value| value.parent = path.into());
+                        return Ok(());
+                    }
                     draft.update(|value| {
                         value.repo = path.into();
                         if value.name.trim().is_empty() {
@@ -410,6 +429,7 @@ pub fn Projects(
             }
         };
         let value = draft.get_untracked();
+        let clone = clone_draft.get_untracked();
         let previous = original.get_untracked();
         let (method, path) = if remove {
             (Method::DELETE, format!("/api/projects/{}", value.id))
@@ -418,7 +438,7 @@ pub fn Projects(
         } else {
             (Method::PATCH, format!("/api/projects/{}", value.id))
         };
-        let body = if remove {
+        let mut body = if remove {
             serde_json::json!({"archiveTasks":archive.get_untracked()})
         } else if !value.id.is_empty() {
             value.patch(&previous)
@@ -429,6 +449,25 @@ pub fn Projects(
         error.set(String::new());
         spawn_local(async move {
             let result = async {
+                if clone.enabled && value.id.is_empty() && !remove {
+                    let operation = format!("clone-{}", js_sys::Date::now() as u64);
+                    clone_operation.set(operation.clone());
+                    let response = write(&token, Method::POST, "/api/repositories/clone", &serde_json::json!({
+                        "url":clone.url, "parent":clone.parent, "directory":clone.directory,
+                        "connection":if clone.connection.is_empty() { None } else { Some(clone.connection) },
+                        "operation":operation, "confirmed":true,
+                    })).await;
+                    clone_operation.set(String::new());
+                    let result: serde_json::Value = response?.json().await.map_err(|_| "message.invalid_server_response")?;
+                    let path = result["path"].as_str().filter(|path| !path.is_empty()).ok_or("message.invalid_server_response")?;
+                    body["repo"] = serde_json::json!(path);
+                    draft.update(|draft| draft.repo = path.into());
+                    clone_draft.set(CloneDraft::default());
+                    cloned.set(true);
+                    if result["authorized"].as_bool() != Some(true) {
+                        return Err("message.clone_authorization_failed".into());
+                    }
+                }
                 let response = write(&token, method, &path, &body).await?;
                 if remove {
                     projects.update(|projects| {
@@ -457,7 +496,12 @@ pub fn Projects(
                     });
                     repository.set(saved.repo.clone());
                     if value.id.is_empty() {
-                        select(Draft::default());
+                        if clone.enabled {
+                            select(saved);
+                            editing.set(true);
+                        } else {
+                            select(Draft::default());
+                        }
                         creating.set(false);
                     } else {
                         select(saved);
@@ -475,6 +519,9 @@ pub fn Projects(
                 error.set(message);
             }
             pending.set(false);
+            if clone.enabled && editing.get_untracked() {
+                detect_branch.run(draft.get_untracked().repo);
+            }
             if remove && draft.get_untracked().id.is_empty() {
                 request_animation_frame(move || {
                     if let Some(element) = document()
@@ -1136,6 +1183,17 @@ pub fn Projects(
                         </div>
                     </div>
                     <fieldset disabled={move || pending.get() || editing.get()}>
+                        <crate::form::Field id="project-source" label={Signal::derive(move || i18n.text("message.clone_source"))}>
+                            <crate::form::Select {..} id="project-source"
+                                prop:value={move || if clone_draft.get().enabled { "clone" } else { "local" }}
+                                on:change={move |event| {
+                                    clone_draft.update(|value| value.enabled = event_target_value(&event) == "clone");
+                                    error.set(String::new());
+                                }}>
+                                <option value="local">{move || i18n.text("message.clone_existing_folder")}</option>
+                                <option value="clone">{move || i18n.text("message.clone_repository")}</option>
+                            </crate::form::Select>
+                        </crate::form::Field>
                         <crate::form::Field
                             id="project-create-name"
                             label={Signal::derive(move || i18n.text("message.project_name"))}
@@ -1153,6 +1211,60 @@ pub fn Projects(
                                 }}
                             />
                         </crate::form::Field>
+                        <Show when={move || clone_draft.get().enabled}>
+                            <crate::form::Field id="project-clone-url" label={Signal::derive(move || i18n.text("message.clone_url"))}>
+                                <crate::form::Input {..} id="project-clone-url" required=true maxlength="2000"
+                                    placeholder="https://github.com/equipe/projet.git"
+                                    prop:value={move || clone_draft.get().url}
+                                    on:input={move |event| {
+                                        let url = event_target_value(&event);
+                                        error.set(String::new());
+                                        let previous = atelier_core::application::project_clone::suggested_directory(&clone_draft.get_untracked().url);
+                                        clone_draft.update(|value| {
+                                            if value.directory.is_empty() || value.directory == previous {
+                                                value.directory = atelier_core::application::project_clone::suggested_directory(&url);
+                                            }
+                                            if url.starts_with("ssh://") || url.contains('@') { value.connection.clear(); }
+                                            value.url = url;
+                                        });
+                                        draft.update(|value| {
+                                            if value.name.trim().is_empty() || value.name == previous { value.name = clone_draft.get_untracked().directory; }
+                                        });
+                                    }}/>
+                            </crate::form::Field>
+                            <Show when={move || !clone_draft.get().url.starts_with("ssh://") && !clone_draft.get().url.contains('@')}>
+                            <crate::form::Field id="project-clone-connection" label={Signal::derive(move || i18n.text("message.clone_connection"))}
+                                help={Signal::derive(move || i18n.text("message.clone_https_help"))}>
+                                <crate::form::Select {..} id="project-clone-connection" prop:value={move || clone_draft.get().connection}
+                                    on:change={move |event| clone_draft.update(|value| value.connection = event_target_value(&event))}>
+                                    <option value="">{move || i18n.text("message.clone_public")}</option>
+                                    <option value="github">"GitHub"</option>
+                                    <option value="gitlab">"GitLab"</option>
+                                    <option value="azure">"Azure DevOps"</option>
+                                </crate::form::Select>
+                            </crate::form::Field>
+                            </Show>
+                            <p class="hint" hidden={move || !clone_draft.get().url.starts_with("ssh://") && !clone_draft.get().url.contains('@')}>
+                                {move || i18n.text("message.clone_ssh_help")}
+                            </p>
+                            <crate::form::Field id="project-clone-parent" label={Signal::derive(move || i18n.text("message.clone_parent"))}>
+                                <div class="directory-picker">
+                                    <crate::form::Input {..} id="project-clone-parent" required=true maxlength="1800"
+                                        prop:value={move || clone_draft.get().parent}
+                                        on:input={move |event| clone_draft.update(|value| value.parent = event_target_value(&event))}/>
+                                    <crate::button::Button {..} id="browse-clone-parent" type="button" on:click={move |_| browse()}>
+                                        {move || i18n.text("message.browse")}
+                                    </crate::button::Button>
+                                </div>
+                            </crate::form::Field>
+                            <crate::form::Field id="project-clone-directory" label={Signal::derive(move || i18n.text("message.clone_directory"))}
+                                help={Signal::derive(move || i18n.text("message.clone_destination_help"))}>
+                                <crate::form::Input {..} id="project-clone-directory" required=true maxlength="100"
+                                    prop:value={move || clone_draft.get().directory}
+                                    on:input={move |event| clone_draft.update(|value| value.directory = event_target_value(&event))}/>
+                            </crate::form::Field>
+                        </Show>
+                        <Show when={move || !clone_draft.get().enabled}>
                         <crate::form::Field
                             id="project-directory"
                             label={Signal::derive(move || i18n.text("message.local_directory"))}
@@ -1195,6 +1307,8 @@ pub fn Projects(
                                 )
                             }}
                         </p>
+                        </Show>
+                        <p class="hint" role="status" hidden={move || !cloned.get()}>{move || i18n.text("message.clone_preserved")}</p>
                         <crate::modal::ModalActions {..} >
                             <crate::button::Button
                                 busy={Signal::derive(move || pending.get())}
@@ -1204,10 +1318,26 @@ pub fn Projects(
                                 {..}
                                 type="submit"
                             >
-                                {move || i18n.text("message.add_project")}
+                                {move || i18n.text(if clone_draft.get().enabled { "message.clone_and_add" } else { "message.add_project" })}
                             </crate::button::Button>
                         </crate::modal::ModalActions>
                     </fieldset>
+                    <Show when={move || !clone_operation.get().is_empty()}>
+                        <p role="status">{move || i18n.text("message.clone_running")}</p>
+                        <crate::button::Button {..} id="cancel-project-clone" type="button"
+                            on:click={move |_| {
+                                let operation = clone_operation.get_untracked();
+                                if let Ok(credential) = token.get_value() {
+                                    spawn_local(async move {
+                                        if let Err(message) = write(&credential, Method::POST, &format!("/api/repositories/clone/{operation}/cancel"), &serde_json::json!({})).await {
+                                            error.set(message);
+                                        }
+                                    });
+                                }
+                            }}>
+                            {move || i18n.text("message.clone_cancel")}
+                        </crate::button::Button>
+                    </Show>
                     <p class="error" role="alert">
                         {error_text}
                     </p>

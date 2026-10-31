@@ -49,6 +49,7 @@ mod jira_transitions;
 mod kanban;
 mod mutations;
 mod preparation;
+mod project_clone;
 mod projects;
 mod queue;
 mod repository_access;
@@ -85,6 +86,7 @@ struct AppState {
     event_token: String,
     port: u16,
     shutdown: watch::Sender<bool>,
+    clone_cancellation: watch::Sender<String>,
     changed: tokio::sync::broadcast::Sender<()>,
     file_reads: tokio::sync::Semaphore,
     integration_reads: tokio::sync::Semaphore,
@@ -343,6 +345,7 @@ async fn serve_mode(
         event_token: session::new_token()?,
         port: listener.local_addr()?.port(),
         shutdown,
+        clone_cancellation: watch::channel(String::new()).0,
         services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
         runs: crate::infrastructure::command_runs::CommandRuns::new(changed.clone()),
         changed,

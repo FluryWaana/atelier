@@ -16,6 +16,7 @@ pub mod integrations;
 pub mod jira;
 pub mod kanban;
 pub mod preparation;
+pub mod project_clone;
 pub mod projects;
 pub mod reviews;
 pub mod services;

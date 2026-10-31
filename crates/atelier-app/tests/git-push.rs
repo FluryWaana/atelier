@@ -2,6 +2,108 @@ fn null() -> &'static str {
     if cfg!(windows) { "NUL" } else { "/dev/null" }
 }
 
+#[tokio::test]
+async fn project_clone_checks_out_an_isolated_remote_and_never_replaces_existing_files() {
+    use atelier_app::infrastructure::project_clone::Destination;
+    use atelier_core::application::project_clone::CloneRequest;
+    let fixture = tempfile::tempdir().unwrap();
+    let root = std::fs::canonicalize(fixture.path()).unwrap();
+    let source = root.join("source");
+    let remotes = root.join("remote");
+    std::fs::create_dir(&source).unwrap();
+    std::fs::create_dir_all(remotes.join("owner")).unwrap();
+    git(&source, &["init", "-b", "main"]).await;
+    std::fs::write(source.join("README.md"), "synthetic clone content").unwrap();
+    git(&source, &["add", "."]).await;
+    git(&source, &["commit", "-qm", "Synthetic clone fixture"]).await;
+    git(
+        &remotes,
+        &[
+            "clone",
+            "--bare",
+            "--no-hardlinks",
+            &path(&source),
+            "owner/repo.git",
+        ],
+    )
+    .await;
+    let remote = Remote {
+        root: remotes,
+        writes: Arc::new(AtomicUsize::new(0)),
+        lose_response: Arc::new(AtomicBool::new(false)),
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let app = Router::new()
+        .fallback(axum::routing::any(serve))
+        .with_state(remote);
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let authentication = HttpsAuthentication::synthetic(
+        ForgeConfiguration {
+            kind: ForgeKind::Github,
+            base: base.clone(),
+        },
+        "owner/repo".into(),
+        "synthetic-push-token".into(),
+    )
+    .unwrap();
+    let mut input = CloneRequest {
+        url: "https://forge.example.test/owner/repo.git".into(),
+        parent: path(&root),
+        directory: "cloned".into(),
+        connection: None,
+        operation: "synthetic-clone".into(),
+        confirmed: true,
+    };
+    let destination = Destination::reserve(&input).unwrap();
+    // The explicit synthetic authentication is the only entry point for loopback HTTP doubles.
+    input.url = format!("{base}/owner/repo.git");
+    destination
+        .download(&input, Some(&authentication), std::future::pending())
+        .await
+        .unwrap();
+    let cloned = destination.publish().unwrap();
+    assert_eq!(
+        std::fs::read_to_string(Path::new(&cloned).join("README.md")).unwrap(),
+        "synthetic clone content"
+    );
+    assert_eq!(
+        git(Path::new(&cloned), &["branch", "--show-current"]).await,
+        b"main\n"
+    );
+    assert!(
+        git(Path::new(&cloned), &["status", "--porcelain"])
+            .await
+            .is_empty()
+    );
+    input.url = "https://forge.example.test/owner/repo.git".into();
+    assert!(Destination::reserve(&input).is_err());
+    input.directory = "race".into();
+    let destination = Destination::reserve(&input).unwrap();
+    std::fs::create_dir(root.join("race")).unwrap();
+    std::fs::write(root.join("race/human.txt"), "keep").unwrap();
+    assert!(destination.publish().is_err());
+    destination.discard().unwrap();
+    assert_eq!(
+        std::fs::read_to_string(root.join("race/human.txt")).unwrap(),
+        "keep"
+    );
+    input.directory = "cancelled".into();
+    let destination = Destination::reserve(&input).unwrap();
+    input.url = format!("{base}/owner/repo.git");
+    assert!(
+        destination
+            .download(&input, Some(&authentication), async {
+                "synthetic cancellation".into()
+            })
+            .await
+            .is_err()
+    );
+    destination.discard().unwrap();
+    assert!(!root.join("cancelled").exists());
+    server.abort();
+}
+
 use atelier_app::infrastructure::{
     files::Repository, git_transport::HttpsAuthentication, process_tree,
 };

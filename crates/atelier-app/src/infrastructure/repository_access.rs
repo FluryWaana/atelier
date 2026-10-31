@@ -79,7 +79,7 @@ pub(super) fn absolute(path: &Path) -> Result<Dir> {
     }
     Ok(directory)
 }
-fn identity(directory: &Dir) -> Result<String> {
+pub(super) fn identity(directory: &Dir) -> Result<String> {
     #[cfg(unix)]
     {
         use cap_std::fs::MetadataExt;
@@ -130,6 +130,16 @@ pub fn open(root: &Dir, path: &Path) -> Result<Dir> {
     Ok(directory)
 }
 pub fn register(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Result<Registry> {
+    register_checked(root, path, expected, confirmed, None)
+}
+
+pub(super) fn register_checked(
+    root: &Dir,
+    path: &str,
+    expected: u64,
+    confirmed: bool,
+    expected_identity: Option<&str>,
+) -> Result<Registry> {
     if !confirmed || path.encode_utf16().count() > 2000 || path.chars().any(char::is_control) {
         return Err("message.confirm_access_to_this_repository_directory".into());
     }
@@ -139,6 +149,10 @@ pub fn register(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Resul
     }
     let normalized = path_string(Path::new(path));
     let directory = absolute(Path::new(&normalized))?;
+    let identity = identity(&directory)?;
+    if expected_identity.is_some_and(|expected| expected != identity) {
+        return Err("message.clone_destination_changed".into());
+    }
     let metadata = directory
         .symlink_metadata(".git")
         .map_err(|_| "message.this_directory_does_not_contain_a_main_git_repository")?;
@@ -153,7 +167,7 @@ pub fn register(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Resul
     let selected = path_string(Path::new(path));
     let entry = Registration {
         path: selected,
-        identity: identity(&directory)?,
+        identity,
     };
     if let Some(previous) = registry.repositories.iter_mut().find(|previous| {
         atelier_core::domain::projects::same_repository(&previous.path, &entry.path, cfg!(windows))
