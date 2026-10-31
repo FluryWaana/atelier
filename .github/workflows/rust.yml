@@ -395,17 +395,26 @@ jobs:
       - name: Safari WASM and restart scenario
         if: runner.os == 'macOS'
         run: |
-          sudo safaridriver --enable
-          safaridriver --version
+          bash xtask/packaging/prepare-safari.sh
           bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui --prepared-assets
         env:
           ATELIER_TEST_BROWSER: safari
-      - name: Preserve synthetic UI screenshots
+      - name: Preserve Safari diagnostics only when session creation failed
+        if: failure() && runner.os == 'macOS'
+        shell: bash
+        run: |
+          if compgen -G '.artifacts/rust-ui-safari-*-startup.log' >/dev/null && [[ -d "$HOME/Library/Logs/com.apple.WebDriver" ]]; then
+            cp -R "$HOME/Library/Logs/com.apple.WebDriver" .artifacts/rust-safari-startup-diagnostics
+          fi
+      - name: Preserve synthetic UI failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: rust-ui-${{ runner.os }}-${{ runner.arch }}
-          path: .artifacts/rust-*.png
+          path: |
+            .artifacts/rust-*.png
+            .artifacts/rust-ui-*-startup.log
+            .artifacts/rust-safari-startup-diagnostics/**
           include-hidden-files: true
           if-no-files-found: ignore
       - name: Preserve browser compilation cache after verification

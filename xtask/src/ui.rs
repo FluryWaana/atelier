@@ -235,10 +235,14 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
     } else {
         driver_command.args(["--port", &driver_port.to_string()]);
     }
+    if browser == "safari" {
+        driver_command.arg("--diagnose");
+    }
+    let driver_log = tempfile::NamedTempFile::new()?;
     let mut driver = Process(
         driver_command
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(driver_log.as_file().try_clone()?))
+            .stderr(Stdio::from(driver_log.as_file().try_clone()?))
             .spawn()?,
     );
     let endpoint = format!("http://127.0.0.1:{driver_port}");
@@ -294,10 +298,24 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
         }
         _ => unreachable!(),
     }
-    let client = ClientBuilder::rustls()?
+    let connected = ClientBuilder::rustls()?
         .capabilities(capabilities)
         .connect(&endpoint)
-        .await?;
+        .await;
+    if connected.is_err() {
+        let artifacts = root().join(".artifacts");
+        std::fs::create_dir_all(&artifacts)?;
+        let path = artifacts.join(format!(
+            "rust-ui-{browser}-{}-startup.log",
+            std::process::id()
+        ));
+        // No application session or authenticated journey exists at this point.
+        match driver_log.persist_noclobber(&path) {
+            Ok(_) => eprintln!("Journal du démarrage WebDriver : {}", path.display()),
+            Err(error) => eprintln!("Journal du démarrage WebDriver non conservé : {error}"),
+        }
+    }
+    let client = connected?;
     // The two-second client above is only for driver readiness, not multi-step native operations.
     let http = reqwest::Client::builder()
         .timeout(Duration::from_secs(180))
