@@ -52,13 +52,13 @@ sudo dscl . -read "/Users/$probe_user" GeneratedUID >/dev/null
 sudo dscl . -create "/Users/$probe_user" NFSHomeDirectory "$probe_root/home"
 sudo dscl . -create "/Users/$probe_user" UserShell /bin/bash
 sudo chown "$probe_uid:20" "$probe_root/home"
-[[ $(id -u "$probe_user") == "$probe_uid" ]]
+[[ $(id -u "$probe_user") == "$probe_uid" ]] || exit 1
 "$probe_root/fixture" test-keyring-account prepare "$probe_root/shared"
 if "$probe_root/fixture" test-keyring-account other "$probe_root/shared"; then
   echo 'Reusing the same native account must fail' >&2
   exit 1
 fi
-[[ ! -e "$probe_root/shared/other.json" ]]
+[[ ! -e "$probe_root/shared/other.json" ]] || exit 1
 other_started=1
 as_other other
 "$probe_root/fixture" test-keyring-account verify "$probe_root/shared"

@@ -4,7 +4,7 @@ set -euo pipefail
 # Homebrew's Git uses the system curl; this isolated test build must use an explicit OpenSSL curl.
 curl_prefix=$(brew --prefix curl)
 curl_version=$("$curl_prefix/bin/curl" --version)
-[[ $curl_version == *OpenSSL* ]]
+[[ $curl_version == *OpenSSL* ]] || exit 1
 printf '%s\n' "$curl_version"
 version=2.56.0
 prefix="$RUNNER_TEMP/atelier-git-openssl"
@@ -17,7 +17,7 @@ if [[ ! -x "$prefix/bin/git" ]]; then
   make -C "$fixture/git-$version" -j2 prefix="$prefix" CURL_CONFIG="$curl_prefix/bin/curl-config" NO_OPENSSL=1 APPLE_COMMON_CRYPTO=1 NO_TCLTK=1 NO_GETTEXT=1 NO_PERL=1 NO_PYTHON=1 NO_RUST=1 all
   make -C "$fixture/git-$version" prefix="$prefix" CURL_CONFIG="$curl_prefix/bin/curl-config" NO_OPENSSL=1 APPLE_COMMON_CRYPTO=1 NO_TCLTK=1 NO_GETTEXT=1 NO_PERL=1 NO_PYTHON=1 NO_RUST=1 install
 fi
-[[ $("$prefix/bin/git" --version) == "git version $version" ]]
+[[ $("$prefix/bin/git" --version) == "git version $version" ]] || exit 1
 "$prefix/bin/git" version --build-options
 links=$(otool -L "$prefix/libexec/git-core/git-remote-http")
 printf '%s\n' "$links"

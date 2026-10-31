@@ -26,7 +26,7 @@ cleanup() {
 trap cleanup EXIT
 created=1
 printf 'create-keychain -p %s "%s"\nunlock-keychain -p %s "%s"\n' "$password" "$quoted" "$password" "$quoted" | /usr/bin/security -i >/dev/null
-[[ -f "$keychain" && ! -L "$keychain" ]]
+[[ -f "$keychain" && ! -L "$keychain" ]] || exit 1
 /usr/bin/security set-keychain-settings -lut 21600 "$keychain"
 unset password
 export ATELIER_TEST_KEYCHAIN="$keychain"

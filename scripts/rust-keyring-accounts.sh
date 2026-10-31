@@ -37,7 +37,7 @@ if [[ $# == 3 && ($1 == first || $1 == other) ]]; then
       echo 'Reusing the same native account must fail' >&2
       exit 1
     fi
-    [[ ! -e "$probe_root/shared/other.json" ]]
+    [[ ! -e "$probe_root/shared/other.json" ]] || exit 1
     # Only the encrypted fixtures are shared; each process has its own native UID and bus.
     sudo -n -H -u "$probe_user" env GITHUB_ACTIONS=true ATELIER_TEST_DISPOSABLE_KEYRING=1 \
       dbus-run-session -- bash "$probe_root/probe.sh" other "$probe_root" "$probe_user"

@@ -6,6 +6,14 @@ if (-not [IO.Path]::IsPathRooted($LockFile) -or $Port -lt 1 -or $Port -gt 65535 
 $failureLog = Join-Path ([IO.Path]::GetDirectoryName($LockFile)) 'tray-qualification-error.log'
 trap {
   $details = $_ | Out-String
+  try {
+    $processes = Get-CimInstance Win32_Process -Filter "Name='explorer.exe' OR Name='atelier.exe'" -OperationTimeoutSec 3 -ErrorAction Stop |
+      Where-Object { $_.Name -eq 'explorer.exe' -or ($_.ExecutablePath -and $_.ExecutablePath.StartsWith($fixtureBase, [StringComparison]::OrdinalIgnoreCase)) } |
+      Select-Object -First 32 ProcessId, ParentProcessId, SessionId, Name, ExecutablePath
+    $details += "`nNative process context (qualification PID $PID):`n" + ($processes | Format-List | Out-String)
+  } catch {
+    $details += "`nNative process context unavailable.`n"
+  }
   $details.Substring(0, [Math]::Min($details.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
   exit 1
 }

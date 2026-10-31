@@ -216,6 +216,9 @@ fn invalid_process_number(field: &str, value: &str) -> crate::Error {
 }
 
 fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
+    if group <= 0 {
+        return Err("message.process_inspection_response_invalid".into());
+    }
     let text = std::str::from_utf8(bytes)?;
     let mut members = Vec::new();
     for (index, line) in text.lines().enumerate() {
@@ -228,16 +231,23 @@ fn parse_members(bytes: &[u8], group: libc::pid_t) -> Result<Vec<u32>> {
             .parse()
             .map_err(|_| invalid_process_number("PID", pid))?;
         let observed = fields.next().ok_or("message.process_group_missing")?;
-        let observed: libc::pid_t = observed
+        let observed: i64 = observed
             .parse()
             .map_err(|_| invalid_process_number("PGID", observed))?;
+        if !(-1..=i64::from(u32::MAX)).contains(&observed) {
+            return Err(invalid_process_number("PGID", &observed.to_string()));
+        }
         let state = fields.next().ok_or("message.process_state_missing")?;
-        if fields.next().is_some() || pid == 0 || state.is_empty() {
+        if fields.next().is_some() || state.is_empty() {
             return Err("message.process_inspection_response_invalid".into());
         }
-        if observed == group && !state.starts_with('Z') {
+        if observed == i64::from(group) {
+            if pid == 0 {
+                return Err("message.process_inspection_response_invalid".into());
+            }
+            let native_pid = libc::pid_t::try_from(pid)?;
             // A reused PID or a member that moved groups cannot be attributed to this owner.
-            if unsafe { libc::getpgid(libc::pid_t::try_from(pid)?) } == group {
+            if !state.starts_with('Z') && unsafe { libc::getpgid(native_pid) } == group {
                 members.push(pid);
             }
         }
@@ -347,15 +357,31 @@ mod tests {
         assert!(parse_members(b"4294967296 2 S\n", 2).is_err());
         assert!(parse_members(b"1 2\n", 2).is_err());
         assert!(
-            parse_members(b"42 4294967295 S\n", 2)
+            parse_members(b"42 4294967296 S\n", 2)
                 .unwrap_err()
                 .to_string()
-                .contains("PGID invalide ou hors limites (4294967295)")
+                .contains("PGID invalide ou hors limites (4294967296)")
         );
+        assert!(parse_members(b"0 2 S\n", 2).is_err());
+        assert!(parse_members(b"4294967295 2 S\n", 2).is_err());
+        assert!(parse_members(b"42 -2 S\n", 2).is_err());
+        assert!(parse_members(b"42 group S\n", 2).is_err());
+        assert!(parse_members(b"", 0).is_err());
+        assert!(parse_members(b"", -1).is_err());
         assert!(
             !invalid_process_number("PID", "synthetic-private-argument")
                 .to_string()
                 .contains("synthetic-private-argument")
         );
+    }
+
+    #[test]
+    fn unrelated_process_group_sentinels_do_not_hide_owned_members() {
+        let pid = std::process::id();
+        // getpgrp only reads the test process's current group.
+        let group = unsafe { libc::getpgrp() };
+        let snapshot =
+            format!("0 0 S\n0 4294967295 S\n42 4294967295 S\n42 -1 S\n{pid} {group} S\n");
+        assert_eq!(parse_members(snapshot.as_bytes(), group).unwrap(), [pid]);
     }
 }

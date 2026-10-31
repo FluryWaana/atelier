@@ -2,7 +2,8 @@ use atelier_app::infrastructure::token_vault::execute_keyring;
 use std::time::{Duration, Instant};
 
 #[tokio::test]
-async fn keyring_stdin_eof_and_excessive_stderr_are_handled_without_hanging() {
+async fn keyring_handles_stdin_eof_excessive_stderr_and_the_production_deadline() {
+    // Keep fixture processes sequential, like the native operations serialized by protect.
     let fixture = env!("CARGO_BIN_EXE_native-fixture");
     let (status, value) = execute_keyring(fixture, &["keyring-echo"], Some("synthetic-é-🔑"))
         .await
@@ -16,10 +17,6 @@ async fn keyring_stdin_eof_and_excessive_stderr_are_handled_without_hanging() {
             .is_err()
     );
     assert!(started.elapsed() < Duration::from_secs(10));
-}
-
-#[tokio::test]
-async fn an_unresponsive_keyring_is_terminated_at_the_production_deadline() {
     let started = Instant::now();
     let error = execute_keyring(env!("CARGO_BIN_EXE_native-fixture"), &["idle"], None)
         .await

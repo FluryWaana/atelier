@@ -8,6 +8,7 @@ use std::{
 
 #[test]
 fn cached_macos_git_is_reused_only_with_the_expected_version_and_tls_backend() {
+    let bash = std::env::var_os("ATELIER_TEST_BASH").unwrap_or("bash".into());
     for (git, curl, valid_links, accepted) in [
         ("git version 2.56.0", "curl OpenSSL", true, true),
         ("git version 2.55.0", "curl OpenSSL", true, false),
@@ -36,7 +37,7 @@ fn cached_macos_git_is_reused_only_with_the_expected_version_and_tls_backend() {
         } else {
             "/usr/lib/libcurl.4.dylib".into()
         };
-        let status = Command::new("bash")
+        let status = Command::new(&bash)
             .arg(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/packaging/install-macos-git.sh"

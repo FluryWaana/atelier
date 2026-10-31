@@ -9,9 +9,9 @@ format=${1:?deb or rpm required}
 case "$format" in
   deb)
     apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y passwd util-linux gnome-keyring dbus-x11 curl jq /delivery/installers/*.deb
+    DEBIAN_FRONTEND=noninteractive apt-get install -y passwd util-linux diffutils gnome-keyring dbus-x11 curl jq /delivery/installers/*.deb
     ;;
-  rpm) dnf install -y shadow-utils util-linux gnome-keyring dbus-daemon curl jq /delivery/installers/*.rpm ;;
+  rpm) dnf install -y shadow-utils util-linux diffutils gnome-keyring dbus-daemon curl jq /delivery/installers/*.rpm ;;
   *) exit 1 ;;
 esac
 root=/opt/atelier-kanban-rust
