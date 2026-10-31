@@ -122,7 +122,9 @@ function Confirm-TrayQuit([string]$LockFile, [int]$Port) {
     $connection = [Net.Sockets.TcpClient]::new()
     try {
       $connected = $connection.ConnectAsync([Net.IPAddress]::Loopback, $Port)
-      if ($connected.Wait(1000)) { $connected.GetAwaiter().GetResult() }
+      # Windows can report a refused loopback connection after more than one second.
+      while (-not $connected.Wait(1000) -and [DateTime]::UtcNow -lt $deadline) {}
+      if ($connected.IsCompleted) { $connected.GetAwaiter().GetResult() }
     } catch {
       $failure = $_.Exception.GetBaseException()
       if ($failure -isnot [Net.Sockets.SocketException] -or $failure.SocketErrorCode -ne [Net.Sockets.SocketError]::ConnectionRefused) { throw }

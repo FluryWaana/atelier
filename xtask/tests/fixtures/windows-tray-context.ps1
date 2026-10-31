@@ -112,4 +112,24 @@ foreach ($scenario in @('owned', 'unavailable', 'ui-unavailable', 'long')) {
   if ($scenario -eq 'unavailable' -and -not $saved.Contains('Native process context unavailable')) { throw 'CIM failure masked original error.' }
   if ($scenario -eq 'ui-unavailable' -and (-not $saved.Contains('Native Explorer controls unavailable') -or -not $saved.Contains('explorer.exe'))) { throw 'UI failure masked process evidence.' }
 }
+& {
+  $quit = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Confirm-TrayQuit' }, $true)
+  . ([scriptblock]::Create($quit.Extent.Text))
+  function Wait-TrayButton { return 'synthetic button' }
+  function Wait-TrayControl { param($Name) return $Name }
+  function Find-OwnedTrayControl { return $null }
+  function Invoke-TrayControl {
+    param($Control)
+    if ($Control -eq 'Quitter Atelier / Quit Atelier') { $listener.Stop() }
+  }
+  $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+  $listener.Start()
+  $port = $listener.LocalEndpoint.Port
+  $lock = Join-Path $Fixture 'released-synthetic.lock'
+  [IO.File]::WriteAllText($lock, 'synthetic')
+  try {
+    Confirm-TrayQuit $lock $port
+    if (-not [IO.File]::Exists($lock)) { throw 'Quit qualification removed the persistent lock file.' }
+  } finally { $listener.Stop() }
+}
 Write-Output 'Native tray evidence contract passed with synthetic processes and UI records.'
