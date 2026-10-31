@@ -14,6 +14,9 @@ mod ui;
 mod update_flow;
 
 fn root() -> PathBuf {
+    if let Some(workspace) = std::env::var_os("GITHUB_WORKSPACE") {
+        return PathBuf::from(workspace);
+    }
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("workspace parent")
@@ -149,12 +152,13 @@ async fn main() -> Result<()> {
         ["test-keyring-lock"] => keyring::test(true).await,
         ["test-keyring-account", phase, directory] => keyring::accounts::probe(Path::new(directory), phase).await,
         ["test-tray"] => run(command("cargo").args(["run", "--locked", "-p", "xtask", "--bin", "native-fixture", "--", "tray"])),
-        ["test-ui"] => ui::test(false).await,
-        ["test-ui", "--prepared-assets"] => ui::test(true).await,
+        ["test-ui"] => ui::test(false, false).await,
+        ["test-ui", "--prepared-assets"] => ui::test(true, false).await,
+        ["test-ui", "--prepared-assets", "--prepared-binaries"] => ui::test(true, true).await,
         ["test-updates"] => update_flow::test().await,
         ["test-updates", "--prepared-delivery", delivery] => update_flow::test_delivery(Path::new(delivery)).await,
         ["qualify-installed-update", installation, data, port, delivery] => update_flow::test_installed(Path::new(installation), Path::new(data), port.parse()?, Path::new(delivery)).await,
-        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui [--prepared-assets] | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
+        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui [--prepared-assets [--prepared-binaries]] | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
     }
 }
 

@@ -4,7 +4,7 @@ use fantoccini::{Client, ClientBuilder, Locator};
 use serde_json::json;
 use std::{
     future::Future,
-    path::Path,
+    path::{Path, PathBuf},
     pin::Pin,
     process::{Child, Stdio},
     time::{Duration, Instant},
@@ -206,7 +206,16 @@ async fn wait_title(client: &Client, title: &str) -> Result<()> {
     Err("La tâche n’apparaît pas dans le navigateur.".into())
 }
 
-pub async fn test(prepared_assets: bool) -> Result<()> {
+fn validate_prepared_binaries(paths: &[PathBuf]) -> Result<()> {
+    for path in paths {
+        if !atelier_app::infrastructure::checked_file::plain_metadata(path)?.is_file() {
+            return Err(format!("Exécutable de test absent : {}", path.display()).into());
+        }
+    }
+    Ok(())
+}
+
+pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> {
     let requested_journey = std::env::var("ATELIER_TEST_JOURNEY").unwrap_or("all".into());
     if !matches!(
         requested_journey.as_str(),
@@ -228,7 +237,15 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
     } else {
         super::build_ui(false)?;
     }
-    if std::env::var_os("ATELIER_TEST_SERVER").is_none() {
+    if prepared_binaries {
+        validate_prepared_binaries(&[
+            ui_server(),
+            crate::target()
+                .join("debug")
+                .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX)),
+        ])?;
+    }
+    if !prepared_binaries && std::env::var_os("ATELIER_TEST_SERVER").is_none() {
         run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
             "build",
             "--locked",
@@ -236,14 +253,16 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
             "atelier-app",
         ]))?;
     }
-    run(command("cargo").args([
-        "build",
-        "--locked",
-        "-p",
-        "xtask",
-        "--bin",
-        "native-fixture",
-    ]))?;
+    if !prepared_binaries {
+        run(command("cargo").args([
+            "build",
+            "--locked",
+            "-p",
+            "xtask",
+            "--bin",
+            "native-fixture",
+        ]))?;
+    }
     let driver_program = std::env::var_os("ATELIER_WEBDRIVER").unwrap_or(default_driver.into());
     let driver_port = free_port()?;
     let mut driver_command = command(driver_program);
@@ -342,7 +361,10 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
             Box::pin(diagnostics_scenario(&client, &http)),
         ),
         ("jira", Box::pin(jira_recovery_scenario(&client, &http))),
-        ("updates", Box::pin(updates_scenario(&client, &http))),
+        (
+            "updates",
+            Box::pin(updates_scenario(&client, &http, prepared_binaries)),
+        ),
     ];
     let mut failures = Vec::new();
     for (name, journey) in journeys {
@@ -1006,7 +1028,11 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     Ok(())
 }
 
-async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+async fn updates_scenario(
+    client: &Client,
+    http: &reqwest::Client,
+    prepared_binaries: bool,
+) -> Result<()> {
     use atelier_app::infrastructure::{
         installation::InstallationMode, installed, package, session, update_package, updates,
     };
@@ -1025,7 +1051,15 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
             .checked_add(1)
             .ok_or("Version de fixture excessive.")?
     );
-    crate::notices::generate(&temporary.path().join("third-party-notices.txt")).await?;
+    let notices = temporary.path().join("third-party-notices.txt");
+    if prepared_binaries {
+        std::fs::copy(
+            crate::target().join("debug/third-party-notices.txt"),
+            &notices,
+        )?;
+    } else {
+        crate::notices::generate(&notices).await?;
+    }
     println!(
         "Updates : octets du binaire synthétique={}, avis={}; limite du binaire=134217728.",
         std::fs::metadata(&binary)?.len(),
@@ -4710,6 +4744,21 @@ fn ui_server() -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn prepared_binaries_require_every_file_and_refuse_directories() {
+        let fixture = tempfile::tempdir().unwrap();
+        let server = fixture.path().join("server");
+        let agent = fixture.path().join("agent");
+        std::fs::write(&server, b"synthetic server").unwrap();
+        let paths = [server, agent.clone()];
+        assert!(super::validate_prepared_binaries(&paths).is_err());
+        std::fs::create_dir(&agent).unwrap();
+        assert!(super::validate_prepared_binaries(&paths).is_err());
+        std::fs::remove_dir(&agent).unwrap();
+        std::fs::write(&agent, b"synthetic agent").unwrap();
+        super::validate_prepared_binaries(&paths).unwrap();
+    }
+
     #[test]
     fn synthetic_path_excludes_installed_agents_and_relative_directories() {
         let root = tempfile::tempdir().unwrap();

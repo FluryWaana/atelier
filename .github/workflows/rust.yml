@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: 'Verification family; partial runs never qualify the whole rebuild'
+        description: 'Verification family; full covers all families on the selected platform'
         type: choice
         default: browser
         options: [browser, delivery, native, full]
@@ -32,7 +32,7 @@ permissions:
 env:
   ATELIER_RUST_FINAL_CAMPAIGN: '1'
 concurrency:
-  group: rust-migration-${{ github.ref }}
+  group: rust-migration-${{ github.ref }}-${{ inputs.scope }}-${{ inputs.platform }}-${{ inputs.full_matrix }}-${{ inputs.browser }}-${{ inputs.journey }}
   cancel-in-progress: true
 jobs:
   selection:
@@ -81,6 +81,33 @@ jobs:
           printf 'browser_os=%s\n' "$browser_os" >> "$GITHUB_OUTPUT"
           printf 'target_os=%s\n' "$target_os" >> "$GITHUB_OUTPUT"
           printf 'Scope: %s; browser/journey (browser scope only): %s/%s; platform: %s\n\nA partial selection is not global qualification. No release is published.\n' "$REQUESTED_SCOPE" "$REQUESTED_BROWSER" "$REQUESTED_JOURNEY" "$REQUESTED_PLATFORM" >> "$GITHUB_STEP_SUMMARY"
+  checks:
+    if: inputs.scope == 'native' || inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - run: cargo fmt --all -- --check
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-checks-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: rust-checks-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+      - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
+      - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+        if: ${{ !cancelled() }}
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: ${{ !cancelled() }}
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-checks-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   ui-payload:
     needs: selection
     if: inputs.scope != 'native'
@@ -140,19 +167,39 @@ jobs:
           persist-credentials: false
       - name: Install pinned toolchain
         run: rustup show
-      - name: Cache Windows Rust builds
-        id: windows-rust-cache
-        if: runner.os == 'Windows'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Restore native Rust builds
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             target
-          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: rustc -vV
+      - name: Identify the macOS curl dependency
+        id: macos-curl
+        if: runner.os == 'macOS'
+        run: |
+          brew install curl
+          echo "version=$(brew list --versions curl)" >> "$GITHUB_OUTPUT"
+      - name: Cache the isolated macOS Git build
+        id: macos-git-cache
+        if: runner.os == 'macOS'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/atelier-git-openssl
+          key: macos-git-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.macos-curl.outputs.version }}-${{ hashFiles('xtask/packaging/install-macos-git.sh') }}
       - name: Provision the pinned macOS Git OpenSSL backend for synthetic TLS
         if: runner.os == 'macOS'
         run: bash xtask/packaging/install-macos-git.sh
+      - name: Preserve the validated macOS Git build
+        if: runner.os == 'macOS' && steps.macos-git-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/atelier-git-openssl
+          key: macos-git-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.macos-curl.outputs.version }}-${{ hashFiles('xtask/packaging/install-macos-git.sh') }}
       - name: Install isolated Linux native prerequisites
         if: runner.os == 'Linux'
         shell: bash
@@ -162,7 +209,6 @@ jobs:
           if [ ! -f /usr/share/applications/google-chrome.desktop ]; then
             sudo apt-get install -y epiphany-browser
           fi
-      - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
       - run: cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
         if: runner.os == 'Windows'
@@ -180,10 +226,6 @@ jobs:
             printf "%s" synthetic-final-tests-password | gnome-keyring-daemon --unlock --components=secrets
             cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
           '
-      - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
-        if: ${{ !cancelled() }}
-      - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
-        if: ${{ !cancelled() }}
       - name: Synthetic native TLS integration journeys
         run: cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
       - name: Synthetic native forge publication and reviewed commits over TLS
@@ -307,17 +349,78 @@ jobs:
         run: |
           cargo xtask test-tray
           cargo test -p atelier-app --test native-tray --locked -- --ignored
-      - name: Preserve partial Windows Rust cache after verification
-        if: always() && runner.os == 'Windows' && steps.windows-rust-cache.outputs.cache-hit != 'true'
+      - name: Preserve native Rust cache after verification
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             target
-          key: rust-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-  browser:
-    needs: [selection, ui-payload]
+          key: rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+  browser-build:
+    needs: selection
     if: inputs.scope == 'browser' || inputs.scope == 'full'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.selection.outputs.browser_os) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: rustup show
+      - name: Restore browser compilation cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+      - run: cargo build --locked -p atelier-app --bin atelier
+      - run: cargo build --locked -p xtask --bin xtask --bin native-fixture
+      - run: cargo fetch --locked
+        if: inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates'
+      - name: Prepare dependency notices without requiring Cargo in browser jobs
+        if: inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates'
+        shell: bash
+        run: |
+          mkdir -p .artifacts/browser-notices
+          ./target/debug/xtask third-party-notices .artifacts/browser-notices/third-party-notices.txt
+      - name: Preserve executable permissions in the browser payload
+        shell: bash
+        env:
+          EXE_SUFFIX: ${{ runner.os == 'Windows' && '.exe' || '' }}
+          PREPARE_NOTICES: ${{ inputs.scope == 'full' || inputs.journey == 'all' || inputs.journey == 'updates' }}
+        run: |
+          mkdir -p .artifacts
+          tar -C target/debug -cf .artifacts/browser-binaries.tar "atelier$EXE_SUFFIX" "xtask$EXE_SUFFIX" "native-fixture$EXE_SUFFIX"
+          if [ "$PREPARE_NOTICES" = true ]; then
+            tar -rf .artifacts/browser-binaries.tar -C .artifacts/browser-notices third-party-notices.txt
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-browser-binaries-${{ matrix.os }}
+          path: .artifacts/browser-binaries.tar
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve browser compilation cache after preparation
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+  browser:
+    needs: [selection, ui-payload, browser-build]
+    if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full') }}
     env:
       ATELIER_TEST_JOURNEY: ${{ inputs.scope == 'full' && 'all' || inputs.journey }}
     strategy:
@@ -330,23 +433,19 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - run: rustup show
-      - name: Restore browser compilation cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
-            rust-build-v1-${{ runner.os }}-${{ runner.arch }}-browser-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-            ${{ runner.os == 'Linux' && format('rust-ui-payload-v1-{0}-', hashFiles('Cargo.lock', 'rust-toolchain.toml')) || '' }}
+          name: rust-browser-binaries-${{ matrix.os }}
+          path: .artifacts/browser-binaries
+      - name: Restore the prepared browser executables
+        shell: bash
+        run: |
+          mkdir -p target/debug
+          tar -xf .artifacts/browser-binaries/browser-binaries.tar -C target/debug
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: rust-wasm-ui-candidate
           path: .artifacts/rust-ui
-      - run: cargo fetch --locked
       - name: Install disposable Linux browser keyring prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring dbus-x11
@@ -358,7 +457,7 @@ jobs:
           $env:ATELIER_TEST_BROWSER = 'edge'
           & $env:ATELIER_WEBDRIVER --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo xtask test-ui --prepared-assets
+          ./target/debug/xtask test-ui --prepared-assets --prepared-binaries
       - name: Record browser and driver versions
         if: runner.os == 'Linux' && (inputs.scope == 'full' || inputs.browser == 'all' || inputs.browser == 'chrome')
         run: |
@@ -373,7 +472,7 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-chrome-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo xtask test-ui --prepared-assets
+            ./target/debug/xtask test-ui --prepared-assets --prepared-binaries
           '
         env:
           ATELIER_TEST_BROWSER: chrome
@@ -388,7 +487,7 @@ jobs:
           unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
           dbus-run-session -- bash -euo pipefail -c '
             printf "%s" synthetic-final-firefox-password | gnome-keyring-daemon --unlock --components=secrets
-            cargo xtask test-ui --prepared-assets
+            ./target/debug/xtask test-ui --prepared-assets --prepared-binaries
           '
         env:
           ATELIER_TEST_BROWSER: firefox
@@ -396,7 +495,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           bash xtask/packaging/prepare-safari.sh
-          bash xtask/packaging/with-macos-keychain.sh cargo xtask test-ui --prepared-assets
+          bash xtask/packaging/with-macos-keychain.sh ./target/debug/xtask test-ui --prepared-assets --prepared-binaries
         env:
           ATELIER_TEST_BROWSER: safari
       - name: Preserve Safari diagnostics only when session creation failed
@@ -417,14 +516,6 @@ jobs:
             .artifacts/rust-safari-startup-diagnostics/**
           include-hidden-files: true
           if-no-files-found: ignore
-      - name: Preserve browser compilation cache after verification
-        if: ${{ !cancelled() }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: rust-browser-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   delivery:
     needs: [selection, ui-payload]
     if: inputs.scope == 'delivery' || inputs.scope == 'full'
@@ -448,6 +539,7 @@ jobs:
           restore-keys: |
             rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
             rust-delivery-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+            rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
             rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
