@@ -79,6 +79,29 @@ pub(super) fn stage(
 mod tests {
     use super::*;
     #[test]
+    fn publication_requires_siblings_and_preserves_nested_staging_on_refusal() {
+        let root = tempfile::tempdir().unwrap();
+        let work = root.path().join("work");
+        let source = work.join("delivery");
+        let output = root.path().join("published");
+        fs::create_dir_all(&source).unwrap();
+        fs::write(source.join("artifact"), "synthetic package").unwrap();
+        assert!(atelier_app::infrastructure::package::publish_directory(&source, &output).is_err());
+        assert!(!output.exists());
+        assert_eq!(
+            fs::read_to_string(source.join("artifact")).unwrap(),
+            "synthetic package"
+        );
+        let sibling = root.path().join("delivery");
+        fs::rename(&source, &sibling).unwrap();
+        atelier_app::infrastructure::package::publish_directory(&sibling, &output).unwrap();
+        assert!(!sibling.exists());
+        assert_eq!(
+            fs::read_to_string(output.join("artifact")).unwrap(),
+            "synthetic package"
+        );
+    }
+    #[test]
     fn publication_never_replaces_a_destination_created_after_staging() {
         let root = tempfile::tempdir().unwrap();
         let source = root.path().join("staged");

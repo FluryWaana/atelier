@@ -24,13 +24,14 @@ pub fn probe() -> Result<()> {
             .method_timeout(Duration::from_secs(3))
             .build()
             .await?;
-        let watcher = Proxy::new(
-            &connection,
-            "org.kde.StatusNotifierWatcher",
-            "/StatusNotifierWatcher",
-            "org.kde.StatusNotifierWatcher",
-        )
-        .await?;
+        // XFCE announces registration with its own signals, not PropertiesChanged.
+        let watcher: Proxy<'_> = zbus::proxy::Builder::new(&connection)
+            .destination("org.kde.StatusNotifierWatcher")
+            .path("/StatusNotifierWatcher")
+            .interface("org.kde.StatusNotifierWatcher")
+            .cache_properties(zbus::proxy::CacheProperties::No)
+            .build()
+            .await?;
         let deadline = Instant::now() + Duration::from_secs(10);
         while !watcher
             .get_property::<bool>("IsStatusNotifierHostRegistered")

@@ -8,6 +8,16 @@ const PRE: &str = include_str!("../packaging/linux-preinstall.sh");
 const REMOVE: &str = include_str!("../packaging/linux-preremove.sh");
 const POST: &str = include_str!("../packaging/linux-postremove.sh");
 const INSTALL: &str = include_str!("../packaging/linux-postinstall.sh");
+fn compiler_path(path: &Path) -> Result<String> {
+    let path = fs::canonicalize(path)?;
+    let path = path.to_str().ok_or("Chemin du compilateur non UTF-8.")?;
+    // Inno interprets verbatim Windows drive prefixes as filename constants.
+    Ok(if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        path.strip_prefix(r"\\?\").unwrap_or(path).to_owned()
+    })
+}
 #[cfg(unix)]
 fn system_modes(root: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -167,8 +177,8 @@ pub(super) async fn build(
         run(
             compiler,
             &[
-                format!("/DSourceDir={}", app.display()).into(),
-                format!("/DOutputDir={}", result.display()).into(),
+                format!("/DSourceDir={}", compiler_path(&app)?).into(),
+                format!("/DOutputDir={}", compiler_path(&result)?).into(),
                 format!("/DReleaseVersion={version}").into(),
                 super::root()
                     .join("xtask/packaging/windows.iss")
@@ -328,6 +338,20 @@ pub(super) async fn build(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn compiler_paths_preserve_spaces_and_unicode_without_verbatim_prefixes() {
+        let temporary = tempfile::Builder::new()
+            .prefix("atelier compiler é ")
+            .tempdir()
+            .unwrap();
+        let path = compiler_path(temporary.path()).unwrap();
+        assert!(!path.starts_with(r"\\?\"));
+        assert!(path.contains("atelier compiler é "));
+        assert_eq!(
+            fs::canonicalize(path).unwrap(),
+            fs::canonicalize(temporary.path()).unwrap()
+        );
+    }
     #[test]
     fn missing_or_misnamed_compiler_results_do_not_become_installers() {
         for (name, bytes) in [

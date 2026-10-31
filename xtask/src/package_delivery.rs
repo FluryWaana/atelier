@@ -173,8 +173,10 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
     let work = tempfile::Builder::new()
         .prefix("atelier-final-packages-")
         .tempdir_in(parent)?;
-    let delivery = work.path().join("delivery");
-    std::fs::create_dir(&delivery)?;
+    let delivery_directory = tempfile::Builder::new()
+        .prefix("atelier-delivery-")
+        .tempdir_in(parent)?;
+    let delivery = delivery_directory.path();
     let target = payload::native_target()?;
     run(command("cargo").args(["build", "--release", "--locked", "-p", "atelier-app"]))?;
     let binary = crate::target()
@@ -282,7 +284,7 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
         &serde_json::to_vec_pretty(&report)?,
     )?;
     payload::write(&delivery.join("README.txt"), b"Synthetic preproduction qualification artifacts. NOT a release.\nThe signing key is temporary and has no production authority.\nThe private key is excluded. No Node runtime or native feasibility executable is packaged.\nportable-qualification.json records only journeys actually completed by this command.\nNative installer and update/rollback evidence is recorded separately by the final manual workflow.\n")?;
-    payload::publish_directory(&delivery, output)?;
+    payload::publish_directory(delivery, output)?;
     println!(
         "Qualified portable package and prepared native artifacts for {target}: {}",
         output.display()
