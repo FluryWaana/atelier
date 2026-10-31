@@ -2,8 +2,8 @@ mod agent_account;
 #[cfg(windows)]
 pub mod agent_cli;
 mod agent_context;
-mod agent_models;
 pub mod agent_diagnostics;
+mod agent_models;
 pub mod agent_providers;
 pub mod automation;
 pub mod azure_tickets;
@@ -25,7 +25,7 @@ pub mod data_lock;
 pub mod database;
 mod dependencies;
 pub mod dev_servers;
-mod directory_link;
+pub mod directory_link;
 pub mod extensions;
 pub mod files;
 pub mod folders;

@@ -73,8 +73,11 @@ pub fn agent_options(agent: &str, body: &Value, settings: Option<&Value>) -> Res
         .map_or(Some(""), Value::as_str)
         .ok_or("message.invalid_model")?;
     let model = text(model, 180).map_err(|_| "message.invalid_model")?;
-    if model.chars().any(char::is_control) { return Err("message.invalid_model"); }
-    if agent_type.protocol != super::agent_catalog::ProtocolKind::Acp && !model.is_empty()
+    if model.chars().any(char::is_control) {
+        return Err("message.invalid_model");
+    }
+    if agent_type.protocol != super::agent_catalog::ProtocolKind::Acp
+        && !model.is_empty()
         && (!model.as_bytes()[0].is_ascii_alphanumeric()
             || !model
                 .bytes()

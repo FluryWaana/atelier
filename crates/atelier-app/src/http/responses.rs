@@ -66,7 +66,8 @@ fn status(error: &crate::Error, default: StatusCode) -> StatusCode {
     if error.is::<VaultFailure>() {
         return StatusCode::SERVICE_UNAVAILABLE;
     }
-    if error.is::<serde_json::Error>()
+    if error.is::<super::projects::BackupFailure>()
+        || error.is::<serde_json::Error>()
         || error.is::<rusqlite::Error>()
         || error.is::<std::io::Error>()
         || error.is::<tokio::task::JoinError>()

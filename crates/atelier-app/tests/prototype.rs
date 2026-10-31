@@ -193,7 +193,13 @@ async fn folder_selection_requires_the_local_session_and_a_native_launcher() {
         .await
         .unwrap();
     assert_eq!(result.status(), 409);
-    assert!(result.text().await.unwrap().contains("lanceur natif"));
+    assert!(
+        result
+            .text()
+            .await
+            .unwrap()
+            .contains("message.the_folder_picker_is_available_through_the_native_launcher")
+    );
     stop(&address, &token, task).await;
 }
 
@@ -1074,7 +1080,9 @@ async fn backup_http_guards_restore_rescue_credentials_and_queue_in_one_transact
         for path in ["/api/backups", "/api/backups/restore"] {
             let response = post(path).json(&json!({})).send().await.unwrap();
             assert_eq!(response.status(), 409);
-            assert!(response.text().await.unwrap().contains("chronomètres"));
+            assert!(response.text().await.unwrap().contains(
+                "message.pause_the_queue_stop_agents_and_timers_then_complete_or_verify_t"
+            ));
         }
         assert_eq!(
             post(&format!("/api/time/{timer_id}/stop"))
@@ -1384,7 +1392,7 @@ async fn global_settings_commit_with_dpapi_preserve_concurrent_edits_and_roll_ba
             store.save_settings(&settings)
         }).await.unwrap();
         let old: Document =
-            serde_json::from_str(r#"{"jira":"old-synthetic","future":{"\u00e9":"\u00e8"}}"#)
+            serde_json::from_str(r#"{"jira":"old-synthetic","future":"synthetic-\u00e8"}"#)
                 .unwrap();
         token_vault::save(&database, &old).await.unwrap();
         let encrypted = database
@@ -2037,7 +2045,7 @@ async fn project_edits_back_up_before_relocation_and_roll_back_cards_and_reviews
             response.get::<String>("projectRules").unwrap(),
             Some("é".to_owned())
         );
-        assert_eq!(response.raw(&"é".to_owned()).unwrap().get(), r#""\u00e8""#);
+        assert_eq!(response.raw("é").unwrap().get(), r#""\u00e8""#);
         assert!(response.raw("unknown").is_none());
         let (branch, target) = tokio::join!(
             patch(serde_json::from_str(r#"{"baseBranch":"develop"}"#).unwrap()),
@@ -2278,7 +2286,7 @@ async fn project_detection_reads_only_synthetic_repositories_and_never_saves_dra
             .text()
             .await
             .unwrap()
-            .contains("Autorise explicitement ce dépôt")
+            .contains("message.explicitly_authorize_this_repository_in_settings_before_using_it")
     );
     assert_eq!(
         request(reqwest::Method::POST, &path)
@@ -3404,7 +3412,7 @@ async fn http_and_restart_preserve_unicode_and_unknown_json_keys() {
         .unwrap();
     assert_eq!(response.status(), 200);
     let raw = response.text().await.unwrap();
-    assert!(raw.contains(r#""\u00e9":{"unknown":"\u00e8"}"#));
+    assert!(raw.contains(r#""é":{"unknown":"\u00e8"}"#));
     let board: Board = serde_json::from_str(&raw).unwrap();
     assert_eq!(board.cards[0].title, "é".to_owned());
     let client = reqwest::Client::new();

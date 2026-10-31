@@ -129,7 +129,7 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
             continue;
         }
         // The rebuild deliberately separates manual status changes from agent execution.
-        if body.string_equals("status", "doing").unwrap()
+        if body.get::<String>("status").ok().flatten().as_deref() == Some("doing")
             && !saved.fields.string_equals("status", "doing").unwrap()
         {
             continue;

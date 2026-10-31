@@ -57,6 +57,9 @@ pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
     let output = command("git")
         .args([
             "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
             "-z",
             "--",
             "Cargo.toml",
@@ -123,7 +126,7 @@ pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
         .join("[[package]]");
     std::fs::write(lock, changed)?;
     // Reuse release dependencies without overwriting the original version in target/release.
-    let target = root().join("target/synthetic-update");
+    let target = crate::target().join("synthetic-update");
     run(command("cargo")
         .current_dir(&source)
         .env("CARGO_TARGET_DIR", &target)
@@ -383,7 +386,7 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
         .ok_or("Version de fixture excessive.")?;
     let next = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
     let binary = original.map(Path::to_owned).unwrap_or_else(|| {
-        root().join("target/debug").join(if cfg!(windows) {
+        crate::target().join("debug").join(if cfg!(windows) {
             "atelier.exe"
         } else {
             "atelier"

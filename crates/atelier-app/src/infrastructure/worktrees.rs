@@ -332,7 +332,7 @@ pub async fn inspect_status(
     let head = head.trim().to_owned();
     super::files::validate_commit(&head)?;
     let changes = repository
-        .git(&["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
+        .without_programs(&["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
         .await?;
     let after = String::from_utf8(repository.git(&["rev-parse", "--verify", "HEAD"]).await?)?;
     if head != after.trim() {

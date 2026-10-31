@@ -359,19 +359,21 @@ async fn changing_manual_board_mapping_invalidates_an_existing_refresh_preview()
                 .settings::<Document>()?
                 .get::<JiraConfiguration>("jiraConnection")?
                 .unwrap();
-            let mut configuration = Configuration::default();
-            configuration.jira = Some(JiraMapping {
-                instance: connection.url,
-                account: connection.email,
-                mode: connection.mode,
-                board_id: 42,
-                name: "Synthetic board".into(),
-                columns: vec![JiraBoardColumn {
-                    name: "Open".into(),
-                    status_ids: vec!["1".into()],
-                }],
-                targets: [("1".into(), "doing".into())].into(),
-            });
+            let mut configuration = Configuration {
+                jira: Some(JiraMapping {
+                    instance: connection.url,
+                    account: connection.email,
+                    mode: connection.mode,
+                    board_id: 42,
+                    name: "Synthetic board".into(),
+                    columns: vec![JiraBoardColumn {
+                        name: "Open".into(),
+                        status_ids: vec!["1".into()],
+                    }],
+                    targets: [("1".into(), "doing".into())].into(),
+                }),
+                ..Configuration::default()
+            };
             let mut project = document(
                 json!({"id":"synthetic-project","repo":"/synthetic/kanban","kanban":configuration}),
             );

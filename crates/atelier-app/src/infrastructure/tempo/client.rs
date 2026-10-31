@@ -250,7 +250,9 @@ impl Tempo {
             for row in rows {
                 let id = identifier(row)?;
                 if !ids.insert(id) {
-                    return Err("message.repeated_tempo_pagination_incomplete_result_refused".into());
+                    return Err(
+                        "message.repeated_tempo_pagination_incomplete_result_refused".into(),
+                    );
                 }
                 if row["description"]
                     .as_str()

@@ -85,16 +85,16 @@ mod tests {
             require_idle(true, true, true, &[])
                 .unwrap_err()
                 .to_string()
-                .contains("fournisseurs")
+                .contains("message.wait_for_runs_and_updates_to_finish_before_editing_providers")
         );
         assert!(
             require_idle(false, true, true, &[])
                 .unwrap_err()
                 .to_string()
-                .contains("Front / Back")
+                .contains("message.stop_front_back_servers_before_this_operation")
         );
         for value in [
-            r#"{"runningSince":1}"#,
+            r#"{"runningSince":"2026-10-30T09:00:00Z"}"#,
             r#"{"exportState":"sending"}"#,
             r#"{"exportState":"uncertain"}"#,
         ] {
@@ -110,7 +110,7 @@ mod tests {
             false,
             false,
             false,
-            &[serde_json::from_str(r#"{"runningSince":0,"exportState":"exported"}"#).unwrap()],
+            &[serde_json::from_str(r#"{"exportState":"exported"}"#).unwrap()],
         )
         .unwrap();
         assert!(require_idle(false, false, true, &[]).is_err());
@@ -121,7 +121,7 @@ mod tests {
                 restore_name(&body)
                     .unwrap_err()
                     .to_string()
-                    .contains("Confirme")
+                    .contains("message.confirm_restoration_of_this_backup")
             );
         }
         let mut settings = serde_json::from_str(
@@ -134,18 +134,11 @@ mod tests {
         assert_eq!(queue.raw("ids").unwrap().get(), r#"["\u00e9"]"#);
         assert_eq!(queue.get::<i32>("future").unwrap(), Some(1));
         assert_eq!(settings.raw("other").unwrap().get(), r#""\u00e8""#);
-        for (value, field) in [
-            (r#"["\u00e9"]"#, Some(r#""\u00e9""#)),
-            (r#""\u00e8x""#, Some(r#""\u00e8""#)),
-            ("null", None),
-            ("3", None),
-        ] {
+        for value in [r#"["\u00e9"]"#, r#""\u00e8x""#, "null", "3"] {
             let mut settings =
                 serde_json::from_str(&format!(r#"{{"taskQueue":{value}}}"#)).unwrap();
-            pause_restored_queue(&mut settings).unwrap();
-            let queue = settings.get::<Document>("taskQueue").unwrap().unwrap();
-            assert_eq!(queue.raw("0").map(|value| value.get()), field);
-            assert!(queue.flag("paused").unwrap());
+            assert!(pause_restored_queue(&mut settings).is_err());
+            assert_eq!(settings.raw("taskQueue").unwrap().get(), value);
         }
     }
 }

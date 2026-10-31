@@ -37,9 +37,10 @@ pub fn create(
     let mut settings = repository.settings()?;
     let mut templates = templates(&settings)?;
     if templates.len() >= 50 {
-        return Err(
-            CardFailure::Invalid("message.remove_a_template_before_adding_another_50_maximum").into(),
-        );
+        return Err(CardFailure::Invalid(
+            "message.remove_a_template_before_adding_another_50_maximum",
+        )
+        .into());
     }
     let mut template = Document::default();
     template.set("id", &new_id())?;

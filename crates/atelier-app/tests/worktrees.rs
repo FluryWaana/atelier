@@ -5,15 +5,14 @@ use std::{path::Path, time::Duration};
 fn null() -> &'static str {
     if cfg!(windows) { "NUL" } else { "/dev/null" }
 }
-fn link_directory(target: &Path, link: impl AsRef<Path>) -> std::io::Result<()> {
-    #[cfg(windows)]
-    {
-        std::os::windows::fs::symlink_dir(target, link)
-    }
-    #[cfg(unix)]
-    {
-        std::os::unix::fs::symlink(target, link)
-    }
+fn link_directory(target: &Path, link: impl AsRef<Path>) -> atelier_app::Result<()> {
+    let link = link.as_ref();
+    let parent = Dir::open_ambient_dir(link.parent().unwrap(), ambient_authority())?;
+    atelier_app::infrastructure::directory_link::create(
+        &parent,
+        Path::new(link.file_name().unwrap()),
+        target,
+    )
 }
 fn remove_directory_link(link: impl AsRef<Path>) -> std::io::Result<()> {
     #[cfg(windows)]

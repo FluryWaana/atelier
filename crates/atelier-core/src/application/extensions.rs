@@ -339,7 +339,7 @@ pub struct TicketPage {
 #[serde(tag = "state", rename_all = "camelCase", deny_unknown_fields)]
 pub enum TicketSync {
     Ready { page: TicketPage },
-    ConfigurationRequired,
+    ConfigurationRequired {},
 }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -402,7 +402,7 @@ pub fn ticket_page(method: Method, output: &Value) -> Result<TicketPage> {
             .map_err(|_| "message.invalid_connector_ticket_page")?
         {
             TicketSync::Ready { page } => page,
-            TicketSync::ConfigurationRequired => {
+            TicketSync::ConfigurationRequired {} => {
                 return Err("message.ticket_sync_configuration_required");
             }
         },
@@ -838,7 +838,7 @@ mod tests {
         let missing = serde_json::json!({"state":"configurationRequired"});
         assert!(matches!(
             serde_json::from_value::<TicketSync>(missing.clone()).unwrap(),
-            TicketSync::ConfigurationRequired
+            TicketSync::ConfigurationRequired {}
         ));
         assert!(ticket_page(Method::TicketsSync, &missing).is_err());
         let ready = serde_json::json!({"state":"ready","page":{"items":[],"next":"page-2"}});

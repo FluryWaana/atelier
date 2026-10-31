@@ -1465,9 +1465,13 @@
       }
     ],
     "expected": {
-      "error": "message.invalid_reasoning_effort_for_this_agent"
+      "value": {
+        "model": "",
+        "effort": "max"
+      }
     }
-  },
+  }
+,
   {
     "operation": "agentOptions",
     "args": [
@@ -1477,9 +1481,13 @@
       }
     ],
     "expected": {
-      "error": "message.invalid_reasoning_effort_for_this_agent"
+      "value": {
+        "model": "",
+        "effort": "deep_mode-1"
+      }
     }
-  },
+  }
+,
   {
     "operation": "agentOptions",
     "args": [
@@ -3540,35 +3548,10 @@
       }
     ],
     "expected": {
-      "value": {
-        "projectRules": "",
-        "agent": "",
-        "baseBranch": "",
-        "repositoryConnector": "",
-        "jiraMode": "inherit",
-        "jiraStatusMap": {
-          "todo": "",
-          "doing": "",
-          "review": "",
-          "done": "",
-          "standby": ""
-        },
-        "frontCommand": "",
-        "backCommand": "",
-        "frontRepo": "",
-        "backRepo": "",
-        "frontDirectory": "",
-        "backDirectory": "",
-        "frontPort": 0,
-        "backPort": 0,
-        "linkedProjectId": "",
-        "automationEnabled": false,
-        "autoFix": true,
-        "prTarget": "",
-        "testCommand": ""
-      }
+      "error": "message.invalid_agent"
     }
-  },
+  }
+,
   {
     "operation": "projectSettings",
     "args": [
@@ -4725,6 +4708,7 @@
     ],
     "expected": {
       "value": {
+        "kanban": null,
         "repo": "first",
         "agent": "claude",
         "baseBranch": "develop",
@@ -4785,6 +4769,7 @@
     ],
     "expected": {
       "value": {
+        "kanban": null,
         "repo": "first",
         "agent": "codex",
         "baseBranch": "main",
@@ -4845,6 +4830,7 @@
     ],
     "expected": {
       "value": {
+        "kanban": null,
         "repo": "first",
         "agent": "codex",
         "baseBranch": "main",
@@ -4905,6 +4891,7 @@
     ],
     "expected": {
       "value": {
+        "kanban": null,
         "repo": "first",
         "agent": "codex",
         "baseBranch": "main",
@@ -4965,6 +4952,7 @@
     ],
     "expected": {
       "value": {
+        "kanban": null,
         "repo": "first",
         "agent": "claude",
         "baseBranch": "develop",

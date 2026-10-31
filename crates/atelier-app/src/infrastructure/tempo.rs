@@ -69,9 +69,7 @@ pub fn configure(
                 || token.chars().any(char::is_control)
         })
     {
-        return Err(
-            "message.invalid_tempo_settings_choose_a_listed_site_and_a_valid_token".into(),
-        );
+        return Err("message.invalid_tempo_settings_choose_a_listed_site_and_a_valid_token".into());
     }
     jira::require_revision(store, input.expected_jira_revision)?;
     let mut stored = store.settings::<Document>()?;

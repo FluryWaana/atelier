@@ -61,7 +61,7 @@ fn historical_settings_preserve_credentials_unicode_fields_and_validation_order(
                 let value = serde_json::from_str::<String>(raw.get())
                     .map_err(|_| "message.invalid_or_overly_long_text")?;
                 let value = text(&value, 2000)?;
-                if value == String::from("missing") {
+                if value == "missing" {
                     return Err("Dépôt synthétique absent.".into());
                 }
                 let mut resolved = String::from("resolved:");

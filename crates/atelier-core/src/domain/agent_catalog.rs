@@ -134,7 +134,14 @@ mod tests {
             }
         }
         assert!(agent_options("codex", &json!({"effort": "max"}), None).is_ok());
-        assert!(agent_options("opencode", &json!({"model": "{\"provider\":\"synthetic\"}"}), None).is_ok());
+        assert!(
+            agent_options(
+                "opencode",
+                &json!({"model": "{\"provider\":\"synthetic\"}"}),
+                None
+            )
+            .is_ok()
+        );
         assert!(agent_options("opencode", &json!({"model": "bad\nmodel"}), None).is_err());
         assert!(agent_options("command", &json!({"effort": "custom"}), None).is_ok());
         assert!(agent_options("unknown", &json!({}), None).is_err());

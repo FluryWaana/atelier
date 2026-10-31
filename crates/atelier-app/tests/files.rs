@@ -6,15 +6,14 @@ use std::{path::Path, time::Duration};
 fn null() -> &'static str {
     if cfg!(windows) { "NUL" } else { "/dev/null" }
 }
-fn link_directory(target: &Path, link: impl AsRef<Path>) -> std::io::Result<()> {
-    #[cfg(windows)]
-    {
-        std::os::windows::fs::symlink_dir(target, link)
-    }
-    #[cfg(unix)]
-    {
-        std::os::unix::fs::symlink(target, link)
-    }
+fn link_directory(target: &Path, link: impl AsRef<Path>) -> atelier_app::Result<()> {
+    let link = link.as_ref();
+    let parent = Dir::open_ambient_dir(link.parent().unwrap(), ambient_authority())?;
+    atelier_app::infrastructure::directory_link::create(
+        &parent,
+        Path::new(link.file_name().unwrap()),
+        target,
+    )
 }
 async fn git(repo: &Path, args: &[&str]) -> Vec<u8> {
     let mut command = tokio::process::Command::new("git");
@@ -233,7 +232,7 @@ async fn diffs_cover_all_states_preserve_git_and_never_invoke_repository_program
             .unwrap()
             .unavailable
             .unwrap()
-            .contains("binaire")
+            == "message.binary_file_text_preview_unavailable"
     );
     assert!(
         open()
@@ -317,13 +316,19 @@ async fn git_previews_preserve_the_index_refuse_escapes_and_bound_text_reads() {
         Some("<script>synthetic</script>\n")
     );
     for (path, message) in [
-        ("large.txt", "512 Kio"),
-        ("binary.bin", "binaire"),
-        ("legacy.txt", "UTF-8"),
+        (
+            "large.txt",
+            "message.the_file_is_too_large_to_preview_512_kib_maximum",
+        ),
+        ("binary.bin", "message.binary_file_text_preview_unavailable"),
+        (
+            "legacy.txt",
+            "message.non_utf_8_encoding_text_preview_unavailable",
+        ),
     ] {
         let preview = open().preview(path.into()).await.unwrap();
         assert!(preview.content.is_none());
-        assert!(preview.unavailable.unwrap().contains(message));
+        assert_eq!(preview.unavailable.as_deref(), Some(message));
     }
     let outside = root_path.join("outside");
     std::fs::create_dir(&outside).unwrap();

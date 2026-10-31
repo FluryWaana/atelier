@@ -99,7 +99,7 @@ pub async fn synchronize(
         }
         let sync = serde_json::from_value::<TicketSync>(report.output.clone())
             .map_err(|_| "message.invalid_server_response")?;
-        if matches!(sync, TicketSync::ConfigurationRequired) {
+        if matches!(sync, TicketSync::ConfigurationRequired {}) {
             return Ok(Outcome::ConfigurationRequired);
         }
         let project = project

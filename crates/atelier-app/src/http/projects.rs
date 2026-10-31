@@ -21,7 +21,7 @@ enum Action {
 }
 
 #[derive(Debug)]
-struct BackupFailure;
+pub(super) struct BackupFailure;
 impl std::fmt::Display for BackupFailure {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str("Sauvegarde du projet impossible.")

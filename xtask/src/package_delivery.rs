@@ -175,8 +175,8 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
     std::fs::create_dir(&delivery)?;
     let target = payload::native_target()?;
     run(command("cargo").args(["build", "--release", "--locked", "-p", "atelier-app"]))?;
-    let binary = root()
-        .join("target/release")
+    let binary = crate::target()
+        .join("release")
         .join(payload::binary_name(target)?);
     let assets = root().join(".artifacts/rust-ui");
     let notices = work.path().join("third-party-notices.txt");

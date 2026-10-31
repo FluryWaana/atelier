@@ -230,10 +230,7 @@ pub fn prepare_update(
         .or_else(|| previous.raw("jiraStatusMap"))
         .and_then(|raw| serde_json::from_str::<Document>(raw.get()).ok())
         .ok_or(SettingsFailure::Invalid("message.invalid_jira_mapping"))?;
-    if mapping
-        .keys()
-        .any(|key| !STATUSES.iter().any(|status| key == *status))
-    {
+    if mapping.keys().any(|key| !STATUSES.contains(&key)) {
         return Err(SettingsFailure::Invalid("message.invalid_jira_mapping").into());
     }
     let empty = RawValue::from_string("\"\"".into())?;

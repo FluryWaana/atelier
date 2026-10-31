@@ -302,7 +302,7 @@ mod tests {
                 .unwrap()
                 .unwrap();
             let mut request = [0; 4096];
-            stream.read(&mut request).await.unwrap();
+            assert!(stream.read(&mut request).await.unwrap() > 0);
             let _ = stream.write_all(&reply).await;
         });
         (url, task)

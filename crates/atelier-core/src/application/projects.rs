@@ -126,16 +126,16 @@ pub fn detect(
     mut scan: impl FnMut(&str) -> Result<Document>,
 ) -> Result<Document> {
     let project = project.ok_or(ProjectFailure::Missing)?;
-    let role = if body.raw("role").is_some() {
-        if body.string_equals("role", "front")? {
-            Some("front")
-        } else if body.string_equals("role", "back")? {
-            Some("back")
-        } else {
+    let role = body
+        .get::<String>("role")
+        .map_err(|_| ProjectFailure::Invalid("message.invalid_application_to_detect"))?;
+    let role = match role.as_deref() {
+        None => None,
+        Some("front") => Some("front"),
+        Some("back") => Some("back"),
+        Some(_) => {
             return Err(ProjectFailure::Invalid("message.invalid_application_to_detect").into());
         }
-    } else {
-        None
     };
     let mut sources = project.clone();
     if use_draft {
@@ -323,7 +323,7 @@ pub fn prepare_update(
         }
     }
     if !options.linked_project_id.is_empty()
-        && (options.linked_project_id == String::from(id)
+        && (options.linked_project_id == id
             || !projects.iter().any(|project| {
                 project.get::<String>("id").ok().flatten().as_ref()
                     == Some(&options.linked_project_id)

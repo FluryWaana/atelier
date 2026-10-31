@@ -3,7 +3,7 @@ use cap_std::fs::Dir;
 use std::path::Path;
 
 #[cfg(unix)]
-pub(super) fn create(parent: &Dir, name: &Path, target: &Path) -> Result<()> {
+pub fn create(parent: &Dir, name: &Path, target: &Path) -> Result<()> {
     parent.symlink_contents(target, name)?;
     Ok(())
 }
@@ -46,7 +46,7 @@ fn junction_buffer(target: &Path) -> Result<Vec<u16>> {
 }
 
 #[cfg(windows)]
-pub(super) fn create(parent: &Dir, name: &Path, target: &Path) -> Result<()> {
+pub fn create(parent: &Dir, name: &Path, target: &Path) -> Result<()> {
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsMaybeDirExt};
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::System::{IO::DeviceIoControl, Ioctl::FSCTL_SET_REPARSE_POINT};

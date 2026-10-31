@@ -145,10 +145,7 @@ pub fn project_settings(body: &Document, settings: &Document) -> Result<ProjectS
         .transpose()
         .map_err(|_| "message.invalid_jira_mapping")?
         .unwrap_or_default();
-    if mapping
-        .keys()
-        .any(|key| !STATUSES.iter().any(|status| key == *status))
-    {
+    if mapping.keys().any(|key| !STATUSES.contains(&key)) {
         return Err("message.invalid_jira_mapping");
     }
     let mut status_map = Document::default();

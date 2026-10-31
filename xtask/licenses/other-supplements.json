@@ -80,17 +80,17 @@
   },
   {
     "name": "rsqlite-vfs",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "license": "MIT",
-    "repository": null,
-    "commit": "1bb309784f25c401ddf95131dcde4c4cdad7aee7",
-    "checksum": "c51c9ae4df8a7fba42103df5c621fa3c37eccf3a3c650879e90fc48b11cc192c",
+    "repository": "https://github.com/Spxg/sqlite-wasm-rs",
+    "commit": "3d8318430bacd7d6a1aafdf5b5e54fb0fee8d451",
+    "checksum": "353b74f9810d5b085b6c42c9d86a5f0fdb795553235cdd48753b32e3809d18a7",
     "selectedLicense": "MIT",
     "texts": [
       {
-        "file": "upstream/rsqlite-vfs-0.1.1-LICENSE",
+        "file": "upstream/rsqlite-vfs-0.2.0-LICENSE",
         "sha256": "e1c1975c3474cce31722836f101a40ffaf1cc784e4d2f38ce3e77b9712934e78",
-        "url": "https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/1bb309784f25c401ddf95131dcde4c4cdad7aee7/LICENSE"
+        "url": "https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/3d8318430bacd7d6a1aafdf5b5e54fb0fee8d451/LICENSE"
       }
     ]
   },

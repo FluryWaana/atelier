@@ -8,20 +8,21 @@ use atelier_core::{
 };
 use serde_json::json;
 fn mapping() -> Configuration {
-    let mut configuration = Configuration::default();
-    configuration.jira = Some(JiraMapping {
-        instance: "https://synthetic.example.test".into(),
-        account: "synthetic@example.test".into(),
-        mode: JiraMode::Cloud,
-        board_id: 42,
-        name: "Synthetic board".into(),
-        columns: vec![JiraBoardColumn {
-            name: "In progress".into(),
-            status_ids: vec!["10".into(), "11".into()],
-        }],
-        targets: [("10".into(), "doing".into()), ("11".into(), "doing".into())].into(),
-    });
-    configuration
+    Configuration {
+        jira: Some(JiraMapping {
+            instance: "https://synthetic.example.test".into(),
+            account: "synthetic@example.test".into(),
+            mode: JiraMode::Cloud,
+            board_id: 42,
+            name: "Synthetic board".into(),
+            columns: vec![JiraBoardColumn {
+                name: "In progress".into(),
+                status_ids: vec!["10".into(), "11".into()],
+            }],
+            targets: [("10".into(), "doing".into()), ("11".into(), "doing".into())].into(),
+        }),
+        ..Configuration::default()
+    }
 }
 #[test]
 fn board_reads_preserve_column_order_and_all_status_ids() {

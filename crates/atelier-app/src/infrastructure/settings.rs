@@ -25,7 +25,7 @@ pub fn platform() -> &'static str {
 }
 
 pub fn jira_base(value: &str) -> Result<String> {
-    let url = reqwest::Url::parse(&value).map_err(|_| "Invalid URL")?;
+    let url = reqwest::Url::parse(value).map_err(|_| "Invalid URL")?;
     if url.scheme() != "https"
         || !url.username().is_empty()
         || url.password().is_some_and(|value| !value.is_empty())

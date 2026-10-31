@@ -22,11 +22,15 @@ fn commit(value: Option<&str>) -> Result<&str> {
         .filter(|value| {
             [40, 64].contains(&value.len()) && value.bytes().all(|byte| byte.is_ascii_hexdigit())
         })
-        .ok_or_else(|| "message.pr_mr_commits_are_unavailable_refresh_the_pr_mr_before_reviewing".into())
+        .ok_or_else(|| {
+            "message.pr_mr_commits_are_unavailable_refresh_the_pr_mr_before_reviewing".into()
+        })
 }
 async fn clean(repository: &Repository, source: &str) -> Result<()> {
     if !super::local_commit::disk_matches_commit(repository, source).await? {
-        return Err("message.publish_changes_and_keep_the_worktree_clean_at_the_pr_mr_commit".into());
+        return Err(
+            "message.publish_changes_and_keep_the_worktree_clean_at_the_pr_mr_commit".into(),
+        );
     }
     Ok(())
 }
@@ -64,7 +68,9 @@ pub async fn prepare_with_adapters(
         .get::<PullRequest>("pullRequest")?
         .ok_or("message.a_pr_mr_and_its_worktree_are_required_for_review")?;
     if configuration.kind != linked.kind || configuration.base != linked.base_url {
-        return Err("message.the_pr_mr_connection_changed_refresh_its_link_before_reviewing".into());
+        return Err(
+            "message.the_pr_mr_connection_changed_refresh_its_link_before_reviewing".into(),
+        );
     }
     let repository =
         forge_association::verify(root, roots, card, &configuration, &linked.repository).await?;

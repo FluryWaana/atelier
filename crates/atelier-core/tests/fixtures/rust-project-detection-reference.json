@@ -473,49 +473,25 @@
         ]
       }
     },
-    {
-      "name": "clear dedicated front false",
-      "body": {
-        "frontRepo": false
-      },
-      "useDraft": true,
-      "project": {
-        "id": "project",
-        "repo": "root",
-        "frontRepo": "front",
-        "backRepo": "",
-        "unknown": "\u00e9"
-      },
-      "expected": {
-        "value": {
-          "candidates": [
-            {
-              "id": "ui",
-              "role": "front",
-              "command": "npm run dev",
-              "unknown": "\u00e9",
-              "sourceRepo": "root"
-            },
-            {
-              "id": "api",
-              "role": "back",
-              "command": "dotnet run",
-              "unknown": "\u00e8",
-              "sourceRepo": "root"
-            }
-          ],
-          "warnings": [
-            "warning",
-            "\u00e9"
-          ]
-        },
-        "events": [
-          {
-            "scan": "root"
-          }
-        ]
-      }
+  {
+    "name": "clear dedicated front false",
+    "body": {
+      "frontRepo": false
     },
+    "useDraft": true,
+    "project": {
+      "id": "project",
+      "repo": "root",
+      "frontRepo": "front",
+      "backRepo": "",
+      "unknown": "é"
+    },
+    "expected": {
+      "error": "message.invalid_request",
+      "events": []
+    }
+  }
+,
     {
       "name": "clear dedicated front 0",
       "body": {
@@ -530,33 +506,8 @@
         "unknown": "\u00e9"
       },
       "expected": {
-        "value": {
-          "candidates": [
-            {
-              "id": "ui",
-              "role": "front",
-              "command": "npm run dev",
-              "unknown": "\u00e9",
-              "sourceRepo": "root"
-            },
-            {
-              "id": "api",
-              "role": "back",
-              "command": "dotnet run",
-              "unknown": "\u00e8",
-              "sourceRepo": "root"
-            }
-          ],
-          "warnings": [
-            "warning",
-            "\u00e9"
-          ]
-        },
-        "events": [
-          {
-            "scan": "root"
-          }
-        ]
+        "error": "message.invalid_request",
+        "events": []
       }
     },
     {
@@ -618,21 +569,18 @@
         ]
       }
     },
-    {
-      "name": "truthy array is validated",
-      "body": {
-        "frontRepo": []
-      },
-      "useDraft": true,
-      "expected": {
-        "error": "message.invalid_or_overly_long_text",
-        "events": [
-          {
-            "repository": []
-          }
-        ]
-      }
+  {
+    "name": "truthy array is validated",
+    "body": {
+      "frontRepo": []
     },
+    "useDraft": true,
+    "expected": {
+      "error": "message.invalid_request",
+      "events": []
+    }
+  }
+,
     {
       "name": "UTF16 source and candidate fields",
       "body": {

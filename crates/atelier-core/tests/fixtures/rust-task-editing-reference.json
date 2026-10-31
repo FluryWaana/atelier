@@ -4041,7 +4041,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title \u00e9",
+      "title": "Title é",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4051,7 +4051,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "\u00e8",
+          "text": "è",
           "done": false
         }
       ],
@@ -4059,14 +4059,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "\u00e9"
+        "keep": "é"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title \u00e9",
+        "title": "Title é",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4076,7 +4076,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "\u00e8",
+            "text": "è",
             "done": false
           }
         ],
@@ -4084,17 +4084,13 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "\u00e9"
+          "keep": "é"
         }
       },
-      "events": [
-        [
-          "repository",
-          true
-        ]
-      ]
+      "events": []
     }
-  },
+  }
+,
   {
     "body": {
       "branch": " branch ",

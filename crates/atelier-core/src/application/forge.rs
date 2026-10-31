@@ -101,7 +101,9 @@ pub fn repository(kind: ForgeKind, name: &str, number: u64) -> Result<Vec<&str>,
         || number == 0
         || number > i32::MAX as u64
     {
-        return Err(ForgeFailure::Invalid("message.invalid_repository_or_pr_number"));
+        return Err(ForgeFailure::Invalid(
+            "message.invalid_repository_or_pr_number",
+        ));
     }
     if kind != ForgeKind::Gitlab && parts.len() != 2 {
         return Err(ForgeFailure::Invalid(

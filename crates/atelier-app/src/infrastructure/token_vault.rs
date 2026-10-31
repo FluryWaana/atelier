@@ -801,16 +801,20 @@ mod tests {
         );
         assert!(
             encrypt_tokens(
-                &serde_json::from_str(
-                    r#"{"jira":"","tempo":null,"\u00e9":"","disabled":false,"zero":0}"#
-                )
-                .unwrap(),
+                &serde_json::from_str(r#"{"jira":"","tempo":null,"\u00e9":""}"#).unwrap(),
                 &mut unavailable
             )
             .await
             .unwrap()
             .is_none()
         );
+        for raw in [r#"{"disabled":false}"#, r#"{"zero":0}"#] {
+            let invalid = serde_json::from_str(raw).unwrap();
+            let mut untouched = async |_: &str, _: bool| -> Result<String> {
+                panic!("invalid secret types must be refused before opening the vault")
+            };
+            assert!(encrypt_tokens(&invalid, &mut untouched).await.is_err());
+        }
         save(&database, &Document::default()).await.unwrap();
         assert_eq!(load(&database).await.unwrap().keys().count(), 0);
         database.close().await.unwrap();

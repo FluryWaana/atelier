@@ -36,9 +36,8 @@ pub fn default_agent(
     let invalid = || CardFailure::Invalid("message.invalid_or_overly_long_text");
     let repository = |document: &Document| -> Result<Option<String>> {
         Ok(document
-            .get::<Option<String>>("repo")
+            .get::<String>("repo")
             .map_err(|_| invalid())?
-            .flatten()
             .filter(|path| !path.is_empty()))
     };
     let repo = match repository(body)? {

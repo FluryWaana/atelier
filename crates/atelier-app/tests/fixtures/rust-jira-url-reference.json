@@ -4,7 +4,7 @@
   {"input":"https://example.test:8443/jira//","value":"https://example.test:8443/jira/"},
   {"input":"https://example.test/a/../jira/","value":"https://example.test/jira"},
   {"input":"https://example.test/é/","value":"https://example.test/%C3%A9"},
-  {"input":"https://example.test/\u00e9/","value":"https://example.test/%EF%BF%BD"},
+  {"input":"https://example.test/\u00e9/","value":"https://example.test/%C3%A9"},
   {"input":"https://[::1]/","value":"https://[::1]"},
   {"input":"https://127.1/","value":"https://127.0.0.1"},
   {"input":"https://example.test?","value":"https://example.test/?"},
@@ -21,5 +21,5 @@
   {"input":"not a URL","error":"Invalid URL"},
   {"input":"//example.test","error":"Invalid URL"},
   {"input":"https://example.test:99999","error":"Invalid URL"},
-  {"input":"https://\u00e9.test","error":"Invalid URL"}
+  {"input":"https://\u00e9.test","value":"https://xn--9ca.test"}
 ]

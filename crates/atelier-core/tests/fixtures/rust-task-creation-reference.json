@@ -420,33 +420,16 @@
       "mode": false
     },
     "expected": {
-      "value": {
-        "id": "created",
-        "title": "Task",
-        "description": "",
-        "instructions": "",
-        "repo": "",
-        "agent": "claude",
-        "model": "",
-        "effort": "",
-        "mode": "edit",
-        "checklist": [],
-        "status": "todo",
-        "createdAt": "2026-10-24T00:00:00.000Z",
-        "updatedAt": "2026-10-24T00:00:00.001Z"
-      },
-      "prompt": "",
+      "error": "message.invalid_agent_or_mode",
       "events": [
         [
           "agentFor",
           null
-        ],
-        "id",
-        "timestamp",
-        "timestamp"
+        ]
       ]
     }
-  },
+  }
+,
   {
     "body": {
       "title": "Task",
@@ -582,33 +565,11 @@
       "agent": false
     },
     "expected": {
-      "value": {
-        "id": "created",
-        "title": "Task",
-        "description": "",
-        "instructions": "",
-        "repo": "",
-        "agent": "claude",
-        "model": "",
-        "effort": "",
-        "mode": "edit",
-        "checklist": [],
-        "status": "todo",
-        "createdAt": "2026-10-24T00:00:00.000Z",
-        "updatedAt": "2026-10-24T00:00:00.001Z"
-      },
-      "prompt": "",
-      "events": [
-        [
-          "agentFor",
-          null
-        ],
-        "id",
-        "timestamp",
-        "timestamp"
-      ]
+      "error": "message.invalid_agent",
+      "events": []
     }
-  },
+  }
+,
   {
     "body": {
       "title": "Task",
@@ -1649,47 +1610,25 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\u00e9",
+          "description": "é",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\u00e8",
+              "text": "è",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\u00e9"
+      "unknown": "é"
     },
     "expected": {
-      "value": {
-        "id": "created",
-        "title": "Task",
-        "description": "",
-        "instructions": "",
-        "repo": "default-repo",
-        "agent": "claude",
-        "model": "",
-        "effort": "",
-        "mode": "edit",
-        "checklist": [],
-        "status": "todo",
-        "createdAt": "2026-10-24T00:00:00.000Z",
-        "updatedAt": "2026-10-24T00:00:00.001Z"
-      },
-      "prompt": "",
-      "events": [
-        [
-          "agentFor",
-          null
-        ],
-        "id",
-        "timestamp",
-        "timestamp"
-      ]
+      "error": "message.invalid_request",
+      "events": []
     }
-  },
+  }
+,
   {
     "body": {
       "title": "Task",
@@ -1700,24 +1639,25 @@
       "taskTemplates": [
         {
           "id": "template",
-          "description": "\u00e9",
+          "description": "é",
           "instructions": " template ",
           "mode": "analyze",
           "checklist": [
             {
-              "text": "\u00e8",
+              "text": "è",
               "done": false
             }
           ]
         }
       ],
-      "unknown": "\u00e9"
+      "unknown": "é"
     },
     "expected": {
-      "error": "message.template_not_found",
+      "error": "message.invalid_request",
       "events": []
     }
-  },
+  }
+,
   {
     "body": {
       "title": "Idea",
@@ -1887,14 +1827,11 @@
           "agentFor",
           true
         ],
-        "id",
-        [
-          "repository",
-          true
-        ]
+        "id"
       ]
     }
-  },
+  }
+,
   {
     "body": {
       "title": "Task",

@@ -71,9 +71,25 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .get("fault")
         .and_then(Value::as_str)
         .unwrap_or("success");
-    let manifest: Manifest = serde_json::from_value(
-        json!({"id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSync","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{"id":"site","label":"Synthetic repository site","kind":"url"},{"id":"fault","label":"Synthetic fault","kind":"text"},{"id":"fixture-root","label":"Marked synthetic directory","kind":"text","credentialScope":true},{"id":"token","label":"Synthetic token","kind":"password"}],"tabs":[{"id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{"id":"synthetic-write","label":"Synthetic write","effect":"remote"}]}],"translations":{}}),
-    )?;
+    let manifest: Manifest = serde_json::from_value(json!({
+        "id":"synthetic-extension","name":"Synthetic extension","description":"No account; guarded local synthetic effects only","sourceLocale":"en-US","methods":["check","ticketsSync","ticketsSearch","ticketsReset","ticketsRead","ticketsTransitions","ticketsTransition","repositoriesPreview","repositoriesPublish","repositoriesRefresh","repositoriesReview","timePreview","timeSend","timeReconcile","action","reconcile"],"fields":[{
+            "id":"site","label":"Synthetic repository site","kind":"url"
+        },{
+            "id":"fault","label":"Synthetic fault","kind":"text"
+        },{
+            "id":"fixture-root","label":"Marked synthetic directory","kind":"text","credentialScope":true
+        },{
+            "id":"token","label":"Synthetic token","kind":"password"
+        }
+        ],"tabs":[{
+            "id":"effects","label":"Synthetic effects","description":"Marked local fixture only","actions":[{
+                "id":"synthetic-write","label":"Synthetic write","effect":"remote"
+            }
+            ]
+        }
+        ],"translations":{
+        }
+    }))?;
     let mut reply = Reply {
         protocol: PROTOCOL.into(),
         request_id: request.request_id.clone(),

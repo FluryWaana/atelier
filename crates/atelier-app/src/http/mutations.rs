@@ -93,19 +93,19 @@ pub(super) async fn detached(
     }
 }
 
-async fn guard_path(request: &mut Request) -> Result<String, Response> {
+async fn guard_path(request: &mut Request) -> Result<String, &'static str> {
     let matched = request
         .extensions()
         .get::<MatchedPath>()
         .map(|path| path.as_str().to_owned())
-        .ok_or_else(|| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?;
+        .ok_or("message.invalid_request")?;
     if !matched.contains('{') {
         return Ok(matched);
     }
     let params = request
         .extract_parts::<RawPathParams>()
         .await
-        .map_err(|_| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?;
+        .map_err(|_| "message.invalid_request")?;
     let mut segments = Vec::new();
     for segment in matched.split('/') {
         let value = if let Some(name) = segment
@@ -116,13 +116,13 @@ async fn guard_path(request: &mut Request) -> Result<String, Response> {
                 .iter()
                 .find(|(key, _)| *key == name)
                 .map(|(_, value)| value)
-                .ok_or_else(|| failure(StatusCode::BAD_REQUEST, "message.invalid_request"))?
+                .ok_or("message.invalid_request")?
         } else {
             segment
         };
         // Decoded separators must not create a different guard target.
         if value.contains(['/', '\\']) || value.chars().any(char::is_control) {
-            return Err(failure(StatusCode::BAD_REQUEST, "message.invalid_request"));
+            return Err("message.invalid_request");
         }
         segments.push(value);
     }
@@ -138,7 +138,7 @@ pub(super) async fn mutate(
     if request.method() != Method::GET {
         let operation_path = match guard_path(&mut request).await {
             Ok(path) => path,
-            Err(response) => return response,
+            Err(message) => return failure(StatusCode::BAD_REQUEST, message),
         };
         let cancellation = request.method() == Method::POST && policy == Policy::Cancellation;
         let gate = state.mutations.clone();
@@ -232,7 +232,7 @@ mod tests {
                     StatusCode::CONFLICT.into_response()
                 }
                 Ok(_) => next.run(request).await,
-                Err(response) => response,
+                Err(message) => failure(StatusCode::BAD_REQUEST, message),
             }
         }
         let router = axum::Router::new()
