@@ -116,7 +116,8 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
     if path.is_absolute() {
         candidates.push(path.to_owned());
     } else if !name.contains(['/', '\\', ':']) {
-        let filenames = vec![name.to_owned()];
+        #[cfg(unix)]
+        let filenames = [name.to_owned()];
         #[cfg(windows)]
         let filenames = if path.extension().is_none() {
             let mut names = vec![format!("{name}.exe"), format!("{name}.com")];
@@ -125,7 +126,7 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
             }
             names
         } else {
-            filenames
+            vec![name.to_owned()]
         };
         if let Some(search) = environment.get("PATH") {
             candidates.extend(

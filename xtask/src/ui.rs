@@ -1799,12 +1799,30 @@ async fn brainstorm_scenario(
         .await?;
     task_tab(client, "activity").await?;
     wait_dom(client,"return document.querySelector('#edit-model')?.value === 'synthetic-task-model' && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
-    wait_dom(
+    let verification_ready = wait_dom(
         client,
         "return document.querySelector('#start-verification')?.disabled === false;",
         vec![],
     )
-    .await?;
+    .await;
+    if let Err(error) = verification_ready {
+        let state: atelier_core::contracts::Board = http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(token)
+            .send()
+            .await?
+            .checked_status()
+            .await?
+            .json()
+            .await?;
+        let card = state.cards.iter().find(|card| card.id == converted[0].id);
+        let controls = client.execute("return Object.fromEntries(['save-task','create-worktree','verify-worktree','enqueue-task','start-verification','run-agent','run-mode'].map(id=>{const el=document.getElementById(id);return [id,el?{disabled:el.disabled,value:el.value}:null]}));", vec![]).await?;
+        return Err(format!(
+            "{error}. Verification task: {card:?}. Projects: {:?}. Controls: {controls:?}",
+            state.projects
+        )
+        .into());
+    }
     task_tab(client, "activity").await?;
     click(client, "#start-verification").await?;
     wait_dom(client,"return document.querySelector('#verification-result')?.textContent.includes('Vérification réussie sur cet instantané') && document.querySelector('#stop-run')?.disabled === true && document.querySelector('.criterion-done')?.checked === false && !document.querySelector('.service-log script');",vec![]).await?;

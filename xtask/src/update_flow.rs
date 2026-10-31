@@ -143,7 +143,9 @@ pub(super) fn next_binary(temporary: &Path, next: &str) -> Result<PathBuf> {
     } else {
         "atelier"
     });
-    let successor = temporary.join(format!("next-atelier{}", std::env::consts::EXE_SUFFIX));
+    let successor = temporary.join("successor-bin");
+    std::fs::create_dir(&successor)?;
+    let successor = successor.join(format!("atelier{}", std::env::consts::EXE_SUFFIX));
     std::fs::copy(binary, &successor)?;
     Ok(successor)
 }
