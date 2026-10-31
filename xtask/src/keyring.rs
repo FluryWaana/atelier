@@ -126,9 +126,21 @@ async fn test_prototype_vaults(platform: KeyringPlatform) -> Result<()> {
         let own = database.call(token_vault::read_encrypted).await?.ok_or("Second coffre absent.")?;
         database.call(move |store| token_vault::save_encrypted(store, Some(&encrypted))).await?;
         let vault = PrototypeVault::new(second_service.clone())?;
-        if database.call(move |store| settings::public_config(store, &mut |value, decrypt| vault.protect(value, decrypt))).await.is_ok() {
-            return Err("Un prototype a déchiffré le coffre d'un autre.".into());
-        }
+        database.call(move |store| {
+            let foreign = token_vault::read_encrypted(store)?.ok_or("Coffre étranger absent.")?;
+            if vault.protect(&foreign, true).is_ok() {
+                return Err("Un prototype a déchiffré le coffre d'un autre.".into());
+            }
+            // Public settings remain readable when credentials cannot be decrypted.
+            let public = settings::public_config(store, &mut |value, decrypt| vault.protect(value, decrypt))?;
+            if !public.string_equals("credentialError", "message.credentials_unavailable_local_data_remain_available")?
+                || ["tokenSet", "azureTokenSet", "tempoTokenSet"].iter().any(|flag| public.raw(flag).is_none_or(|value| value.get() != "null"))
+                || token_vault::read_encrypted(store)?.as_deref() != Some(foreign.as_str())
+            {
+                return Err("Le coffre étranger doit rester indisponible et inchangé dans les réglages publics.".into());
+            }
+            Ok(())
+        }).await?;
         database.call(move |store| token_vault::save_encrypted(store, Some(&own))).await?;
         let vault = PrototypeVault::new(second_service.clone())?;
         database.call(move |store| {
