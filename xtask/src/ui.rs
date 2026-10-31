@@ -51,10 +51,51 @@ fn free_port() -> Result<u16> {
         .port())
 }
 
-async fn start_server(data: &Path, port: u16, assets: &Path) -> Result<(Process, String)> {
-    let executable = ui_server();
+async fn start_server(
+    executable: &Path,
+    data: &Path,
+    port: u16,
+    assets: &Path,
+) -> Result<(Process, String)> {
+    let search = std::env::var_os("PATH").unwrap_or_default();
+    let search = synthetic_search_path(&search)?;
+    let mut server = command(executable);
+    server.env_clear().env("PATH", search);
+    for key in [
+        "SYSTEMROOT",
+        "WINDIR",
+        "COMSPEC",
+        "PATHEXT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "DBUS_SESSION_BUS_ADDRESS",
+        "GNOME_KEYRING_CONTROL",
+        "XDG_RUNTIME_DIR",
+        "CI",
+        "ATELIER_RUST_FINAL_CAMPAIGN",
+        "ATELIER_TEST_DISPOSABLE_KEYRING",
+        "ATELIER_TEST_KEYCHAIN",
+        "RUNNER_TEMP",
+    ] {
+        if let Some(value) = std::env::var_os(key) {
+            server.env(key, value);
+        }
+    }
+    for key in [
+        "HOME",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_STATE_HOME",
+        "XDG_CACHE_HOME",
+    ] {
+        server.env(key, data);
+    }
     let mut process = Process(
-        command(executable)
+        server
             .arg("serve")
             .arg("--data-dir")
             .arg(data)
@@ -84,6 +125,21 @@ async fn start_server(data: &Path, port: u16, assets: &Path) -> Result<(Process,
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     Err("Délai de démarrage du serveur dépassé.".into())
+}
+
+fn synthetic_search_path(search: &std::ffi::OsStr) -> Result<std::ffi::OsString> {
+    let paths = std::env::split_paths(search).filter(|directory| {
+        directory.is_absolute()
+            && !atelier_core::domain::agent_catalog::AGENTS
+                .iter()
+                .filter_map(|agent| agent.executable)
+                .any(|name| {
+                    ["", ".exe", ".com", ".cmd", ".bat"]
+                        .iter()
+                        .any(|extension| directory.join(format!("{name}{extension}")).exists())
+                })
+    });
+    Ok(std::env::join_paths(paths)?)
 }
 
 async fn stop_server(process: &mut Process, port: u16, token: &str) -> Result<()> {
@@ -257,6 +313,7 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
         match journey.await {
             Ok(()) => println!("Parcours synthétique {name} réussi."),
             Err(error) => {
+                eprintln!("Parcours synthétique {name} en échec : {error}");
                 if let Ok(screenshot) = client.screenshot().await {
                     let path = root().join(format!(
                         ".artifacts/rust-ui-{browser}-{name}-{}-failed.png",
@@ -284,7 +341,7 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
     let data = tempfile::tempdir()?;
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    let (_server, token) = start_server(data.path(), port, &ui_assets()).await?;
+    let (_server, token) = start_server(&ui_server(), data.path(), port, &ui_assets()).await?;
     client.goto(&format!("{address}/#session={token}")).await?;
     wait_dom(
         client,
@@ -391,7 +448,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
     let assets = ui_assets();
-    let (mut server, token) = start_server(data.path(), port, &assets).await?;
+    let (mut server, token) = start_server(&ui_server(), data.path(), port, &assets).await?;
     let repo = data.path().join("repositories/board-fixture");
     std::fs::create_dir_all(&repo)?;
     let project: serde_json::Value = http
@@ -816,7 +873,8 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     click(client, "#confirm-editor").await?;
     wait_dom(client, "return !document.querySelector('#task-editor') && document.querySelectorAll('article.card').length === 2;", vec![]).await?;
     stop_server(&mut server, port, &token).await?;
-    let (mut restarted, next_token) = start_server(data.path(), port, &assets).await?;
+    let (mut restarted, next_token) =
+        start_server(&ui_server(), data.path(), port, &assets).await?;
     if session::same_secret(&token, &next_token) {
         return Err("Session non renouvelée.".into());
     }
@@ -910,8 +968,7 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
 
 async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
     use atelier_app::infrastructure::{
-        installation::InstallationMode, installed, launcher, package, session, update_package,
-        updates,
+        installation::InstallationMode, installed, package, session, update_package, updates,
     };
     use atelier_core::application::updates::Phase;
     let temporary = tempfile::tempdir()?;
@@ -957,12 +1014,11 @@ async fn updates_scenario(client: &Client, http: &reqwest::Client) -> Result<()>
     let data = temporary.path().join("synthetic-data");
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    launcher::start(
+    let (_server, _) = start_server(
         &installed.active_executable()?,
         &data,
-        &installed.slot_path(&installed.current().active)?.join("ui"),
         port,
-        false,
+        &installed.slot_path(&installed.current().active)?.join("ui"),
     )
     .await?;
     let result=async {
@@ -1191,7 +1247,7 @@ async fn jira_recovery_scenario(client: &Client, http: &reqwest::Client) -> Resu
     }
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
-    let (mut server, token) = start_server(data.path(), port, &ui_assets()).await?;
+    let (mut server, token) = start_server(&ui_server(), data.path(), port, &ui_assets()).await?;
     client
         .goto(&format!("{address}/tasks/time-export#session={token}"))
         .await?;
@@ -1582,6 +1638,7 @@ async fn forge_task_scenario(client: &Client, address: &str) -> Result<()> {
         vec![],
     )
     .await?;
+    click(client, "#commit-author-name").await?;
     client
         .find(Locator::Css("#commit-author-name"))
         .await?
@@ -1690,11 +1747,6 @@ async fn brainstorm_scenario(
     if converted.len() != 1 || !converted[0].fields.string_equals("status", "todo")? {
         return Err("La conversion de brainstorm est absente ou dupliquée.".into());
     }
-    client
-        .goto(&format!("{address}/tasks/{}", converted[0].id))
-        .await?;
-    task_tab(client, "activity").await?;
-    wait_dom(client,"return document.querySelector('#task-editor')?.textContent.includes('Keep open question') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     let fixture = crate::target()
         .join("debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
@@ -1707,6 +1759,11 @@ async fn brainstorm_scenario(
         .await?
         .checked_status()
         .await?;
+    client
+        .goto(&format!("{address}/tasks/{}", converted[0].id))
+        .await?;
+    task_tab(client, "activity").await?;
+    wait_dom(client,"return document.querySelector('#task-editor')?.textContent.includes('Keep open question') && document.querySelector('.criterion-done')?.checked === false;",vec![]).await?;
     wait_dom(client,"return Array.from(document.querySelector('#run-agent')?.options||[]).some(option=>option.value==='preparation-command');",vec![]).await?;
     client.execute("for(const [id,value] of [['run-agent','preparation-command'],['run-purpose','preparation']]){const select=document.getElementById(id);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));}return true;",vec![]).await?;
     task_tab(client, "activity").await?;
@@ -1760,9 +1817,13 @@ async fn brainstorm_scenario(
         .await?
         .checked_status()
         .await?;
+    client
+        .goto(&format!("{address}/tasks/{}", converted[0].id))
+        .await?;
+    task_tab(client, "activity").await?;
     wait_dom(
         client,
-        "return document.querySelector('#enqueue-task')?.disabled === false;",
+        "return document.querySelector('#edit-agent')?.value === 'queue-command' && document.querySelector('#enqueue-task')?.disabled === false;",
         vec![],
     )
     .await?;
@@ -3993,23 +4054,29 @@ async fn files_scenario(
         format!("{address}/api/cards/{}/worktree/remove", card.id),
         format!("{address}/api/backups"),
         format!("{address}/api/backups/restore"),
-        format!("{address}/api/agent-providers/synthetic-guard/cli-update"),
         format!("{address}/api/extensions/synthetic-guard/operations"),
         format!("{address}/api/extensions/synthetic-guard/operations/synthetic-operation/send"),
         format!("{address}/api/extensions/synthetic-guard/tickets/reset/preview"),
         format!("{address}/api/extensions/synthetic-guard/tickets/reset/apply"),
-    ] {
-        if http
-            .post(path)
+    ]
+    .into_iter()
+    .chain(
+        cfg!(windows).then(|| format!("{address}/api/agent-providers/synthetic-guard/cli-update")),
+    ) {
+        let response = http
+            .post(&path)
             .bearer_auth(token)
             .header("x-local-request", "1")
             .json(&json!({"confirmed":true,"discardChanges":true}))
             .send()
-            .await?
-            .status()
-            != reqwest::StatusCode::CONFLICT
-        {
-            return Err("Une opération destructive a accepté des services actifs.".into());
+            .await?;
+        if response.status() != reqwest::StatusCode::CONFLICT {
+            return Err(format!(
+                "Opération {path} avec services actifs : HTTP {} au lieu de 409, {}",
+                response.status(),
+                response.text().await?
+            )
+            .into());
         }
     }
     if http
@@ -4558,4 +4625,28 @@ fn ui_server() -> std::path::PathBuf {
                 .join("debug")
                 .join(format!("atelier{}", std::env::consts::EXE_SUFFIX))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn synthetic_path_excludes_installed_agents_and_relative_directories() {
+        let root = tempfile::tempdir().unwrap();
+        let git = root.path().join("git");
+        let agents = root.path().join("agents");
+        std::fs::create_dir(&git).unwrap();
+        std::fs::create_dir(&agents).unwrap();
+        for filename in ["codex", "claude.exe", "gemini.cmd", "copilot.bat"] {
+            let file = agents.join(filename);
+            std::fs::write(&file, b"never execute").unwrap();
+            let path =
+                std::env::join_paths([std::path::Path::new("relative"), &agents, &git]).unwrap();
+            let filtered = super::synthetic_search_path(&path).unwrap();
+            assert_eq!(
+                std::env::split_paths(&filtered).collect::<Vec<_>>(),
+                vec![git.clone()]
+            );
+            std::fs::remove_file(file).unwrap();
+        }
+    }
 }

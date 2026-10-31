@@ -297,7 +297,7 @@ pub(super) async fn test_installed(
         .error_for_status()?
         .json()
         .await?;
-    if state["cards"]
+    if state["brainstorms"]
         .as_array()
         .is_none_or(|cards| !cards.contains(&card))
     {
@@ -492,7 +492,7 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
         .error_for_status()?
         .json()
         .await?;
-    if state["cards"]
+    if state["brainstorms"]
         .as_array()
         .is_none_or(|cards| !cards.contains(&card))
     {
@@ -539,7 +539,7 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
         .error_for_status()?
         .json()
         .await?;
-    if state["cards"]
+    if state["brainstorms"]
         .as_array()
         .is_none_or(|cards| !cards.contains(&card))
     {

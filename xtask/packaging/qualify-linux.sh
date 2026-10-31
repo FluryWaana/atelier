@@ -42,7 +42,7 @@ if [ "$phase" = initial ]; then
   request --json '{"title":"Synthetic installed package persistence"}' http://127.0.0.1:4389/api/brainstorms > "$HOME/package-fixture/card.json"
 else
   request http://127.0.0.1:4389/api/state > "$HOME/package-fixture/state.json"
-  jq -e --slurpfile card "$HOME/package-fixture/card.json" '.cards | any(.id == $card[0].id and .title == $card[0].title)' "$HOME/package-fixture/state.json" >/dev/null
+  jq -e --slurpfile card "$HOME/package-fixture/card.json" '.brainstorms | any(.id == $card[0].id and .title == $card[0].title)' "$HOME/package-fixture/state.json" >/dev/null
 fi
 request http://127.0.0.1:4389/api/health > "$HOME/package-fixture/health-$phase.json"
 unset token

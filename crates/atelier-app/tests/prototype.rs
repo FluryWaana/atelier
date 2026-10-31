@@ -37,6 +37,46 @@ async fn start(
 }
 
 #[tokio::test]
+async fn brainstorms_remain_in_their_own_collection_after_restart() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let client = reqwest::Client::new();
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    let idea: Value = client
+        .post(format!("{address}/api/brainstorms"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"title":"Synthetic persistent idea"}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let first_token = token.clone();
+    stop(&address, &token, server).await;
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    assert_ne!(token, first_token);
+    let state: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(state["brainstorms"], json!([idea]));
+    assert_eq!(state["cards"], json!([]));
+    stop(&address, &token, server).await;
+}
+
+#[tokio::test]
 async fn invalid_text_and_field_types_never_create_cards() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

@@ -116,15 +116,16 @@ fn executable(profile: &Document, environment: &Environment) -> Result<PathBuf> 
     if path.is_absolute() {
         candidates.push(path.to_owned());
     } else if !name.contains(['/', '\\', ':']) {
-        let filenames = if cfg!(windows) && path.extension().is_none() {
+        let filenames = vec![name.to_owned()];
+        #[cfg(windows)]
+        let filenames = if path.extension().is_none() {
             let mut names = vec![format!("{name}.exe"), format!("{name}.com")];
-            #[cfg(windows)]
             if allow_script {
                 names.extend([format!("{name}.cmd"), format!("{name}.bat")]);
             }
             names
         } else {
-            vec![name.to_owned()]
+            filenames
         };
         if let Some(search) = environment.get("PATH") {
             candidates.extend(

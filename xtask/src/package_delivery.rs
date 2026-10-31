@@ -25,14 +25,16 @@ async fn cli(binary: &Path, args: &[std::ffi::OsString]) -> Result<()> {
     command
         .args(args)
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
         .kill_on_drop(true);
     #[cfg(windows)]
     command.creation_flags(0x08000000);
-    let output = tokio::time::timeout(Duration::from_secs(40), command.output()).await??;
-    if !output.status.success() {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    // The detached Windows server can retain inherited handles after its launcher exits.
+    let status = tokio::time::timeout(Duration::from_secs(40), command.status())
+        .await
+        .map_err(|_| format!("Délai du lanceur dépassé pour {:?}.", args.first()))??;
+    if !status.success() {
         return Err("Le lanceur du paquet réel a refusé la commande de qualification.".into());
     }
     Ok(())
@@ -140,7 +142,7 @@ async fn portable(
             .json()
             .await?;
         let state_read_ms=reading.elapsed().as_millis();
-        if state["cards"]
+        if state["brainstorms"]
             .as_array()
             .is_none_or(|cards| !cards.contains(&card))
         {
