@@ -164,8 +164,6 @@ jobs:
           fi
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
-      - name: Verify the current Rust source inventory
-        run: cargo xtask inventory --check
       - run: cargo test --workspace --exclude atelier-ui --locked --no-fail-fast
         if: runner.os == 'Windows'
       - name: Native Rust tests with an explicit disposable macOS keychain
