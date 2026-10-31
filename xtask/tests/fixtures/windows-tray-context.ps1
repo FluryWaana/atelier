@@ -12,21 +12,33 @@ $record = Format-TrayControlContext $metadata
 if ($record.Name.Length -ne 256 -or $record.ClassName.Length -ne 256 -or $record.AutomationId.Length -ne 256 -or $record.ProcessId -ne 42 -or -not $record.Offscreen) { throw 'Native UI record contract failed.' }
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-$find = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Find-OwnedTrayControl' }, $true)
-$assignment = $find.Find({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left.VariablePath.UserPath -eq 'condition' }, $true)
-$Name = 'Show hidden icons'
-$Type = [System.Windows.Automation.ControlType]::Button
-$condition = & ([scriptblock]::Create($assignment.Right.Extent.Text))
-$nameCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [System.Windows.Automation.AutomationElement]::NameProperty }
-$typeCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [System.Windows.Automation.AutomationElement]::ControlTypeProperty }
-if (-not ($nameCondition.Flags -band [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase) -or $typeCondition.Value -ne $Type.Id) { throw 'Tray control condition lost case tolerance or its exact control type.' }
-if (-not [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons') -or [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons other')) { throw 'Observed overflow label does not match exactly ignoring case.' }
-$assignments = @($find.FindAll({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left.VariablePath.UserPath -eq 'condition' }, $true))
-$Name='Atelier Kanban'; $AlternativeName='Atelier Kanban : synthetic ready'
-$condition = & ([scriptblock]::Create($assignments[1].Right.Extent.Text))
-$parts=$condition.GetConditions()
-$names=@($parts[0].GetConditions() | ForEach-Object { $_.Value })
-if ($parts[1].Value -ne $Type.Id -or $names.Count -ne 2 -or $names -notcontains $Name -or $names -notcontains $AlternativeName) { throw 'Atomic tray-label transition condition failed.' }
+$constructor = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'New-TrayControlCondition' }, $true)
+. ([scriptblock]::Create($constructor.Extent.Text))
+function Assert-TrayCondition($Name, $Type, $AlternativeName, [string[]]$ExpectedNames, [string[]]$RejectedNames) {
+  $parts = (New-TrayControlCondition $Name $Type $AlternativeName).GetConditions()
+  if ($parts.Count -ne 2 -or $parts[1].Property -ne [System.Windows.Automation.AutomationElement]::ControlTypeProperty -or $parts[1].Value -ne $Type.Id) { throw 'Tray control condition lost its exact control type.' }
+  $names = @(if ($parts[0] -is [System.Windows.Automation.OrCondition]) { $parts[0].GetConditions() } else { $parts[0] })
+  if ($names.Count -ne $ExpectedNames.Count) { throw 'Unexpected tray label aliases.' }
+  foreach ($condition in $names) {
+    if ($condition.Property -ne [System.Windows.Automation.AutomationElement]::NameProperty -or $condition.Flags -ne [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase -or $ExpectedNames -notcontains $condition.Value) { throw 'Tray label condition lost its exact case-insensitive match.' }
+  }
+  foreach ($label in @($ExpectedNames + $RejectedNames)) {
+    $matched = @($names | Where-Object { [StringComparer]::OrdinalIgnoreCase.Equals([string]$_.Value, $label) }).Count -gt 0
+    if ($matched -ne ($ExpectedNames -contains $label)) { throw "Tray label match failed: $label" }
+  }
+}
+$buttonType = [System.Windows.Automation.ControlType]::Button
+$menuType = [System.Windows.Automation.ControlType]::MenuItem
+$ready = 'Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
+$compositeReady = 'Atelier Kanban Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
+$rejectedReady = @(($ready + ' other'), ($compositeReady + ' other'), ('Other ' + $ready), ('Atelier Kanban ' + $compositeReady))
+Assert-TrayCondition $ready $buttonType '' @($ready, $compositeReady) $rejectedReady
+Assert-TrayCondition 'Atelier Kanban' $buttonType '' @('Atelier Kanban', 'Atelier Kanban Atelier Kanban') @($ready, 'Atelier Kanban other')
+Assert-TrayCondition 'Atelier Kanban' $buttonType $ready @('Atelier Kanban', 'Atelier Kanban Atelier Kanban', $ready, $compositeReady) $rejectedReady
+Assert-TrayCondition 'Show hidden icons' $buttonType '' @('Show Hidden Icons') @('Show Hidden Icons Hide', 'Show Hidden Icons other', 'Atelier Kanban Show hidden icons')
+Assert-TrayCondition 'Ouvrir Atelier / Open Atelier' $menuType '' @('Ouvrir Atelier / Open Atelier') @('Atelier Kanban Ouvrir Atelier / Open Atelier')
+Assert-TrayCondition $ready $menuType '' @($ready) @($compositeReady)
+Assert-TrayCondition 'Atelier Kanban other' $buttonType '' @('Atelier Kanban other') @('Atelier Kanban Atelier Kanban other')
 $wait = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Wait-TrayButton' }, $true)
 . ([scriptblock]::Create($wait.Extent.Text))
 function Find-OwnedTrayControl {

@@ -46,17 +46,22 @@ function Get-TrayControlContext([int]$ExplorerId) {
   'Explorer PID {0}: {1} controls found, {2} inspected.' -f $ExplorerId, $elements.Count, [Math]::Min($elements.Count, 512)
   $records | Sort-Object @{ Expression = { $_.Name -like 'Atelier*' }; Descending = $true } | Select-Object -First 128
 }
-function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type, [string]$AlternativeName) {
-  $condition = [System.Windows.Automation.AndCondition]::new(
-    [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase),
+function New-TrayControlCondition([string]$Name, [System.Windows.Automation.ControlType]$Type, [string]$AlternativeName) {
+  $atelierNames = @('Atelier Kanban', ('Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'))
+  [System.Windows.Automation.Condition[]]$names = @(foreach ($label in @($Name, $AlternativeName)) {
+    if (-not $label) { continue }
+    [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $label, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)
+    # Explorer can prepend the application title to the exact notification tooltip.
+    if ($Type -eq [System.Windows.Automation.ControlType]::Button -and $label -in $atelierNames) {
+      [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, ('Atelier Kanban ' + $label), [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)
+    }
+  })
+  $nameCondition = if ($names.Count -eq 1) { $names[0] } else { [System.Windows.Automation.OrCondition]::new($names) }
+  return [System.Windows.Automation.AndCondition]::new($nameCondition,
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $Type))
-  if ($AlternativeName) {
-    $condition = [System.Windows.Automation.AndCondition]::new(
-      [System.Windows.Automation.OrCondition]::new(
-        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase),
-        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $AlternativeName, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)),
-      [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $Type))
-  }
+}
+function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type, [string]$AlternativeName) {
+  $condition = New-TrayControlCondition $Name $Type $AlternativeName
   $found = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   if ($found.Count -gt 1) { throw 'Ambiguous native tray control; no action sent.' }
   if ($found.Count -eq 1) { return $found[0] }

@@ -17,11 +17,11 @@ sha2 = "=0.11.1"
 time = { version = "=0.3.55", features = ["formatting"] }
 reqwest.workspace = true
 fantoccini = { version = "=0.22.1", default-features = false, features = ["rustls-tls"] }
+hyper-util = { version = "=0.1.21", features = ["client-legacy", "http1", "tokio", "service"] }
 
 [dev-dependencies]
 cap-std = "=4.0.3"
 hyper = "=1.12.0"
-hyper-util = { version = "=0.1.21", features = ["tokio", "service"] }
 tokio-rustls = { version = "=0.26.6", default-features = false, features = ["aws_lc_rs", "tls12"] }
 
 [target.'cfg(windows)'.dependencies]

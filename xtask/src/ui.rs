@@ -179,12 +179,13 @@ async fn connect_browser(
     browser: &str,
     mut capabilities: serde_json::Map<String, serde_json::Value>,
 ) -> Result<(Client, Option<String>)> {
+    atelier_app::infrastructure::local_http::server_port(endpoint)?;
     use fantoccini::error::NewSessionError;
     if browser == "safari" {
         capabilities.insert("platformName".into(), json!("mac"));
         capabilities.insert("safari:diagnose".into(), json!(true));
     }
-    let first = ClientBuilder::rustls()?
+    let first = ClientBuilder::new(hyper_util::client::legacy::connect::HttpConnector::new())
         .capabilities(capabilities.clone())
         .connect(endpoint)
         .await;
@@ -200,7 +201,7 @@ async fn connect_browser(
             eprintln!(
                 "Première création de session Safari refusée : {reason}. Une seule seconde tentative avant tout parcours."
             );
-            match ClientBuilder::rustls()?.capabilities(capabilities).connect(endpoint).await {
+            match ClientBuilder::new(hyper_util::client::legacy::connect::HttpConnector::new()).capabilities(capabilities).connect(endpoint).await {
                     Ok(client) => Ok((client, Some(reason))),
                     Err(second) => Err(format!("Création de session Safari refusée deux fois. Première erreur : {reason}. Seconde erreur : {second}").into()),
                 }
@@ -4936,6 +4937,55 @@ fn ui_server() -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn webdriver_http_sessions_do_not_require_native_certificates() {
+        let fixture = tempfile::tempdir().unwrap();
+        let certificates = fixture.path().join("empty-ca.pem");
+        let directory = fixture.path().join("empty-ca-directory");
+        std::fs::write(&certificates, b"").unwrap();
+        std::fs::create_dir(&directory).unwrap();
+        let test_name = "ui::tests::safari_session_timeout_gets_one_retry_before_any_journey_and_preserves_both_failures";
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap());
+        child
+            .args(["--exact", test_name, "--test-threads=1", "--nocapture"])
+            .env("SSL_CERT_FILE", certificates)
+            .env("SSL_CERT_DIR", directory);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            child.creation_flags(0x08000000);
+        }
+        let output = child.output().unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success(),
+            "{stdout}\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            stdout.contains(test_name) && stdout.contains("1 passed; 0 failed"),
+            "The isolated HTTP session scenarios did not execute: {stdout}"
+        );
+    }
+
+    #[tokio::test]
+    async fn webdriver_transport_is_restricted_to_the_local_http_endpoint() {
+        for endpoint in [
+            "https://127.0.0.1:4444",
+            "http://localhost:4444",
+            "http://192.0.2.1:4444",
+            "http://127.0.0.1:0",
+            "http://127.0.0.1:4444/other",
+        ] {
+            let Err(error) =
+                super::connect_browser(endpoint, "safari", serde_json::Map::new()).await
+            else {
+                panic!("WebDriver must remain loopback HTTP only");
+            };
+            assert_eq!(error.to_string(), "Adresse du serveur local invalide.");
+        }
+    }
+
     #[test]
     fn safari_diagnostics_copy_only_new_xpc_files_with_a_size_bound() {
         let fixture = tempfile::tempdir().unwrap();
