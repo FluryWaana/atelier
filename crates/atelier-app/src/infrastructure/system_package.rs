@@ -127,16 +127,14 @@ mod native {
         checked_file::CheckedFile,
         installation::{self, InstallationMode},
         installed::{self, Current, Version},
-        package, publish, update_package, updates,
+        package, package_maintenance, publish, update_package, updates,
     };
     use super::*;
     use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
     use cap_std::fs::{Dir, MetadataExt, OpenOptionsExt};
     use serde::{Deserialize, Serialize};
     use sha2::{Digest, Sha256};
-    use std::{
-        collections::BTreeSet, os::fd::AsRawFd, os::unix::fs::PermissionsExt, time::Duration,
-    };
+    use std::{collections::BTreeSet, os::unix::fs::PermissionsExt, time::Duration};
     const FORMAT: &str = "atelier-system-package/1";
     const MARKER: &str = ".package-maintenance";
     #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -187,8 +185,8 @@ mod native {
         root: PathBuf,
         parent: Dir,
         key: String,
-        _external: std::fs::File,
-        _running: Option<std::fs::File>,
+        _external: package_maintenance::Guard,
+        _running: Option<package_maintenance::Guard>,
     }
     impl Scope {
         fn open(root: &Path) -> Result<Self> {
@@ -223,7 +221,7 @@ mod native {
             if file.metadata()?.len() != 0 {
                 return Err("Verrou système modifié ; contenu conservé.".into());
             }
-            lock(&file)?;
+            let file = package_maintenance::exclusive(file)?;
             let running = if root.try_exists()? {
                 let directory = super::super::repository_access::absolute(&root)?;
                 match directory.symlink_metadata(".package-lock") {
@@ -237,8 +235,7 @@ mod native {
                         if running.metadata()?.len() != 0 {
                             return Err("Verrou système modifié.".into());
                         }
-                        lock(&running)?;
-                        Some(running)
+                        Some(package_maintenance::exclusive(running)?)
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
                     Err(error) => return Err(error.into()),
@@ -339,13 +336,6 @@ mod native {
             root.as_os_str().as_encoded_bytes(),
         ));
         Ok(read_journal(&parent, &root, &key)?.is_some_and(|journal| journal.pending()))
-    }
-    fn lock(file: &std::fs::File) -> Result<()> {
-        // Both package operations and packaged servers retain these advisory locks until complete.
-        if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
-            return Err("Arrête toutes les instances Atelier et les autres opérations du gestionnaire de paquets.".into());
-        }
-        Ok(())
     }
     fn relative(path: &str) -> Result<()> {
         if path.is_empty()

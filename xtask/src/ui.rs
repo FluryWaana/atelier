@@ -51,6 +51,23 @@ fn free_port() -> Result<u16> {
         .port())
 }
 
+fn preserve_driver_startup_log(log: tempfile::NamedTempFile, browser: &str) {
+    let preserved: Result<_> = (|| {
+        let artifacts = root().join(".artifacts");
+        std::fs::create_dir_all(&artifacts)?;
+        let path = artifacts.join(format!(
+            "rust-ui-{browser}-{}-startup.log",
+            std::process::id()
+        ));
+        log.persist_noclobber(&path)?;
+        Ok(path)
+    })();
+    match preserved {
+        Ok(path) => eprintln!("Journal du démarrage WebDriver : {}", path.display()),
+        Err(error) => eprintln!("Journal du démarrage WebDriver non conservé : {error}"),
+    }
+}
+
 async fn start_server(
     executable: &Path,
     data: &Path,
@@ -254,12 +271,14 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
         .build()?;
     loop {
         if driver.0.try_wait()?.is_some() {
+            preserve_driver_startup_log(driver_log, &browser);
             return Err("WebDriver s’est arrêté au démarrage.".into());
         }
         if http.get(format!("{endpoint}/status")).send().await.is_ok() {
             break;
         }
         if Instant::now() >= deadline {
+            preserve_driver_startup_log(driver_log, &browser);
             return Err("WebDriver ne répond pas.".into());
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -303,17 +322,8 @@ pub async fn test(prepared_assets: bool) -> Result<()> {
         .connect(&endpoint)
         .await;
     if connected.is_err() {
-        let artifacts = root().join(".artifacts");
-        std::fs::create_dir_all(&artifacts)?;
-        let path = artifacts.join(format!(
-            "rust-ui-{browser}-{}-startup.log",
-            std::process::id()
-        ));
         // No application session or authenticated journey exists at this point.
-        match driver_log.persist_noclobber(&path) {
-            Ok(_) => eprintln!("Journal du démarrage WebDriver : {}", path.display()),
-            Err(error) => eprintln!("Journal du démarrage WebDriver non conservé : {error}"),
-        }
+        preserve_driver_startup_log(driver_log, &browser);
     }
     let client = connected?;
     // The two-second client above is only for driver readiness, not multi-step native operations.

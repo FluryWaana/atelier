@@ -38,7 +38,7 @@ pub fn recover_command(args: impl IntoIterator<Item = std::ffi::OsString>) -> Re
 fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path::PathBuf> {
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
     use cap_std::fs::MetadataExt;
-    use std::{io::Write, os::fd::AsRawFd};
+    use std::io::Write;
     const MARKER: &str = ".package-maintenance";
     const CONTENT: &[u8] = b"atelier-package-maintenance/1\n";
     let directory = super::repository_access::absolute(root)?;
@@ -50,10 +50,7 @@ fn recover(root: &Path, verify: impl FnOnce() -> Result<()>) -> Result<std::path
     if lock.metadata()?.len() != 0 {
         return Err("Verrou de paquet modifié ; contenu conservé.".into());
     }
-    // Match the shared lock held by every Linux packaged server, without stopping any process.
-    if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
-        return Err("Arrête toutes les instances et opérations du gestionnaire de paquets avant la récupération.".into());
-    }
+    let _lock = exclusive(lock)?;
     if super::system_package::pending(root)? {
         return Err("Une transaction système reste non résolue ; utilise la récupération du gestionnaire de paquets.".into());
     }
@@ -106,6 +103,25 @@ pub struct Guard {
     #[cfg(target_os = "linux")]
     _lock: Option<std::fs::File>,
 }
+#[cfg(target_os = "linux")]
+pub(super) fn exclusive(file: std::fs::File) -> Result<Guard> {
+    use std::os::fd::AsRawFd;
+    // The owned regular file remains open for the whole maintenance operation.
+    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        return Err("Arrête toutes les instances Atelier et les autres opérations du gestionnaire de paquets.".into());
+    }
+    Ok(Guard { _lock: Some(file) })
+}
+impl Drop for Guard {
+    fn drop(&mut self) {
+        #[cfg(target_os = "linux")]
+        if let Some(file) = &self._lock {
+            use std::os::fd::AsRawFd;
+            // Closing alone leaves flock held by descriptors inherited during a concurrent fork.
+            unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_UN) };
+        }
+    }
+}
 pub fn acquire(root: Option<&Path>) -> Result<Guard> {
     #[cfg(windows)]
     {
@@ -155,8 +171,9 @@ pub fn acquire(root: Option<&Path>) -> Result<Guard> {
         if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_SH | libc::LOCK_NB) } != 0 {
             return Err("Le paquet Atelier est en cours de maintenance.".into());
         }
+        let guard = Guard { _lock: Some(file) };
         marker()?;
-        Ok(Guard { _lock: Some(file) })
+        Ok(guard)
     }
     #[cfg(not(any(windows, target_os = "linux")))]
     {
@@ -237,6 +254,96 @@ fn windows_named(running_name: &str, maintenance_name: &str) -> Result<Guard> {
 mod tests {
     use super::*;
     use std::os::fd::AsRawFd;
+
+    struct InheritedDescriptors {
+        release: std::os::unix::net::UnixStream,
+        pid: libc::pid_t,
+    }
+    impl Drop for InheritedDescriptors {
+        fn drop(&mut self) {
+            use std::io::Write;
+            let _ = self.release.write_all(&[1]);
+            loop {
+                // This synthetic child only waits on its pipe and then exits.
+                if unsafe { libc::waitpid(self.pid, std::ptr::null_mut(), 0) } >= 0
+                    || std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted
+                {
+                    break;
+                }
+            }
+        }
+    }
+    fn inherit_descriptors() -> InheritedDescriptors {
+        let (reader, release) = std::os::unix::net::UnixStream::pair().unwrap();
+        // The child uses only async-signal-safe syscalls before _exit, with no Rust cleanup.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0);
+        if pid == 0 {
+            let mut byte = 0_u8;
+            unsafe {
+                loop {
+                    if libc::read(reader.as_raw_fd(), std::ptr::from_mut(&mut byte).cast(), 1) >= 0
+                        || *libc::__errno_location() != libc::EINTR
+                    {
+                        break;
+                    }
+                }
+                libc::_exit(0);
+            }
+        }
+        InheritedDescriptors { release, pid }
+    }
+
+    #[test]
+    fn recovery_releases_inherited_locks_on_success_and_failure() {
+        for refused in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let lock = root.path().join(".package-lock");
+            let marker = root.path().join(".package-maintenance");
+            std::fs::write(&lock, []).unwrap();
+            std::fs::write(&marker, "atelier-package-maintenance/1\n").unwrap();
+            let mut inherited = None;
+            let result = recover(root.path(), || {
+                inherited = Some(inherit_descriptors());
+                if refused {
+                    return Err("Synthetic verification refusal".into());
+                }
+                Ok(())
+            });
+            let reopened = if refused {
+                exclusive(std::fs::File::open(&lock).unwrap())
+            } else {
+                acquire(Some(root.path()))
+            };
+            drop(inherited);
+            if refused {
+                assert!(result.is_err());
+                assert!(marker.exists());
+            } else {
+                result.unwrap();
+                assert!(!marker.exists());
+            }
+            reopened.unwrap();
+        }
+    }
+    #[test]
+    fn dropped_guards_release_shared_and_exclusive_locks_inherited_by_a_child() {
+        for maintenance in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let path = root.path().join(".package-lock");
+            std::fs::write(&path, []).unwrap();
+            let guard = if maintenance {
+                exclusive(std::fs::File::open(&path).unwrap()).unwrap()
+            } else {
+                acquire(Some(root.path())).unwrap()
+            };
+            let inherited = inherit_descriptors();
+            drop(guard);
+            let reopened = exclusive(std::fs::File::open(&path).unwrap());
+            drop(inherited);
+            reopened.unwrap();
+        }
+    }
     #[test]
     fn a_system_installation_cannot_start_during_an_incomplete_unpack() {
         let root = tempfile::tempdir().unwrap();
@@ -273,7 +380,7 @@ mod tests {
                     std::fs::read(receipt).unwrap(),
                     b"atelier-package-maintenance/1\n"
                 );
-                assert!(acquire(Some(root.path())).is_ok());
+                acquire(Some(root.path())).unwrap();
             } else {
                 assert!(result.is_err());
                 assert!(marker.exists());
@@ -321,12 +428,18 @@ mod tests {
         std::fs::write(root.path().join(".package-lock"), []).unwrap();
         std::fs::write(root.path().join("synthetic-data"), "preserve").unwrap();
         let server = acquire(Some(root.path())).unwrap();
+        let other_server = acquire(Some(root.path())).unwrap();
         let file = std::fs::File::open(root.path().join(".package-lock")).unwrap();
         assert_ne!(
             unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
             0
         );
         drop(server);
+        assert_ne!(
+            unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
+            0
+        );
+        drop(other_server);
         assert_eq!(
             unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
             0
