@@ -86,11 +86,12 @@ before=$(sha256sum "$database" | cut -d ' ' -f 1)
 test ! -e "$root/.package-maintenance"
 
 # The older v1 marker has its own explicit, preserving recovery path.
-ui="$root/versions/$(jq -r '.active.id' "$root/current.json")/ui"
+active="$root/versions/$(jq -r '.active.id' "$root/current.json")"
+ui="$active/ui"
 printf '%s\n' atelier-package-maintenance/1 > "$root/.package-maintenance"
 chmod 600 "$root/.package-maintenance"
-if runuser -u atelier-rust-synthetic -- "$root/atelier" serve --data-dir "$fixture/synthetic-data" --assets "$ui" --port 4389 > "$fixture/maintenance-refusal.log" 2>&1; then echo 'Maintenance marker failed to block launch.' >&2; exit 1; fi
-grep -q 'installation ou désinstallation' "$fixture/maintenance-refusal.log"
+if runuser -u atelier-rust-synthetic -- "$active/atelier" serve --data-dir "$fixture/synthetic-data" --assets "$ui" --port 4389 > "$fixture/maintenance-refusal.log" 2>&1; then echo 'Maintenance marker failed to block launch.' >&2; exit 1; fi
+if ! grep -q 'installation ou désinstallation' "$fixture/maintenance-refusal.log"; then cat "$fixture/maintenance-refusal.log" >&2; exit 1; fi
 "$root/atelier" recover-package-maintenance --root "$root" --confirm
 test ! -e "$root/.package-maintenance"
 

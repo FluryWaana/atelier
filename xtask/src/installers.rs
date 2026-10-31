@@ -8,6 +8,17 @@ const PRE: &str = include_str!("../packaging/linux-preinstall.sh");
 const REMOVE: &str = include_str!("../packaging/linux-preremove.sh");
 const POST: &str = include_str!("../packaging/linux-postremove.sh");
 const INSTALL: &str = include_str!("../packaging/linux-postinstall.sh");
+fn deb_control(version: &str, architecture: &str) -> String {
+    format!(
+        "Package: atelier-kanban-rust\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: Atelier Kanban <noreply@github.com>\nSection: devel\nPriority: optional\nDepends: libc6, libgcc-s1, libsecret-tools, xdg-utils, zenity, util-linux, procps\nDescription: Local Kanban workspace with a Rust runtime\n Signed native installation. User data is retained on removal.\n"
+    )
+}
+fn rpm_spec(version: &str, deb: &Path) -> String {
+    format!(
+        "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later\nRequires: libsecret, xdg-utils, zenity, util-linux, procps-ng\nRequires(post): procps-ng\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; signed runtime state and user data are retained safely.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%post\n{INSTALL}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/usr/lib/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n/usr/share/doc/atelier-kanban-rust\n",
+        deb.display()
+    )
+}
 fn compiler_path(path: &Path) -> Result<String> {
     let path = fs::canonicalize(path)?;
     let path = path.to_str().ok_or("Chemin du compilateur non UTF-8.")?;
@@ -245,9 +256,7 @@ pub(super) async fn build(
         } else {
             "amd64"
         };
-        let control = format!(
-            "Package: atelier-kanban-rust\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: Atelier Kanban <noreply@github.com>\nSection: devel\nPriority: optional\nDepends: libc6, libgcc-s1, libsecret-tools, xdg-utils, zenity, util-linux\nDescription: Local Kanban workspace with a Rust runtime\n Signed native installation. User data is retained on removal.\n"
-        );
+        let control = deb_control(&version, architecture);
         put(&deb, "DEBIAN/control", control.as_bytes(), false)?;
         put(&deb, "DEBIAN/preinst", PRE.as_bytes(), true)?;
         put(&deb, "DEBIAN/postinst", INSTALL.as_bytes(), true)?;
@@ -284,10 +293,7 @@ pub(super) async fn build(
         for name in ["BUILD", "BUILDROOT", "RPMS", "SOURCES", "SPECS", "SRPMS"] {
             fs::create_dir(rpm.join(name))?;
         }
-        let spec = format!(
-            "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later\nRequires: libsecret, xdg-utils, zenity, util-linux\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; signed runtime state and user data are retained safely.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%post\n{INSTALL}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/usr/lib/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n/usr/share/doc/atelier-kanban-rust\n",
-            deb.display()
-        );
+        let spec = rpm_spec(&version, &deb);
         let spec_path = scratch_path.join("atelier.spec");
         package::write(&spec_path, spec.as_bytes())?;
         run(
@@ -338,6 +344,33 @@ pub(super) async fn build(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn packages_provide_process_inspection_during_installation_and_runtime() {
+        for architecture in ["amd64", "arm64"] {
+            let control = deb_control("0.1.9", architecture);
+            let dependencies = control
+                .lines()
+                .find_map(|line| line.strip_prefix("Depends: "))
+                .unwrap();
+            assert!(
+                dependencies
+                    .split(',')
+                    .any(|package| package.trim() == "procps")
+            );
+        }
+        let spec = rpm_spec("0.1.9", Path::new("/synthetic/deb"));
+        let headers: Vec<_> = spec
+            .lines()
+            .take_while(|line| *line != "%description")
+            .collect();
+        assert!(headers.contains(&"Requires(post): procps-ng"));
+        assert!(
+            headers
+                .iter()
+                .filter_map(|line| line.strip_prefix("Requires: "))
+                .any(|line| line.split(',').any(|package| package.trim() == "procps-ng"))
+        );
+    }
     #[test]
     fn compiler_paths_preserve_spaces_and_unicode_without_verbatim_prefixes() {
         let temporary = tempfile::Builder::new()

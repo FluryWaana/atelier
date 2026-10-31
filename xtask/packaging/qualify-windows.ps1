@@ -52,7 +52,15 @@ try {
   Invoke-Owned $uninstallers[0].FullName ($silent + @("/LOG=$(Join-Path $deliveryRoot 'uninstall-running-refusal.log')")) $false
   Invoke-Owned $setups[0].FullName ($silent + @("/DIR=$app", "/LOG=$(Join-Path $deliveryRoot 'setup-running-refusal.log')")) $false
   $nativePowerShell = Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell/v1.0/powershell.exe'
-  Invoke-Owned $nativePowerShell @('-NoLogo', '-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'qualify-tray-windows.ps1'), '-LockFile', (Join-Path $data '.atelier-data-lock.sqlite'), '-Port', "$port")
+  try {
+    Invoke-Owned $nativePowerShell @('-NoLogo', '-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'qualify-tray-windows.ps1'), '-LockFile', (Join-Path $data '.atelier-data-lock.sqlite'), '-Port', "$port")
+  } finally {
+    $trayFailure = Join-Path $data 'tray-qualification-error.log'
+    if (Test-Path -LiteralPath $trayFailure -PathType Leaf) {
+      Copy-Item -LiteralPath $trayFailure -Destination (Join-Path $deliveryRoot 'tray-qualification-error.log') -ErrorAction Continue
+      Get-Content -LiteralPath $trayFailure -ErrorAction Continue
+    }
+  }
   $launched = $false
   # Reuse the signed successor and existing updater on the actual Setup installation.
   # The helper reads the synthetic DPAPI session internally; no token enters PowerShell.

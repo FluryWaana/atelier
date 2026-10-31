@@ -51,7 +51,15 @@ fn free_port() -> Result<u16> {
         .port())
 }
 
-fn preserve_driver_startup_log(log: tempfile::NamedTempFile, browser: &str) {
+fn preserve_driver_startup_log(
+    log: &tempfile::NamedTempFile,
+    browser: &str,
+    reason: &str,
+    driver_pid: u32,
+) {
+    use std::io::{Read, Write};
+    #[cfg(not(target_os = "macos"))]
+    let _ = driver_pid;
     let preserved: Result<_> = (|| {
         let artifacts = root().join(".artifacts");
         std::fs::create_dir_all(&artifacts)?;
@@ -59,12 +67,81 @@ fn preserve_driver_startup_log(log: tempfile::NamedTempFile, browser: &str) {
             "rust-ui-{browser}-{}-startup.log",
             std::process::id()
         ));
-        log.persist_noclobber(&path)?;
+        let mut output = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)?;
+        writeln!(output, "{reason}")?;
+        std::io::copy(&mut log.reopen()?.take(2 * 1024 * 1024), &mut output)?;
         Ok(path)
     })();
     match preserved {
         Ok(path) => eprintln!("Journal du démarrage WebDriver : {}", path.display()),
         Err(error) => eprintln!("Journal du démarrage WebDriver non conservé : {error}"),
+    }
+    #[cfg(target_os = "macos")]
+    if browser == "safari"
+        && std::env::var("CI").as_deref() == Ok("true")
+        && std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() == Ok("1")
+    {
+        let saved: Result<()> = (|| {
+            let home = std::env::var_os("HOME").ok_or("HOME du runner absent.")?;
+            let source = PathBuf::from(home).join("Library/Logs/com.apple.WebDriver");
+            let destination = root().join(".artifacts/rust-safari-startup-diagnostics");
+            std::fs::create_dir_all(&destination)?;
+            let prefix = format!("safaridriver.{driver_pid}.");
+            for entry in std::fs::read_dir(source)?.take(128) {
+                let entry = entry?;
+                if entry.file_name().to_string_lossy().starts_with(&prefix)
+                    && atelier_app::infrastructure::checked_file::plain_metadata(&entry.path())?
+                        .is_file()
+                {
+                    let mut output = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(destination.join(entry.file_name()))?;
+                    std::io::copy(
+                        &mut std::fs::File::open(entry.path())?.take(2 * 1024 * 1024),
+                        &mut output,
+                    )?;
+                }
+            }
+            Ok(())
+        })();
+        if let Err(error) = saved {
+            eprintln!("Diagnostics Safari de démarrage non conservés : {error}");
+        }
+    }
+}
+
+async fn connect_browser(
+    endpoint: &str,
+    browser: &str,
+    capabilities: serde_json::Map<String, serde_json::Value>,
+) -> Result<(Client, Option<String>)> {
+    use fantoccini::error::NewSessionError;
+    let first = ClientBuilder::rustls()?
+        .capabilities(capabilities.clone())
+        .connect(endpoint)
+        .await;
+    match first {
+        Ok(client) => Ok((client, None)),
+        Err(first)
+            if browser == "safari"
+                && matches!(&first,
+            NewSessionError::SessionNotCreated(error)
+            if error.message.contains("The session timed out while connecting to a Safari instance")) =>
+        {
+            let reason = first.to_string();
+            eprintln!(
+                "Première création de session Safari refusée : {reason}. Une seule seconde tentative avant tout parcours."
+            );
+            match ClientBuilder::rustls()?.capabilities(capabilities).connect(endpoint).await {
+                    Ok(client) => Ok((client, Some(reason))),
+                    Err(second) => Err(format!("Création de session Safari refusée deux fois. Première erreur : {reason}. Seconde erreur : {second}").into()),
+                }
+        }
+        Err(error) => Err(error.into()),
     }
 }
 
@@ -290,15 +367,17 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
         .build()?;
     loop {
         if driver.0.try_wait()?.is_some() {
-            preserve_driver_startup_log(driver_log, &browser);
-            return Err("WebDriver s’est arrêté au démarrage.".into());
+            let reason = "WebDriver s’est arrêté au démarrage.";
+            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id());
+            return Err(reason.into());
         }
         if http.get(format!("{endpoint}/status")).send().await.is_ok() {
             break;
         }
         if Instant::now() >= deadline {
-            preserve_driver_startup_log(driver_log, &browser);
-            return Err("WebDriver ne répond pas.".into());
+            let reason = "WebDriver ne répond pas.";
+            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id());
+            return Err(reason.into());
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
@@ -336,15 +415,18 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
         }
         _ => unreachable!(),
     }
-    let connected = ClientBuilder::rustls()?
-        .capabilities(capabilities)
-        .connect(&endpoint)
-        .await;
-    if connected.is_err() {
-        // No application session or authenticated journey exists at this point.
-        preserve_driver_startup_log(driver_log, &browser);
+    let connected = connect_browser(&endpoint, &browser, capabilities).await;
+    // Snapshot before any application session exists, also if startup recovered.
+    match &connected {
+        Ok((_, Some(reason))) => {
+            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id())
+        }
+        Err(error) => {
+            preserve_driver_startup_log(&driver_log, &browser, &error.to_string(), driver.0.id())
+        }
+        _ => {}
     }
-    let client = connected?;
+    let (client, _) = connected?;
     // The two-second client above is only for driver readiness, not multi-step native operations.
     let http = reqwest::Client::builder()
         .timeout(Duration::from_secs(180))
@@ -4744,6 +4826,80 @@ fn ui_server() -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn safari_session_timeout_gets_one_retry_before_any_journey_and_preserves_both_failures()
+    {
+        use axum::{
+            Json, Router,
+            http::StatusCode,
+            routing::{delete, post},
+        };
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        const FIRST: &str = "The session timed out while connecting to a Safari instance. first";
+        const SECOND: &str = "The session timed out while connecting to a Safari instance. second";
+        for (browser, failures, expected_attempts, success) in [
+            ("safari", vec![("session not created", FIRST)], 2, true),
+            (
+                "safari",
+                vec![
+                    ("session not created", FIRST),
+                    ("session not created", SECOND),
+                ],
+                2,
+                false,
+            ),
+            (
+                "safari",
+                vec![("session not created", "Allow Remote Automation is disabled")],
+                1,
+                false,
+            ),
+            ("safari", vec![("invalid argument", FIRST)], 1, false),
+            ("chrome", vec![("session not created", FIRST)], 1, false),
+            ("firefox", vec![("session not created", FIRST)], 1, false),
+            ("safari", vec![], 1, true),
+        ] {
+            let attempts = Arc::new(AtomicUsize::new(0));
+            let observed = attempts.clone();
+            let router = Router::new().route("/session", post(move || {
+                let attempts = observed.clone();
+                let failures = failures.clone();
+                async move {
+                    let index = attempts.fetch_add(1, Ordering::SeqCst);
+                    match failures.get(index) {
+                        Some((code, message)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"value":{"error":code,"message":message,"stacktrace":""}}))),
+                        None => (StatusCode::OK, Json(serde_json::json!({"value":{"sessionId":"synthetic","capabilities":{"browserName":browser}}}))),
+                    }
+                }
+            }))
+            .route("/session/synthetic", delete(|| async { Json(serde_json::json!({"value":null})) }))
+            .route("/session/synthetic/url", post(|| async { (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"value":{"error":"unknown error","message":"synthetic journey refused","stacktrace":""}}))) }));
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let endpoint = format!("http://{}", listener.local_addr().unwrap());
+            let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+            let result = super::connect_browser(&endpoint, browser, serde_json::Map::new()).await;
+            assert_eq!(result.is_ok(), success);
+            assert_eq!(attempts.load(Ordering::SeqCst), expected_attempts);
+            match result {
+                Ok((client, previous)) => {
+                    assert_eq!(previous.is_some(), expected_attempts == 2);
+                    assert!(client.goto("http://synthetic.invalid").await.is_err());
+                    assert_eq!(attempts.load(Ordering::SeqCst), expected_attempts);
+                    client.close().await.unwrap();
+                }
+                Err(error) if expected_attempts == 2 => {
+                    let message = error.to_string();
+                    assert!(message.contains(FIRST) && message.contains(SECOND));
+                }
+                Err(_) => {}
+            }
+            server.abort();
+        }
+    }
+
     #[test]
     fn prepared_binaries_require_every_file_and_refuse_directories() {
         let fixture = tempfile::tempdir().unwrap();

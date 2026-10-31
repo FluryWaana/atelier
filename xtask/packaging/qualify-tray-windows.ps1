@@ -3,8 +3,14 @@ $ErrorActionPreference = 'Stop'
 if ($env:CI -ne 'true' -or $env:ATELIER_RUST_FINAL_CAMPAIGN -ne '1' -or -not $env:RUNNER_TEMP) { throw 'Disposable native desktop final campaign required.' }
 $fixtureBase = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not [IO.Path]::IsPathRooted($LockFile) -or $Port -lt 1 -or $Port -gt 65535 -or -not [IO.Path]::GetFullPath($LockFile).StartsWith($fixtureBase, [StringComparison]::OrdinalIgnoreCase)) { throw 'Synthetic tray scope refused.' }
+$failureLog = Join-Path ([IO.Path]::GetDirectoryName($LockFile)) 'tray-qualification-error.log'
+trap {
+  $details = $_ | Out-String
+  $details.Substring(0, [Math]::Min($details.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
+  exit 1
+}
 # ASCII source keeps the Windows PowerShell 5.1 helper independent of the runner code page.
-$readyName = 'Atelier Kanban ' + [char]0x2014 + ' Pr' + [char]0x00ea + 't / Ready'
+$readyName = 'Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type) {

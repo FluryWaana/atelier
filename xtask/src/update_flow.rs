@@ -516,15 +516,12 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
     if terminal(&installation, &preview.id).await? != Phase::RolledBack {
         return Err("La mauvaise version exécutée n’a pas déclenché le rollback.".into());
     }
-    if updates::status(Some(&installation))?
+    let reason = updates::status(Some(&installation))?
         .operation
-        .is_none_or(|operation| {
-            !operation
-                .message
-                .contains("La version exécutée ne correspond pas à la version signée.")
-        })
-    {
-        return Err("Le scénario négatif n’a pas atteint le contrôle de version prévu.".into());
+        .ok_or("Journal du scénario négatif absent.")?
+        .message;
+    if !reason.contains(updates::RUNTIME_VERSION_MISMATCH) {
+        return Err(format!("Le scénario négatif n’a pas atteint le contrôle de version prévu. Motif observé : {reason}").into());
     }
     let observed = LocalHttp::new()?
         .authenticated_health(&address, || session::read_optional(&data))

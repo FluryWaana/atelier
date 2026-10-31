@@ -420,7 +420,7 @@ jobs:
           key: rust-browser-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
   browser:
     needs: [selection, ui-payload, browser-build]
-    if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full') }}
+    if: ${{ !cancelled() && needs.selection.result == 'success' && needs.ui-payload.result == 'success' && needs.browser-build.result == 'success' && (inputs.scope == 'browser' || inputs.scope == 'full') }}
     env:
       ATELIER_TEST_JOURNEY: ${{ inputs.scope == 'full' && 'all' || inputs.journey }}
     strategy:
@@ -498,13 +498,6 @@ jobs:
           bash xtask/packaging/with-macos-keychain.sh ./target/debug/xtask test-ui --prepared-assets --prepared-binaries
         env:
           ATELIER_TEST_BROWSER: safari
-      - name: Preserve Safari diagnostics only when session creation failed
-        if: failure() && runner.os == 'macOS'
-        shell: bash
-        run: |
-          if compgen -G '.artifacts/rust-ui-safari-*-startup.log' >/dev/null && [[ -d "$HOME/Library/Logs/com.apple.WebDriver" ]]; then
-            cp -R "$HOME/Library/Logs/com.apple.WebDriver" .artifacts/rust-safari-startup-diagnostics
-          fi
       - name: Preserve synthetic UI failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

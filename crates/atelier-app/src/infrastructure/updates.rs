@@ -22,6 +22,8 @@ use std::{
 use tokio::{process::Command, time::Instant};
 
 const JOURNAL: &str = "update-operation.json";
+pub const RUNTIME_VERSION_MISMATCH: &str =
+    "message.the_running_version_does_not_match_the_signed_version";
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Journal {
@@ -491,7 +493,7 @@ async fn running_version(journal: &Journal, expected: &str) -> Result<()> {
         .await?
         .ok_or("La version démarrée ne répond pas.")?;
     if observed["version"] != expected {
-        return Err("message.the_running_version_does_not_match_the_signed_version".into());
+        return Err(RUNTIME_VERSION_MISMATCH.into());
     }
     Ok(())
 }
@@ -960,6 +962,53 @@ mod tests {
             backup: None,
         };
         (root, installation, journal)
+    }
+
+    #[tokio::test]
+    async fn runtime_mismatch_keeps_its_reason_through_rollback_and_preserves_data() {
+        use axum::{Json, Router, extract::Query, http::HeaderMap, routing::get};
+        use std::collections::HashMap;
+        let (_root, mut installation, mut journal) = prepared_installation();
+        let before = std::fs::read(journal.data.join("kanban.sqlite")).unwrap();
+        let token = "ab".repeat(32);
+        session::write(&journal.data, &token).unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        journal.port = listener.local_addr().unwrap().port();
+        let port = journal.port;
+        let router = Router::new().route("/api/health", get(move |Query(query): Query<HashMap<String, String>>, headers: HeaderMap| {
+            let token = token.clone();
+            async move {
+                if let Some(challenge) = query.get("challenge") {
+                    assert!(!headers.contains_key("authorization"));
+                    Json(serde_json::json!({"proof": session::proof(&token, challenge, port).unwrap()}))
+                } else {
+                    assert_eq!(headers["authorization"], format!("Bearer {token}"));
+                    Json(serde_json::json!({"version": "0.2.0"}))
+                }
+            }
+        }));
+        let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        running_version(&journal, "0.2.0").await.unwrap();
+        let reason = running_version(&journal, &journal.next.version)
+            .await
+            .unwrap_err()
+            .to_string();
+        server.abort();
+        let _ = server.await;
+        assert_eq!(reason, RUNTIME_VERSION_MISMATCH);
+        installation
+            .write_current(&journal.expected, switched(&journal))
+            .unwrap();
+        rollback(&mut installation, &mut journal, Some(&reason))
+            .await
+            .unwrap();
+        assert_eq!(journal.operation.state, Phase::RolledBack);
+        assert!(journal.operation.message.contains(RUNTIME_VERSION_MISMATCH));
+        assert!(installation.current() == &journal.expected);
+        assert_eq!(
+            std::fs::read(journal.data.join("kanban.sqlite")).unwrap(),
+            before
+        );
     }
 
     #[tokio::test]
