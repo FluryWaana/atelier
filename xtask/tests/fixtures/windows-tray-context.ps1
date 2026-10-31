@@ -10,6 +10,17 @@ $format = $ast.Find({ param($node) $node -is [Management.Automation.Language.Fun
 $metadata = [pscustomobject]@{ ProcessId=42; ControlType=[pscustomobject]@{ProgrammaticName='ControlType.Button'}; IsOffscreen=$true; Name=('n'*400); ClassName=('c'*400); AutomationId=('a'*400) }
 $record = Format-TrayControlContext $metadata
 if ($record.Name.Length -ne 256 -or $record.ClassName.Length -ne 256 -or $record.AutomationId.Length -ne 256 -or $record.ProcessId -ne 42 -or -not $record.Offscreen) { throw 'Native UI record contract failed.' }
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$find = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Find-OwnedTrayControl' }, $true)
+$assignment = $find.Find({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] -and $node.Left.VariablePath.UserPath -eq 'condition' }, $true)
+$Name = 'Show hidden icons'
+$Type = [System.Windows.Automation.ControlType]::Button
+$condition = & ([scriptblock]::Create($assignment.Right.Extent.Text))
+$nameCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [System.Windows.Automation.AutomationElement]::NameProperty }
+$typeCondition = $condition.GetConditions() | Where-Object { $_.Property -eq [System.Windows.Automation.AutomationElement]::ControlTypeProperty }
+if (-not ($nameCondition.Flags -band [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase) -or $typeCondition.Value -ne $Type.Id) { throw 'Tray control condition lost case tolerance or its exact control type.' }
+if (-not [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons') -or [StringComparer]::OrdinalIgnoreCase.Equals([string]$nameCondition.Value, 'Show Hidden Icons other')) { throw 'Observed overflow label does not match exactly ignoring case.' }
 $prelude = @'
 param($Fixture, $Scenario)
 $fixtureBase = $Fixture + [IO.Path]::DirectorySeparatorChar

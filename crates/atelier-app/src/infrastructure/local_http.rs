@@ -53,7 +53,9 @@ fn disconnected(error: &(dyn std::error::Error + 'static)) -> bool {
     if let Some(error) = error.downcast_ref::<std::io::Error>()
         && matches!(
             error.kind(),
-            std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::ConnectionReset
+            std::io::ErrorKind::ConnectionRefused
+                | std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
         )
     {
         return true;
@@ -198,5 +200,36 @@ impl LocalHttp {
             return Err("Session locale refusée. Rouvre Atelier avec son lanceur.".into());
         }
         Ok(Some(response.json()?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Error, ErrorKind};
+
+    #[test]
+    fn disconnected_recognizes_transport_breaks_but_not_unknown_server_states() {
+        for (kind, expected) in [
+            (ErrorKind::ConnectionRefused, true),
+            (ErrorKind::ConnectionReset, true),
+            (ErrorKind::ConnectionAborted, true),
+            (ErrorKind::TimedOut, false),
+            (ErrorKind::PermissionDenied, false),
+            (ErrorKind::InvalidData, false),
+        ] {
+            assert_eq!(
+                super::disconnected(&Error::from(kind)),
+                expected,
+                "{kind:?}"
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn winsock_aborted_connection_is_a_transport_break() {
+        let error = Error::from_raw_os_error(10053);
+        assert_eq!(error.kind(), ErrorKind::ConnectionAborted);
+        assert!(super::disconnected(&error));
     }
 }

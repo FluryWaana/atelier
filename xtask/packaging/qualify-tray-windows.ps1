@@ -48,7 +48,7 @@ function Get-TrayControlContext([int]$ExplorerId) {
 }
 function Find-OwnedTrayControl([string]$Name, [System.Windows.Automation.ControlType]$Type) {
   $condition = [System.Windows.Automation.AndCondition]::new(
-    [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name),
+    [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $Name, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase),
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $Type))
   $found = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   if ($found.Count -gt 1) { throw 'Ambiguous native tray control; no action sent.' }

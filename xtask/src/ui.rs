@@ -60,27 +60,43 @@ fn free_port() -> Result<u16> {
         .port())
 }
 
-#[cfg(any(target_os = "macos", test))]
-fn copy_safari_startup_diagnostics(
+struct SafariStartupDiagnostics {
+    source: PathBuf,
+    existing: std::collections::BTreeSet<std::ffi::OsString>,
+}
+
+fn safari_diagnostic_names(
     source: &Path,
+) -> Result<std::collections::BTreeSet<std::ffi::OsString>> {
+    if !atelier_app::infrastructure::checked_file::plain_metadata(source)?.is_dir() {
+        return Err("Dossier de diagnostics Safari requis.".into());
+    }
+    let mut names = std::collections::BTreeSet::new();
+    for entry in std::fs::read_dir(source)?.take(129) {
+        if names.len() == 128 {
+            return Err("Limite de 128 entrées atteinte avant la fin du dossier.".into());
+        }
+        names.insert(entry?.file_name());
+    }
+    Ok(names)
+}
+
+fn copy_safari_startup_diagnostics(
+    snapshot: &SafariStartupDiagnostics,
     destination: &Path,
     driver_pid: u32,
 ) -> Result<usize> {
     use std::io::Read;
-    let mut examined = 0;
+    let source = &snapshot.source;
     let mut copied = 0;
     let result: Result<()> = (|| {
         std::fs::create_dir_all(destination)?;
-        let prefix = format!("safaridriver.{driver_pid}.");
-        for entry in std::fs::read_dir(source)?.take(129) {
-            if examined == 128 {
-                return Err("Limite de 128 entrées atteinte avant la fin du dossier.".into());
-            }
-            examined += 1;
-            let entry = entry?;
-            if !entry.file_name().to_string_lossy().starts_with(&prefix)
-                || !atelier_app::infrastructure::checked_file::plain_metadata(&entry.path())?
-                    .is_file()
+        let names = safari_diagnostic_names(source)?;
+        // Safari's XPC service may write the trace under a different PID than its launcher.
+        for name in names.difference(&snapshot.existing) {
+            let path = source.join(name);
+            if !name.to_string_lossy().starts_with("safaridriver.")
+                || !atelier_app::infrastructure::checked_file::plain_metadata(&path)?.is_file()
             {
                 continue;
             }
@@ -90,21 +106,21 @@ fn copy_safari_startup_diagnostics(
             let mut output = std::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
-                .open(destination.join(entry.file_name()))?;
+                .open(destination.join(name))?;
             std::io::copy(
-                &mut std::fs::File::open(entry.path())?.take(2 * 1024 * 1024),
+                &mut std::fs::File::open(path)?.take(2 * 1024 * 1024),
                 &mut output,
             )?;
             copied += 1;
         }
         if copied == 0 {
-            return Err("Aucun fichier de diagnostic pour ce processus.".into());
+            return Err("Aucun nouveau fichier de diagnostic depuis le lancement.".into());
         }
         Ok(())
     })();
     if let Err(error) = result {
         return Err(format!(
-            "PID {driver_pid}, source {}, {examined} entrées examinées, {copied} fichiers copiés : {error}",
+            "PID lanceur {driver_pid}, source {}, {copied} fichiers copiés : {error}",
             source.display()
         )
         .into());
@@ -117,6 +133,7 @@ fn preserve_driver_startup_log(
     browser: &str,
     reason: &str,
     driver_pid: u32,
+    safari_diagnostics: Option<&SafariStartupDiagnostics>,
 ) {
     use std::io::{Read, Write};
     let preserved: Result<_> = (|| {
@@ -133,19 +150,13 @@ fn preserve_driver_startup_log(
         writeln!(output, "{reason}")?;
         writeln!(output, "Processus WebDriver : PID {driver_pid}.")?;
         std::io::copy(&mut log.reopen()?.take(2 * 1024 * 1024), &mut output)?;
-        #[cfg(target_os = "macos")]
-        if browser == "safari"
-            && std::env::var("CI").as_deref() == Ok("true")
-            && std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() == Ok("1")
-        {
+        if let Some(snapshot) = safari_diagnostics {
             let saved: Result<String> = (|| {
-                let home = std::env::var_os("HOME").ok_or("HOME du runner absent.")?;
-                let source = PathBuf::from(home).join("Library/Logs/com.apple.WebDriver");
                 let destination = root().join(".artifacts/rust-safari-startup-diagnostics");
-                let copied = copy_safari_startup_diagnostics(&source, &destination, driver_pid)?;
+                let copied = copy_safari_startup_diagnostics(snapshot, &destination, driver_pid)?;
                 Ok(format!(
-                    "PID {driver_pid}, source {}, {copied} fichiers copiés.",
-                    source.display()
+                    "PID lanceur {driver_pid}, source {}, {copied} fichiers copiés.",
+                    snapshot.source.display()
                 ))
             })();
             let message = match saved {
@@ -166,9 +177,13 @@ fn preserve_driver_startup_log(
 async fn connect_browser(
     endpoint: &str,
     browser: &str,
-    capabilities: serde_json::Map<String, serde_json::Value>,
+    mut capabilities: serde_json::Map<String, serde_json::Value>,
 ) -> Result<(Client, Option<String>)> {
     use fantoccini::error::NewSessionError;
+    if browser == "safari" {
+        capabilities.insert("platformName".into(), json!("mac"));
+        capabilities.insert("safari:diagnose".into(), json!(true));
+    }
     let first = ClientBuilder::rustls()?
         .capabilities(capabilities.clone())
         .connect(endpoint)
@@ -355,7 +370,7 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
         "edge" => "msedgedriver",
         "chrome" => "chromedriver",
         "firefox" => "geckodriver",
-        "safari" => "safaridriver",
+        "safari" => "/usr/bin/safaridriver",
         _ => return Err("Navigateur de test inconnu.".into()),
     };
     if prepared_assets {
@@ -401,6 +416,24 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
         driver_command.arg("--diagnose");
     }
     let driver_log = tempfile::NamedTempFile::new()?;
+    let safari_diagnostics = if cfg!(target_os = "macos")
+        && browser == "safari"
+        && std::env::var("CI").as_deref() == Ok("true")
+        && std::env::var("ATELIER_RUST_FINAL_CAMPAIGN").as_deref() == Ok("1")
+    {
+        let home = std::env::var_os("HOME").ok_or("HOME du runner absent.")?;
+        let source = PathBuf::from(home).join("Library/Logs/com.apple.WebDriver");
+        std::fs::create_dir_all(&source)?;
+        let existing = safari_diagnostic_names(&source).map_err(|error| {
+            format!(
+                "État initial des diagnostics Safari refusé dans {} : {error}",
+                source.display()
+            )
+        })?;
+        Some(SafariStartupDiagnostics { source, existing })
+    } else {
+        None
+    };
     let mut driver = Process(
         driver_command
             .stdout(Stdio::from(driver_log.as_file().try_clone()?))
@@ -417,7 +450,13 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
     loop {
         if driver.0.try_wait()?.is_some() {
             let reason = "WebDriver s’est arrêté au démarrage.";
-            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id());
+            preserve_driver_startup_log(
+                &driver_log,
+                &browser,
+                reason,
+                driver.0.id(),
+                safari_diagnostics.as_ref(),
+            );
             return Err(reason.into());
         }
         if http.get(format!("{endpoint}/status")).send().await.is_ok() {
@@ -428,7 +467,13 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
             if let Err(error) = driver.stop() {
                 eprintln!("Arrêt WebDriver avant conservation du diagnostic refusé : {error}");
             }
-            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id());
+            preserve_driver_startup_log(
+                &driver_log,
+                &browser,
+                reason,
+                driver.0.id(),
+                safari_diagnostics.as_ref(),
+            );
             return Err(reason.into());
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -470,14 +515,24 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
     let connected = connect_browser(&endpoint, &browser, capabilities).await;
     // Snapshot before any application session exists, also if startup recovered.
     match &connected {
-        Ok((_, Some(reason))) => {
-            preserve_driver_startup_log(&driver_log, &browser, reason, driver.0.id())
-        }
+        Ok((_, Some(reason))) => preserve_driver_startup_log(
+            &driver_log,
+            &browser,
+            reason,
+            driver.0.id(),
+            safari_diagnostics.as_ref(),
+        ),
         Err(error) => {
             if let Err(stop_error) = driver.stop() {
                 eprintln!("Arrêt WebDriver avant conservation du diagnostic refusé : {stop_error}");
             }
-            preserve_driver_startup_log(&driver_log, &browser, &error.to_string(), driver.0.id())
+            preserve_driver_startup_log(
+                &driver_log,
+                &browser,
+                &error.to_string(),
+                driver.0.id(),
+                safari_diagnostics.as_ref(),
+            )
         }
         _ => {}
     }
@@ -4882,17 +4937,27 @@ fn ui_server() -> std::path::PathBuf {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn safari_diagnostics_copy_only_owned_files_with_a_size_bound() {
+    fn safari_diagnostics_copy_only_new_xpc_files_with_a_size_bound() {
         let fixture = tempfile::tempdir().unwrap();
         let source = fixture.path().join("source");
         let destination = fixture.path().join("saved");
         std::fs::create_dir(&source).unwrap();
         std::fs::write(source.join("safaridriver.421.trace.txt"), b"unrelated").unwrap();
         std::fs::create_dir(source.join("safaridriver.42.directory")).unwrap();
-        let name = "safaridriver.42.trace.txt";
+        let snapshot = super::SafariStartupDiagnostics {
+            existing: super::safari_diagnostic_names(&source).unwrap(),
+            source: source.clone(),
+        };
+        std::fs::write(
+            source.join("safaridriver.421.trace.txt"),
+            b"changed old trace",
+        )
+        .unwrap();
+        std::fs::write(source.join("unrelated-new.txt"), b"unrelated").unwrap();
+        let name = "safaridriver.77.trace.txt";
         std::fs::write(source.join(name), vec![b'x'; 2 * 1024 * 1024 + 1]).unwrap();
         assert_eq!(
-            super::copy_safari_startup_diagnostics(&source, &destination, 42).unwrap(),
+            super::copy_safari_startup_diagnostics(&snapshot, &destination, 42).unwrap(),
             1
         );
         assert_eq!(std::fs::read_dir(&destination).unwrap().count(), 1);
@@ -4900,7 +4965,8 @@ mod tests {
             std::fs::read(destination.join(name)).unwrap(),
             vec![b'x'; 2 * 1024 * 1024]
         );
-        let error = super::copy_safari_startup_diagnostics(&source, &destination, 42)
+        std::fs::write(source.join(name), b"later synthetic authenticated request").unwrap();
+        let error = super::copy_safari_startup_diagnostics(&snapshot, &destination, 42)
             .unwrap_err()
             .to_string();
         assert!(error.contains("0 fichiers copiés"));
@@ -4911,23 +4977,32 @@ mod tests {
     }
 
     #[test]
-    fn safari_diagnostics_report_missing_files_with_the_owned_pid_and_source() {
+    fn safari_diagnostics_report_missing_files_with_the_launcher_pid_and_source() {
         let fixture = tempfile::tempdir().unwrap();
         let source = fixture.path().join("source");
         let destination = fixture.path().join("saved");
+        assert!(super::safari_diagnostic_names(&source).is_err());
         for exists in [false, true] {
             if exists {
                 std::fs::create_dir(&source).unwrap();
                 std::fs::write(source.join("safaridriver.421.trace.txt"), b"unrelated").unwrap();
             }
-            let error = super::copy_safari_startup_diagnostics(&source, &destination, 42)
+            let snapshot = super::SafariStartupDiagnostics {
+                source: source.clone(),
+                existing: if exists {
+                    super::safari_diagnostic_names(&source).unwrap()
+                } else {
+                    Default::default()
+                },
+            };
+            let error = super::copy_safari_startup_diagnostics(&snapshot, &destination, 42)
                 .unwrap_err()
                 .to_string();
-            assert!(error.contains("PID 42"));
+            assert!(error.contains("PID lanceur 42"));
             assert!(error.contains(&source.display().to_string()));
             assert!(error.contains("0 fichiers copiés"));
             if exists {
-                assert!(error.contains("Aucun fichier"));
+                assert!(error.contains("Aucun nouveau fichier"));
             }
         }
     }
@@ -4942,10 +5017,17 @@ mod tests {
             let source = fixture.path().join("source");
             let destination = fixture.path().join("saved");
             std::fs::create_dir(&source).unwrap();
+            let snapshot = super::SafariStartupDiagnostics {
+                existing: super::safari_diagnostic_names(&source).unwrap(),
+                source: source.clone(),
+            };
             for index in 0..count {
                 std::fs::write(source.join(format!("{prefix}.{index}.txt")), b"synthetic").unwrap();
             }
-            let error = super::copy_safari_startup_diagnostics(&source, &destination, 42)
+            if count == 129 {
+                assert!(super::safari_diagnostic_names(&source).is_err());
+            }
+            let error = super::copy_safari_startup_diagnostics(&snapshot, &destination, 42)
                 .unwrap_err()
                 .to_string();
             assert!(error.contains(message), "{error}");
@@ -4959,15 +5041,19 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn safari_diagnostics_refuse_linked_owned_files() {
+    fn safari_diagnostics_refuse_new_linked_files() {
         let fixture = tempfile::tempdir().unwrap();
         let source = fixture.path().join("source");
         let destination = fixture.path().join("saved");
         std::fs::create_dir(&source).unwrap();
+        let snapshot = super::SafariStartupDiagnostics {
+            existing: super::safari_diagnostic_names(&source).unwrap(),
+            source: source.clone(),
+        };
         let unrelated = fixture.path().join("unrelated.txt");
         std::fs::write(&unrelated, b"unrelated synthetic content").unwrap();
         std::os::unix::fs::symlink(&unrelated, source.join("safaridriver.42.link.txt")).unwrap();
-        assert!(super::copy_safari_startup_diagnostics(&source, &destination, 42).is_err());
+        assert!(super::copy_safari_startup_diagnostics(&snapshot, &destination, 42).is_err());
         assert_eq!(std::fs::read_dir(destination).unwrap().count(), 0);
     }
 
@@ -5009,10 +5095,18 @@ mod tests {
         ] {
             let attempts = Arc::new(AtomicUsize::new(0));
             let observed = attempts.clone();
-            let router = Router::new().route("/session", post(move || {
+            let router = Router::new().route("/session", post(move |Json(body): Json<serde_json::Value>| {
                 let attempts = observed.clone();
                 let failures = failures.clone();
                 async move {
+                    let capabilities = &body["capabilities"]["alwaysMatch"];
+                    if browser == "safari" {
+                        assert_eq!(capabilities["platformName"], "mac");
+                        assert_eq!(capabilities["safari:diagnose"], true);
+                    } else {
+                        assert!(capabilities.get("platformName").is_none());
+                        assert!(capabilities.get("safari:diagnose").is_none());
+                    }
                     let index = attempts.fetch_add(1, Ordering::SeqCst);
                     match failures.get(index) {
                         Some((code, message)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"value":{"error":code,"message":message,"stacktrace":""}}))),
