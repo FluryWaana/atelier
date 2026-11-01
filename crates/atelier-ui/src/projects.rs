@@ -395,16 +395,35 @@ pub fn Projects(
                 if let Some(path) = chosen["path"].as_str().filter(|path| !path.is_empty()) {
                     if clone_draft.get_untracked().enabled {
                         clone_draft.update(|value| value.parent = path.into());
-                        return Ok(());
+                    } else {
+                        draft.update(|value| {
+                            value.repo = path.into();
+                            if value.name.trim().is_empty() {
+                                value.name = path
+                                    .rsplit(['/', '\\'])
+                                    .find(|part| !part.is_empty())
+                                    .unwrap_or_default()
+                                    .into();
+                            }
+                        });
                     }
-                    draft.update(|value| {
-                        value.repo = path.into();
-                        if value.name.trim().is_empty() {
-                            value.name = path
-                                .rsplit(['/', '\\'])
-                                .find(|part| !part.is_empty())
-                                .unwrap_or_default()
-                                .into();
+                    // Revalidate after the values and the enabled fieldset have reached the DOM.
+                    request_animation_frame(move || {
+                        let options = web_sys::EventInit::new();
+                        options.set_bubbles(true);
+                        for id in [
+                            "project-create-name",
+                            "project-directory",
+                            "project-name",
+                            "project-repo",
+                            "project-clone-parent",
+                        ] {
+                            if let Some(control) = document().get_element_by_id(id)
+                                && let Ok(event) =
+                                    web_sys::Event::new_with_event_init_dict("change", &options)
+                            {
+                                let _ = control.dispatch_event(&event);
+                            }
                         }
                     });
                 }

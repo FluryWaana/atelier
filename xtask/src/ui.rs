@@ -3215,11 +3215,52 @@ async fn projects_scenario(
         .await?;
     wait_dom(client, "return document.querySelector('#project-directory').getAttribute('aria-invalid') === 'true' && document.querySelector('#project-directory-field-error').textContent.trim().length > 0 && document.activeElement.id === 'project-directory';", vec![]).await?;
 
+    clear_input(client, "#project-create-name").await?;
+    client
+        .execute(
+            "document.querySelector('#project-form').requestSubmit();",
+            vec![],
+        )
+        .await?;
+    wait_dom(client, "return ['project-create-name','project-directory'].every(id=>document.getElementById(id).getAttribute('aria-invalid') === 'true');", vec![]).await?;
+    client.execute(r#"
+        window.__projectPickerFetch = window.fetch;
+        window.__projectPickerCalls = 0;
+        window.fetch = async (...args) => {
+            const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            if (new URL(url, location.href).pathname === '/api/folders/choose') {
+                const path = window.__projectPickerCalls++ === 0 ? null : arguments[0];
+                return new Response(JSON.stringify({path}), {status:200, headers:{'content-type':'application/json'}});
+            }
+            return window.__projectPickerFetch(...args);
+        };
+    "#, vec![json!(repo.to_string_lossy())]).await?;
+    click(client, "#browse-project").await?;
+    wait_dom(client, "return window.__projectPickerCalls === 1 && !document.querySelector('#browse-project').matches(':disabled') && ['project-create-name','project-directory'].every(id=>document.getElementById(id).value === '' && document.getElementById(id).getAttribute('aria-invalid') === 'true');", vec![]).await?;
+    click(client, "#browse-project").await?;
+    let picker_validation = wait_dom(client, "return document.querySelector('#project-create-name').value === 'project-ui' && document.querySelector('#project-directory').value.length > 0 && ['project-create-name','project-directory'].every(id=>document.getElementById(id).getAttribute('aria-invalid') === 'false' && document.getElementById(id+'-field-error').hidden);", vec![]).await;
+    client
+        .execute(
+            "window.fetch=window.__projectPickerFetch;delete window.__projectPickerFetch;delete window.__projectPickerCalls;",
+            vec![],
+        )
+        .await?;
+    picker_validation?;
+    clear_input(client, "#project-create-name").await?;
+    client
+        .find(Locator::Css("#project-create-name"))
+        .await?
+        .send_keys("Projet depuis l’interface")
+        .await?;
+    wait_dom(client, "return document.querySelector('#project-create-name').getAttribute('aria-invalid') === 'false' && document.querySelector('#project-create-name-field-error').hidden;", vec![]).await?;
+    clear_input(client, "#project-directory").await?;
+
     client
         .find(Locator::Css("#project-directory"))
         .await?
         .send_keys(&repo.to_string_lossy())
         .await?;
+    wait_dom(client, "return document.querySelector('#project-directory').getAttribute('aria-invalid') === 'false' && document.querySelector('#project-directory-field-error').hidden;", vec![]).await?;
     wait_dom(client,"return document.querySelector('#project-create-access')?.hidden === false && document.querySelector('#project-create-access .authorize-project-repository') && !document.querySelector('#project-edit-access')?.matches(':not([hidden])');",vec![]).await?;
     click(client, "#project-form button[type=submit]").await?;
     wait_dom(client, "return document.querySelectorAll('#project-list .project-choice').length === 2 && !document.querySelector('#project-create-dialog');", vec![]).await?;
