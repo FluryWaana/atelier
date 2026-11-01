@@ -40,9 +40,34 @@ The response repeats `protocol`, `requestId`, `module` and `method`. It supplies
 
 `describe` receives empty settings and secrets, null input and no operation or action. It returns the manifest.
 
+For the request above, a minimal successful discovery response is:
+
+```json
+{
+  "protocol": "atelier-connector/1",
+  "requestId": "request-synthetic-1",
+  "module": "demo",
+  "method": "describe",
+  "status": "ok",
+  "message": "Demo connector available",
+  "output": {
+    "id": "demo",
+    "name": "Demo connector",
+    "description": "A minimal connector with a connection check",
+    "sourceLocale": "en-US",
+    "methods": ["check"],
+    "fields": [],
+    "tabs": [],
+    "translations": {}
+  }
+}
+```
+
+After installation, implement `check` with the same response envelope and `method` set to `check`. Each response must copy the actual request's identity values. A successful check can return an empty output object.
+
 ## Manifest
 
-The manifest defines identity, name, description, source language, methods, fields, tabs, actions and translations. Source languages are `en-US` and `fr-FR`. Labels and messages are plain text.
+The manifest uses `id`, `name`, `description`, `sourceLocale`, `methods`, `fields`, `tabs` and optional `translations`. Source languages are `en-US` and `fr-FR`. Labels and messages are plain text. The public Rust definitions and validation rules are in [extensions.rs](../crates/atelier-core/src/application/extensions.rs).
 
 | Item | Limit |
 | --- | --- |
@@ -78,7 +103,9 @@ Remote methods and actions require `reconcile`. Time export instead requires the
 
 Every write uses a persisted operation identifier. Preview and confirmation bind the module revision, credential scope, relevant local snapshots and destination. The host revalidates them before dispatch and local application.
 
-After interruption or a lost response, the host observes the original operation through reconciliation and never resends the write automatically. A reconciliation request retains the original identity and input and uses a renewed nonce. Positive confirmation requires the matching receipt and validated method output. A plain `ok` or an empty search is insufficient evidence of a remote effect.
+After interruption or a lost response, the host observes the original operation through reconciliation and never resends the write automatically. A reconciliation request retains the original `operationId` and input and uses a new `requestId`. Positive confirmation requires the matching receipt and validated method output. A plain `ok` or an empty search is insufficient evidence of a remote effect.
+
+The `output.receipt` object contains `operationId`, `outcome`, `reference` and `observedAt`. Outcomes are `applied`, `notAttempted` and `unknown`. `reference` is a nonempty observation reference. `observedAt` uses RFC 3339 and must be no more than ten minutes old or one minute in the future. The operation identity must match the original intention. Method specific results, such as the observed ticket or exact time proposal, remain required alongside the receipt.
 
 Remote state can change after preflight. The connector's result is its own observation and does not independently prove that Atelier caused the effect. This limit applies to remote transitions and publication.
 

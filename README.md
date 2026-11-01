@@ -60,10 +60,11 @@ See [getting started](docs/getting-started.md) for platform requirements, first 
 * [Testing](docs/testing.md)
 * [Packaging and updates](docs/packaging.md)
 * [Brand assets](docs/branding.md)
+* [Security](SECURITY.md)
 
 ## Contribute
 
-Bug reports and focused pull requests are welcome on [GitHub](https://github.com/FluryWaana/atelier). Include reproduction steps and use synthetic data for examples. Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing the code or running integration checks.
+Bug reports and focused pull requests are welcome on [GitHub](https://github.com/FluryWaana/atelier). Include reproduction steps and use synthetic data for examples. Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing the code or running integration checks. Report suspected vulnerabilities through the private channel in [SECURITY.md](SECURITY.md).
 
 ## License
 

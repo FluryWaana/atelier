@@ -4,11 +4,13 @@ Atelier Kanban is in preproduction. Use [GitHub Releases](https://github.com/Flu
 
 ## Targets and tools
 
-| Target | Package formats | Native build requirements |
-| --- | --- | --- |
-| Windows x64 | Portable archive and Setup | MSVC, Windows SDK with `rc.exe`, Inno Setup 6 |
-| Linux x64 and ARM64 | Portable archive, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
-| macOS x64 and ARM64 | Portable archive | Xcode command line tools |
+| Platform | Rust target | Distribution formats | Native build requirements |
+| --- | --- | --- | --- |
+| Windows x64 | `x86_64-pc-windows-msvc` | Signed ZIP payload and Setup | MSVC, Windows SDK with `rc.exe`, Inno Setup 6 |
+| Linux x64 | `x86_64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
+| macOS Intel | `x86_64-apple-darwin` | Signed ZIP payload | Xcode command line tools |
+| macOS Apple Silicon | `aarch64-apple-darwin` | Signed ZIP payload | Xcode command line tools |
 
 All builds use the committed Rust toolchain and lockfile, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
 
@@ -33,7 +35,7 @@ cargo xtask archive-package OUTPUT ARCHIVE.zip
 cargo xtask verify-archive ARCHIVE.zip TARGET
 ```
 
-The payload contains the native `atelier` binary, approved UI assets, LICENSE, README, dependency notices and a manifest. It excludes databases, credentials, backups, logs, source tools and feasibility executables. The manifest records sizes, SHA256 values and architecture. A manifest alone does not authenticate an archive.
+The payload contains the native `atelier` binary, approved UI assets, LICENSE, [README.txt](../xtask/packaging/README.txt), dependency notices and a manifest. It excludes databases, credentials, backups, logs, source tools and feasibility executables. The manifest records sizes, SHA256 values and architecture. A manifest alone does not authenticate an archive.
 
 Staging uses a neighboring temporary directory and refuses existing destinations. ZIP handling bounds entries and sizes and rejects traversal, absolute paths, links, unsupported types and collisions. Extraction verifies CRC, hashes and target. Native executable permissions are preserved.
 
@@ -47,21 +49,47 @@ Published releases use the distribution key pinned in the application. Synthetic
 
 Release files can include an update archive named `atelier-VERSION-TARGET.zip`, its `.zip.signed.json` metadata, platform installers and `atelier-update-public.json`. `SHA256SUMS` records release file hashes. Its Ed25519 signature covers the bytes of `atelier-kanban-release-checksums/1\n` followed by the checksum file, where `\n` represents a newline.
 
+Windows uses `SHA256SUMS` and `SHA256SUMS.sig`. Linux and macOS use `SHA256SUMS-TARGET` and the matching `.sig` file for each target.
+
 ```text
 cargo xtask verify-release-checksums SHA256SUMS SHA256SUMS.sig
 ```
 
-Distribution signatures authenticate package content. They are separate from Windows Authenticode and do not remove SmartScreen warnings. An update archive is not an initialized portable installation.
+This command authenticates the checksum file. It does not compare the downloaded files to its entries. After signature verification, check those file hashes from the download directory:
+
+| Platform | File hash check |
+| --- | --- |
+| Linux | `sha256sum --check SHA256SUMS-TARGET` |
+| macOS | `shasum -a 256 --check SHA256SUMS-TARGET` |
+| Windows with PowerShell 7 | `Get-FileHash -Algorithm SHA256 DOWNLOADED_FILE` and compare the result with its entry in `SHA256SUMS` |
+
+Replace `TARGET` with the selected target and keep the checksum filename paired with its signature. Run the signature command from a trusted source checkout, using paths to the downloaded checksum files.
+
+Distribution signatures are separate from Windows Authenticode and do not remove SmartScreen warnings. An update archive is not an initialized portable installation.
 
 ## Installation
 
+Windows Setup integrates the official icon, version resources and shortcut. Uninstallation preserves workspace data. Linux system installations are maintained through the package manager.
+
+For a portable installation, download the archive for your operating system and architecture together with its `.zip.signed.json` file. Use a trusted source checkout prepared as described in [getting started](getting-started.md). This provides the installer command without executing an unverified downloaded binary.
+
+Export the distribution public key pinned in that checkout to a new file:
+
 ```text
-atelier install --archive ARCHIVE.zip --signature SIGNED_METADATA.json --trust TRUSTED_PUBLIC_KEY.json --destination NEW_INSTALLATION --mode portable
+cargo xtask release-update-trust TRUSTED_PUBLIC_KEY.json
 ```
 
-Installation refuses an existing destination. It keeps a stable launcher, trusted metadata and separate payload versions. The selected active payload must pass installation validation. Data locations and first launch behavior are documented in [launch and data](launcher.md).
+Do not substitute a key supplied only by the archive being verified. Choose an installation directory that does not exist and whose parent directory already exists. Replace the example paths with the downloaded files and that destination. Quote paths containing spaces:
 
-Windows Setup integrates the official icon, version resources and shortcut. Uninstallation preserves workspace data. Linux system installations are maintained through the package manager.
+```text
+cargo run -p atelier-app --locked -- install --archive ARCHIVE.zip --signature ARCHIVE.zip.signed.json --trust TRUSTED_PUBLIC_KEY.json --destination NEW_INSTALLATION --mode portable
+```
+
+Installation authenticates metadata and archive content before publishing the destination. It keeps a stable launcher, trusted metadata and separate payload versions. Existing destinations are refused.
+
+Open `NEW_INSTALLATION/atelier.exe` on Windows or run `NEW_INSTALLATION/atelier` on Linux or macOS. The installed launcher selects the verified active payload and opens the browser. Portable data stays under `NEW_INSTALLATION/data`.
+
+Data locations and first launch behavior are documented in [launch and data](launcher.md).
 
 ## Application updates
 

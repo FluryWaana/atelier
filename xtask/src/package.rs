@@ -61,7 +61,10 @@ pub(super) fn stage(
         &temporary.path().join("LICENSE"),
         &read(&super::root().join("LICENSE"), 1024 * 1024)?,
     )?;
-    write(&temporary.path().join("README.txt"),b"Atelier Kanban Rust - preproduction payload\nNative binary and Leptos WASM assets. No Node runtime.\nNative launcher candidate; no launcher, installer or updater qualification is claimed.\nIsolated qualification only: atelier launch --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets ui --no-browser\nStop with: atelier stop --data-dir EMPTY_SYNTHETIC_DIRECTORY\nUse atelier serve --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets ui for foreground diagnostics.\n")?;
+    write(
+        &temporary.path().join("README.txt"),
+        include_bytes!("../packaging/README.txt"),
+    )?;
     let value = manifest(temporary.path(), target, env!("CARGO_PKG_VERSION"))?;
     write(
         &temporary.path().join("atelier-package.json"),

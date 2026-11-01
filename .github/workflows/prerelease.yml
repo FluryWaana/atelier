@@ -153,15 +153,19 @@ jobs:
           test "$(find . -maxdepth 1 -type f | wc -l)" -eq 6
           tag="v$RELEASE_VERSION"
           cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
-          Prérelease Windows x64 d'Atelier Kanban.
+          Atelier Kanban preview for Windows x64.
 
-          Le Setup, ses menus natifs, la mise à jour installée, la conservation des données, la désinstallation et la réinstallation ont été qualifiés sur le runner Windows avec des données synthétiques.
+          Use the Setup executable to install the application. The ZIP archive and its signed metadata are update payloads, not an initialized portable installation.
 
-          Les mises à jour et SHA256SUMS sont signés avec la clé Ed25519 de distribution historique. SHA256SUMS.sig signe les octets de SHA256SUMS précédés de `atelier-kanban-release-checksums/1` et d'un saut de ligne. La clé publique de confiance reste épinglée dans l'application.
+          Update metadata and checksums use Ed25519 signatures. `SHA256SUMS.sig` authenticates the bytes of `SHA256SUMS` prefixed with `atelier-kanban-release-checksums/1` and a newline. The trusted public key is pinned in the application. `atelier-update-public.json` provides its public metadata.
 
-          Les exécutables ne portent pas de certificat Authenticode. Windows peut afficher un avertissement SmartScreen. Linux et macOS ne sont pas distribués dans cette prérelease. Le format de données Rust refuse les anciens formats non pris en charge. Conservez vos anciennes données séparément.
+          The Windows executables do not have an Authenticode certificate. SmartScreen can display a warning. Unsupported workspace formats are refused without conversion or deletion.
 
-          Cette prérelease ne remplace pas la release stable et n'est pas proposée par la recherche automatique de mises à jour stables.
+          This is a prerelease. The application's stable update channel does not offer prereleases.
+
+          [Getting started](https://github.com/FluryWaana/atelier/blob/main/docs/getting-started.md)
+          [Installation and updates](https://github.com/FluryWaana/atelier/blob/main/docs/packaging.md)
+          [Security](https://github.com/FluryWaana/atelier/blob/main/SECURITY.md)
           NOTES
           gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" > /dev/null
           gh release create "$tag" --verify-tag --draft --prerelease --latest=false --title "Atelier Kanban $tag preview" --notes-file "$RUNNER_TEMP/release-notes.txt" \

@@ -190,14 +190,18 @@ jobs:
           done
           gh release upload "$RELEASE_TAG" ./*
           cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
-          Prérelease d'Atelier Kanban pour Windows x64, Linux x64 et ARM64, macOS Intel et Apple Silicon.
+          Atelier Kanban preview for Windows x64, Linux x64 and ARM64, and macOS Intel and Apple Silicon.
 
-          Windows fournit le Setup. Linux fournit les DEB et RPM. Chaque cible possède son archive de mise à jour et son manifeste signé. Les paquets, démarrages et scénarios de conservation ont été qualifiés avec des données synthétiques. Les installateurs Windows et Linux ont aussi été testés avec mise à jour, refus de paquets invalides, désinstallation et réinstallation.
+          Windows provides a Setup installer. Linux provides DEB and RPM packages. Each target includes an update archive and signed metadata. An update archive is a payload, not an initialized portable installation. Follow the portable installation instructions for macOS or when using an archive directly.
 
-          Les archives et les empreintes sont signées avec la clé Ed25519 historique. SHA256SUMS couvre Windows. Les fichiers SHA256SUMS suivis de la cible couvrent Linux et macOS. Chaque signature .sig emploie le préfixe `atelier-kanban-release-checksums/1` suivi d'un saut de ligne, puis les octets exacts du fichier d'empreintes. La clé de confiance publique est atelier-update-public.json et reste épinglée dans l'application.
+          Update metadata and checksums use Ed25519 signatures. `SHA256SUMS` covers Windows files. `SHA256SUMS-TARGET` covers each Linux or macOS target. Each `.sig` authenticates the prefix `atelier-kanban-release-checksums/1`, a newline and the exact checksum file bytes. The trusted public key is pinned in the application. `atelier-update-public.json` provides its public metadata.
 
-          Les exécutables Windows ne portent pas de certificat Authenticode. Les applications macOS ne sont pas signées avec Apple Developer ID et ne sont pas notariées. SmartScreen et Gatekeeper peuvent afficher des avertissements. Le format Rust refuse les anciens formats de données non pris en charge. Conservez vos anciennes données séparément.
+          Windows executables do not have an Authenticode certificate. macOS applications do not have an Apple Developer ID signature or notarization. SmartScreen and Gatekeeper can display warnings. Unsupported workspace formats are refused without conversion or deletion.
 
-          Cette prérelease ne remplace pas la release stable et n'est pas proposée par la recherche automatique des mises à jour stables.
+          This is a prerelease. The application's stable update channel does not offer prereleases.
+
+          [Getting started](https://github.com/FluryWaana/atelier/blob/main/docs/getting-started.md)
+          [Installation and updates](https://github.com/FluryWaana/atelier/blob/main/docs/packaging.md)
+          [Security](https://github.com/FluryWaana/atelier/blob/main/SECURITY.md)
           NOTES
           gh release edit "$RELEASE_TAG" --prerelease --latest=false --title "Atelier Kanban $RELEASE_TAG preview" --notes-file "$RUNNER_TEMP/release-notes.txt"

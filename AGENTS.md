@@ -16,11 +16,11 @@ The Cargo workspace contains exactly:
 
 Keep domain/application independent of I/O and platform APIs. Prefer explicit typed models and focused functions. Keep transactions short, reserve external operations before I/O, and revalidate before committing their results. Do not add abstractions without a concrete caller.
 
-Regression fixtures belong to their owning crates' `tests/fixtures/` directories. The application and its build use Rust without a Node runtime dependency. `scripts/` contains native keyring probes and the optional local preview helper. Do not recreate deleted reports unless requested.
+Regression fixtures belong to their owning crates' `tests/fixtures/` directories. The application and its build use Rust without a Node runtime dependency. `scripts/` contains native keyring probes and the optional local preview helper. Do not add generated reports to documentation unless requested.
 
 ## Data and security
 
-Work exclusively with synthetic databases, repositories, credentials and agent fixtures. Never open, modify or remove user `data/` during development. The authorization to reset the design does not require touching local user files.
+Work exclusively with synthetic databases, repositories, credentials and agent fixtures. Never open, modify or remove user `data/` during development.
 
 The application uses an explicit database identity/version and refuses unsupported data. Never silently erase a database. Preserve atomic writes, backups, rollback and bounded storage access. Bind HTTP to loopback, require the local session and validate Host/Origin. Never commit tokens, databases, backups or logs, or expose secrets to the frontend.
 
@@ -32,7 +32,7 @@ No real account access, paid agent calls, tags or release publication. Test inte
 
 Local formatting, compilation, unit and integration tests, Clippy and synthetic browser journeys are authorized with normal workstation resources. No additional confirmation is needed for these local checks or for fixing failures within the requested work. Never touch user `data/` or use real accounts, credentials or paid agents.
 
-The Rust workflow remains manual-only. Do not launch or rerun CI, create tags or publish releases. Local verification does not authorize those actions or override the isolated native-account and keychain requirements above. Do not treat skipped or deferred checks as passed.
+GitHub Actions workflows use manual triggers. Do not launch or rerun CI, create tags or publish releases. Local verification does not override the isolated native account and keychain requirements above. Do not treat skipped or deferred checks as passed.
 
 ## Build and tests
 
@@ -63,6 +63,6 @@ Use idiomatic Rust, explicit errors at boundaries and justified unsafe blocks. E
 
 ## Git and progress
 
-Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch. Both are already authorized. No CI launch or rerun is currently authorized. Existing logs may be read. Mark pending/failed results honestly, fix known failures and record real evidence.
+Conventional Commits in English are required: `<type>[scope][!]: <imperative description>`. Commit and push coherent increments on the working branch. Do not launch or rerun CI. Existing logs may be read. Mark pending/failed results honestly, fix known failures and record real evidence.
 
 Keep concise French progress updates. Distinguish completion of the requested change from qualification of the whole application. Do not infer permission to publish from permission to commit/push.

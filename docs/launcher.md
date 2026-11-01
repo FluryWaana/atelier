@@ -10,7 +10,7 @@ atelier stop --data-dir WORKSPACE_DIRECTORY --port 4317
 atelier serve --data-dir WORKSPACE_DIRECTORY --assets BUILT_UI --port 4317
 ```
 
-Replace the example paths with explicit directories. `launch` starts a background server or reuses a verified instance and opens its browser session. Add `--no-browser` to skip opening the browser. `serve` keeps the server in the foreground. Use the same data directory and port to stop an instance. Unknown or repeated options and missing UI assets are refused.
+Replace the example paths with explicit directories and quote paths containing spaces. `launch` starts a background server or reuses a verified instance and opens its browser session. Add `--no-browser` to skip opening the browser. `serve` keeps the server in the foreground. Use the same data directory and port to stop an instance. Unknown or repeated options and missing UI assets are refused.
 
 ## Instance identity
 
@@ -22,7 +22,7 @@ The browser opens through native platform facilities. Session tokens are not pri
 
 ## Data locations
 
-The UI defaults to the binary's `ui` directory. Portable installations keep data in their `data` subdirectory. Installed workspaces use these locations:
+An installed launcher uses the UI assets from its active version directory. A standalone binary uses the adjacent `ui` directory unless `--assets` is provided. Portable installations keep data in their `data` subdirectory. Installed workspaces use these locations:
 
 | Platform | Workspace |
 | --- | --- |

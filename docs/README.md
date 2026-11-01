@@ -10,6 +10,7 @@
 * [Agents](agents.md): profiles, checks and CLI updates
 * [Project workflows](workflows.md): execution, review and publication
 * [Packages and updates](packaging.md): distribution and recovery
+* [Security](../SECURITY.md): private vulnerability reports and trust boundaries
 
 ## Develop and extend
 

@@ -4,10 +4,10 @@ Atelier Kanban is a Cargo workspace with four members. The native application se
 
 | Crate | Responsibility |
 | --- | --- |
-| `atelier-core` | Domain models, validation, application use cases and public contracts |
-| `atelier-app` | Composition, HTTP, SQLite, filesystem, credentials, Git, processes and integrations |
-| `atelier-ui` | Leptos CSR interface compiled to WebAssembly |
-| `xtask` | UI builds, source inventory, verification and packaging |
+| [`atelier-core`](../crates/atelier-core) | Domain models, validation, application use cases and public contracts |
+| [`atelier-app`](../crates/atelier-app) | Composition, HTTP, SQLite, filesystem, credentials, Git, processes and integrations |
+| [`atelier-ui`](../crates/atelier-ui/README.md) | Leptos CSR interface compiled to WebAssembly |
+| [`xtask`](../xtask) | UI builds, source inventory, verification and packaging |
 
 ## Boundaries
 

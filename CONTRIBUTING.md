@@ -2,6 +2,14 @@
 
 Focused bug reports, documentation improvements and pull requests are welcome. Explain the problem, intended behavior and reproduction or verification steps. Use synthetic examples and remove credentials, session URLs and personal data from reports.
 
+## Help and issues
+
+Use [GitHub Issues](https://github.com/FluryWaana/atelier/issues) for usage questions, reproducible bugs and feature requests. Search existing issues before opening one.
+
+For a bug, include the application version or commit, operating system and browser version, reproduction steps, expected behavior and actual behavior. Attach sanitized output or screenshots when useful. For a feature request, describe the problem and an example of the intended use.
+
+Report suspected vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## Setup
 
 Follow [getting started](docs/getting-started.md) and use the committed toolchain and lockfile. The application has four workspace crates and no Node.js build dependency. Read the [architecture](docs/architecture.md) before changing domain, adapter or UI boundaries.

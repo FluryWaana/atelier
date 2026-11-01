@@ -18,6 +18,13 @@ On Linux, credential storage requires `secret-tool` and an unlocked Secret Servi
 
 Install Git and the Rust toolchain pinned by [rust-toolchain.toml](../rust-toolchain.toml), including the `wasm32-unknown-unknown` target. Install Trunk 0.22.1 and wasm-bindgen CLI 0.2.130 in your PATH. Native compiler requirements are listed in [packaging](packaging.md).
 
+Clone the repository and enter its directory:
+
+```sh
+git clone https://github.com/FluryWaana/atelier.git
+cd atelier
+```
+
 With Rustup and the native compiler tools installed, prepare the build tools from the repository root:
 
 ```sh
@@ -65,3 +72,5 @@ Agent programs have their own installation and authentication requirements. Atel
 If a build rejects an asset, check the pinned UI tools and use `cargo xtask build-ui` so loader and size checks run together. If a port is occupied, choose a free port without stopping an unknown process.
 
 An unsupported database is refused. Keep its directory intact and use a separate empty directory when trying the application. See [launch and data](launcher.md) for instance identity and import rules.
+
+For help, open a [GitHub issue](https://github.com/FluryWaana/atelier/issues) with the version, operating system and reproduction steps. Remove credentials and session URLs from shared output.
