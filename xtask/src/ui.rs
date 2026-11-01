@@ -3201,6 +3201,7 @@ async fn projects_scenario(
     )?;
     click(client, "#manage-projects").await?;
     click(client, "#add-project").await?;
+    wait_dom(client, "const input=document.querySelector('#project-directory'),browse=document.querySelector('#browse-project');return input?.parentElement.classList.contains('directory-picker') && !input.parentElement.querySelector('[data-input-action=copy]') && browse.getBoundingClientRect().height <= input.getBoundingClientRect().height + 1;", vec![]).await?;
     client
         .find(Locator::Css("#project-create-name"))
         .await?
